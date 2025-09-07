@@ -1,0 +1,875 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Search, 
+  MessageSquare, 
+  TrendingUp, 
+  Users, 
+  AlertTriangle, 
+  BarChart3, 
+  Target, 
+  Zap,
+  Brain,
+  Lightbulb,
+  ChevronRight,
+  Copy,
+  RefreshCw,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Activity,
+  Calendar,
+  LineChart,
+} from 'lucide-react';
+import { useSession } from '../contexts/SessionContext';
+
+interface RAGResponse {
+  query: string;
+  query_type: string;
+  customer_id: number;
+  results_count: number;
+  similarity_threshold: number;
+  response: string;
+  relevant_results: Array<{
+    similarity: number;
+    text: string;
+    metadata: {
+      type: string;
+      account_id?: number;
+      account_name?: string;
+      revenue?: number;
+      industry?: string;
+      region?: string;
+      category?: string;
+      kpi_parameter?: string;
+      data?: string;
+      impact_level?: string;
+      // Historical analysis properties
+      trend_direction?: string;
+      trend_strength?: number;
+      volatility?: number;
+      data_points?: number;
+      date_range?: string;
+      current_value?: number;
+      previous_value?: number;
+    };
+  }>;
+}
+
+interface QueryTemplate {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  query: string;
+  icon: React.ComponentType<any>;
+  color: string;
+  query_type: 'revenue_analysis' | 'account_analysis' | 'kpi_analysis' | 'general' | 'trend_analysis' | 'temporal_analysis';
+}
+
+const RAGAnalysis: React.FC = () => {
+  const { session } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [error, setError] = useState('');
+  const [response, setResponse] = useState<RAGResponse | null>(null);
+  const [customQuery, setCustomQuery] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<QueryTemplate | null>(null);
+  const [isKnowledgeBaseBuilt, setIsKnowledgeBaseBuilt] = useState(false);
+  const [vectorDb, setVectorDb] = useState<'faiss' | 'qdrant' | 'historical' | 'temporal'>('qdrant');
+  const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
+  const statusCheckRef = useRef<boolean>(false);
+
+  // Check knowledge base status on component load and when vector DB changes
+  useEffect(() => {
+    if (session?.customer_id) {
+      checkKnowledgeBaseStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.customer_id, vectorDb]);
+
+  // Check status only, no auto-build
+  useEffect(() => {
+    if (session?.customer_id) {
+      checkKnowledgeBaseStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.customer_id]);
+
+  // Pre-defined query templates
+  const queryTemplates: QueryTemplate[] = [
+    // Revenue Analysis
+    {
+      id: 'revenue-top-accounts',
+      category: 'Revenue Analysis',
+      title: 'Top Revenue Accounts',
+      description: 'Identify accounts with the highest revenue',
+      query: 'Which accounts have the highest revenue?',
+      icon: TrendingUp,
+      color: 'bg-green-500',
+      query_type: 'revenue_analysis'
+    },
+    {
+      id: 'revenue-total',
+      category: 'Revenue Analysis',
+      title: 'Total Revenue Overview',
+      description: 'Get total revenue across all accounts',
+      query: 'What is the total revenue across all accounts?',
+      icon: BarChart3,
+      color: 'bg-green-500',
+      query_type: 'revenue_analysis'
+    },
+    {
+      id: 'revenue-growth',
+      category: 'Revenue Analysis',
+      title: 'Revenue Growth Analysis',
+      description: 'Analyze revenue growth patterns and trends',
+      query: 'Show me revenue growth analysis and trends',
+      icon: TrendingUp,
+      color: 'bg-green-500',
+      query_type: 'revenue_analysis'
+    },
+    {
+      id: 'revenue-industry',
+      category: 'Revenue Analysis',
+      title: 'Industry Revenue Breakdown',
+      description: 'Compare revenue performance by industry',
+      query: 'How does revenue vary by industry?',
+      icon: BarChart3,
+      color: 'bg-green-500',
+      query_type: 'revenue_analysis'
+    },
+
+    // Account Health & Performance
+    {
+      id: 'account-health',
+      category: 'Account Health',
+      title: 'Account Health Overview',
+      description: 'Get comprehensive account health analysis',
+      query: 'Show me account health scores and performance',
+      icon: Users,
+      color: 'bg-blue-500',
+      query_type: 'account_analysis'
+    },
+    {
+      id: 'account-risk',
+      category: 'Account Health',
+      title: 'At-Risk Accounts',
+      description: 'Identify accounts that might be at risk of churn',
+      query: 'Which accounts are at risk of churn?',
+      icon: AlertTriangle,
+      color: 'bg-red-500',
+      query_type: 'account_analysis'
+    },
+    {
+      id: 'account-performance',
+      category: 'Account Health',
+      title: 'Account Performance Ranking',
+      description: 'Rank accounts by overall performance',
+      query: 'Which accounts are performing best?',
+      icon: Target,
+      color: 'bg-blue-500',
+      query_type: 'account_analysis'
+    },
+    {
+      id: 'account-engagement',
+      category: 'Account Health',
+      title: 'Account Engagement Analysis',
+      description: 'Analyze account engagement levels',
+      query: 'Show me account engagement analysis',
+      icon: Users,
+      color: 'bg-blue-500',
+      query_type: 'account_analysis'
+    },
+
+    // KPI Performance
+    {
+      id: 'kpi-top-performing',
+      category: 'KPI Performance',
+      title: 'Top Performing KPIs',
+      description: 'Identify the best performing KPIs',
+      query: 'What are the top performing KPIs?',
+      icon: Target,
+      color: 'bg-purple-500',
+      query_type: 'kpi_analysis'
+    },
+    {
+      id: 'kpi-customer-satisfaction',
+      category: 'KPI Performance',
+      title: 'Customer Satisfaction Analysis',
+      description: 'Analyze customer satisfaction scores',
+      query: 'Show me customer satisfaction analysis',
+      icon: MessageSquare,
+      color: 'bg-purple-500',
+      query_type: 'kpi_analysis'
+    },
+    {
+      id: 'kpi-categories',
+      category: 'KPI Performance',
+      title: 'KPI Category Performance',
+      description: 'Compare performance across KPI categories',
+      query: 'How are different KPI categories performing?',
+      icon: BarChart3,
+      color: 'bg-purple-500',
+      query_type: 'kpi_analysis'
+    },
+    {
+      id: 'kpi-trends',
+      category: 'KPI Performance',
+      title: 'KPI Trends & Patterns',
+      description: 'Identify trends and patterns in KPI data',
+      query: 'What are the key trends in our KPI performance?',
+      icon: TrendingUp,
+      color: 'bg-purple-500',
+      query_type: 'kpi_analysis'
+    },
+
+    // Industry & Regional Analysis
+    {
+      id: 'industry-analysis',
+      category: 'Industry Analysis',
+      title: 'Industry Performance',
+      description: 'Compare performance across industries',
+      query: 'How do we perform across different industries?',
+      icon: BarChart3,
+      color: 'bg-orange-500',
+      query_type: 'general'
+    },
+    {
+      id: 'regional-analysis',
+      category: 'Regional Analysis',
+      title: 'Regional Performance',
+      description: 'Analyze performance by geographic region',
+      query: 'Show me regional performance analysis',
+      icon: BarChart3,
+      color: 'bg-orange-500',
+      query_type: 'general'
+    },
+
+    // Historical Trend Analysis
+    {
+      id: 'historical-trends',
+      category: 'Historical Analysis',
+      title: 'Overall Trend Analysis',
+      description: 'Analyze trends across all KPIs and accounts over time',
+      query: 'Show me trends across all KPIs and accounts over time',
+      icon: LineChart,
+      color: 'bg-indigo-500',
+      query_type: 'trend_analysis'
+    },
+    {
+      id: 'kpi-trends-historical',
+      category: 'Historical Analysis',
+      title: 'KPI Trend Analysis',
+      description: 'Analyze historical trends for specific KPIs',
+      query: 'Show me historical trends in Time to First Value over time',
+      icon: TrendingUp,
+      color: 'bg-indigo-500',
+      query_type: 'trend_analysis'
+    },
+    {
+      id: 'account-trends-historical',
+      category: 'Historical Analysis',
+      title: 'Account Performance Trends',
+      description: 'Track account performance changes over time',
+      query: 'Show me how account performance has changed over time',
+      icon: Users,
+      color: 'bg-indigo-500',
+      query_type: 'trend_analysis'
+    },
+    {
+      id: 'health-evolution',
+      category: 'Historical Analysis',
+      title: 'Health Score Evolution',
+      description: 'Track health score changes over time',
+      query: 'How have health scores evolved over time?',
+      icon: Activity,
+      color: 'bg-indigo-500',
+      query_type: 'trend_analysis'
+    },
+    {
+      id: 'temporal-patterns',
+      category: 'Historical Analysis',
+      title: 'Temporal Patterns',
+      description: 'Identify seasonal and cyclical patterns',
+      query: 'What temporal patterns and seasonality do you see in the data?',
+      icon: Calendar,
+      color: 'bg-indigo-500',
+      query_type: 'temporal_analysis'
+    },
+    {
+      id: 'predictive-insights',
+      category: 'Historical Analysis',
+      title: 'Predictive Insights',
+      description: 'Get predictions based on historical data',
+      query: 'What predictions can you make based on historical trends?',
+      icon: Clock,
+      color: 'bg-indigo-500',
+      query_type: 'trend_analysis'
+    },
+
+    // Monthly Revenue Analysis
+    {
+      id: 'monthly-revenue',
+      category: 'Monthly Revenue Analysis',
+      title: 'Monthly Revenue Breakdown',
+      description: 'Get detailed monthly revenue analysis with account breakdowns',
+      query: 'Which accounts have the highest revenue across last 4 months? please provide month details as well?',
+      icon: Calendar,
+      color: 'bg-purple-500',
+      query_type: 'revenue_analysis'
+    },
+    {
+      id: 'revenue-trends',
+      category: 'Monthly Revenue Analysis',
+      title: 'Revenue Trends & Patterns',
+      description: 'Analyze revenue growth patterns and identify trends',
+      query: 'Analyze revenue trends and patterns over the last 6 months',
+      icon: TrendingUp,
+      color: 'bg-purple-500',
+      query_type: 'trend_analysis'
+    },
+    {
+      id: 'top-accounts-monthly',
+      category: 'Monthly Revenue Analysis',
+      title: 'Top Accounts by Month',
+      description: 'See which accounts performed best each month',
+      query: 'Which accounts performed best each month? Show monthly rankings',
+      icon: BarChart3,
+      color: 'bg-purple-500',
+      query_type: 'account_analysis'
+    },
+
+    // Strategic Insights
+    {
+      id: 'strategic-insights',
+      category: 'Strategic Insights',
+      title: 'Strategic Recommendations',
+      description: 'Get AI-powered strategic recommendations',
+      query: 'What strategic recommendations do you have for improving our business?',
+      icon: Lightbulb,
+      color: 'bg-yellow-500',
+      query_type: 'general'
+    },
+    {
+      id: 'growth-opportunities',
+      category: 'Strategic Insights',
+      title: 'Growth Opportunities',
+      description: 'Identify potential growth opportunities',
+      query: 'What growth opportunities do you see in our data?',
+      icon: Zap,
+      color: 'bg-yellow-500',
+      query_type: 'general'
+    }
+  ];
+
+  // Group templates by category
+  const templatesByCategory = queryTemplates.reduce((acc, template) => {
+    if (!acc[template.category]) {
+      acc[template.category] = [];
+    }
+    acc[template.category].push(template);
+    return acc;
+  }, {} as Record<string, QueryTemplate[]>);
+
+  const checkKnowledgeBaseStatus = async () => {
+    if (!session?.customer_id || isBuilding || statusCheckRef.current) return;
+    
+    statusCheckRef.current = true;
+    
+    try {
+      let endpoint: string;
+      
+      if (vectorDb === 'historical') {
+        endpoint = '/api/rag-historical/status';
+      } else if (vectorDb === 'temporal') {
+        endpoint = '/api/rag-temporal/status';
+      } else if (vectorDb === 'qdrant') {
+        endpoint = '/api/rag-qdrant/status';
+      } else {
+        endpoint = '/api/rag-openai/status';
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'X-Customer-ID': session.customer_id.toString(),
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (vectorDb === 'historical') {
+          if (result.is_built) {
+            setIsHistoricalBuilt(true);
+            localStorage.setItem('historicalBuilt', 'true');
+          } else {
+            setIsHistoricalBuilt(false);
+            localStorage.removeItem('historicalBuilt');
+          }
+        } else {
+          if (result.is_built) {
+            setIsKnowledgeBaseBuilt(true);
+            localStorage.setItem('knowledgeBaseBuilt', 'true');
+          } else {
+            setIsKnowledgeBaseBuilt(false);
+            localStorage.removeItem('knowledgeBaseBuilt');
+          }
+        }
+      }
+    } catch (err) {
+      console.log('Status check failed:', err);
+    } finally {
+      statusCheckRef.current = false;
+    }
+  };
+
+  const buildKnowledgeBase = async () => {
+    if (!session?.customer_id) return;
+    
+    // Check if already built before starting
+    if (isKnowledgeBaseBuilt || isHistoricalBuilt) {
+      console.log('Knowledge base already built, skipping...');
+      return;
+    }
+    
+    setIsBuilding(true);
+    setError('');
+    
+    try {
+      let endpoint: string;
+      
+      if (vectorDb === 'historical') {
+        endpoint = '/api/rag-historical/build';
+      } else if (vectorDb === 'temporal') {
+        endpoint = '/api/rag-temporal/build';
+      } else if (vectorDb === 'qdrant') {
+        endpoint = '/api/rag-qdrant/build';
+      } else {
+        endpoint = '/api/rag-openai/build';
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'X-Customer-ID': session.customer_id.toString(),
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to build knowledge base');
+      }
+      
+      const result = await response.json();
+      
+      if (vectorDb === 'historical') {
+        setIsHistoricalBuilt(true);
+        localStorage.setItem('historicalBuilt', 'true');
+      } else {
+        setIsKnowledgeBaseBuilt(true);
+        localStorage.setItem('knowledgeBaseBuilt', 'true');
+      }
+      
+      console.log('Knowledge base built:', result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to build knowledge base');
+    } finally {
+      setIsBuilding(false);
+    }
+  };
+
+  const executeQuery = async (query: string, queryType: string = 'general') => {
+    if (!session?.customer_id) return;
+    
+    setIsLoading(true);
+    setError('');
+    setResponse(null);
+    
+    try {
+      let endpoint: string;
+      
+      if (vectorDb === 'historical') {
+        endpoint = '/api/rag-historical/query';
+      } else if (vectorDb === 'temporal') {
+        endpoint = '/api/rag-temporal/query';
+      } else if (vectorDb === 'qdrant') {
+        endpoint = '/api/rag-qdrant/query';
+      } else {
+        endpoint = '/api/rag-openai/query';
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'X-Customer-ID': session.customer_id.toString(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query,
+          query_type: queryType
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to execute query');
+      }
+      
+      const result = await response.json();
+      
+      if (result.error && result.error.includes('Knowledge base not built')) {
+        setError('Knowledge base not built. Please build the knowledge base first by clicking the "Build Knowledge Base" button.');
+        return;
+      }
+      
+      setResponse(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to execute query');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTemplateClick = (template: QueryTemplate) => {
+    setSelectedTemplate(template);
+    setCustomQuery(template.query);
+    executeQuery(template.query, template.query_type);
+  };
+
+  const handleCustomQuery = () => {
+    if (customQuery.trim()) {
+      executeQuery(customQuery.trim());
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const formatResponse = (response: string) => {
+    // Simple formatting for better readability
+    if (!response) {
+      return <p className="mb-2 text-gray-500">No response available</p>;
+    }
+    return response
+      .split('\n')
+      .map((line, index) => (
+        <p key={index} className="mb-2">
+          {line}
+        </p>
+      ));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Brain className="h-8 w-8 text-blue-600" />
+            AI-Powered RAG Analysis
+          </h2>
+          <p className="text-gray-600 mt-1">
+            Ask intelligent questions about your KPI and account data, including historical trends and temporal analysis
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Vector Database Selector */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Analysis Type:</label>
+            <select
+              value={vectorDb}
+              onChange={(e) => setVectorDb(e.target.value as 'faiss' | 'qdrant' | 'historical' | 'temporal')}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isBuilding}
+            >
+              <option value="qdrant">Current Data (Qdrant)</option>
+              <option value="faiss">Current Data (FAISS)</option>
+              <option value="historical">Historical Analysis</option>
+              <option value="temporal">Monthly Revenue Analysis</option>
+            </select>
+          </div>
+          
+          <button
+            onClick={buildKnowledgeBase}
+            disabled={isBuilding || (vectorDb === 'historical' ? isHistoricalBuilt : isKnowledgeBaseBuilt)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isBuilding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (vectorDb === 'historical' ? isHistoricalBuilt : isKnowledgeBaseBuilt) ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {(vectorDb === 'historical' ? isHistoricalBuilt : isKnowledgeBaseBuilt) 
+              ? (vectorDb === 'historical' ? 'Historical Data Ready' : 
+                 vectorDb === 'temporal' ? 'Monthly Analysis Ready' : 'Knowledge Base Ready')
+              : (vectorDb === 'historical' ? 'Build Historical Analysis' : 
+                 vectorDb === 'temporal' ? 'Build Monthly Analysis' : 'Build Knowledge Base')
+            }
+          </button>
+        </div>
+      </div>
+
+      {/* Knowledge Base Status */}
+      {(isKnowledgeBaseBuilt || isHistoricalBuilt) && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-green-800 font-medium">
+              {vectorDb === 'historical' 
+                ? 'Historical analysis data is ready for trend queries' 
+                : vectorDb === 'temporal'
+                ? 'Monthly revenue analysis is ready for temporal queries'
+                : 'Knowledge base is ready for queries'
+              }
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <XCircle className="h-5 w-5 text-red-600" />
+            <span className="text-red-800">{error}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Query Templates */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-yellow-500" />
+              Quick Query Templates
+            </h3>
+            
+            <div className="space-y-4">
+              {Object.entries(templatesByCategory).map(([category, templates]) => (
+                <div key={category}>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">{category}</h4>
+                  <div className="space-y-2">
+                    {templates.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleTemplateClick(template)}
+                        className={`w-full p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md text-left ${
+                          selectedTemplate?.id === template.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${template.color} text-white`}>
+                            <template.icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-medium text-gray-900 text-sm">
+                              {template.title}
+                            </h5>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {template.description}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Query Interface and Results */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Custom Query Input */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Search className="h-5 w-5 text-blue-500" />
+              Custom Query
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <textarea
+                  value={customQuery}
+                  onChange={(e) => setCustomQuery(e.target.value)}
+                  placeholder="Ask any question about your KPI and account data..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-500">
+                  {customQuery.length} characters
+                </div>
+                <button
+                  onClick={handleCustomQuery}
+                  disabled={!customQuery.trim() || isLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                  {isLoading ? 'Analyzing...' : 'Ask Question'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Results */}
+          {response && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-green-500" />
+                  AI Analysis Results
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">
+                    {response?.results_count || 0} relevant results
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(response.response || 'No response available')}
+                    className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                    title="Copy response"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Query Info */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-gray-700">Query:</span>
+                  <span className="text-sm text-gray-900">{response?.query || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span>Type: {response?.query_type || 'N/A'}</span>
+                  <span>Similarity: {response?.similarity_threshold || 'N/A'}</span>
+                  <span>Customer: {response?.customer_id || 'N/A'}</span>
+                </div>
+              </div>
+
+              {/* AI Response */}
+              <div className="prose prose-sm max-w-none">
+                <div className={`border-l-4 p-4 rounded-r-lg ${
+                  vectorDb === 'historical' 
+                    ? 'bg-indigo-50 border-indigo-400' 
+                    : 'bg-blue-50 border-blue-400'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    {vectorDb === 'historical' ? (
+                      <LineChart className="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <Brain className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className="text-gray-800">
+                      {formatResponse(response?.response || '')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Relevant Results */}
+              {response?.relevant_results && response.relevant_results.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Relevant Data Sources</h4>
+                  <div className="space-y-2">
+                    {response.relevant_results.slice(0, 5).map((result, index) => (
+                      <div
+                        key={index}
+                        className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-gray-500">
+                                {result.metadata.type === 'kpi_temporal' ? 'Historical KPI' : 
+                                 result.metadata.type === 'health_trend' ? 'Health Trend' :
+                                 result.metadata.type === 'kpi' ? 'KPI' : 'Account'}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                Similarity: {(result.similarity * 100).toFixed(1)}%
+                              </span>
+                              {result.metadata.trend_direction && (
+                                <span className={`text-xs px-2 py-1 rounded ${
+                                  result.metadata.trend_direction === 'increasing' ? 'bg-green-100 text-green-800' :
+                                  result.metadata.trend_direction === 'decreasing' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {result.metadata.trend_direction}
+                                </span>
+                              )}
+                            </div>
+                            {result.metadata.account_name && (
+                              <div className="text-sm font-medium text-gray-900">
+                                {result.metadata.account_name}
+                                {result.metadata.revenue && (
+                                  <span className="text-gray-500 ml-2">
+                                    (${result.metadata.revenue.toLocaleString()})
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {result.metadata.kpi_parameter && (
+                              <div className="text-sm text-gray-700">
+                                {result.metadata.kpi_parameter}: {result.metadata.data}
+                              </div>
+                            )}
+                            {result.metadata.trend_strength && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                Trend Strength: {(result.metadata.trend_strength * 100).toFixed(1)}% | 
+                                Volatility: {result.metadata.volatility ? (result.metadata.volatility * 100).toFixed(1) : 'N/A'}% | 
+                                Data Points: {result.metadata.data_points || 'N/A'}
+                              </div>
+                            )}
+                            {result.metadata.date_range && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Period: {result.metadata.date_range}
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-1">
+                              {result.text.substring(0, 150)}...
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Analyzing your data...</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RAGAnalysis;

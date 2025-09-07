@@ -1,0 +1,297 @@
+#!/usr/bin/env python3
+"""
+Create corporate metadata with 25 companies list.
+"""
+
+import json
+import random
+from datetime import datetime
+
+def create_corporate_metadata():
+    """Create corporate metadata with 25 companies"""
+    
+    # Define 25 companies with realistic data
+    companies = [
+        {
+            "company_id": 1,
+            "company_name": "TechCorp Solutions",
+            "revenue": 2500000,
+            "industry": "Technology",
+            "region": "North America",
+            "employee_count": 150,
+            "contract_value": 500000,
+            "status": "Active"
+        },
+        {
+            "company_id": 2,
+            "company_name": "Global Manufacturing Inc",
+            "revenue": 8500000,
+            "industry": "Manufacturing",
+            "region": "North America",
+            "employee_count": 450,
+            "contract_value": 1200000,
+            "status": "Active"
+        },
+        {
+            "company_id": 3,
+            "company_name": "Healthcare Systems Ltd",
+            "revenue": 4200000,
+            "industry": "Healthcare",
+            "region": "North America",
+            "employee_count": 280,
+            "contract_value": 800000,
+            "status": "Active"
+        },
+        {
+            "company_id": 4,
+            "company_name": "Financial Services Group",
+            "revenue": 15000000,
+            "industry": "Financial Services",
+            "region": "North America",
+            "employee_count": 800,
+            "contract_value": 2500000,
+            "status": "Active"
+        },
+        {
+            "company_id": 5,
+            "company_name": "Retail Chain Corp",
+            "revenue": 6800000,
+            "industry": "Retail",
+            "region": "North America",
+            "employee_count": 320,
+            "contract_value": 950000,
+            "status": "Active"
+        },
+        {
+            "company_id": 6,
+            "company_name": "Energy Solutions Co",
+            "revenue": 12000000,
+            "industry": "Energy",
+            "region": "North America",
+            "employee_count": 600,
+            "contract_value": 1800000,
+            "status": "Active"
+        },
+        {
+            "company_id": 7,
+            "company_name": "Transportation Logistics",
+            "revenue": 5500000,
+            "industry": "Transportation",
+            "region": "North America",
+            "employee_count": 350,
+            "contract_value": 750000,
+            "status": "Active"
+        },
+        {
+            "company_id": 8,
+            "company_name": "Education Technology",
+            "revenue": 3200000,
+            "industry": "Education",
+            "region": "North America",
+            "employee_count": 200,
+            "contract_value": 450000,
+            "status": "Active"
+        },
+        {
+            "company_id": 9,
+            "company_name": "Real Estate Development",
+            "revenue": 9500000,
+            "industry": "Real Estate",
+            "region": "North America",
+            "employee_count": 500,
+            "contract_value": 1400000,
+            "status": "Active"
+        },
+        {
+            "company_id": 10,
+            "company_name": "Media & Entertainment",
+            "revenue": 7800000,
+            "industry": "Media",
+            "region": "North America",
+            "employee_count": 400,
+            "contract_value": 1100000,
+            "status": "Active"
+        },
+        {
+            "company_id": 11,
+            "company_name": "Pharmaceutical Research",
+            "revenue": 18000000,
+            "industry": "Pharmaceuticals",
+            "region": "North America",
+            "employee_count": 900,
+            "contract_value": 3000000,
+            "status": "Active"
+        },
+        {
+            "company_id": 12,
+            "company_name": "Automotive Solutions",
+            "revenue": 11000000,
+            "industry": "Automotive",
+            "region": "North America",
+            "employee_count": 550,
+            "contract_value": 1600000,
+            "status": "Active"
+        },
+        {
+            "company_id": 13,
+            "company_name": "Food & Beverage Corp",
+            "revenue": 7200000,
+            "industry": "Food & Beverage",
+            "region": "North America",
+            "employee_count": 380,
+            "contract_value": 1000000,
+            "status": "Active"
+        },
+        {
+            "company_id": 14,
+            "company_name": "Construction Services",
+            "revenue": 8800000,
+            "industry": "Construction",
+            "region": "North America",
+            "employee_count": 480,
+            "contract_value": 1300000,
+            "status": "Active"
+        },
+        {
+            "company_id": 15,
+            "company_name": "Telecommunications Ltd",
+            "revenue": 13500000,
+            "industry": "Telecommunications",
+            "region": "North America",
+            "employee_count": 700,
+            "contract_value": 2200000,
+            "status": "Active"
+        },
+        {
+            "company_id": 16,
+            "company_name": "Aerospace Technologies",
+            "revenue": 16000000,
+            "industry": "Aerospace",
+            "region": "North America",
+            "employee_count": 850,
+            "contract_value": 2800000,
+            "status": "Active"
+        },
+        {
+            "company_id": 17,
+            "company_name": "Biotechnology Innovations",
+            "revenue": 6200000,
+            "industry": "Biotechnology",
+            "region": "North America",
+            "employee_count": 320,
+            "contract_value": 850000,
+            "status": "Active"
+        },
+        {
+            "company_id": 18,
+            "company_name": "Environmental Services",
+            "revenue": 4800000,
+            "industry": "Environmental",
+            "region": "North America",
+            "employee_count": 250,
+            "contract_value": 650000,
+            "status": "Active"
+        },
+        {
+            "company_id": 19,
+            "company_name": "Legal Services Group",
+            "revenue": 9200000,
+            "industry": "Legal Services",
+            "region": "North America",
+            "employee_count": 520,
+            "contract_value": 1350000,
+            "status": "Active"
+        },
+        {
+            "company_id": 20,
+            "company_name": "Consulting Partners",
+            "revenue": 7500000,
+            "industry": "Consulting",
+            "region": "North America",
+            "employee_count": 420,
+            "contract_value": 1050000,
+            "status": "Active"
+        },
+        {
+            "company_id": 21,
+            "company_name": "Insurance Solutions",
+            "revenue": 12500000,
+            "industry": "Insurance",
+            "region": "North America",
+            "employee_count": 650,
+            "contract_value": 2000000,
+            "status": "Active"
+        },
+        {
+            "company_id": 22,
+            "company_name": "Marketing & Advertising",
+            "revenue": 5800000,
+            "industry": "Marketing",
+            "region": "North America",
+            "employee_count": 300,
+            "contract_value": 800000,
+            "status": "Active"
+        },
+        {
+            "company_id": 23,
+            "company_name": "Security Systems Inc",
+            "revenue": 8200000,
+            "industry": "Security",
+            "region": "North America",
+            "employee_count": 450,
+            "contract_value": 1200000,
+            "status": "Active"
+        },
+        {
+            "company_id": 24,
+            "company_name": "Research & Development",
+            "revenue": 10500000,
+            "industry": "R&D",
+            "region": "North America",
+            "employee_count": 580,
+            "contract_value": 1500000,
+            "status": "Active"
+        },
+        {
+            "company_id": 25,
+            "company_name": "Data Analytics Corp",
+            "revenue": 6800000,
+            "industry": "Data Analytics",
+            "region": "North America",
+            "employee_count": 360,
+            "contract_value": 950000,
+            "status": "Active"
+        }
+    ]
+    
+    # Create corporate metadata structure
+    corporate_metadata = {
+        "metadata_type": "corporate_companies",
+        "total_companies": 25,
+        "created_at": datetime.now().isoformat(),
+        "companies": companies,
+        "summary": {
+            "total_revenue": sum(company["revenue"] for company in companies),
+            "total_employees": sum(company["employee_count"] for company in companies),
+            "total_contract_value": sum(company["contract_value"] for company in companies),
+            "industries": list(set(company["industry"] for company in companies)),
+            "regions": list(set(company["region"] for company in companies))
+        }
+    }
+    
+    # Save to JSON file
+    with open("corporate_metadata.json", "w") as f:
+        json.dump(corporate_metadata, f, indent=2)
+    
+    print(f"✅ Created corporate metadata:")
+    print(f"   - Companies: {len(companies)}")
+    print(f"   - Total Revenue: ${corporate_metadata['summary']['total_revenue']:,}")
+    print(f"   - Total Employees: {corporate_metadata['summary']['total_employees']:,}")
+    print(f"   - Total Contract Value: ${corporate_metadata['summary']['total_contract_value']:,}")
+    print(f"   - Industries: {len(corporate_metadata['summary']['industries'])}")
+    print(f"   - Regions: {len(corporate_metadata['summary']['regions'])}")
+    
+    return corporate_metadata
+
+if __name__ == "__main__":
+    create_corporate_metadata() 

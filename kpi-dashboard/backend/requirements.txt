@@ -1,0 +1,15 @@
+flask
+flask_sqlalchemy
+flask_migrate
+pandas
+openpyxl
+flask-cors
+scikit-learn
+numpy
+chromadb
+sentence-transformers
+anthropic
+faiss-cpu
+openai
+python-dotenv
+qdrant-client 

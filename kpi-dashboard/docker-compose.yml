@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kpi-dashboard-backend
+    ports:
+      - "5059:5059"
+    env_file:
+      - docker.env
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - PYTHONPATH=/app
+    volumes:
+      # Mount database and uploads for persistence
+      - ./backend/instance:/app/instance
+      - ./backend/uploads:/app/uploads
+      - ./backend/qdrant_storage:/app/qdrant_storage
+      # Mount .env file if it exists
+      - ./backend/.env:/app/.env:ro
+    networks:
+      - kpi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5059/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: kpi-dashboard-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - kpi-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  kpi-network:
+    driver: bridge
+
+volumes:
+  # Persistent volumes for data
+  backend_data:
+    driver: local
+  qdrant_data:
+    driver: local
