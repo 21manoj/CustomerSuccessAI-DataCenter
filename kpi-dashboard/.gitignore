@@ -59,3 +59,21 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+
+# Temporary deployment files
+kpi-dashboard-key.pem
+kpi-dashboard.tar.gz
+*.log
+
+# Qdrant storage directories
+qdrant_storage*/
+qdrant_storage_*/
+
+# AWS deployment artifacts
+backend-service-config.json
+ecs-*.json
+apprunner-*.yaml
+
+# Production environment files
+production.env
+
