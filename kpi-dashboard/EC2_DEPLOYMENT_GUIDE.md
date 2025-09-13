@@ -301,6 +301,22 @@ I'll create a deployment script that automates the entire process once you have 
 3. **Docker not starting**: Ensure Docker service is running
 4. **App not loading**: Check nginx configuration and backend logs
 
+### **Testing RAG System:**
+```bash
+# Run comprehensive RAG time series tests
+cd backend
+./run_rag_tests.sh
+
+# Or run tests directly
+python test_rag_time_series.py
+
+# Test specific RAG queries
+curl -X POST http://YOUR_IP:3000/api/direct-rag/query \
+  -H "Content-Type: application/json" \
+  -H "X-Customer-ID: 6" \
+  -d '{"query": "What was the revenue for June, July and August?"}'
+```
+
 ### **Useful Commands:**
 ```bash
 # Check instance status
