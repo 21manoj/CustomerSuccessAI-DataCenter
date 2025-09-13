@@ -23,23 +23,33 @@ load_dotenv()
 class EnhancedRAGSystemQdrant:
     def __init__(self):
         """Initialize the enhanced RAG system with Qdrant and OpenAI"""
-        # Initialize OpenAI client
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        # Initialize OpenAI client - will be set at query time
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
         
         # Initialize embedding model
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.embedding_dimension = 384  # all-MiniLM-L6-v2 dimension
         
-        # Initialize Qdrant client
-        self.qdrant_client = QdrantClient(
-            host=os.getenv('QDRANT_HOST', 'localhost'),
-            port=int(os.getenv('QDRANT_PORT', 6333))
-        )
+        # Initialize Qdrant client with local file storage fallback
+        try:
+            self.qdrant_client = QdrantClient(
+                host=os.getenv('QDRANT_HOST', 'localhost'),
+                port=int(os.getenv('QDRANT_PORT', 6333))
+            )
+            # Test connection
+            self.qdrant_client.get_collections()
+            print("✅ Connected to Qdrant server")
+        except Exception as e:
+            print(f"⚠️ Qdrant server not available, using local file storage: {e}")
+            # Use unique storage path to avoid conflicts
+            import time
+            unique_id = int(time.time() * 1000) % 100000
+            self.qdrant_client = QdrantClient(path=f"./qdrant_storage_{unique_id}")
         
         # Configuration
         self.collection_name = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_vectors')
         self.top_k = int(os.getenv('RAG_TOP_K', 10))
-        self.similarity_threshold = float(os.getenv('RAG_SIMILARITY_THRESHOLD', 0.3))
+        self.similarity_threshold = float(os.getenv('RAG_SIMILARITY_THRESHOLD', 0.01))
         self.customer_id = None
         
         # Ensure collection exists
@@ -63,7 +73,15 @@ class EnhancedRAGSystemQdrant:
                 )
                 print(f"✅ Collection {self.collection_name} created successfully")
             else:
-                print(f"✅ Collection {self.collection_name} already exists")
+                # Check if collection has data
+                try:
+                    collection_info = self.qdrant_client.get_collection(self.collection_name)
+                    if collection_info.points_count > 0:
+                        print(f"✅ Collection {self.collection_name} already exists with {collection_info.points_count} points")
+                    else:
+                        print(f"✅ Collection {self.collection_name} exists but is empty")
+                except Exception as e:
+                    print(f"✅ Collection {self.collection_name} already exists")
                 
         except Exception as e:
             print(f"❌ Error ensuring collection exists: {str(e)}")
@@ -263,13 +281,21 @@ class EnhancedRAGSystemQdrant:
         
         # Upload points to Qdrant
         try:
+            print(f"🔧 Uploading {len(points)} vectors to Qdrant collection '{self.collection_name}'...")
             self.qdrant_client.upsert(
                 collection_name=self.collection_name,
                 points=points
             )
             print(f"✅ Uploaded {len(points)} vectors to Qdrant collection")
+            
+            # Verify upload
+            collection_info = self.qdrant_client.get_collection(self.collection_name)
+            print(f"📊 Collection info after upload: {collection_info}")
+            
         except Exception as e:
             print(f"❌ Error uploading to Qdrant: {str(e)}")
+            import traceback
+            traceback.print_exc()
             raise
     
     def query(self, query_text: str, query_type: str = 'general') -> Dict[str, Any]:
@@ -297,10 +323,11 @@ class EnhancedRAGSystemQdrant:
                 with_payload=True
             )
             
-            # Filter by similarity threshold
+            # Filter by similarity threshold (very permissive)
             relevant_results = []
             for result in search_results:
-                if result.score >= self.similarity_threshold:
+                # Accept all results with any positive score
+                if result.score > 0:
                     relevant_results.append({
                         'similarity': float(result.score),
                         'text': result.payload.get('text', ''),
@@ -373,7 +400,13 @@ class EnhancedRAGSystemQdrant:
         """
         
         try:
-            client = openai.OpenAI(api_key=openai.api_key)
+            # Get API key from environment at query time
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                # Try the specific key that was provided
+                api_key = "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"
+            
+            client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
@@ -518,40 +551,62 @@ class EnhancedRAGSystemQdrant:
             return {'error': f'Failed to get collection info: {str(e)}'}
     
     def _aggregate_monthly_revenue(self, time_series_data, kpis, account_lookup):
-        """Aggregate monthly revenue data from time-series records"""
+        """Aggregate monthly revenue data from time-series records and account data"""
         monthly_data = {}
         
-        # Group by month and year
+        # First, get all unique months from time-series data
+        months_years = set()
         for ts in time_series_data:
-            kpi = next((k for k in kpis if k.kpi_id == ts.kpi_id), None)
-            account = account_lookup.get(ts.account_id)
+            months_years.add((ts.month, ts.year))
+        
+        # For each month, aggregate revenue data
+        for month, year in months_years:
+            month_year = (month, year)
+            monthly_data[month_year] = {
+                'total_revenue': 0,
+                'account_revenues': {},
+                'account_count': 0
+            }
             
-            if not kpi or not account:
-                continue
-                
-            # Look for revenue-related KPIs
-            if 'revenue' in kpi.kpi_parameter.lower() or 'revenue' in kpi.category.lower():
-                month_year = (ts.month, ts.year)
-                
-                if month_year not in monthly_data:
-                    monthly_data[month_year] = {
-                        'total_revenue': 0,
-                        'account_revenues': {},
-                        'account_count': 0
-                    }
-                
-                # Add revenue (assuming value is in thousands or actual amount)
-                revenue_value = float(ts.value) if ts.value else 0
-                monthly_data[month_year]['total_revenue'] += revenue_value
-                
-                if ts.account_id not in monthly_data[month_year]['account_revenues']:
-                    monthly_data[month_year]['account_revenues'][ts.account_id] = {
-                        'account_name': account.account_name,
-                        'revenue': 0
-                    }
-                    monthly_data[month_year]['account_count'] += 1
-                
-                monthly_data[month_year]['account_revenues'][ts.account_id]['revenue'] += revenue_value
+            # Get all accounts for this customer
+            for account_id, account in account_lookup.items():
+                if account.customer_id == self.customer_id:
+                    # Use account revenue as base (this represents the account's total revenue)
+                    account_revenue = float(account.revenue) if account.revenue else 0
+                    
+                    # Look for revenue growth or changes in time-series data for this account
+                    revenue_growth = 0
+                    for ts in time_series_data:
+                        if (ts.account_id == account_id and 
+                            ts.month == month and 
+                            ts.year == year):
+                            
+                            # Get the KPI parameter from the related KPI record
+                            kpi = next((k for k in kpis if k.kpi_id == ts.kpi_id), None)
+                            if kpi and ('revenue' in kpi.kpi_parameter.lower() or 'growth' in kpi.kpi_parameter.lower()):
+                                
+                                # Apply growth percentage to base revenue
+                                growth_value = float(ts.value) if ts.value else 0
+                                if '%' in str(ts.value):
+                                    # It's a percentage, apply it to base revenue
+                                    revenue_growth = account_revenue * (growth_value / 100)
+                                else:
+                                    # It's an absolute value
+                                    revenue_growth = growth_value
+                                break
+                    
+                    # Calculate final revenue for this month
+                    final_revenue = account_revenue + revenue_growth
+                    
+                    if final_revenue > 0:
+                        monthly_data[month_year]['total_revenue'] += final_revenue
+                        monthly_data[month_year]['account_revenues'][account_id] = {
+                            'account_name': account.account_name,
+                            'revenue': final_revenue,
+                            'base_revenue': account_revenue,
+                            'growth': revenue_growth
+                        }
+                        monthly_data[month_year]['account_count'] += 1
         
         # Calculate top accounts for each month
         for month_year, data in monthly_data.items():
@@ -566,7 +621,9 @@ class EnhancedRAGSystemQdrant:
                 {
                     'account_id': acc_id,
                     'account_name': acc_data['account_name'],
-                    'revenue': acc_data['revenue']
+                    'revenue': acc_data['revenue'],
+                    'base_revenue': acc_data['base_revenue'],
+                    'growth': acc_data['growth']
                 }
                 for acc_id, acc_data in sorted_accounts
             ]
@@ -586,20 +643,23 @@ class EnhancedRAGSystemQdrant:
         account_count = data['account_count']
         top_accounts = data['top_accounts']
         
-        text = f"""
-        Monthly Revenue Report: {month_name} {year}
-        Total Revenue: ${total_revenue:,.2f}
-        Active Accounts: {account_count}
-        Top Revenue Accounts:
-        """
+        text = f"""Monthly Revenue Report: {month_name} {year}
+Total Revenue: ${total_revenue:,.2f}
+Active Accounts: {account_count}
+Top Revenue Accounts:"""
         
         for i, acc in enumerate(top_accounts, 1):
-            text += f"        {i}. {acc['account_name']}: ${acc['revenue']:,.2f}\n"
+            text += f"\n{i}. {acc['account_name']}: ${acc['revenue']:,.2f}"
         
-        text += f"""
-        This month showed revenue performance across {account_count} active accounts.
-        The top performing account was {top_accounts[0]['account_name'] if top_accounts else 'N/A'} with ${top_accounts[0]['revenue']:,.2f} if top_accounts else 0.
-        """
+        if top_accounts:
+            text += f"""
+
+This month showed revenue performance across {account_count} active accounts.
+The top performing account was {top_accounts[0]['account_name']} with ${top_accounts[0]['revenue']:,.2f}."""
+        else:
+            text += f"""
+
+This month showed revenue performance across {account_count} active accounts."""
         
         return text.strip()
 
@@ -608,6 +668,12 @@ qdrant_rag_systems = {}
 
 def get_qdrant_rag_system(customer_id: int) -> EnhancedRAGSystemQdrant:
     """Get or create Qdrant RAG system instance for specific customer"""
+    # Only create new instance if it doesn't exist
     if customer_id not in qdrant_rag_systems:
         qdrant_rag_systems[customer_id] = EnhancedRAGSystemQdrant()
+        qdrant_rag_systems[customer_id].customer_id = customer_id
+    else:
+        # Ensure customer_id is set
+        qdrant_rag_systems[customer_id].customer_id = customer_id
+    
     return qdrant_rag_systems[customer_id]

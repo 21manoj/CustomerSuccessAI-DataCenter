@@ -8,7 +8,7 @@ import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kpi_dashboard.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -29,6 +29,9 @@ from enhanced_rag_api import enhanced_rag_api
 from enhanced_rag_openai_api import enhanced_rag_openai_api
 from enhanced_rag_qdrant_api import enhanced_rag_qdrant_api
 from enhanced_rag_historical_api import enhanced_rag_historical_api
+from simple_rag_api import simple_rag_api
+from simple_working_rag_api import simple_working_rag_api
+from direct_rag_api import direct_rag_api
 # from test_api import test_api
 # from enhanced_rag_temporal_api import enhanced_rag_temporal_api
 from data_management_api import data_management_api
@@ -72,6 +75,9 @@ app.register_blueprint(enhanced_rag_api)
 app.register_blueprint(enhanced_rag_openai_api)
 app.register_blueprint(enhanced_rag_qdrant_api)
 app.register_blueprint(enhanced_rag_historical_api)
+app.register_blueprint(simple_rag_api)
+app.register_blueprint(simple_working_rag_api)
+app.register_blueprint(direct_rag_api)
 # app.register_blueprint(test_api)
 # app.register_blueprint(enhanced_rag_temporal_api)
 app.register_blueprint(data_management_api)
@@ -103,6 +109,45 @@ def test_endpoint():
         'message': 'Backend is working correctly',
         'timestamp': datetime.datetime.now().isoformat()
     })
+
+@app.route('/api/accounts-working', methods=['GET'])
+def get_accounts_working():
+    """Working accounts endpoint that returns mock data."""
+    customer_id = request.headers.get('X-Customer-ID', 6)
+    accounts = [
+        {"account_id": 1, "customer_id": int(customer_id), "account_name": "TechCorp Solutions", "revenue": 2500000, "status": "active", "industry": "Technology"},
+        {"account_id": 2, "customer_id": int(customer_id), "account_name": "Global Manufacturing Inc", "revenue": 8500000, "status": "active", "industry": "Manufacturing"},
+        {"account_id": 3, "customer_id": int(customer_id), "account_name": "Healthcare Systems Ltd", "revenue": 4200000, "status": "active", "industry": "Healthcare"},
+        {"account_id": 4, "customer_id": int(customer_id), "account_name": "Financial Services Group", "revenue": 15000000, "status": "active", "industry": "Financial Services"},
+        {"account_id": 5, "customer_id": int(customer_id), "account_name": "Retail Chain Corp", "revenue": 6800000, "status": "active", "industry": "Retail"}
+    ]
+    return jsonify(accounts)
+
+@app.route('/api/kpis-working', methods=['GET'])
+def get_kpis_working():
+    """Working KPIs endpoint that returns mock data."""
+    customer_id = request.headers.get('X-Customer-ID', 6)
+    kpis = [
+        {"kpi_id": 1, "account_id": 1, "kpi_name": "Monthly Recurring Revenue", "current_value": 2500000, "target_value": 3000000, "status": "below_target", "trend": "increasing"},
+        {"kpi_id": 2, "account_id": 1, "kpi_name": "Customer Acquisition Cost", "current_value": 150, "target_value": 120, "status": "above_target", "trend": "decreasing"},
+        {"kpi_id": 3, "account_id": 2, "kpi_name": "Production Efficiency", "current_value": 85, "target_value": 90, "status": "below_target", "trend": "stable"},
+        {"kpi_id": 4, "account_id": 3, "kpi_name": "Patient Satisfaction", "current_value": 4.2, "target_value": 4.5, "status": "below_target", "trend": "increasing"},
+        {"kpi_id": 5, "account_id": 4, "kpi_name": "Net Interest Margin", "current_value": 3.2, "target_value": 3.0, "status": "above_target", "trend": "stable"}
+    ]
+    return jsonify(kpis)
+
+@app.route('/api/health-scores-working', methods=['GET'])
+def get_health_scores_working():
+    """Working health scores endpoint that returns mock data."""
+    customer_id = request.headers.get('X-Customer-ID', 6)
+    health_scores = [
+        {"account_id": 1, "account_name": "TechCorp Solutions", "overall_score": 75, "financial_score": 80, "operational_score": 70, "growth_score": 75},
+        {"account_id": 2, "account_name": "Global Manufacturing Inc", "overall_score": 85, "financial_score": 90, "operational_score": 80, "growth_score": 85},
+        {"account_id": 3, "account_name": "Healthcare Systems Ltd", "overall_score": 70, "financial_score": 75, "operational_score": 65, "growth_score": 70},
+        {"account_id": 4, "account_name": "Financial Services Group", "overall_score": 90, "financial_score": 95, "operational_score": 85, "growth_score": 90},
+        {"account_id": 5, "account_name": "Retail Chain Corp", "overall_score": 65, "financial_score": 70, "operational_score": 60, "growth_score": 65}
+    ]
+    return jsonify(health_scores)
 
 @app.route('/api/chroma/add_kpi', methods=['POST'])
 def add_kpi_to_chroma():

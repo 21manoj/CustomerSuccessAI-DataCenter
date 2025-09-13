@@ -1,0 +1,135 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AppRunnerPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "apprunner:*",
+                "apprunner:CreateService",
+                "apprunner:DeleteService",
+                "apprunner:GetService",
+                "apprunner:ListServices",
+                "apprunner:UpdateService",
+                "apprunner:StartDeployment",
+                "apprunner:ListOperations"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:*",
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "ecr:CreateRepository",
+                "ecr:DeleteRepository",
+                "ecr:DescribeRepositories",
+                "ecr:ListRepositories",
+                "ecr:PutImage",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECSPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "ecs:*",
+                "ecs:CreateCluster",
+                "ecs:DeleteCluster",
+                "ecs:DescribeClusters",
+                "ecs:ListClusters",
+                "ecs:CreateService",
+                "ecs:DeleteService",
+                "ecs:DescribeServices",
+                "ecs:ListServices",
+                "ecs:UpdateService",
+                "ecs:RegisterTaskDefinition",
+                "ecs:DeregisterTaskDefinition",
+                "ecs:DescribeTaskDefinition",
+                "ecs:ListTaskDefinitions"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3Permissions",
+            "Effect": "Allow",
+            "Action": [
+                "s3:*",
+                "s3:CreateBucket",
+                "s3:DeleteBucket",
+                "s3:GetBucketLocation",
+                "s3:GetBucketPolicy",
+                "s3:GetBucketVersioning",
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:PutBucketPolicy",
+                "s3:PutBucketVersioning",
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "IAMPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole",
+                "iam:GetRole",
+                "iam:ListRoles",
+                "iam:CreateRole",
+                "iam:AttachRolePolicy",
+                "iam:PutRolePolicy"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudFormationPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:*",
+                "cloudformation:CreateStack",
+                "cloudformation:DeleteStack",
+                "cloudformation:DescribeStacks",
+                "cloudformation:ListStacks",
+                "cloudformation:UpdateStack"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "LogsPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "logs:*",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ElasticBeanstalkPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "elasticbeanstalk:*",
+                "elasticbeanstalk:CreateApplication",
+                "elasticbeanstalk:DeleteApplication",
+                "elasticbeanstalk:DescribeApplications",
+                "elasticbeanstalk:CreateEnvironment",
+                "elasticbeanstalk:DeleteEnvironment",
+                "elasticbeanstalk:DescribeEnvironments",
+                "elasticbeanstalk:UpdateEnvironment"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

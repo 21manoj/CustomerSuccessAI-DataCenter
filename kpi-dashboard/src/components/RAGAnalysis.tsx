@@ -33,8 +33,8 @@ interface RAGResponse {
   relevant_results: Array<{
     similarity: number;
     text: string;
-    metadata: {
-      type: string;
+    metadata?: {
+      type?: string;
       account_id?: number;
       account_name?: string;
       revenue?: number;
@@ -76,7 +76,7 @@ const RAGAnalysis: React.FC = () => {
   const [customQuery, setCustomQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<QueryTemplate | null>(null);
   const [isKnowledgeBaseBuilt, setIsKnowledgeBaseBuilt] = useState(false);
-  const [vectorDb, setVectorDb] = useState<'faiss' | 'qdrant' | 'historical' | 'temporal'>('qdrant');
+  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal'>('working');
   const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
   const statusCheckRef = useRef<boolean>(false);
 
@@ -447,6 +447,23 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-temporal/build';
       } else if (vectorDb === 'qdrant') {
         endpoint = '/api/rag-qdrant/build';
+      } else if (vectorDb === 'working') {
+        // Direct RAG doesn't need build, just check status
+        const statusResponse = await fetch('/api/direct-rag/status', {
+          method: 'GET',
+          headers: {
+            'X-Customer-ID': session.customer_id.toString()
+          }
+        });
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          setIsKnowledgeBaseBuilt(true);
+          setError('');
+          return;
+        } else {
+          throw new Error('Failed to check direct RAG status');
+        }
       } else {
         endpoint = '/api/rag-openai/build';
       }
@@ -497,6 +514,8 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-temporal/query';
       } else if (vectorDb === 'qdrant') {
         endpoint = '/api/rag-qdrant/query';
+      } else if (vectorDb === 'working') {
+        endpoint = '/api/direct-rag/query';
       } else {
         endpoint = '/api/rag-openai/query';
       }
@@ -582,10 +601,11 @@ const RAGAnalysis: React.FC = () => {
             <label className="text-sm font-medium text-gray-700">Analysis Type:</label>
             <select
               value={vectorDb}
-              onChange={(e) => setVectorDb(e.target.value as 'faiss' | 'qdrant' | 'historical' | 'temporal')}
+              onChange={(e) => setVectorDb(e.target.value as 'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal')}
               className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isBuilding}
             >
+              <option value="working">Working RAG System</option>
               <option value="qdrant">Current Data (Qdrant)</option>
               <option value="faiss">Current Data (FAISS)</option>
               <option value="historical">Historical Analysis</option>
@@ -798,24 +818,24 @@ const RAGAnalysis: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-medium text-gray-500">
-                                {result.metadata.type === 'kpi_temporal' ? 'Historical KPI' : 
-                                 result.metadata.type === 'health_trend' ? 'Health Trend' :
-                                 result.metadata.type === 'kpi' ? 'KPI' : 'Account'}
+                                {result.metadata?.type === 'kpi_temporal' ? 'Historical KPI' : 
+                                 result.metadata?.type === 'health_trend' ? 'Health Trend' :
+                                 result.metadata?.type === 'kpi' ? 'KPI' : 'Account'}
                               </span>
                               <span className="text-xs text-gray-400">
                                 Similarity: {(result.similarity * 100).toFixed(1)}%
                               </span>
-                              {result.metadata.trend_direction && (
+                              {result.metadata?.trend_direction && (
                                 <span className={`text-xs px-2 py-1 rounded ${
-                                  result.metadata.trend_direction === 'increasing' ? 'bg-green-100 text-green-800' :
-                                  result.metadata.trend_direction === 'decreasing' ? 'bg-red-100 text-red-800' :
+                                  result.metadata?.trend_direction === 'increasing' ? 'bg-green-100 text-green-800' :
+                                  result.metadata?.trend_direction === 'decreasing' ? 'bg-red-100 text-red-800' :
                                   'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {result.metadata.trend_direction}
+                                  {result.metadata?.trend_direction}
                                 </span>
                               )}
                             </div>
-                            {result.metadata.account_name && (
+                            {result.metadata?.account_name && (
                               <div className="text-sm font-medium text-gray-900">
                                 {result.metadata.account_name}
                                 {result.metadata.revenue && (
@@ -825,19 +845,19 @@ const RAGAnalysis: React.FC = () => {
                                 )}
                               </div>
                             )}
-                            {result.metadata.kpi_parameter && (
+                            {result.metadata?.kpi_parameter && (
                               <div className="text-sm text-gray-700">
                                 {result.metadata.kpi_parameter}: {result.metadata.data}
                               </div>
                             )}
-                            {result.metadata.trend_strength && (
+                            {result.metadata?.trend_strength && (
                               <div className="text-xs text-gray-600 mt-1">
                                 Trend Strength: {(result.metadata.trend_strength * 100).toFixed(1)}% | 
                                 Volatility: {result.metadata.volatility ? (result.metadata.volatility * 100).toFixed(1) : 'N/A'}% | 
                                 Data Points: {result.metadata.data_points || 'N/A'}
                               </div>
                             )}
-                            {result.metadata.date_range && (
+                            {result.metadata?.date_range && (
                               <div className="text-xs text-gray-500 mt-1">
                                 Period: {result.metadata.date_range}
                               </div>
