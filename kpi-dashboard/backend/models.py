@@ -127,4 +127,83 @@ class KPITimeSeries(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     
     # Ensure unique combination of kpi, month, and year
-    __table_args__ = (db.UniqueConstraint('kpi_id', 'month', 'year', name='unique_kpi_month_year'),) 
+    __table_args__ = (db.UniqueConstraint('kpi_id', 'month', 'year', name='unique_kpi_month_year'),)
+
+class PlaybookTrigger(db.Model):
+    __tablename__ = 'playbook_triggers'
+    trigger_id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False)
+    playbook_type = db.Column(db.String(50), nullable=False)  # 'voc', 'activation', 'sla', 'renewal', 'expansion'
+    trigger_config = db.Column(db.Text)  # JSON string of trigger configuration
+    auto_trigger_enabled = db.Column(db.Boolean, default=False)
+    last_evaluated = db.Column(db.DateTime)
+    last_triggered = db.Column(db.DateTime)
+    trigger_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Ensure unique combination of customer and playbook type
+    __table_args__ = (db.UniqueConstraint('customer_id', 'playbook_type', name='unique_customer_playbook'),)
+
+class PlaybookExecution(db.Model):
+    __tablename__ = 'playbook_executions'
+    id = db.Column(db.Integer, primary_key=True)
+    execution_id = db.Column(db.String(36), nullable=False, unique=True, index=True)  # UUID
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=True, index=True)
+    playbook_id = db.Column(db.String(50), nullable=False, index=True)  # 'voc-sprint', 'activation-blitz', etc.
+    
+    # Execution status
+    status = db.Column(db.String(20), default='in-progress')  # 'in-progress', 'completed', 'failed', 'cancelled'
+    current_step = db.Column(db.String(100))
+    
+    # Execution data stored as JSON
+    execution_data = db.Column(db.JSON, nullable=False)  # Full execution object with context, results, metadata
+    
+    # Timestamps
+    started_at = db.Column(db.DateTime, nullable=False)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Relationship to reports (cascade delete)
+    reports = db.relationship('PlaybookReport', backref='execution', cascade='all, delete-orphan', passive_deletes=True)
+    
+    # Indexes for common queries
+    __table_args__ = (
+        db.Index('idx_customer_playbook_exec', 'customer_id', 'playbook_id'),
+        db.Index('idx_account_playbook_exec', 'account_id', 'playbook_id'),
+        db.Index('idx_status', 'status'),
+    )
+
+class PlaybookReport(db.Model):
+    __tablename__ = 'playbook_reports'
+    report_id = db.Column(db.Integer, primary_key=True)
+    execution_id = db.Column(db.String(36), db.ForeignKey('playbook_executions.execution_id', ondelete='CASCADE'), nullable=False, unique=True, index=True)  # UUID
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=True, index=True)
+    playbook_id = db.Column(db.String(50), nullable=False, index=True)  # 'voc-sprint', 'activation-blitz', etc.
+    playbook_name = db.Column(db.String(100), nullable=False)
+    account_name = db.Column(db.String(200))
+    status = db.Column(db.String(20), default='in-progress')  # 'in-progress', 'completed', 'failed'
+    
+    # Report data stored as JSON
+    report_data = db.Column(db.JSON, nullable=False)  # Full report with RACI, outcomes, exit criteria
+    
+    # Metadata
+    duration = db.Column(db.String(50))  # '30 days', '90 days', etc.
+    steps_completed = db.Column(db.Integer, default=0)
+    total_steps = db.Column(db.Integer)
+    
+    # Timestamps
+    started_at = db.Column(db.DateTime, nullable=False)
+    completed_at = db.Column(db.DateTime)
+    report_generated_at = db.Column(db.DateTime, server_default=db.func.now())
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Indexes for common queries
+    __table_args__ = (
+        db.Index('idx_customer_playbook', 'customer_id', 'playbook_id'),
+        db.Index('idx_account_playbook', 'account_id', 'playbook_id'),
+    ) 

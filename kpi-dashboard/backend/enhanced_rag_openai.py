@@ -2,6 +2,7 @@
 """
 Enhanced RAG System with OpenAI GPT-4 and FAISS
 Provides advanced KPI and account analysis capabilities with multi-tenant support
+Includes query caching to reduce API costs
 """
 
 import os
@@ -13,7 +14,8 @@ from datetime import datetime
 import openai
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
-from models import db, KPI, Account, KPIUpload, CustomerConfig
+from models import db, KPI, Account, KPIUpload, CustomerConfig, PlaybookReport
+from query_cache import get_query_cache, cache_query_result, get_cached_query_result
 
 # Load environment variables
 load_dotenv()
@@ -190,9 +192,16 @@ class EnhancedRAGSystemOpenAI:
         print(f"✅ FAISS index built with {len(all_embeddings)} vectors for customer {self.customer_id}")
     
     def query(self, query_text: str, query_type: str = 'general') -> Dict[str, Any]:
-        """Query the enhanced RAG system using OpenAI"""
+        """Query the enhanced RAG system using OpenAI with caching"""
         if not self.faiss_index:
             return {'error': 'Knowledge base not built'}
+        
+        # Check cache first
+        cached_result = get_cached_query_result(self.customer_id, query_text, query_type)
+        if cached_result:
+            cached_result['cache_hit'] = True
+            cached_result['cost'] = '$0.00'
+            return cached_result
         
         # Generate query embedding
         query_embedding = self.embedding_model.encode([query_text])[0].reshape(1, -1).astype('float32')
@@ -210,18 +219,31 @@ class EnhancedRAGSystemOpenAI:
                     'metadata': self.index_metadata[idx]
                 })
         
-        # Generate response using OpenAI
+        # Generate response using OpenAI (expensive operation)
         response = self._generate_openai_response(query_text, relevant_results, query_type)
         
-        return {
+        # Check if playbook context was used
+        account_id = self._extract_account_id_from_query(query_text)
+        playbook_context = self._get_playbook_context(account_id)
+        
+        result = {
             'query': query_text,
             'query_type': query_type,
             'customer_id': self.customer_id,
             'results_count': len(relevant_results),
             'similarity_threshold': self.similarity_threshold,
             'response': response,
-            'relevant_results': relevant_results[:5]  # Limit for response
+            'relevant_results': relevant_results[:5],  # Limit for response
+            'cache_hit': False,
+            'cost': '$0.02',
+            'playbook_enhanced': bool(playbook_context),  # Track if playbook data was used
+            'enhancement_source': 'playbook_reports' if playbook_context else None
         }
+        
+        # Cache the result for future queries
+        cache_query_result(self.customer_id, query_text, result, query_type)
+        
+        return result
     
     def _generate_openai_response(self, query: str, results: List[Dict], query_type: str) -> str:
         """Generate response using OpenAI GPT-4"""
@@ -230,6 +252,13 @@ class EnhancedRAGSystemOpenAI:
         
         # Prepare context from results
         context = self._prepare_context(results)
+        
+        # Add playbook insights context
+        account_id = self._extract_account_id_from_query(query)
+        playbook_context = self._get_playbook_context(account_id)
+        
+        if playbook_context:
+            context += playbook_context
         
         # Create system prompt based on query type
         if query_type == 'revenue_analysis':
@@ -245,8 +274,10 @@ class EnhancedRAGSystemOpenAI:
             Analyze KPI performance, trends, and impact levels to provide insights about business metrics and recommendations.
             Focus on performance optimization and strategic insights."""
         else:
-            system_prompt = """You are a business intelligence analyst. 
+            system_prompt = """You are a business intelligence analyst with access to both real-time KPI data and historical playbook execution insights. 
             Analyze the provided data to answer questions about business performance, KPIs, and customer insights.
+            When playbook insights are available, use them to provide evidence-based recommendations with specific outcomes, metrics, and action plans.
+            Cite specific playbook results when relevant (e.g., 'According to the VoC Sprint completed on [date]...').
             Provide comprehensive analysis with specific recommendations."""
         
         user_prompt = f"""
@@ -256,8 +287,9 @@ class EnhancedRAGSystemOpenAI:
         {context}
         
         Please provide a comprehensive analysis and answer to the query based on the available data.
+        {"When referencing playbook insights, cite specific outcomes with metrics and dates." if playbook_context else ""}
         Include specific insights, recommendations, and relevant metrics where applicable.
-        Format your response in a clear, actionable manner.
+        Format your response in a clear, actionable manner with concrete examples where available.
         """
         
         try:
@@ -296,6 +328,96 @@ class EnhancedRAGSystemOpenAI:
                 """)
         
         return "\n".join(context_parts)
+    
+    def _get_playbook_context(self, account_id: Optional[int] = None) -> str:
+        """Get recent playbook insights for query context enrichment"""
+        try:
+            query = PlaybookReport.query.filter_by(customer_id=self.customer_id)
+            
+            if account_id:
+                query = query.filter_by(account_id=account_id)
+                print(f"🔍 Fetching playbook reports for customer {self.customer_id}, account {account_id}")
+            else:
+                print(f"🔍 Fetching playbook reports for customer {self.customer_id} (all accounts)")
+            
+            # Get last 3 reports
+            reports = query.order_by(PlaybookReport.report_generated_at.desc()).limit(3).all()
+            
+            if not reports:
+                print(f"⚠️  No playbook reports found")
+                return ""
+            
+            print(f"✓ Found {len(reports)} playbook report(s)")
+            
+            context = "\n\n=== RECENT PLAYBOOK INSIGHTS ===\n"
+            context += f"(Based on {len(reports)} recent playbook executions)\n"
+            
+            for report in reports:
+                data = report.report_data
+                playbook_name = data.get('playbook_name', 'Unknown Playbook')
+                account_name = report.account_name or 'All Accounts'
+                report_date = report.report_generated_at.strftime('%Y-%m-%d') if report.report_generated_at else 'Unknown'
+                
+                context += f"\n📊 {playbook_name} - {account_name} ({report_date}):\n"
+                
+                # Add executive summary (truncated)
+                exec_summary = data.get('executive_summary', '')
+                if exec_summary:
+                    context += f"Summary: {exec_summary[:200]}...\n"
+                
+                # Add key outcomes
+                outcomes = data.get('outcomes_achieved', {})
+                if outcomes:
+                    context += "Key Outcomes:\n"
+                    count = 0
+                    for outcome_key, outcome_data in outcomes.items():
+                        if count >= 2:  # Limit to 2 outcomes per report
+                            break
+                        if isinstance(outcome_data, dict):
+                            improvement = outcome_data.get('improvement', 'N/A')
+                            status = outcome_data.get('status', 'Unknown')
+                            context += f"  • {outcome_key}: {improvement} ({status})\n"
+                            count += 1
+                
+                # Add top next step
+                next_steps = data.get('next_steps', [])
+                if next_steps:
+                    context += f"Next Step: {next_steps[0]}\n"
+            
+            context += "\n(Use these insights to provide evidence-based recommendations)\n"
+            return context
+            
+        except Exception as e:
+            print(f"Warning: Could not fetch playbook context: {e}")
+            return ""
+    
+    def _extract_account_id_from_query(self, query: str) -> Optional[int]:
+        """Try to extract account ID or name from query for account-specific context"""
+        try:
+            query_lower = query.lower()
+            
+            # Try to find account by name in query
+            accounts = Account.query.filter_by(customer_id=self.customer_id).all()
+            
+            # First pass: exact match
+            for account in accounts:
+                if account.account_name.lower() in query_lower:
+                    return account.account_id
+            
+            # Second pass: partial match (e.g., "TechCorp" matches "TechCorp Solutions")
+            # Split account names into words and check if any significant word matches
+            for account in accounts:
+                account_words = account.account_name.lower().split()
+                for word in account_words:
+                    # Only match significant words (length > 3 to avoid common words)
+                    if len(word) > 3 and word in query_lower:
+                        print(f"✓ Matched '{word}' from '{account.account_name}' in query")
+                        return account.account_id
+            
+            return None
+        except Exception as e:
+            print(f"Warning: Could not extract account ID: {e}")
+            return None
     
     def analyze_revenue_drivers(self, customer_id: int) -> Dict[str, Any]:
         """Analyze revenue drivers across accounts"""

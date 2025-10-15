@@ -33,3 +33,4 @@ else
     echo "🔧 Check the logs and ensure the backend is running."
     exit 1
 fi
+

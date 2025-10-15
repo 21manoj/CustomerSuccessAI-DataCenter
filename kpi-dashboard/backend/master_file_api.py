@@ -108,18 +108,46 @@ def upload_master_file():
 @master_file_api.route('/api/master-file/weights', methods=['GET'])
 def get_category_weights():
     """Get current category weights for the customer"""
-    # For now, return default weights until database schema is fixed
-    default_weights = {
-        "Product Usage KPI": 0.3,
-        "Support KPI": 0.2,
-        "Customer Sentiment KPI": 0.2,
-        "Business Outcomes KPI": 0.15,
-        "Relationship Strength KPI": 0.15
-    }
-    return jsonify({
-        'category_weights': default_weights,
-        'source': 'default'
-    })
+    try:
+        customer_id = get_customer_id()
+        
+        # Get customer configuration
+        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        
+        if config and config.category_weights:
+            # Parse stored weights
+            weights = json.loads(config.category_weights)
+            return jsonify({
+                'category_weights': weights,
+                'source': 'customer_config'
+            })
+        else:
+            # Return default weights if no config
+            default_weights = {
+                "Relationship Strength": 0.20,
+                "Adoption & Engagement": 0.25,
+                "Support & Experience": 0.20,
+                "Product Value": 0.20,
+                "Business Outcomes": 0.15
+            }
+            return jsonify({
+                'category_weights': default_weights,
+                'source': 'default'
+            })
+    except Exception as e:
+        # Fallback to default on error
+        default_weights = {
+            "Relationship Strength": 0.20,
+            "Adoption & Engagement": 0.25,
+            "Support & Experience": 0.20,
+            "Product Value": 0.20,
+            "Business Outcomes": 0.15
+        }
+        return jsonify({
+            'category_weights': default_weights,
+            'source': 'default',
+            'error': str(e)
+        })
 
 @master_file_api.route('/api/master-file/test', methods=['GET'])
 def test_master_file_api():

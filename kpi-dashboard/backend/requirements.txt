@@ -12,4 +12,5 @@ anthropic
 faiss-cpu
 openai
 python-dotenv
-qdrant-client 
+qdrant-client
+watchdog 

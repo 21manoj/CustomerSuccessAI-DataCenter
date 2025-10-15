@@ -4,7 +4,7 @@ Direct RAG API - Bypasses vector search issues
 """
 
 from flask import Blueprint, request, jsonify, abort
-from models import db, KPI, Account, KPIUpload
+from models import db, KPI, Account, KPIUpload, PlaybookReport
 from sqlalchemy import text
 import openai
 
@@ -19,6 +19,97 @@ def get_customer_id():
         return int(cid)
     except Exception:
         abort(400, 'Invalid X-Customer-ID header')
+
+
+def get_playbook_context(customer_id, query_text):
+    """Get recent playbook insights for context enrichment"""
+    try:
+        # Try to extract account from query
+        query_lower = query_text.lower()
+        account_id = None
+        
+        # Find account by name in query
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        for account in accounts:
+            # Exact match
+            if account.account_name.lower() in query_lower:
+                account_id = account.account_id
+                break
+        
+        # Partial match (word-based)
+        if not account_id:
+            for account in accounts:
+                account_words = account.account_name.lower().split()
+                for word in account_words:
+                    if len(word) > 3 and word in query_lower:
+                        account_id = account.account_id
+                        print(f"✓ Matched '{word}' from '{account.account_name}' in query")
+                        break
+                if account_id:
+                    break
+        
+        # Query playbook reports
+        query = PlaybookReport.query.filter_by(customer_id=customer_id)
+        if account_id:
+            query = query.filter_by(account_id=account_id)
+            print(f"🔍 Fetching playbook reports for customer {customer_id}, account {account_id}")
+        else:
+            print(f"🔍 Fetching playbook reports for customer {customer_id} (all accounts)")
+        
+        reports = query.order_by(PlaybookReport.report_generated_at.desc()).limit(3).all()
+        
+        if not reports:
+            print(f"⚠️  No playbook reports found")
+            return None
+        
+        print(f"✓ Found {len(reports)} playbook report(s)")
+        
+        # Build context
+        context = "\n\n=== RECENT PLAYBOOK INSIGHTS ===\n"
+        context += f"(Based on {len(reports)} recent playbook executions)\n"
+        
+        for report in reports:
+            data = report.report_data
+            playbook_name = data.get('playbook_name', 'Unknown Playbook')
+            account_name = report.account_name or 'All Accounts'
+            report_date = report.report_generated_at.strftime('%Y-%m-%d') if report.report_generated_at else 'Unknown'
+            
+            context += f"\n📊 {playbook_name} - {account_name} ({report_date}):\n"
+            
+            # Add executive summary (truncated)
+            exec_summary = data.get('executive_summary', '')
+            if exec_summary:
+                context += f"Summary: {exec_summary[:250]}...\n"
+            
+            # Add key outcomes
+            outcomes = data.get('outcomes_achieved', {})
+            if outcomes:
+                context += "Key Outcomes:\n"
+                count = 0
+                for outcome_key, outcome_data in outcomes.items():
+                    if count >= 3:  # Show top 3 outcomes
+                        break
+                    if isinstance(outcome_data, dict):
+                        baseline = outcome_data.get('baseline', 'N/A')
+                        current = outcome_data.get('current', 'N/A')
+                        improvement = outcome_data.get('improvement', 'N/A')
+                        status = outcome_data.get('status', 'Unknown')
+                        context += f"  • {outcome_key}: {baseline} → {current} ({improvement}) - {status}\n"
+                        count += 1
+            
+            # Add top 2 next steps
+            next_steps = data.get('next_steps', [])
+            if next_steps:
+                context += "Priority Actions:\n"
+                for i, step in enumerate(next_steps[:2]):
+                    context += f"  {i+1}. {step}\n"
+        
+        context += "\n(Use these playbook insights to provide evidence-based, action-oriented recommendations)\n"
+        return context
+        
+    except Exception as e:
+        print(f"Warning: Could not fetch playbook context: {e}")
+        return None
 
 @direct_rag_api.route('/api/direct-rag/query', methods=['POST'])
 def direct_query():
@@ -77,6 +168,12 @@ def direct_query():
         context_data.append("=== END TIME SERIES DATA ===")
         print(f"Added comprehensive time series data to context. Total context items: {len(context_data)}")
         
+        # Add playbook insights context
+        playbook_context = get_playbook_context(customer_id, query_text)
+        if playbook_context:
+            context_data.append(playbook_context)
+            print(f"✓ Added playbook insights context")
+        
         # Generate AI response
         try:
             client = openai.OpenAI(api_key="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")
@@ -85,7 +182,15 @@ def direct_query():
             
             system_prompt = f"""
             You are an AI assistant analyzing KPI and account data for a customer success platform.
-            Based on the provided data, answer the user's query with specific insights and recommendations.
+            You have access to both real-time KPI data and historical playbook execution insights.
+            
+            When playbook insights are available, prioritize them in your response:
+            - Cite specific playbook names and dates
+            - Reference concrete outcomes with before/after metrics
+            - Include action plans and next steps from playbook reports
+            - Connect playbook results to current KPI trends
+            
+            Provide evidence-based, action-oriented recommendations with specific metrics.
             """
             
             user_prompt = f"""
@@ -153,7 +258,9 @@ def direct_query():
             'results_count': len(kpis) + len(accounts),
             'relevant_results': relevant_results,
             'response': ai_response,
-            'similarity_threshold': 0.0
+            'similarity_threshold': 0.0,
+            'playbook_enhanced': bool(playbook_context),
+            'enhancement_source': 'playbook_reports' if playbook_context else None
         })
         
     except Exception as e:

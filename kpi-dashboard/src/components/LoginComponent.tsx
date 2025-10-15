@@ -56,12 +56,26 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-            <TrendingUp className="h-8 w-8 text-white" />
+        <div className="text-center flex flex-col items-center">
+          {/* Company Logo - Replace with your company logo */}
+          <div className="mx-auto mb-6">
+            <img 
+              src="/company-logo.png" 
+              alt="Company Logo" 
+              className="h-32 w-auto object-contain"
+              onError={(e) => {
+                // Fallback to gradient icon if logo not found
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="h-24 w-24 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl items-center justify-center mx-auto" style={{display: 'none'}}>
+              <TrendingUp className="h-12 w-12 text-white" />
+            </div>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">GrowthCS</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to your account dashboard</p>
+          <h2 className="text-2xl font-bold text-gray-900 text-center">Customer Success Value Management System</h2>
+          <p className="mt-2 text-sm text-gray-600 text-center">A Triad Partner AI Solution</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">

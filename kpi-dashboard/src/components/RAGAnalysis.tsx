@@ -588,7 +588,7 @@ const RAGAnalysis: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Brain className="h-8 w-8 text-blue-600" />
-            AI-Powered RAG Analysis
+            AI Insights
           </h2>
           <p className="text-gray-600 mt-1">
             Ask intelligent questions about your KPI and account data, including historical trends and temporal analysis
@@ -665,13 +665,13 @@ const RAGAnalysis: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Query Templates */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-yellow-500" />
               Quick Query Templates
             </h3>
             
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto" style={{maxHeight: 'calc(100vh - 250px)'}}>
               {Object.entries(templatesByCategory).map(([category, templates]) => (
                 <div key={category}>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">{category}</h4>

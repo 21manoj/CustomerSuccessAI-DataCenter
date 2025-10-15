@@ -8,7 +8,17 @@ import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
+# Use local path for development, Docker path for production
+import os
+if os.path.exists('/app/instance'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
+else:
+    # Local development
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    instance_path = os.path.join(os.path.dirname(basedir), 'instance')
+    os.makedirs(instance_path, exist_ok=True)
+    db_path = os.path.join(instance_path, 'kpi_dashboard.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -44,6 +54,15 @@ from kpi_reference_api import kpi_reference_api
 from reference_ranges_api import reference_ranges_api
 from financial_projections_api import financial_projections_api
 from best_practices_api import best_practices_api
+from analytics_api import analytics_api
+from unified_query_api import unified_query_api
+from cache_api import cache_api
+from playbook_triggers_api import playbook_triggers_api
+from playbook_execution_api import playbook_execution_api
+from playbook_reports_api import playbook_reports_api
+from playbook_recommendations_api import playbook_recommendations_api
+from feature_toggle_api import feature_toggle_api
+from registration_api import registration_api
 
 # Initialize Chroma client and collection for KPI VDB (lazy loading)
 global_chroma_client = None
@@ -92,6 +111,15 @@ app.register_blueprint(kpi_reference_api)
 app.register_blueprint(reference_ranges_api)
 app.register_blueprint(financial_projections_api)
 app.register_blueprint(best_practices_api)
+app.register_blueprint(analytics_api)
+app.register_blueprint(unified_query_api)
+app.register_blueprint(cache_api)
+app.register_blueprint(playbook_triggers_api)
+app.register_blueprint(playbook_execution_api)
+app.register_blueprint(playbook_reports_api)
+app.register_blueprint(playbook_recommendations_api)
+app.register_blueprint(feature_toggle_api)
+app.register_blueprint(registration_api)
 
 @app.route('/')
 def home():

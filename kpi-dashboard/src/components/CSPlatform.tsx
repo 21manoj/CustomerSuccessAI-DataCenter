@@ -28,6 +28,9 @@ import {
 } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
 import RAGAnalysis from './RAGAnalysis';
+import SettingsModal from './Settings';
+import Playbooks from './Playbooks';
+import PlaybookReports from './PlaybookReports';
 
 interface KPI {
   kpi_id: number;
@@ -89,6 +92,7 @@ const CSPlatform = () => {
   const { session, logout } = useSession();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [isUploading, setIsUploading] = useState(false);
   const [showKPITable, setShowKPITable] = useState(false);
@@ -1180,16 +1184,16 @@ const CSPlatform = () => {
     icon: React.ComponentType<{ className?: string }>;
     color: string;
   }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200/60 p-6 hover:shadow-xl hover:border-blue-300/50 transition-all duration-300 hover:-translate-y-1">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
-          <div className="flex items-center mt-2">
+          <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+          <div className="flex items-center mt-3">
             {trend === 'up' && <ArrowUp className="h-4 w-4 text-green-500 mr-1" />}
             {trend === 'down' && <ArrowDown className="h-4 w-4 text-red-500 mr-1" />}
             {trend === 'stable' && <Minus className="h-4 w-4 text-gray-500 mr-1" />}
-            <span className={`text-sm font-medium ${
+            <span className={`text-sm font-semibold ${
               trend === 'up' ? 'text-green-600' : 
               trend === 'down' ? 'text-red-600' : 'text-gray-600'
             }`}>
@@ -1197,8 +1201,8 @@ const CSPlatform = () => {
             </span>
           </div>
         </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="h-6 w-6 text-white" />
+        <div className={`p-4 rounded-xl ${color} shadow-md`}>
+          <Icon className="h-7 w-7 text-white" />
         </div>
       </div>
     </div>
@@ -1306,24 +1310,6 @@ const CSPlatform = () => {
             <p className="text-sm font-medium text-gray-900">Auto Sync</p>
             <p className="text-xs text-gray-500">FiveTran, Zapier</p>
           </div>
-        </div>
-
-        {/* Account Name Input */}
-        <div className="mb-6">
-          <label htmlFor="accountName" className="block text-sm font-medium text-gray-700 mb-2">
-            Account Name for KPI Data
-          </label>
-          <input
-            id="accountName"
-            type="text"
-            value={uploadAccountName}
-            onChange={(e) => setUploadAccountName(e.target.value)}
-            placeholder="Enter account name (e.g., TechCorp Solutions)"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <p className="text-xs text-gray-600 mt-1">
-            Enter a unique account name. The system will check for duplicates and create a new account if needed.
-          </p>
         </div>
 
         {isUploading && (
@@ -1778,31 +1764,23 @@ const CSPlatform = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/20">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 shadow-md px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-2">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-              <h1 className="ml-3 text-xl font-bold text-gray-900">GrowthCS</h1>
-            </div>
-            <div className="hidden md:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-              <select 
-                value={selectedAccount?.account_name || 'All Accounts'}
-                onChange={(e) => {
-                  const account = accounts.find(acc => acc.account_name === e.target.value);
-                  setSelectedAccount(account || null);
-                }}
-                className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700"
-              >
-                <option value="All Accounts">All Accounts</option>
-                {accounts.map(account => (
-                  <option key={account.account_id} value={account.account_name}>{account.account_name}</option>
-                ))}
-              </select>
+          <div className="flex items-center space-x-4 flex-1">
+            {/* Company Logo */}
+            <img 
+              src="/company-logo.png" 
+              alt="Company Logo" 
+              className="h-14 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            {/* Centered Title */}
+            <div className="flex-1 text-center">
+              <h1 className="text-xl font-bold text-gray-900">Customer Success Value Management System - A Triad Partner AI Solution</h1>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -1814,45 +1792,42 @@ const CSPlatform = () => {
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </button>
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-medium">CS</span>
-            </div>
           </div>
         </div>
       </header>
 
       <div className="flex">
         {/* Sidebar */}
-        <nav className="w-64 bg-white border-r border-gray-200 px-4 py-6">
-          <div className="space-y-1">
+        <nav className="w-64 bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 shadow-sm px-4 py-6">
+          <div className="space-y-2">
                     {[
-          { id: 'dashboard', label: 'Growth Dashboard', icon: BarChart3 },
+          { id: 'dashboard', label: 'Customer Success Performance Console', icon: BarChart3 },
           { id: 'upload', label: 'Data Integration', icon: Upload },
-          { id: 'analytics', label: 'KPI Analytics', icon: Activity },
+          { id: 'analytics', label: 'Customer Success Value Analytics', icon: Activity },
           { id: 'accounts', label: 'Account Health', icon: Users },
-          { id: 'rag-analysis', label: 'RAG Analysis', icon: MessageSquare },
-          { id: 'insights', label: 'AI Insights', icon: MessageSquare },
+          { id: 'rag-analysis', label: 'AI Insights', icon: MessageSquare },
+          { id: 'insights', label: 'Playbooks', icon: MessageSquare },
           { id: 'settings', label: 'Settings', icon: Settings },
           { id: 'reports', label: 'Reports', icon: FileText }
         ].map(item => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                   activeTab === item.id 
-                    ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
-                    : 'text-gray-600 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md transform scale-105' 
+                    : 'text-gray-700 hover:bg-white hover:shadow-sm hover:text-blue-600'
                 }`}
               >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.label}
+                <item.icon className={`h-5 w-5 mr-3 ${activeTab === item.id ? 'text-white' : ''}`} />
+                <span className="font-medium text-sm">{item.label}</span>
               </button>
             ))}
           </div>
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-8 bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* Header Stats */}
@@ -1883,7 +1858,7 @@ const CSPlatform = () => {
                 />
                 <MetricCard 
                   title="Health Score"
-                  value={`${Math.round(accounts.reduce((acc, a) => acc + a.health_score, 0) / Math.max(accounts.length, 1))}/100`}
+                  value={rollupResults ? `${Math.round(rollupResults.overall_score)}/100` : `${Math.round(accounts.reduce((acc, a) => acc + a.health_score, 0) / Math.max(accounts.length, 1))}/100`}
                   change="Average"
                   trend="stable"
                   icon={AlertTriangle}
@@ -1895,9 +1870,12 @@ const CSPlatform = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                   {/* Corporate Health Rollup */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="bg-white rounded-xl shadow-lg border-2 border-blue-100/50 p-6 hover:shadow-xl transition-all duration-300">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Corporate Health Rollup</h3>
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                        <div className="h-1 w-1 bg-blue-600 rounded-full mr-2"></div>
+                        Corporate Health Rollup
+                      </h3>
                       <button 
                         onClick={calculateCorporateRollup}
                         disabled={isCalculatingRollup}
@@ -2007,8 +1985,6 @@ const CSPlatform = () => {
                 </div>
 
                 <div className="space-y-6">
-                  <RAGQueryInterface />
-                  
                   {/* Account Health Summary */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Health Summary</h3>
@@ -2605,19 +2581,23 @@ const CSPlatform = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-blue-700 font-medium">Total Data Points:</span>
-                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.total_data_points.toLocaleString()}</span>
+                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.total_data_points?.toLocaleString() || '0'}</span>
                           </div>
                           <div>
                             <span className="text-blue-700 font-medium">Date Range:</span>
-                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.date_range.oldest} to {timeSeriesStats.date_range.newest}</span>
+                            <span className="ml-2 text-blue-900 font-bold">
+                              {timeSeriesStats.date_range ? 
+                                `${timeSeriesStats.date_range.oldest} to ${timeSeriesStats.date_range.newest}` : 
+                                'N/A'}
+                            </span>
                           </div>
                           <div>
                             <span className="text-blue-700 font-medium">Health Trends:</span>
-                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.health_trend_records}</span>
+                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.health_trend_records || '0'}</span>
                           </div>
                           <div>
                             <span className="text-blue-700 font-medium">KPI Time Series:</span>
-                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.kpi_time_series_records.toLocaleString()}</span>
+                            <span className="ml-2 text-blue-900 font-bold">{timeSeriesStats.kpi_time_series_records?.toLocaleString() || '0'}</span>
                           </div>
                         </div>
                       </div>
@@ -2715,6 +2695,10 @@ const CSPlatform = () => {
           {activeTab === 'rag-analysis' && <RAGAnalysis />}
 
           {activeTab === 'insights' && (
+            <Playbooks customerId={session.customer_id} />
+          )}
+
+          {activeTab === 'playbooks' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900">AI-Powered Business Insights</h2>
               <RAGQueryInterface />
@@ -2756,7 +2740,16 @@ const CSPlatform = () => {
 
                   {activeTab === 'settings' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Settings & Configuration</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Settings & Configuration</h2>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Advanced Settings
+              </button>
+            </div>
             
             {/* Master KPI Framework Upload */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -3007,16 +3000,14 @@ const CSPlatform = () => {
           </div>
         )}
 
-        {activeTab === 'reports' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Reports & Analytics</h2>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <p className="text-gray-600">Reports dashboard coming soon...</p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'reports' && <PlaybookReports customerId={session.customer_id} />}
         </main>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 };
