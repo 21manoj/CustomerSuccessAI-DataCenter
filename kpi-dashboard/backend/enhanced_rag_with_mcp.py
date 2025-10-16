@@ -26,14 +26,17 @@ class EnhancedRAGWithMCP(EnhancedRAGSystemOpenAI):
     
     def __init__(self, customer_id: int):
         # Initialize parent RAG system (existing functionality)
-        super().__init__(customer_id)
+        super().__init__()  # Parent takes no args
+        
+        # Store customer_id for MCP
+        self.customer_id = customer_id
         
         # MCP integration
         self.mcp = MCPIntegration(customer_id)
         self.mcp_enabled = False
         self.mcp_systems = get_mcp_config(customer_id)
         
-        logger.info(f"MCP-Enhanced RAG initialized. MCP systems: {self.mcp_systems}")
+        logger.info(f"MCP-Enhanced RAG initialized for customer {customer_id}. MCP systems: {self.mcp_systems}")
     
     async def init_mcp(self):
         """Initialize MCP connections (async)"""
