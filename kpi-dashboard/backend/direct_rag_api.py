@@ -7,6 +7,11 @@ from flask import Blueprint, request, jsonify, abort
 from models import db, KPI, Account, KPIUpload, PlaybookReport
 from sqlalchemy import text
 import openai
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 direct_rag_api = Blueprint('direct_rag_api', __name__)
 
@@ -174,21 +179,42 @@ def direct_query():
             context_data.append(playbook_context)
             print(f"✓ Added playbook insights context")
         
+        # Add system playbook knowledge
+        from playbook_knowledge import format_playbook_knowledge_for_rag
+        import os
+        
+        playbook_knowledge = ""
+        # Check if query is about playbooks or improvement
+        if any(keyword in query_text.lower() for keyword in ['playbook', 'improve', 'increase', 'reduce', 'better', 'leverage', 'help', 'address']):
+            playbook_knowledge = format_playbook_knowledge_for_rag()
+        
         # Generate AI response
         try:
-            client = openai.OpenAI(api_key="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")
+            # Use environment variable for API key
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                return jsonify({'error': 'OpenAI API key not configured'}), 500
+                
+            client = openai.OpenAI(api_key=api_key)
             
             context = "\n".join(context_data)
             
+            playbook_instruction = ""
+            if playbook_knowledge:
+                playbook_instruction = "\nIMPORTANT: When recommending playbooks, ONLY suggest the 5 system-defined playbooks listed below. Do NOT make up generic playbook names."
+            
             system_prompt = f"""
             You are an AI assistant analyzing KPI and account data for a customer success platform.
-            You have access to both real-time KPI data and historical playbook execution insights.
+            You have access to:
+            1. Real-time KPI data and historical playbook execution insights
+            2. System-defined playbooks (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)
             
             When playbook insights are available, prioritize them in your response:
             - Cite specific playbook names and dates
             - Reference concrete outcomes with before/after metrics
             - Include action plans and next steps from playbook reports
             - Connect playbook results to current KPI trends
+            {playbook_instruction}
             
             Provide evidence-based, action-oriented recommendations with specific metrics.
             """
@@ -198,6 +224,8 @@ def direct_query():
             
             Available Data:
             {context}
+            
+            {playbook_knowledge}
             
             Please provide a comprehensive analysis and answer based on the available data.
             """
