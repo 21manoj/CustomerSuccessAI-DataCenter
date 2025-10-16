@@ -42,7 +42,7 @@ def build_enhanced_knowledge_base():
 
 @enhanced_rag_openai_api.route('/api/rag-openai/query', methods=['POST'])
 def enhanced_query():
-    """Query the enhanced RAG system with OpenAI GPT-4 analysis"""
+    """Query the enhanced RAG system with OpenAI GPT-4 analysis (MCP-enhanced when enabled)"""
     customer_id = get_customer_id()
     data = request.json
     
@@ -57,14 +57,48 @@ def enhanced_query():
         query_type = _detect_query_type(query_text)
     
     try:
-        rag_system = get_rag_system(customer_id)
+        # ============================================
+        # Check if MCP integration is enabled
+        # ============================================
+        from mcp_integration import is_mcp_enabled
+        mcp_enabled = is_mcp_enabled(customer_id)
         
-        # Ensure knowledge base is built
-        if not rag_system.faiss_index:
-            rag_system.build_knowledge_base(customer_id)
-        
-        # Query the enhanced RAG system
-        result = rag_system.query(query_text, query_type)
+        if mcp_enabled:
+            # Use MCP-enhanced RAG
+            try:
+                from enhanced_rag_with_mcp import EnhancedRAGWithMCP
+                rag_system = EnhancedRAGWithMCP(customer_id)
+                
+                # Ensure knowledge base is built
+                if not rag_system.faiss_index:
+                    rag_system.build_knowledge_base(customer_id)
+                
+                # Query with MCP enhancement (async)
+                result = rag_system.query_sync(query_text, query_type)
+                
+            except Exception as e:
+                # Automatic fallback to standard RAG on any MCP error
+                import logging
+                logging.error(f"MCP-enhanced RAG failed, falling back: {e}")
+                
+                rag_system = get_rag_system(customer_id)
+                if not rag_system.faiss_index:
+                    rag_system.build_knowledge_base(customer_id)
+                result = rag_system.query(query_text, query_type)
+                result['mcp_enhanced'] = False
+                result['mcp_fallback'] = True
+                result['mcp_error'] = str(e)
+        else:
+            # Use standard RAG (existing functionality)
+            rag_system = get_rag_system(customer_id)
+            
+            # Ensure knowledge base is built
+            if not rag_system.faiss_index:
+                rag_system.build_knowledge_base(customer_id)
+            
+            # Query the enhanced RAG system
+            result = rag_system.query(query_text, query_type)
+            result['mcp_enhanced'] = False
         
         return jsonify(result)
     except Exception as e:

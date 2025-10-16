@@ -23,6 +23,15 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
+  // MCP integration state
+  const [mcpEnabled, setMcpEnabled] = useState(false);
+  const [mcpConfig, setMcpConfig] = useState({
+    salesforce: false,
+    servicenow: false,
+    surveys: false
+  });
+  const [mcpStatus, setMcpStatus] = useState<any>(null);
+  
   // Playbook trigger settings state
   const [triggerSettings, setTriggerSettings] = useState<Record<string, any>>({
     voc: {
@@ -66,6 +75,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   useEffect(() => {
     fetchFeatureStatus();
     fetchTriggerSettings();
+    fetchMCPStatus();
   }, []);
 
   const fetchFeatureStatus = async () => {
@@ -247,6 +257,103 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       setError(err instanceof Error ? err.message : 'Failed to test trigger conditions');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ============================================
+  // MCP Integration Functions
+  // ============================================
+
+  const fetchMCPStatus = async () => {
+    try {
+      const customerId = sessionStorage.getItem('customer_id') || '1';
+      const response = await fetch('/api/features/mcp', {
+        headers: {
+          'X-Customer-ID': customerId
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMcpEnabled(data.enabled);
+        setMcpConfig({
+          salesforce: data.salesforce_enabled,
+          servicenow: data.servicenow_enabled,
+          surveys: data.surveys_enabled
+        });
+        setMcpStatus(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch MCP status:', err);
+    }
+  };
+
+  const toggleMCP = async (enabled: boolean) => {
+    try {
+      setSaving(true);
+      const customerId = sessionStorage.getItem('customer_id') || '1';
+      
+      const response = await fetch('/api/features/mcp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Customer-ID': customerId
+        },
+        body: JSON.stringify({
+          enabled: enabled,
+          salesforce_enabled: mcpConfig.salesforce,
+          servicenow_enabled: mcpConfig.servicenow,
+          surveys_enabled: mcpConfig.surveys
+        })
+      });
+
+      if (response.ok) {
+        setMcpEnabled(enabled);
+        setSuccess(`MCP Integration ${enabled ? 'ENABLED' : 'DISABLED'} successfully!`);
+        setTimeout(() => setSuccess(null), 5000);
+      } else {
+        throw new Error('Failed to toggle MCP');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to toggle MCP');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleMCPSystem = async (system: string, enabled: boolean) => {
+    const newConfig = { ...mcpConfig, [system]: enabled };
+    setMcpConfig(newConfig);
+
+    if (mcpEnabled) {
+      // Save immediately if MCP is enabled
+      try {
+        setSaving(true);
+        const customerId = sessionStorage.getItem('customer_id') || '1';
+        
+        const response = await fetch('/api/features/mcp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Customer-ID': customerId
+          },
+          body: JSON.stringify({
+            enabled: mcpEnabled,
+            salesforce_enabled: newConfig.salesforce,
+            servicenow_enabled: newConfig.servicenow,
+            surveys_enabled: newConfig.surveys
+          })
+        });
+
+        if (response.ok) {
+          setSuccess(`${system} ${enabled ? 'enabled' : 'disabled'} successfully!`);
+          setTimeout(() => setSuccess(null), 3000);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update system');
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -464,6 +571,195 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* MCP Integration Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            🔌 External System Integration (MCP)
+          </h3>
+          
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 mb-4">
+            <div className="flex items-start">
+              <div className="text-3xl mr-4">✨</div>
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-blue-900 mb-2">AI-Powered Real-Time Integration</h4>
+                <p className="text-sm text-blue-800 mb-3">
+                  <strong>Beta Feature:</strong> Connect your Customer Success platform to external systems for real-time AI insights.
+                  When enabled, AI queries automatically include live data from:
+                </p>
+                <ul className="text-sm text-blue-800 space-y-1 mb-3">
+                  <li>• <strong>Salesforce CRM:</strong> ARR, contracts, opportunities, account data</li>
+                  <li>• <strong>ServiceNow ITSM:</strong> Support tickets, SLA breaches, escalations</li>
+                  <li>• <strong>Survey Platform:</strong> NPS, CSAT, VoC interviews, CSM assessments</li>
+                </ul>
+                <div className="bg-blue-100 rounded p-3 mt-3">
+                  <p className="text-xs text-blue-900">
+                    <strong>⚡ Performance:</strong> Queries enhanced with real-time data typically take 2-5 seconds.
+                    <br />
+                    <strong>🔄 Rollback:</strong> Toggle OFF anytime for instant rollback to local data only.
+                    <br />
+                    <strong>🛡️ Safety:</strong> Automatic fallback to local data if external systems unavailable.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Master MCP Toggle */}
+          <div className="bg-white border-2 border-gray-200 rounded-lg p-6 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1">
+                <label className="text-base font-semibold text-gray-900 flex items-center">
+                  <span className="text-2xl mr-2">🚀</span>
+                  Enable MCP Integration
+                </label>
+                <p className="text-sm text-gray-600 mt-1">
+                  Master switch to enable/disable all external system connections
+                </p>
+              </div>
+              <button
+                onClick={() => toggleMCP(!mcpEnabled)}
+                disabled={saving}
+                className={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 ${
+                  mcpEnabled ? 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg' : 'bg-gray-300'
+                } ${saving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-xl'}`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                    mcpEnabled ? 'translate-x-9' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Status Indicator */}
+            <div className={`p-3 rounded-lg ${mcpEnabled ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+              <div className="flex items-center">
+                <div className={`h-3 w-3 rounded-full mr-2 ${mcpEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <span className="text-sm font-medium text-gray-700">
+                  {mcpEnabled ? '✅ MCP Integration Active - AI queries enhanced with real-time data' : '⚪ Using Local Database Only'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Individual System Toggles */}
+          {mcpEnabled && (
+            <div className="bg-white border-2 border-blue-200 rounded-lg p-6">
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Connected Systems</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Select which external systems to include in AI queries. You can enable/disable individual systems independently.
+              </p>
+              
+              <div className="space-y-4">
+                {/* Salesforce Toggle */}
+                <div className="flex items-start justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xl mr-2">☁️</span>
+                      <span className="text-sm font-semibold text-gray-900">Salesforce CRM</span>
+                      <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${mcpConfig.salesforce ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                        {mcpConfig.salesforce ? 'Connected' : 'Disconnected'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 ml-7">
+                      Provides: Account details, ARR, contracts, opportunities, engagement history
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={mcpConfig.salesforce}
+                    onChange={(e) => toggleMCPSystem('salesforce', e.target.checked)}
+                    disabled={saving}
+                    className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+
+                {/* ServiceNow Toggle */}
+                <div className="flex items-start justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-50 rounded-lg border border-orange-200">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xl mr-2">🎫</span>
+                      <span className="text-sm font-semibold text-gray-900">ServiceNow ITSM</span>
+                      <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${mcpConfig.servicenow ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                        {mcpConfig.servicenow ? 'Connected' : 'Disconnected'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 ml-7">
+                      Provides: Support tickets, incidents, SLA breaches, escalations, response times
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={mcpConfig.servicenow}
+                    onChange={(e) => toggleMCPSystem('servicenow', e.target.checked)}
+                    disabled={saving}
+                    className="h-5 w-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                  />
+                </div>
+
+                {/* Survey Platform Toggle */}
+                <div className="flex items-start justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xl mr-2">📋</span>
+                      <span className="text-sm font-semibold text-gray-900">Survey & Interview Platform</span>
+                      <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${mcpConfig.surveys ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                        {mcpConfig.surveys ? 'Connected' : 'Disconnected'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 ml-7">
+                      Provides: NPS scores, CSAT ratings, VoC interview feedback, CSM relationship assessments
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={mcpConfig.surveys}
+                    onChange={(e) => toggleMCPSystem('surveys', e.target.checked)}
+                    disabled={saving}
+                    className="h-5 w-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    setMcpConfig({ salesforce: true, servicenow: true, surveys: true });
+                    toggleMCP(true);
+                  }}
+                  disabled={saving || mcpEnabled}
+                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  ✅ Enable All Systems
+                </button>
+                <button
+                  onClick={() => toggleMCP(false)}
+                  disabled={saving || !mcpEnabled}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  🔄 Disable MCP (Rollback)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Warning when disabled */}
+          {!mcpEnabled && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+              <div className="flex items-start">
+                <div className="text-yellow-600 mr-2">⚠️</div>
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-800">
+                    <strong>MCP Integration is currently disabled.</strong> AI queries use your local KPI database only.
+                    Enable MCP to enhance AI with real-time data from Salesforce, ServiceNow, and survey platforms.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Playbook Triggers Section */}

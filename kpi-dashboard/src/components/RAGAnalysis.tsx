@@ -54,6 +54,17 @@ interface RAGResponse {
       previous_value?: number;
     };
   }>;
+  // MCP enhancement fields
+  mcp_enhanced?: boolean;
+  mcp_sources?: string[];
+  mcp_fallback?: boolean;
+  mcp_error?: string;
+  sources?: {
+    local_database?: boolean;
+    salesforce?: boolean;
+    servicenow?: boolean;
+    surveys?: boolean;
+  };
 }
 
 interface QueryTemplate {
@@ -783,6 +794,48 @@ const RAGAnalysis: React.FC = () => {
                   <span>Customer: {response?.customer_id || 'N/A'}</span>
                 </div>
               </div>
+
+              {/* MCP Data Source Badges */}
+              {response.mcp_enhanced && (
+                <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <span className="text-xs font-semibold text-green-800 flex items-center">
+                      <span className="animate-pulse mr-1">✨</span>
+                      Enhanced with real-time data from:
+                    </span>
+                    {response.sources?.local_database && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-md border border-blue-300">
+                        📊 Your Database
+                      </span>
+                    )}
+                    {response.sources?.salesforce && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-md border border-blue-300">
+                        ☁️ Salesforce (Live)
+                      </span>
+                    )}
+                    {response.sources?.servicenow && (
+                      <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-md border border-orange-300">
+                        🎫 ServiceNow (Live)
+                      </span>
+                    )}
+                    {response.sources?.surveys && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-md border border-purple-300">
+                        📋 Surveys (Live)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* MCP Fallback Warning */}
+              {response.mcp_fallback && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center text-xs text-yellow-800">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    <span>External systems unavailable. Using local data only. ({response.mcp_error})</span>
+                  </div>
+                </div>
+              )}
 
               {/* AI Response */}
               <div className="prose prose-sm max-w-none">

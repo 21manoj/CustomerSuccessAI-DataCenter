@@ -190,6 +190,138 @@ def validate_dependencies():
             'status': 'error'
         }), 500
 
+# ============================================
+# MCP Integration Feature Toggle
+# ============================================
+
+def get_customer_id():
+    """Get customer ID from request headers"""
+    return request.headers.get('X-Customer-ID', type=int, default=1)
+
+@feature_toggle_api.route('/api/features/mcp', methods=['GET'])
+def get_mcp_status():
+    """Get MCP integration status for customer"""
+    try:
+        from models import FeatureToggle as FTModel, db
+        
+        customer_id = get_customer_id()
+        
+        toggle = FTModel.query.filter_by(
+            customer_id=customer_id,
+            feature_name='mcp_integration'
+        ).first()
+        
+        if toggle:
+            config = toggle.config or {}
+            return jsonify({
+                'enabled': toggle.enabled,
+                'salesforce_enabled': config.get('salesforce', False),
+                'servicenow_enabled': config.get('servicenow', False),
+                'surveys_enabled': config.get('surveys', False),
+                'description': toggle.description,
+                'updated_at': toggle.updated_at.isoformat() if toggle.updated_at else None,
+                'status': 'success'
+            })
+        else:
+            # Default: disabled
+            return jsonify({
+                'enabled': False,
+                'salesforce_enabled': False,
+                'servicenow_enabled': False,
+                'surveys_enabled': False,
+                'description': 'MCP integration not configured',
+                'status': 'success'
+            })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to get MCP status: {str(e)}',
+            'status': 'error'
+        }), 500
+
+@feature_toggle_api.route('/api/features/mcp', methods=['POST'])
+def toggle_mcp():
+    """Toggle MCP integration on/off"""
+    try:
+        from models import FeatureToggle as FTModel, db
+        from datetime import datetime
+        
+        customer_id = get_customer_id()
+        data = request.json
+        
+        # Get or create toggle
+        toggle = FTModel.query.filter_by(
+            customer_id=customer_id,
+            feature_name='mcp_integration'
+        ).first()
+        
+        if not toggle:
+            toggle = FTModel(
+                customer_id=customer_id,
+                feature_name='mcp_integration',
+                enabled=False,
+                config={},
+                description='MCP external system integration (Salesforce, ServiceNow, Surveys)'
+            )
+            db.session.add(toggle)
+        
+        # Update toggle
+        toggle.enabled = data.get('enabled', False)
+        toggle.config = {
+            'salesforce': data.get('salesforce_enabled', False),
+            'servicenow': data.get('servicenow_enabled', False),
+            'surveys': data.get('surveys_enabled', False)
+        }
+        toggle.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': f"MCP integration {'enabled' if toggle.enabled else 'disabled'}",
+            'enabled': toggle.enabled,
+            'config': toggle.config
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': f'Failed to toggle MCP: {str(e)}',
+            'status': 'error'
+        }), 500
+
+@feature_toggle_api.route('/api/features/mcp/status', methods=['GET'])
+def get_mcp_connection_status():
+    """Get real-time MCP connection status"""
+    try:
+        from mcp_integration import is_mcp_enabled, get_mcp_config
+        
+        customer_id = get_customer_id()
+        
+        enabled = is_mcp_enabled(customer_id)
+        config = get_mcp_config(customer_id)
+        
+        # Check MCP SDK availability
+        try:
+            import mcp
+            mcp_available = True
+        except ImportError:
+            mcp_available = False
+        
+        return jsonify({
+            'enabled': enabled,
+            'systems': config,
+            'mcp_sdk_installed': mcp_available,
+            'ready_to_use': enabled and mcp_available,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to get connection status: {str(e)}',
+            'status': 'error'
+        }), 500
+
 # Example usage
 if __name__ == "__main__":
     print("🔧 Feature Toggle API")

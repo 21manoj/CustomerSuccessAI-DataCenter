@@ -206,4 +206,21 @@ class PlaybookReport(db.Model):
     __table_args__ = (
         db.Index('idx_customer_playbook', 'customer_id', 'playbook_id'),
         db.Index('idx_account_playbook', 'account_id', 'playbook_id'),
+    )
+
+class FeatureToggle(db.Model):
+    __tablename__ = 'feature_toggles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    feature_name = db.Column(db.String(100), nullable=False, index=True)
+    enabled = db.Column(db.Boolean, default=False, nullable=False)
+    config = db.Column(db.JSON)  # Feature-specific configuration
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Ensure unique combination of customer and feature
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', 'feature_name', name='unique_customer_feature'),
     ) 
