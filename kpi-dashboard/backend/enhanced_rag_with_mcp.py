@@ -201,16 +201,30 @@ class EnhancedRAGWithMCP(EnhancedRAGSystemOpenAI):
         
         combined_context = "\n".join(context_parts)
         
+        # Add system playbook knowledge
+        from playbook_knowledge import format_playbook_knowledge_for_rag
+        
+        playbook_knowledge = ""
+        # Check if query is about playbooks or improvement
+        if any(keyword in query.lower() for keyword in ['playbook', 'improve', 'increase', 'reduce', 'better', 'leverage']):
+            playbook_knowledge = format_playbook_knowledge_for_rag()
+        
         # Generate response with enhanced context
         system_prompt = f"""You are a Customer Success AI assistant with access to:
 1. Historical KPI data from the customer's database
 2. Real-time CRM data from Salesforce  
 3. Live support ticket data from ServiceNow
 4. Recent survey results and customer feedback
+5. System-defined playbooks (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)
 
 Provide comprehensive analysis using ALL available data sources.
 Always cite which system the data came from (e.g., "According to Salesforce...", "Recent support tickets show...").
+When recommending playbooks, ONLY suggest the 5 system-defined playbooks. Do NOT invent generic playbook names.
 Prioritize real-time data when available."""
+        
+        playbook_instruction = ""
+        if playbook_knowledge:
+            playbook_instruction = "5. When recommending playbooks, ONLY use the 5 system playbooks listed above (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)"
         
         user_prompt = f"""
 Query: {query}
@@ -218,11 +232,14 @@ Query: {query}
 Available Context:
 {combined_context}
 
+{playbook_knowledge}
+
 Provide a comprehensive answer that:
 1. Synthesizes data from all sources
 2. Highlights real-time insights from external systems
 3. Provides specific, actionable recommendations
 4. Cites data sources (Local DB, Salesforce, ServiceNow, Surveys)
+{playbook_instruction}
 """
         
         try:

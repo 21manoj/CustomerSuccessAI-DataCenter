@@ -280,14 +280,33 @@ class EnhancedRAGSystemOpenAI:
             Cite specific playbook results when relevant (e.g., 'According to the VoC Sprint completed on [date]...').
             Provide comprehensive analysis with specific recommendations."""
         
+        # Add system playbook knowledge
+        from playbook_knowledge import format_playbook_knowledge_for_rag, get_playbook_for_goal
+        
+        playbook_knowledge = ""
+        # Check if query is about playbooks or improvement
+        if any(keyword in query.lower() for keyword in ['playbook', 'improve', 'increase', 'reduce', 'better']):
+            playbook_knowledge = format_playbook_knowledge_for_rag()
+        
+        playbook_instruction = ""
+        if playbook_knowledge:
+            playbook_instruction = "\nIMPORTANT: When recommending playbooks, ONLY suggest the 5 system-defined playbooks listed above. Do NOT make up generic playbook names."
+        
+        playbook_context_instruction = ""
+        if playbook_context:
+            playbook_context_instruction = "When referencing playbook insights, cite specific outcomes with metrics and dates."
+        
         user_prompt = f"""
         Query: {query}
         
         Context from knowledge base (Customer ID: {self.customer_id}):
         {context}
         
+        {playbook_knowledge}
+        
         Please provide a comprehensive analysis and answer to the query based on the available data.
-        {"When referencing playbook insights, cite specific outcomes with metrics and dates." if playbook_context else ""}
+        {playbook_context_instruction}
+        {playbook_instruction}
         Include specific insights, recommendations, and relevant metrics where applicable.
         Format your response in a clear, actionable manner with concrete examples where available.
         """
