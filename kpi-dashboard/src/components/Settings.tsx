@@ -293,6 +293,12 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       setSaving(true);
       const customerId = sessionStorage.getItem('customer_id') || '1';
       
+      // When enabling MCP, automatically enable all systems
+      // When disabling MCP, disable all systems
+      const newConfig = enabled 
+        ? { salesforce: true, servicenow: true, surveys: true }  // Auto-enable all
+        : { salesforce: false, servicenow: false, surveys: false };  // Disable all
+      
       const response = await fetch('/api/features/mcp', {
         method: 'POST',
         headers: {
@@ -301,15 +307,16 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
         },
         body: JSON.stringify({
           enabled: enabled,
-          salesforce_enabled: mcpConfig.salesforce,
-          servicenow_enabled: mcpConfig.servicenow,
-          surveys_enabled: mcpConfig.surveys
+          salesforce_enabled: newConfig.salesforce,
+          servicenow_enabled: newConfig.servicenow,
+          surveys_enabled: newConfig.surveys
         })
       });
 
       if (response.ok) {
         setMcpEnabled(enabled);
-        setSuccess(`MCP Integration ${enabled ? 'ENABLED' : 'DISABLED'} successfully!`);
+        setMcpConfig(newConfig);  // Update local state
+        setSuccess(`MCP Integration ${enabled ? 'ENABLED' : 'DISABLED'} successfully! ${enabled ? 'All systems enabled.' : ''}`);
         setTimeout(() => setSuccess(null), 5000);
       } else {
         throw new Error('Failed to toggle MCP');
