@@ -31,6 +31,12 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         body: JSON.stringify({ email, password }),
       });
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Backend is not responding correctly. Please wait a moment and try again.');
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Login failed');
@@ -47,7 +53,11 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
 
       onLogin(session);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      if (err instanceof Error && err.message.includes('JSON')) {
+        setError('Backend is starting up. Please wait a few seconds and try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Login failed');
+      }
     } finally {
       setIsLoading(false);
     }
