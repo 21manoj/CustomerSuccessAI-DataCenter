@@ -65,6 +65,9 @@ interface RAGResponse {
     servicenow?: boolean;
     surveys?: boolean;
   };
+  // Playbook enhancement fields
+  playbook_enhanced?: boolean;
+  enhancement_source?: string;
 }
 
 interface QueryTemplate {
