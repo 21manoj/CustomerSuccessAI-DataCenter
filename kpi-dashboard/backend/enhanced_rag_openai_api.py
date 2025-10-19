@@ -51,6 +51,7 @@ def enhanced_query():
     
     query_text = data['query']
     query_type = data.get('query_type', 'general')
+    conversation_history = data.get('conversation_history', [])
     
     # Auto-detect query type based on keywords
     if not query_type or query_type == 'auto':
@@ -74,7 +75,7 @@ def enhanced_query():
                     rag_system.build_knowledge_base(customer_id)
                 
                 # Query with MCP enhancement (async)
-                result = rag_system.query_sync(query_text, query_type)
+                result = rag_system.query_sync(query_text, query_type, conversation_history)
                 
             except Exception as e:
                 # Automatic fallback to standard RAG on any MCP error
@@ -84,7 +85,7 @@ def enhanced_query():
                 rag_system = get_rag_system(customer_id)
                 if not rag_system.faiss_index:
                     rag_system.build_knowledge_base(customer_id)
-                result = rag_system.query(query_text, query_type)
+                result = rag_system.query(query_text, query_type, conversation_history)
                 result['mcp_enhanced'] = False
                 result['mcp_fallback'] = True
                 result['mcp_error'] = str(e)
@@ -97,7 +98,7 @@ def enhanced_query():
                 rag_system.build_knowledge_base(customer_id)
             
             # Query the enhanced RAG system
-            result = rag_system.query(query_text, query_type)
+            result = rag_system.query(query_text, query_type, conversation_history)
             result['mcp_enhanced'] = False
         
         return jsonify(result)

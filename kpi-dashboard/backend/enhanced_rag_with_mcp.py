@@ -52,11 +52,13 @@ class EnhancedRAGWithMCP(EnhancedRAGSystemOpenAI):
         else:
             logger.info("No MCP systems enabled")
     
-    def query_sync(self, query_text: str, query_type: str = 'general') -> Dict[str, Any]:
+    def query_sync(self, query_text: str, query_type: str = 'general', conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """
         Synchronous wrapper for async query
         Maintains compatibility with existing code
         """
+        if conversation_history is None:
+            conversation_history = []
         try:
             # Run async query in event loop
             loop = asyncio.new_event_loop()

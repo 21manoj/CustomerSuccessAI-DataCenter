@@ -191,10 +191,13 @@ class EnhancedRAGSystemOpenAI:
         
         print(f"✅ FAISS index built with {len(all_embeddings)} vectors for customer {self.customer_id}")
     
-    def query(self, query_text: str, query_type: str = 'general') -> Dict[str, Any]:
+    def query(self, query_text: str, query_type: str = 'general', conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """Query the enhanced RAG system using OpenAI with caching"""
         if not self.faiss_index:
             return {'error': 'Knowledge base not built'}
+        
+        if conversation_history is None:
+            conversation_history = []
         
         # Check cache first
         cached_result = get_cached_query_result(self.customer_id, query_text, query_type)
@@ -220,7 +223,7 @@ class EnhancedRAGSystemOpenAI:
                 })
         
         # Generate response using OpenAI (expensive operation)
-        response = self._generate_openai_response(query_text, relevant_results, query_type)
+        response = self._generate_openai_response(query_text, relevant_results, query_type, conversation_history)
         
         # Check if playbook context was used
         account_id = self._extract_account_id_from_query(query_text)
@@ -245,10 +248,13 @@ class EnhancedRAGSystemOpenAI:
         
         return result
     
-    def _generate_openai_response(self, query: str, results: List[Dict], query_type: str) -> str:
+    def _generate_openai_response(self, query: str, results: List[Dict], query_type: str, conversation_history: List[Dict] = None) -> str:
         """Generate response using OpenAI GPT-4"""
         if not results:
             return "I couldn't find relevant information to answer your query."
+        
+        if conversation_history is None:
+            conversation_history = []
         
         # Prepare context from results
         context = self._prepare_context(results)
@@ -259,6 +265,15 @@ class EnhancedRAGSystemOpenAI:
         
         if playbook_context:
             context += playbook_context
+        
+        # Build conversation context
+        conversation_context_str = ""
+        if conversation_history:
+            conversation_context_str = "\n\n=== CONVERSATION HISTORY ===\n"
+            for i, msg in enumerate(conversation_history, 1):
+                conversation_context_str += f"\nPrevious Q{i}: {msg.get('query', '')}\n"
+                conversation_context_str += f"Previous A{i}: {msg.get('response', '')[:200]}...\n"
+            conversation_context_str += "\n(Use this context to understand follow-up questions and maintain conversation flow)\n"
         
         # Create system prompt based on query type
         if query_type == 'revenue_analysis':
@@ -297,14 +312,16 @@ class EnhancedRAGSystemOpenAI:
             playbook_context_instruction = "When referencing playbook insights, cite specific outcomes with metrics and dates."
         
         user_prompt = f"""
-        Query: {query}
+        {conversation_context_str}
+        
+        Current Query: {query}
         
         Context from knowledge base (Customer ID: {self.customer_id}):
         {context}
         
         {playbook_knowledge}
         
-        Please provide a comprehensive analysis and answer to the query based on the available data.
+        Please provide a comprehensive analysis and answer to the query based on the available data and conversation context.
         {playbook_context_instruction}
         {playbook_instruction}
         Include specific insights, recommendations, and relevant metrics where applicable.

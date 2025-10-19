@@ -127,6 +127,7 @@ def direct_query():
     
     query_text = data['query']
     query_type = data.get('query_type', 'general')
+    conversation_history = data.get('conversation_history', [])
     
     try:
         # Fetch data directly from database
@@ -203,16 +204,27 @@ def direct_query():
             if playbook_knowledge:
                 playbook_instruction = "\nIMPORTANT: When recommending playbooks, ONLY suggest the 5 system-defined playbooks listed below. Do NOT make up generic playbook names."
             
+            # Build conversation context
+            conversation_context = ""
+            if conversation_history:
+                conversation_context = "\n=== CONVERSATION HISTORY ===\n"
+                for i, msg in enumerate(conversation_history, 1):
+                    conversation_context += f"\nPrevious Q{i}: {msg.get('query', '')}\n"
+                    conversation_context += f"Previous A{i}: {msg.get('response', '')[:200]}...\n"
+                conversation_context += "\n(Use this context to understand follow-up questions and maintain conversation flow)\n"
+            
             system_prompt = f"""
             You are an AI assistant analyzing KPI and account data for a customer success platform.
             You have access to:
             1. Real-time KPI data and historical playbook execution insights
             2. System-defined playbooks (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)
+            3. Conversation history for context awareness
             
-            When playbook insights are available, prioritize them in your response:
-            - Cite specific playbook names and dates
-            - Reference concrete outcomes with before/after metrics
-            - Include action plans and next steps from playbook reports
+            When answering:
+            - Use conversation history to understand follow-up questions (e.g., "What about TechCorp?" refers to previous context)
+            - When playbook insights are available, cite specific names, dates, and outcomes
+            - Reference concrete metrics with before/after comparisons
+            - Include actionable next steps from playbook reports
             - Connect playbook results to current KPI trends
             {playbook_instruction}
             
@@ -220,14 +232,16 @@ def direct_query():
             """
             
             user_prompt = f"""
-            Query: {query_text}
+            {conversation_context}
+            
+            Current Query: {query_text}
             
             Available Data:
             {context}
             
             {playbook_knowledge}
             
-            Please provide a comprehensive analysis and answer based on the available data.
+            Please provide a comprehensive analysis and answer based on the available data and conversation context.
             """
             
             response = client.chat.completions.create(
