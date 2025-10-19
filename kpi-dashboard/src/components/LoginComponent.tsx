@@ -144,12 +144,16 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </form>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 mb-2">Demo Credentials:</p>
-            <div className="space-y-1 text-xs">
-              <p><span className="font-medium">Email:</span> corporate@example.com</p>
-              <p><span className="font-medium">Password:</span> password123</p>
-            </div>
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-gray-700 text-center">
+              For demo credentials, please email{' '}
+              <a 
+                href="mailto:info@triadpartners.ai" 
+                className="text-blue-600 hover:text-blue-800 font-medium underline"
+              >
+                info@triadpartners.ai
+              </a>
+            </p>
           </div>
         </div>
       </div>

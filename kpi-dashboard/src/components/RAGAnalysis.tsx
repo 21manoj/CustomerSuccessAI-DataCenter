@@ -78,6 +78,13 @@ interface QueryTemplate {
   query_type: 'revenue_analysis' | 'account_analysis' | 'kpi_analysis' | 'general' | 'trend_analysis' | 'temporal_analysis';
 }
 
+interface ConversationMessage {
+  id: string;
+  query: string;
+  response: RAGResponse;
+  timestamp: Date;
+}
+
 const RAGAnalysis: React.FC = () => {
   const { session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
@@ -90,6 +97,41 @@ const RAGAnalysis: React.FC = () => {
   const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal'>('working');
   const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
   const statusCheckRef = useRef<boolean>(false);
+  
+  // Conversation history state
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  const conversationEndRef = useRef<HTMLDivElement>(null);
+  
+  // Load conversation history from localStorage on mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(`rag_conversation_${session?.customer_id}`);
+    if (savedHistory) {
+      try {
+        const parsed = JSON.parse(savedHistory);
+        setConversationHistory(parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })));
+      } catch (e) {
+        console.error('Failed to load conversation history:', e);
+      }
+    }
+  }, [session?.customer_id]);
+  
+  // Save conversation history to localStorage whenever it changes
+  useEffect(() => {
+    if (session?.customer_id && conversationHistory.length > 0) {
+      localStorage.setItem(
+        `rag_conversation_${session.customer_id}`,
+        JSON.stringify(conversationHistory)
+      );
+    }
+  }, [conversationHistory, session?.customer_id]);
+  
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversationHistory]);
 
   // Check knowledge base status on component load and when vector DB changes
   useEffect(() => {
@@ -531,6 +573,12 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-openai/query';
       }
       
+      // Include conversation context (last 3 exchanges)
+      const recentHistory = conversationHistory.slice(-3).map(msg => ({
+        query: msg.query,
+        response: msg.response.response
+      }));
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -539,7 +587,8 @@ const RAGAnalysis: React.FC = () => {
         },
         body: JSON.stringify({
           query,
-          query_type: queryType
+          query_type: queryType,
+          conversation_history: recentHistory
         })
       });
       
@@ -554,7 +603,17 @@ const RAGAnalysis: React.FC = () => {
         return;
       }
       
+      // Add to conversation history
+      const newMessage: ConversationMessage = {
+        id: Date.now().toString(),
+        query,
+        response: result,
+        timestamp: new Date()
+      };
+      setConversationHistory(prev => [...prev, newMessage]);
+      
       setResponse(result);
+      setCustomQuery(''); // Clear input after successful query
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute query');
     } finally {
@@ -572,6 +631,12 @@ const RAGAnalysis: React.FC = () => {
     if (customQuery.trim()) {
       executeQuery(customQuery.trim());
     }
+  };
+  
+  const clearConversation = () => {
+    setConversationHistory([]);
+    setResponse(null);
+    localStorage.removeItem(`rag_conversation_${session?.customer_id}`);
   };
 
   const copyToClipboard = (text: string) => {
