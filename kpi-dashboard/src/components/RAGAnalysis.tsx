@@ -785,48 +785,147 @@ const RAGAnalysis: React.FC = () => {
           </div>
         </div>
 
-        {/* Query Interface and Results */}
+        {/* Conversation Interface */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Custom Query Input */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Search className="h-5 w-5 text-blue-500" />
-              Custom Query
-            </h3>
+          {/* Conversation Thread */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col" style={{height: 'calc(100vh - 280px)'}}>
+            {/* Conversation Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-blue-500" />
+                AI Conversation
+              </h3>
+              {conversationHistory.length > 0 && (
+                <button
+                  onClick={clearConversation}
+                  className="text-sm text-gray-500 hover:text-red-600 px-3 py-1 rounded-md hover:bg-red-50"
+                >
+                  Clear Conversation
+                </button>
+              )}
+            </div>
             
-            <div className="space-y-4">
-              <div>
+            {/* Conversation Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {conversationHistory.length === 0 && !isLoading && (
+                <div className="text-center py-12 text-gray-400">
+                  <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                  <p className="text-lg">Start a conversation</p>
+                  <p className="text-sm mt-2">Ask questions about your accounts, KPIs, or playbooks</p>
+                </div>
+              )}
+              
+              {conversationHistory.map((message) => (
+                <div key={message.id} className="space-y-3">
+                  {/* User Query */}
+                  <div className="flex justify-end">
+                    <div className="max-w-3/4 bg-blue-600 text-white rounded-lg p-3 shadow-sm">
+                      <p className="text-sm">{message.query}</p>
+                      <span className="text-xs opacity-75 mt-1 block">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* AI Response */}
+                  <div className="flex justify-start">
+                    <div className="max-w-3/4 bg-gray-50 rounded-lg p-4 shadow-sm border border-gray-200">
+                      <div className="flex items-start gap-2 mb-2">
+                        <Brain className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-800 prose prose-sm max-w-none">
+                            {formatResponse(message.response.response || '')}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Data Source Badges */}
+                      {message.response.mcp_enhanced && message.response.sources && (
+                        <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                          <span className="text-xs text-gray-500">Sources:</span>
+                          {message.response.sources.local_database && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">📊 Database</span>
+                          )}
+                          {message.response.sources.salesforce && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">☁️ Salesforce</span>
+                          )}
+                          {message.response.sources.servicenow && (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-md">🎫 ServiceNow</span>
+                          )}
+                          {message.response.sources.surveys && (
+                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-md">📋 Surveys</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Playbook Enhancement Badge */}
+                      {message.response.playbook_enhanced && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-md">
+                            ✓ Enhanced with Playbook Insights
+                          </span>
+                        </div>
+                      )}
+                      
+                      <span className="text-xs text-gray-400 mt-2 block">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Loading State */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-3/4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <span className="text-gray-600">AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={conversationEndRef} />
+            </div>
+            
+            {/* Input Area */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex gap-3">
                 <textarea
                   value={customQuery}
                   onChange={(e) => setCustomQuery(e.target.value)}
-                  placeholder="Ask any question about your KPI and account data..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={3}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCustomQuery();
+                    }
+                  }}
+                  placeholder="Ask a question... (Shift+Enter for new line)"
+                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={2}
                 />
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">
-                  {customQuery.length} characters
-                </div>
                 <button
                   onClick={handleCustomQuery}
                   disabled={!customQuery.trim() || isLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed h-fit self-end"
                 >
                   {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Search className="h-4 w-4" />
+                    'Send'
                   )}
-                  {isLoading ? 'Analyzing...' : 'Ask Question'}
                 </button>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Press Enter to send, Shift+Enter for new line
               </div>
             </div>
           </div>
 
-          {/* Results */}
-          {response && (
+          {/* Old Results Section - Keep for now but hidden, will remove after testing */}
+          {false && response && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
