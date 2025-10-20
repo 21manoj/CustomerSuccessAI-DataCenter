@@ -1,0 +1,82 @@
+[
+  {
+    "test": "Frontend Accessibility",
+    "status": "PASS",
+    "message": "Frontend serving React app",
+    "duration": 0.0554201602935791,
+    "timestamp": "2025-10-19T18:12:46.602696",
+    "details": null
+  },
+  {
+    "test": "Backend Accessibility",
+    "status": "PASS",
+    "message": "Backend API responding",
+    "duration": 0.011873006820678711,
+    "timestamp": "2025-10-19T18:12:46.614633",
+    "details": null
+  },
+  {
+    "test": "Login",
+    "status": "PASS",
+    "message": "Login successful for test@test.com",
+    "duration": 0.08755803108215332,
+    "timestamp": "2025-10-19T18:12:46.702228",
+    "details": "Customer ID: 1, User: Test User"
+  },
+  {
+    "test": "Accounts API",
+    "status": "PASS",
+    "message": "Retrieved 25 accounts",
+    "duration": 0.0033969879150390625,
+    "timestamp": "2025-10-19T18:12:46.705690",
+    "details": null
+  },
+  {
+    "test": "Playbooks API",
+    "status": "PASS",
+    "message": "Retrieved 3 playbook executions",
+    "duration": 0.0040819644927978516,
+    "timestamp": "2025-10-19T18:12:46.709841",
+    "details": null
+  },
+  {
+    "test": "Deterministic Query Speed",
+    "status": "PASS",
+    "message": "Database query completed in 0.005s",
+    "duration": 0.005464076995849609,
+    "timestamp": "2025-10-19T18:12:46.715330",
+    "details": "Target: < 1.0s for direct DB queries"
+  },
+  {
+    "test": "Query Without History",
+    "status": "PASS",
+    "message": "RAG query successful",
+    "duration": 11.80255675315857,
+    "timestamp": "2025-10-19T18:12:58.518066",
+    "details": "Response length: 1973 chars"
+  },
+  {
+    "test": "Query With Conversation History (V3 CORE)",
+    "status": "PASS",
+    "message": "AI understood 'the first one' from context!",
+    "duration": 24.16285800933838,
+    "timestamp": "2025-10-19T18:13:22.681110",
+    "details": "Context-aware response: DigitalFirst is currently our highest revenue-generating account with a revenue of $4,830,936. They ..."
+  },
+  {
+    "test": "Analytical Query Completeness",
+    "status": "PASS",
+    "message": "Response includes explanation, recommendations, and metrics",
+    "duration": 17.46707510948181,
+    "timestamp": "2025-10-19T18:13:40.148584",
+    "details": "Length: 2392 chars"
+  },
+  {
+    "test": "Query Classifier",
+    "status": "PASS",
+    "message": "All 4 queries classified correctly",
+    "duration": 0.006649971008300781,
+    "timestamp": "2025-10-19T18:13:40.155316",
+    "details": "\u2713 'List all accounts' \u2192 deterministic\n      \u2713 'Why is NPS declining?' \u2192 analytical\n      \u2713 'Which playbooks are running?' \u2192 deterministic\n      \u2713 'How can I improve customer satisfaction?' \u2192 analytical"
+  }
+]
