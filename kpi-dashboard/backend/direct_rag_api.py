@@ -4,11 +4,13 @@ Direct RAG API - Bypasses vector search issues
 """
 
 from flask import Blueprint, request, jsonify, abort
-from models import db, KPI, Account, KPIUpload, PlaybookReport
+from models import db, KPI, Account, KPIUpload, PlaybookReport, QueryAudit
 from sqlalchemy import text
 import openai
 import os
+import time
 from dotenv import load_dotenv
+from query_cache import get_cached_query_result, cache_query_result, get_cache_stats
 
 # Load environment variables
 load_dotenv()
@@ -119,6 +121,7 @@ def get_playbook_context(customer_id, query_text):
 @direct_rag_api.route('/api/direct-rag/query', methods=['POST'])
 def direct_query():
     """Direct RAG query that bypasses vector search"""
+    start_time = time.time()
     customer_id = get_customer_id()
     data = request.json
     
@@ -128,6 +131,44 @@ def direct_query():
     query_text = data['query']
     query_type = data.get('query_type', 'general')
     conversation_history = data.get('conversation_history', [])
+    
+    # Determine conversation turn
+    conversation_turn = len(conversation_history) + 1
+    has_conversation_history = len(conversation_history) > 0
+    
+    # Check cache first (skip if conversation history exists - dynamic context)
+    cache_hit = False
+    if not conversation_history:
+        cached_result = get_cached_query_result(customer_id, query_text, query_type)
+        if cached_result:
+            cached_result['cache_hit'] = True
+            cached_result['cost'] = '$0.00'
+            cache_hit = True
+            
+            # Log cached query to audit
+            try:
+                audit = QueryAudit(
+                    customer_id=customer_id,
+                    query_text=query_text,
+                    query_type=query_type,
+                    response_text=cached_result.get('response', ''),
+                    response_time_ms=int((time.time() - start_time) * 1000),
+                    results_count=cached_result.get('results_count', 0),
+                    cache_hit=True,
+                    playbook_enhanced=cached_result.get('playbook_enhanced', False),
+                    has_conversation_history=has_conversation_history,
+                    conversation_turn=conversation_turn,
+                    estimated_cost=0.0,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')[:500]
+                )
+                db.session.add(audit)
+                db.session.commit()
+            except Exception as e:
+                print(f"Audit log failed (non-critical): {e}")
+                db.session.rollback()
+            
+            return jsonify(cached_result)
     
     try:
         # Fetch data directly from database
@@ -293,7 +334,7 @@ def direct_query():
                     }
                 })
         
-        return jsonify({
+        result = {
             'customer_id': customer_id,
             'query': query_text,
             'query_type': query_type,
@@ -302,8 +343,40 @@ def direct_query():
             'response': ai_response,
             'similarity_threshold': 0.0,
             'playbook_enhanced': bool(playbook_context),
-            'enhancement_source': 'playbook_reports' if playbook_context else None
-        })
+            'enhancement_source': 'playbook_reports' if playbook_context else None,
+            'cache_hit': False,
+            'cost': '$0.02'  # Estimated OpenAI cost per query
+        }
+        
+        # Cache the result (only if no conversation history - those are dynamic)
+        if not conversation_history:
+            cache_query_result(customer_id, query_text, result, query_type)
+        
+        # Audit logging (for compliance and analytics)
+        try:
+            response_time_ms = int((time.time() - start_time) * 1000)
+            audit = QueryAudit(
+                customer_id=customer_id,
+                query_text=query_text,
+                query_type=query_type,
+                response_text=ai_response,
+                response_time_ms=response_time_ms,
+                results_count=len(kpis) + len(accounts),
+                cache_hit=False,
+                playbook_enhanced=bool(playbook_context),
+                has_conversation_history=has_conversation_history,
+                conversation_turn=conversation_turn,
+                estimated_cost=0.02,  # $0.02 per OpenAI query
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:500]
+            )
+            db.session.add(audit)
+            db.session.commit()
+        except Exception as e:
+            print(f"Audit log failed (non-critical): {e}")
+            db.session.rollback()
+        
+        return jsonify(result)
         
     except Exception as e:
         return jsonify({'error': f'Query failed: {str(e)}'}), 500

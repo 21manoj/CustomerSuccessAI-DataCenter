@@ -223,4 +223,43 @@ class FeatureToggle(db.Model):
     # Ensure unique combination of customer and feature
     __table_args__ = (
         db.UniqueConstraint('customer_id', 'feature_name', name='unique_customer_feature'),
-    ) 
+    )
+
+class QueryAudit(db.Model):
+    """Audit log for all RAG queries - for compliance and analytics"""
+    __tablename__ = 'query_audits'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True, index=True)
+    query_text = db.Column(db.Text, nullable=False)
+    query_type = db.Column(db.String(50), default='general')
+    
+    # Response metadata
+    response_text = db.Column(db.Text)  # AI response
+    response_time_ms = db.Column(db.Integer)  # Response time in milliseconds
+    results_count = db.Column(db.Integer)  # Number of results returned
+    
+    # Classification
+    is_deterministic = db.Column(db.Boolean, default=False)  # Deterministic vs analytical query
+    cache_hit = db.Column(db.Boolean, default=False)  # Was result from cache?
+    
+    # Enhancements
+    mcp_enhanced = db.Column(db.Boolean, default=False)  # MCP data included?
+    playbook_enhanced = db.Column(db.Boolean, default=False)  # Playbook insights included?
+    
+    # Conversation context
+    has_conversation_history = db.Column(db.Boolean, default=False)
+    conversation_turn = db.Column(db.Integer, default=1)  # Turn number in conversation
+    
+    # Cost tracking
+    estimated_cost = db.Column(db.Float, default=0.0)  # Estimated OpenAI API cost
+    
+    # Audit fields
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
+    ip_address = db.Column(db.String(45))  # IPv4 or IPv6
+    user_agent = db.Column(db.String(500))
+    
+    # Relationships
+    customer = db.relationship('Customer', backref='query_audits')
+    user = db.relationship('User', backref='query_audits') 
