@@ -275,21 +275,37 @@ class EnhancedRAGSystemOpenAI:
                 conversation_context_str += f"Previous A{i}: {msg.get('response', '')[:200]}...\n"
             conversation_context_str += "\n(Use this context to understand follow-up questions and maintain conversation flow)\n"
         
+        # Anti-hallucination rules (applied to all prompt types)
+        anti_hallucination_rules = """
+        CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
+        1. ONLY use account names, KPI values, and metrics explicitly provided in the context below
+        2. NEVER invent, guess, or hallucinate account names, company names, or data not in the provided context
+        3. If asked to list accounts, ONLY list exact account names from the context
+        4. If you don't have specific data to answer a question, say "I don't have that specific information in the current data"
+        5. Do NOT use generic industry terms like "pharmaceutical", "aerospace", "technology" unless they appear in actual account names provided
+        
+        REMEMBER: Only use data explicitly provided to you. Never make up account names or data points.
+        """
+        
         # Create system prompt based on query type
         if query_type == 'revenue_analysis':
-            system_prompt = """You are a business analyst specializing in KPI and revenue analysis. 
+            system_prompt = anti_hallucination_rules + """
+            You are a business analyst specializing in KPI and revenue analysis. 
             Analyze the provided KPI and account data to answer questions about revenue, growth, and business performance.
             Focus on revenue drivers, account performance, and business insights. Provide specific metrics and actionable recommendations."""
         elif query_type == 'account_analysis':
-            system_prompt = """You are a customer success analyst. 
+            system_prompt = anti_hallucination_rules + """
+            You are a customer success analyst. 
             Analyze account performance, engagement, and health scores to provide insights about customer relationships and risk assessment.
             Focus on account health, engagement patterns, and retention strategies."""
         elif query_type == 'kpi_analysis':
-            system_prompt = """You are a KPI specialist. 
+            system_prompt = anti_hallucination_rules + """
+            You are a KPI specialist. 
             Analyze KPI performance, trends, and impact levels to provide insights about business metrics and recommendations.
             Focus on performance optimization and strategic insights."""
         else:
-            system_prompt = """You are a business intelligence analyst with access to both real-time KPI data and historical playbook execution insights. 
+            system_prompt = anti_hallucination_rules + """
+            You are a business intelligence analyst with access to both real-time KPI data and historical playbook execution insights. 
             Analyze the provided data to answer questions about business performance, KPIs, and customer insights.
             When playbook insights are available, use them to provide evidence-based recommendations with specific outcomes, metrics, and action plans.
             Cite specific playbook results when relevant (e.g., 'According to the VoC Sprint completed on [date]...').

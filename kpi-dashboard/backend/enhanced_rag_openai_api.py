@@ -53,6 +53,16 @@ def enhanced_query():
     query_type = data.get('query_type', 'general')
     conversation_history = data.get('conversation_history', [])
     
+    # Security: Validate conversation history belongs to this customer
+    if conversation_history:
+        for i, msg in enumerate(conversation_history):
+            hist_customer_id = msg.get('customer_id')
+            if hist_customer_id and hist_customer_id != customer_id:
+                return jsonify({
+                    'error': 'Invalid conversation history',
+                    'message': 'Conversation history does not belong to this customer'
+                }), 403
+    
     # Auto-detect query type based on keywords
     if not query_type or query_type == 'auto':
         query_type = _detect_query_type(query_text)

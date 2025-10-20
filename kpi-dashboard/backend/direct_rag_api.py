@@ -132,6 +132,19 @@ def direct_query():
     query_type = data.get('query_type', 'general')
     conversation_history = data.get('conversation_history', [])
     
+    # Security: Validate conversation history belongs to this customer
+    # Prevent conversation history from one customer being used by another
+    if conversation_history:
+        # Check if any previous query in history contains data from a different customer
+        # We'll validate by checking if the customer_id in history matches current customer_id
+        for i, msg in enumerate(conversation_history):
+            hist_customer_id = msg.get('customer_id')
+            if hist_customer_id and hist_customer_id != customer_id:
+                return jsonify({
+                    'error': 'Invalid conversation history',
+                    'message': 'Conversation history does not belong to this customer'
+                }), 403
+    
     # Determine conversation turn
     conversation_turn = len(conversation_history) + 1
     has_conversation_history = len(conversation_history) > 0
@@ -256,8 +269,16 @@ def direct_query():
             
             system_prompt = f"""
             You are an AI assistant analyzing KPI and account data for a customer success platform.
+            
+            CRITICAL RULES - YOU MUST FOLLOW THESE STRICTLY:
+            1. ONLY use account names, KPI values, and metrics that are explicitly provided in the "Available Data" section below
+            2. NEVER invent, guess, or hallucinate account names, company names, or data that is not in the provided context
+            3. If asked to list accounts, ONLY list the exact account names from the "Available Data" section
+            4. If you don't have specific data to answer a question, say "I don't have that specific information in the current data"
+            5. Do NOT use generic industry terms like "pharmaceutical", "aerospace", "technology" unless they appear in the actual account names provided
+            
             You have access to:
-            1. Real-time KPI data and historical playbook execution insights
+            1. Real-time KPI data and historical playbook execution insights (see "Available Data" section)
             2. System-defined playbooks (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)
             3. Conversation history for context awareness
             
@@ -269,7 +290,7 @@ def direct_query():
             - Connect playbook results to current KPI trends
             {playbook_instruction}
             
-            Provide evidence-based, action-oriented recommendations with specific metrics.
+            REMEMBER: Only use data explicitly provided to you. Never make up account names or data points.
             """
             
             user_prompt = f"""

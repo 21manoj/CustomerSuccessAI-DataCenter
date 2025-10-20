@@ -576,10 +576,11 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-openai/query';
       }
       
-      // Include conversation context (last 3 exchanges)
+      // Include conversation context (last 3 exchanges) with customer_id for security
       const recentHistory = conversationHistory.slice(-3).map(msg => ({
         query: msg.query,
-        response: msg.response.response
+        response: msg.response.response,
+        customer_id: session.customer_id  // Add customer_id for backend validation
       }));
       
       const response = await fetch(endpoint, {
