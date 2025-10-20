@@ -1425,7 +1425,6 @@ const CSPlatform = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                               {kpiData
                                 .filter(kpi => kpi.account_id === account.account_id)
-                                .slice(0, 5) // Show first 5 account KPIs for compact view
                                 .map((kpi) => (
                                   <tr key={kpi.kpi_id} className="hover:bg-gray-50">
                                     <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900">{kpi.category}</td>
