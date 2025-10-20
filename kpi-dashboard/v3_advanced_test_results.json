@@ -1,0 +1,74 @@
+[
+  {
+    "test": "RAG Cache - First Query (Cache Miss)",
+    "status": "PASS",
+    "message": "First query took 14.89s (uncached)",
+    "duration": 14.885960817337036,
+    "timestamp": "2025-10-19T18:55:39.912183",
+    "details": "Response: 2188 chars, Cache: False"
+  },
+  {
+    "test": "RAG Cache - Repeat Query (Cache Hit)",
+    "status": "PASS",
+    "message": "Cached query 3604.4x faster!",
+    "duration": 0.004129886627197266,
+    "timestamp": "2025-10-19T18:55:39.916382",
+    "details": "First: 14.89s \u2192 Cached: 0.00s, Cost: $0.00"
+  },
+  {
+    "test": "Cache Performance Improvement",
+    "status": "PASS",
+    "message": "Cache provides 1036.7x speedup!",
+    "duration": 11.87465214729309,
+    "timestamp": "2025-10-19T18:55:51.791152",
+    "details": "Uncached: 11.36s \u2192 Cached: 0.01s"
+  },
+  {
+    "test": "Account Count Isolation",
+    "status": "PASS",
+    "message": "Each customer sees only their accounts",
+    "duration": 0.009140968322753906,
+    "timestamp": "2025-10-19T18:55:51.800444",
+    "details": "Customer 1: 25/25, Customer 2: 10/10"
+  },
+  {
+    "test": "Multi-Tenant Data Isolation",
+    "status": "PASS",
+    "message": "No data leakage between customers",
+    "duration": 0.007010221481323242,
+    "timestamp": "2025-10-19T18:55:51.807508",
+    "details": "Customer 1: 25 accounts, Customer 2: 10 accounts, Overlap: 0"
+  },
+  {
+    "test": "Multi-Tenant RAG Isolation",
+    "status": "FAIL",
+    "message": "Data leakage in RAG responses",
+    "duration": 36.96005702018738,
+    "timestamp": "2025-10-19T18:56:28.767814",
+    "details": "C1 has C2 data: False, C2 has C1 data: True"
+  },
+  {
+    "test": "Playbook Isolation",
+    "status": "PASS",
+    "message": "Playbook data retrieved",
+    "duration": 0.009843826293945312,
+    "timestamp": "2025-10-19T18:56:28.777853",
+    "details": "C1: 3 playbooks, C2: 3 playbooks"
+  },
+  {
+    "test": "Conversation Isolation (Security)",
+    "status": "WARN",
+    "message": "Customer 1 data appeared in Customer 2 response",
+    "duration": 25.802023887634277,
+    "timestamp": "2025-10-19T18:56:54.580064",
+    "details": "Consider adding customer_id validation for conversation history"
+  },
+  {
+    "test": "Unauthorized Customer Access",
+    "status": "PASS",
+    "message": "Invalid customer ID returns empty data",
+    "duration": 0.004363059997558594,
+    "timestamp": "2025-10-19T18:56:54.584563",
+    "details": "Security: No data leaked for non-existent customer"
+  }
+]
