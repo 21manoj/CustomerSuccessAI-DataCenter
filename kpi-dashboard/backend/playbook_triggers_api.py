@@ -83,7 +83,7 @@ def save_trigger_settings():
         data = request.json
         
         playbook_type = data.get('playbook_type')
-        triggers = data.get('triggers', {})
+        triggers = data.get('trigger_config', data.get('triggers', {}))
         
         if not playbook_type:
             return jsonify({
@@ -138,7 +138,7 @@ def test_trigger_conditions():
         data = request.json
         
         playbook_type = data.get('playbook_type')
-        triggers = data.get('triggers', {})
+        triggers = data.get('trigger_config', data.get('triggers', {}))
         
         if not playbook_type:
             return jsonify({

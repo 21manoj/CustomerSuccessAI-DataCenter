@@ -1,0 +1,21 @@
+services:
+  backend-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile.v3
+    ports:
+      - "5090:5059"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONPATH=/app
+    volumes:
+      - ./instance:/app/instance
+
+  frontend-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx-v3
+    ports:
+      - "3003:80"
+    depends_on:
+      - backend-v3

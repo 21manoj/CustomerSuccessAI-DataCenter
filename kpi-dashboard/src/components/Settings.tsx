@@ -188,7 +188,56 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       const response = await fetch('/api/playbook-triggers');
       if (response.ok) {
         const data = await response.json();
-        setTriggerSettings(data.triggers || triggerSettings);
+        console.log('Fetched trigger settings:', data.triggers);
+        
+        // Merge saved settings with defaults
+        const savedSettings = data.triggers || {};
+        const mergedSettings = {
+          voc: {
+            nps_threshold: 10,
+            csat_threshold: 3.6,
+            churn_risk_threshold: 0.30,
+            health_score_drop_threshold: 10,
+            churn_mentions_threshold: 2,
+            auto_trigger_enabled: false,
+            ...savedSettings.voc?.trigger_config
+          },
+          activation: {
+            adoption_index_threshold: 60,
+            active_users_threshold: 50,
+            dau_mau_threshold: 0.25,
+            unused_feature_check: true,
+            auto_trigger_enabled: false,
+            ...savedSettings.activation?.trigger_config
+          },
+          sla: {
+            sla_breach_threshold: 5,
+            response_time_multiplier: 2.0,
+            escalation_trend: 'increasing',
+            reopen_rate_threshold: 0.20,
+            auto_trigger_enabled: false,
+            ...savedSettings.sla?.trigger_config
+          },
+          renewal: {
+            renewal_window_days: 90,
+            health_score_threshold: 70,
+            engagement_trend: 'declining',
+            budget_risk: true,
+            auto_trigger_enabled: false,
+            ...savedSettings.renewal?.trigger_config
+          },
+          expansion: {
+            health_score_threshold: 80,
+            adoption_threshold: 85,
+            usage_limit_percentage: 0.80,
+            budget_window: 'Q1_Q4',
+            auto_trigger_enabled: false,
+            ...savedSettings.expansion?.trigger_config
+          }
+        };
+        
+        setTriggerSettings(mergedSettings);
+        console.log('Merged trigger settings:', mergedSettings);
       }
     } catch (err) {
       console.error('Failed to fetch trigger settings:', err);
@@ -215,7 +264,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
         },
         body: JSON.stringify({
           playbook_type: playbookType,
-          triggers: triggerSettings[playbookType]
+          trigger_config: triggerSettings[playbookType]
         })
       });
 
