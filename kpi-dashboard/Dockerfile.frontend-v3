@@ -1,0 +1,14 @@
+# V3 Frontend Dockerfile
+FROM nginx:alpine
+
+# Copy built React app (use full path to avoid .dockerignore)
+COPY ./build /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx-server-v3.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
