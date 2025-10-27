@@ -88,14 +88,14 @@ def evaluate_account_for_voc_sprint(account, triggers):
     health_score = calculate_health_score_proxy(account.account_id)
     
     # Check NPS threshold (using health score as proxy)
-    nps_threshold = triggers.get('nps_threshold', 6.0)  # More realistic default
+    nps_threshold = triggers.get('nps_threshold', 10.0)  # Default threshold
     nps_proxy = health_score / 10  # Convert to 0-10 scale
     if nps_proxy < nps_threshold:
         reasons.append(f"Low NPS proxy ({nps_proxy:.1f} < {nps_threshold})")
         score += 30
     
     # Check CSAT threshold (using health score as proxy)
-    csat_threshold = triggers.get('csat_threshold', 3.0)  # More realistic default
+    csat_threshold = triggers.get('csat_threshold', 3.6)  # Default threshold
     csat_proxy = health_score / 20  # Convert to 0-5 scale
     if csat_proxy < csat_threshold:
         reasons.append(f"Low CSAT proxy ({csat_proxy:.1f} < {csat_threshold})")
@@ -307,11 +307,11 @@ def evaluate_account_for_expansion_timing(account, triggers):
         }
     
     # Check adoption threshold (configurable)
-    adoption_threshold = triggers.get('adoption_threshold', 85)
+    adoption_threshold = triggers.get('adoption_threshold', 0.85)
     kpi_count = KPI.query.filter_by(account_id=account.account_id).count()
-    adoption_proxy = (kpi_count / 20) * 100  # Convert to percentage
+    adoption_proxy = kpi_count / 20  # Fraction (0-1)
     if adoption_proxy >= adoption_threshold:
-        reasons.append(f"High adoption ({adoption_proxy:.1f}% ≥ {adoption_threshold}%)")
+        reasons.append(f"High adoption ({adoption_proxy:.1%} ≥ {adoption_threshold:.1%})")
         score += 30
     else:
         return {
@@ -330,8 +330,8 @@ def evaluate_account_for_expansion_timing(account, triggers):
         score += 25
     
     # Check budget window (configurable)
-    budget_window = triggers.get('budget_window', 'Q1_Q4')
-    if budget_window in ['Q1_Q4', 'Q1', 'Q4']:  # Budget available in Q1 or Q4
+    budget_window = triggers.get('budget_window', 'open')
+    if budget_window in ['Q1_Q4', 'Q1', 'Q4', 'open']:  # Budget available
         reasons.append(f"Budget window open ({budget_window})")
         score += 20
     
