@@ -390,8 +390,8 @@ def get_playbook_recommendations(playbook_id):
         
         if trigger_config and trigger_config.trigger_config:
             db_triggers = json.loads(trigger_config.trigger_config)
-            # Merge provided triggers with database triggers (provided takes precedence)
-            triggers = {**db_triggers, **triggers}
+            # Merge provided triggers with database triggers (database takes precedence now)
+            triggers = {**triggers, **db_triggers}
         
         # Get all accounts for customer
         accounts = Account.query.filter_by(customer_id=customer_id).all()

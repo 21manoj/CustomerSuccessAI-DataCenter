@@ -43,6 +43,7 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [showAccountSelector, setShowAccountSelector] = useState(false);
   const [playbookToStart, setPlaybookToStart] = useState<string | null>(null);
+  const [savedTriggers, setSavedTriggers] = useState<Record<string, any>>({});
   
   const { 
     executions, 
@@ -70,7 +71,7 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
     const fetchAccounts = async () => {
       try {
         const response = await fetch('/api/accounts', {
-          headers: { 'X-Customer-ID': customerId.toString() }
+          headers: { 'X-Customer-ID': (customerId || 1).toString() }
         });
         if (response.ok) {
           const data = await response.json();
@@ -87,6 +88,93 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
     };
     fetchAccounts();
   }, [customerId]);
+  
+  // Fetch saved triggers for all playbooks
+  useEffect(() => {
+    const fetchTriggers = async () => {
+      try {
+        const response = await fetch('/api/playbook-triggers', {
+          headers: { 'X-Customer-ID': (customerId || 1).toString() }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const triggers: Record<string, any> = {};
+          // Check if data.triggers is an array or an object
+          if (data.triggers) {
+            if (Array.isArray(data.triggers)) {
+              data.triggers.forEach((t: any) => {
+                if (t.trigger_config) {
+                  try {
+                    triggers[t.playbook_type] = typeof t.trigger_config === 'string' 
+                      ? JSON.parse(t.trigger_config) 
+                      : t.trigger_config;
+                  } catch (e) {
+                    console.error('Failed to parse trigger config:', e);
+                  }
+                }
+              });
+            } else {
+              // If it's an object (as returned by the API), iterate through it
+              Object.keys(data.triggers).forEach((playbookType) => {
+                const triggerData = data.triggers[playbookType];
+                if (triggerData && triggerData.trigger_config) {
+                  triggers[playbookType] = triggerData.trigger_config;
+                }
+              });
+            }
+          }
+          setSavedTriggers(triggers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch trigger settings:', error);
+      }
+    };
+    
+    fetchTriggers();
+  }, [customerId]);
+
+  // Helper function to get trigger description from saved triggers
+  const getTriggerDescription = (playbookId: string): string => {
+    // Map playbook IDs to their database playbook types
+    const playbookTypeMap: Record<string, string> = {
+      'voc-sprint': 'voc',
+      'activation-blitz': 'activation',
+      'sla-stabilizer': 'sla',
+      'renewal-safeguard': 'renewal',
+      'expansion-timing': 'expansion'
+    };
+    
+    const playbookType = playbookTypeMap[playbookId];
+    if (!playbookType || !savedTriggers[playbookType]) {
+      // Return default description from playbook if no saved triggers
+      const playbook = playbooks.find(p => p.id === playbookId);
+      const triggerStep = playbook?.steps.find(s => s.id.includes('trigger-check'));
+      return triggerStep?.description || '';
+    }
+    
+    const triggers = savedTriggers[playbookType];
+    const parts: string[] = [];
+    
+    // Build description based on playbook type
+    switch (playbookType) {
+      case 'voc':
+        if (triggers.nps_threshold !== undefined) parts.push(`NPS < ${triggers.nps_threshold}`);
+        if (triggers.csat_threshold !== undefined) parts.push(`CSAT < ${triggers.csat_threshold}`);
+        if (triggers.churn_risk_threshold !== undefined) parts.push(`Churn Risk ≥ ${(triggers.churn_risk_threshold * 100).toFixed(0)}%`);
+        if (triggers.health_score_drop_threshold !== undefined) parts.push(`Health score drop ≥ ${triggers.health_score_drop_threshold} pts`);
+        break;
+      case 'activation':
+        if (triggers.adoption_index_threshold !== undefined) parts.push(`Adoption < ${triggers.adoption_index_threshold}`);
+        if (triggers.active_users_threshold !== undefined) parts.push(`Active Users < ${triggers.active_users_threshold}`);
+        if (triggers.dau_mau_threshold !== undefined) parts.push(`DAU/MAU < ${(triggers.dau_mau_threshold * 100).toFixed(0)}%`);
+        break;
+      // Add other playbook types as needed
+      default:
+        return playbooks.find(p => p.id === playbookId)?.steps.find(s => s.id.includes('trigger-check'))?.description || '';
+    }
+    
+    return `Evaluate ${playbooks.find(p => p.id === playbookId)?.name || 'Playbook'} triggers: ${parts.join(', ')}`;
+  };
 
   const handleStartPlaybookClick = async (playbookId: string) => {
     setPlaybookToStart(playbookId);
@@ -94,19 +182,17 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
     setLoadingRecommendations(true);
     
     try {
-      // Get playbook triggers
-      const playbook = playbooks.find(p => p.id === playbookId);
-      const triggerStep = playbook?.steps.find(s => s.id.includes('trigger-check'));
-      const triggers = triggerStep?.data?.triggers || {};
+      // Don't send triggers from frontend - let backend load from database settings
+      // This ensures saved settings in the UI are always used
       
-      // Fetch recommendations
+      // Fetch recommendations without sending triggers
       const response = await fetch(`/api/playbooks/recommendations/${playbookId}`, {
         method: 'POST',
         headers: {
-          'X-Customer-ID': customerId.toString(),
+          'X-Customer-ID': (customerId || 1).toString(),
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ triggers })
+        body: JSON.stringify({})  // Empty body - backend will load from DB
       });
       
       if (response.ok) {
@@ -188,7 +274,7 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
       
       // Trigger incremental report generation in background
       fetch(`/api/playbooks/executions/${executionId}/report`, {
-        headers: { 'X-Customer-ID': customerId.toString() }
+        headers: { 'X-Customer-ID': (customerId || 1).toString() }
       }).catch(err => console.log('Report generation queued'));
       
     } catch (error) {
@@ -205,7 +291,7 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
     try {
       const response = await fetch(`/api/playbooks/executions/${executionId}`, {
         method: 'DELETE',
-        headers: { 'X-Customer-ID': customerId.toString() }
+        headers: { 'X-Customer-ID': (customerId || 1).toString() }
       });
       
       if (response.ok) {
@@ -302,9 +388,16 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
               const playbook = getPlaybook(execution.playbookId);
               if (!playbook) return null;
               
-              // Get trigger values from first step data
-              const triggerStep = playbook.steps.find(s => s.id.includes('trigger-check'));
-              const triggerValues = triggerStep?.data?.triggers || {};
+              // Get trigger values from saved triggers in database, fallback to playbook defaults
+              const playbookTypeMap: Record<string, string> = {
+                'voc-sprint': 'voc',
+                'activation-blitz': 'activation',
+                'sla-stabilizer': 'sla',
+                'renewal-safeguard': 'renewal',
+                'expansion-timing': 'expansion'
+              };
+              const playbookType = playbookTypeMap[playbook.id];
+              const triggerValues = savedTriggers[playbookType] || playbook.steps.find(s => s.id.includes('trigger-check'))?.data?.triggers || {};
               
               return (
                 <div key={execution.id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
@@ -581,7 +674,11 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
                     </div>
                     <div className="flex-1">
                       <h5 className="font-medium text-gray-900">{step.title}</h5>
-                      <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {step.id.includes('trigger-check') && selectedPlaybook ? 
+                          getTriggerDescription(selectedPlaybook.id) : 
+                          step.description}
+                      </p>
                       <div className="flex items-center mt-2 space-x-2">
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
                           {step.type}
