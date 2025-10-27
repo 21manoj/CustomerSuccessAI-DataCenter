@@ -74,15 +74,43 @@ def get_accounts():
     """Get all accounts for a customer"""
     customer_id = get_customer_id()
     accounts = Account.query.filter_by(customer_id=customer_id).all()
-    return jsonify([{
-        'account_id': a.account_id,
-        'account_name': a.account_name,
-        'revenue': float(a.revenue),
-        'industry': a.industry,
-        'region': a.region,
-        'account_status': a.account_status,
-        'created_at': a.created_at.isoformat() if a.created_at else None
-    } for a in accounts])
+    
+    # Import models needed for health score calculation
+    from models import HealthTrend
+    from playbook_recommendations_api import calculate_health_score_proxy
+    
+    result = []
+    for a in accounts:
+        # First try to get health score from health_trends table
+        latest_trend = HealthTrend.query.filter_by(
+            account_id=a.account_id,
+            customer_id=customer_id
+        ).order_by(
+            HealthTrend.year.desc(),
+            HealthTrend.month.desc()
+        ).first()
+        
+        health_score = None
+        if latest_trend and latest_trend.overall_health_score:
+            health_score = float(latest_trend.overall_health_score)
+        else:
+            # Calculate health score on-the-fly from KPIs
+            health_score = calculate_health_score_proxy(a.account_id)
+        
+        result.append({
+            'account_id': a.account_id,
+            'customer_id': a.customer_id,
+            'account_name': a.account_name,
+            'revenue': float(a.revenue),
+            'status': a.account_status,
+            'industry': a.industry,
+            'region': a.region,
+            'health_score': health_score,
+            'account_status': a.account_status,
+            'created_at': a.created_at.isoformat() if a.created_at else None
+        })
+    
+    return jsonify(result)
 
 @kpi_api.route('/api/accounts', methods=['POST'])
 def create_account():

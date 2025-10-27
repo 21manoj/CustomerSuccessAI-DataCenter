@@ -116,8 +116,28 @@ def get_accounts():
         # Get accounts from database
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         
+        # Import models needed for health score calculation
+        from backend.models import KPI, HealthTrend
+        
         result = []
         for account in accounts:
+            # First try to get health score from health_trends table
+            latest_trend = HealthTrend.query.filter_by(
+                account_id=account.account_id,
+                customer_id=customer_id
+            ).order_by(
+                HealthTrend.year.desc(),
+                HealthTrend.month.desc()
+            ).first()
+            
+            health_score = None
+            if latest_trend and latest_trend.overall_health_score:
+                health_score = float(latest_trend.overall_health_score)
+            else:
+                # Calculate health score on-the-fly from KPIs
+                from backend.playbook_recommendations_api import calculate_health_score_proxy
+                health_score = calculate_health_score_proxy(account.account_id)
+            
             result.append({
                 'account_id': account.account_id,
                 'customer_id': account.customer_id,
@@ -126,6 +146,8 @@ def get_accounts():
                 'status': account.status,
                 'industry': account.industry,
                 'region': account.region,
+                'health_score': health_score,
+                'account_status': account.status,
                 'created_at': account.created_at.isoformat() if account.created_at else None
             })
         

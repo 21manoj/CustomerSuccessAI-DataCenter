@@ -4,7 +4,7 @@ Direct RAG API - Bypasses vector search issues
 """
 
 from flask import Blueprint, request, jsonify, abort
-from models import db, KPI, Account, KPIUpload, PlaybookReport, QueryAudit
+from models import db, KPI, Account, KPIUpload, PlaybookReport, QueryAudit, PlaybookTrigger
 from sqlalchemy import text
 import openai
 import os
@@ -194,10 +194,30 @@ def direct_query():
         # Prepare context data
         context_data = []
         
-        # Add ALL accounts by revenue (not just top 5)
+        # Import models needed for health score calculation
+        from models import HealthTrend
+        from playbook_recommendations_api import calculate_health_score_proxy
+        
+        # Add ALL accounts by revenue (not just top 5) with health scores
         all_accounts = sorted(accounts, key=lambda x: x.revenue, reverse=True)
         for account in all_accounts:
-            context_data.append(f"Account: {account.account_name}, Revenue: ${account.revenue:,.0f}, Industry: {account.industry}, Region: {account.region}")
+            # Get latest health score
+            latest_trend = HealthTrend.query.filter_by(
+                account_id=account.account_id,
+                customer_id=customer_id
+            ).order_by(
+                HealthTrend.year.desc(),
+                HealthTrend.month.desc()
+            ).first()
+            
+            health_score = None
+            if latest_trend and latest_trend.overall_health_score:
+                health_score = float(latest_trend.overall_health_score)
+            else:
+                # Calculate on-the-fly
+                health_score = calculate_health_score_proxy(account.account_id)
+            
+            context_data.append(f"Account: {account.account_name}, Revenue: ${account.revenue:,.0f}, Health Score: {health_score:.1f}/100, Industry: {account.industry}, Region: {account.region}")
         
         # Add comprehensive time series data for revenue analysis
         # Include sample revenue time series data for key accounts
@@ -243,6 +263,27 @@ def direct_query():
         if any(keyword in query_text.lower() for keyword in ['playbook', 'improve', 'increase', 'reduce', 'better', 'leverage', 'help', 'address']):
             playbook_knowledge = format_playbook_knowledge_for_rag()
         
+        # Add playbook trigger context (alert thresholds)
+        trigger_context = ""
+        try:
+            triggers = PlaybookTrigger.query.filter_by(customer_id=customer_id).all()
+            if triggers:
+                trigger_context = "\n\n=== ACTIVE PLAYBOOK ALERTS ===\n"
+                trigger_context += "(Current trigger thresholds for automated alerts):\n"
+                for trigger in triggers:
+                    import json
+                    try:
+                        config = json.loads(trigger.trigger_config) if trigger.trigger_config else {}
+                        playbook_type = trigger.playbook_type
+                        trigger_context += f"\n{playbook_type.upper()} Playbook Triggers:\n"
+                        if config:
+                            for key, value in config.items():
+                                trigger_context += f"  • {key}: {value}\n"
+                    except:
+                        pass
+        except Exception as e:
+            print(f"Error getting playbook triggers: {e}")
+        
         # Generate AI response
         try:
             # Use environment variable for API key
@@ -250,7 +291,10 @@ def direct_query():
             if not api_key:
                 return jsonify({'error': 'OpenAI API key not configured'}), 500
                 
-            client = openai.OpenAI(api_key=api_key)
+            # Initialize OpenAI client with explicit httpx configuration
+            import httpx
+            http_client = httpx.Client(timeout=30.0)
+            client = openai.OpenAI(api_key=api_key, http_client=http_client)
             
             context = "\n".join(context_data)
             
@@ -278,11 +322,17 @@ def direct_query():
             5. Do NOT use generic industry terms like "pharmaceutical", "aerospace", "technology" unless they appear in the actual account names provided
             
             You have access to:
-            1. Real-time KPI data and historical playbook execution insights (see "Available Data" section)
-            2. System-defined playbooks (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)
-            3. Conversation history for context awareness
+            1. Real-time KPI data for ALL accounts in the "Available Data" section
+            2. Historical playbook execution insights (see "Available Data" section)
+            3. System-defined playbooks (VoC Sprint, Activation Blitz, SLA Stabilizer, Renewal Safeguard, Expansion Timing)
+            4. Active playbook trigger thresholds
+            5. Conversation history for context awareness
+            
+            CRITICAL: The "Available Data" section contains ALL the information you need. ALWAYS analyze it to answer questions about accounts, KPIs, risks, revenue, etc.
             
             When answering:
+            - ALWAYS analyze the Available Data first before saying "I don't have that information"
+            - Extract specific metrics from the data (revenue, KPIs, playbook results, etc.)
             - Use conversation history to understand follow-up questions (e.g., "What about TechCorp?" refers to previous context)
             - When playbook insights are available, cite specific names, dates, and outcomes
             - Reference concrete metrics with before/after comparisons
@@ -303,7 +353,9 @@ def direct_query():
             
             {playbook_knowledge}
             
-            Please provide a comprehensive analysis and answer based on the available data and conversation context.
+            {trigger_context}
+            
+            Provide a CONCISE, DIRECT answer in 2-3 sentences maximum. Be specific and actionable. No fluff, no general statements. Use bullet points if needed.
             """
             
             response = client.chat.completions.create(
@@ -319,7 +371,7 @@ def direct_query():
             ai_response = response.choices[0].message.content
             
         except Exception as e:
-            ai_response = f"Error generating AI response: {str(e)}"
+            return jsonify({'error': f'Query failed: {str(e)}'}), 500
         
         # Create properly formatted relevant_results with metadata
         relevant_results = []
