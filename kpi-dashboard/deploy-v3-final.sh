@@ -16,6 +16,16 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ Frontend built successfully"
 
+# Step 1.5: Copy local database to deployment directory
+echo "💾 Copying local database..."
+if [ -f "instance/kpi_dashboard.db" ]; then
+    cp instance/kpi_dashboard.db instance/kpi_dashboard.db.backup
+    echo "✅ Database backed up and will be included in deployment"
+else
+    echo "⚠️  No local database found at instance/kpi_dashboard.db"
+    echo "   Existing AWS database will be preserved"
+fi
+
 # Step 2: Create deployment package
 echo "📦 Creating deployment package..."
 tar -czf kpi-dashboard-v3-final.tar.gz \
@@ -25,6 +35,7 @@ tar -czf kpi-dashboard-v3-final.tar.gz \
     --exclude='qdrant_storage*' \
     --exclude='*.tar.gz' \
     --exclude='instance/.gitkeep' \
+    --exclude='instance/kpi_dashboard.db.backup' \
     .
 
 echo "✅ Package created: kpi-dashboard-v3-final.tar.gz"
@@ -47,10 +58,20 @@ ssh -i kpi-dashboard-key.pem ec2-user@3.84.178.121 << 'DEPLOY_SCRIPT'
     mkdir -p /home/ec2-user/kpi-dashboard-v3
     tar -xzf /home/ec2-user/kpi-dashboard-v3-final.tar.gz -C /home/ec2-user/kpi-dashboard-v3 2>&1 | grep -v 'LIBARCHIVE.xattr' || true
     
-    # Copy database from local
-    echo "Copying database..."
-    if [ -f "/home/ec2-user/backend/instance/kpi_dashboard.db" ]; then
-        cp /home/ec2-user/backend/instance/kpi_dashboard.db /home/ec2-user/kpi-dashboard-v3/instance/ 2>/dev/null || true
+    # Copy database from extracted package or preserve existing
+    echo "Setting up database..."
+    if [ -f "/home/ec2-user/kpi-dashboard-v3/instance/kpi_dashboard.db" ]; then
+        echo "✅ Using database from deployment package"
+        # Ensure instance directory exists
+        mkdir -p /home/ec2-user/kpi-dashboard-v3/instance
+    else
+        echo "⚠️  No database in package, checking for existing..."
+        if [ -f "/home/ec2-user/kpi-dashboard-v3/instance/kpi_dashboard.db" ]; then
+            echo "✅ Found existing database, preserving it"
+        else
+            echo "⚠️  No database found, will use fresh database"
+            mkdir -p /home/ec2-user/kpi-dashboard-v3/instance
+        fi
     fi
     
     # Restart containers
