@@ -30,4 +30,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:5059/api/health || exit 1
 
 # Start the application
-CMD ["python", "app_v3_simple.py"]
+CMD ["python", "app_v3_minimal.py"]

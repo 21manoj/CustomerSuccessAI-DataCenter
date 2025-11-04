@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TrendingUp, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
@@ -27,9 +28,10 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+        
+      credentials: 'include'},
+        body: JSON.stringify({ email, password })
+    });
 
       // Check content type before parsing
       const contentType = response.headers.get('content-type');
@@ -45,11 +47,11 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
       const data = await response.json();
       
       const session = {
-        customer_id: data.customer_id,
-        user_id: data.user_id.toString(),
-        user_name: data.user_name || 'User',
-        email: data.email,
-      };
+        customer_id: data.user?.customer_id || 1,
+        user_id: data.user?.user_id?.toString() || '1',
+        user_name: data.user?.customer_name || 'User',
+        email: data.user?.email || ''
+    };
 
       onLogin(session);
     } catch (err) {
@@ -154,7 +156,17 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </form>
 
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-gray-700 text-center mb-2">New Company?</p>
+            <Link
+              to="/register"
+              className="block w-full py-2 px-4 border border-green-600 rounded-lg text-sm font-medium text-green-700 hover:bg-green-100 text-center"
+            >
+              Create New Account
+            </Link>
+          </div>
+
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-gray-700 text-center">
               For demo credentials, please email{' '}
               <a 

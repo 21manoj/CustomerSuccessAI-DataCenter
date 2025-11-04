@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile.v3
+    ports:
+      - "5059:5059"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    volumes:
+      - ./backend:/app
+      - ./instance:/app/instance
+    command: python app_v3_minimal.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5059/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  frontend-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend-v3
+    ports:
+      - "3003:80"
+    depends_on:
+      - backend-v3
+    environment:
+      - REACT_APP_API_URL=http://localhost:5059
+    volumes:
+      - ./build:/usr/share/nginx/html

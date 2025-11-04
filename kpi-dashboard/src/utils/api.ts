@@ -16,9 +16,9 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}): Prom
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  };
+      ...options.headers
+    }
+    };
   
   return fetch(url, { ...defaultOptions, ...options });
 };

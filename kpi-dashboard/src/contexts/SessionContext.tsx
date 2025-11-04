@@ -14,8 +14,8 @@ const SessionContext = createContext<{
 }>({
   session: null,
   login: () => {},
-  logout: () => {},
-});
+  logout: () => {}
+    });
 
 export const useSession = () => useContext(SessionContext);
 
