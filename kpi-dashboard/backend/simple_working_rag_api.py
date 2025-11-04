@@ -4,24 +4,25 @@ Simple Working RAG API endpoints
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from simple_working_rag import simple_working_rag
 
 simple_working_rag_api = Blueprint('simple_working_rag_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @simple_working_rag_api.route('/api/simple-working-rag/build', methods=['POST'])
 def build_simple_working_knowledge_base():
     """Build simple working knowledge base for specific customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         simple_working_rag.build_knowledge_base(customer_id)
@@ -38,7 +39,7 @@ def build_simple_working_knowledge_base():
 @simple_working_rag_api.route('/api/simple-working-rag/query', methods=['POST'])
 def simple_working_query():
     """Query the simple working RAG system"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -56,7 +57,7 @@ def simple_working_query():
 @simple_working_rag_api.route('/api/simple-working-rag/status', methods=['GET'])
 def simple_working_status():
     """Get simple working RAG system status"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     is_built = simple_working_rag.customer_id == customer_id and len(simple_working_rag.data) > 0
     

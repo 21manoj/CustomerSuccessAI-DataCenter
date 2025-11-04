@@ -5,7 +5,11 @@ Handles environment-specific settings and feature toggles
 """
 
 import os
+import secrets
+import logging
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 class Config:
     """Base configuration"""
@@ -14,8 +18,67 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///instance/kpi_dashboard.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Security
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    # Security - Secret Key with Fail-Safe
+    @staticmethod
+    def get_secret_key(environment='development'):
+        """Get secret key with environment-specific fail-safe"""
+        secret_key = os.environ.get('SECRET_KEY')
+        
+        if secret_key:
+            # Validate length
+            if len(secret_key) < 32:
+                raise ValueError(
+                    f"SECRET_KEY too short ({len(secret_key)} chars). "
+                    "Must be at least 32 characters!"
+                )
+            return secret_key
+        
+        # DEVELOPMENT: Auto-generate temporary key with warning
+        if environment == 'development':
+            temp_key = secrets.token_hex(32)
+            logger.warning(
+                "⚠️  SECRET_KEY not set. Using auto-generated temporary key for development. "
+                "Run 'python backend/generate_secret_key.py' to create persistent key."
+            )
+            print("⚠️  WARNING: Using temporary SECRET_KEY (will change on restart)")
+            print("⚠️  Run: python backend/generate_secret_key.py")
+            return temp_key
+        
+        # PRODUCTION: Fail hard
+        raise ValueError(
+            "❌ CRITICAL: SECRET_KEY not set in production! "
+            "Application cannot start without secret key. "
+            "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    
+    SECRET_KEY = get_secret_key(os.environ.get('FLASK_ENV', 'development'))
+    
+    # Flask-Session Configuration
+    SESSION_TYPE = 'sqlalchemy'  # Database-backed sessions
+    SESSION_SQLALCHEMY_TABLE = 'sessions'  # Table name
+    SESSION_PERMANENT = True  # Enable session timeout
+    SESSION_USE_SIGNER = True  # Sign session cookies
+    SESSION_KEY_PREFIX = 'cs_session:'  # Namespace for sessions
+    
+    # Session Cookie Configuration
+    SESSION_COOKIE_NAME = 'cs_session'
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access (XSS protection)
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+    
+    # Session Durations
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)  # Active session: 8 hours
+    REMEMBER_COOKIE_NAME = 'cs_remember'  # Remember me cookie
+    REMEMBER_COOKIE_DURATION = timedelta(days=7)  # Remember me: 7 days
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+    
+    # Idle Timeout
+    SESSION_IDLE_TIMEOUT = timedelta(minutes=30)  # 30 minutes idle = logout
+    
+    # Flask-Login Configuration
+    LOGIN_DISABLED = False
+    SESSION_PROTECTION = 'strong'  # Detect session hijacking
     
     # File uploads
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
@@ -58,17 +121,13 @@ class Config:
     
     # CORS
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
-    
-    # Session
-    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
 
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     TESTING = False
+    SESSION_COOKIE_SECURE = False  # Allow HTTP in development
+    REMEMBER_COOKIE_SECURE = False
     
     # Enable all features in development
     FEATURE_FORMAT_DETECTION = True
@@ -81,13 +140,28 @@ class DevelopmentConfig(Config):
     ENABLE_HOT_RELOAD = True
 
 class ProductionConfig(Config):
-    """Production configuration"""
+    """Production configuration with strict security"""
     DEBUG = False
     TESTING = False
     
-    # Security settings
-    SESSION_COOKIE_SECURE = True
-    SECRET_KEY = os.getenv('SECRET_KEY')  # Must be set in production
+    # Validate SECRET_KEY at runtime (not at class definition)
+    @staticmethod
+    def validate_secret_key():
+        """Validate SECRET_KEY when ProductionConfig is actually used"""
+        secret_key = os.environ.get('SECRET_KEY')
+        if not secret_key:
+            raise ValueError(
+                "❌ CRITICAL: SECRET_KEY not set in production! "
+                "Set SECRET_KEY environment variable before starting."
+            )
+        if len(secret_key) < 32:
+            raise ValueError(f"SECRET_KEY too short ({len(secret_key)} chars). Minimum 32 required!")
+        return secret_key
+    
+    # Security settings (HTTPS required)
+    SESSION_COOKIE_SECURE = True  # HTTPS only
+    REMEMBER_COOKIE_SECURE = True  # HTTPS only
+    SESSION_PROTECTION = 'strong'  # Maximum protection
     
     # Performance settings
     RAG_SIMILARITY_THRESHOLD = 0.4  # Higher threshold for production
@@ -96,8 +170,8 @@ class ProductionConfig(Config):
     # Logging
     LOG_LEVEL = 'WARNING'
     
-    # Disable hot reload in production by default
-    ENABLE_HOT_RELOAD = os.getenv('ENABLE_HOT_RELOAD', 'false').lower() == 'true'
+    # Disable hot reload in production
+    ENABLE_HOT_RELOAD = False
 
 class TestingConfig(Config):
     """Testing configuration"""

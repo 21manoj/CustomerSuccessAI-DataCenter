@@ -5,6 +5,7 @@ Provides health status (Healthy/Risk/Critical) for individual KPIs
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, Account, Customer
 from health_score_engine import HealthScoreEngine
@@ -17,7 +18,7 @@ def get_kpi_health_status():
     """
     Get health status for all KPIs of a customer
     """
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     account_id = request.args.get('account_id')
     
     if not customer_id:
@@ -83,7 +84,7 @@ def get_health_status_summary():
     """
     Get health status summary for a customer or account
     """
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     account_id = request.args.get('account_id')
     
     if not customer_id:

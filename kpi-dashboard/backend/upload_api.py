@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from werkzeug.utils import secure_filename
 import pandas as pd
 from extensions import db
@@ -12,7 +13,7 @@ upload_api = Blueprint('upload_api', __name__)
 def upload_excel():
     """Upload and parse a KPI Excel file, create a new versioned upload, and store KPIs."""
     file = request.files.get('file')
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     user_id = request.headers.get('X-User-ID')
     account_name = request.form.get('account_name')  # Account name from frontend
     account_id = None
@@ -20,7 +21,7 @@ def upload_excel():
     if not file:
         return jsonify({'error': 'Missing file'}), 400
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     if not user_id:
         return jsonify({'error': 'Missing X-User-ID header'}), 400
     
@@ -196,9 +197,9 @@ def upload_excel():
 @upload_api.route('/api/uploads', methods=['GET'])
 def get_upload_history():
     """Get all uploads for versioning history for the current customer."""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     uploads = KPIUpload.query.filter_by(customer_id=customer_id).order_by(KPIUpload.version.desc()).all()
     return jsonify([{
         'upload_id': upload.upload_id,

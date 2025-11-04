@@ -4,6 +4,7 @@ API for managing KPI reference ranges
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPIReferenceRange
 from decimal import Decimal

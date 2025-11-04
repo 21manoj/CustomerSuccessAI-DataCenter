@@ -5,6 +5,7 @@ Provides monthly revenue tracking and time-series analysis capabilities
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from enhanced_rag_temporal import temporal_rag_system
 
 # Create blueprint
@@ -14,9 +15,9 @@ enhanced_rag_temporal_api = Blueprint('enhanced_rag_temporal_api', __name__)
 def build_temporal_knowledge_base():
     """Build temporal knowledge base with time-series data"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({"error": "Missing X-Customer-ID header"}), 400
+            return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
         customer_id = int(customer_id)
         
@@ -36,9 +37,9 @@ def build_temporal_knowledge_base():
 def query_temporal_rag():
     """Query temporal RAG system with monthly revenue analysis"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({"error": "Missing X-Customer-ID header"}), 400
+            return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
         customer_id = int(customer_id)
         
@@ -64,9 +65,9 @@ def query_temporal_rag():
 def get_monthly_revenue():
     """Get monthly revenue breakdown for the customer"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({"error": "Missing X-Customer-ID header"}), 400
+            return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
         customer_id = int(customer_id)
         
@@ -88,9 +89,9 @@ def get_monthly_revenue():
 def get_revenue_trends():
     """Get revenue trends and patterns analysis"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({"error": "Missing X-Customer-ID header"}), 400
+            return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
         customer_id = int(customer_id)
         
@@ -112,9 +113,9 @@ def get_revenue_trends():
 def get_top_accounts_monthly():
     """Get top performing accounts by month"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({"error": "Missing X-Customer-ID header"}), 400
+            return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
         customer_id = int(customer_id)
         
@@ -136,9 +137,9 @@ def get_top_accounts_monthly():
 def get_temporal_status():
     """Get status of temporal knowledge base"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({"error": "Missing X-Customer-ID header"}), 400
+            return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
         customer_id = int(customer_id)
         

@@ -6,6 +6,7 @@ Corporate API for handling corporate metadata uploads.
 print("DEBUG: corporate_api.py module loaded/reloaded")
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from werkzeug.utils import secure_filename
 import pandas as pd
 from extensions import db
@@ -21,13 +22,13 @@ corporate_api = Blueprint('corporate_api', __name__)
 def upload_corporate_metadata():
     """Upload corporate metadata with companies list."""
     file = request.files.get('file')
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     user_id = request.headers.get('X-User-ID')
     
     if not file:
         return jsonify({'error': 'Missing file'}), 400
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     if not user_id:
         return jsonify({'error': 'Missing X-User-ID header'}), 400
     
@@ -99,10 +100,10 @@ def upload_corporate_metadata():
 @corporate_api.route('/api/corporate/companies', methods=['GET'])
 def get_corporate_companies():
     """Get list of companies for corporate view."""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     
@@ -175,10 +176,10 @@ def test_corporate():
 def get_corporate_rollup():
     """Get corporate rollup data from loaded companies with revenue-weighted averaging."""
     print("DEBUG: get_corporate_rollup function called")
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     

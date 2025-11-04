@@ -5,6 +5,7 @@ Provides fast, accurate, cost-effective responses for quantitative questions
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import Account, KPI, KPIUpload
 from sqlalchemy import func, and_, or_, cast, Float
@@ -14,15 +15,15 @@ from datetime import datetime
 analytics_api = Blueprint('analytics_api', __name__)
 
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate customer ID from headers"""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 
 # ==================== REVENUE ANALYTICS ====================
@@ -30,7 +31,7 @@ def get_customer_id():
 @analytics_api.route('/api/analytics/revenue/total', methods=['GET'])
 def get_total_revenue():
     """Get total revenue across all accounts"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Optional filters
     industry = request.args.get('industry')
@@ -74,7 +75,7 @@ def get_total_revenue():
 @analytics_api.route('/api/analytics/revenue/average', methods=['GET'])
 def get_average_revenue():
     """Get average revenue per account"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Optional filters
     industry = request.args.get('industry')
@@ -120,7 +121,7 @@ def get_average_revenue():
 @analytics_api.route('/api/analytics/revenue/by-industry', methods=['GET'])
 def get_revenue_by_industry():
     """Get revenue breakdown by industry"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     results = db.session.query(
         Account.industry,
@@ -161,7 +162,7 @@ def get_revenue_by_industry():
 @analytics_api.route('/api/analytics/revenue/by-region', methods=['GET'])
 def get_revenue_by_region():
     """Get revenue breakdown by region"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     results = db.session.query(
         Account.region,
@@ -197,7 +198,7 @@ def get_revenue_by_region():
 @analytics_api.route('/api/analytics/revenue/top-accounts', methods=['GET'])
 def get_top_revenue_accounts():
     """Get top accounts by revenue"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     limit = request.args.get('limit', 10, type=int)
     
     accounts = Account.query.filter_by(
@@ -242,7 +243,7 @@ def get_top_revenue_accounts():
 @analytics_api.route('/api/analytics/accounts/count', methods=['GET'])
 def get_account_count():
     """Get total account count with optional filters"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Get optional filters
     industry = request.args.get('industry')
@@ -291,7 +292,7 @@ def get_account_count():
 @analytics_api.route('/api/analytics/accounts/by-industry', methods=['GET'])
 def get_accounts_by_industry():
     """Get account distribution by industry"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     results = db.session.query(
         Account.industry,
@@ -333,7 +334,7 @@ def get_accounts_by_industry():
 @analytics_api.route('/api/analytics/accounts/by-region', methods=['GET'])
 def get_accounts_by_region():
     """Get account distribution by region"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     results = db.session.query(
         Account.region,
@@ -368,7 +369,7 @@ def get_accounts_by_region():
 @analytics_api.route('/api/analytics/accounts/<int:account_id>', methods=['GET'])
 def get_account_details(account_id):
     """Get detailed information for a specific account"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     account = Account.query.filter_by(
         account_id=account_id,
@@ -408,7 +409,7 @@ def get_account_details(account_id):
 @analytics_api.route('/api/analytics/kpis/count', methods=['GET'])
 def get_kpi_count():
     """Get total KPI count"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     count = db.session.query(func.count(KPI.kpi_id)).join(
         Account, KPI.account_id == Account.account_id
@@ -449,7 +450,7 @@ def get_kpi_count():
 @analytics_api.route('/api/analytics/kpis/summary', methods=['GET'])
 def get_kpi_summary():
     """Get comprehensive KPI summary statistics"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Get KPI count by category
     category_stats = db.session.query(
@@ -500,7 +501,7 @@ def get_kpi_summary():
 @analytics_api.route('/api/analytics/aggregate', methods=['POST'])
 def aggregate_data():
     """Generic aggregation endpoint for flexible queries"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     metric = data.get('metric', 'revenue')
@@ -609,7 +610,7 @@ def aggregate_data():
 @analytics_api.route('/api/analytics/statistics', methods=['GET'])
 def get_statistics():
     """Get comprehensive statistics for customer data"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Revenue statistics
     revenue_stats = db.session.query(

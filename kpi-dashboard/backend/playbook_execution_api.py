@@ -5,6 +5,7 @@ Manages playbook execution, step tracking, and progress monitoring
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, PlaybookExecution, PlaybookReport
 from datetime import datetime
 from dateutil import parser as date_parser
@@ -17,9 +18,7 @@ playbook_execution_api = Blueprint('playbook_execution_api', __name__)
 _executions = {}
 _db_loaded = False
 
-def get_customer_id():
-    """Get customer ID from request headers"""
-    return request.headers.get('X-Customer-ID', type=int, default=1)
+
 
 
 def load_executions_from_db():
@@ -97,7 +96,7 @@ def create_execution():
         # Load executions from DB on first access
         load_executions_from_db()
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         # Check if this is a full execution object (from PlaybookManager) or just create params
@@ -177,7 +176,7 @@ def get_executions():
         # Load executions from DB on first access
         load_executions_from_db()
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         playbook_id = request.args.get('playbookId')
         status = request.args.get('status')
         
@@ -210,7 +209,7 @@ def get_executions():
 def get_execution(execution_id):
     """Get a specific execution"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         customer_executions = _executions.get(customer_id, {})
         execution = customer_executions.get(execution_id)
@@ -237,7 +236,7 @@ def get_execution(execution_id):
 def execute_step(execution_id):
     """Execute/complete a step in a playbook"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         step_id = data.get('stepId')
@@ -293,7 +292,7 @@ def execute_step(execution_id):
 def update_execution(execution_id):
     """Update execution status"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         # Get execution
@@ -332,7 +331,7 @@ def update_execution(execution_id):
 def delete_execution(execution_id):
     """Delete an execution and its associated report"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         customer_executions = _executions.get(customer_id, {})
         
@@ -370,7 +369,7 @@ def delete_execution(execution_id):
 def get_execution_stats():
     """Get execution statistics for a customer"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         customer_executions = _executions.get(customer_id, {})
         executions = list(customer_executions.values())

@@ -5,29 +5,59 @@ Manages blood sample-like thresholds for KPI health scoring
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPIReferenceRange, Customer
 import json
 
 kpi_reference_ranges_api = Blueprint('kpi_reference_ranges_api', __name__)
 
-def get_customer_id():
-    """Get customer ID from request headers"""
-    return request.headers.get('X-Customer-ID', type=int, default=1)
+
 
 @kpi_reference_ranges_api.route('/api/kpi-reference-ranges', methods=['GET'])
 def get_kpi_reference_ranges():
-    """Get all KPI reference ranges for the customer"""
+    """
+    Get all KPI reference ranges for the customer with fallback to system defaults.
+    
+    Strategy:
+    1. Get customer-specific ranges (customer_id = X)
+    2. Get system default ranges (customer_id = NULL)
+    3. Merge: customer overrides take precedence over defaults
+    """
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
-        # Get all reference ranges
-        ranges = KPIReferenceRange.query.all()
+        # Get customer-specific ranges
+        customer_ranges = KPIReferenceRange.query.filter_by(customer_id=customer_id).all()
         
+        # Get system default ranges (customer_id = NULL)
+        system_ranges = KPIReferenceRange.query.filter_by(customer_id=None).all()
+        
+        # Create a dictionary to merge ranges (customer overrides take precedence)
+        ranges_dict = {}
+        
+        # First, add all system defaults
+        for ref_range in system_ranges:
+            ranges_dict[ref_range.kpi_name] = {
+                'range': ref_range,
+                'is_custom': False,
+                'source': 'System Default'
+            }
+        
+        # Then, override with customer-specific ranges
+        for ref_range in customer_ranges:
+            ranges_dict[ref_range.kpi_name] = {
+                'range': ref_range,
+                'is_custom': True,
+                'source': f'Custom Override'
+            }
+        
+        # Build result list
         result = []
-        for ref_range in ranges:
+        for kpi_name, data in ranges_dict.items():
+            ref_range = data['range']
+            
             # Recalculate range strings from numeric values to ensure correctness
-            # Don't trust the string fields which may be stale
             critical_range_str = f"{ref_range.critical_min}-{ref_range.critical_max} {ref_range.unit}"
             risk_range_str = f"{ref_range.risk_min}-{ref_range.risk_max} {ref_range.unit}"
             healthy_range_str = f"{ref_range.healthy_min}-{ref_range.healthy_max} {ref_range.unit}"
@@ -46,13 +76,28 @@ def get_kpi_reference_ranges():
                 'risk_max': ref_range.risk_max,
                 'healthy_min': ref_range.healthy_min,
                 'healthy_max': ref_range.healthy_max,
-                'description': ref_range.description or ''
+                'description': ref_range.description or '',
+                'is_custom': data['is_custom'],
+                'source': data['source'],
+                'customer_id': ref_range.customer_id
             })
+        
+        # Sort by KPI name for consistency
+        result.sort(key=lambda x: x['kpi_name'])
+        
+        # Count summary
+        custom_count = sum(1 for r in result if r['is_custom'])
+        system_count = len(result) - custom_count
         
         return jsonify({
             'status': 'success',
             'ranges': result,
-            'total': len(result)
+            'total': len(result),
+            'summary': {
+                'custom_overrides': custom_count,
+                'system_defaults': system_count,
+                'customer_id': customer_id
+            }
         })
         
     except Exception as e:
@@ -63,9 +108,17 @@ def get_kpi_reference_ranges():
 
 @kpi_reference_ranges_api.route('/api/kpi-reference-ranges/<int:range_id>', methods=['PUT'])
 def update_kpi_reference_range(range_id):
-    """Update a specific KPI reference range"""
+    """
+    Update a specific KPI reference range with copy-on-write behavior.
+    
+    If editing a system default (customer_id=NULL):
+    - Creates a customer-specific override instead of modifying the system default
+    
+    If editing a customer override (customer_id=X):
+    - Updates the existing customer override
+    """
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         # Find the reference range
@@ -76,40 +129,88 @@ def update_kpi_reference_range(range_id):
                 'message': 'KPI reference range not found'
             }), 404
         
-        # Update the range
-        ref_range.critical_min = float(data.get('critical_min', ref_range.critical_min))
-        ref_range.critical_max = float(data.get('critical_max', ref_range.critical_max))
-        ref_range.risk_min = float(data.get('risk_min', ref_range.risk_min))
-        ref_range.risk_max = float(data.get('risk_max', ref_range.risk_max))
-        ref_range.healthy_min = float(data.get('healthy_min', ref_range.healthy_min))
-        ref_range.healthy_max = float(data.get('healthy_max', ref_range.healthy_max))
-        ref_range.description = data.get('description', ref_range.description)
+        # COPY-ON-WRITE LOGIC
+        # If this is a system default (customer_id=NULL), create a customer override
+        if ref_range.customer_id is None:
+            # Check if customer already has an override for this KPI
+            existing_override = KPIReferenceRange.query.filter_by(
+                customer_id=customer_id,
+                kpi_name=ref_range.kpi_name
+            ).first()
+            
+            if existing_override:
+                # Customer already has an override, update it
+                target_range = existing_override
+                action = 'updated'
+            else:
+                # Create a new customer-specific override (copy-on-write)
+                target_range = KPIReferenceRange(
+                    customer_id=customer_id,
+                    kpi_name=ref_range.kpi_name,
+                    unit=ref_range.unit,
+                    higher_is_better=ref_range.higher_is_better,
+                    critical_min=ref_range.critical_min,
+                    critical_max=ref_range.critical_max,
+                    risk_min=ref_range.risk_min,
+                    risk_max=ref_range.risk_max,
+                    healthy_min=ref_range.healthy_min,
+                    healthy_max=ref_range.healthy_max,
+                    description=ref_range.description,
+                    created_by=customer_id,
+                    updated_by=customer_id
+                )
+                db.session.add(target_range)
+                action = 'created'
+        else:
+            # This is already a customer override
+            # Only allow the owner to update it
+            if ref_range.customer_id != customer_id:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Cannot update another customer\'s reference range'
+                }), 403
+            
+            target_range = ref_range
+            action = 'updated'
+        
+        # Apply updates to target range
+        target_range.critical_min = float(data.get('critical_min', target_range.critical_min))
+        target_range.critical_max = float(data.get('critical_max', target_range.critical_max))
+        target_range.risk_min = float(data.get('risk_min', target_range.risk_min))
+        target_range.risk_max = float(data.get('risk_max', target_range.risk_max))
+        target_range.healthy_min = float(data.get('healthy_min', target_range.healthy_min))
+        target_range.healthy_max = float(data.get('healthy_max', target_range.healthy_max))
+        target_range.description = data.get('description', target_range.description)
+        target_range.updated_by = customer_id
         
         # Update range strings
-        ref_range.critical_range = f"{ref_range.critical_min}-{ref_range.critical_max}"
-        ref_range.risk_range = f"{ref_range.risk_min}-{ref_range.risk_max}"
-        ref_range.healthy_range = f"{ref_range.healthy_min}-{ref_range.healthy_max}"
+        target_range.critical_range = f"{target_range.critical_min}-{target_range.critical_max}"
+        target_range.risk_range = f"{target_range.risk_min}-{target_range.risk_max}"
+        target_range.healthy_range = f"{target_range.healthy_min}-{target_range.healthy_max}"
         
         db.session.commit()
         
         return jsonify({
             'status': 'success',
-            'message': 'KPI reference range updated successfully',
+            'message': f'KPI reference range {action} successfully (customer override)',
+            'action': action,
             'range': {
-                'range_id': ref_range.range_id,
-                'kpi_name': ref_range.kpi_name,
-                'unit': ref_range.unit,
-                'higher_is_better': ref_range.higher_is_better,
-                'critical_range': ref_range.critical_range,
-                'risk_range': ref_range.risk_range,
-                'healthy_range': ref_range.healthy_range,
-                'critical_min': ref_range.critical_min,
-                'critical_max': ref_range.critical_max,
-                'risk_min': ref_range.risk_min,
-                'risk_max': ref_range.risk_max,
-                'healthy_min': ref_range.healthy_min,
-                'healthy_max': ref_range.healthy_max,
-                'description': ref_range.description
+                'range_id': target_range.range_id,
+                'kpi_name': target_range.kpi_name,
+                'unit': target_range.unit,
+                'higher_is_better': target_range.higher_is_better,
+                'critical_range': target_range.critical_range,
+                'risk_range': target_range.risk_range,
+                'healthy_range': target_range.healthy_range,
+                'critical_min': target_range.critical_min,
+                'critical_max': target_range.critical_max,
+                'risk_min': target_range.risk_min,
+                'risk_max': target_range.risk_max,
+                'healthy_min': target_range.healthy_min,
+                'healthy_max': target_range.healthy_max,
+                'description': target_range.description,
+                'is_custom': True,
+                'customer_id': target_range.customer_id
             }
         })
         
@@ -124,7 +225,7 @@ def update_kpi_reference_range(range_id):
 def bulk_update_kpi_reference_ranges():
     """Bulk update multiple KPI reference ranges"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         ranges = data.get('ranges', [])
         
@@ -173,7 +274,7 @@ def bulk_update_kpi_reference_ranges():
 def reset_kpi_reference_ranges():
     """Reset KPI reference ranges to default values"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         # Import the default configuration
         from health_score_config import KPI_REFERENCE_RANGES
@@ -190,23 +291,27 @@ def reset_kpi_reference_ranges():
             
             higher_is_better = config['higher_is_better']
             
-            if higher_is_better:
-                # Higher is better: low range = red (critical), high range = green (healthy)
-                critical_min = ranges['low']['min']
-                critical_max = ranges['low']['max']
-                risk_min = ranges['medium']['min']
-                risk_max = ranges['medium']['max']
-                healthy_min = ranges['high']['min']
-                healthy_max = ranges['high']['max']
-            else:
-                # Lower is better: low range = green (healthy), high range = red (critical)
-                # Need to reverse the mapping
-                healthy_min = ranges['low']['min']  # Low values are healthy (green)
-                healthy_max = ranges['low']['max']
-                risk_min = ranges['medium']['min']
-                risk_max = ranges['medium']['max']
-                critical_min = ranges['high']['min']  # High values are critical (red)
-                critical_max = ranges['high']['max']
+            # Map ranges by color (not by key name!)
+            # Find which range has which color
+            critical_range = None
+            risk_range = None
+            healthy_range = None
+            
+            for key, range_data in ranges.items():
+                if range_data['color'] == 'red':
+                    critical_range = range_data
+                elif range_data['color'] == 'yellow':
+                    risk_range = range_data
+                elif range_data['color'] == 'green':
+                    healthy_range = range_data
+            
+            # Assign based on color mapping
+            critical_min = critical_range['min']
+            critical_max = critical_range['max']
+            risk_min = risk_range['min']
+            risk_max = risk_range['max']
+            healthy_min = healthy_range['min']
+            healthy_max = healthy_range['max']
             
             ref_range = KPIReferenceRange(
                 kpi_name=kpi_name,

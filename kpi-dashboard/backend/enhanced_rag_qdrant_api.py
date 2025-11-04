@@ -5,6 +5,7 @@ Provides advanced KPI and account analysis capabilities with production-grade ve
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account, CustomerConfig
 from enhanced_rag_qdrant import get_qdrant_rag_system
@@ -12,20 +13,20 @@ import re
 
 enhanced_rag_qdrant_api = Blueprint('enhanced_rag_qdrant_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/build', methods=['POST'])
 def build_qdrant_knowledge_base():
     """Build Qdrant knowledge base for specific customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -46,7 +47,7 @@ def build_qdrant_knowledge_base():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/query', methods=['POST'])
 def qdrant_query():
     """Query the Qdrant RAG system with OpenAI GPT-4 analysis"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -72,7 +73,7 @@ def qdrant_query():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/revenue-analysis', methods=['GET'])
 def analyze_revenue_drivers_qdrant():
     """Analyze revenue drivers across accounts using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -84,7 +85,7 @@ def analyze_revenue_drivers_qdrant():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/risk-analysis', methods=['GET'])
 def analyze_at_risk_accounts_qdrant():
     """Find accounts at risk of churn using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -96,7 +97,7 @@ def analyze_at_risk_accounts_qdrant():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/status', methods=['GET'])
 def get_knowledge_base_status():
     """Check if knowledge base is built for the customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # For now, just return that it's built since we know it works
     # TODO: Implement proper status checking
@@ -109,7 +110,7 @@ def get_knowledge_base_status():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/collection-info', methods=['GET'])
 def get_collection_info():
     """Get Qdrant collection information"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -121,7 +122,7 @@ def get_collection_info():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/account/<int:account_id>', methods=['GET'])
 def analyze_specific_account_qdrant(account_id):
     """Analyze a specific account's performance using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -141,7 +142,7 @@ def analyze_specific_account_qdrant(account_id):
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/industry/<industry>', methods=['GET'])
 def analyze_industry_performance_qdrant(industry):
     """Analyze performance by industry using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -161,7 +162,7 @@ def analyze_industry_performance_qdrant(industry):
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/top-accounts', methods=['GET'])
 def get_top_accounts_qdrant():
     """Get top accounts by revenue using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -180,7 +181,7 @@ def get_top_accounts_qdrant():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/kpi-performance', methods=['GET'])
 def analyze_kpi_performance_qdrant():
     """Analyze KPI performance across all accounts using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_qdrant_rag_system(customer_id)
@@ -199,7 +200,7 @@ def analyze_kpi_performance_qdrant():
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/query-simple', methods=['POST'])
 def simple_query_qdrant():
     """Simple natural language query handler using Qdrant"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     if not data or 'query' not in data:
         return jsonify({'error': 'Query is required'}), 400

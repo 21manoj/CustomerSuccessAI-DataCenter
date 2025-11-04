@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 import os
 import pandas as pd
 from extensions import db
@@ -13,12 +14,12 @@ cleanup_api = Blueprint('cleanup_api', __name__)
 @cleanup_api.route('/api/cleanup/bulk-upload', methods=['POST'])
 def bulk_cleanup_and_upload():
     """Clean up all existing data and re-upload from a directory of KPI files."""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     user_id = request.headers.get('X-User-ID')
     directory_path = request.json.get('directory_path')
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     if not user_id:
         return jsonify({'error': 'Missing X-User-ID header'}), 400
     if not directory_path:
@@ -252,9 +253,9 @@ def process_single_file(file_path, account_name, customer_id, user_id):
 @cleanup_api.route('/api/cleanup/status', methods=['GET'])
 def get_cleanup_status():
     """Get current data status for the customer."""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     

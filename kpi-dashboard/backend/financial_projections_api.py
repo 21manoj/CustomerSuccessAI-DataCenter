@@ -5,6 +5,7 @@ Handles financial projections tied to KPI changes and trends
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from datetime import datetime, timedelta
 from decimal import Decimal
 import json
@@ -89,10 +90,10 @@ def calculate_financial_impact(kpi_category, current_score, projected_score, acc
 @financial_projections_api.route('/api/financial-projections/account/<int:account_id>', methods=['GET'])
 def get_account_financial_projections(account_id):
     """Get financial projections for a specific account based on KPI trends"""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     months = request.args.get('months', 12, type=int)
@@ -228,10 +229,10 @@ def get_account_financial_projections(account_id):
 @financial_projections_api.route('/api/financial-projections/corporate', methods=['GET'])
 def get_corporate_financial_projections():
     """Get corporate-level financial projections"""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     months = request.args.get('months', 12, type=int)
@@ -295,10 +296,10 @@ def get_corporate_financial_projections():
 @financial_projections_api.route('/api/financial-projections/kpi-impact/<kpi_name>', methods=['GET'])
 def get_kpi_financial_impact(kpi_name):
     """Get financial impact analysis for a specific KPI across all accounts"""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     

@@ -5,6 +5,7 @@ Provides reference ranges for KPI calculations
 """
 
 from flask import Blueprint, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from health_score_config import KPI_REFERENCE_RANGES
 
 kpi_reference_api = Blueprint('kpi_reference_api', __name__)

@@ -1,25 +1,26 @@
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account, CustomerConfig
 from datetime import datetime
 
 kpi_api = Blueprint('kpi_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 # Configuration Endpoints
 @kpi_api.route('/api/config', methods=['GET'])
 def get_customer_config():
     """Get customer configuration including KPI upload mode"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
     if not config:
@@ -39,7 +40,7 @@ def get_customer_config():
 @kpi_api.route('/api/config', methods=['PUT'])
 def update_customer_config():
     """Update customer configuration"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
@@ -72,7 +73,7 @@ def _get_mode_description(mode):
 @kpi_api.route('/api/accounts', methods=['GET'])
 def get_accounts():
     """Get all accounts for a customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     accounts = Account.query.filter_by(customer_id=customer_id).all()
     
     # Import models needed for health score calculation
@@ -115,7 +116,7 @@ def get_accounts():
 @kpi_api.route('/api/accounts', methods=['POST'])
 def create_account():
     """Create a new account"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     account = Account(
@@ -138,7 +139,7 @@ def create_account():
 @kpi_api.route('/api/accounts/<int:account_id>', methods=['PUT'])
 def update_account(account_id):
     """Update an account"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     account = Account.query.get_or_404(account_id)
     
     if account.customer_id != customer_id:
@@ -155,7 +156,7 @@ def update_account(account_id):
 @kpi_api.route('/api/accounts/<int:account_id>/kpis', methods=['GET'])
 def get_account_kpis(account_id):
     """Get all KPIs for a specific account"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     account = Account.query.get_or_404(account_id)
     
     if account.customer_id != customer_id:
@@ -181,7 +182,7 @@ def get_account_kpis(account_id):
 @kpi_api.route('/api/kpi/<int:kpi_id>', methods=['PATCH'])
 def edit_kpi(kpi_id):
     """Edit a single KPI entry by ID, enforcing customer ownership."""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     kpi = KPI.query.get_or_404(kpi_id)
     upload = KPIUpload.query.get_or_404(kpi.upload_id)
     if upload.customer_id != customer_id:
@@ -198,7 +199,7 @@ def edit_kpi(kpi_id):
 @kpi_api.route('/api/kpis/customer/all', methods=['GET'])
 def get_all_kpis():
     """Get all KPIs for a customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Get KPIs with account information for this customer
     kpis = db.session.query(KPI, Account).join(
@@ -235,7 +236,7 @@ def test_kpis():
 @kpi_api.route('/api/kpis/<int:upload_id>', methods=['GET'])
 def get_kpis(upload_id):
     """Get all KPIs for a given upload, enforcing customer ownership."""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     upload = KPIUpload.query.get_or_404(upload_id)
     if upload.customer_id != customer_id:
         abort(403, 'Forbidden: Upload does not belong to your customer')

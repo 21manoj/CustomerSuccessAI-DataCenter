@@ -5,21 +5,22 @@ Provides endpoints to view, manage, and invalidate query cache
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from query_cache import get_query_cache, invalidate_customer_cache, get_cache_stats
 from datetime import datetime
 
 cache_api = Blueprint('cache_api', __name__)
 
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate customer ID"""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 
 @cache_api.route('/api/cache/stats', methods=['GET'])

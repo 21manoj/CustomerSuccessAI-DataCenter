@@ -4,24 +4,25 @@ Working RAG API endpoints
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from working_rag_system import working_rag_system
 
 working_rag_api = Blueprint('working_rag_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @working_rag_api.route('/api/working-rag/build', methods=['POST'])
 def build_working_knowledge_base():
     """Build working knowledge base for specific customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         working_rag_system.build_knowledge_base(customer_id)
@@ -38,7 +39,7 @@ def build_working_knowledge_base():
 @working_rag_api.route('/api/working-rag/query', methods=['POST'])
 def working_query():
     """Query the working RAG system"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -56,7 +57,7 @@ def working_query():
 @working_rag_api.route('/api/working-rag/status', methods=['GET'])
 def working_status():
     """Get working RAG system status"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     is_built = working_rag_system.customer_id == customer_id and len(working_rag_system.data) > 0
     

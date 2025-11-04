@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account
 import pandas as pd
@@ -604,9 +605,9 @@ account_rag_system = AccountAnalyticsRAGSystem()
 def analyze_account_growth():
     """Analyze account growth patterns and revenue drivers"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+            return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
         
         analysis = account_rag_system.analyze_account_growth(int(customer_id))
         return jsonify(analysis)
@@ -618,9 +619,9 @@ def analyze_account_growth():
 def query_account_analytics():
     """Answer questions about account performance, growth, and revenue drivers"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if not customer_id:
-            return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+            return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
         
         data = request.json
         query = data.get('query', '').lower()
@@ -820,7 +821,7 @@ def query_kpis():
     data = request.get_json()
     query = data.get('query', '').strip()
     upload_id = data.get('upload_id')
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not query:
         return jsonify({'error': 'Query is required'}), 400
@@ -913,7 +914,7 @@ def generate_insights(query_type, search_results, kpi_data):
         
     elif query_type == "health_score_analysis":
         # Get health scores analysis
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         if customer_id:
             try:
                 health_analysis = analyze_health_scores(int(customer_id))
@@ -988,10 +989,10 @@ def generate_comprehensive_analysis(kpi_data):
 @rag_api.route('/api/rag/health-scores', methods=['POST'])
 def get_health_scores():
     """Get health scores analysis for all accounts"""
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
     customer_id = int(customer_id)
     

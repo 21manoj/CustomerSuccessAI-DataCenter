@@ -5,6 +5,7 @@ Provides temporal analysis, trend analysis, and historical insights
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account, HealthTrend
 from enhanced_rag_historical import get_historical_rag_system
@@ -12,20 +13,20 @@ import re
 
 enhanced_rag_historical_api = Blueprint('enhanced_rag_historical_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @enhanced_rag_historical_api.route('/api/rag-historical/build', methods=['POST'])
 def build_historical_knowledge_base():
     """Build historical knowledge base with temporal data"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -51,7 +52,7 @@ def build_historical_knowledge_base():
 @enhanced_rag_historical_api.route('/api/rag-historical/query', methods=['POST'])
 def historical_query():
     """Query the historical RAG system with temporal analysis"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -74,7 +75,7 @@ def historical_query():
 @enhanced_rag_historical_api.route('/api/rag-historical/trend-analysis', methods=['GET'])
 def analyze_trends():
     """Analyze trends across all KPIs and accounts"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -96,7 +97,7 @@ def analyze_trends():
 @enhanced_rag_historical_api.route('/api/rag-historical/temporal-analysis', methods=['GET'])
 def analyze_temporal_patterns():
     """Analyze temporal patterns and seasonality"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -118,7 +119,7 @@ def analyze_temporal_patterns():
 @enhanced_rag_historical_api.route('/api/rag-historical/kpi-trends/<kpi_name>', methods=['GET'])
 def analyze_kpi_trends(kpi_name):
     """Analyze trends for a specific KPI"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -141,7 +142,7 @@ def analyze_kpi_trends(kpi_name):
 @enhanced_rag_historical_api.route('/api/rag-historical/account-trends/<int:account_id>', methods=['GET'])
 def analyze_account_trends(account_id):
     """Analyze trends for a specific account"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -164,7 +165,7 @@ def analyze_account_trends(account_id):
 @enhanced_rag_historical_api.route('/api/rag-historical/health-evolution', methods=['GET'])
 def analyze_health_evolution():
     """Analyze health score evolution over time"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -186,7 +187,7 @@ def analyze_health_evolution():
 @enhanced_rag_historical_api.route('/api/rag-historical/predictive-insights', methods=['GET'])
 def get_predictive_insights():
     """Get predictive insights based on historical data"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)
@@ -208,7 +209,7 @@ def get_predictive_insights():
 @enhanced_rag_historical_api.route('/api/rag-historical/collection-info', methods=['GET'])
 def get_historical_collection_info():
     """Get historical collection information"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         rag_system = get_historical_rag_system(customer_id)

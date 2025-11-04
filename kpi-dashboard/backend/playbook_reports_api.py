@@ -5,6 +5,7 @@ Generates comprehensive reports for playbook executions with RACI, outcomes, and
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Account, KPI, PlaybookReport
 from datetime import datetime
 from dateutil import parser as date_parser
@@ -13,9 +14,7 @@ import random
 
 playbook_reports_api = Blueprint('playbook_reports_api', __name__)
 
-def get_customer_id():
-    """Get customer ID from request headers"""
-    return request.headers.get('X-Customer-ID', type=int, default=1)
+
 
 
 # In-memory cache for faster access (automatically loaded from DB on startup)
@@ -42,7 +41,7 @@ def load_reports_from_db():
 def save_report_to_db(execution_id, report, execution_data):
     """Save or update a playbook report in the database"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         # Parse timestamps
         started_at = execution_data.get('startedAt')
@@ -923,7 +922,7 @@ def get_execution_report(execution_id):
         # Load reports from DB on first access
         load_reports_from_db()
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         # Check if report already exists in cache
         if execution_id in _execution_reports:
@@ -1019,7 +1018,7 @@ def get_all_reports():
         # Load reports from DB on first access
         load_reports_from_db()
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         playbook_type = request.args.get('playbook_type')
         status = request.args.get('status')
         

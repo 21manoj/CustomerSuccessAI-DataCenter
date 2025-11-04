@@ -5,6 +5,7 @@ Supports multiple file formats and automatic knowledge base updates
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from werkzeug.utils import secure_filename
 import pandas as pd
 from extensions import db
@@ -26,14 +27,14 @@ enhanced_upload_api = Blueprint('enhanced_upload_api', __name__)
 def upload_excel_enhanced():
     """Enhanced upload with format detection and automatic RAG rebuild"""
     file = request.files.get('file')
-    customer_id = request.headers.get('X-Customer-ID')
+    customer_id = get_current_customer_id()
     user_id = request.headers.get('X-User-ID')
     account_name = request.form.get('account_name')
     
     if not file:
         return jsonify({'error': 'Missing file'}), 400
     if not customer_id:
-        return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+        return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     if not user_id:
         return jsonify({'error': 'Missing X-User-ID header'}), 400
     if not account_name:

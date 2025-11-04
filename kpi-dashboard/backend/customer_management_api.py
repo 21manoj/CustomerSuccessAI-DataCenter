@@ -5,6 +5,7 @@ Handles customer creation, data upload, and knowledge base management
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Customer, CustomerConfig, Account, KPIUpload
 from enhanced_rag_qdrant import get_qdrant_rag_system
 import json

@@ -4,6 +4,7 @@ Health Trend API for tracking and retrieving monthly health score trends.
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from datetime import datetime, timedelta
 from extensions import db
 from models import HealthTrend, Account, Customer
@@ -15,7 +16,7 @@ health_trend_api = Blueprint('health_trend_api', __name__)
 def get_health_trends():
     """Get health trend data for a customer or specific account"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         account_id = request.args.get('account_id')
         
         if not customer_id:
@@ -59,7 +60,7 @@ def get_health_trends():
 def create_health_trend():
     """Create or update health trend data for a specific month"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         data = request.get_json()
         
         if not customer_id:
@@ -124,7 +125,7 @@ def create_health_trend():
 def generate_health_trends():
     """Generate health trend data for all accounts based on current KPI data"""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400

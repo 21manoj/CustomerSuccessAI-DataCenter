@@ -5,6 +5,7 @@ Analyzes which accounts need which playbooks based on their current KPI data and
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Account, KPI, KPITimeSeries
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -13,9 +14,7 @@ import json
 playbook_recommendations_api = Blueprint('playbook_recommendations_api', __name__)
 
 
-def get_customer_id():
-    """Get customer ID from request headers"""
-    return request.headers.get('X-Customer-ID', type=int, default=1)
+
 
 
 def calculate_health_score_proxy(account_id):
@@ -366,7 +365,7 @@ def test_health_score(account_id):
 def get_playbook_recommendations(playbook_id):
     """Get account recommendations for a specific playbook"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json or {}
         triggers = data.get('triggers', {})
         

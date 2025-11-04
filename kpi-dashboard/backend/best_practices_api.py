@@ -5,6 +5,7 @@ Provides access to KPI best practices and industry benchmarks
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from rag_knowledge_schema import KPIBestPractices, IndustryBenchmarks
 

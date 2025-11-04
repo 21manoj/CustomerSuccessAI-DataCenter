@@ -4,6 +4,7 @@ Time Series API for retrieving KPI trends and health score history.
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from health_score_storage import HealthScoreStorageService
 from datetime import datetime
 
@@ -13,13 +14,13 @@ time_series_api = Blueprint('time_series_api', __name__)
 def get_kpi_trends():
     """Get historical trends for a specific KPI."""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         kpi_name = request.args.get('kpi_name')
         account_id = request.args.get('account_id', type=int)
         months = request.args.get('months', 12, type=int)
         
         if not customer_id:
-            return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+            return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
         if not kpi_name:
             return jsonify({'error': 'Missing kpi_name parameter'}), 400
         if not account_id:
@@ -43,12 +44,12 @@ def get_kpi_trends():
 def get_account_health_trends():
     """Get historical health score trends for an account."""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         account_id = request.args.get('account_id', type=int)
         months = request.args.get('months', 12, type=int)
         
         if not customer_id:
-            return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+            return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
         if not account_id:
             return jsonify({'error': 'Missing account_id parameter'}), 400
         
@@ -69,11 +70,11 @@ def get_account_health_trends():
 def generate_historical_data():
     """Generate historical KPI and health score data for testing."""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         months_back = request.json.get('months_back', 12) if request.json else 12
         
         if not customer_id:
-            return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+            return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
         
         storage_service = HealthScoreStorageService()
         
@@ -115,10 +116,10 @@ def generate_historical_data():
 def get_time_series_stats():
     """Get statistics about stored time series data."""
     try:
-        customer_id = request.headers.get('X-Customer-ID')
+        customer_id = get_current_customer_id()
         
         if not customer_id:
-            return jsonify({'error': 'Missing X-Customer-ID header'}), 400
+            return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
         
         from models import HealthTrend, KPITimeSeries, Account
         

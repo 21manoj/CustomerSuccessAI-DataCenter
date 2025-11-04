@@ -5,6 +5,7 @@ Manages playbook trigger configurations and evaluates trigger conditions
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, PlaybookTrigger, Account, KPI
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -13,16 +14,14 @@ import json
 playbook_triggers_api = Blueprint('playbook_triggers_api', __name__)
 
 
-def get_customer_id():
-    """Get customer ID from request headers"""
-    return request.headers.get('X-Customer-ID', type=int, default=1)
+
 
 
 @playbook_triggers_api.route('/api/playbook-triggers', methods=['GET'])
 def get_trigger_settings():
     """Get all playbook trigger configurations for a customer"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         # Fetch all trigger configurations for this customer
         triggers = PlaybookTrigger.query.filter_by(customer_id=customer_id).all()
@@ -79,7 +78,7 @@ def get_trigger_settings():
 def save_trigger_settings():
     """Save or update playbook trigger configuration"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         playbook_type = data.get('playbook_type')
@@ -134,7 +133,7 @@ def save_trigger_settings():
 def test_trigger_conditions():
     """Test trigger conditions against current account data"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         playbook_type = data.get('playbook_type')
@@ -307,7 +306,7 @@ def evaluate_activation_triggers(customer_id, triggers):
 def evaluate_all_triggers():
     """Evaluate all enabled playbook triggers for a customer"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         # Get all enabled trigger configurations
         triggers = PlaybookTrigger.query.filter_by(
@@ -366,7 +365,7 @@ def evaluate_all_triggers():
 def get_trigger_history():
     """Get trigger evaluation history for a customer"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         playbook_type = request.args.get('playbook_type')
         
         query = PlaybookTrigger.query.filter_by(customer_id=customer_id)

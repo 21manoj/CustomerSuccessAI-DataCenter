@@ -5,6 +5,7 @@ Provides advanced KPI and account analysis capabilities
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account, CustomerConfig
 from enhanced_rag_system import enhanced_rag_system
@@ -12,20 +13,20 @@ import re
 
 enhanced_rag_api = Blueprint('enhanced_rag_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @enhanced_rag_api.route('/api/enhanced-rag/build', methods=['POST'])
 def build_enhanced_knowledge_base():
     """Build enhanced knowledge base with FAISS index"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         enhanced_rag_system.build_knowledge_base(customer_id)
@@ -41,7 +42,7 @@ def build_enhanced_knowledge_base():
 @enhanced_rag_api.route('/api/enhanced-rag/query', methods=['POST'])
 def enhanced_query():
     """Query the enhanced RAG system with Claude analysis"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -69,7 +70,7 @@ def enhanced_query():
 @enhanced_rag_api.route('/api/enhanced-rag/revenue-analysis', methods=['GET'])
 def analyze_revenue_drivers():
     """Analyze revenue drivers across accounts"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Ensure knowledge base is built
@@ -84,7 +85,7 @@ def analyze_revenue_drivers():
 @enhanced_rag_api.route('/api/enhanced-rag/risk-analysis', methods=['GET'])
 def analyze_at_risk_accounts():
     """Find accounts at risk of churn"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Ensure knowledge base is built
@@ -99,7 +100,7 @@ def analyze_at_risk_accounts():
 @enhanced_rag_api.route('/api/enhanced-rag/account/<int:account_id>', methods=['GET'])
 def analyze_specific_account(account_id):
     """Analyze a specific account's performance"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Ensure knowledge base is built
@@ -135,7 +136,7 @@ def analyze_specific_account(account_id):
 @enhanced_rag_api.route('/api/enhanced-rag/industry/<industry>', methods=['GET'])
 def analyze_industry_performance(industry):
     """Analyze performance by industry"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Ensure knowledge base is built
@@ -169,7 +170,7 @@ def analyze_industry_performance(industry):
 @enhanced_rag_api.route('/api/enhanced-rag/top-accounts', methods=['GET'])
 def get_top_accounts():
     """Get top accounts by revenue"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Ensure knowledge base is built
@@ -190,7 +191,7 @@ def get_top_accounts():
 @enhanced_rag_api.route('/api/enhanced-rag/kpi-performance', methods=['GET'])
 def analyze_kpi_performance():
     """Analyze KPI performance across all accounts"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Ensure knowledge base is built
@@ -222,7 +223,7 @@ def analyze_kpi_performance():
 @enhanced_rag_api.route('/api/enhanced-rag/accounts/revenue', methods=['GET'])
 def get_accounts_by_revenue():
     """Get accounts filtered by revenue criteria"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     min_revenue = request.args.get('min_revenue', type=float)
     max_revenue = request.args.get('max_revenue', type=float)
     
@@ -258,7 +259,7 @@ def get_accounts_by_revenue():
 @enhanced_rag_api.route('/api/enhanced-rag/query-simple', methods=['POST'])
 def simple_query():
     """Simple natural language query handler for revenue questions"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     if not data or 'query' not in data:
         return jsonify({'error': 'Query is required'}), 400

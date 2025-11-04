@@ -1,4 +1,5 @@
 from flask import Flask
+from auth_middleware import get_current_customer_id, get_current_user_id
 from flask_migrate import Migrate
 from flask_cors import CORS
 from extensions import db
@@ -63,6 +64,7 @@ from playbook_reports_api import playbook_reports_api
 from playbook_recommendations_api import playbook_recommendations_api
 from feature_toggle_api import feature_toggle_api
 from registration_api import registration_api
+from kpi_reference_ranges_api import kpi_reference_ranges_api
 
 # Initialize Chroma client and collection for KPI VDB (lazy loading)
 global_chroma_client = None
@@ -120,6 +122,7 @@ app.register_blueprint(playbook_reports_api)
 app.register_blueprint(playbook_recommendations_api)
 app.register_blueprint(feature_toggle_api)
 app.register_blueprint(registration_api)
+app.register_blueprint(kpi_reference_ranges_api)
 
 @app.route('/')
 def home():
@@ -141,7 +144,7 @@ def test_endpoint():
 @app.route('/api/accounts-working', methods=['GET'])
 def get_accounts_working():
     """Working accounts endpoint that returns mock data."""
-    customer_id = request.headers.get('X-Customer-ID', 6)
+    customer_id = get_current_customer_id()
     accounts = [
         {"account_id": 1, "customer_id": int(customer_id), "account_name": "TechCorp Solutions", "revenue": 2500000, "status": "active", "industry": "Technology"},
         {"account_id": 2, "customer_id": int(customer_id), "account_name": "Global Manufacturing Inc", "revenue": 8500000, "status": "active", "industry": "Manufacturing"},
@@ -154,7 +157,7 @@ def get_accounts_working():
 @app.route('/api/kpis-working', methods=['GET'])
 def get_kpis_working():
     """Working KPIs endpoint that returns mock data."""
-    customer_id = request.headers.get('X-Customer-ID', 6)
+    customer_id = get_current_customer_id()
     kpis = [
         {"kpi_id": 1, "account_id": 1, "kpi_name": "Monthly Recurring Revenue", "current_value": 2500000, "target_value": 3000000, "status": "below_target", "trend": "increasing"},
         {"kpi_id": 2, "account_id": 1, "kpi_name": "Customer Acquisition Cost", "current_value": 150, "target_value": 120, "status": "above_target", "trend": "decreasing"},
@@ -167,7 +170,7 @@ def get_kpis_working():
 @app.route('/api/health-scores-working', methods=['GET'])
 def get_health_scores_working():
     """Working health scores endpoint that returns mock data."""
-    customer_id = request.headers.get('X-Customer-ID', 6)
+    customer_id = get_current_customer_id()
     health_scores = [
         {"account_id": 1, "account_name": "TechCorp Solutions", "overall_score": 75, "financial_score": 80, "operational_score": 70, "growth_score": 75},
         {"account_id": 2, "account_name": "Global Manufacturing Inc", "overall_score": 85, "financial_score": 90, "operational_score": 80, "growth_score": 85},

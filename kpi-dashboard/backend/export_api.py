@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, send_file
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload
 import pandas as pd

@@ -8,6 +8,7 @@ import pandas as pd
 import json
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
+from auth_middleware import get_current_customer_id, get_current_user_id
 from werkzeug.utils import secure_filename
 import os
 from models import db, Customer, CustomerConfig
@@ -56,7 +57,7 @@ def extract_category_weights_from_master_file(file_path):
 @master_file_api.route('/api/master-file/upload', methods=['POST'])
 def upload_master_file():
     """Upload and process master KPI framework file"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -109,7 +110,7 @@ def upload_master_file():
 def get_category_weights():
     """Get current category weights for the customer"""
     try:
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         # Get customer configuration
         config = CustomerConfig.query.filter_by(customer_id=customer_id).first()

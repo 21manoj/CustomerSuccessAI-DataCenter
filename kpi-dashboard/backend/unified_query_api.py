@@ -5,6 +5,7 @@ Entry point for all user queries - automatically routes to the best system
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from query_router import QueryRouter
 from extensions import db
 from models import Account, KPI
@@ -15,15 +16,15 @@ from datetime import datetime
 unified_query_api = Blueprint('unified_query_api', __name__)
 
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate customer ID"""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 
 @unified_query_api.route('/api/query', methods=['POST'])
@@ -54,7 +55,7 @@ def unified_query():
     data = request.json
     query = data.get('query', '').strip()
     force_routing = data.get('force_routing')  # Optional override
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     if not query:
         return jsonify({'error': 'Query is required'}), 400

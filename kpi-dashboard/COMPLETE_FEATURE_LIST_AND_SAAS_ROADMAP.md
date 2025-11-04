@@ -106,6 +106,7 @@
 - **Custom KPI Formulas**: User-defined calculations and metrics
 - **Scheduled Reports**: Automated report generation and delivery
 - **Data Export**: CSV, Excel, PDF, API exports
+- **KPI Reference Ranges Export/Import**: Excel/CSV templates for bulk configuration management
 
 #### **🔗 Enterprise Integrations**
 - **CRM Integration**: Salesforce, HubSpot, Pipedrive

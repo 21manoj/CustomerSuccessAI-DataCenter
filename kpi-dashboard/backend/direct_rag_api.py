@@ -4,6 +4,7 @@ Direct RAG API - Bypasses vector search issues
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, KPI, Account, KPIUpload, PlaybookReport, QueryAudit, PlaybookTrigger
 from sqlalchemy import text
 import openai
@@ -17,15 +18,15 @@ load_dotenv()
 
 direct_rag_api = Blueprint('direct_rag_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 
 def get_playbook_context(customer_id, query_text):
@@ -122,7 +123,7 @@ def get_playbook_context(customer_id, query_text):
 def direct_query():
     """Direct RAG query that bypasses vector search"""
     start_time = time.time()
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -475,7 +476,7 @@ def direct_query():
 @direct_rag_api.route('/api/direct-rag/status', methods=['GET'])
 def direct_status():
     """Get direct RAG system status"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).count()

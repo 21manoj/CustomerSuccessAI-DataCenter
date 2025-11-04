@@ -4,17 +4,33 @@ Minimal V3 App for Testing
 Only includes essential APIs without heavy dependencies
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_session import Session
+from flask_login import LoginManager, current_user
 from extensions import db
 import datetime
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
-# Use local path for development, Docker path for production
+
+# Load configuration
 import os
+env = os.getenv('FLASK_ENV', 'development')
+if env == 'production':
+    app.config.from_object('config.ProductionConfig')
+elif env == 'testing':
+    app.config.from_object('config.TestingConfig')
+else:
+    app.config.from_object('config.DevelopmentConfig')
+
+# Use local path for development, Docker path for production
 if os.path.exists('/app/instance'):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
 else:
@@ -24,14 +40,33 @@ else:
     os.makedirs(instance_path, exist_ok=True)
     db_path = os.path.join(instance_path, 'kpi_dashboard.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-CORS(app)
+# Enable CORS with credentials support
+CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', ['http://localhost:3000']))
 
+# Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Initialize Flask-Session (database-backed sessions)
+app.config['SESSION_SQLALCHEMY'] = db
+Session(app)
+
+# Initialize Flask-Login (user session management)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.session_protection = 'strong'
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login"""
+    from models import User
+    return User.query.get(int(user_id))
+
+# Initialize global authentication middleware
+from auth_middleware import init_auth_middleware, get_current_customer_id, get_current_user_id
+init_auth_middleware(app)
 
 import models
 from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig
@@ -109,9 +144,21 @@ def health_check():
 
 @app.route('/api/accounts', methods=['GET'])
 def get_accounts():
-    """Get accounts for the customer"""
+    """
+    Get accounts for the customer.
+    
+    SECURITY: Requires authentication. Uses customer_id from session.
+    """
+    # SECURITY FIX: Require authentication
+    if not current_user.is_authenticated:
+        return jsonify({
+            'error': 'Authentication required',
+            'message': 'Please log in to access this resource'
+        }), 401
+    
     try:
-        customer_id = request.headers.get('X-Customer-ID', type=int, default=1)
+        # SECURITY FIX: Get customer_id from authenticated user session (not headers!)
+        customer_id = current_user.customer_id
         
         # Get accounts from database
         accounts = Account.query.filter_by(customer_id=customer_id).all()
@@ -165,11 +212,17 @@ def get_accounts():
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    """User login endpoint"""
+    """
+    User login endpoint with session creation.
+    
+    SECURITY: Uses Flask-Login to create secure server-side sessions.
+    No more X-Customer-ID headers - session handles authentication.
+    """
     try:
         data = request.json
         email = data.get('email')
         password = data.get('password')
+        remember = data.get('remember', False)  # Remember me checkbox
         
         if not email or not password:
             return jsonify({
@@ -186,8 +239,31 @@ def login():
                 'message': 'Invalid email or password'
             }), 401
         
+        # Check if user account is active
+        if not user.active:
+            return jsonify({
+                'status': 'error',
+                'message': 'Account is inactive. Contact support.'
+            }), 403
+        
         # Get customer info
         customer = Customer.query.get(user.customer_id)
+        
+        # Log in user - Flask-Login creates secure session
+        from flask_login import login_user
+        login_user(user, remember=remember)
+        
+        # Store additional session data for quick access
+        session['customer_id'] = user.customer_id
+        session['user_id'] = user.user_id
+        session['login_time'] = datetime.datetime.utcnow().isoformat()
+        session['ip_address'] = request.remote_addr
+        session['user_agent'] = request.headers.get('User-Agent', '')[:500]
+        session.permanent = True  # Enable session timeout
+        
+        # Update user's last login
+        user.last_login = datetime.datetime.utcnow()
+        db.session.commit()
         
         return jsonify({
             'status': 'success',
@@ -195,9 +271,11 @@ def login():
             'user': {
                 'user_id': user.user_id,
                 'email': user.email,
+                'user_name': user.user_name,
                 'customer_id': user.customer_id,
                 'customer_name': customer.customer_name if customer else 'Unknown'
-            }
+            },
+            'session_expires': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat() if not remember else None
         })
         
     except Exception as e:
@@ -205,6 +283,71 @@ def login():
             'status': 'error',
             'message': f'Login failed: {str(e)}'
         }), 500
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    """
+    User logout endpoint - destroys session.
+    
+    SECURITY: Properly destroys server-side session.
+    """
+    try:
+        from flask_login import logout_user, login_required
+        
+        # Check if user is logged in
+        if not current_user.is_authenticated:
+            return jsonify({
+                'status': 'success',
+                'message': 'Already logged out'
+            }), 200
+        
+        # Logout user (destroys Flask-Login session)
+        logout_user()
+        
+        # Clear session data
+        session.clear()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Logged out successfully'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Logout failed: {str(e)}'
+        }), 500
+
+@app.route('/api/session/status', methods=['GET'])
+def session_status():
+    """Check if user is authenticated"""
+    if current_user.is_authenticated:
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'user_id': current_user.user_id,
+                'email': current_user.email,
+                'customer_id': current_user.customer_id
+            }
+        }), 200
+    else:
+        return jsonify({
+            'authenticated': False
+        }), 401
+
+@app.route('/api/session/refresh', methods=['POST'])
+def session_refresh():
+    """Refresh session on user activity"""
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    session.modified = True  # Mark session as modified to update expiry
+    session['last_activity'] = datetime.datetime.utcnow().isoformat()
+    
+    return jsonify({
+        'status': 'success',
+        'expires_at': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat()
+    }), 200
 
 if __name__ == '__main__':
     with app.app_context():

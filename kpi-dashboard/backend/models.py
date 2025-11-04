@@ -6,6 +6,9 @@ class Customer(db.Model):
     customer_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, unique=True)
     phone = db.Column(db.String)
+    domain = db.Column(db.String, unique=True, nullable=True)  # Email domain for multi-tenant identification
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 
 class CustomerConfig(db.Model):
     __tablename__ = 'customer_configs'
@@ -34,8 +37,39 @@ class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'))
     user_name = db.Column(db.String, nullable=False)
-    email = db.Column(db.String)
+    email = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.String(128))
+    active = db.Column(db.Boolean, default=True)  # For account deactivation
+    last_login = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Ensure username is unique within each customer domain
+    # Email must be unique globally
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', 'user_name', name='unique_customer_username'),
+        db.UniqueConstraint('email', name='unique_user_email'),
+    )
+    
+    # Flask-Login required methods
+    def is_authenticated(self):
+        """User is authenticated if they have a valid session"""
+        return True
+    
+    def is_active(self):
+        """Check if user account is active"""
+        return self.active
+    
+    def is_anonymous(self):
+        """User is not anonymous"""
+        return False
+    
+    def get_id(self):
+        """Return user ID as string (Flask-Login requirement)"""
+        return str(self.user_id)
+
+# Note: Flask-Session automatically creates 'sessions' table
+# We don't need to define it here - it manages its own schema
 
 class KPIUpload(db.Model):
     __tablename__ = 'kpi_uploads'
@@ -90,7 +124,8 @@ class HealthTrend(db.Model):
 class KPIReferenceRange(db.Model):
     __tablename__ = 'kpi_reference_ranges'
     range_id = db.Column(db.Integer, primary_key=True)
-    kpi_name = db.Column(db.String, nullable=False, unique=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id', ondelete='CASCADE'), nullable=True)  # NULL = system default
+    kpi_name = db.Column(db.String, nullable=False)
     unit = db.Column(db.String, nullable=False)
     higher_is_better = db.Column(db.Boolean, nullable=False, default=True)
     
@@ -106,11 +141,23 @@ class KPIReferenceRange(db.Model):
     healthy_min = db.Column(db.Numeric(10, 2), nullable=False)
     healthy_max = db.Column(db.Numeric(10, 2), nullable=False)
     
+    # String representations for UI display
+    critical_range = db.Column(db.String(100))
+    risk_range = db.Column(db.String(100))
+    healthy_range = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    
     # Metadata
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     created_by = db.Column(db.Integer, db.ForeignKey('users.user_id'))
     updated_by = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    
+    # Composite unique constraint: same kpi_name allowed for different customers
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', 'kpi_name', name='uq_customer_kpi_name'),
+        db.Index('idx_ref_range_customer_kpi', 'customer_id', 'kpi_name'),
+    )
 
 class KPITimeSeries(db.Model):
     __tablename__ = 'kpi_time_series'

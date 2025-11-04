@@ -5,6 +5,7 @@ Provides endpoints for managing feature toggles from the React UI
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 import os
 import sys
 
@@ -194,9 +195,7 @@ def validate_dependencies():
 # MCP Integration Feature Toggle
 # ============================================
 
-def get_customer_id():
-    """Get customer ID from request headers"""
-    return request.headers.get('X-Customer-ID', type=int, default=1)
+
 
 @feature_toggle_api.route('/api/features/mcp', methods=['GET'])
 def get_mcp_status():
@@ -204,7 +203,7 @@ def get_mcp_status():
     try:
         from models import FeatureToggle as FTModel, db
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         toggle = FTModel.query.filter_by(
             customer_id=customer_id,
@@ -246,7 +245,7 @@ def toggle_mcp():
         from models import FeatureToggle as FTModel, db
         from datetime import datetime
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         data = request.json
         
         # Get or create toggle
@@ -296,7 +295,7 @@ def get_mcp_connection_status():
     try:
         from mcp_integration import is_mcp_enabled, get_mcp_config
         
-        customer_id = get_customer_id()
+        customer_id = get_current_customer_id()
         
         enabled = is_mcp_enabled(customer_id)
         config = get_mcp_config(customer_id)

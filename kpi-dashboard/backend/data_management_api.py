@@ -1,24 +1,25 @@
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account, CustomerConfig
 from datetime import datetime
 
 data_management_api = Blueprint('data_management_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @data_management_api.route('/api/data/status', methods=['GET'])
 def get_data_status():
     """Get current data status for a customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     # Count KPIs
     kpi_count = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).count()
@@ -50,7 +51,7 @@ def get_data_status():
 @data_management_api.route('/api/data/clear', methods=['POST'])
 def clear_all_data():
     """Clear all data for a customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Get upload IDs for this customer
@@ -93,7 +94,7 @@ def clear_all_data():
 @data_management_api.route('/api/data/clear-uploads', methods=['POST'])
 def clear_uploads():
     """Clear specific uploads"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     upload_ids = data.get('upload_ids', [])
     
@@ -147,7 +148,7 @@ def clear_uploads():
 @data_management_api.route('/api/data/clear-accounts', methods=['POST'])
 def clear_accounts():
     """Clear all accounts for a customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         # Delete all accounts for this customer

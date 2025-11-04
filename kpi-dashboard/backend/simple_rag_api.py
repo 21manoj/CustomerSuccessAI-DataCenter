@@ -4,24 +4,25 @@ Simple RAG API endpoints
 """
 
 from flask import Blueprint, request, jsonify, abort
+from auth_middleware import get_current_customer_id, get_current_user_id
 from simple_rag_system import simple_rag_system
 
 simple_rag_api = Blueprint('simple_rag_api', __name__)
 
-def get_customer_id():
+def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = request.headers.get('X-Customer-ID')
+    cid = get_current_customer_id()
     if not cid:
-        abort(400, 'Missing X-Customer-ID header')
+        abort(400, 'Authentication required (handled by middleware)')
     try:
         return int(cid)
     except Exception:
-        abort(400, 'Invalid X-Customer-ID header')
+        abort(400, 'Invalid authentication (handled by middleware)')
 
 @simple_rag_api.route('/api/simple-rag/build', methods=['POST'])
 def build_simple_knowledge_base():
     """Build simple knowledge base for specific customer"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     try:
         simple_rag_system.build_knowledge_base(customer_id)
@@ -38,7 +39,7 @@ def build_simple_knowledge_base():
 @simple_rag_api.route('/api/simple-rag/query', methods=['POST'])
 def simple_query():
     """Query the simple RAG system"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     data = request.json
     
     if not data or 'query' not in data:
@@ -56,7 +57,7 @@ def simple_query():
 @simple_rag_api.route('/api/simple-rag/status', methods=['GET'])
 def simple_status():
     """Get simple RAG system status"""
-    customer_id = get_customer_id()
+    customer_id = get_current_customer_id()
     
     is_built = simple_rag_system.customer_id == customer_id and len(simple_rag_system.data) > 0
     

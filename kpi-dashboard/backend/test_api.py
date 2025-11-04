@@ -4,6 +4,7 @@ Test API
 """
 
 from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Customer, Account, KPIUpload
 
 test_api = Blueprint('test_api', __name__)
