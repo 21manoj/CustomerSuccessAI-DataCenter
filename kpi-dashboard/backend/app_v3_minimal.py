@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Minimal V3 App for Testing
-Only includes essential APIs without heavy dependencies
+V5 Production App
+Includes all essential APIs with session-based authentication and multi-tenant support
 """
 
 from flask import Flask, request, jsonify, session
@@ -30,6 +30,9 @@ elif env == 'testing':
 else:
     app.config.from_object('config.DevelopmentConfig')
 
+# Enable debug mode for better error messages
+app.config['DEBUG'] = True
+
 # Use local path for development, Docker path for production
 if os.path.exists('/app/instance'):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
@@ -48,9 +51,19 @@ CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', ['ht
 db.init_app(app)
 migrate = Migrate(app, db)
 
+# Ensure sessions table exists before initializing Flask-Session
+with app.app_context():
+    db.create_all()  # This will create the sessions table if it doesn't exist
+
 # Initialize Flask-Session (database-backed sessions)
+app.config['SESSION_TYPE'] = 'sqlalchemy'
 app.config['SESSION_SQLALCHEMY'] = db
-Session(app)
+app.config['SESSION_SQLALCHEMY_TABLE'] = 'sessions'
+try:
+    Session(app)
+except Exception as e:
+    print(f"⚠️  Warning: Flask-Session initialization issue: {e}")
+    print("   Sessions will still work, but cleanup may be disabled")
 
 # Initialize Flask-Login (user session management)
 login_manager = LoginManager()
@@ -62,10 +75,19 @@ login_manager.session_protection = 'strong'
 def load_user(user_id):
     """Load user by ID for Flask-Login"""
     from models import User
-    return User.query.get(int(user_id))
+    try:
+        user = User.query.get(int(user_id))
+        if user:
+            # Refresh to ensure we have latest data from database (including customer_id)
+            db.session.refresh(user)
+        return user
+    except Exception as e:
+        logger.error(f"Error loading user {user_id}: {e}")
+        return None
 
 # Initialize global authentication middleware
 from auth_middleware import init_auth_middleware, get_current_customer_id, get_current_user_id
+from activity_logging import activity_logger
 init_auth_middleware(app)
 
 import models
@@ -77,6 +99,7 @@ from kpi_api import kpi_api
 from download_api import download_api
 from data_management_api import data_management_api
 from corporate_api import corporate_api
+from openai_key_api import openai_key_api
 from time_series_api import time_series_api
 from cleanup_api import cleanup_api
 from health_trend_api import health_trend_api
@@ -96,8 +119,16 @@ from feature_toggle_api import feature_toggle_api
 from registration_api import registration_api
 from kpi_reference_ranges_api import kpi_reference_ranges_api
 from direct_rag_api import direct_rag_api
+from customer_performance_summary_api import customer_perf_summary_api
+from workflow_config_api import workflow_config_api
+from export_api import export_api
+from data_quality_api import data_quality_api
+from customer_profile_api import customer_profile_api
+from enhanced_upload_api import enhanced_upload_api
+from enhanced_rag_openai_api import enhanced_rag_openai_api
 
 app.register_blueprint(upload_api)
+app.register_blueprint(enhanced_upload_api)
 app.register_blueprint(kpi_api)
 app.register_blueprint(download_api)
 app.register_blueprint(data_management_api)
@@ -123,6 +154,31 @@ app.register_blueprint(feature_toggle_api)
 app.register_blueprint(registration_api)
 app.register_blueprint(kpi_reference_ranges_api)
 app.register_blueprint(direct_rag_api)
+app.register_blueprint(customer_perf_summary_api)
+app.register_blueprint(workflow_config_api)
+app.register_blueprint(export_api)
+from activity_log_api import activity_log_api
+app.register_blueprint(activity_log_api)
+from governance_rag_api import governance_rag_api
+app.register_blueprint(governance_rag_api)
+app.register_blueprint(openai_key_api)
+app.register_blueprint(data_quality_api)
+app.register_blueprint(customer_profile_api)
+app.register_blueprint(enhanced_rag_openai_api)
+
+# Load persisted data on startup
+@app.before_request
+def initialize_data_once():
+    """Load persisted data from database on first request"""
+    if not hasattr(app, '_data_initialized'):
+        try:
+            from playbook_execution_api import load_executions_from_db
+            load_executions_from_db()
+            print("✓ Initialized persisted data on startup")
+            app._data_initialized = True
+        except Exception as e:
+            print(f"Warning: Could not initialize persisted data: {e}")
+            app._data_initialized = True  # Prevent repeated attempts
 
 @app.route('/')
 def home():
@@ -130,16 +186,16 @@ def home():
     # Use local timezone for timestamp
     local_tz = datetime.datetime.now().astimezone().tzinfo
     now = datetime.datetime.now(local_tz).isoformat()
-    return f"KPI Dashboard V3 Backend is running! Timestamp: {now}"
+    return f"KPI Dashboard V5 Backend is running! Timestamp: {now}"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'version': 'V3',
+        'version': 'V5',
         'timestamp': datetime.datetime.now().isoformat(),
-        'message': 'KPI Dashboard V3 Backend is running'
+        'message': 'KPI Dashboard V5 Backend is running'
     })
 
 @app.route('/api/accounts', methods=['GET'])
@@ -233,14 +289,59 @@ def login():
         # Find user by email
         user = User.query.filter_by(email=email).first()
         
-        if not user or not check_password_hash(user.password_hash, password):
+        if not user:
+            # Log failed login attempt (user not found)
+            try:
+                # Try to find customer by email domain or use default
+                customer_id = 1  # Default, will be logged as unknown user
+                activity_logger.log_login(
+                    customer_id=customer_id,
+                    user_id=None,
+                    status='failure',
+                    error_message='User not found'
+                )
+            except:
+                pass
             return jsonify({
                 'status': 'error',
                 'message': 'Invalid email or password'
             }), 401
         
-        # Check if user account is active
-        if not user.active:
+        # Check password hash (handle None case)
+        if not user.password_hash:
+            # Log failed login attempt
+            try:
+                activity_logger.log_login(
+                    customer_id=user.customer_id,
+                    user_id=user.user_id,
+                    status='failure',
+                    error_message='User account has no password set'
+                )
+            except:
+                pass
+            return jsonify({
+                'status': 'error',
+                'message': 'User account has no password set. Please contact support.'
+            }), 401
+        
+        if not check_password_hash(user.password_hash, password):
+            # Log failed login attempt (wrong password)
+            try:
+                activity_logger.log_login(
+                    customer_id=user.customer_id,
+                    user_id=user.user_id,
+                    status='failure',
+                    error_message='Invalid password'
+                )
+            except:
+                pass
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid email or password'
+            }), 401
+        
+        # Check if user account is active (handle None as active for backwards compatibility)
+        if user.active is False:
             return jsonify({
                 'status': 'error',
                 'message': 'Account is inactive. Contact support.'
@@ -265,6 +366,19 @@ def login():
         user.last_login = datetime.datetime.utcnow()
         db.session.commit()
         
+        # Log successful login
+        try:
+            activity_logger.log_login(
+                customer_id=user.customer_id,
+                user_id=user.user_id,
+                status='success'
+            )
+        except Exception as log_error:
+            print(f"Warning: Failed to log login activity: {log_error}")
+        
+        # Refresh user from database to ensure we have latest data
+        db.session.refresh(user)
+        
         return jsonify({
             'status': 'success',
             'message': 'Login successful',
@@ -279,9 +393,13 @@ def login():
         })
         
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        traceback.print_exc()  # Print full traceback to console
         return jsonify({
             'status': 'error',
-            'message': f'Login failed: {str(e)}'
+            'message': f'Login failed: {str(e)}',
+            'traceback': error_traceback  # Always include for debugging
         }), 500
 
 @app.route('/api/logout', methods=['POST'])
@@ -294,12 +412,26 @@ def logout():
     try:
         from flask_login import logout_user, login_required
         
+        # Get user info before logout
+        user_id = session.get('user_id')
+        customer_id = session.get('customer_id')
+        
         # Check if user is logged in
         if not current_user.is_authenticated:
             return jsonify({
                 'status': 'success',
                 'message': 'Already logged out'
             }), 200
+        
+        # Log logout before destroying session
+        if user_id and customer_id:
+            try:
+                activity_logger.log_logout(
+                    customer_id=customer_id,
+                    user_id=user_id
+                )
+            except Exception as log_error:
+                print(f"Warning: Failed to log logout activity: {log_error}")
         
         # Logout user (destroys Flask-Login session)
         logout_user()
@@ -335,6 +467,26 @@ def session_status():
             'authenticated': False
         }), 401
 
+@app.route('/api/session', methods=['GET'])
+def session_info():
+    """
+    Backwards-compat endpoint for frontend session check.
+    Mirrors /api/session/status shape with user details when authenticated.
+    """
+    if current_user.is_authenticated:
+        from models import User, Customer
+        user = User.query.get(current_user.user_id)
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'user_id': user.user_id,
+                'email': user.email,
+                'user_name': user.user_name,
+                'customer_id': user.customer_id
+            }
+        }), 200
+    return jsonify({'authenticated': False}), 401
+
 @app.route('/api/session/refresh', methods=['POST'])
 def session_refresh():
     """Refresh session on user activity"""
@@ -352,4 +504,5 @@ def session_refresh():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    # Option 1: Production-ready - no auto-reload (code changes require manual restart)
     app.run(host='0.0.0.0', port=5059, debug=False)

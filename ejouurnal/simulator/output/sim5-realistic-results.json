@@ -1,0 +1,4491 @@
+{
+  "config": {
+    "API_BASE_URL": "http://localhost:3005/api",
+    "TOTAL_USERS": 100,
+    "SIM_DAYS": 12,
+    "MINUTES_PER_DAY": 2,
+    "CHURN_RATE": 0.25,
+    "OUTPUT_DIR": "./simulator/output",
+    "START_TIME": 1760929122334
+  },
+  "analytics": {
+    "simulation": "Sim5-Realistic",
+    "config": {
+      "users": 100,
+      "days": 12,
+      "skeptics": "40%"
+    },
+    "users": {
+      "total": 100,
+      "active": 81,
+      "premium": 63,
+      "churned": 19,
+      "withInsights": 89
+    },
+    "retention": {
+      "d7": "81.0%",
+      "overall": "81.0%"
+    },
+    "conversion": {
+      "overall": "63.0%",
+      "withInsights": "69.7%",
+      "withoutInsights": "9.1%",
+      "insightsLift": "7.7x"
+    },
+    "engagement": {
+      "avgCheckInsPerUser": "21.9",
+      "avgJournalsPerUser": "4.3",
+      "avgDetailsPerUser": "8.2"
+    },
+    "revenue": {
+      "mrr": "$629.37",
+      "arpu": "$6.29"
+    },
+    "api": {
+      "totalCalls": 3725,
+      "errors": 0
+    },
+    "personaBreakdown": {
+      "Committed Seeker": {
+        "total": 21,
+        "active": 19,
+        "premium": 20,
+        "withInsights": 21,
+        "avgCheckIns": 34,
+        "avgJournals": 7.619047619047619,
+        "conversionRate": "95.2%"
+      },
+      "Purpose-Driven": {
+        "total": 6,
+        "active": 6,
+        "premium": 6,
+        "withInsights": 6,
+        "avgCheckIns": 35,
+        "avgJournals": 8,
+        "conversionRate": "100.0%"
+      },
+      "Busy Parent": {
+        "total": 18,
+        "active": 16,
+        "premium": 16,
+        "withInsights": 17,
+        "avgCheckIns": 25.055555555555557,
+        "avgJournals": 5.111111111111111,
+        "conversionRate": "88.9%"
+      },
+      "Curious Explorer": {
+        "total": 12,
+        "active": 9,
+        "premium": 8,
+        "withInsights": 10,
+        "avgCheckIns": 20.416666666666668,
+        "avgJournals": 3,
+        "conversionRate": "66.7%"
+      },
+      "Inconsistent Optimist": {
+        "total": 9,
+        "active": 6,
+        "premium": 5,
+        "withInsights": 7,
+        "avgCheckIns": 15.444444444444445,
+        "avgJournals": 2.5555555555555554,
+        "conversionRate": "55.6%"
+      },
+      "Skeptic - Downloaded But Doubtful": {
+        "total": 12,
+        "active": 9,
+        "premium": 2,
+        "withInsights": 10,
+        "avgCheckIns": 12.916666666666666,
+        "avgJournals": 2.1666666666666665,
+        "conversionRate": "16.7%"
+      },
+      "Overwhelmed Struggler": {
+        "total": 13,
+        "active": 11,
+        "premium": 3,
+        "withInsights": 13,
+        "avgCheckIns": 14.307692307692308,
+        "avgJournals": 2.076923076923077,
+        "conversionRate": "23.1%"
+      },
+      "App Collector": {
+        "total": 9,
+        "active": 5,
+        "premium": 3,
+        "withInsights": 5,
+        "avgCheckIns": 10.11111111111111,
+        "avgJournals": 1.5555555555555556,
+        "conversionRate": "33.3%"
+      }
+    }
+  },
+  "dailyMetrics": [
+    {
+      "day": 1,
+      "totalUsers": 34,
+      "activeUsers": 33,
+      "checkIns": 66,
+      "journals": 10,
+      "details": 17,
+      "insights": 0,
+      "conversions": 1,
+      "churns": 1,
+      "premiumUsers": 1,
+      "revenue": 9.99
+    },
+    {
+      "day": 2,
+      "totalUsers": 68,
+      "activeUsers": 67,
+      "checkIns": 153,
+      "journals": 28,
+      "details": 55,
+      "insights": 0,
+      "conversions": 3,
+      "churns": 0,
+      "premiumUsers": 4,
+      "revenue": 39.96
+    },
+    {
+      "day": 3,
+      "totalUsers": 100,
+      "activeUsers": 97,
+      "checkIns": 203,
+      "journals": 51,
+      "details": 86,
+      "insights": 0,
+      "conversions": 1,
+      "churns": 2,
+      "premiumUsers": 5,
+      "revenue": 49.95
+    },
+    {
+      "day": 4,
+      "totalUsers": 100,
+      "activeUsers": 93,
+      "checkIns": 214,
+      "journals": 46,
+      "details": 78,
+      "insights": 34,
+      "conversions": 8,
+      "churns": 4,
+      "premiumUsers": 13,
+      "revenue": 129.86999999999998
+    },
+    {
+      "day": 5,
+      "totalUsers": 100,
+      "activeUsers": 90,
+      "checkIns": 197,
+      "journals": 40,
+      "details": 74,
+      "insights": 18,
+      "conversions": 8,
+      "churns": 3,
+      "premiumUsers": 21,
+      "revenue": 209.79000000000005
+    },
+    {
+      "day": 6,
+      "totalUsers": 100,
+      "activeUsers": 90,
+      "checkIns": 194,
+      "journals": 27,
+      "details": 67,
+      "insights": 16,
+      "conversions": 8,
+      "churns": 0,
+      "premiumUsers": 29,
+      "revenue": 289.7100000000001
+    },
+    {
+      "day": 7,
+      "totalUsers": 100,
+      "activeUsers": 90,
+      "checkIns": 204,
+      "journals": 47,
+      "details": 78,
+      "insights": 11,
+      "conversions": 11,
+      "churns": 0,
+      "premiumUsers": 40,
+      "revenue": 399.6000000000002
+    },
+    {
+      "day": 8,
+      "totalUsers": 100,
+      "activeUsers": 89,
+      "checkIns": 196,
+      "journals": 33,
+      "details": 72,
+      "insights": 8,
+      "conversions": 4,
+      "churns": 1,
+      "premiumUsers": 44,
+      "revenue": 439.56000000000023
+    },
+    {
+      "day": 9,
+      "totalUsers": 100,
+      "activeUsers": 86,
+      "checkIns": 199,
+      "journals": 38,
+      "details": 72,
+      "insights": 1,
+      "conversions": 8,
+      "churns": 3,
+      "premiumUsers": 52,
+      "revenue": 519.4800000000002
+    },
+    {
+      "day": 10,
+      "totalUsers": 100,
+      "activeUsers": 84,
+      "checkIns": 192,
+      "journals": 35,
+      "details": 73,
+      "insights": 0,
+      "conversions": 3,
+      "churns": 2,
+      "premiumUsers": 55,
+      "revenue": 549.4500000000003
+    },
+    {
+      "day": 11,
+      "totalUsers": 100,
+      "activeUsers": 83,
+      "checkIns": 175,
+      "journals": 38,
+      "details": 78,
+      "insights": 0,
+      "conversions": 4,
+      "churns": 1,
+      "premiumUsers": 59,
+      "revenue": 589.4100000000003
+    },
+    {
+      "day": 12,
+      "totalUsers": 100,
+      "activeUsers": 81,
+      "checkIns": 198,
+      "journals": 33,
+      "details": 69,
+      "insights": 1,
+      "conversions": 4,
+      "churns": 2,
+      "premiumUsers": 63,
+      "revenue": 629.3700000000003
+    }
+  ],
+  "userDetails": [
+    {
+      "userId": "sim5_001",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 8,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 50.11649312355195,
+        "mind": 51.52035371027095,
+        "soul": 43.69332802231005,
+        "purpose": 44.512058462874386
+      },
+      "insightsDay": 4,
+      "churnDay": 9
+    },
+    {
+      "userId": "sim5_002",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Reduce distractions",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 19,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 4,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 53.511398420258224,
+        "mind": 54.80516112074265,
+        "soul": 41.52148540640436,
+        "purpose": 44.0373816549008
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_003",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 19,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 55.33679143708434,
+        "mind": 44.82633746378503,
+        "soul": 51.42287870548161,
+        "purpose": 52.05197859159977
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_004",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 9,
+      "checkInCount": 9,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 47.39788616432525,
+        "mind": 48.09994633871392,
+        "soul": 50.272035462407366,
+        "purpose": 48.728783692269396
+      },
+      "insightsDay": 8,
+      "churnDay": 10
+    },
+    {
+      "userId": "sim5_005",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Looking for something new",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 34,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 10,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 47.57794092280194,
+        "mind": 45.00128251441087,
+        "soul": 46.4857718141379,
+        "purpose": 42.490649218911614
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_006",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 26,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 6,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 69.8323795723184,
+        "mind": 48.47579932595279,
+        "soul": 60.667807782292115,
+        "purpose": 41.93598131188582
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_007",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Just want to try this out",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 10,
+      "checkInCount": 21,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 7,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 52.20840192761376,
+        "mind": 57.934430321372965,
+        "soul": 52.147933223487165,
+        "purpose": 42.924485131035404
+      },
+      "insightsDay": 4,
+      "churnDay": 11
+    },
+    {
+      "userId": "sim5_008",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 53.82747134108851,
+        "mind": 52.54958239340318,
+        "soul": 56.39466034141171,
+        "purpose": 49.766238353124685
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_009",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 25,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 12,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 41.86085775734991,
+        "mind": 47.39295119721833,
+        "soul": 52.9931906355719,
+        "purpose": 50.81831747930721
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_010",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 21,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 64,
+      "scores": {
+        "body": 85.20880502009489,
+        "mind": 85.19945554697635,
+        "soul": 80.00519826102655,
+        "purpose": 71.13793269285534
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_011",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 39,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 24,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 54,
+      "scores": {
+        "body": 56.725878346304185,
+        "mind": 36.69410783475753,
+        "soul": 54.09055249871078,
+        "purpose": 67.36382456123694
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_012",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 37,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 26,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 41,
+      "scores": {
+        "body": 36.04270053221581,
+        "mind": 41.64200638308094,
+        "soul": 41.33486488660476,
+        "purpose": 44.86316455585959
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_013",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 35,
+      "meaningfulDays": 0,
+      "journalsGenerated": 9,
+      "detailsAddedCount": 18,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 49.50904772895797,
+        "mind": 43.23921742553661,
+        "soul": 59.57756658640043,
+        "purpose": 55.91245838237705
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_014",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 1
+    },
+    {
+      "userId": "sim5_015",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 19,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 55.12962791648092,
+        "mind": 53.83995892737922,
+        "soul": 46.47160628489774,
+        "purpose": 41.165190250120496
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_016",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 54,
+      "scores": {
+        "body": 55.47273173816228,
+        "mind": 54.06296371475962,
+        "soul": 49.20418074347023,
+        "purpose": 57.4084021775071
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_017",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 41.44187697295994,
+        "mind": 52.937139161130915,
+        "soul": 52.68204285004705,
+        "purpose": 42.67451337750379
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_018",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 26,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 8,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 54,
+      "scores": {
+        "body": 51.976193006570526,
+        "mind": 51.845430761673256,
+        "soul": 59.08911528432475,
+        "purpose": 54.3212914118631
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_019",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 57.718311712534636,
+        "mind": 51.242215749080486,
+        "soul": 47.17316750567438,
+        "purpose": 58.516242000389454
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_020",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Downloaded a bunch of apps",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 8,
+      "checkInCount": 7,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 44.52439237808781,
+        "mind": 46.579917924361716,
+        "soul": 51.54810357386758,
+        "purpose": 46.25543857932708
+      },
+      "churnDay": 9
+    },
+    {
+      "userId": "sim5_021",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 37,
+      "meaningfulDays": 0,
+      "journalsGenerated": 9,
+      "detailsAddedCount": 26,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 48.88032275840367,
+        "mind": 56.17545197103777,
+        "soul": 54.27695241600951,
+        "purpose": 42.62039057109588
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_022",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 27,
+      "meaningfulDays": 1,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 9,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 65,
+      "scores": {
+        "body": 83.09217765829541,
+        "mind": 82.14987218234478,
+        "soul": 84.52663848539505,
+        "purpose": 77.6231688708695
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_023",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 34,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 12,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 48.57216879853708,
+        "mind": 46.78975586772685,
+        "soul": 50.223480083026715,
+        "purpose": 48.8122730481139
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_024",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 43,
+      "meaningfulDays": 0,
+      "journalsGenerated": 10,
+      "detailsAddedCount": 27,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 55.45914288870562,
+        "mind": 42.9739711891919,
+        "soul": 49.798725980722104,
+        "purpose": 50.49408189882373
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_025",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 30,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 8,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 43.626421953144785,
+        "mind": 58.16896689200983,
+        "soul": 45.06894991240577,
+        "purpose": 51.89239493235129
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_026",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 49.430932393382335,
+        "mind": 47.719875789719445,
+        "soul": 47.22779603702048,
+        "purpose": 49.59745649573218
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_027",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 46.414746393903116,
+        "mind": 53.5298473556873,
+        "soul": 50.015022258257815,
+        "purpose": 54.461165866523864
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_028",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 3,
+      "checkInCount": 4,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 50.10456470878628,
+        "mind": 52.21333046210828,
+        "soul": 53.30875745921328,
+        "purpose": 46.12393790872707
+      },
+      "churnDay": 4
+    },
+    {
+      "userId": "sim5_029",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 24,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 2,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 51.51616736215758,
+        "mind": 49.00321736402298,
+        "soul": 55.79956948490249,
+        "purpose": 52.17543416983619
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_030",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 24,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 8,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 57.78273891786867,
+        "mind": 49.22183057049708,
+        "soul": 52.020983576149185,
+        "purpose": 56.809883074592534
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_031",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 45.73088883897561,
+        "mind": 47.10303812859776,
+        "soul": 46.48359750395096,
+        "purpose": 53.02672395955035
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_032",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 56.800237102622106,
+        "mind": 47.16202601520838,
+        "soul": 47.4319522248638,
+        "purpose": 55.06929586248442
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_033",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Want to make a change",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 23,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 3,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 53.40355211022735,
+        "mind": 55.84597682637721,
+        "soul": 45.10579943689419,
+        "purpose": 61.158986506987
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_034",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 7,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 46.74743300290966,
+        "mind": 48.99686094323994,
+        "soul": 50.99121770045771,
+        "purpose": 52.30101903842705
+      },
+      "churnDay": 8
+    },
+    {
+      "userId": "sim5_035",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 24,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 6,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 52.94506576782917,
+        "mind": 55.84629800177236,
+        "soul": 43.59441906224163,
+        "purpose": 51.4143745473385
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_036",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 13,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 47.085139245206484,
+        "mind": 53.59503466054082,
+        "soul": 54.81418443979125,
+        "purpose": 52.60479038200309
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_037",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 24,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 9,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 51.23860589676549,
+        "mind": 49.67918651617287,
+        "soul": 50.148523002894564,
+        "purpose": 45.99473396299389
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_038",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 32,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 16,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 61,
+      "scores": {
+        "body": 63.53526979054342,
+        "mind": 67.1431171501674,
+        "soul": 68.27429277417474,
+        "purpose": 65.39517702104749
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_039",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 10,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.36660516243652,
+        "mind": 47.724098389851015,
+        "soul": 51.28466184815683,
+        "purpose": 46.80735357080198
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_040",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 36,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 22,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.39079001534915,
+        "mind": 44.155872100306105,
+        "soul": 51.764711664926075,
+        "purpose": 53.03820977604523
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_041",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 36,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 22,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 44.3083785419729,
+        "mind": 53.171232729382275,
+        "soul": 46.724622169914646,
+        "purpose": 53.359674707971266
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_042",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.08,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Have more energy throughout the day",
+      "microMoves": [
+        "20-min sunlight within 2 hours of waking",
+        "3 meals, no snacking between",
+        "15-min power nap (2-3pm)"
+      ],
+      "category": "energy",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 36,
+      "meaningfulDays": 0,
+      "journalsGenerated": 11,
+      "detailsAddedCount": 21,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 51.71483588819809,
+        "mind": 49.34070677910635,
+        "soul": 43.26748079883396,
+        "purpose": 48.70054103225414
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_043",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 4,
+      "checkInCount": 7,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.38564996514988,
+        "mind": 50.251265493059776,
+        "soul": 54.14339722093021,
+        "purpose": 54.44265348887525
+      },
+      "churnDay": 5
+    },
+    {
+      "userId": "sim5_044",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 31,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 11,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 56.41694440176704,
+        "mind": 49.22111975021909,
+        "soul": 47.202332223489044,
+        "purpose": 54.95789078237055
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_045",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 39,
+      "meaningfulDays": 0,
+      "journalsGenerated": 9,
+      "detailsAddedCount": 19,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 45.04710770497368,
+        "mind": 55.60223244584064,
+        "soul": 57.05633744698128,
+        "purpose": 46.08148952178351
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_046",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.08,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Build deeper connections with loved ones",
+      "microMoves": [
+        "30-min device-free dinner together",
+        "Weekly date night (no agenda)",
+        "Ask 3 questions before giving advice"
+      ],
+      "category": "connection",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 40,
+      "meaningfulDays": 0,
+      "journalsGenerated": 9,
+      "detailsAddedCount": 21,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 39.470887131110125,
+        "mind": 51.03684689062635,
+        "soul": 53.884844949166656,
+        "purpose": 61.59922008337608
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_047",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 2,
+      "checkInCount": 2,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.14104241271128,
+        "mind": 49.22818849830953,
+        "soul": 50.85072875195343,
+        "purpose": 47.98053639890988
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim5_048",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 49.65561412916396,
+        "mind": 56.636019563871336,
+        "soul": 47.75660540653158,
+        "purpose": 57.27522062465925
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_049",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 49.65553684458134,
+        "mind": 51.19740674677925,
+        "soul": 58.6294966040126,
+        "purpose": 49.29385886386977
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_050",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 57.495478868829224,
+        "mind": 46.93868196194411,
+        "soul": 53.439413708313666,
+        "purpose": 50.421210857680514
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_051",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 18,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 2,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 52.30173743021961,
+        "mind": 47.73883906969645,
+        "soul": 48.510778203094574,
+        "purpose": 54.23160383826403
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_052",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 25,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 2,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 54.71510261767847,
+        "mind": 50.70004800980905,
+        "soul": 51.697046648830586,
+        "purpose": 52.87768692986055
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_053",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 3,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 46.38701179473715,
+        "mind": 57.60143263770493,
+        "soul": 48.28521029603416,
+        "purpose": 50.52480203854786
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_054",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 25,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 4,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 52.40443234771345,
+        "mind": 55.83926208096919,
+        "soul": 48.865219427932324,
+        "purpose": 50.72238917517445
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_055",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 40,
+      "meaningfulDays": 0,
+      "journalsGenerated": 10,
+      "detailsAddedCount": 22,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 43,
+      "scores": {
+        "body": 52.35748453663164,
+        "mind": 42.561284503492985,
+        "soul": 47.04362157759688,
+        "purpose": 28.74219607384243
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_056",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 54.2505673914144,
+        "mind": 47.6063564090282,
+        "soul": 47.9769365368394,
+        "purpose": 57.68016572809494
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_057",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 11,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 3,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 57.31455116788336,
+        "mind": 52.041211803654754,
+        "soul": 48.24469545553048,
+        "purpose": 50.5114874518936
+      },
+      "insightsDay": 5,
+      "churnDay": 12
+    },
+    {
+      "userId": "sim5_058",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 4,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 46.33800016582911,
+        "mind": 49.32139592348798,
+        "soul": 47.695674285728046,
+        "purpose": 54.00145720594428
+      },
+      "insightsDay": 4,
+      "churnDay": 5
+    },
+    {
+      "userId": "sim5_059",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 31,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 8,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 46.94991617446832,
+        "mind": 51.86900029695363,
+        "soul": 39.027554106443986,
+        "purpose": 53.689096179201236
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_060",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 20,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 3,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.805798675468644,
+        "mind": 56.77704058866823,
+        "soul": 48.26318247478695,
+        "purpose": 42.80677435173681
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_061",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 54,
+      "scores": {
+        "body": 55.42130368423849,
+        "mind": 55.74192399286864,
+        "soul": 52.322186718743765,
+        "purpose": 52.52338173812368
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_062",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.08,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Have more energy throughout the day",
+      "microMoves": [
+        "20-min sunlight within 2 hours of waking",
+        "3 meals, no snacking between",
+        "15-min power nap (2-3pm)"
+      ],
+      "category": "energy",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 37,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 22,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 40,
+      "scores": {
+        "body": 44.811983697112886,
+        "mind": 41.554198360317244,
+        "soul": 39.557083200696844,
+        "purpose": 32.89484219862033
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_063",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 3,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 46.907590206964244,
+        "mind": 52.13240213570147,
+        "soul": 49.188476534472365,
+        "purpose": 50.34510139909325
+      },
+      "churnDay": 4
+    },
+    {
+      "userId": "sim5_064",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 21,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 6,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 46,
+      "scores": {
+        "body": 45.19013469261191,
+        "mind": 44.170402030558186,
+        "soul": 55.867524558232134,
+        "purpose": 38.0144396400099
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_065",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.67780925985023,
+        "mind": 49.36871543497753,
+        "soul": 46.41661647101038,
+        "purpose": 50.962316425622085
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_066",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 38,
+      "meaningfulDays": 0,
+      "journalsGenerated": 11,
+      "detailsAddedCount": 23,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 46,
+      "scores": {
+        "body": 49.54620926457096,
+        "mind": 37.86613033479157,
+        "soul": 56.32081249399894,
+        "purpose": 40.98552073697237
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_067",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Reduce distractions",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 3,
+      "checkInCount": 5,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.79088867272375,
+        "mind": 46.3760474959802,
+        "soul": 52.567878519906024,
+        "purpose": 47.0727857033488
+      },
+      "churnDay": 4
+    },
+    {
+      "userId": "sim5_068",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 28,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 8,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 54,
+      "scores": {
+        "body": 54.725696760745485,
+        "mind": 50.00668125101359,
+        "soul": 56.637600053262275,
+        "purpose": 55.856024719516775
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_069",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 34,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 24,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 61,
+      "scores": {
+        "body": 60.074851681283434,
+        "mind": 67.60860374761796,
+        "soul": 49.40068478999219,
+        "purpose": 67.75219328465658
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_070",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Reduce distractions",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 55.17677674204073,
+        "mind": 55.66447611322628,
+        "soul": 51.25881189486438,
+        "purpose": 47.60286519155278
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_071",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 37,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 25,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 62.238525107935615,
+        "mind": 46.76252881769576,
+        "soul": 56.72470516197509,
+        "purpose": 34.009420565903795
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_072",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 11,
+      "checkInCount": 7,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 52.970540262079986,
+        "mind": 53.0293855451327,
+        "soul": 51.271693581058244,
+        "purpose": 48.46147328828967
+      },
+      "churnDay": 12
+    },
+    {
+      "userId": "sim5_073",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 23,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 9,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 52.588667566955024,
+        "mind": 52.02042415866149,
+        "soul": 49.32810832284471,
+        "purpose": 53.770892893774615
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_074",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 3,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 43.20557719807505,
+        "mind": 44.415074840260154,
+        "soul": 53.564161874530086,
+        "purpose": 51.03110598398563
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_075",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 45.10167752008345,
+        "mind": 55.620776054211476,
+        "soul": 51.21019481398329,
+        "purpose": 53.116704579368914
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_076",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.02964612836009,
+        "mind": 53.90932809299053,
+        "soul": 43.230672638222444,
+        "purpose": 53.261499199601936
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim5_077",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 21,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 6,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 52.1655656000179,
+        "mind": 48.35591059506203,
+        "soul": 53.03812761687001,
+        "purpose": 46.9689556629652
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_078",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 10,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 41.16371514361383,
+        "mind": 49.79501379108899,
+        "soul": 52.34995308342591,
+        "purpose": 48.85714331386059
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_079",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 4,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 45.61495657326962,
+        "mind": 49.96054038894338,
+        "soul": 49.80788207057145,
+        "purpose": 50.342306141249104
+      },
+      "insightsDay": 4,
+      "churnDay": 5
+    },
+    {
+      "userId": "sim5_080",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.15,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 8,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.594429273006725,
+        "mind": 52.072895930733836,
+        "soul": 50.627074953161845,
+        "purpose": 50.80127831060264
+      },
+      "insightsDay": 7,
+      "churnDay": 9
+    },
+    {
+      "userId": "sim5_081",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Want to make a change",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 3,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 50.491460988394145,
+        "mind": 57.56898772202143,
+        "soul": 46.91245763958667,
+        "purpose": 50.93837977636783
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim5_082",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 21,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 46.19159811968443,
+        "mind": 52.52871361739924,
+        "soul": 56.60231269830311,
+        "purpose": 52.684828173612665
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_083",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 37,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 27,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 45,
+      "scores": {
+        "body": 45.70946081720855,
+        "mind": 38.63635401599564,
+        "soul": 48.689883958860605,
+        "purpose": 46.39309117604353
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_084",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 33,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 26,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 47.81443007309107,
+        "mind": 51.70110439678922,
+        "soul": 61.008663451149346,
+        "purpose": 43.72015463572123
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_085",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.08,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Build deeper connections with loved ones",
+      "microMoves": [
+        "30-min device-free dinner together",
+        "Weekly date night (no agenda)",
+        "Ask 3 questions before giving advice"
+      ],
+      "category": "connection",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 31,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 12,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 56.968826260226884,
+        "mind": 44.724254757584404,
+        "soul": 54.65977245039858,
+        "purpose": 50.66574983603977
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_086",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.08,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Have more energy throughout the day",
+      "microMoves": [
+        "20-min sunlight within 2 hours of waking",
+        "3 meals, no snacking between",
+        "15-min power nap (2-3pm)"
+      ],
+      "category": "energy",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 33,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 15,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.33420267175212,
+        "mind": 53.597936573206994,
+        "soul": 46.21349486989296,
+        "purpose": 60.73784251011589
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_087",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Just want to try this out",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 23,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 7,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 49.490000616045656,
+        "mind": 44.30264713029377,
+        "soul": 42.37957780035821,
+        "purpose": 49.86524468493355
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_088",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 30,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 18,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 46.926831879126695,
+        "mind": 51.60514849902959,
+        "soul": 58.75121574999157,
+        "purpose": 52.95686995486486
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_089",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 37,
+      "meaningfulDays": 3,
+      "journalsGenerated": 9,
+      "detailsAddedCount": 18,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 100,
+      "scores": {
+        "body": 100,
+        "mind": 100,
+        "soul": 100,
+        "purpose": 100
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_090",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.05,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Just want to try this out",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim5_091",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.1,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Downloaded a bunch of apps",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 41.84921219847233,
+        "mind": 47.00270290126516,
+        "soul": 55.24425287622756,
+        "purpose": 50.59833563061979
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim5_092",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.08,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Build deeper connections with loved ones",
+      "microMoves": [
+        "30-min device-free dinner together",
+        "Weekly date night (no agenda)",
+        "Ask 3 questions before giving advice"
+      ],
+      "category": "connection",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 33,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 18,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 38.95205365480342,
+        "mind": 48.408392748582166,
+        "soul": 51.891278398663175,
+        "purpose": 52.86769542705261
+      },
+      "insightsDay": 4
+    },
+    {
+      "userId": "sim5_093",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 7,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 46.70511589270817,
+        "mind": 53.38125454364669,
+        "soul": 44.31669832921835,
+        "purpose": 53.30838988299724
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_094",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 9,
+      "checkInCount": 21,
+      "meaningfulDays": 3,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 10,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 98,
+      "scores": {
+        "body": 96.15496738381012,
+        "mind": 100,
+        "soul": 100,
+        "purpose": 95.45249772201218
+      },
+      "insightsDay": 5,
+      "churnDay": 10
+    },
+    {
+      "userId": "sim5_095",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.06,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 3,
+      "checkInCount": 1,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.35517447269673,
+        "mind": 48.431695944610134,
+        "soul": 50.45285287848792,
+        "purpose": 51.60466784595161
+      },
+      "churnDay": 4
+    },
+    {
+      "userId": "sim5_096",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 32,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 19,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 51.87565591656699,
+        "mind": 49.87152374312505,
+        "soul": 54.808858567261574,
+        "purpose": 41.239085881298244
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_097",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.15,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 3,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 47.64818541825542,
+        "mind": 53.20258112948674,
+        "soul": 54.545072424944856,
+        "purpose": 53.9898402913961
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim5_098",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.15,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.07,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 4,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.94085802560588,
+        "mind": 50.698474554373874,
+        "soul": 55.60042997668204,
+        "purpose": 47.50040295154737
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim5_099",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 36,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 25,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 32.60287228404988,
+        "mind": 55.55899318183069,
+        "soul": 63.901998482704705,
+        "purpose": 53.848899610581995
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim5_100",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.12,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 32,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 24,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 37.734470859604045,
+        "mind": 55.61712130215868,
+        "soul": 53.62791794944127,
+        "purpose": 43.050463377760686
+      },
+      "insightsDay": 5
+    }
+  ]
+}

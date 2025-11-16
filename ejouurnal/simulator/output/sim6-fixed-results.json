@@ -1,0 +1,4464 @@
+{
+  "config": {
+    "API_BASE_URL": "http://localhost:3005/api",
+    "TOTAL_USERS": 100,
+    "SIM_DAYS": 12,
+    "MINUTES_PER_DAY": 2,
+    "CHURN_RATE": 0.25,
+    "OUTPUT_DIR": "./simulator/output",
+    "START_TIME": 1760942319440
+  },
+  "analytics": {
+    "simulation": "Sim6-SkepticHeavy",
+    "config": {
+      "users": 100,
+      "days": 12,
+      "demographics": "10% High | 30% Medium | 60% SKEPTICS",
+      "insightsThreshold": "15 check-ins",
+      "insightsMultiplier": "2.0x"
+    },
+    "users": {
+      "total": 100,
+      "active": 65,
+      "premium": 22,
+      "churned": 35,
+      "withInsights": 44
+    },
+    "retention": {
+      "d7": "65.0%",
+      "overall": "65.0%"
+    },
+    "conversion": {
+      "overall": "22.0%",
+      "withInsights": "43.2%",
+      "withoutInsights": "5.4%",
+      "insightsLift": "8.1x"
+    },
+    "engagement": {
+      "avgCheckInsPerUser": "14.7",
+      "avgJournalsPerUser": "2.4",
+      "avgDetailsPerUser": "3.8"
+    },
+    "revenue": {
+      "mrr": "$219.78",
+      "arpu": "$2.20"
+    },
+    "api": {
+      "totalCalls": 2336,
+      "errors": 0
+    },
+    "personaBreakdown": {
+      "Committed Seeker": {
+        "total": 8,
+        "active": 8,
+        "premium": 8,
+        "withInsights": 8,
+        "avgCheckIns": 36.75,
+        "avgJournals": 8.125,
+        "conversionRate": "100.0%"
+      },
+      "Purpose-Driven": {
+        "total": 1,
+        "active": 0,
+        "premium": 0,
+        "withInsights": 0,
+        "avgCheckIns": 13,
+        "avgJournals": 4,
+        "conversionRate": "0.0%"
+      },
+      "Busy Parent": {
+        "total": 6,
+        "active": 6,
+        "premium": 3,
+        "withInsights": 6,
+        "avgCheckIns": 27,
+        "avgJournals": 5,
+        "conversionRate": "50.0%"
+      },
+      "Curious Explorer": {
+        "total": 9,
+        "active": 7,
+        "premium": 2,
+        "withInsights": 8,
+        "avgCheckIns": 22.333333333333332,
+        "avgJournals": 4.111111111111111,
+        "conversionRate": "22.2%"
+      },
+      "Inconsistent Optimist": {
+        "total": 8,
+        "active": 5,
+        "premium": 3,
+        "withInsights": 7,
+        "avgCheckIns": 17.625,
+        "avgJournals": 2.25,
+        "conversionRate": "37.5%"
+      },
+      "Skeptic - Downloaded But Doubtful": {
+        "total": 20,
+        "active": 15,
+        "premium": 4,
+        "withInsights": 8,
+        "avgCheckIns": 12.65,
+        "avgJournals": 1.7,
+        "conversionRate": "20.0%"
+      },
+      "Overwhelmed Struggler": {
+        "total": 24,
+        "active": 11,
+        "premium": 0,
+        "withInsights": 6,
+        "avgCheckIns": 8.708333333333334,
+        "avgJournals": 1.0833333333333333,
+        "conversionRate": "0.0%"
+      },
+      "App Collector": {
+        "total": 24,
+        "active": 13,
+        "premium": 2,
+        "withInsights": 1,
+        "avgCheckIns": 8.208333333333334,
+        "avgJournals": 1.125,
+        "conversionRate": "8.3%"
+      }
+    }
+  },
+  "dailyMetrics": [
+    {
+      "day": 1,
+      "totalUsers": 34,
+      "activeUsers": 32,
+      "checkIns": 53,
+      "journals": 8,
+      "details": 11,
+      "insights": 0,
+      "conversions": 0,
+      "churns": 2,
+      "premiumUsers": 0,
+      "revenue": 0
+    },
+    {
+      "day": 2,
+      "totalUsers": 68,
+      "activeUsers": 63,
+      "checkIns": 110,
+      "journals": 13,
+      "details": 26,
+      "insights": 0,
+      "conversions": 1,
+      "churns": 3,
+      "premiumUsers": 1,
+      "revenue": 9.99
+    },
+    {
+      "day": 3,
+      "totalUsers": 100,
+      "activeUsers": 89,
+      "checkIns": 148,
+      "journals": 27,
+      "details": 36,
+      "insights": 0,
+      "conversions": 1,
+      "churns": 6,
+      "premiumUsers": 2,
+      "revenue": 19.98
+    },
+    {
+      "day": 4,
+      "totalUsers": 100,
+      "activeUsers": 87,
+      "checkIns": 137,
+      "journals": 27,
+      "details": 30,
+      "insights": 0,
+      "conversions": 1,
+      "churns": 2,
+      "premiumUsers": 3,
+      "revenue": 29.97
+    },
+    {
+      "day": 5,
+      "totalUsers": 100,
+      "activeUsers": 84,
+      "checkIns": 140,
+      "journals": 26,
+      "details": 30,
+      "insights": 4,
+      "conversions": 6,
+      "churns": 3,
+      "premiumUsers": 9,
+      "revenue": 89.91
+    },
+    {
+      "day": 6,
+      "totalUsers": 100,
+      "activeUsers": 80,
+      "checkIns": 147,
+      "journals": 22,
+      "details": 48,
+      "insights": 5,
+      "conversions": 2,
+      "churns": 4,
+      "premiumUsers": 11,
+      "revenue": 109.88999999999999
+    },
+    {
+      "day": 7,
+      "totalUsers": 100,
+      "activeUsers": 76,
+      "checkIns": 130,
+      "journals": 19,
+      "details": 36,
+      "insights": 7,
+      "conversions": 2,
+      "churns": 4,
+      "premiumUsers": 13,
+      "revenue": 129.86999999999998
+    },
+    {
+      "day": 8,
+      "totalUsers": 100,
+      "activeUsers": 75,
+      "checkIns": 121,
+      "journals": 21,
+      "details": 37,
+      "insights": 4,
+      "conversions": 4,
+      "churns": 1,
+      "premiumUsers": 17,
+      "revenue": 169.83
+    },
+    {
+      "day": 9,
+      "totalUsers": 100,
+      "activeUsers": 73,
+      "checkIns": 119,
+      "journals": 17,
+      "details": 33,
+      "insights": 8,
+      "conversions": 0,
+      "churns": 2,
+      "premiumUsers": 17,
+      "revenue": 169.83
+    },
+    {
+      "day": 10,
+      "totalUsers": 100,
+      "activeUsers": 71,
+      "checkIns": 127,
+      "journals": 24,
+      "details": 30,
+      "insights": 7,
+      "conversions": 2,
+      "churns": 2,
+      "premiumUsers": 19,
+      "revenue": 189.81000000000003
+    },
+    {
+      "day": 11,
+      "totalUsers": 100,
+      "activeUsers": 68,
+      "checkIns": 125,
+      "journals": 20,
+      "details": 36,
+      "insights": 2,
+      "conversions": 2,
+      "churns": 3,
+      "premiumUsers": 21,
+      "revenue": 209.79000000000005
+    },
+    {
+      "day": 12,
+      "totalUsers": 100,
+      "activeUsers": 65,
+      "checkIns": 113,
+      "journals": 17,
+      "details": 28,
+      "insights": 7,
+      "conversions": 1,
+      "churns": 3,
+      "premiumUsers": 22,
+      "revenue": 219.78000000000006
+    }
+  ],
+  "userDetails": [
+    {
+      "userId": "sim6_001",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 54.910468420482474,
+        "mind": 51.85420216465465,
+        "soul": 46.356436543675024,
+        "purpose": 49.725246167977886
+      }
+    },
+    {
+      "userId": "sim6_002",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 10,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.980630989164695,
+        "mind": 51.50482565886139,
+        "soul": 44.34631167258773,
+        "purpose": 48.98038901255506
+      }
+    },
+    {
+      "userId": "sim6_003",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 19,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 3,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 43,
+      "scores": {
+        "body": 35.991233345522915,
+        "mind": 48.8446825598007,
+        "soul": 43.94327437260731,
+        "purpose": 38.7696228132447
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_004",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 50.02672638400447,
+        "mind": 47.16389560607235,
+        "soul": 51.46396898322289,
+        "purpose": 56.37662799166103
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim6_005",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 44,
+      "meaningfulDays": 0,
+      "journalsGenerated": 10,
+      "detailsAddedCount": 29,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 54.665835046275234,
+        "mind": 52.97600352776747,
+        "soul": 47.4241605586256,
+        "purpose": 40.82084857353148
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim6_006",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 8,
+      "checkInCount": 7,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.84156741845776,
+        "mind": 53.39142616787995,
+        "soul": 52.459244018342616,
+        "purpose": 47.36128981359864
+      },
+      "churnDay": 9
+    },
+    {
+      "userId": "sim6_007",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 3,
+      "checkInCount": 7,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.681216469164134,
+        "mind": 45.62617337167395,
+        "soul": 49.052654466711246,
+        "purpose": 50.448516183190996
+      },
+      "churnDay": 4
+    },
+    {
+      "userId": "sim6_008",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 13,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.930476471182565,
+        "mind": 47.20087874277198,
+        "soul": 47.63625281478266,
+        "purpose": 45.588293069252934
+      }
+    },
+    {
+      "userId": "sim6_009",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 2,
+      "checkInCount": 2,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.5215265653822,
+        "mind": 52.92138205594719,
+        "soul": 50.85077734459872,
+        "purpose": 49.25565312404064
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim6_010",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Looking for something new",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 30,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 6,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 42.87393545567654,
+        "mind": 61.50734290073571,
+        "soul": 57.562524936385714,
+        "purpose": 47.39052970546718
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim6_011",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 53.85772719868253,
+        "mind": 52.96403973186495,
+        "soul": 51.00414243396705,
+        "purpose": 49.51725962148065
+      },
+      "insightsDay": 10
+    },
+    {
+      "userId": "sim6_012",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 61.15679729611581,
+        "mind": 47.491605234627414,
+        "soul": 49.815063678708945,
+        "purpose": 59.971871083711
+      },
+      "insightsDay": 11
+    },
+    {
+      "userId": "sim6_013",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 9,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.11399157226667,
+        "mind": 54.372373293034855,
+        "soul": 45.2907564415559,
+        "purpose": 47.326050295288674
+      }
+    },
+    {
+      "userId": "sim6_014",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 1,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 2
+    },
+    {
+      "userId": "sim6_015",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 4,
+      "checkInCount": 2,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.53390407463347,
+        "mind": 50.35769833673428,
+        "soul": 51.9975303368879,
+        "purpose": 49.06922121753073
+      },
+      "churnDay": 5
+    },
+    {
+      "userId": "sim6_016",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 9,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 47.42798927911225,
+        "mind": 55.227716878204866,
+        "soul": 46.31617953487976,
+        "purpose": 48.599400197908075
+      },
+      "churnDay": 10
+    },
+    {
+      "userId": "sim6_017",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 1
+    },
+    {
+      "userId": "sim6_018",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Looking for something new",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 34,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 7,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 46.07609263177427,
+        "mind": 43.30421994375922,
+        "soul": 56.399802569897076,
+        "purpose": 42.406982353179735
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim6_019",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Reduce distractions",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 23,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 52.26990862820887,
+        "mind": 44.24159919026799,
+        "soul": 56.4982104461793,
+        "purpose": 48.98730866294023
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim6_020",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.97639959813108,
+        "mind": 53.29098563518813,
+        "soul": 49.83549154039657,
+        "purpose": 47.348878011862965
+      }
+    },
+    {
+      "userId": "sim6_021",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.08577334469681,
+        "mind": 51.784228217876226,
+        "soul": 49.8366961388229,
+        "purpose": 49.60601056634763
+      }
+    },
+    {
+      "userId": "sim6_022",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Looking for something new",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 26,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 9,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 51.13776921791467,
+        "mind": 55.9543117979495,
+        "soul": 46.02770385629323,
+        "purpose": 51.73089593387633
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_023",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 10,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 36.80527424839101,
+        "mind": 53.29466561265896,
+        "soul": 50.481464083284095,
+        "purpose": 49.67213646359494
+      },
+      "insightsDay": 10,
+      "churnDay": 11
+    },
+    {
+      "userId": "sim6_024",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 1,
+      "checkInCount": 2,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 49.542161486921955,
+        "mind": 50.05881314733316,
+        "soul": 48.353845499227646,
+        "purpose": 50.39980271380022
+      },
+      "churnDay": 2
+    },
+    {
+      "userId": "sim6_025",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Downloaded a bunch of apps",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 13,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 46.05937111192049,
+        "mind": 45.8582295627463,
+        "soul": 54.19300256803346,
+        "purpose": 46.99022545861715
+      }
+    },
+    {
+      "userId": "sim6_026",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 10,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 42.738184793746015,
+        "mind": 51.03447863797,
+        "soul": 42.826967930300924,
+        "purpose": 47.301253143317844
+      }
+    },
+    {
+      "userId": "sim6_027",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 31,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 9,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 53.85717516037892,
+        "mind": 48.70216123256676,
+        "soul": 55.858531658179444,
+        "purpose": 53.22884981245541
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_028",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 32,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 14,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 48.089810665813935,
+        "mind": 51.75025730859758,
+        "soul": 44.902210455661915,
+        "purpose": 50.741648773141826
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim6_029",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 7,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 49.99722806261363,
+        "mind": 47.70809882966127,
+        "soul": 55.90576834152425,
+        "purpose": 50.5754905324696
+      },
+      "churnDay": 8
+    },
+    {
+      "userId": "sim6_030",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "See if this helps me feel better",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 8,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 50.80556246558712,
+        "mind": 48.26123094584319,
+        "soul": 52.50828674512886,
+        "purpose": 49.12277558423134
+      },
+      "insightsDay": 5,
+      "churnDay": 9
+    },
+    {
+      "userId": "sim6_031",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Try to be more present with kids",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 28,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 15,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 48.21692860318018,
+        "mind": 50.683508412511586,
+        "soul": 39.08340699448096,
+        "purpose": 48.61494745177863
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_032",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.97558123692694,
+        "mind": 47.822534810087035,
+        "soul": 53.11888219407827,
+        "purpose": 45.76318038007436
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_033",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 52.54306991412,
+        "mind": 53.53768593206143,
+        "soul": 58.14239915983503,
+        "purpose": 54.43150412568933
+      }
+    },
+    {
+      "userId": "sim6_034",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 1
+    },
+    {
+      "userId": "sim6_035",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 2,
+      "checkInCount": 1,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.098763271831245,
+        "mind": 50.027952764724894,
+        "soul": 50.853563638833855,
+        "purpose": 51.54008237640384
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim6_036",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 42.19855214616468,
+        "mind": 46.322517046963725,
+        "soul": 51.665188194406205,
+        "purpose": 45.76331924151446
+      }
+    },
+    {
+      "userId": "sim6_037",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Just want to try this out",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 21,
+      "meaningfulDays": 0,
+      "journalsGenerated": 6,
+      "detailsAddedCount": 7,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 44.73235385560851,
+        "mind": 52.862977231490824,
+        "soul": 43.393021440643984,
+        "purpose": 56.04206688188008
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_038",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 41.75382199808979,
+        "mind": 50.4254874735395,
+        "soul": 53.90163821805656,
+        "purpose": 55.044194408594734
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_039",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 41,
+      "meaningfulDays": 0,
+      "journalsGenerated": 10,
+      "detailsAddedCount": 28,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 45,
+      "scores": {
+        "body": 53.99183447141307,
+        "mind": 47.25593820686239,
+        "soul": 44.95307938815143,
+        "purpose": 32.39180014637246
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim6_040",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 9,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": true,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 50.47127544514161,
+        "mind": 46.56919370270144,
+        "soul": 45.74393659867991,
+        "purpose": 52.54712631050329
+      },
+      "churnDay": 10
+    },
+    {
+      "userId": "sim6_041",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 13,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.55830698382176,
+        "mind": 57.37641661789078,
+        "soul": 51.74749888105873,
+        "purpose": 46.6848970840608
+      }
+    },
+    {
+      "userId": "sim6_042",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 36,
+      "meaningfulDays": 0,
+      "journalsGenerated": 7,
+      "detailsAddedCount": 24,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 56.4087701701733,
+        "mind": 49.007270201618226,
+        "soul": 51.50737048475368,
+        "purpose": 49.73061124765943
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim6_043",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 11,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 49.77460919363052,
+        "mind": 49.315078808657844,
+        "soul": 55.10232982290626,
+        "purpose": 47.846987928498564
+      },
+      "insightsDay": 10,
+      "churnDay": 12
+    },
+    {
+      "userId": "sim6_044",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 2,
+      "checkInCount": 1,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 51.00855352469595,
+        "mind": 48.62690354557538,
+        "soul": 48.45655105573865,
+        "purpose": 48.66306072340095
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim6_045",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 4,
+      "checkInCount": 4,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 47.487035979858724,
+        "mind": 48.237401370279485,
+        "soul": 47.23923101799447,
+        "purpose": 52.04006043989953
+      },
+      "churnDay": 5
+    },
+    {
+      "userId": "sim6_046",
+      "persona": {
+        "name": "Purpose-Driven",
+        "weight": 0.04,
+        "intentions": [
+          "Build sustainable fitness habits",
+          "Have more energy throughout the day",
+          "Build deeper connections with loved ones"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.12,
+        "checkInRate": 0.8,
+        "journalRate": 0.7,
+        "detailsRate": 0.6,
+        "churnMultiplier": 0.6
+      },
+      "intentionText": "Build sustainable fitness habits",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 6,
+      "checkInCount": 13,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 6,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 49.19832475238624,
+        "mind": 47.83118878161479,
+        "soul": 44.92449620147513,
+        "purpose": 47.799924153909444
+      },
+      "churnDay": 7
+    },
+    {
+      "userId": "sim6_047",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 2,
+      "checkInCount": 1,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.2193062561993,
+        "mind": 48.529975868527,
+        "soul": 49.224607292078936,
+        "purpose": 48.738433005220145
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim6_048",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 39,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 23,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 45.930641548314895,
+        "mind": 42.39253298580344,
+        "soul": 51.13412708580626,
+        "purpose": 47.66064481506423
+      },
+      "insightsDay": 5
+    },
+    {
+      "userId": "sim6_049",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 47.80882473224449,
+        "mind": 40.772104547409064,
+        "soul": 36.40120131598826,
+        "purpose": 57.424907610896376
+      },
+      "insightsDay": 11
+    },
+    {
+      "userId": "sim6_050",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 18,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.94859962892369,
+        "mind": 51.2586552628981,
+        "soul": 41.57484763476481,
+        "purpose": 54.37865806162102
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_051",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 18,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 39.354655675680895,
+        "mind": 54.32031773778157,
+        "soul": 50.16972940744498,
+        "purpose": 51.37273943537088
+      },
+      "insightsDay": 10
+    },
+    {
+      "userId": "sim6_052",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 7,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 48.30870484283766,
+        "mind": 46.730418290701984,
+        "soul": 50.03151988252716,
+        "purpose": 45.88720304343903
+      }
+    },
+    {
+      "userId": "sim6_053",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.27944370296165,
+        "mind": 52.21505527175415,
+        "soul": 49.153485462036905,
+        "purpose": 50.240723984566266
+      }
+    },
+    {
+      "userId": "sim6_054",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Looking for something new",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 46.48109678311429,
+        "mind": 49.76967849942786,
+        "soul": 51.67211176844438,
+        "purpose": 45.18383792958524
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_055",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 5,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.583968343293755,
+        "mind": 50.477753037135344,
+        "soul": 50.8155949090822,
+        "purpose": 50.81312062204619
+      },
+      "churnDay": 6
+    },
+    {
+      "userId": "sim6_056",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 3,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 56.464692853448,
+        "mind": 54.479555911943926,
+        "soul": 50.201747008746956,
+        "purpose": 48.87593906702615
+      }
+    },
+    {
+      "userId": "sim6_057",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 46.38821965124074,
+        "mind": 48.272104746584496,
+        "soul": 52.80963827410137,
+        "purpose": 42.96046078111066
+      },
+      "insightsDay": 10
+    },
+    {
+      "userId": "sim6_058",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 3,
+      "checkInCount": 1,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 51.65037796712937,
+        "mind": 48.099781198564806,
+        "soul": 51.44994888308144,
+        "purpose": 48.679712744728995
+      },
+      "churnDay": 4
+    },
+    {
+      "userId": "sim6_059",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 19,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 6,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 52.16960698962353,
+        "mind": 48.9945693363796,
+        "soul": 46.68765790194072,
+        "purpose": 50.15257126930199
+      },
+      "insightsDay": 10
+    },
+    {
+      "userId": "sim6_060",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 47.05833443973317,
+        "mind": 46.932777701949654,
+        "soul": 54.6116987316356,
+        "purpose": 44.31571528195561
+      }
+    },
+    {
+      "userId": "sim6_061",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Downloaded a bunch of apps",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 4,
+      "checkInCount": 4,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 52.82535292956537,
+        "mind": 48.898512301627505,
+        "soul": 50.02551345655967,
+        "purpose": 49.34738959032857
+      },
+      "churnDay": 5
+    },
+    {
+      "userId": "sim6_062",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 50.38382594206364,
+        "mind": 47.03244564037902,
+        "soul": 51.71142100441546,
+        "purpose": 45.920023773275155
+      }
+    },
+    {
+      "userId": "sim6_063",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 48.85372772302761,
+        "mind": 58.92543300834849,
+        "soul": 49.06553870614547,
+        "purpose": 52.34116547175937
+      }
+    },
+    {
+      "userId": "sim6_064",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Just want to try this out",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 24,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 57.00391399054457,
+        "mind": 45.231851299614156,
+        "soul": 48.61703293544669,
+        "purpose": 52.11573897598327
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_065",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 33,
+      "meaningfulDays": 0,
+      "journalsGenerated": 9,
+      "detailsAddedCount": 20,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 54,
+      "scores": {
+        "body": 53.34419443517439,
+        "mind": 59.635557748592134,
+        "soul": 48.204624470346104,
+        "purpose": 53.483835494063904
+      },
+      "insightsDay": 6
+    },
+    {
+      "userId": "sim6_066",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Just want to try this out",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 2
+    },
+    {
+      "userId": "sim6_067",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 52.4121816134568,
+        "mind": 47.24620071722008,
+        "soul": 50.363614657218115,
+        "purpose": 52.79070940869012
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_068",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Downloaded a bunch of apps",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 6,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 54.105564584351136,
+        "mind": 52.54252257835814,
+        "soul": 50.826936399582245,
+        "purpose": 46.55874053127977
+      },
+      "churnDay": 7
+    },
+    {
+      "userId": "sim6_069",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 24,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 5,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 47.26688521258748,
+        "mind": 44.50616437330673,
+        "soul": 46.74743366291055,
+        "purpose": 51.550155897795705
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_070",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 5,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 46.31503745557012,
+        "mind": 49.37283550446798,
+        "soul": 49.825062826347626,
+        "purpose": 50.55313137725586
+      },
+      "churnDay": 6
+    },
+    {
+      "userId": "sim6_071",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Everything seems too hard",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 46,
+      "scores": {
+        "body": 48.697226760527016,
+        "mind": 42.069958173885,
+        "soul": 48.79071354115683,
+        "purpose": 45.37738242806362
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_072",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Downloaded a bunch of apps",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 5,
+      "checkInCount": 6,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 51.59833059502421,
+        "mind": 51.10780288829116,
+        "soul": 48.67775833824247,
+        "purpose": 52.25614974118319
+      },
+      "churnDay": 6
+    },
+    {
+      "userId": "sim6_073",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 3
+    },
+    {
+      "userId": "sim6_074",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 11,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 55.47793602268234,
+        "mind": 53.28801878501376,
+        "soul": 52.7520248983085,
+        "purpose": 44.366003021053544
+      },
+      "churnDay": 12
+    },
+    {
+      "userId": "sim6_075",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Improve my focus and concentration",
+      "microMoves": [
+        "90-min deep work blocks (no distraction)",
+        "Airplane mode 9-11am",
+        "Single-tasking (one thing at a time)"
+      ],
+      "category": "focus",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 35,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 26,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 47.28979262276993,
+        "mind": 55.92137477431602,
+        "soul": 59.36223143899454,
+        "purpose": 49.715283836298944
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_076",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Just want to feel less overwhelmed",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 25,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 11,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 49.32332561835625,
+        "mind": 48.2495175062367,
+        "soul": 51.561981135057636,
+        "purpose": 53.58377612929697
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim6_077",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 20,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 2,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 48.03530304517836,
+        "mind": 44.84581267621018,
+        "soul": 52.193288796304756,
+        "purpose": 49.199215358317296
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_078",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Probably will forget about it",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 47.14180234452718,
+        "mind": 48.873623553454124,
+        "soul": 46.654878158909995,
+        "purpose": 48.9540928681009
+      }
+    },
+    {
+      "userId": "sim6_079",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 48.66962769035624,
+        "mind": 47.55380465656569,
+        "soul": 47.2005286802999,
+        "purpose": 50.204119906677974
+      }
+    },
+    {
+      "userId": "sim6_080",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 10,
+      "checkInCount": 11,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 46.33054588055884,
+        "mind": 48.663476802446446,
+        "soul": 52.656672817148234,
+        "purpose": 48.19174411044314
+      },
+      "churnDay": 11
+    },
+    {
+      "userId": "sim6_081",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 10,
+      "checkInCount": 9,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 49.83213451414633,
+        "mind": 51.97808394663097,
+        "soul": 55.059033605664375,
+        "purpose": 46.13481276838658
+      },
+      "churnDay": 11
+    },
+    {
+      "userId": "sim6_082",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 6,
+      "checkInCount": 8,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50.48940653470021,
+        "mind": 46.28658501848732,
+        "soul": 48.25606124669975,
+        "purpose": 46.167285273581975
+      },
+      "churnDay": 7
+    },
+    {
+      "userId": "sim6_083",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "Not sure this will help",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 14,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 54.49543575387856,
+        "mind": 42.553236180216565,
+        "soul": 51.93262328077141,
+        "purpose": 45.74795003938587
+      }
+    },
+    {
+      "userId": "sim6_084",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 9,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 1,
+      "isPremium": true,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 52,
+      "scores": {
+        "body": 52.80590506066028,
+        "mind": 47.49663757807604,
+        "soul": 53.88479500210903,
+        "purpose": 54.02513626509074
+      }
+    },
+    {
+      "userId": "sim6_085",
+      "persona": {
+        "name": "Busy Parent",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to feel less overwhelmed",
+          "Try to be more present with kids",
+          "Maybe get more sleep"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.6,
+        "journalRate": 0.45,
+        "detailsRate": 0.3,
+        "churnMultiplier": 1
+      },
+      "intentionText": "Maybe get more sleep",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 4,
+      "detailsAddedCount": 8,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 43.67833304238209,
+        "mind": 55.509166258164065,
+        "soul": 44.73292055072549,
+        "purpose": 52.72985937343908
+      },
+      "insightsDay": 8
+    },
+    {
+      "userId": "sim6_086",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "I want to lose weight and feel healthier",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 33,
+      "meaningfulDays": 0,
+      "journalsGenerated": 8,
+      "detailsAddedCount": 23,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 36.70877004755958,
+        "mind": 52.8778086812127,
+        "soul": 48.70646291806852,
+        "purpose": 48.027938531630404
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_087",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Get in better shape this month",
+      "microMoves": [
+        "30-min cardio 4x per week",
+        "Strength training 3x per week",
+        "High-protein breakfast (30g+) daily"
+      ],
+      "category": "weight",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 16,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 45.46963093296189,
+        "mind": 48.966216101675,
+        "soul": 47.89267187807089,
+        "purpose": 49.657589174922144
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_088",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Reduce distractions",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 23,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 3,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 47.43996714967894,
+        "mind": 49.548324390861204,
+        "soul": 50.22883904357149,
+        "purpose": 40.0351291403082
+      },
+      "insightsDay": 9
+    },
+    {
+      "userId": "sim6_089",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 3,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 49,
+      "scores": {
+        "body": 47.995140731439406,
+        "mind": 51.883322073574725,
+        "soul": 51.93382636377915,
+        "purpose": 45.56962748521188
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_090",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 13,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 41.58714848849253,
+        "mind": 51.38558323038932,
+        "soul": 46.30957457896069,
+        "purpose": 51.89971854604644
+      }
+    },
+    {
+      "userId": "sim6_091",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 53,
+      "scores": {
+        "body": 54.98667222321873,
+        "mind": 53.97931575445276,
+        "soul": 47.35435265485883,
+        "purpose": 56.72523134356241
+      }
+    },
+    {
+      "userId": "sim6_092",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 2,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 45.95587200549441,
+        "mind": 46.55043461407182,
+        "soul": 53.984623838607256,
+        "purpose": 48.315608475341
+      }
+    },
+    {
+      "userId": "sim6_093",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Life feels overwhelming lately",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 6,
+      "checkInCount": 4,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.42312527398567,
+        "mind": 49.77910857840333,
+        "soul": 49.123710551668644,
+        "purpose": 50.23865411642366
+      },
+      "churnDay": 7
+    },
+    {
+      "userId": "sim6_094",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "My friend told me to try this",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 12,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": false,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 48.8343293640754,
+        "mind": 50.27399531821097,
+        "soul": 53.33183687529261,
+        "purpose": 48.50833889709989
+      }
+    },
+    {
+      "userId": "sim6_095",
+      "persona": {
+        "name": "Inconsistent Optimist",
+        "weight": 0.1,
+        "intentions": [
+          "Want to make a change",
+          "Get in better shape this month",
+          "Reduce distractions"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.04,
+        "checkInRate": 0.5,
+        "journalRate": 0.35,
+        "detailsRate": 0.2,
+        "churnMultiplier": 1.2
+      },
+      "intentionText": "Want to make a change",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 11,
+      "checkInCount": 17,
+      "meaningfulDays": 0,
+      "journalsGenerated": 1,
+      "detailsAddedCount": 4,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 40.88526265237401,
+        "mind": 56.51106892925896,
+        "soul": 52.860862160197584,
+        "purpose": 49.267300711561816
+      },
+      "insightsDay": 9,
+      "churnDay": 12
+    },
+    {
+      "userId": "sim6_096",
+      "persona": {
+        "name": "Curious Explorer",
+        "weight": 0.1,
+        "intentions": [
+          "Just want to try this out",
+          "See if this helps me feel better",
+          "Looking for something new"
+        ],
+        "engagementLevel": "medium",
+        "conversionProbability": 0.03,
+        "checkInRate": 0.55,
+        "journalRate": 0.4,
+        "detailsRate": 0.25,
+        "churnMultiplier": 1.1
+      },
+      "intentionText": "Looking for something new",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 22,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 7,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 47,
+      "scores": {
+        "body": 45.496161294678316,
+        "mind": 36.996022331078414,
+        "soul": 52.23464322360523,
+        "purpose": 52.828929341346566
+      },
+      "insightsDay": 10
+    },
+    {
+      "userId": "sim6_097",
+      "persona": {
+        "name": "Skeptic - Downloaded But Doubtful",
+        "weight": 0.2,
+        "intentions": [
+          "My friend told me to try this",
+          "I guess I should track something",
+          "Not sure this will help"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.02,
+        "checkInRate": 0.35,
+        "journalRate": 0.2,
+        "detailsRate": 0.1,
+        "churnMultiplier": 1.8
+      },
+      "intentionText": "I guess I should track something",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 5,
+      "checkInCount": 4,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 1,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 52.2353846274627,
+        "mind": 50.66003324506054,
+        "soul": 48.448933520525166,
+        "purpose": 46.47244254512841
+      },
+      "churnDay": 6
+    },
+    {
+      "userId": "sim6_098",
+      "persona": {
+        "name": "Overwhelmed Struggler",
+        "weight": 0.25,
+        "intentions": [
+          "Life feels overwhelming lately",
+          "Need help but not sure where to start",
+          "Everything seems too hard"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.3,
+        "journalRate": 0.15,
+        "detailsRate": 0.08,
+        "churnMultiplier": 2
+      },
+      "intentionText": "Need help but not sure where to start",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 15,
+      "meaningfulDays": 0,
+      "journalsGenerated": 2,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 48,
+      "scores": {
+        "body": 44.15961396179517,
+        "mind": 49.54381053723709,
+        "soul": 47.05503765800857,
+        "purpose": 49.30275835053531
+      },
+      "insightsDay": 12
+    },
+    {
+      "userId": "sim6_099",
+      "persona": {
+        "name": "Committed Seeker",
+        "weight": 0.06,
+        "intentions": [
+          "I want to lose weight and feel healthier",
+          "Show up with more presence for my family",
+          "Improve my focus and concentration"
+        ],
+        "engagementLevel": "high",
+        "conversionProbability": 0.15,
+        "checkInRate": 0.85,
+        "journalRate": 0.75,
+        "detailsRate": 0.65,
+        "churnMultiplier": 0.5
+      },
+      "intentionText": "Show up with more presence for my family",
+      "microMoves": [
+        "10-min morning walk",
+        "No phone first hour after waking",
+        "5-min meditation before work"
+      ],
+      "category": "presence",
+      "joinDay": 0,
+      "lastActiveDay": 12,
+      "checkInCount": 33,
+      "meaningfulDays": 0,
+      "journalsGenerated": 5,
+      "detailsAddedCount": 22,
+      "isPremium": true,
+      "hasInsights": true,
+      "isChurned": false,
+      "avgFulfillment": 51,
+      "scores": {
+        "body": 50.12245410248517,
+        "mind": 48.04867204761037,
+        "soul": 45.248340043902324,
+        "purpose": 64.406628245614
+      },
+      "insightsDay": 7
+    },
+    {
+      "userId": "sim6_100",
+      "persona": {
+        "name": "App Collector",
+        "weight": 0.15,
+        "intentions": [
+          "Downloaded a bunch of apps",
+          "Maybe this one will work",
+          "Probably will forget about it"
+        ],
+        "engagementLevel": "low",
+        "conversionProbability": 0.01,
+        "checkInRate": 0.25,
+        "journalRate": 0.12,
+        "detailsRate": 0.05,
+        "churnMultiplier": 2.2
+      },
+      "intentionText": "Maybe this one will work",
+      "microMoves": [
+        "Morning walk",
+        "Meditation",
+        "Reading"
+      ],
+      "category": "general",
+      "joinDay": 0,
+      "lastActiveDay": 0,
+      "checkInCount": 0,
+      "meaningfulDays": 0,
+      "journalsGenerated": 0,
+      "detailsAddedCount": 0,
+      "isPremium": false,
+      "hasInsights": false,
+      "isChurned": true,
+      "avgFulfillment": 50,
+      "scores": {
+        "body": 50,
+        "mind": 50,
+        "soul": 50,
+        "purpose": 50
+      },
+      "churnDay": 3
+    }
+  ]
+}

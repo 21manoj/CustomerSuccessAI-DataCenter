@@ -1,0 +1,357 @@
+[1m
+╔══════════════════════════════════════════════════════════╗[0m
+[1m║     REAL LIFE CONVERSION SIMULATION - 100 USERS         ║[0m
+[1m║     Full Virtuous Cycle with Churn & All Triggers       ║[0m
+[1m╚══════════════════════════════════════════════════════════╝
+[0m
+[34m👥 Creating 100 users across 5 personas...[0m
+[34m   Creating 10 power-user users (base conversion: 60%)...[0m
+[34m   Creating 30 engaged users (base conversion: 35%)...[0m
+[34m   Creating 40 casual users (base conversion: 15%)...[0m
+[34m   Creating 15 struggler users (base conversion: 5%)...[0m
+[34m   Creating 5 churner users (base conversion: 1%)...[0m
+[32m✅ Created 100 users
+[0m
+[34m📅 Starting 28-day simulation (4 weeks)...
+[0m
+[36m
+📅 Day 1 (Week 1, Mon)[0m
+[37m   Active: 64/100 (64.0%) | Check-ins: 168 | Insights: 0[0m
+[36m
+📅 Day 2 (Week 1, Tue)[0m
+[37m   Active: 71/100 (71.0%) | Check-ins: 180 | Insights: 0[0m
+[36m
+📅 Day 3 (Week 1, Wed)[0m
+[37m   Active: 72/100 (72.0%) | Check-ins: 180 | Insights: 90[0m
+[36m
+📅 Day 4 (Week 1, Thu)[0m
+[37m   Active: 75/100 (75.0%) | Check-ins: 186 | Insights: 0[0m
+[36m
+📅 Day 5 (Week 1, Fri)[0m
+[37m   Active: 78/100 (78.0%) | Check-ins: 195 | Insights: 0[0m
+[36m
+📅 Day 6 (Week 1, Sat)[0m
+[37m   Active: 72/100 (72.0%) | Check-ins: 177 | Insights: 0[0m
+[36m
+📅 Day 7 (Week 1, Sun)[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 27.0% | Roll: 5.7% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.3/day, Locked=0, Streak=4, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587301...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: High Engagement | Plan: annual[0m
+[33m      Conversion Prob: 27.0%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 35.1% | Roll: 11.6% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.3/day, Locked=0, Streak=2, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587301...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: High Engagement | Plan: annual[0m
+[33m      Conversion Prob: 35.1%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[2m      Prob: 32.4% | Roll: 55.0% → ❌ Pass[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 32.4% | Roll: 10.8% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.9/day, Locked=0, Streak=7, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587301...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: High Engagement | Plan: monthly[0m
+[33m      Conversion Prob: 32.4%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 37.8% | Roll: 6.8% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.4/day, Locked=0, Streak=6, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587301...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: Missed Intention | Plan: monthly[0m
+[33m      Conversion Prob: 37.8%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[2m      Prob: 32.4% | Roll: 92.7% → ❌ Pass[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 32.4% | Roll: 4.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.9/day, Locked=0, Streak=7, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587302...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: High Engagement | Plan: annual[0m
+[33m      Conversion Prob: 32.4%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 37.8% | Roll: 14.6% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.4/day, Locked=0, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587302...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: Missed Intention | Plan: monthly[0m
+[33m      Conversion Prob: 37.8%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 31.1% | Roll: 21.5% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.3/day, Locked=0, Streak=6, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587302...[0m
+[32m      Persona: power-user | Day: 7 | Week: 1[0m
+[32m      Trigger: High Engagement | Plan: annual[0m
+[33m      Conversion Prob: 31.1%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[2m      Prob: 32.4% | Roll: 41.0% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 34.4% | Roll: 92.4% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 18.9% | Roll: 18.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.0/day, Locked=0, Streak=7, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587304...[0m
+[32m      Persona: engaged | Day: 7 | Week: 1[0m
+[32m      Trigger: High Engagement | Plan: annual[0m
+[33m      Conversion Prob: 18.9%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 17.6% | Roll: 8.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.6/day, Locked=0, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587305...[0m
+[32m      Persona: engaged | Day: 7 | Week: 1[0m
+[32m      Trigger: Missed Intention | Plan: monthly[0m
+[33m      Conversion Prob: 17.6%[0m
+[37m   Active: 76/100 (76.0%) | Check-ins: 185 | Insights: 138[0m
+[32m   💰 CONVERSIONS: 9[0m
+[36m
+============================================================[0m
+[1m📊 WEEK 1 SUMMARY[0m
+[36m============================================================[0m
+[37m   Active Users: 91/100 (91.0%)[0m
+[32m   Conversions This Week: 9[0m
+[37m   Total Conversions: 9 (9.0%)[0m
+[37m   Total Churned: 0 (0.0%)[0m
+[37m   Check-ins: 1086[0m
+[37m   Insights: 228[0m
+[37m   Locked Clicks: 0[0m
+[36m============================================================
+[0m
+[36m
+📅 Day 8 (Week 2, Mon)[0m
+[37m   Active: 49/100 (49.0%) | Check-ins: 105 | Insights: 0[0m
+[33m   🔒 Locked clicks: 12[0m
+[36m
+📅 Day 9 (Week 2, Tue)[0m
+[37m   Active: 59/100 (59.0%) | Check-ins: 129 | Insights: 0[0m
+[33m   🔒 Locked clicks: 7[0m
+[36m
+📅 Day 10 (Week 2, Wed)[0m
+[31m   💀 User user_176... (struggler) CHURNED after 10 days[0m
+[37m   Active: 55/99 (55.6%) | Check-ins: 119 | Insights: 0[0m
+[33m   🔒 Locked clicks: 11[0m
+[31m   💀 Churned: 1[0m
+[36m
+📅 Day 11 (Week 2, Thu)[0m
+[37m   Active: 53/99 (53.5%) | Check-ins: 122 | Insights: 0[0m
+[33m   🔒 Locked clicks: 9[0m
+[36m
+📅 Day 12 (Week 2, Fri)[0m
+[37m   Active: 47/99 (47.5%) | Check-ins: 108 | Insights: 0[0m
+[33m   🔒 Locked clicks: 10[0m
+[36m
+📅 Day 13 (Week 2, Sat)[0m
+[37m   Active: 60/99 (60.6%) | Check-ins: 130 | Insights: 0[0m
+[33m   🔒 Locked clicks: 11[0m
+[36m
+📅 Day 14 (Week 2, Sun)[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 95.0% | Roll: 4.6% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.9/day, Locked=0, Streak=14, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587301...[0m
+[32m      Persona: power-user | Day: 14 | Week: 2[0m
+[32m      Trigger: 14-Day Streak | Plan: monthly[0m
+[33m      Conversion Prob: 95.0%[0m
+[2m   🎲 User user_176... (power-user)[0m
+[32m      Prob: 95.0% | Roll: 60.8% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=3.9/day, Locked=0, Streak=14, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587302...[0m
+[32m      Persona: power-user | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: annual[0m
+[33m      Conversion Prob: 95.0%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 52.9% | Roll: 90.9% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 52.7% | Roll: 1.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.6/day, Locked=0, Streak=6, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587302...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 52.7%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 95.0% | Roll: 79.0% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.5/day, Locked=7, Streak=1, Preview=83.1716532725609s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587302...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: High Locked Clicks | Plan: monthly[0m
+[33m      Conversion Prob: 95.0%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 42.3% | Roll: 23.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.4/day, Locked=1, Streak=2, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587303...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: monthly[0m
+[33m      Conversion Prob: 42.3%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 95.0% | Roll: 45.2% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.9/day, Locked=2, Streak=14, Preview=80.70527204659575s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587303...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Premium Preview | Plan: annual[0m
+[33m      Conversion Prob: 95.0%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 40.6% | Roll: 12.5% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.6/day, Locked=0, Streak=6, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587303...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 40.6%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 45.9% | Roll: 96.3% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 41.2% | Roll: 89.9% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 52.9% | Roll: 2.6% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.0/day, Locked=3, Streak=5, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587303...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 52.9%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 94.7% | Roll: 17.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.4/day, Locked=6, Streak=2, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587303...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: annual[0m
+[33m      Conversion Prob: 94.7%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 85.2% | Roll: 43.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.2/day, Locked=3, Streak=2, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587304...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: annual[0m
+[33m      Conversion Prob: 85.2%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 88.6% | Roll: 54.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.6/day, Locked=1, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587304...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: monthly[0m
+[33m      Conversion Prob: 88.6%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 95.0% | Roll: 49.8% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.7/day, Locked=2, Streak=13, Preview=33.598710844236514s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587304...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: monthly[0m
+[33m      Conversion Prob: 95.0%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 40.6% | Roll: 37.6% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.5/day, Locked=0, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587304...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 40.6%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 91.4% | Roll: 90.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.5/day, Locked=2, Streak=8, Preview=75.8306573134636s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587304...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Premium Preview | Plan: annual[0m
+[33m      Conversion Prob: 91.4%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 33.8% | Roll: 73.1% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 95.0% | Roll: 25.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.2/day, Locked=6, Streak=2, Preview=76.90481707202228s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587305...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: High Locked Clicks | Plan: annual[0m
+[33m      Conversion Prob: 95.0%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 79.1% | Roll: 48.0% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.3/day, Locked=4, Streak=8, Preview=39.03363911685654s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587305...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 79.1%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 49.4% | Roll: 68.2% → ❌ Pass[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 64.2% | Roll: 14.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.4/day, Locked=2, Streak=5, Preview=56.315851744073484s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587305...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: annual[0m
+[33m      Conversion Prob: 64.2%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[32m      Prob: 52.7% | Roll: 21.5% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=2.1/day, Locked=2, Streak=2, Preview=58.54227579875037s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587305...[0m
+[32m      Persona: engaged | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 52.7%[0m
+[2m   🎲 User user_176... (engaged)[0m
+[2m      Prob: 33.8% | Roll: 83.2% → ❌ Pass[0m
+[2m   🎲 User user_176... (casual)[0m
+[32m      Prob: 15.1% | Roll: 3.3% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=1.4/day, Locked=1, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587306...[0m
+[32m      Persona: casual | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: monthly[0m
+[33m      Conversion Prob: 15.1%[0m
+[2m   🎲 User user_176... (casual)[0m
+[32m      Prob: 20.3% | Roll: 0.7% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=1.4/day, Locked=1, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587306...[0m
+[32m      Persona: casual | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: annual[0m
+[33m      Conversion Prob: 20.3%[0m
+[2m   🎲 User user_176... (casual)[0m
+[32m      Prob: 22.0% | Roll: 1.6% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=1.5/day, Locked=0, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587308...[0m
+[32m      Persona: casual | Day: 14 | Week: 2[0m
+[32m      Trigger: Missed Intention | Plan: annual[0m
+[33m      Conversion Prob: 22.0%[0m
+[2m   🎲 User user_176... (struggler)[0m
+[32m      Prob: 3.5% | Roll: 1.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=0.6/day, Locked=0, Streak=1, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587311...[0m
+[32m      Persona: struggler | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: annual[0m
+[33m      Conversion Prob: 3.5%[0m
+[31m   💀 User user_176... (struggler) CHURNED after 14 days[0m
+[2m   🎲 User user_176... (struggler)[0m
+[32m      Prob: 4.0% | Roll: 1.9% → ✅ CONVERT[0m
+[37m      Signals: CheckIns=0.9/day, Locked=0, Streak=2, Preview=0s[0m
+[1m   💰💰💰 CONVERSION! User user_1761587312...[0m
+[32m      Persona: struggler | Day: 14 | Week: 2[0m
+[32m      Trigger: Base conversion | Plan: monthly[0m
+[33m      Conversion Prob: 4.0%[0m
+[37m   Active: 57/98 (58.2%) | Check-ins: 126 | Insights: 114[0m
+[33m   🔒 Locked clicks: 8[0m
+[32m   💰 CONVERSIONS: 23[0m
+[31m   💀 Churned: 1[0m
+[36m
+============================================================[0m
+[1m📊 WEEK 2 SUMMARY[0m
+[36m============================================================[0m
+[37m   Active Users: 66/100 (66.0%)[0m
+[32m   Conversions This Week: 23[0m
+[37m   Total Conversions: 32 (32.0%)[0m
+[37m   Total Churned: 2 (2.0%)[0m
+[37m   Check-ins: 1984[0m
+[37m   Insights: 342[0m
+[37m   Locked Clicks: 68[0m
+[36m============================================================
+[0m
+[36m
+📅 Day 15 (Week 3, Mon)[0m
+[37m   Active: 30/98 (30.6%) | Check-ins: 52 | Insights: 0[0m
+[33m   🔒 Locked clicks: 23[0m
+[36m
+📅 Day 16 (Week 3, Tue)[0m
+[37m   Active: 34/98 (34.7%) | Check-ins: 57 | Insights: 0[0m
+[33m   🔒 Locked clicks: 11[0m
+[36m
+📅 Day 17 (Week 3, Wed)[0m
+[31m   💀 User user_176... (struggler) CHURNED after 17 days[0m
+[37m   Active: 38/97 (39.2%) | Check-ins: 67 | Insights: 0[0m
+[33m   🔒 Locked clicks: 16[0m
+[31m   💀 Churned: 1[0m
+[36m
+📅 Day 18 (Week 3, Thu)[0m

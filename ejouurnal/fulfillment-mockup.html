@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fulfillment App - Complete Interactive Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .phone-frame {
+      background: linear-gradient(to bottom right, #1e293b, #0f172a);
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [currentScreen, setCurrentScreen] = useState('home');
+      const [selectedDayPart, setSelectedDayPart] = useState('day');
+      const [completedDayParts, setCompletedDayParts] = useState(['morning']);
+      const [scores, setScores] = useState({
+        body: 72,
+        mind: 68,
+        soul: 85,
+        purpose: 60,
+        overall: 71
+      });
+      const [detailData, setDetailData] = useState({
+        sleepHours: 7.5,
+        sleepQuality: 4,
+        breakfast: 'good',
+        lunch: 'ok',
+        dinner: 'good',
+        exerciseType: 'Walk',
+        exerciseDuration: 30,
+        exerciseIntensity: 'moderate',
+        socialQuality: 'energized'
+      });
+      const [journalTone, setJournalTone] = useState('reflective');
+      const [journalGenerated, setJournalGenerated] = useState(false);
+      const [profilePicture, setProfilePicture] = useState(null);
+
+      const today = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+
+      const completeCheckIn = (dayPart) => {
+        if (!completedDayParts.includes(dayPart)) {
+          setCompletedDayParts([...completedDayParts, dayPart]);
+          setScores({
+            body: Math.min(100, scores.body + 3),
+            mind: Math.min(100, scores.mind + 5),
+            soul: Math.min(100, scores.soul + 2),
+            purpose: Math.min(100, scores.purpose + 4),
+            overall: Math.min(100, scores.overall + 3)
+          });
+          
+          // Generate journal after night check-in
+          if (dayPart === 'night') {
+            setTimeout(() => {
+              setJournalGenerated(true);
+              setCurrentScreen('journal-ready');
+            }, 2000);
+          }
+        }
+      };
+
+      // Sample AI-generated journal text
+      const sampleJournal = journalTone === 'reflective' 
+        ? `You started the morning feeling good 🙂 after a solid 7.5 hours of sleep - the third consecutive night of quality rest. Your body responded well, carrying that energy through the day with 8,234 steps and a mindful 30-minute walk.
+
+Mind-wise, you encountered work stress in the afternoon but took a 10-minute walk (a micro-act that's been boosting your MindScore by +7 points lately). Your mood lifted to "great" 😊 by evening, showing the power of that simple intervention.
+
+You felt energized after a deep conversation with a colleague - your 4th "energized" social interaction this week. This aligns beautifully with your intention to "show up with more presence for my family and friends."
+
+Your fuel choices were solid: nourishing breakfast (oatmeal + fruit) and a home-cooked dinner. Only 32 minutes of social media today, down from your 70-minute baseline - and you can feel the difference in mental clarity.
+
+Purpose progress: You completed 2 of 3 micro-moves today (morning walk ✓, read 2 chapters ✓). That's 67% weekly adherence, up from 50% last week. The momentum is building.
+
+Pattern Alert: This is your best Wednesday in 3 weeks. Last Wednesday, you scored 58 overall after heavy social media use (82 minutes). Today, you kept it minimal and scored 74. The correlation is clear.
+
+Tomorrow: You're on a 3-day streak of quality sleep. If you maintain 7+ hours tomorrow, your data suggests a +12 MindScore boost is likely. Consider that morning walk again - it's your most reliable lever.
+
+---
+Overall Fulfillment: 74/100
+Meaningful Day: Yes ✨ - all dimensions met thresholds and you advanced your weekly purpose.`
+        : journalTone === 'factual'
+        ? `Date: Wednesday, October 16, 2024
+
+Check-ins Completed: 4/4
+Average Mood: Good (80/100)
+Contexts: Work (2x), Social (1x)
+Micro-acts: Walk (1x), Meditation (1x)
+
+Sleep: 7.5 hours (Quality: 4/5 stars)
+Activity: 8,234 steps, 30 min moderate walk
+Fuel: Breakfast (Good), Lunch (Ok), Dinner (Good)
+Screen Time: 3h 42min total, 32min social media
+
+Scores:
+- Body: 72/100 (+3 from yesterday)
+- Mind: 68/100 (+5 from yesterday)
+- Soul: 85/100 (+2 from yesterday)
+- Purpose: 60/100 (+4 from yesterday)
+- Overall: 74/100
+
+Weekly Intention: "Show up with more presence"
+Micro-moves: 2/3 completed (67%)
+
+Patterns:
+- 3-day sleep quality streak
+- Social media 18min below baseline
+- Best Wednesday score in 3 weeks
+
+Status: Meaningful Day (all thresholds met)`
+        : journalTone === 'coach-like'
+        ? `Great work today! 💪
+
+You crushed it with 4 complete check-ins and kept your energy high throughout the day. That 7.5-hour sleep investment is really paying off - you're on a 3-day quality sleep streak!
+
+I noticed you handled work stress beautifully in the afternoon. Instead of scrolling, you took a 10-minute walk. That's exactly the kind of intervention that's been adding +7 points to your MindScore. Keep choosing movement over screens!
+
+Your social connections were energizing today - 4 quality interactions this week! You're living your intention to "show up with more presence." That's not just words, that's action.
+
+Food choices were solid, and keeping social media to just 32 minutes (vs your 70min baseline) gave you the mental space to actually be present. The data doesn't lie: you scored 16 points higher than last Wednesday when you spent 82 minutes scrolling.
+
+You're at 67% on your weekly micro-moves (2/3). Want to hit that call to your friend tomorrow? You've built momentum - use it!
+
+Tomorrow's Opportunity: One more day of 7+ hours sleep and you'll likely see another +12 MindScore boost. Your body is responding to consistency. Keep the streak alive!
+
+Overall: 74/100 - Meaningful Day achieved! ✨`
+        : `October's amber light filtered through your consciousness at dawn - another cycle of rest complete. Seven hours, thirty minutes. The fourth morning in gentle succession where sleep came easily, stayed deeply.
+
+You moved through the day like water finding its course. Eight thousand steps written in invisible ink across sidewalks and hallways. A thirty-minute walk when the afternoon weight grew heavy - not escape, but return. Return to breath, to movement, to the simple truth of a body in motion.
+
+Words mattered today. Four conversations where you chose presence over performance. Energized, they said. Energized, you felt. Perhaps because you came whole, not fractured by the scattered light of screens elsewhere.
+
+The numbers tell a story too, if you know how to read them: thirty-two minutes in the scroll versus seventy usual. The space left behind? Clarity. The arithmetic of subtraction becoming addition.
+
+You promised yourself three small movements toward purpose. Two made, one waiting. Not perfection - presence. Tomorrow holds the third.
+
+This Wednesday outscored the last by sixteen points. The pattern? Less glitter, more gold. Less consumption, more creation. The ancient equation holding true in digital age.
+
+Sleep calls again. If you answer with seven hours, the data whispers promise: tomorrow's mind will thank today's rest.
+
+Fulfillment: 74. Meaningful: Yes.
+The quiet accumulation of intentional days.`;
+
+      // HOME SCREEN
+      const HomeScreen = () => {
+        const completedCount = completedDayParts.length;
+        const isMeaningfulDay = scores.body >= 70 && scores.mind >= 65 && scores.soul >= 80 && scores.purpose >= 55;
+        const allCheckInsComplete = completedCount === 4;
+
+        return (
+          <div className="h-full gradient-bg overflow-y-auto pb-20">
+            <div className="pt-14 pb-4 px-6">
+              <div className="flex items-start justify-between mb-1">
+                <h1 className="text-2xl font-bold text-gray-800 flex-1">How's your day unfolding?</h1>
+                <div className="text-right ml-2">
+                  <div className="text-xs font-semibold text-blue-600">{today}</div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">Quick check-ins build your Fulfillment score</p>
+            </div>
+
+            {/* AI Journal Ready (after night check-in) */}
+            {journalGenerated && (
+              <div className="px-6 mb-4">
+                <button
+                  onClick={() => setCurrentScreen('journal-view')}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-5 shadow-lg active:scale-95 transition-transform animate-pulse"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="text-3xl">✨</div>
+                      <div className="text-left">
+                        <div className="font-bold text-base">Your Daily Journal is Ready!</div>
+                        <div className="text-sm opacity-90">AI-generated reflection of your day</div>
+                      </div>
+                    </div>
+                    <div className="text-2xl">→</div>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* Daypart Chips */}
+            <div className="px-6 mb-4">
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Today's Check-ins</h3>
+                  <div className="text-xs text-gray-500">{completedCount} of 4 completed</div>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <DayPartChip emoji="🌅" label="Morning" time="6-10am" completed={completedDayParts.includes('morning')} onClick={() => { setSelectedDayPart('morning'); setCurrentScreen('checkin-intro'); }} />
+                  <DayPartChip emoji="☀️" label="Day" time="10-4pm" completed={completedDayParts.includes('day')} current={!completedDayParts.includes('day')} onClick={() => { setSelectedDayPart('day'); setCurrentScreen('checkin-intro'); }} />
+                  <DayPartChip emoji="🌆" label="Evening" time="4-8pm" completed={completedDayParts.includes('evening')} current={!completedDayParts.includes('evening') && completedDayParts.includes('day')} onClick={() => { setSelectedDayPart('evening'); setCurrentScreen('checkin-intro'); }} />
+                  <DayPartChip emoji="🌙" label="Night" time="8pm+" completed={completedDayParts.includes('night')} current={!completedDayParts.includes('night') && completedDayParts.includes('evening')} onClick={() => { setSelectedDayPart('night'); setCurrentScreen('checkin-intro'); }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Add Details Button */}
+            <div className="px-6 mb-4">
+              <button
+                onClick={() => setCurrentScreen('add-details')}
+                className="w-full bg-white rounded-2xl p-4 shadow-md border-2 border-dashed border-blue-300 active:scale-95 transition-transform"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">📊</div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-gray-800 text-sm">Add Details</div>
+                    <div className="text-xs text-gray-500">Track sleep, food, exercise & more</div>
+                  </div>
+                  <div className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-bold">Premium</div>
+                </div>
+              </button>
+            </div>
+
+            {/* Today's Fulfillment */}
+            <div className="px-6 mb-4">
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700">Today's Fulfillment</h3>
+                  <button onClick={() => setCurrentScreen('scoring-info')} className="text-xs text-blue-600 font-semibold bg-blue-50 px-3 py-1 rounded-full">
+                    How it works?
+                  </button>
+                </div>
+                
+                <div className="text-center mb-6">
+                  <div className="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent mb-1">
+                    {scores.overall}
+                  </div>
+                  <div className="text-xs text-gray-500">Overall Score (0-100)</div>
+                </div>
+
+                <div className="space-y-3">
+                  <ScoreBar label="Body" score={scores.body} color="bg-red-400" description="Strength & Energy" />
+                  <ScoreBar label="Mind" score={scores.mind} color="bg-teal-400" description="Calm & Clarity" />
+                  <ScoreBar label="Soul" score={scores.soul} color="bg-green-400" description="Meaning & Connection" />
+                  <ScoreBar label="Purpose" score={scores.purpose} color="bg-yellow-400" description="Direction" />
+                </div>
+
+                {isMeaningfulDay && (
+                  <div className="mt-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">✨</span>
+                      <div>
+                        <div className="text-sm font-semibold text-yellow-800">Meaningful Day!</div>
+                        <div className="text-xs text-yellow-700">All dimensions above your thresholds</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* This Week */}
+            <div className="px-6 mb-4">
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700">This Week's Progress</h3>
+                  <button onClick={() => setCurrentScreen('weekly-ritual')} className="text-sm font-semibold text-blue-600">
+                    Review →
+                  </button>
+                </div>
+
+                <div className="text-center mb-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <div className="text-5xl font-extrabold text-green-500">5</div>
+                    <div className="text-3xl">📈</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-800">Meaningful Days</div>
+                  <div className="text-xs text-gray-500 mt-1">Your north star metric (MDW)</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center bg-blue-50 rounded-xl p-3">
+                    <div className="text-2xl font-bold text-blue-600">67%</div>
+                    <div className="text-xs text-gray-600">Purpose completed</div>
+                  </div>
+                  <div className="text-center bg-green-50 rounded-xl p-3">
+                    <div className="text-2xl font-bold text-green-600">-18m</div>
+                    <div className="text-xs text-gray-600">Social vs baseline</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fulfillment Lineage Button */}
+            <div className="px-6 mb-6">
+              <button onClick={() => setCurrentScreen('lineage')} className="w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-2xl p-5 shadow-lg active:scale-95 transition-transform">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">🔗</div>
+                    <div className="text-left">
+                      <div className="font-semibold text-base">View Fulfillment Lineage</div>
+                      <div className="text-sm opacity-90">See how your choices connect</div>
+                    </div>
+                  </div>
+                  <div className="text-2xl">→</div>
+                </div>
+              </button>
+            </div>
+
+            <BottomNav current="home" onChange={setCurrentScreen} />
+          </div>
+        );
+      };
+
+      // JOURNAL READY SCREEN
+      const JournalReady = () => (
+        <div className="h-full bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+          <div className="px-6 text-center">
+            <div className="text-7xl mb-6 animate-bounce">✨</div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">Journal Generated!</h2>
+            <p className="text-gray-600 mb-8">Your daily reflection is ready to read</p>
+            
+            <div className="bg-white rounded-2xl p-6 mb-8 shadow-lg">
+              <div className="text-sm text-gray-600 mb-3">AI Analysis Complete</div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">5s</div>
+              <div className="text-xs text-gray-500">Analyzing 4 check-ins + device data</div>
+            </div>
+
+            <button
+              onClick={() => setCurrentScreen('journal-view')}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-semibold shadow-lg active:scale-95 transition-transform mb-3"
+            >
+              Read Your Journal
+            </button>
+            
+            <button
+              onClick={() => setCurrentScreen('home')}
+              className="text-gray-500 font-semibold"
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      );
+
+      // JOURNAL VIEW SCREEN
+      const JournalView = () => (
+        <div className="h-full bg-white overflow-y-auto pb-20">
+          <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
+            <div className="pt-14 pb-4 px-6">
+              <div className="flex items-center justify-between">
+                <button onClick={() => setCurrentScreen('home')} className="text-blue-600 font-semibold">
+                  ← Back
+                </button>
+                <h1 className="text-sm font-semibold text-gray-800">Today's Journal</h1>
+                <button onClick={() => setCurrentScreen('journal-edit')} className="text-blue-600 font-semibold">
+                  Edit
+                </button>
+              </div>
+              <div className="text-xs text-gray-500 text-center mt-2">{today}</div>
+            </div>
+          </div>
+
+          <div className="px-6 py-6">
+            <div className="prose prose-sm max-w-none">
+              <div className="whitespace-pre-line text-gray-700 leading-relaxed text-sm">
+                {sampleJournal}
+              </div>
+            </div>
+
+            {/* Personal Notes Section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <span>💭</span>
+                <span>Your Personal Notes</span>
+              </h3>
+              <button
+                onClick={() => setCurrentScreen('journal-edit')}
+                className="w-full bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl p-4 text-sm text-blue-600 font-semibold"
+              >
+                + Add your thoughts...
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  // Get personal notes from localStorage
+                  const savedNotes = localStorage.getItem('personalNotes');
+                  
+                  // Cycle to next tone
+                  const tones = ['reflective', 'coach-like', 'poetic', 'factual'];
+                  const currentIndex = tones.indexOf(journalTone);
+                  const nextTone = tones[(currentIndex + 1) % tones.length];
+                  setJournalTone(nextTone);
+                  
+                  // Show alert with context about personal notes
+                  if (savedNotes && savedNotes.trim()) {
+                    alert(`Journal regenerated with ${nextTone === 'coach-like' ? 'Coach-Like' : nextTone.charAt(0).toUpperCase() + nextTone.slice(1)} tone!\n\nYour personal thoughts have been woven into the narrative.`);
+                  } else {
+                    alert(`Journal regenerated with ${nextTone === 'coach-like' ? 'Coach-Like' : nextTone.charAt(0).toUpperCase() + nextTone.slice(1)} tone!`);
+                  }
+                }}
+                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200"
+              >
+                🔄 Regenerate
+              </button>
+              <button
+                onClick={() => alert('Exporting as PDF...')}
+                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-200"
+              >
+                📤 Export
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      // JOURNAL EDIT SCREEN
+      const JournalEdit = () => {
+        const [editedText, setEditedText] = useState(sampleJournal);
+        const [personalNotes, setPersonalNotes] = useState('');
+
+        const handleSave = () => {
+          // Save personal notes for use in regeneration
+          if (personalNotes.trim()) {
+            localStorage.setItem('personalNotes', personalNotes);
+          }
+          setCurrentScreen('journal-view');
+        };
+
+        return (
+          <div className="h-full bg-white overflow-y-auto pb-20">
+            <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
+              <div className="pt-14 pb-4 px-6">
+                <div className="flex items-center justify-between">
+                  <button onClick={() => setCurrentScreen('journal-view')} className="text-gray-600">
+                    Cancel
+                  </button>
+                  <h1 className="text-sm font-semibold text-gray-800">Edit Journal</h1>
+                  <button onClick={handleSave} className="text-blue-600 font-semibold">
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-6">
+              <div className="mb-6">
+                <label className="text-xs font-semibold text-gray-600 mb-2 block">AI-Generated Text</label>
+                <textarea
+                  value={editedText}
+                  onChange={(e) => setEditedText(e.target.value)}
+                  className="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none"
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-2 block">Your Personal Notes</label>
+                <textarea
+                  value={personalNotes}
+                  onChange={(e) => setPersonalNotes(e.target.value)}
+                  placeholder="Add your own thoughts, feelings, or reflections..."
+                  className="w-full h-32 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl text-sm resize-none"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ADD DETAILS SCREEN
+      const AddDetails = () => {
+        const [sleepHours, setSleepHours] = useState(detailData.sleepHours);
+        const [sleepQuality, setSleepQuality] = useState(detailData.sleepQuality);
+        const [breakfast, setBreakfast] = useState(detailData.breakfast);
+        const [lunch, setLunch] = useState(detailData.lunch);
+        const [dinner, setDinner] = useState(detailData.dinner);
+        const [snacks, setSnacks] = useState('ok');
+        const [exerciseType, setExerciseType] = useState(detailData.exerciseType);
+        const [exerciseDuration, setExerciseDuration] = useState(detailData.exerciseDuration);
+        const [exerciseIntensity, setExerciseIntensity] = useState(detailData.exerciseIntensity);
+
+        const saveAllDetails = () => {
+          setDetailData({
+            ...detailData,
+            sleepHours,
+            sleepQuality,
+            breakfast,
+            lunch,
+            dinner,
+            exerciseType,
+            exerciseDuration,
+            exerciseIntensity,
+          });
+          alert('All details saved!');
+          setCurrentScreen('home');
+        };
+
+        return (
+          <div className="h-full gradient-bg overflow-y-auto pb-20">
+            <div className="pt-14 pb-4 px-6">
+              <button onClick={() => setCurrentScreen('home')} className="mb-4 text-blue-600 font-semibold">
+                ← Back
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Add Details</h1>
+              <p className="text-sm text-gray-600">Optional deep dive for better insights</p>
+            </div>
+
+            <div className="px-6 space-y-4 pb-6">
+              {/* Sleep */}
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-3xl">💤</div>
+                  <div>
+                    <h3 className="font-bold text-gray-800">Sleep</h3>
+                    <p className="text-xs text-gray-500">From last night</p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Hours Slept</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    step="0.5"
+                    value={sleepHours}
+                    onChange={(e) => setSleepHours(e.target.value)}
+                    className="w-full"
+                  />
+                  <div className="text-center text-2xl font-bold text-blue-600 mt-2">{sleepHours}h</div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Quality</label>
+                  <div className="flex justify-center gap-2">
+                    {[1,2,3,4,5].map(star => (
+                      <button
+                        key={star}
+                        onClick={() => setSleepQuality(star)}
+                        className="text-3xl"
+                      >
+                        {star <= sleepQuality ? '⭐' : '☆'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3 text-xs text-blue-600 bg-blue-50 rounded-lg p-2 text-center">
+                  Pre-filled from HealthKit • Tap to edit
+                </div>
+              </div>
+
+              {/* Food */}
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-3xl">🍽️</div>
+                  <h3 className="font-bold text-gray-800">Fuel & Nutrition</h3>
+                </div>
+
+                <FoodEntry meal="Breakfast" value={breakfast} onChange={setBreakfast} />
+                <FoodEntry meal="Lunch" value={lunch} onChange={setLunch} />
+                <FoodEntry meal="Dinner" value={dinner} onChange={setDinner} />
+                <FoodEntry meal="Snacks" value={snacks} onChange={setSnacks} />
+              </div>
+
+              {/* Exercise */}
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-3xl">💪</div>
+                  <h3 className="font-bold text-gray-800">Activity & Exercise</h3>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+                  <div className="text-sm text-green-800">
+                    <span className="font-semibold">8,234 steps</span> • 45 active minutes
+                  </div>
+                  <div className="text-xs text-green-600 mt-1">From Apple Health</div>
+                </div>
+
+                {exerciseType && exerciseDuration > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+                    <div className="text-sm font-semibold text-blue-800">{exerciseType}</div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {exerciseDuration} min • {exerciseIntensity} intensity
+                    </div>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => setCurrentScreen('exercise-detail')}
+                  className="w-full bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl p-4 text-sm text-blue-600 font-semibold hover:bg-blue-100"
+                >
+                  + Add Manual Exercise
+                </button>
+              </div>
+
+              {/* Social */}
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-3xl">👥</div>
+                  <h3 className="font-bold text-gray-800">Social Connections</h3>
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Quality</label>
+                  <div className="flex gap-2">
+                    <button className="flex-1 bg-green-50 border-2 border-green-500 text-green-700 py-3 rounded-xl font-semibold text-sm">
+                      ⚡ Energized
+                    </button>
+                    <button className="flex-1 bg-gray-100 border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-semibold text-sm">
+                      😐 Neutral
+                    </button>
+                    <button className="flex-1 bg-gray-100 border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-semibold text-sm">
+                      😔 Drained
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setCurrentScreen('social-detail')}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-600 font-semibold"
+                >
+                  + Add Optional Details
+                </button>
+              </div>
+
+              {/* Screen Time */}
+              <div className="bg-white rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-3xl">📱</div>
+                  <h3 className="font-bold text-gray-800">Screen Time</h3>
+                </div>
+
+                <div className="text-center mb-4">
+                  <div className="text-4xl font-bold text-gray-800 mb-1">3h 42m</div>
+                  <div className="text-xs text-gray-500">Total today</div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center p-2 bg-orange-50 rounded-lg">
+                    <span className="text-gray-700">Social Media</span>
+                    <span className="font-semibold text-orange-600">32m ↓</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-700">Work</span>
+                    <span className="font-semibold text-gray-800">2h 15m</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-700">Entertainment</span>
+                    <span className="font-semibold text-gray-800">45m</span>
+                  </div>
+                </div>
+
+                <button className="w-full mt-4 bg-yellow-50 border border-yellow-200 text-yellow-700 py-3 rounded-xl font-semibold text-sm">
+                  ✨ Felt comparison trigger?
+                </button>
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={() => {
+                  setDetailData({ ...detailData, sleepHours, sleepQuality });
+                  setCurrentScreen('home');
+                  alert('Details saved! These will enrich your AI journal.');
+                }}
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold shadow-lg active:scale-95 transition-transform"
+              >
+                Save All Details
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // EXERCISE DETAIL
+      const ExerciseDetail = () => {
+        const [localType, setLocalType] = useState(detailData.exerciseType);
+        const [localDuration, setLocalDuration] = useState(detailData.exerciseDuration);
+        const [localIntensity, setLocalIntensity] = useState(detailData.exerciseIntensity);
+
+        const saveExercise = () => {
+          setDetailData({
+            ...detailData,
+            exerciseType: localType,
+            exerciseDuration: localDuration,
+            exerciseIntensity: localIntensity,
+          });
+          alert(`Exercise saved: ${localType}, ${localDuration} min, ${localIntensity} intensity`);
+          setCurrentScreen('add-details');
+        };
+
+        return (
+          <div className="h-full gradient-bg overflow-y-auto pb-20">
+            <div className="pt-14 pb-4 px-6">
+              <button onClick={() => setCurrentScreen('add-details')} className="mb-4 text-blue-600 font-semibold">
+                ← Back
+              </button>
+              <h1 className="text-xl font-bold text-gray-800 mb-2">Add Exercise</h1>
+            </div>
+
+            <div className="px-6 space-y-4">
+              <div className="bg-white rounded-2xl p-5 shadow-lg">
+                <label className="text-sm font-semibold text-gray-700 mb-3 block">Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Walk', 'Run', 'Gym', 'Yoga', 'Sport', 'Other'].map(type => (
+                    <button 
+                      key={type} 
+                      onClick={() => setLocalType(type)}
+                      className={`py-2 rounded-lg text-sm font-semibold cursor-pointer ${localType === type ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Duration</label>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="120" 
+                    value={localDuration} 
+                    onChange={(e) => setLocalDuration(parseInt(e.target.value))}
+                    className="w-full" 
+                  />
+                  <div className="text-center text-xl font-bold text-blue-600 mt-2">{localDuration} min</div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Intensity</label>
+                  <div className="flex gap-2">
+                    {['light', 'moderate', 'vigorous'].map(intensity => (
+                      <button 
+                        key={intensity}
+                        onClick={() => setLocalIntensity(intensity)}
+                        className={`flex-1 border-2 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
+                          localIntensity === intensity
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {intensity.charAt(0).toUpperCase() + intensity.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={saveExercise} 
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold hover:bg-blue-700"
+              >
+                Save Exercise
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // SOCIAL DETAIL
+      const SocialDetail = () => (
+        <div className="h-full gradient-bg overflow-y-auto pb-20">
+          <div className="pt-14 pb-4 px-6">
+            <button onClick={() => setCurrentScreen('add-details')} className="mb-4 text-blue-600 font-semibold">
+              ← Back
+            </button>
+            <h1 className="text-xl font-bold text-gray-800 mb-2">Social Details</h1>
+            <p className="text-xs text-gray-500">Optional - helps with deeper insights</p>
+          </div>
+
+          <div className="px-6 space-y-4">
+            <div className="bg-white rounded-2xl p-5 shadow-lg">
+              <label className="text-sm font-semibold text-gray-700 mb-3 block">Who?</label>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {['Friend', 'Family', 'Colleague', 'Other'].map(who => (
+                  <button key={who} className={`py-2 rounded-lg text-sm font-semibold ${who === 'Colleague' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                    {who}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="text"
+                placeholder='Or type: "Coffee with Sarah"'
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+              />
+
+              <div className="mt-4">
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Duration</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['15min', '30min', '1h', '2h+'].map(dur => (
+                    <button key={dur} className={`py-2 rounded-lg text-sm font-semibold ${dur === '30min' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      {dur}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Deep talk', 'Casual', 'Meeting', 'Group'].map(type => (
+                    <button key={type} className={`py-2 rounded-lg text-sm font-semibold ${type === 'Deep talk' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button onClick={() => setCurrentScreen('add-details')} className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold">
+              Save Social Details
+            </button>
+          </div>
+        </div>
+      );
+
+      // SETTINGS SCREEN
+      const SettingsScreen = () => (
+        <div className="h-full gradient-bg overflow-y-auto pb-20">
+          <div className="pt-14 pb-4 px-6">
+            <button onClick={() => setCurrentScreen('profile')} className="mb-4 text-blue-600 font-semibold">
+              ← Back
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Settings</h1>
+          </div>
+
+          <div className="px-6 space-y-4">
+            <div className="bg-white rounded-2xl p-5 shadow-lg">
+              <h3 className="font-semibold text-gray-800 mb-4">AI Journal Tone</h3>
+              <div className="space-y-2">
+                {[
+                  { value: 'reflective', label: 'Reflective', desc: 'Personal & encouraging' },
+                  { value: 'factual', label: 'Factual', desc: 'Data-focused & clinical' },
+                  { value: 'coach-like', label: 'Coach-Like', desc: 'Motivational & action-oriented' },
+                  { value: 'poetic', label: 'Poetic', desc: 'Literary & contemplative' }
+                ].map(tone => (
+                  <button
+                    key={tone.value}
+                    onClick={() => setJournalTone(tone.value)}
+                    className={`w-full p-4 rounded-xl text-left border-2 transition-all ${
+                      journalTone === tone.value 
+                        ? 'bg-blue-50 border-blue-500' 
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-800">{tone.label}</div>
+                        <div className="text-xs text-gray-500">{tone.desc}</div>
+                      </div>
+                      {journalTone === tone.value && <div className="text-blue-600 text-xl">✓</div>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentScreen('journal-view')}
+                className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-semibold text-sm"
+              >
+                Preview with {journalTone === 'reflective' ? 'Reflective' : journalTone === 'factual' ? 'Factual' : journalTone === 'coach-like' ? 'Coach-Like' : 'Poetic'} Tone
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      // CHECK-IN SCREENS (simplified - already implemented)
+      const CheckInIntro = () => {
+        const dayPartEmojis = { morning: '🌅', day: '☀️', evening: '🌆', night: '🌙' };
+        const dayPartLabels = { morning: 'Morning', day: 'Day', evening: 'Evening', night: 'Night' };
+
+        return (
+          <div className="h-full bg-gradient-to-br from-blue-50 to-teal-50">
+            <div className="pt-14 pb-4 px-6">
+              <button onClick={() => setCurrentScreen('home')} className="mb-4">
+                <div className="text-2xl text-gray-600">✕</div>
+              </button>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-4xl">{dayPartEmojis[selectedDayPart]}</div>
+                <div>
+                  <div className="text-xl font-bold text-gray-800">{dayPartLabels[selectedDayPart]} Check-in</div>
+                  <div className="text-sm text-gray-500">Takes ~15 seconds</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6">
+              <div className="bg-white rounded-3xl p-6 shadow-xl mb-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Quick 3-Step Flow</h2>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
+                    <div>
+                      <div className="font-semibold text-gray-800">Pick your mood</div>
+                      <div className="text-sm text-gray-600">5 emotions (auto-advances)</div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
+                    <div>
+                      <div className="font-semibold text-gray-800">Add context</div>
+                      <div className="text-sm text-gray-600">Work/Sleep/Social - 0-2 tags</div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
+                    <div>
+                      <div className="font-semibold text-gray-800">Log micro-act</div>
+                      <div className="text-sm text-gray-600">Optional - or skip</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 bg-blue-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-blue-800">
+                    <span className="text-xl">💡</span>
+                    <div className="text-sm">
+                      <span className="font-semibold">Fast core flow</span> stays under 20 seconds
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setCurrentScreen('checkin-mood')}
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold shadow-lg active:scale-95 transition-transform"
+              >
+                Start Check-in →
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const CheckInMoodScreen = () => {
+        const moods = [
+          { emoji: '😢', label: 'Rough' },
+          { emoji: '😕', label: 'Low' },
+          { emoji: '😐', label: 'Okay' },
+          { emoji: '🙂', label: 'Good' },
+          { emoji: '😊', label: 'Great' },
+        ];
+
+        return (
+          <div className="h-full bg-gradient-to-br from-blue-50 to-teal-50">
+            <div className="pt-14 pb-4 px-6">
+              <button onClick={() => setCurrentScreen('home')} className="mb-4">
+                <div className="text-2xl text-gray-600">✕</div>
+              </button>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xl font-bold text-gray-800">Mood</div>
+                <div className="text-xs text-gray-500">Step 1 of 3</div>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-2 mb-8">
+              <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+            </div>
+
+            <div className="px-6">
+              <h2 className="text-2xl font-bold text-gray-800 text-center mb-2">
+                How are you feeling?
+              </h2>
+              <p className="text-sm text-gray-500 text-center mb-8">
+                Affects Mind & Soul scores
+              </p>
+
+              <div className="flex justify-center gap-3 flex-wrap max-w-md mx-auto mb-8">
+                {moods.map((mood, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTimeout(() => setCurrentScreen('checkin-context'), 300)}
+                    className="w-20 h-20 bg-white rounded-2xl flex flex-col items-center justify-center border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 active:scale-95 transition-all shadow-sm"
+                  >
+                    <div className="text-3xl mb-1">{mood.emoji}</div>
+                    <div className="text-xs font-semibold text-gray-700">{mood.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                <div className="text-xs text-blue-800">
+                  <span className="font-semibold">Auto-advances</span> after selection
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const CheckInContextScreen = () => {
+        const contexts = [
+          { emoji: '💼', label: 'Work' },
+          { emoji: '😴', label: 'Sleep' },
+          { emoji: '👥', label: 'Social' },
+        ];
+
+        return (
+          <div className="h-full bg-gradient-to-br from-blue-50 to-teal-50">
+            <div className="pt-14 pb-4 px-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xl font-bold text-gray-800">Context</div>
+                <div className="text-xs text-gray-500">Step 2 of 3</div>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-2 mb-8">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+            </div>
+
+            <div className="px-6">
+              <h2 className="text-2xl font-bold text-gray-800 text-center mb-2">
+                What's the context?
+              </h2>
+              <p className="text-sm text-gray-500 text-center mb-8">
+                Optional - Pick 0-2 tags
+              </p>
+
+              <div className="flex flex-col items-center gap-3 max-w-sm mx-auto mb-12">
+                {contexts.map((ctx, i) => (
+                  <button
+                    key={i}
+                    className="w-full px-6 py-4 rounded-2xl flex items-center gap-3 border-2 bg-white border-gray-200 text-gray-700 transition-all shadow-sm hover:border-blue-500"
+                  >
+                    <div className="text-2xl">{ctx.emoji}</div>
+                    <div className="font-semibold text-lg">{ctx.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentScreen('checkin-microact')}
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold active:scale-95 transition-transform"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const CheckInMicroActScreen = () => {
+        const microActs = [
+          { emoji: '🙏', label: 'Gratitude' },
+          { emoji: '💝', label: 'Kindness' },
+          { emoji: '📚', label: 'Learning' },
+          { emoji: '🌳', label: 'Nature' },
+          { emoji: '🧘', label: 'Meditate' },
+          { emoji: '🌬️', label: 'Breathe' },
+          { emoji: '🚶', label: 'Walk' },
+          { emoji: '✍️', label: 'Journal' },
+        ];
+
+        return (
+          <div className="h-full bg-gradient-to-br from-blue-50 to-teal-50">
+            <div className="pt-14 pb-4 px-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xl font-bold text-gray-800">Micro-act</div>
+                <div className="text-xs text-gray-500">Step 3 of 3</div>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-2 mb-8">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+            </div>
+
+            <div className="px-6">
+              <h2 className="text-2xl font-bold text-gray-800 text-center mb-2">
+                Any micro-act today?
+              </h2>
+              <p className="text-sm text-gray-500 text-center mb-8">
+                Optional - Boosts Soul & Purpose
+              </p>
+
+              <div className="grid grid-cols-4 gap-3 max-w-sm mx-auto mb-8">
+                {microActs.map((act, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      completeCheckIn(selectedDayPart);
+                      setCurrentScreen('checkin-complete');
+                    }}
+                    className="aspect-square bg-white rounded-2xl flex flex-col items-center justify-center border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 active:scale-95 transition-all shadow-sm"
+                  >
+                    <div className="text-2xl mb-1">{act.emoji}</div>
+                    <div className="text-xs text-gray-600 text-center px-1 font-medium leading-tight">{act.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  completeCheckIn(selectedDayPart);
+                  setCurrentScreen('checkin-complete');
+                }}
+                className="w-full text-gray-500 py-3 font-semibold border-2 border-gray-200 rounded-xl bg-white"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const CheckInComplete = () => (
+        <div className="h-full bg-gradient-to-br from-green-50 to-teal-50 flex items-center justify-center">
+          <div className="px-6 text-center">
+            <div className="text-7xl mb-6 animate-bounce">✓</div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">Check-in Complete!</h2>
+            <p className="text-gray-600 mb-8">Your scores are updating...</p>
+            
+            <div className="bg-white rounded-2xl p-6 mb-8 shadow-lg">
+              <div className="text-sm text-gray-600 mb-3">Time taken</div>
+              <div className="text-4xl font-bold text-green-600 mb-2">14s</div>
+              <div className="text-xs text-gray-500">Under 15 seconds! 🎉</div>
+            </div>
+
+            <button
+              onClick={() => setCurrentScreen('home')}
+              className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold shadow-lg active:scale-95 transition-transform"
+            >
+              Back to Home
+            </button>
+          </div>
+        </div>
+      );
+
+      // PROFILE SCREEN
+      const ProfileScreen = () => {
+        const handleProfilePicture = () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                setProfilePicture(event.target.result);
+                localStorage.setItem('profilePicture', event.target.result);
+                alert('Profile picture updated! ✅');
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        };
+
+        return (
+          <div className="h-full gradient-bg overflow-y-auto pb-20">
+            <div className="pt-14 pb-6 px-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="relative">
+                  <div 
+                    className="w-20 h-20 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg overflow-hidden cursor-pointer hover:opacity-90"
+                    onClick={handleProfilePicture}
+                  >
+                    {profilePicture ? (
+                      <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      'MG'
+                    )}
+                  </div>
+                  <button 
+                    onClick={handleProfilePicture}
+                    className="absolute bottom-0 right-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs shadow-lg hover:bg-blue-600"
+                    title="Change profile picture"
+                  >
+                    📷
+                  </button>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Manoj Gupta</h2>
+                  <p className="text-sm text-gray-500">manoj@example.com</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-semibold">💎 Premium</span>
+                  </div>
+                </div>
+              </div>
+
+            <div className="bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-200 rounded-2xl p-4 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-blue-800">🔥 Current Streak</span>
+                <span className="text-3xl font-bold text-blue-600">12 days</span>
+              </div>
+              <p className="text-xs text-blue-600">Keep going! Building consistency.</p>
+            </div>
+          </div>
+
+          <div className="px-6 space-y-2 mb-6">
+            <SettingButton icon="👤" label="Edit Profile" onClick={() => {}} />
+            <SettingButton icon="🔔" label="Notifications" badge="4x daily" onClick={() => {}} />
+            <SettingButton icon="🎨" label="Journal Tone" badge={journalTone} onClick={() => setCurrentScreen('settings')} />
+            <SettingButton icon="⚙️" label="App Settings" onClick={() => {}} />
+            <SettingButton icon="💎" label="Manage Premium" onClick={() => setCurrentScreen('premium')} />
+            <SettingButton icon="📔" label="Journal History" onClick={() => setCurrentScreen('journal-history')} />
+            <SettingButton icon="📊" label="Export Data" onClick={() => {}} />
+            <SettingButton icon="🔒" label="Privacy & Security" onClick={() => {}} />
+            <SettingButton icon="❓" label="Help & Support" onClick={() => {}} />
+          </div>
+
+          <div className="px-6 mb-6">
+            <button className="w-full text-left px-4 py-3 text-sm text-red-600 font-semibold bg-red-50 rounded-xl border border-red-200">
+              🚪 Log Out
+            </button>
+          </div>
+
+          <div className="px-6 text-center text-xs text-gray-400">
+            <p>Version 1.0.0</p>
+            <p className="mt-2">Made with care for meaningful living</p>
+          </div>
+
+          <BottomNav current="profile" onChange={setCurrentScreen} />
+        </div>
+      );
+      };
+
+      // JOURNAL HISTORY
+      const JournalHistory = () => (
+        <div className="h-full gradient-bg overflow-y-auto pb-20">
+          <div className="pt-14 pb-4 px-6">
+            <button onClick={() => setCurrentScreen('profile')} className="mb-4 text-blue-600 font-semibold">
+              ← Back
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Journal History</h1>
+            <p className="text-sm text-gray-600">This week's reflections</p>
+          </div>
+
+          <div className="px-6 space-y-3">
+            {['Monday, Oct 14', 'Tuesday, Oct 15', 'Wednesday, Oct 16'].map((date, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentScreen('journal-view')}
+                className="w-full bg-white rounded-2xl p-5 shadow-md text-left active:scale-95 transition-transform"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-bold text-gray-800">{date}</div>
+                  <div className="text-xl">✨</div>
+                </div>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                  "You started {date.split(',')[0]} with renewed energy after..."
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-500">Fulfillment: {68 + i * 3}</div>
+                  <div className="text-blue-600 text-sm font-semibold">Read →</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+
+      // LINEAGE SCREEN
+      const LineageScreen = () => {
+        const allInsights = [
+          { icon: "💡", title: "Morning walks boost next-day focus", badge: "LAG • 1d", confidence: "HIGH", description: "Days with ≥45 active minutes show +12 MindScore the next day. Your body movement directly impacts mental clarity.", impact: "+12", color: "border-yellow-400" },
+          { icon: "🧘", title: "Meditation calms immediately", badge: "SAME-DAY", confidence: "HIGH", description: "Check-ins after meditation show 15% higher mood ratings on average. Deep breathing activates your parasympathetic nervous system.", impact: "+7", color: "border-teal-400" },
+          { icon: "⚠️", title: "Sleep threshold detected", badge: "BREAKPOINT", confidence: "MEDIUM", description: "When sleep drops below 6.5 hours, your MindScore typically drops by ~18 points. Prioritize 7+ hours for optimal clarity.", impact: "-18", color: "border-red-400" },
+          { icon: "🌱", title: "Purpose builds on consistency", badge: "PURPOSE-PATH", confidence: "HIGH", description: "Completing 2+ micro-moves per day increases your PurposeScore by +15 points. Small daily actions compound into direction.", impact: "+15", color: "border-green-400" },
+          { icon: "📱", title: "Social media impacts clarity", badge: "SAME-DAY", confidence: "MEDIUM", description: "Heavy social media use (>60 min) correlates with -8 MindScore in evening check-ins. Consider time limits.", impact: "-8", color: "border-orange-400" },
+          { icon: "🌳", title: "Nature restores soul score", badge: "SAME-DAY", confidence: "HIGH", description: "Spending 20+ minutes outdoors increases SoulScore by +10 points. Natural environments reduce cortisol and boost wellbeing.", impact: "+10", color: "border-green-400" },
+          { icon: "💪", title: "Exercise creates momentum", badge: "LAG • 2-3d", confidence: "MEDIUM", description: "Days with vigorous exercise show +8 BodyScore and +6 MindScore for the next 2-3 days. Physical vitality cascades.", impact: "+8", color: "border-red-400" }
+        ];
+
+        return (
+          <div className="h-full gradient-bg overflow-y-auto pb-20">
+            <div className="pt-14 pb-4 px-6">
+              <button onClick={() => setCurrentScreen('home')} className="mb-4 text-blue-600 font-semibold">
+                ← Back
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Fulfillment Lineage</h1>
+              <p className="text-sm text-gray-600">How your choices ripple into outcomes</p>
+            </div>
+
+            <div className="px-6 mb-6">
+              <div className="bg-white rounded-3xl p-5 shadow-lg">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Your Journey (Last 7 Days)</h3>
+                
+                <div className="flex gap-3 overflow-x-auto pb-2 mb-4">
+                  {[65, 68, 70, 73, 75, 72, 78].map((h, i) => (
+                    <div key={i} className="flex-shrink-0">
+                      <div className="flex gap-1 mb-2" style={{height: '80px', alignItems: 'flex-end'}}>
+                        <div className="w-2 bg-red-400 rounded-t" style={{height: `${h}%`}}></div>
+                        <div className="w-2 bg-teal-400 rounded-t" style={{height: `${h - 5}%`}}></div>
+                        <div className="w-2 bg-green-400 rounded-t" style={{height: `${h + 5}%`}}></div>
+                        <div className="w-2 bg-yellow-400 rounded-t" style={{height: `${h - 10}%`}}></div>
+                      </div>
+                      <div className="text-xs text-gray-500 text-center">
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
+                      </div>
+                      {i === 4 && <div className="text-center text-lg">⭐</div>}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-center gap-4 pt-4 border-t border-gray-100">
+                  <LegendItem color="bg-red-400" label="Body" />
+                  <LegendItem color="bg-teal-400" label="Mind" />
+                  <LegendItem color="bg-green-400" label="Soul" />
+                  <LegendItem color="bg-yellow-400" label="Purpose" />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 mb-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Key Connections</h3>
+              <p className="text-xs text-gray-500 mb-4">7 patterns discovered from your data</p>
+              
+              {allInsights.map((insight, i) => (
+                <InsightCard key={i} {...insight} />
+              ))}
+            </div>
+
+            <BottomNav current="insights" onChange={setCurrentScreen} />
+          </div>
+        );
+      };
+
+      // SCORING INFO (unchanged)
+      const ScoringInfo = () => (
+        <div className="h-full bg-gradient-to-br from-purple-50 to-blue-50 overflow-y-auto pb-6">
+          <div className="pt-14 pb-4 px-6">
+            <button onClick={() => setCurrentScreen('home')} className="mb-4 text-gray-600">
+              ← Back
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">How Scoring Works</h1>
+            <p className="text-sm text-gray-600">Understanding your Fulfillment score</p>
+          </div>
+
+          <div className="px-6 space-y-4 pb-6">
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <h3 className="font-bold text-gray-800 mb-3">📊 The 4 Dimensions</h3>
+              <div className="space-y-3">
+                <DimensionExplanation color="bg-red-400" label="Body (0-100)" items={["Sleep quality & duration", "Activity/steps", "Fuel quality", "HRV/Resting HR"]} />
+                <DimensionExplanation color="bg-teal-400" label="Mind (0-100)" items={["Mood ratings", "Focus minutes", "Stress relief used", "Mental clarity"]} />
+                <DimensionExplanation color="bg-green-400" label="Soul (0-100)" items={["Micro-acts (gratitude, meditation)", "Social quality", "Acts of kindness", "Connection"]} />
+                <DimensionExplanation color="bg-yellow-400" label="Purpose (0-100)" items={["Weekly intention progress", "Micro-moves completed", "Daily purpose check", "Direction"]} />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-3xl p-6 shadow-lg">
+              <h3 className="font-bold mb-3 text-lg">✨ Meaningful Day</h3>
+              <p className="text-sm opacity-95 mb-3">
+                A day where ALL dimensions meet your personalized thresholds AND you make progress on your weekly purpose.
+              </p>
+              <div className="bg-white/20 rounded-xl p-3 text-sm">
+                <span className="font-semibold">Goal:</span> 5+ Meaningful Days per Week (MDW)
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <h3 className="font-bold text-gray-800 mb-3">🎯 How We Calculate</h3>
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex gap-2">
+                  <div className="font-semibold text-blue-600">1.</div>
+                  <div>Your <span className="font-semibold">check-ins</span> feed mood, context, and micro-acts</div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="font-semibold text-blue-600">2.</div>
+                  <div><span className="font-semibold">Device data</span> adds sleep, activity, and screen time</div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="font-semibold text-blue-600">3.</div>
+                  <div><span className="font-semibold">Optional details</span> (food, exercise, social) add precision</div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="font-semibold text-blue-600">4.</div>
+                  <div><span className="font-semibold">AI analysis</span> combines everything into 4 dimension scores</div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="font-semibold text-blue-600">5.</div>
+                  <div><span className="font-semibold">Weighted average</span> creates your Overall Score</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      // Helper Components
+      const DayPartChip = ({ emoji, label, time, completed, current, onClick }) => (
+        <button
+          onClick={onClick}
+          className={`relative flex flex-col items-center p-3 rounded-xl border-2 transition-all active:scale-95 ${
+            completed
+              ? 'bg-green-50 border-green-500'
+              : current
+              ? 'bg-blue-50 border-blue-500 shadow-md ring-2 ring-blue-200'
+              : 'bg-white border-gray-200'
+          }`}
+        >
+          {completed && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
+              ✓
+            </div>
+          )}
+          <div className="text-2xl mb-1">{emoji}</div>
+          <div className={`text-xs font-bold ${completed ? 'text-green-700' : current ? 'text-blue-700' : 'text-gray-700'}`}>
+            {label}
+          </div>
+          <div className="text-xs text-gray-500">{time}</div>
+        </button>
+      );
+
+      const ScoreBar = ({ label, score, color, description }) => (
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <div>
+              <span className="text-sm font-bold text-gray-800">{label}</span>
+              <span className="text-xs text-gray-500 ml-2">{description}</span>
+            </div>
+            <span className="text-sm font-bold text-gray-800">{score}</span>
+          </div>
+          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{width: `${score}%`}}></div>
+          </div>
+        </div>
+      );
+
+      const FoodEntry = ({ meal, value, onChange }) => (
+        <div className="mb-3 pb-3 border-b border-gray-100 last:border-0">
+          <div className="text-sm font-semibold text-gray-700 mb-2">{meal}</div>
+          <div className="flex gap-2">
+            {['good', 'ok', 'poor'].map(quality => (
+              <button
+                key={quality}
+                onClick={() => onChange(quality)}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-80 ${
+                  value === quality
+                    ? quality === 'good' ? 'bg-green-500 text-white' : quality === 'ok' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {quality.charAt(0).toUpperCase() + quality.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+
+      const DimensionExplanation = ({ color, label, items }) => (
+        <div className="pb-3 border-b border-gray-100 last:border-0">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-3 h-3 rounded-full ${color}`}></div>
+            <div className="font-semibold text-gray-800 text-sm">{label}</div>
+          </div>
+          <ul className="text-xs text-gray-600 space-y-1 ml-5">
+            {items.map((item, i) => (
+              <li key={i}>• {item}</li>
+            ))}
+          </ul>
+        </div>
+      );
+
+      const LegendItem = ({ color, label }) => (
+        <div className="flex items-center gap-2">
+          <div className={`w-2.5 h-2.5 rounded-full ${color}`}></div>
+          <span className="text-xs font-medium text-gray-600">{label}</span>
+        </div>
+      );
+
+      const InsightCard = ({ icon, title, badge, confidence, description, impact, color }) => (
+        <div className={`bg-white rounded-2xl p-5 mb-3 shadow-md border-l-4 ${color}`}>
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="text-2xl">{icon}</div>
+              <div className="flex-1">
+                <div className="font-bold text-gray-800 text-sm mb-1">{title}</div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs text-gray-500 uppercase font-semibold">{badge}</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                    confidence === 'HIGH' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {confidence}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className={`text-lg font-bold ${impact.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+              {impact} pts
+            </div>
+          </div>
+          <p className="text-xs text-gray-600 leading-relaxed">{description}</p>
+        </div>
+      );
+
+      const SettingButton = ({ icon, label, badge, onClick }) => (
+        <button onClick={onClick} className="w-full bg-white rounded-xl p-4 flex items-center justify-between active:bg-gray-50 transition-colors shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="text-xl">{icon}</div>
+            <span className="text-sm font-semibold text-gray-800">{label}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {badge && <span className="text-xs text-gray-500 font-medium capitalize">{badge}</span>}
+            <div className="text-gray-400">→</div>
+          </div>
+        </button>
+      );
+
+      const BottomNav = ({ current, onChange }) => (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+          <div className="flex justify-around py-2">
+            <NavButton icon="📅" label="Today" active={current === 'home'} onClick={() => onChange('home')} />
+            <NavButton icon="🔗" label="Insights" active={current === 'insights'} onClick={() => onChange('lineage')} />
+            <NavButton icon="💎" label="Premium" active={current === 'premium'} onClick={() => onChange('premium')} />
+            <NavButton icon="👤" label="Profile" active={current === 'profile'} onClick={() => onChange('profile')} />
+          </div>
+        </div>
+      );
+
+      const NavButton = ({ icon, label, active, onClick }) => (
+        <button onClick={onClick} className={`flex flex-col items-center gap-1 px-4 py-2 ${active ? 'text-blue-600' : 'text-gray-400'}`}>
+          <div className="text-xl">{icon}</div>
+          <span className="text-xs font-semibold">{label}</span>
+        </button>
+      );
+
+      // Render Screen
+      const renderScreen = () => {
+        switch(currentScreen) {
+          case 'home': return <HomeScreen />;
+          case 'checkin-intro': return <CheckInIntro />;
+          case 'checkin-mood': return <CheckInMoodScreen />;
+          case 'checkin-context': return <CheckInContextScreen />;
+          case 'checkin-microact': return <CheckInMicroActScreen />;
+          case 'checkin-complete': return <CheckInComplete />;
+          case 'journal-ready': return <JournalReady />;
+          case 'journal-view': return <JournalView />;
+          case 'journal-edit': return <JournalEdit />;
+          case 'add-details': return <AddDetails />;
+          case 'exercise-detail': return <ExerciseDetail />;
+          case 'social-detail': return <SocialDetail />;
+          case 'scoring-info': return <ScoringInfo />;
+          case 'lineage': return <LineageScreen />;
+          case 'profile': return <ProfileScreen />;
+          case 'settings': return <SettingsScreen />;
+          case 'journal-history': return <JournalHistory />;
+          default: return <HomeScreen />;
+        }
+      };
+
+      return (
+        <div className="min-h-screen phone-frame flex items-center justify-center p-4 md:p-8">
+          <div className="relative">
+            <div className="w-[375px] h-[812px] bg-black rounded-[50px] shadow-2xl relative overflow-hidden border-8 border-gray-900">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-50"></div>
+              <div className="absolute top-0 left-0 right-0 h-11 z-40 px-8 flex items-center justify-between text-xs font-medium text-white">
+                <span>9:41</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-3 border border-white rounded-sm"></div>
+                  <div className="w-1 h-2 bg-white rounded-sm"></div>
+                </div>
+              </div>
+              <div className="w-full h-full">{renderScreen()}</div>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full"></div>
+            </div>
+            <div className="absolute -bottom-12 left-0 right-0 text-center text-white text-sm font-medium">
+              {currentScreen === 'home' && 'Home - Fulfillment App'}
+              {currentScreen === 'profile' && 'Profile & Settings'}
+              {currentScreen === 'lineage' && 'Fulfillment Lineage - 7 Connections'}
+              {currentScreen === 'add-details' && 'Add Details (Premium)'}
+              {currentScreen === 'journal-view' && 'AI-Generated Journal'}
+              {currentScreen === 'settings' && 'Journal Tone Settings'}
+              {currentScreen.includes('checkin') && 'Quick Check-in Flow'}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

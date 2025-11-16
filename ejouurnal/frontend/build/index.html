@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fulfillment - Discover Your Patterns</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .phone-frame {
+            max-width: 390px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            height: 844px;
+            position: relative;
+        }
+        .status-bar {
+            height: 44px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+        }
+        .screen {
+            height: 800px;
+            overflow-y: auto;
+            background: #FAFBFC;
+        }
+        .streak-flame {
+            animation: flicker 1.5s ease-in-out infinite;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulsing {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        .conversion-banner {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(255, 107, 107, 0.3); }
+            to { box-shadow: 0 0 30px rgba(255, 107, 107, 0.6); }
+        }
+        .hidden { display: none; }
+        .premium-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #8B4513;
+            font-weight: bold;
+        }
+        .insight-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+        .insight-confidence {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .virtuous-cycle {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span>9:41</span>
+            <span>⚡📶</span>
+        </div>
+
+        <!-- Screen Content -->
+        <div class="screen" id="screen">
+            <!-- Home Screen - INSIGHTS CENTERED -->
+            <div id="home-screen" class="p-6">
+                <!-- Header with Streak -->
+                <div class="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-2xl mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-bold">Fulfillment</h1>
+                            <p class="text-purple-100 text-sm">Discover your patterns</p>
+        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold streak-flame" id="streak-count">7</div>
+                            <div class="text-xs text-purple-200">Day Streak</div>
+    </div>
+        </div>
+    </div>
+
+                <!-- VIRTUOUS CYCLE BANNER -->
+                <div class="virtuous-cycle mb-6">
+                    <h3 class="text-lg font-bold mb-2">🔄 Your Virtuous Cycle</h3>
+                    <p class="text-sm opacity-90">Check-in → Insights → Action → Growth</p>
+                </div>
+
+                <!-- INSIGHTS HERO SECTION -->
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-white text-lg">💡</span>
+                    </div>
+                            <div>
+                                <h2 class="font-bold text-gray-800 text-lg">Your Latest Insights</h2>
+                                <p class="text-sm text-gray-600">AI discovered patterns in your data</p>
+                </div>
+                        </div>
+                        <button onclick="navigateTo('insights')" class="text-indigo-600 text-sm font-medium">
+                            View All →
+                        </button>
+                    </div>
+                    
+                    <!-- Latest Insights Display -->
+                    <div id="latest-insights" class="space-y-3">
+                        <div class="bg-white rounded-lg p-3 shadow-sm">
+                            <div class="flex items-start justify-between mb-2">
+                                <h4 class="font-semibold text-gray-800 text-sm">Sleep Quality Impact</h4>
+                                <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">85% confidence</span>
+                        </div>
+                            <p class="text-xs text-gray-600">Your sleep quality strongly correlates with your morning energy levels.</p>
+                    </div>
+                        <div class="bg-white rounded-lg p-3 shadow-sm">
+                            <div class="flex items-start justify-between mb-2">
+                                <h4 class="font-semibold text-gray-800 text-sm">Weekly Rhythm</h4>
+                                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">78% confidence</span>
+                </div>
+                            <p class="text-xs text-gray-600">You tend to feel more fulfilled on days when you exercise.</p>
+                        </div>
+                        </div>
+                    
+                    <button onclick="generateNewInsights()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors mt-4">
+                        🔍 Discover New Patterns
+                    </button>
+                    </div>
+
+                <!-- Quick Actions Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <button onclick="navigateTo('checkin')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="text-2xl mb-2">📝</div>
+                        <div class="font-semibold text-gray-800">Check-in</div>
+                        <div class="text-xs text-gray-500">Log your mood</div>
+                    </button>
+                    <button onclick="navigateTo('micro-moves')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="text-2xl mb-2">🎯</div>
+                        <div class="font-semibold text-gray-800">Micro-moves</div>
+                        <div class="text-xs text-gray-500">Small actions</div>
+                    </button>
+                    <button onclick="navigateTo('journal')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="text-2xl mb-2">🤖</div>
+                        <div class="font-semibold text-gray-800">AI Journal</div>
+                        <div class="text-xs text-gray-500">Generate insights</div>
+                    </button>
+                    <button onclick="navigateTo('intentions')" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="text-2xl mb-2">🎯</div>
+                        <div class="font-semibold text-gray-800">Intentions</div>
+                        <div class="text-xs text-gray-500">Set goals</div>
+                    </button>
+                </div>
+
+                <!-- Progress Overview -->
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-3">Your Progress</h3>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-purple-600" id="checkin-count">0</div>
+                            <div class="text-xs text-gray-500">Check-ins</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-indigo-600" id="insight-count">0</div>
+                            <div class="text-xs text-gray-500">Insights</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-green-600" id="journal-count">0</div>
+                            <div class="text-xs text-gray-500">Journals</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversion Banner (if user is ready) -->
+                <div id="conversion-banner" class="conversion-banner text-white p-4 rounded-xl mb-6 hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg">🎉 Ready for Premium?</h3>
+                            <p class="text-sm opacity-90">Unlock deeper insights and patterns</p>
+                        </div>
+                        <button onclick="showConversionOffer()" class="bg-white text-pink-600 px-4 py-2 rounded-lg font-semibold text-sm">
+                            Upgrade
+                </button>
+            </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <h3 class="font-semibold text-gray-800 mb-3">Recent Activity</h3>
+                    <div id="recent-activity" class="space-y-2">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            Welcome to Fulfillment!
+                        </div>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Check-in Screen -->
+            <div id="checkin-screen" class="hidden p-6">
+                <div class="flex items-center mb-6">
+                    <button onclick="navigateTo('home')" class="mr-4 text-gray-600">← Back</button>
+                    <h2 class="text-xl font-bold">How are you feeling?</h2>
+                    </div>
+
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div class="grid grid-cols-5 gap-3 mb-6">
+                        <button class="mood-btn bg-red-50 text-red-600 p-3 rounded-xl text-center hover:bg-red-100 transition-colors" data-mood="very-low">
+                            <div class="text-2xl mb-1">😞</div>
+                            <div class="text-xs">Very Low</div>
+                        </button>
+                        <button class="mood-btn bg-orange-50 text-orange-600 p-3 rounded-xl text-center hover:bg-orange-100 transition-colors" data-mood="low">
+                            <div class="text-2xl mb-1">😔</div>
+                            <div class="text-xs">Low</div>
+                        </button>
+                        <button class="mood-btn bg-yellow-50 text-yellow-600 p-3 rounded-xl text-center hover:bg-yellow-100 transition-colors" data-mood="neutral">
+                            <div class="text-2xl mb-1">😐</div>
+                            <div class="text-xs">Neutral</div>
+                        </button>
+                        <button class="mood-btn bg-green-50 text-green-600 p-3 rounded-xl text-center hover:bg-green-100 transition-colors" data-mood="good">
+                            <div class="text-2xl mb-1">😊</div>
+                            <div class="text-xs">Good</div>
+                        </button>
+                        <button class="mood-btn bg-blue-50 text-blue-600 p-3 rounded-xl text-center hover:bg-blue-100 transition-colors" data-mood="great">
+                            <div class="text-2xl mb-1">😄</div>
+                            <div class="text-xs">Great</div>
+                        </button>
+                        </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">What's on your mind?</label>
+                        <textarea id="context" class="w-full p-3 border border-gray-200 rounded-xl resize-none" rows="2" placeholder="Work, relationships, health, etc."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Micro-move for today</label>
+                        <select id="micro-act" class="w-full p-3 border border-gray-200 rounded-xl">
+                            <option value="gratitude">Gratitude practice</option>
+                            <option value="meditation">Meditation</option>
+                            <option value="exercise">Exercise</option>
+                            <option value="reading">Reading</option>
+                            <option value="journaling">Journaling</option>
+                        </select>
+                            </div>
+                    
+                    <button id="checkin-btn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all">
+                        Log Check-in
+                    </button>
+                    </div>
+                </div>
+
+            <!-- Micro-moves Screen -->
+            <div id="micro-moves-screen" class="hidden p-6">
+                <div class="flex items-center mb-6">
+                    <button onclick="navigateTo('home')" class="mr-4 text-gray-600">← Back</button>
+                    <h2 class="text-xl font-bold">Micro-moves</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-gray-800 mb-2">Today's Micro-moves</h3>
+                        <div id="micro-moves-list" class="space-y-2">
+                            <div class="flex items-center justify-between p-2 bg-green-50 rounded-lg">
+                                <span class="text-sm">Take 3 deep breaths</span>
+                                <button class="text-green-600 text-sm" onclick="markMicroMoveComplete(this)">✓ Done</button>
+                            </div>
+                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                <span class="text-sm">Write down one thing you're grateful for</span>
+                                <button class="text-gray-400 text-sm" onclick="markMicroMoveComplete(this)">Mark done</button>
+                        </div>
+                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                <span class="text-sm">Do a 2-minute stretch</span>
+                                <button class="text-gray-400 text-sm" onclick="markMicroMoveComplete(this)">Mark done</button>
+                            </div>
+                        </div>
+                            </div>
+
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-gray-800 mb-2">Add Custom Micro-move</h3>
+                        <input type="text" id="custom-micro-move" placeholder="What small action will you take?" class="w-full p-3 border border-gray-200 rounded-lg mb-3">
+                        <button onclick="addCustomMicroMove()" class="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold">Add Micro-move</button>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- AI Journal Screen -->
+            <div id="journal-screen" class="hidden p-6">
+                <div class="flex items-center mb-6">
+                    <button onclick="navigateTo('home')" class="mr-4 text-gray-600">← Back</button>
+                    <h2 class="text-xl font-bold">AI Journal</h2>
+                </div>
+
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100 mb-4">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-white text-sm">🤖</span>
+                </div>
+                            <div>
+                            <h3 class="font-semibold text-gray-800">AI Journal</h3>
+                            <p class="text-sm text-gray-600">Personalized insights from your data</p>
+                            </div>
+                        </div>
+                        
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Journal Tone</label>
+                        <select id="journal-tone" class="w-full p-3 border border-gray-200 rounded-xl">
+                            <option value="reflective">Reflective</option>
+                            <option value="celebratory">Celebratory</option>
+                            <option value="insightful">Insightful</option>
+                            <option value="motivational">Motivational</option>
+                        </select>
+                        </div>
+                        
+                    <button id="generate-journal" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors">
+                        Generate AI Journal
+                    </button>
+                        </div>
+                        
+                <div id="journal-display" class="hidden">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold text-gray-800">Your AI Journal</h3>
+                            <button onclick="regenerateJournal()" class="text-indigo-600 text-sm font-medium">Regenerate</button>
+                            </div>
+                        <div id="journal-content" class="text-gray-700 leading-relaxed"></div>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Intentions Screen -->
+            <div id="intentions-screen" class="hidden p-6">
+                <div class="flex items-center mb-6">
+                    <button onclick="navigateTo('home')" class="mr-4 text-gray-600">← Back</button>
+                    <h2 class="text-xl font-bold">Intentions</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-gray-800 mb-2">This Week's Intention</h3>
+                        <div id="current-intention" class="p-3 bg-purple-50 rounded-lg">
+                            <p class="text-sm text-gray-700">Focus on mindfulness and self-care</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-gray-800 mb-2">Progress</h3>
+                        <div class="flex items-center mb-2">
+                            <div class="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                                <div id="progress-bar" class="bg-purple-600 h-2 rounded-full transition-all duration-300" style="width: 60%"></div>
+                        </div>
+                            <span id="progress-text" class="text-sm text-gray-600">60%</span>
+                        </div>
+                        <p id="progress-days" class="text-xs text-gray-500">4 of 7 days completed</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-gray-800 mb-2">Set New Intention</h3>
+                        <textarea id="new-intention" placeholder="What do you want to focus on this week?" class="w-full p-3 border border-gray-200 rounded-lg mb-3" rows="3"></textarea>
+                        <button onclick="setIntention()" class="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold">Set Intention</button>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- INSIGHTS SCREEN - CENTER OF VIRTUOUS CYCLE -->
+            <div id="insights-screen" class="hidden p-6">
+                <div class="flex items-center mb-6">
+                    <button onclick="navigateTo('home')" class="mr-4 text-gray-600">← Back</button>
+                    <h2 class="text-xl font-bold">AI Insights</h2>
+                        </div>
+                        
+                <div class="space-y-4">
+                    <!-- Virtuous Cycle Explanation -->
+                    <div class="virtuous-cycle">
+                        <h3 class="text-lg font-bold mb-2">🔄 The Virtuous Cycle</h3>
+                        <p class="text-sm opacity-90">More check-ins → Better insights → Smarter actions → Greater fulfillment</p>
+                        </div>
+                        
+                    <!-- Generate New Insights -->
+                    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-100">
+                        <div class="flex items-center mb-4">
+                            <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-white text-sm">💡</span>
+                        </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Discover New Patterns</h3>
+                                <p class="text-sm text-gray-600">AI analyzes your data to find insights</p>
+                    </div>
+                </div>
+                        <button id="generate-insights" class="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition-colors">
+                            🔍 Generate New Insights
+                </button>
+            </div>
+
+                    <!-- Insights Display -->
+                    <div id="insights-display" class="hidden">
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                            <h3 class="font-semibold text-gray-800 mb-3">Your Discovered Patterns</h3>
+                            <div id="insights-content" class="space-y-3">
+                                <!-- Insights will be loaded here -->
+                </div>
+                    </div>
+                </div>
+
+                    <!-- Premium Insights Teaser -->
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+                        <div class="flex items-center mb-2">
+                            <span class="text-yellow-600 mr-2">⭐</span>
+                            <h4 class="font-semibold text-yellow-800 text-sm">Premium Insights</h4>
+                        </div>
+                        <p class="text-xs text-yellow-700 mb-2">Unlock advanced pattern detection, trend analysis, and personalized recommendations.</p>
+                        <button onclick="showConversionOffer()" class="text-yellow-700 text-xs font-medium">Upgrade to Premium →</button>
+                    </div>
+                    
+                    <!-- Requirements Warning -->
+                    <div id="insights-requirements" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                        <div class="flex items-center">
+                            <span class="text-yellow-600 mr-2">⚠️</span>
+                            <div>
+                                <h4 class="font-semibold text-yellow-800 text-sm">Need More Data</h4>
+                                <p class="text-xs text-yellow-700">Generate at least 4 check-ins to unlock AI insights</p>
+                        </div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Conversion Offer Screen -->
+            <div id="conversion-screen" class="hidden p-6">
+                <div class="flex items-center mb-6">
+                    <button onclick="navigateTo('home')" class="mr-4 text-gray-600">← Back</button>
+                    <h2 class="text-xl font-bold">Upgrade to Premium</h2>
+                        </div>
+                        
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-6 rounded-2xl">
+                        <h3 class="text-2xl font-bold mb-2">🎉 Special Offer!</h3>
+                        <p class="text-lg">Get 50% off your first month</p>
+                        <div class="text-3xl font-bold mt-2">$4.99/month</div>
+                        <div class="text-sm opacity-90">Regular price: $9.99/month</div>
+                        </div>
+                        
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-gray-800 mb-3">Premium Insights Features</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span class="text-green-500 mr-2">✓</span>
+                                Advanced pattern detection
+                        </div>
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span class="text-green-500 mr-2">✓</span>
+                                Trend analysis over time
+                    </div>
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span class="text-green-500 mr-2">✓</span>
+                                Personalized recommendations
+                </div>
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span class="text-green-500 mr-2">✓</span>
+                                Export insights data
+                        </div>
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span class="text-green-500 mr-2">✓</span>
+                                Priority support
+                        </div>
+                    </div>
+                </div>
+
+                    <button onclick="upgradeToPremium()" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-4 rounded-xl font-bold text-lg">
+                        Upgrade Now - 50% Off
+                </button>
+            </div>
+                </div>
+                    </div>
+                </div>
+
+    <script>
+        // Global variables
+        let currentUserId = null;
+        let userData = null;
+        const API_BASE = 'http://localhost:3005';
+
+        // Initialize app
+        async function initApp() {
+            try {
+                // Create or get user
+                currentUserId = await createUser();
+                console.log('User ID:', currentUserId);
+                
+                // Load user data and check conversion readiness
+                await loadUserData();
+                await checkConversionReadiness();
+                loadRecentActivity();
+                loadLatestInsights();
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                showError('Failed to connect to server. Please check your connection.');
+            }
+        }
+
+        // Create user
+        async function createUser() {
+            const response = await fetch(`${API_BASE}/api/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: 'Customer User',
+                    email: `customer_${Date.now()}@example.com`,
+                    persona: 'engaged'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to create user');
+            }
+            
+            const data = await response.json();
+            return data.id;
+        }
+
+        // Load user data
+        async function loadUserData() {
+            try {
+                const response = await fetch(`${API_BASE}/api/analytics`);
+                if (response.ok) {
+                    const data = await response.json();
+                    userData = data;
+                    updateProgressCounters(data);
+                }
+            } catch (error) {
+                console.error('Failed to load user data:', error);
+            }
+        }
+
+        // Load latest insights
+        async function loadLatestInsights() {
+            try {
+                const response = await fetch(`${API_BASE}/api/insights/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.insights && data.insights.length > 0) {
+                        displayLatestInsights(data.insights);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load insights:', error);
+            }
+        }
+
+        // Display latest insights on home screen
+        function displayLatestInsights(insights) {
+            const container = document.getElementById('latest-insights');
+            container.innerHTML = insights.slice(0, 2).map(insight => `
+                <div class="bg-white rounded-lg p-3 shadow-sm">
+                    <div class="flex items-start justify-between mb-2">
+                        <h4 class="font-semibold text-gray-800 text-sm">${insight.title}</h4>
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">${Math.round(insight.confidence * 100)}% confidence</span>
+                        </div>
+                    <p class="text-xs text-gray-600">${insight.description}</p>
+                    </div>
+            `).join('');
+        }
+
+        // Check conversion readiness
+        async function checkConversionReadiness() {
+            try {
+                const response = await fetch(`${API_BASE}/api/conversion/calculate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        currentDay: 1
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.isReadyForConversion) {
+                        document.getElementById('conversion-banner').classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check conversion readiness:', error);
+            }
+        }
+
+        // Update progress counters
+        function updateProgressCounters(data) {
+            document.getElementById('checkin-count').textContent = data.totalCheckIns || 0;
+            document.getElementById('journal-count').textContent = data.totalJournals || 0;
+            document.getElementById('insight-count').textContent = data.totalInsights || 0;
+        }
+
+        // Navigation
+        function navigateTo(screen) {
+            // Hide all screens
+            document.querySelectorAll('[id$="-screen"]').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            
+            // Show target screen
+            document.getElementById(screen + '-screen').classList.remove('hidden');
+        }
+
+        // Check-in functionality
+        document.getElementById('checkin-btn').addEventListener('click', async () => {
+            const selectedMood = document.querySelector('.mood-btn.selected');
+            const context = document.getElementById('context').value;
+            const microAct = document.getElementById('micro-act').value;
+            
+            if (!selectedMood) {
+                alert('Please select how you\'re feeling');
+                return;
+            }
+            
+            const mood = selectedMood.dataset.mood;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/check-ins`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        day_part: 'morning',
+                        mood: mood,
+                        contexts: context ? [context] : ['general'],
+                        micro_act: microAct
+                    })
+                });
+                
+                if (response.ok) {
+                    showSuccess('Check-in logged successfully!');
+                    await loadUserData();
+                    await checkConversionReadiness();
+                    // Reset form
+                    document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+                    document.getElementById('context').value = '';
+                    // Navigate back to home
+                    navigateTo('home');
+                } else {
+                    throw new Error('Failed to log check-in');
+                }
+            } catch (error) {
+                console.error('Check-in error:', error);
+                showError('Failed to log check-in. Please try again.');
+            }
+        });
+
+        // Mood selection
+        document.querySelectorAll('.mood-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected', 'ring-2', 'ring-purple-500'));
+                btn.classList.add('selected', 'ring-2', 'ring-purple-500');
+            });
+        });
+
+        // Generate AI Journal
+        document.getElementById('generate-journal').addEventListener('click', async () => {
+            const btn = document.getElementById('generate-journal');
+            const originalText = btn.textContent;
+            const tone = document.getElementById('journal-tone').value;
+            
+            btn.textContent = 'Generating...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/journals/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        tone: tone
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('journal-content').textContent = data.content;
+                    document.getElementById('journal-display').classList.remove('hidden');
+                    showSuccess('AI Journal generated!');
+                    await loadUserData();
+                } else {
+                    throw new Error('Failed to generate journal');
+                }
+            } catch (error) {
+                console.error('Journal generation error:', error);
+                showError('Failed to generate journal. Please try again.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Regenerate journal
+        function regenerateJournal() {
+            document.getElementById('generate-journal').click();
+        }
+
+        // Generate new insights (from home screen)
+        async function generateNewInsights() {
+            navigateTo('insights');
+            document.getElementById('generate-insights').click();
+        }
+
+        // Insights functionality
+        document.getElementById('generate-insights').addEventListener('click', async () => {
+            const btn = document.getElementById('generate-insights');
+            const originalText = btn.textContent;
+            
+            btn.textContent = 'Generating...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/insights/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.insights && data.insights.length > 0) {
+                        displayInsights(data.insights);
+                        document.getElementById('insights-display').classList.remove('hidden');
+                        document.getElementById('insights-requirements').classList.add('hidden');
+                        showSuccess('New insights discovered!');
+                        await loadUserData();
+                        await loadLatestInsights();
+                    } else {
+                        document.getElementById('insights-requirements').classList.remove('hidden');
+                        showError(data.message || 'Need more data to generate insights');
+                    }
+                } else {
+                    throw new Error('Failed to generate insights');
+                }
+            } catch (error) {
+                console.error('Insights generation error:', error);
+                showError('Failed to generate insights. Please try again.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        function displayInsights(insights) {
+            const container = document.getElementById('insights-content');
+            
+            // Separate free and locked insights
+            const freeInsights = insights.slice(0, 2);
+            const lockedInsights = insights.slice(2);
+            
+            let html = '';
+            
+            // Show free insights normally
+            freeInsights.forEach(insight => {
+                html += `
+                    <div class="insight-card">
+                        <div class="flex items-start justify-between mb-2">
+                            <h4 class="font-semibold text-white text-sm">${insight.title}</h4>
+                            <span class="insight-confidence">
+                                ${Math.round(insight.confidence * 100)}% confidence
+                            </span>
+                        </div>
+                        <p class="text-sm text-white opacity-90">${insight.description}</p>
+                    </div>
+                `;
+            });
+            
+            // Show locked insights with preview and blur
+            lockedInsights.forEach(insight => {
+                html += `
+                    <div class="insight-card" style="position: relative; overflow: hidden; opacity: 0.6;">
+                        <div class="flex items-start justify-between mb-2">
+                            <h4 class="font-semibold text-gray-400 text-sm">${insight.title}</h4>
+                            <span class="insight-confidence" style="background: rgba(255,255,255,0.1);">
+                                🔒 Locked
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-400">${insight.description}</p>
+                        
+                        <div onclick="showLockedInsightOffer(${JSON.stringify(insight).replace(/"/g, '&quot;')})" 
+                             style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border-radius: 1rem;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</div>
+                            <div style="text-align: center; padding: 0 1rem;">
+                                <div style="font-size: 0.875rem; font-weight: 600; color: #8b5cf6;">Unlock Premium to see full insight</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Track locked insight clicks and show conversion offer
+        async function showLockedInsightOffer(insight) {
+            try {
+                // Track interaction
+                await fetch(\`\${API_BASE}/api/users/\${currentUserId}/interactions\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'locked_insight_click',
+                        data: {
+                            insightId: insight.id || 'unknown',
+                            insightType: insight.type || 'unknown',
+                            insightTitle: insight.title
+                        }
+                    })
+                });
+                
+                // Get conversion offer
+                const response = await fetch(\`\${API_BASE}/api/conversion/offer\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUserId })
+                });
+                
+                const data = await response.json();
+                if (data.offer) {
+                    // Show conversion offer
+                    document.getElementById('offer-content').innerHTML = \`
+                        <p class="text-gray-600 mb-4">\${data.offer.messaging.headline}</p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-2 mb-4">
+                            \${data.offer.messaging.bullets.map(b => \`<li>\${b}</li>\`).join('')}
+                        </ul>
+                        <div class="bg-purple-50 rounded-lg p-4 text-center">
+                            <div class="text-3xl font-bold text-purple-600">$\${data.offer.pricing.monthly}/month</div>
+                            <div class="text-sm text-gray-600">or $\${data.offer.pricing.annual}/year</div>
+                        </div>
+                    \`;
+                    // Navigate to conversion screen
+                    navigateTo('conversion');
+                }
+            } catch (error) {
+                console.error('Error showing offer:', error);
+            }
+        }
+
+        // Micro-moves functionality
+        function markMicroMoveComplete(button) {
+            const container = button.parentElement;
+            container.classList.remove('bg-gray-50');
+            container.classList.add('bg-green-50');
+            button.textContent = '✓ Done';
+            button.classList.remove('text-gray-400');
+            button.classList.add('text-green-600');
+        }
+
+        function addCustomMicroMove() {
+            const input = document.getElementById('custom-micro-move');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const container = document.getElementById('micro-moves-list');
+            const newMove = document.createElement('div');
+            newMove.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-lg';
+            newMove.innerHTML = `
+                <span class="text-sm">${text}</span>
+                <button class="text-gray-400 text-sm" onclick="markMicroMoveComplete(this)">Mark done</button>
+            `;
+            container.appendChild(newMove);
+            input.value = '';
+        }
+
+        // Intentions functionality
+        function setIntention() {
+            const input = document.getElementById('new-intention');
+            const text = input.value.trim();
+            if (!text) return;
+
+            document.getElementById('current-intention').innerHTML = `<p class="text-sm text-gray-700">${text}</p>`;
+            input.value = '';
+            showSuccess('Intention set successfully!');
+        }
+
+        // Conversion functionality
+        function showConversionOffer() {
+            navigateTo('conversion');
+        }
+
+        async function upgradeToPremium() {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/${currentUserId}/premium`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tier: 'premium', plan: 'monthly' })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showSuccess('🎉 Welcome to Premium!');
+                    navigateTo('home');
+                } else {
+                    throw new Error('Upgrade failed');
+                }
+            } catch (error) {
+                console.error('Upgrade error:', error);
+                showError('Failed to upgrade. Please try again.');
+            }
+        }
+
+        // Load recent activity
+        async function loadRecentActivity() {
+            try {
+                const response = await fetch(`${API_BASE}/api/analytics`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const activityDiv = document.getElementById('recent-activity');
+                    activityDiv.innerHTML = `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                            ${data.totalCheckIns || 0} check-ins completed
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-2 h-2 bg-indigo-500 rounded-full mr-3"></span>
+                            ${data.totalInsights || 0} insights discovered
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                            ${data.totalJournals || 0} AI journals generated
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load activity:', error);
+            }
+        }
+
+        // Utility functions
+        function showSuccess(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        function showError(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

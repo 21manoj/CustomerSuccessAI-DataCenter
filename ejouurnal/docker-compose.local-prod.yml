@@ -1,0 +1,80 @@
+# FULFILLMENT APP - LOCAL PRODUCTION TESTING
+# Use this for local production testing
+
+version: '3.8'
+
+services:
+  # SQLite Database (for local testing)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fulfillment-backend:latest
+    container_name: fulfillment-backend-local-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      DB_TYPE: sqlite
+      DB_PATH: /app/data/fulfillment.db
+      JWT_SECRET: local_production_jwt_secret_123
+      CORS_ORIGIN: "*"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your_openai_key_here}
+      RATE_LIMIT_MAX: 5000
+      RATE_LIMIT_WINDOW: 60000
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/fulfillment.db:/app/data/fulfillment.db
+    networks:
+      - fulfillment-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend (React Production Build)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: fulfillment-frontend:latest
+    container_name: fulfillment-frontend-local-prod
+    restart: always
+    ports:
+      - "3006:80"
+    depends_on:
+      - backend
+    networks:
+      - fulfillment-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: fulfillment-nginx-local-prod
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.local-prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - fulfillment-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  fulfillment-network:
+    driver: bridge

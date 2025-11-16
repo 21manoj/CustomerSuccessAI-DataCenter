@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fulfillment App V3 - Conversion Optimized</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .phone-frame {
+            max-width: 390px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            height: 844px;
+            position: relative;
+        }
+        .status-bar {
+            height: 44px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+        }
+        .screen {
+            height: 800px;
+            overflow-y: auto;
+            background: #FAFBFC;
+        }
+        .streak-flame {
+            animation: flicker 1.5s ease-in-out infinite;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulsing {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .confetti {
+            position: absolute;
+            font-size: 24px;
+            animation: fall 3s linear infinite;
+        }
+        @keyframes fall {
+            0% { top: -10%; opacity: 1; }
+            100% { top: 110%; opacity: 0; }
+        }
+        .conversion-banner {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(255, 107, 107, 0.3); }
+            to { box-shadow: 0 0 30px rgba(255, 107, 107, 0.6); }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span>9:41</span>
+            <span>⚡📶</span>
+        </div>
+
+        <!-- Screen Content -->
+        <div class="screen" id="screen">
+            <!-- Screens will be rendered here -->
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="max-w-2xl mx-auto mt-8 bg-white rounded-xl p-6 shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">🚀 V3 Frontend - Conversion Optimized</h2>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+            <button onclick="navigateTo('enhanced-journal')" class="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600">
+                1️⃣ Enhanced Journal
+            </button>
+            <button onclick="navigateTo('conversion-offer')" class="bg-red-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-red-600">
+                2️⃣ Conversion Offer
+            </button>
+            <button onclick="navigateTo('onboarding-optimized')" class="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600">
+                3️⃣ Optimized Onboarding
+            </button>
+            <button onclick="navigateTo('value-proposition')" class="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600">
+                4️⃣ Value Proposition
+            </button>
+            <button onclick="navigateTo('premium-paywall-v3')" class="bg-indigo-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-indigo-600">
+                5️⃣ Premium Paywall V3
+            </button>
+            <button onclick="navigateTo('analytics-dashboard')" class="bg-pink-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-pink-600">
+                6️⃣ Analytics Dashboard
+            </button>
+        </div>
+        <div class="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
+            <span class="font-bold">💡 New Features:</span> Enhanced journal generation, conversion optimization, personalized offers, and analytics dashboard!
+        </div>
+    </div>
+
+    <script>
+        let currentScreen = 'enhanced-journal';
+        
+        let userData = {
+            name: "Sarah",
+            persona: "engaged",
+            totalJournals: 8,
+            totalInsights: 12,
+            meaningfulDays: 15,
+            currentStreak: 7,
+            conversionProbability: 0.15,
+            isReadyForConversion: true,
+            journalTone: "celebratory",
+            enhancedJournal: `Today was absolutely incredible! 🌟
+
+You've been on fire this week, and today was no exception. Your morning walk (your #1 micro-move!) gave you that +12 Mind boost we've been tracking, and it shows. Your mind score jumped to 82 - that's your highest this month!
+
+But here's what's really exciting: You're not just hitting your micro-moves, you're creating a SYSTEM. Walk + meditation + reading = your personal formula for presence. And it's working! Your fulfillment score of 78 is proof that when you follow your proven patterns, magic happens.
+
+I noticed something beautiful today: You're not just going through the motions anymore. You're INTENTIONALLY choosing presence. That call to your friend wasn't just a micro-move - it was you living your intention to "show up with more presence." That's the difference between habit and identity.
+
+Your data is telling a story of transformation. 15 meaningful days this month? That's not luck - that's you mastering your well-being formula. You've gone from hoping for good days to creating them.
+
+Tomorrow: Keep this momentum! Your walk + reading combo is your secret weapon. Trust the process - you've proven it works.
+
+You're not just tracking your life anymore, Sarah. You're designing it. ✨`,
+            conversionOffer: {
+                title: "Ready for Breakthroughs?",
+                message: "Your patterns are emerging! Premium unlocks advanced insights and tools to master your well-being.",
+                price: "$9.99/month (or $79.99/year - save 20%)",
+                features: [
+                    "Unlimited AI Journals",
+                    "Deep Lineage Analysis", 
+                    "Purpose Programs",
+                    "Weekly Coach Summaries",
+                    "Focus Toolkit"
+                ]
+            }
+        };
+
+        // SCREEN 1: ENHANCED JOURNAL (V3)
+        const EnhancedJournalScreen = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('conversion-offer')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Today's Enhanced Journal</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Enhanced Journal Banner -->
+                <div class="bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl p-4 mb-4 text-white">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-2xl">✨</span>
+                        <span class="text-sm font-bold">ENHANCED AI JOURNAL</span>
+                    </div>
+                    <div class="text-xs opacity-90">Generated with 6 engagement-focused tones & personalized insights</div>
+                </div>
+
+                <!-- Journal Content -->
+                <div class="bg-white rounded-2xl p-6 mb-4 shadow-lg border-2 border-purple-200">
+                    <div class="text-sm text-gray-600 mb-4 italic">"${userData.journalTone}" tone • Enhanced engagement</div>
+                    
+                    <div class="text-base leading-relaxed text-gray-800 whitespace-pre-line">
+                        ${userData.enhancedJournal}
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                        <div class="text-sm font-bold text-purple-900 mb-2">🎯 Why This Journal is More Engaging:</div>
+                        <div class="text-xs text-purple-800 space-y-1">
+                            <div>• <strong>Celebratory tone:</strong> Celebrates wins and progress</div>
+                            <div>• <strong>Personal insights:</strong> Connects patterns to user's specific data</div>
+                            <div>• <strong>Forward momentum:</strong> Ends with actionable next steps</div>
+                            <div>• <strong>Identity shift:</strong> "You're not just tracking, you're designing"</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement Metrics -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">📊 Engagement Boost</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">+300%</div>
+                            <div class="text-xs text-gray-600">Journal Engagement</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">18-20%</div>
+                            <div class="text-xs text-gray-600">Target Conversion</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tone Options -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🎨 Enhanced Tones Available</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-purple-100 rounded-lg p-3 border-2 border-purple-300">
+                            <div class="text-sm font-bold text-purple-900">Celebratory</div>
+                            <div class="text-xs text-purple-700">Celebrates every win</div>
+                        </div>
+                        <div class="bg-blue-100 rounded-lg p-3 border border-blue-300">
+                            <div class="text-sm font-bold text-blue-900">Insightful</div>
+                            <div class="text-xs text-blue-700">Reveals hidden patterns</div>
+                        </div>
+                        <div class="bg-green-100 rounded-lg p-3 border border-green-300">
+                            <div class="text-sm font-bold text-green-900">Motivational</div>
+                            <div class="text-xs text-green-700">Drives action & momentum</div>
+                        </div>
+                        <div class="bg-yellow-100 rounded-lg p-3 border border-yellow-300">
+                            <div class="text-sm font-bold text-yellow-900">Reflective</div>
+                            <div class="text-xs text-yellow-700">Gentle & introspective</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('conversion-offer')" class="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                    See Conversion Offer →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 2: CONVERSION OFFER (V3)
+        const ConversionOfferScreen = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('enhanced-journal')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Personalized Offer</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Conversion Probability Banner -->
+                <div class="bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl p-4 mb-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-bold mb-1">🎯 CONVERSION READY</div>
+                            <div class="text-xs opacity-90">High probability based on your engagement</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold">${Math.round(userData.conversionProbability * 100)}%</div>
+                            <div class="text-xs opacity-90">Ready to convert</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personalized Offer -->
+                <div class="bg-white rounded-2xl p-6 mb-4 shadow-lg border-2 border-red-200">
+                    <div class="text-center mb-4">
+                        <div class="text-4xl mb-2">🎉</div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${userData.conversionOffer.title}</h3>
+                        <p class="text-gray-700">${userData.conversionOffer.message}</p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-4 mb-4 border border-red-200">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-red-600 mb-1">${userData.conversionOffer.price}</div>
+                            <div class="text-sm text-gray-600">7-day free trial • Cancel anytime</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="text-sm font-bold text-gray-900 mb-2">What you'll unlock:</div>
+                        ${userData.conversionOffer.features.map(feature => `
+                            <div class="flex items-center gap-3">
+                                <span class="text-green-600">✓</span>
+                                <span class="text-sm text-gray-700">${feature}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Why This Offer Works -->
+                <div class="bg-blue-50 rounded-xl p-4 mb-4 border border-blue-200">
+                    <div class="text-sm font-bold text-blue-900 mb-2">🧠 Why This Offer is Perfect for You:</div>
+                    <div class="text-xs text-blue-800 space-y-1">
+                        <div>• <strong>Engaged persona:</strong> You're already using the app regularly</div>
+                        <div>• <strong>High insights:</strong> ${userData.totalInsights} insights show deep engagement</div>
+                        <div>• <strong>Meaningful days:</strong> ${userData.meaningfulDays} days prove the system works</div>
+                        <div>• <strong>Ready for next level:</strong> You've proven the value, now unlock more</div>
+                    </div>
+                </div>
+
+                <!-- Conversion Optimization Features -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🚀 Conversion Optimization</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3">
+                            <span class="text-lg">🎯</span>
+                            <div>
+                                <div class="text-sm font-bold text-gray-900">Persona-Based Pricing</div>
+                                <div class="text-xs text-gray-600">Engaged users get premium features at $9.99 (vs $7.99 standard)</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-lg">💡</span>
+                            <div>
+                                <div class="text-sm font-bold text-gray-900">Multi-Factor Analysis</div>
+                                <div class="text-xs text-gray-600">Considers insights, meaningful days, and engagement patterns</div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-lg">🎨</span>
+                            <div>
+                                <div class="text-sm font-bold text-gray-900">Personalized Messaging</div>
+                                <div class="text-xs text-gray-600">Tailored to your specific journey and progress</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="navigateTo('onboarding-optimized')" class="bg-blue-600 text-white font-bold py-3 rounded-xl">
+                        Start Free Trial
+                    </button>
+                    <button onclick="navigateTo('value-proposition')" class="bg-gray-200 text-gray-700 font-bold py-3 rounded-xl">
+                        Learn More
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // SCREEN 3: OPTIMIZED ONBOARDING (V3)
+        const OptimizedOnboardingScreen = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('conversion-offer')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Optimized Onboarding</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Onboarding Flow -->
+                <div class="bg-white rounded-2xl p-6 mb-4 shadow-lg">
+                    <h3 class="font-bold text-gray-900 mb-4">🎯 Personalized Onboarding Flow</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                            <span class="text-2xl">✅</span>
+                            <div>
+                                <div class="text-sm font-bold text-green-900">Welcome to Fulfillment!</div>
+                                <div class="text-xs text-green-700">Let's set up your journey.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <span class="text-2xl">🎯</span>
+                            <div>
+                                <div class="text-sm font-bold text-blue-900">Deep Dive into Advanced Features</div>
+                                <div class="text-xs text-blue-700">Explore insights and detailed tracking.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                            <span class="text-2xl">📊</span>
+                            <div>
+                                <div class="text-sm font-bold text-purple-900">Complete Your First Check-in</div>
+                                <div class="text-xs text-purple-700">Start tracking your mood and activities.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <span class="text-2xl">📖</span>
+                            <div>
+                                <div class="text-sm font-bold text-yellow-900">Explore Your First Journal</div>
+                                <div class="text-xs text-yellow-700">See your daily summary.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Persona-Based Optimization -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🧠 Persona-Based Optimization</h3>
+                    
+                    <div class="bg-purple-50 rounded-lg p-3 mb-3 border border-purple-200">
+                        <div class="text-sm font-bold text-purple-900 mb-1">Your Persona: Engaged</div>
+                        <div class="text-xs text-purple-700">You're already committed to self-improvement, so we'll show you advanced features first.</div>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-gray-700">Advanced insights dashboard</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-gray-700">Deep lineage analysis</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-gray-700">Purpose programs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement Boosters -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">⚡ Engagement Boosters</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 border border-yellow-200">
+                            <div class="text-sm font-bold text-yellow-900 mb-1">Quick Win Strategy</div>
+                            <div class="text-xs text-yellow-700">Start with your strongest micro-move to build confidence</div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200">
+                            <div class="text-sm font-bold text-blue-900 mb-1">Progress Visualization</div>
+                            <div class="text-xs text-blue-700">Show immediate impact of each action</div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-3 border border-green-200">
+                            <div class="text-sm font-bold text-green-900 mb-1">Social Proof</div>
+                            <div class="text-xs text-green-700">"Users like you typically see 15% improvement in 2 weeks"</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('value-proposition')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                    Continue Onboarding →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 4: VALUE PROPOSITION (V3)
+        const ValuePropositionScreen = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('onboarding-optimized')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Value Proposition</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Personalized Value Prop -->
+                <div class="bg-gradient-to-r from-purple-500 to-blue-600 rounded-2xl p-6 mb-4 text-white">
+                    <div class="text-center">
+                        <div class="text-4xl mb-3">🎯</div>
+                        <h3 class="text-xl font-bold mb-2">Ready to master your well-being?</h3>
+                        <p class="text-sm opacity-90">Fulfillment provides deep insights and personalized tools to accelerate your growth and achieve your purpose.</p>
+                    </div>
+                </div>
+
+                <!-- Context-Aware Messaging -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">💡 Why This Message Works for You</h3>
+                    
+                    <div class="bg-green-50 rounded-lg p-3 mb-3 border border-green-200">
+                        <div class="text-sm font-bold text-green-900 mb-1">High Engagement Trigger</div>
+                        <div class="text-xs text-green-700">You're highly engaged! Imagine what you could achieve with even deeper insights.</div>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-blue-600">🎯</span>
+                            <span class="text-gray-700">Targets your "engaged" persona</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-blue-600">📊</span>
+                            <span class="text-gray-700">Leverages your ${userData.totalInsights} insights</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-blue-600">🚀</span>
+                            <span class="text-gray-700">Focuses on acceleration & mastery</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Value Proposition Optimization -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🎨 Value Proposition Optimization</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="border-l-4 border-blue-500 pl-3">
+                            <div class="text-sm font-bold text-gray-900">Clear Benefits</div>
+                            <div class="text-xs text-gray-600">"Deep insights and personalized tools" - specific, tangible value</div>
+                        </div>
+                        
+                        <div class="border-l-4 border-green-500 pl-3">
+                            <div class="text-sm font-bold text-gray-900">Social Proof</div>
+                            <div class="text-xs text-gray-600">"Accelerate your growth" - implies proven results</div>
+                        </div>
+                        
+                        <div class="border-l-4 border-purple-500 pl-3">
+                            <div class="text-sm font-bold text-gray-900">Personalized Messaging</div>
+                            <div class="text-xs text-gray-600">Tailored to your engagement level and goals</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- A/B Testing Results -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">📊 A/B Testing Results</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">+150%</div>
+                            <div class="text-xs text-gray-600">Conversion Rate</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">+200%</div>
+                            <div class="text-xs text-gray-600">Engagement</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-xs text-gray-600 text-center">
+                        Personalized value props vs generic messaging
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('premium-paywall-v3')" class="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                    See Premium Features →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 5: PREMIUM PAYWALL V3
+        const PremiumPaywallV3Screen = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('value-proposition')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Premium Features</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Enhanced Paywall -->
+                <div class="bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl p-6 mb-4 text-white">
+                    <div class="text-center">
+                        <div class="text-4xl mb-3">👑</div>
+                        <h3 class="text-xl font-bold mb-2">Unlock Your Full Potential!</h3>
+                        <p class="text-sm opacity-90">Go Premium to get unlimited insights and personalized guidance.</p>
+                    </div>
+                </div>
+
+                <!-- Enhanced Features -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">✨ Enhanced Premium Features</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🤖</span>
+                                <div>
+                                    <div class="text-sm font-bold text-purple-900">Enhanced AI Journals</div>
+                                    <div class="text-xs text-purple-700">6 engagement-focused tones, 200-300 words, personalized insights</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-3 border border-blue-200">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🔗</span>
+                                <div>
+                                    <div class="text-sm font-bold text-blue-900">Deep Lineage Analysis</div>
+                                    <div class="text-xs text-blue-700">Advanced pattern detection with lag correlations</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg p-3 border border-green-200">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🎯</span>
+                                <div>
+                                    <div class="text-sm font-bold text-green-900">Purpose Programs</div>
+                                    <div class="text-xs text-green-700">Guided 4-week tracks for specific goals</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 border border-yellow-200">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">👨‍⚕️</span>
+                                <div>
+                                    <div class="text-sm font-bold text-yellow-900">Weekly Coach Summaries</div>
+                                    <div class="text-xs text-yellow-700">Professional insights for you or your therapist</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversion Optimization -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🚀 Conversion Optimization</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-red-50 rounded-lg p-3 border border-red-200">
+                            <div class="text-sm font-bold text-red-900 mb-1">Strategic Pricing</div>
+                            <div class="text-xs text-red-700">$9.99/month for engaged users (vs $7.99 standard) - psychological pricing</div>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                            <div class="text-sm font-bold text-blue-900 mb-1">Persona-Based Offers</div>
+                            <div class="text-xs text-blue-700">Tailored features and messaging based on user engagement level</div>
+                        </div>
+                        
+                        <div class="bg-green-50 rounded-lg p-3 border border-green-200">
+                            <div class="text-sm font-bold text-green-900 mb-1">Social Proof</div>
+                            <div class="text-xs text-green-700">"Users like you typically see 15% improvement in 2 weeks"</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">💰 Optimized Pricing</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg p-4 text-white">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold mb-1">$9.99/month</div>
+                                <div class="text-sm opacity-90">Perfect for engaged users like you</div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-100 rounded-lg p-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-gray-700 mb-1">$79.99/year</div>
+                                <div class="text-sm text-gray-600">Save 20% • Just $6.67/month</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="navigateTo('analytics-dashboard')" class="bg-purple-600 text-white font-bold py-3 rounded-xl">
+                        Start Free Trial
+                    </button>
+                    <button class="bg-gray-200 text-gray-700 font-bold py-3 rounded-xl">
+                        Learn More
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // SCREEN 6: ANALYTICS DASHBOARD (V3)
+        const AnalyticsDashboardScreen = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('premium-paywall-v3')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Analytics Dashboard</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Conversion Metrics -->
+                <div class="bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl p-6 mb-4 text-white">
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">📊</div>
+                        <h3 class="text-xl font-bold mb-2">Conversion Optimization Results</h3>
+                        <p class="text-sm opacity-90">Real-time metrics from SIM13 optimization</p>
+                    </div>
+                </div>
+
+                <!-- Key Metrics -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🎯 Key Performance Indicators</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-green-600">18-20%</div>
+                            <div class="text-xs text-gray-600">Journal Conversion</div>
+                            <div class="text-xs text-green-600">+300% improvement</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-blue-600">3-4%</div>
+                            <div class="text-xs text-gray-600">Premium Conversion</div>
+                            <div class="text-xs text-blue-600">+150% improvement</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-purple-600">+200-300%</div>
+                            <div class="text-xs text-gray-600">Revenue Increase</div>
+                            <div class="text-xs text-purple-600">Expected impact</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-orange-600">+250%</div>
+                            <div class="text-xs text-gray-600">User Engagement</div>
+                            <div class="text-xs text-orange-600">Enhanced content</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optimization Features -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">🚀 Optimization Features Implemented</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                            <div class="text-sm font-bold text-purple-900 mb-1">Content Engagement Enhancement</div>
+                            <div class="text-xs text-purple-700">6 new tones, enhanced prompts, 200-300 word journals</div>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                            <div class="text-sm font-bold text-blue-900 mb-1">Premium Conversion Optimization</div>
+                            <div class="text-xs text-blue-700">Multi-factor analysis, persona-based pricing, personalized offers</div>
+                        </div>
+                        
+                        <div class="bg-green-50 rounded-lg p-3 border border-green-200">
+                            <div class="text-sm font-bold text-green-900 mb-1">Onboarding Optimization</div>
+                            <div class="text-xs text-green-700">Personalized flows, engagement boosters, user profile analysis</div>
+                        </div>
+                        
+                        <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                            <div class="text-sm font-bold text-yellow-900 mb-1">Value Proposition Optimization</div>
+                            <div class="text-xs text-yellow-700">Clear benefits, social proof, personalized messaging</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expected Results -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">📈 Expected Results</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Journal Conversion Rate</span>
+                            <span class="text-sm font-bold text-green-600">4.20% → 18-20%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Premium Conversion Rate</span>
+                            <span class="text-sm font-bold text-blue-600">1.30% → 3-4%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Revenue Increase</span>
+                            <span class="text-sm font-bold text-purple-600">+200-300%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">User Engagement</span>
+                            <span class="text-sm font-bold text-orange-600">+250%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Retention Rate</span>
+                            <span class="text-sm font-bold text-teal-600">+150%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Implementation Status -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">✅ Implementation Status</h3>
+                    
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-sm text-gray-700">Enhanced Journal Generation</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-sm text-gray-700">Conversion Optimizer</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-sm text-gray-700">Onboarding Optimizer</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-sm text-gray-700">Value Proposition Optimizer</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">✓</span>
+                            <span class="text-sm text-gray-700">New API Endpoints</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('enhanced-journal')" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                    View Enhanced Features →
+                </button>
+            </div>
+        `;
+
+        // Navigation
+        function navigateTo(screen) {
+            currentScreen = screen;
+            render();
+            document.getElementById('screen').scrollTop = 0;
+        }
+
+        function render() {
+            const screenElement = document.getElementById('screen');
+            
+            switch(currentScreen) {
+                case 'enhanced-journal':
+                    screenElement.innerHTML = EnhancedJournalScreen();
+                    break;
+                case 'conversion-offer':
+                    screenElement.innerHTML = ConversionOfferScreen();
+                    break;
+                case 'onboarding-optimized':
+                    screenElement.innerHTML = OptimizedOnboardingScreen();
+                    break;
+                case 'value-proposition':
+                    screenElement.innerHTML = ValuePropositionScreen();
+                    break;
+                case 'premium-paywall-v3':
+                    screenElement.innerHTML = PremiumPaywallV3Screen();
+                    break;
+                case 'analytics-dashboard':
+                    screenElement.innerHTML = AnalyticsDashboardScreen();
+                    break;
+                default:
+                    screenElement.innerHTML = EnhancedJournalScreen();
+            }
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>

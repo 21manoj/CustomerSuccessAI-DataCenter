@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Upload, 
   Database, 
-  TrendingUp, 
+  TrendingUp,
+  TrendingDown,
   Users, 
   MessageSquare, 
   BarChart3, 
@@ -29,8 +30,23 @@ import {
 import { useSession } from '../contexts/SessionContext';
 import RAGAnalysis from './RAGAnalysis';
 import SettingsModal from './Settings';
+import PlaybookAutomationSettings from './PlaybookAutomationSettings';
+import OpenAIKeySettings from './OpenAIKeySettings';
+import GovernanceSettings from './GovernanceSettings';
 import Playbooks from './Playbooks';
 import PlaybookReports from './PlaybookReports';
+
+interface Product {
+  product_id: number;
+  account_id: number;
+  product_name: string;
+  product_sku?: string;
+  product_type?: string;
+  revenue?: number;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface KPI {
   kpi_id: number;
@@ -43,6 +59,9 @@ interface KPI {
   source_review: string;
   account_id?: number;
   account_name?: string;
+  product_id?: number;
+  aggregation_type?: string;
+  product_name?: string;
 }
 
 interface Account {
@@ -53,6 +72,25 @@ interface Account {
   region: string;
   account_status: string;
   health_score: number;
+  external_account_id?: string;
+  profile_metadata?: {
+    account_tier?: string;
+    assigned_csm?: string;
+    csm_manager?: string;
+    products_used?: string;
+    engagement?: {
+      lifecycle_stage?: string;
+      onboarding_status?: string;
+    };
+    champions?: Array<{
+      primary_champion_name?: string;
+      champion_title?: string;
+      champion_email?: string;
+      champion_status?: string;
+    }>;
+  };
+  products_used?: string[];
+  primary_champion_name?: string;
 }
 
 interface RollupResult {
@@ -93,6 +131,18 @@ const CSPlatform = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Settings UI preferences (persisted in localStorage)
+  const [kpiHealthSectionOpen, setKpiHealthSectionOpen] = useState(() => {
+    const saved = localStorage.getItem('settings_kpi_health_section_open');
+    return saved === 'true';
+  });
+  
+  const toggleKpiHealthSection = () => {
+    const newState = !kpiHealthSectionOpen;
+    setKpiHealthSectionOpen(newState);
+    localStorage.setItem('settings_kpi_health_section_open', String(newState));
+  };
 
   const [isUploading, setIsUploading] = useState(false);
   const [showKPITable, setShowKPITable] = useState(false);
@@ -105,6 +155,11 @@ const CSPlatform = () => {
   const [uploadAccountName, setUploadAccountName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Multi-product state
+  const [products, setProducts] = useState<{[accountId: number]: Product[]}>({});
+  const [selectedProduct, setSelectedProduct] = useState<{accountId: number, productId: number | null} | null>(null);
+  const [viewMode, setViewMode] = useState<'account' | 'product'>('account');
+  
   // Cleanup state variables
   const [cleanupDirectory, setCleanupDirectory] = useState('');
   const [isCleanupRunning, setIsCleanupRunning] = useState(false);
@@ -115,7 +170,10 @@ const CSPlatform = () => {
   const [categoryWeights, setCategoryWeights] = useState<{[key: string]: number}>({});
   const [masterFileError, setMasterFileError] = useState('');
   const [masterFileSuccess, setMasterFileSuccess] = useState<any>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const masterFileInputRef = useRef<HTMLInputElement>(null);
+  const [profileUploading, setProfileUploading] = useState(false);
+  const [profileErrors, setProfileErrors] = useState<any[] | null>(null);
   
   // Collapsible categories state
   const [expandedCategories, setExpandedCategories] = useState<{[key: string]: boolean}>({});
@@ -159,6 +217,36 @@ const CSPlatform = () => {
     healthy_min: number;
     healthy_max: number;
   }>>([]);
+  
+  // Customer Performance Summary state
+  const [perfSummary, setPerfSummary] = useState<{
+    summary: {
+      total_accounts: number;
+      critical_accounts: number;
+      at_risk_accounts: number;
+      healthy_accounts: number;
+      average_health_score: number;
+      company_avg_revenue_growth: number;
+    };
+    accounts_needing_attention: Array<{
+      account_id: number;
+      account_name: string;
+      overall_health_score: number;
+      category_scores: Record<string, number>;
+      focus_areas: Array<{category: string; score: number}>;
+      active_playbooks_count: number;
+      revenue_growth_pct: number;
+    }>;
+    healthy_declining_revenue: Array<{
+      account_id: number;
+      account_name: string;
+      overall_health_score: number;
+      category_scores: Record<string, number>;
+      focus_areas: Array<{category: string; score: number}>;
+      active_playbooks_count: number;
+      revenue_growth_pct: number;
+    }>;
+  } | null>(null);
 
   const [kpiCategories, setKpiCategories] = useState([
     { name: 'Product Usage KPI', count: 0, color: 'bg-emerald-500', weight: 20 },
@@ -174,16 +262,22 @@ const CSPlatform = () => {
     
     try {
       const response = await fetch('/api/accounts', {
+        credentials: 'include', // Include session cookies for authentication
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': session.customer_id.toString(), // Keep for backward compatibility
         },
       });
       
       if (response.ok) {
         const data = await response.json();
         console.log('Accounts API response:', data); // Debug log
+        
+        // Handle both old format (direct array) and new format ({accounts: []})
+        const accountsArray = Array.isArray(data) ? data : (data.accounts || []);
+        console.log('Accounts array:', accountsArray); // Debug log
+        
         // Transform backend data to match our interface
-        const transformedAccounts: Account[] = data.map((acc: any) => ({
+        const transformedAccounts: Account[] = accountsArray.map((acc: any) => ({
           account_id: acc.account_id,
           account_name: acc.account_name,
           revenue: acc.revenue || 0,
@@ -191,6 +285,10 @@ const CSPlatform = () => {
           region: acc.region || 'Unknown',
           account_status: acc.account_status || 'active',
           health_score: acc.health_score || Math.floor(Math.random() * 60) + 40, // Fallback score
+          external_account_id: acc.external_account_id,
+          profile_metadata: acc.profile_metadata,
+          products_used: acc.products_used || [],
+          primary_champion_name: acc.primary_champion_name,
         }));
         console.log('Transformed accounts:', transformedAccounts); // Debug log
         setAccounts(transformedAccounts);
@@ -211,6 +309,7 @@ const CSPlatform = () => {
     
           try {
         const response = await fetch('/api/kpis/customer/all', {
+          credentials: 'include',
           headers: {
             'X-Customer-ID': session.customer_id.toString(),
           },
@@ -231,6 +330,9 @@ const CSPlatform = () => {
           source_review: kpi.source_review || 'System',
           account_id: kpi.account_id,
           account_name: kpi.account_name,
+          product_id: kpi.product_id,
+          aggregation_type: kpi.aggregation_type,
+          product_name: kpi.product_name,
         }));
         console.log('Transformed KPIs:', transformedKPIs.length, 'KPIs'); // Debug log
         setKpiData(transformedKPIs);
@@ -243,6 +345,27 @@ const CSPlatform = () => {
     }
   };
 
+  // Deduplicate KPIs by parameter name - keep only the latest KPI per parameter per account
+  const deduplicatedKpiData = useMemo(() => {
+    const kpiMap = new Map<string, KPI>();
+    
+    // Sort by kpi_id descending to keep the latest (highest ID) for each parameter
+    const sortedKPIs = [...kpiData].sort((a, b) => (b.kpi_id || 0) - (a.kpi_id || 0));
+    
+    for (const kpi of sortedKPIs) {
+      // Create a unique key: account_id + kpi_parameter + (product_id or 'account')
+      const productKey = kpi.product_id ? `product_${kpi.product_id}` : 'account';
+      const key = `${kpi.account_id}_${kpi.kpi_parameter}_${productKey}`;
+      
+      // Only add if we haven't seen this combination before
+      if (!kpiMap.has(key)) {
+        kpiMap.set(key, kpi);
+      }
+    }
+    
+    return Array.from(kpiMap.values());
+  }, [kpiData]);
+
   useEffect(() => {
     console.log('Session changed:', session); // Debug log
     if (session?.customer_id) {
@@ -253,6 +376,7 @@ const CSPlatform = () => {
       fetchKpiHealthStatuses();
       fetchKpiReferenceRanges();
       fetchTimeSeriesStats();
+      fetchPerformanceSummary();
     } else {
       console.log('No customer_id in session'); // Debug log
     }
@@ -264,6 +388,39 @@ const CSPlatform = () => {
       fetchKPIs();
     }
   }, [session?.customer_id]);
+
+  // Fetch products for all accounts
+  const fetchProducts = async (accountId: number) => {
+    if (!session?.customer_id) return;
+    
+    try {
+      const response = await fetch(`/api/accounts/${accountId}/products`, {
+        credentials: 'include',
+        headers: {
+          'X-Customer-ID': session.customer_id.toString(),
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(prev => ({
+          ...prev,
+          [accountId]: data
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching products:', err);
+    }
+  };
+
+  // Fetch products when accounts are loaded
+  useEffect(() => {
+    if (accounts.length > 0 && session?.customer_id) {
+      accounts.forEach(account => {
+        fetchProducts(account.account_id);
+      });
+    }
+  }, [accounts, session?.customer_id]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -396,6 +553,7 @@ const CSPlatform = () => {
     
     try {
       const response = await fetch('/api/health-status/kpis', {
+        credentials: 'include',
         headers: {
           'X-Customer-ID': session.customer_id.toString(),
         },
@@ -420,27 +578,57 @@ const CSPlatform = () => {
     }
   };
 
-  const fetchKpiReferenceRanges = async () => {
+  const fetchPerformanceSummary = async () => {
     try {
-      const response = await fetch('/api/reference-ranges', {
-        method: 'GET',
+      const response = await fetch('/api/customer-performance/summary', {
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Performance summary response:', data); // Debug log
+        if (data.status === 'success') {
+          setPerfSummary(data);
+        } else {
+          console.error('Performance summary returned non-success status:', data);
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Performance summary API error:', response.status, errorData);
+      }
+    } catch (error) {
+      console.error('Error fetching performance summary:', error);
+    }
+  };
+  
+  const fetchKpiReferenceRanges = async () => {
+    try {
+      const cacheBuster = `?_=${Date.now()}`;
+      const response = await fetch(`/api/kpi-reference-ranges${cacheBuster}`, {
+        method: 'GET',
+        credentials: 'include', // Include session cookies for authentication
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
         },
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
-          setKpiReferenceRanges(data.reference_ranges);
-          console.log('KPI reference ranges loaded from database:', data.reference_ranges.length, 'KPIs');
+        console.log('KPI Reference Ranges response:', data); // Debug log
+        if (data.ranges) {
+          setKpiReferenceRanges(data.ranges);
+          console.log('KPI reference ranges loaded from database:', data.ranges.length, 'KPIs');
         } else {
           console.error('Failed to load reference ranges:', data.error);
           setError('Failed to load KPI reference ranges');
         }
       } else {
         console.error('Failed to fetch reference ranges:', response.status);
-        setError('Failed to fetch KPI reference ranges');
+        setError(`Failed to fetch KPI reference ranges: ${response.status}`);
       }
     } catch (error) {
       console.error('Error fetching KPI reference ranges:', error);
@@ -450,8 +638,9 @@ const CSPlatform = () => {
 
   const saveKpiReferenceRanges = async () => {
     try {
-      const response = await fetch('/api/reference-ranges/bulk-update', {
-        method: 'PUT',
+      const response = await fetch('/api/kpi-reference-ranges/bulk-update', {
+        method: 'POST',
+        credentials: 'include', // Include session cookies for authentication
         headers: {
           'Content-Type': 'application/json',
         },
@@ -471,13 +660,13 @@ const CSPlatform = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
+        // Treat either success flag or presence of updated_count/status success as success
+        if (data.success === true || data.status === 'success' || typeof data.updated_count === 'number') {
           console.log('KPI reference ranges saved successfully:', data.updated_count, 'ranges updated');
-          console.log(`Successfully saved ${data.updated_count} KPI reference ranges`);
           // Refresh the data
           fetchKpiReferenceRanges();
         } else {
-          console.error('Failed to save reference ranges:', data.error);
+          console.error('Failed to save reference ranges:', data.error || data.message);
           setError('Failed to save KPI reference ranges');
         }
       } else {
@@ -512,6 +701,7 @@ const CSPlatform = () => {
     
     try {
       const response = await fetch('/api/master-file/weights', {
+        credentials: 'include',
         headers: {
           'X-Customer-ID': session.customer_id.toString(),
         },
@@ -542,6 +732,7 @@ const CSPlatform = () => {
         : '/api/health-trends';
         
       const response = await fetch(url, {
+        credentials: 'include',
         headers: {
           'X-Customer-ID': session.customer_id.toString(),
         },
@@ -579,6 +770,7 @@ const CSPlatform = () => {
     
     try {
       const response = await fetch('/api/time-series/stats', {
+        credentials: 'include',
         headers: {
           'X-Customer-ID': session.customer_id.toString(),
         },
@@ -1009,6 +1201,7 @@ const CSPlatform = () => {
       // Call backend rollup calculation
       const response = await fetch('/api/corporate/rollup', {
         method: 'GET',
+        credentials: 'include',
         headers: {
           'X-Customer-ID': session.customer_id.toString(),
           'X-User-ID': session.user_id.toString(),
@@ -1157,6 +1350,19 @@ const CSPlatform = () => {
     }
   };
 
+  const getHealthStatus = (score: number | null | undefined): { status: string; color: string } => {
+    if (score === null || score === undefined) {
+      return { status: 'Unknown', color: 'gray' };
+    }
+    if (score >= 75) {
+      return { status: 'Healthy', color: 'green' };
+    } else if (score >= 50) {
+      return { status: 'At Risk', color: 'yellow' };
+    } else {
+      return { status: 'Critical', color: 'red' };
+    }
+  };
+
   const getHealthColor = (score: number): string => {
     if (score >= 80) return 'bg-green-500';
     if (score >= 60) return 'bg-yellow-500';
@@ -1220,6 +1426,7 @@ const CSPlatform = () => {
       try {
         const response = await fetch('/api/rag/query', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'X-Customer-ID': session.customer_id.toString(),
@@ -1407,7 +1614,7 @@ const CSPlatform = () => {
                           KPIs for {account.account_name}
                         </h6>
                         <p className="text-xs text-gray-600">
-                          {kpiData.filter(kpi => kpi.account_id === account.account_id).length} Account KPIs
+                          {deduplicatedKpiData.filter(kpi => kpi.account_id === account.account_id && (kpi.product_id === null || kpi.product_id === undefined)).length} Account KPIs
                         </p>
                       </div>
                       
@@ -1423,8 +1630,8 @@ const CSPlatform = () => {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {kpiData
-                                .filter(kpi => kpi.account_id === account.account_id)
+                              {deduplicatedKpiData
+                                .filter(kpi => kpi.account_id === account.account_id && (kpi.product_id === null || kpi.product_id === undefined))
                                 .map((kpi) => (
                                   <tr key={kpi.kpi_id} className="hover:bg-gray-50">
                                     <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900">{kpi.category}</td>
@@ -1453,13 +1660,13 @@ const CSPlatform = () => {
                                 ))}
                             </tbody>
                           </table>
-                          {kpiData.filter(kpi => kpi.account_id === account.account_id).length === 0 && (
+                          {deduplicatedKpiData.filter(kpi => kpi.account_id === account.account_id && !kpi.product_id).length === 0 && (
                             <div className="text-center py-4 text-gray-500">
                               <p className="text-xs">No account-specific KPIs found.</p>
                               <p className="text-xs mt-1">Upload a KPI file with this account name.</p>
                             </div>
                           )}
-                          {kpiData.filter(kpi => kpi.account_id === account.account_id).length > 5 && (
+                          {deduplicatedKpiData.filter(kpi => kpi.account_id === account.account_id && !kpi.product_id).length > 5 && (
                             <p className="text-xs text-gray-500 mt-2 text-center">
                               Showing first 5 KPIs. Go to Accounts tab for full view.
                             </p>
@@ -1477,6 +1684,608 @@ const CSPlatform = () => {
 
     </div>
   );
+
+  const ProductHealthDashboard = () => {
+    const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+    const [productFilter, setProductFilter] = useState<string>('');
+    const [sortColumn, setSortColumn] = useState<string | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+    // Helper function to normalize product names for consistent grouping
+    // Normalizes to lowercase and trims whitespace for matching
+    const normalizeProductName = (name: string): string => {
+      return name.trim().toLowerCase();
+    };
+    
+    // Helper function to calculate simple similarity (for fuzzy matching typos)
+    // Returns a value between 0 and 1, where 1 is an exact match
+    const similarity = (str1: string, str2: string): number => {
+      const s1 = normalizeProductName(str1);
+      const s2 = normalizeProductName(str2);
+      if (s1 === s2) return 1.0;
+      
+      // Simple Levenshtein-like check for single character differences
+      // Check if one string is contained in the other (for typos like "platfom" vs "platform")
+      if (s1.length > 3 && s2.length > 3) {
+        const longer = s1.length > s2.length ? s1 : s2;
+        const shorter = s1.length > s2.length ? s2 : s1;
+        if (longer.includes(shorter) || shorter.includes(longer)) {
+          // If one contains the other and lengths are close (difference <= 2 chars), likely a typo
+          if (Math.abs(longer.length - shorter.length) <= 2) {
+            return 0.95; // High similarity for likely typos
+          }
+        }
+      }
+      
+      // Check character overlap
+      let matches = 0;
+      const minLen = Math.min(s1.length, s2.length);
+      for (let i = 0; i < minLen; i++) {
+        if (s1[i] === s2[i]) matches++;
+      }
+      return matches / Math.max(s1.length, s2.length);
+    };
+    
+    // Helper function to find existing group key (case-insensitive, handles typos/variations)
+    const findGroupKey = (productName: string, groups: { [key: string]: any }): string | null => {
+      const normalized = normalizeProductName(productName);
+      // First try exact match
+      for (const key in groups) {
+        if (normalizeProductName(key) === normalized) {
+          return key;
+        }
+      }
+      // Then try fuzzy match for typos (similarity > 0.9)
+      for (const key in groups) {
+        const sim = similarity(productName, key);
+        if (sim > 0.9) {
+          return key; // Return the existing key (preserves original spelling)
+        }
+      }
+      return null;
+    };
+    
+    // Group products by product name across all accounts
+    // Priority: 1) Customer profile data, 2) Product-level KPIs
+    // Products are merged by name (normalized) to avoid duplicates
+    const productGroups = useMemo(() => {
+      const groups: { [productName: string]: { accounts: Account[], kpis: KPI[], totalRevenue: number, displayName: string } } = {};
+      
+      // Step 1: Collect products from customer profile data (profile_metadata.products_used)
+      accounts.forEach(account => {
+        // Priority 1: profile_metadata.products_used (string from customer profile upload)
+        const profileProducts = account.profile_metadata?.products_used;
+        if (profileProducts && profileProducts.trim()) {
+          // Parse comma-separated products
+          const productNames = profileProducts.split(',').map(p => p.trim()).filter(p => p);
+          productNames.forEach(productName => {
+            const normalizedKey = normalizeProductName(productName);
+            const existingKey = findGroupKey(productName, groups);
+            const groupKey = existingKey || normalizedKey;
+            
+            if (!groups[groupKey]) {
+              groups[groupKey] = {
+                accounts: [],
+                kpis: [],
+                totalRevenue: 0,
+                displayName: productName // Use original name for display
+              };
+            }
+            // Add account if not already added
+            if (!groups[groupKey].accounts.find(a => a.account_id === account.account_id)) {
+              groups[groupKey].accounts.push(account);
+              groups[groupKey].totalRevenue += account.revenue || 0;
+            }
+          });
+        } else {
+          // Fallback: products_used array (from Product table)
+          const productNames = account.products_used || [];
+          productNames.forEach(productName => {
+            const normalizedKey = normalizeProductName(productName);
+            const existingKey = findGroupKey(productName, groups);
+            const groupKey = existingKey || normalizedKey;
+            
+            if (!groups[groupKey]) {
+              groups[groupKey] = {
+                accounts: [],
+                kpis: [],
+                totalRevenue: 0,
+                displayName: productName // Use original name for display
+              };
+            }
+            // Add account if not already added
+            if (!groups[groupKey].accounts.find(a => a.account_id === account.account_id)) {
+              groups[groupKey].accounts.push(account);
+              groups[groupKey].totalRevenue += account.revenue || 0;
+            }
+          });
+        }
+      });
+      
+      // Step 2: Add product-level KPIs to existing groups (or create new groups if needed)
+      // This merges products from KPIs with products from profile data
+      const productKPIs = deduplicatedKpiData.filter(kpi => 
+        kpi.product_id !== null && 
+        kpi.product_id !== undefined && 
+        kpi.product_name && 
+        kpi.product_name.trim() !== ''
+      );
+      
+      console.log(`DEBUG: Found ${productKPIs.length} product-level KPIs`);
+      
+      productKPIs.forEach(kpi => {
+        const productName = kpi.product_name!.trim();
+        const normalizedKey = normalizeProductName(productName);
+        
+        // Try to find existing group by matching normalized names
+        let groupKey = findGroupKey(productName, groups);
+        
+        // If no match found, check all existing groups for similar names
+        if (!groupKey) {
+          for (const key in groups) {
+            const keyNormalized = normalizeProductName(key);
+            if (keyNormalized === normalizedKey) {
+              groupKey = key;
+              break;
+            }
+          }
+        }
+        
+        // If still no match, use normalized key (create new group)
+        if (!groupKey) {
+          groupKey = normalizedKey;
+        }
+        
+        if (!groups[groupKey]) {
+          groups[groupKey] = {
+            accounts: [],
+            kpis: [],
+            totalRevenue: 0,
+            displayName: productName // Use original name for display
+          };
+        }
+        
+        // Add KPI if not already added
+        if (!groups[groupKey].kpis.find(k => k.kpi_id === kpi.kpi_id)) {
+          groups[groupKey].kpis.push(kpi);
+        }
+        
+        // Add account if not already added (in case account wasn't in profile data)
+        const account = accounts.find(a => a.account_id === kpi.account_id);
+        if (account && !groups[groupKey].accounts.find(a => a.account_id === account.account_id)) {
+          groups[groupKey].accounts.push(account);
+          groups[groupKey].totalRevenue += account.revenue || 0;
+        }
+      });
+      
+      console.log(`DEBUG: Product groups after adding KPIs:`, Object.keys(groups).map(key => ({
+        key,
+        displayName: groups[key].displayName,
+        kpiCount: groups[key].kpis.length,
+        accountCount: groups[key].accounts.length
+      })));
+      
+      return groups;
+    }, [kpiData, accounts]);
+
+    const filteredProducts = useMemo(() => {
+      if (!productFilter) return Object.keys(productGroups);
+      return Object.keys(productGroups).filter(name => 
+        name.toLowerCase().includes(productFilter.toLowerCase())
+      );
+    }, [productGroups, productFilter]);
+
+    // Calculate average health score for a product based on its KPIs
+    // Priority: 1) Product-level KPIs (KPIs with product_id set)
+    //           2) Account-level "Product Usage KPI" category KPIs from accounts using that product
+    //              BUT only if the account has only one product (account-level = product-level in that case)
+    // Note: productName is the normalized key from productGroups
+    const getProductHealthScore = (productName: string): number => {
+      // productName is already a normalized key from productGroups
+      const group = productGroups[productName];
+      if (!group) return 0;
+      
+      let total = 0;
+      let count = 0;
+      
+      // Step 1: Use product-level KPIs if available (KPIs with product_id set)
+      const productLevelKPIs = group.kpis.filter(kpi => kpi.product_id);
+      if (productLevelKPIs.length > 0) {
+        productLevelKPIs.forEach(kpi => {
+          const hs = kpiHealthStatuses[kpi.kpi_id];
+          if (hs && typeof hs.health_score === 'number') {
+            total += hs.health_score;
+            count += 1;
+          }
+        });
+      } else {
+        // Step 2: Use account-level "Product Usage KPI" category KPIs from accounts using this product
+        // But only if the account has only one product (so account-level = product-level)
+        group.accounts.forEach(account => {
+          // Get all products for this account (from profile or Product table)
+          const profileProducts = account.profile_metadata?.products_used;
+          const accountProductsList = profileProducts && profileProducts.trim() 
+            ? profileProducts.split(',').map(p => p.trim()).filter(p => p)
+            : (account.products_used || []);
+          
+          // Also count product-level KPIs to determine product count
+          const accountProductKPIs = deduplicatedKpiData.filter(kpi => 
+            kpi.account_id === account.account_id && kpi.product_id
+          );
+          const uniqueProductIds = new Set(accountProductKPIs.map(kpi => kpi.product_id));
+          const totalProductsForAccount = Math.max(accountProductsList.length, uniqueProductIds.size);
+          
+          // Only use account-level Product Usage KPIs if account has exactly one product
+          // OR if this product is the only product in the account's products list
+          // Compare using normalized names for consistency
+          const normalizedProductName = normalizeProductName(productName);
+          const isSingleProductAccount = totalProductsForAccount === 1 || 
+                                         (accountProductsList.length === 1 && 
+                                          normalizeProductName(accountProductsList[0]) === normalizedProductName);
+          
+          if (isSingleProductAccount) {
+            // Use account-level KPIs from relevant categories for product health
+            // Priority: Adoption & Engagement, Product Value (most product-relevant)
+            // Fallback: All account-level KPIs if no product-specific categories found
+            const accountKPIs = deduplicatedKpiData.filter(kpi => 
+              kpi.account_id === account.account_id && 
+              !kpi.product_id // Account-level only
+            );
+            
+            // First try product-relevant categories
+            const productRelevantKPIs = accountKPIs.filter(kpi => 
+              kpi.category === 'Adoption & Engagement' || 
+              kpi.category === 'Product Value'
+            );
+            
+            // Use product-relevant if available, otherwise use all account KPIs
+            const kpisToUse = productRelevantKPIs.length > 0 ? productRelevantKPIs : accountKPIs;
+            
+            kpisToUse.forEach(kpi => {
+              const hs = kpiHealthStatuses[kpi.kpi_id];
+              if (hs && typeof hs.health_score === 'number') {
+                total += hs.health_score;
+                count += 1;
+              }
+            });
+          } else {
+            // Multi-product account: Use account-level KPIs proportionally
+            // For now, use all account KPIs (could be improved with product-specific weighting)
+            const accountKPIs = kpiData.filter(kpi => 
+              kpi.account_id === account.account_id && 
+              !kpi.product_id // Account-level only
+            );
+            
+            // Use product-relevant categories for multi-product accounts too
+            const productRelevantKPIs = accountKPIs.filter(kpi => 
+              kpi.category === 'Adoption & Engagement' || 
+              kpi.category === 'Product Value'
+            );
+            
+            const kpisToUse = productRelevantKPIs.length > 0 ? productRelevantKPIs : accountKPIs;
+            
+            kpisToUse.forEach(kpi => {
+              const hs = kpiHealthStatuses[kpi.kpi_id];
+              if (hs && typeof hs.health_score === 'number') {
+                total += hs.health_score;
+                count += 1;
+              }
+            });
+          }
+        });
+      }
+      
+      if (count === 0) return 0;
+      return Math.round(total / count);
+    };
+
+    // Handle column sorting
+    const handleSort = (column: string) => {
+      if (sortColumn === column) {
+        // Toggle direction if same column
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        // New column, default to ascending
+        setSortColumn(column);
+        setSortDirection('asc');
+      }
+    };
+
+    // Sort KPIs based on selected column and direction
+    const getSortedKPIs = (kpis: KPI[]): KPI[] => {
+      if (!sortColumn) return kpis;
+
+      const sorted = [...kpis].sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        switch (sortColumn) {
+          case 'account':
+            aValue = accounts.find(acc => acc.account_id === a.account_id)?.account_name || '';
+            bValue = accounts.find(acc => acc.account_id === b.account_id)?.account_name || '';
+            break;
+          case 'category':
+            aValue = a.category || '';
+            bValue = b.category || '';
+            break;
+          case 'kpi_parameter':
+            aValue = a.kpi_parameter || '';
+            bValue = b.kpi_parameter || '';
+            break;
+          case 'data':
+            // Try to parse as number, fallback to string
+            aValue = parseFloat(a.data) || a.data || '';
+            bValue = parseFloat(b.data) || b.data || '';
+            break;
+          case 'health_status':
+            const aHealth = kpiHealthStatuses[a.kpi_id]?.health_status || '';
+            const bHealth = kpiHealthStatuses[b.kpi_id]?.health_status || '';
+            // Sort by health status priority: green > yellow > red > unknown
+            const healthPriority: { [key: string]: number } = {
+              'High': 3,
+              'Medium': 2,
+              'Low': 1,
+              '': 0
+            };
+            aValue = healthPriority[aHealth] ?? 0;
+            bValue = healthPriority[bHealth] ?? 0;
+            break;
+          case 'impact_level':
+            aValue = a.impact_level || '';
+            bValue = b.impact_level || '';
+            break;
+          default:
+            return 0;
+        }
+
+        // Compare values
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return aValue - bValue;
+        }
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+        if (aStr < bStr) return -1;
+        if (aStr > bStr) return 1;
+        return 0;
+      });
+
+      return sortDirection === 'asc' ? sorted : sorted.reverse();
+    };
+
+    // Render sort icon
+    const renderSortIcon = (column: string) => {
+      if (sortColumn !== column) {
+        return <span className="text-gray-400 ml-1">↕</span>;
+      }
+      return sortDirection === 'asc' ? (
+        <ArrowUp className="h-3 w-3 ml-1 inline text-blue-600" />
+      ) : (
+        <ArrowDown className="h-3 w-3 ml-1 inline text-blue-600" />
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Product Health Dashboard</h2>
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={productFilter}
+                onChange={(e) => setProductFilter(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-center">
+              <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mr-3" />
+              <span className="text-gray-600">Loading products...</span>
+            </div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="text-center py-8 text-gray-500">
+              <Target className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p>No products found. {productFilter ? 'Try a different search term.' : 'Products will appear here when product-level KPIs are available.'}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredProducts.map((productName) => {
+              const group = productGroups[productName];
+              const healthScore = getProductHealthScore(productName);
+              const isExpanded = selectedProduct === productName;
+              const displayName = group?.displayName || productName;
+              
+              // Count only product-level KPIs for this specific product
+              // First try group.kpis (already matched), then search all KPI data as fallback
+              let productLevelKPICount = group.kpis.filter(kpi => 
+                kpi.product_id !== null && 
+                kpi.product_id !== undefined && 
+                kpi.product_name
+              ).length;
+              
+              // If group.kpis is empty, search all KPI data to find matching product KPIs
+              if (productLevelKPICount === 0) {
+                productLevelKPICount = deduplicatedKpiData.filter(kpi => {
+                  if (!kpi.product_id || kpi.product_id === null || kpi.product_id === undefined || !kpi.product_name) return false;
+                  // Match by normalized product name
+                  const kpiProductName = normalizeProductName(kpi.product_name.trim());
+                  const targetProductName = normalizeProductName(productName);
+                  const displayNameNormalized = normalizeProductName(displayName);
+                  return kpiProductName === targetProductName || kpiProductName === displayNameNormalized;
+                }).length;
+              }
+              
+              return (
+                <div key={productName} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <button
+                    onClick={() => setSelectedProduct(isExpanded ? null : productName)}
+                    className={`w-full p-6 text-left transition-all hover:bg-gray-50 ${
+                      isExpanded ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Target className="h-5 w-5 text-blue-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">{displayName}</h3>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            healthScore >= 80 ? 'bg-green-100 text-green-800' :
+                            healthScore >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            Health: {healthScore}/100
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 mt-3 text-sm text-gray-600">
+                          <div>
+                            <span className="font-medium">Accounts:</span> {group.accounts.length}
+                          </div>
+                          <div>
+                            <span className="font-medium">KPIs:</span> {productLevelKPICount}
+                          </div>
+                          <div>
+                            <span className="font-medium">Total Revenue:</span> ${(group.totalRevenue / 1000000).toFixed(1)}M
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="text-xs text-gray-500">
+                            Accounts: {group.accounts.map(a => a.account_name).join(', ')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <span className="text-gray-400 text-sm">
+                          {isExpanded ? '▼' : '▶'}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t border-gray-200 bg-gray-50 p-6">
+                      <div className="mb-4">
+                        <h4 className="text-md font-semibold text-gray-900 mb-2">
+                          KPIs for {displayName}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Showing {productLevelKPICount} Product-Level KPIs across {group.accounts.length} accounts
+                        </p>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th 
+                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                onClick={() => handleSort('account')}
+                              >
+                                Account{renderSortIcon('account')}
+                              </th>
+                              <th 
+                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                onClick={() => handleSort('category')}
+                              >
+                                Category{renderSortIcon('category')}
+                              </th>
+                              <th 
+                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                onClick={() => handleSort('kpi_parameter')}
+                              >
+                                KPI Parameter{renderSortIcon('kpi_parameter')}
+                              </th>
+                              <th 
+                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                onClick={() => handleSort('data')}
+                              >
+                                Data{renderSortIcon('data')}
+                              </th>
+                              <th 
+                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                onClick={() => handleSort('health_status')}
+                              >
+                                Health Status{renderSortIcon('health_status')}
+                              </th>
+                              <th 
+                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200 select-none"
+                                onClick={() => handleSort('impact_level')}
+                              >
+                                Impact Level{renderSortIcon('impact_level')}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {getSortedKPIs((() => {
+                              // First try group.kpis (already matched and added to group)
+                              const groupKPIs = group.kpis.filter(kpi => 
+                                kpi.product_id !== null && 
+                                kpi.product_id !== undefined && 
+                                kpi.product_name
+                              );
+                              
+                              // If group has KPIs, use them; otherwise search all KPI data
+                              if (groupKPIs.length > 0) {
+                                return groupKPIs;
+                              }
+                              
+                              // Fallback: search all KPI data for matching product KPIs
+                              return deduplicatedKpiData.filter(kpi => {
+                                if (!kpi.product_id || kpi.product_id === null || kpi.product_id === undefined || !kpi.product_name) return false;
+                                const kpiProductName = normalizeProductName(kpi.product_name.trim());
+                                const targetProductName = normalizeProductName(productName);
+                                const displayNameNormalized = normalizeProductName(displayName);
+                                return kpiProductName === targetProductName || kpiProductName === displayNameNormalized;
+                              });
+                            })()).map((kpi) => {
+                              const account = accounts.find(a => a.account_id === kpi.account_id);
+                              return (
+                                <tr key={kpi.kpi_id} className="hover:bg-gray-50">
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                                    <span className="font-medium">{account?.account_name || `Account ${kpi.account_id}`}</span>
+                                  </td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.category}</td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.kpi_parameter}</td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.data}</td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm">
+                                    {kpiHealthStatuses[kpi.kpi_id] ? (
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                        kpiHealthStatuses[kpi.kpi_id].health_color === 'green' ? 'bg-green-100 text-green-800' :
+                                        kpiHealthStatuses[kpi.kpi_id].health_color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                                        kpiHealthStatuses[kpi.kpi_id].health_color === 'red' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {kpiHealthStatuses[kpi.kpi_id].health_status}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400">Loading...</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.impact_level}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const AccountHealthDashboard = () => (
     <div className="space-y-6">
@@ -1538,8 +2347,8 @@ const CSPlatform = () => {
                           : 'bg-white'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">{account.account_name}</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900 text-lg">{account.account_name}</h4>
                         <div className="flex items-center space-x-2">
                           <div className={`w-3 h-3 rounded-full ${getHealthColor(account.health_score)}`}></div>
                           <span className="text-sm text-gray-500">
@@ -1547,10 +2356,99 @@ const CSPlatform = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      
+                      {/* Account Details Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        {/* Health Score with Status */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Health Score</p>
+                          {(() => {
+                            const healthStatus = getHealthStatus(account.health_score);
+                            return (
+                              <div className="flex items-center space-x-2">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  healthStatus.color === 'green' ? 'bg-green-100 text-green-800' :
+                                  healthStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                                  healthStatus.color === 'red' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {healthStatus.status}
+                                </span>
+                                <span className="font-semibold text-gray-900">
+                                  {account.health_score?.toFixed(0) || 'N/A'}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        
+                        {/* Region */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Region</p>
+                          <p className="font-medium text-gray-900">{account.region || 'N/A'}</p>
+                        </div>
+                        
+                        {/* Status */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Status</p>
+                          <p className="font-medium text-gray-900 capitalize">{account.account_status || 'N/A'}</p>
+                        </div>
+                        
+                        {/* Account Tier */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Account Tier</p>
+                          <p className="font-medium text-gray-900">{account.profile_metadata?.account_tier || 'N/A'}</p>
+                        </div>
+                        
+                        {/* Assigned CSM */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Assigned CSM</p>
+                          <p className="font-medium text-gray-900">{account.profile_metadata?.assigned_csm || 'N/A'}</p>
+                        </div>
+                        
+                        {/* CSM Manager */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">CSM Manager</p>
+                          <p className="font-medium text-gray-900">{account.profile_metadata?.csm_manager || 'N/A'}</p>
+                        </div>
+                        
+                        {/* Products Used */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Products Used</p>
+                          <p className="font-medium text-gray-900">
+                            {(() => {
+                              // Priority 1: profile_metadata.products_used (from customer profile upload)
+                              const profileProducts = account.profile_metadata?.products_used;
+                              if (profileProducts && profileProducts.trim()) {
+                                return profileProducts;
+                              }
+                              // Priority 2: products_used array (from Product table)
+                              if (account.products_used && account.products_used.length > 0) {
+                                return account.products_used.join(', ');
+                              }
+                              return 'N/A';
+                            })()}
+                          </p>
+                        </div>
+                        
+                        {/* Champion Name */}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Champion Name</p>
+                          <p className="font-medium text-gray-900">
+                            {account.primary_champion_name || 
+                             account.profile_metadata?.champions?.[0]?.primary_champion_name || 
+                             'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Additional Info Row */}
+                      <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 grid grid-cols-2 md:grid-cols-3 gap-2">
                         <p>Revenue: ${(account.revenue / 1000000).toFixed(1)}M</p>
                         <p>Industry: {account.industry}</p>
-                        <p>Health Score: {account.health_score}/100</p>
+                        {account.profile_metadata?.engagement?.lifecycle_stage && (
+                          <p>Lifecycle: {account.profile_metadata.engagement.lifecycle_stage}</p>
+                        )}
                       </div>
                       <div className="mt-3 flex items-center text-xs text-blue-600">
                         <Eye className="h-3 w-3 mr-1" />
@@ -1566,7 +2464,7 @@ const CSPlatform = () => {
                             KPIs for {account.account_name}
                           </h5>
                                                   <p className="text-sm text-gray-600">
-                          Showing {kpiData.filter(kpi => kpi.account_id === account.account_id).length} Account KPIs
+                          Showing {deduplicatedKpiData.filter(kpi => kpi.account_id === account.account_id && (kpi.product_id === null || kpi.product_id === undefined)).length} Account KPIs
                         </p>
                         </div>
                         
@@ -1574,6 +2472,7 @@ const CSPlatform = () => {
                           <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg">
                             <thead className="bg-gray-100">
                               <tr>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KPI Parameter</th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
@@ -1584,10 +2483,17 @@ const CSPlatform = () => {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {kpiData
-                                .filter(kpi => kpi.account_id === account.account_id)
+                              {deduplicatedKpiData
+                                .filter(kpi => kpi.account_id === account.account_id && (kpi.product_id === null || kpi.product_id === undefined))
                                 .map((kpi) => (
                                   <tr key={kpi.kpi_id} className="hover:bg-gray-50">
+                                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                                      {kpi.product_name ? (
+                                        <span className="font-medium text-blue-600">{kpi.product_name}</span>
+                                      ) : (
+                                        <span className="text-gray-500 italic">Account Level</span>
+                                      )}
+                                    </td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.category}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.kpi_parameter}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.data}</td>
@@ -1614,7 +2520,7 @@ const CSPlatform = () => {
                                 ))}
                             </tbody>
                           </table>
-                          {kpiData.filter(kpi => kpi.account_id === account.account_id).length === 0 && (
+                          {deduplicatedKpiData.filter(kpi => kpi.account_id === account.account_id && !kpi.product_id).length === 0 && (
                             <div className="text-center py-8 text-gray-500">
                               <p>No account-specific KPIs found for this account.</p>
                               <p className="text-sm mt-1">Upload a KPI file with this account name to see KPIs here.</p>
@@ -1691,12 +2597,98 @@ const CSPlatform = () => {
             </div>
           )}
 
+          {/* Products Section */}
+          {selectedAccount && products[selectedAccount.account_id] && products[selectedAccount.account_id].length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Target className="h-5 w-5 mr-2 text-blue-600" />
+                  Products ({products[selectedAccount.account_id].length})
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      setViewMode(viewMode === 'account' ? 'product' : 'account');
+                      setSelectedProduct(null);
+                    }}
+                    className={`px-3 py-1 text-sm rounded-lg ${
+                      viewMode === 'account' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Account View
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewMode('product');
+                    }}
+                    className={`px-3 py-1 text-sm rounded-lg ${
+                      viewMode === 'product' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Product View
+                  </button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {products[selectedAccount.account_id].map((product) => (
+                  <div
+                    key={product.product_id}
+                    onClick={() => {
+                      setSelectedProduct({accountId: selectedAccount.account_id, productId: product.product_id});
+                      setViewMode('product');
+                    }}
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      selectedProduct?.productId === product.product_id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900">{product.product_name}</h4>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {product.status}
+                      </span>
+                    </div>
+                    {product.product_type && (
+                      <p className="text-xs text-gray-500 mb-2">{product.product_type}</p>
+                    )}
+                    {product.revenue && product.revenue > 0 && (
+                      <p className="text-sm font-medium text-gray-700">
+                        Revenue: ${product.revenue.toLocaleString()}
+                      </p>
+                    )}
+                    {product.product_sku && (
+                      <p className="text-xs text-gray-400 mt-1">SKU: {product.product_sku}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {selectedProduct && selectedProduct.productId && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Viewing KPIs for: <strong>{products[selectedAccount.account_id].find(p => p.product_id === selectedProduct.productId)?.product_name}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* KPI Table View */}
           {showKPITable && selectedAccount && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  KPIs for {selectedAccount.account_name}
+                  {viewMode === 'product' && selectedProduct?.productId
+                    ? `KPIs for ${products[selectedAccount.account_id]?.find(p => p.product_id === selectedProduct.productId)?.product_name || 'Product'}`
+                    : `KPIs for ${selectedAccount.account_name}`}
                 </h3>
                 <button 
                   onClick={() => setShowKPITable(false)}
@@ -1710,6 +2702,7 @@ const CSPlatform = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KPI Parameter</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
@@ -1721,9 +2714,23 @@ const CSPlatform = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {kpiData
-                      .filter(kpi => !selectedAccount || kpi.account_id === selectedAccount.account_id || kpi.account_id === null)
+                      .filter(kpi => {
+                        if (!selectedAccount) return false;
+                        if (viewMode === 'product' && selectedProduct?.productId) {
+                          return kpi.product_id === selectedProduct.productId;
+                        }
+                        // Account-level view: show account-level KPIs only (no product_id)
+                        return (kpi.account_id === selectedAccount.account_id || kpi.account_id === null) && !kpi.product_id;
+                      })
                       .map((kpi) => (
                         <tr key={kpi.kpi_id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {kpi.product_name ? (
+                              <span className="font-medium text-blue-600">{kpi.product_name}</span>
+                            ) : (
+                              <span className="text-gray-500 italic">Account Level</span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{kpi.category}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{kpi.kpi_parameter}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{kpi.data}</td>
@@ -1804,6 +2811,7 @@ const CSPlatform = () => {
           { id: 'upload', label: 'Data Integration', icon: Upload },
           { id: 'analytics', label: 'Customer Success Value Analytics', icon: Activity },
           { id: 'accounts', label: 'Account Health', icon: Users },
+          { id: 'products', label: 'Product Health', icon: Target },
           { id: 'rag-analysis', label: 'AI Insights', icon: MessageSquare },
           { id: 'insights', label: 'Playbooks', icon: MessageSquare },
           { id: 'settings', label: 'Settings', icon: Settings },
@@ -1868,140 +2876,215 @@ const CSPlatform = () => {
               {/* Main Dashboard Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                  {/* Corporate Health Rollup */}
-                  <div className="bg-white rounded-xl shadow-lg border-2 border-blue-100/50 p-6 hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                        <div className="h-1 w-1 bg-blue-600 rounded-full mr-2"></div>
-                        Corporate Health Rollup
+                  {/* Accounts Needing Attention - Main focus area */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                        <AlertTriangle className="h-5 w-5 mr-2 text-orange-500" />
+                        Accounts Needing Attention
                       </h3>
+                      <span className="text-xs text-gray-500">Last 3 months</span>
+                    </div>
+                    
+                    <p className="text-sm text-orange-600 mb-4">
+                      ⚠️ These accounts have issues with maintaining healthy scores
+                    </p>
+                    
+                    {perfSummary && perfSummary.accounts_needing_attention.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600">Critical</div>
+                            <div className="text-xs text-gray-500">&lt; 70</div>
+                            <div className="text-lg font-bold text-red-600">{perfSummary.summary.critical_accounts}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600">At Risk</div>
+                            <div className="text-xs text-gray-500">70-79</div>
+                            <div className="text-lg font-bold text-yellow-600">{perfSummary.summary.at_risk_accounts}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600">Healthy</div>
+                            <div className="text-xs text-gray-500">≥ 80</div>
+                            <div className="text-lg font-bold text-green-600">{perfSummary.summary.healthy_accounts}</div>
+                          </div>
+                        </div>
+                        
+                        {/* Account Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {perfSummary.accounts_needing_attention.map((account, idx) => (
+                            <div key={account.account_id} className="border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900 text-sm">{account.account_name}</h4>
+                                  <div className="flex items-center mt-1 space-x-2">
+                                    <div className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      account.overall_health_score >= 80 ? 'bg-green-100 text-green-800' :
+                                      account.overall_health_score >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                      Score: {account.overall_health_score.toFixed(0)}
+                                    </div>
+                                    <div className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+                                      {account.active_playbooks_count} playbooks
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Revenue Trend */}
+                              <div className="mb-3 p-2 bg-gray-50 rounded">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">Revenue Trend:</span>
+                                  <span className={`font-bold ${
+                                    account.revenue_growth_pct > 0 ? 'text-green-600' :
+                                    account.revenue_growth_pct < 0 ? 'text-red-600' :
+                                    'text-gray-600'
+                                  }`}>
+                                    {account.revenue_growth_pct > 0 ? '↑' : account.revenue_growth_pct < 0 ? '↓' : '→'} {Math.abs(account.revenue_growth_pct).toFixed(1)}%
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Focus Areas */}
+                              <div className="space-y-2">
+                                <div className="text-xs font-medium text-gray-600">Focus Areas (Lowest 2):</div>
+                                {account.focus_areas.map((area, areaIdx) => (
+                                  <div key={areaIdx} className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-700">{area.category}</span>
+                                    <span className={`font-semibold ${
+                                      area.score >= 80 ? 'text-green-600' :
+                                      area.score >= 70 ? 'text-yellow-600' :
+                                      'text-red-600'
+                                    }`}>
+                                      {area.score.toFixed(0)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Users className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600">Loading account summary...</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Revenue Decline Alert - Moved from right panel */}
+                  {perfSummary && perfSummary.healthy_declining_revenue && perfSummary.healthy_declining_revenue.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <TrendingDown className="h-5 w-5 mr-2 text-red-500" />
+                          Revenue Decline Alert
+                        </h3>
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                          Healthy KPIs
+                        </span>
+                      </div>
+                      
+                      <div className="mb-3 p-2 bg-red-50 rounded text-xs text-red-700">
+                        ⚠️ These accounts have healthy KPI scores (≥80) but declining revenue (Company avg: {perfSummary.summary.company_avg_revenue_growth > 0 ? '+' : ''}{perfSummary.summary.company_avg_revenue_growth.toFixed(1)}%)
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {perfSummary.healthy_declining_revenue.map((account, idx) => (
+                          <div key={account.account_id} className="border border-red-200 rounded-lg p-3 bg-red-50/30">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-sm">{account.account_name}</h4>
+                                <div className="flex items-center mt-1 space-x-2">
+                                  <div className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    Health: {account.overall_health_score.toFixed(0)}
+                                  </div>
+                                  <div className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    Revenue ↓ {Math.abs(account.revenue_growth_pct).toFixed(1)}%
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="text-xs text-gray-600 mt-2">
+                              <div className="font-medium mb-1">Investigate:</div>
+                              {account.focus_areas.slice(0, 2).map((area, areaIdx) => (
+                                <div key={areaIdx} className="flex items-center justify-between">
+                                  <span>• {area.category}</span>
+                                  <span className="font-semibold">{area.score.toFixed(0)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  {/* Corporate Health Rollup - Condensed */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-gray-900">Corporate Health</h3>
                       <button 
                         onClick={calculateCorporateRollup}
                         disabled={isCalculatingRollup}
-                        className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 disabled:opacity-50"
+                        className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
                       >
-                        {isCalculatingRollup ? 'Calculating...' : 'Calculate Rollup'}
+                        {isCalculatingRollup ? 'Calculating...' : 'Refresh'}
                       </button>
                     </div>
                     
                     {rollupResults ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="text-center p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-600">Overall Score</p>
-                            <p className={`text-2xl font-bold ${getHealthColor(rollupResults.overall_score)}`}>
-                              {rollupResults.overall_score.toFixed(1)}
-                            </p>
+                      <div className="space-y-3">
+                        {/* Top Row - Miniature Stats */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-center p-2 bg-blue-50 rounded">
+                            <p className="text-xs text-gray-600">Score</p>
+                            <p className="text-lg font-bold text-gray-900">{rollupResults.overall_score.toFixed(1)}</p>
                           </div>
-                          <div className="text-center p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-600">Maturity Tier</p>
-                            <p className={`text-lg font-semibold ${getMaturityColor(rollupResults.maturity_tier)}`}>
-                              {rollupResults.maturity_tier}
-                            </p>
+                          <div className="text-center p-2 bg-purple-50 rounded">
+                            <p className="text-xs text-gray-600">Tier</p>
+                            <p className="text-xs font-semibold text-gray-900">{rollupResults.maturity_tier}</p>
                           </div>
-                          <div className="text-center p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-600">Accounts</p>
-                            <p className="text-2xl font-bold text-gray-900">{accounts.length}</p>
+                          <div className="text-center p-2 bg-green-50 rounded">
+                            <p className="text-xs text-gray-600">Accounts</p>
+                            <p className="text-lg font-bold text-gray-900">{accounts.length}</p>
                           </div>
                         </div>
                         
-                        <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900">Category Breakdown:</h4>
+                        {/* Category Breakdown with Color Bars */}
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-gray-600">Categories:</p>
                           {Object.entries(rollupResults.category_scores).map(([categoryName, categoryData]) => (
-                            <div key={categoryName} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <span className="text-sm font-medium text-gray-700">{categoryName}</span>
-                              <div className="flex items-center space-x-2">
-                                <span className={`text-sm font-semibold ${getHealthColor(categoryData.score)}`}>
-                                  {categoryData.score.toFixed(1)}
-                                </span>
-                                <span className="text-xs text-gray-500">({categoryData.weight}%)</span>
+                            <div key={categoryName} className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-700 truncate">{categoryName.split(' ')[0]}</span>
+                                <span className="text-xs font-semibold text-gray-900">{categoryData.score.toFixed(0)}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div 
+                                  className={`h-1.5 rounded-full ${
+                                    categoryData.score >= 75 ? 'bg-green-500' : 
+                                    categoryData.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${categoryData.score}%` }}
+                                ></div>
                               </div>
                             </div>
                           ))}
-                          
-                          {/* Rollup Formula Explanation */}
-                          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                            <h5 className="font-medium text-gray-900 mb-2">Rollup Formula:</h5>
-                            <div className="text-xs text-gray-700 space-y-1">
-                              <p>• <strong>Category Score</strong> = Σ(KPI Data × KPI Weight) / Σ(KPI Weights)</p>
-                              <p>• <strong>Overall Score</strong> = Σ(Category Score × Category Weight) / 100</p>
-                              <p>• <strong>Category Weights</strong>: Product Usage (25%), Customer Success (25%), Business Outcomes (30%), Relationship Strength (20%)</p>
-                              <p>• <strong>Maturity Tiers</strong>: Healthy (&gt;=75), At Risk (50-74), Critical (&lt;50)</p>
-                            </div>
-                          </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">
-                          {accounts.length > 0 
-                            ? 'Click "Calculate Rollup" to see corporate health overview' 
-                            : 'Upload account data to see corporate health overview'
-                          }
-                        </p>
+                      <div className="text-center py-6">
+                        <BarChart3 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-xs text-gray-600">Click Refresh</p>
                       </div>
                     )}
-                  </div>
-
-                  {/* KPI Performance Heatmap */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">KPI Performance Heatmap</h3>
-                    {kpiData.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {kpiData.slice(0, 20).map((kpi, i) => (
-                          <button
-                            key={kpi.kpi_id}
-                            onClick={() => {
-                              setSelectedAccount(null);
-                              setShowKPITable(true);
-                              setActiveTab('accounts');
-                            }}
-                            className={`p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md ${
-                              parseFloat(kpi.data || '0') > 70 ? 'border-green-200 bg-green-50 hover:bg-green-100' :
-                              parseFloat(kpi.data || '0') > 40 ? 'border-yellow-200 bg-yellow-50 hover:bg-yellow-100' : 'border-red-200 bg-red-50 hover:bg-red-100'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
-                                parseFloat(kpi.data || '0') > 70 ? 'bg-green-500' : 
-                                parseFloat(kpi.data || '0') > 40 ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}></div>
-                              <p className="text-sm font-medium text-gray-900 truncate">{kpi.kpi_parameter || `KPI ${i + 1}`}</p>
-                              <p className="text-xs text-gray-600 mt-1">Value: {kpi.data || 'N/A'}</p>
-                              <p className="text-xs text-gray-500">Weight: {kpi.weight || 'N/A'}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Target className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">No KPIs available</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Account Health Summary */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Health Summary</h3>
-                    <div className="space-y-3">
-                      {[
-                        { name: 'Healthy', count: accounts.filter(a => a.health_score >= 80).length, color: 'bg-green-500' },
-                        { name: 'At Risk', count: accounts.filter(a => a.health_score >= 60 && a.health_score < 80).length, color: 'bg-yellow-500' },
-                        { name: 'Critical', count: accounts.filter(a => a.health_score < 60).length, color: 'bg-red-500' }
-                      ].map((status, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full ${status.color} mr-3`}></div>
-                            <span className="text-sm font-medium text-gray-700">{status.name}</span>
-                          </div>
-                          <span className="text-sm font-bold text-gray-900">{status.count}</span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -2086,26 +3169,31 @@ const CSPlatform = () => {
                       {/* Category Breakdown */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {rollupResults.health_scores.enhanced_analysis.category_scores.map((category: any, index: number) => {
-                          const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500'];
-                          const categoryColor = colors[index % colors.length];
+                          // Use backend-provided color (green/yellow/red) not hardcoded colors
+                          const healthColor = category.color === 'green' ? 'bg-green-500' : 
+                                             category.color === 'yellow' ? 'bg-yellow-500' : 
+                                             category.color === 'red' ? 'bg-red-500' : 'bg-gray-500';
+                          const healthBadge = category.color === 'green' ? 'bg-green-100 text-green-800' : 
+                                             category.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : 
+                                             category.color === 'red' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800';
                           
                           return (
                             <div key={index} className="p-4 border border-gray-200 rounded-lg">
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="font-medium text-gray-900 text-sm">{category.category}</h4>
-                                <div className={`px-2 py-1 rounded-full text-xs font-medium text-white ${categoryColor}`}>
-                                  {Math.round(category.category_weight * 100)}%
+                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${healthBadge}`}>
+                                  {category.health_status.toUpperCase()}
                                 </div>
                               </div>
                               <div className="text-2xl font-bold text-gray-900 mb-1">
                                 {Math.round(category.average_score)}/100
                               </div>
                               <div className="text-xs text-gray-500 mb-2">
-                                {category.valid_kpi_count}/{category.kpi_count} KPIs
+                                {category.valid_kpi_count}/{category.kpi_count} KPIs • Weight: {Math.round(category.category_weight * 100)}%
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div 
-                                  className={`h-2 rounded-full ${categoryColor}`}
+                                  className={`h-2 rounded-full ${healthColor}`}
                                   style={{ width: `${category.average_score}%` }}
                                 ></div>
                               </div>
@@ -2691,6 +3779,8 @@ const CSPlatform = () => {
 
           {activeTab === 'accounts' && <AccountHealthDashboard />}
 
+          {activeTab === 'products' && <ProductHealthDashboard />}
+
           {activeTab === 'rag-analysis' && <RAGAnalysis />}
 
           {activeTab === 'insights' && (
@@ -2741,22 +3831,18 @@ const CSPlatform = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Settings & Configuration</h2>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Advanced Settings
-              </button>
             </div>
             
-            {/* Master KPI Framework Upload */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                <Settings className="h-5 w-5 mr-2 text-blue-600" />
-                Master KPI Framework Configuration
-              </h4>
-              <div className="space-y-4">
+            {/* Master KPI Framework Upload (collapsible) */}
+            <details className="bg-white rounded-xl shadow-sm border border-gray-100" open>
+              <summary className="cursor-pointer px-6 py-4 flex items-center justify-between">
+                <span className="flex items-center font-semibold text-gray-900">
+                  <Settings className="h-5 w-5 mr-2 text-blue-600" />
+                  Master KPI Framework Configuration
+                </span>
+                <span className="text-xs text-gray-500">Click to expand/collapse</span>
+              </summary>
+              <div className="p-6 border-t border-gray-100 space-y-4">
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-start space-x-3">
                     <div className="bg-blue-100 rounded-full p-2">
@@ -2772,8 +3858,10 @@ const CSPlatform = () => {
                   </div>
                 </div>
                 
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
-                     onClick={() => masterFileInputRef.current?.click()}>
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                  onClick={() => masterFileInputRef.current?.click()}
+                >
                   <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm font-medium text-gray-900">Upload Master KPI Framework</p>
                   <p className="text-xs text-gray-500">Drag & drop or click to upload Excel file</p>
@@ -2803,42 +3891,212 @@ const CSPlatform = () => {
                   </div>
                 )}
               </div>
+            </details>
+
+
+            {/* Inline Advanced Settings (collapsible sections) */}
+            <div className="space-y-4">
+              <details className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-900 flex items-center">
+                  <Settings className="h-5 w-5 mr-2 text-blue-600" />
+                  Playbook Automation
+                </summary>
+                <div className="p-4">
+                  <PlaybookAutomationSettings isAuthenticated={Boolean(session)} />
+                </div>
+              </details>
+              <details className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-900 flex items-center">
+                  <Settings className="h-5 w-5 mr-2 text-blue-600" />
+                  OpenAI API Key
+                </summary>
+                <div className="p-4">
+                  <OpenAIKeySettings isAuthenticated={Boolean(session)} />
+                </div>
+              </details>
+              <details className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-900 flex items-center">
+                  <Settings className="h-5 w-5 mr-2 text-blue-600" />
+                  Governance & Compliance
+                </summary>
+                <div className="p-4">
+                  <GovernanceSettings isAuthenticated={Boolean(session)} />
+                </div>
+              </details>
             </div>
 
-            {/* Current Category Weights */}
+            {/* Data Export (Save to Excel) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h4 className="font-semibold text-gray-900 mb-4">Current Category Weights</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(categoryWeights).map(([category, weight]) => (
-                  <div key={category} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{category}</p>
-                      <p className="text-xs text-gray-500">Category weight</p>
-                    </div>
-                    <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
-                      {(weight * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <h4 className="font-semibold text-gray-900 mb-4">Data Export (Excel)</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Download all account data including KPIs, products, and configuration in Excel format.
+              </p>
+              <button
+                onClick={async () => {
+                  const fileName = `Account_Data_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+                  try {
+                    setIsExporting(true);
+                    setError('');
+                    const apiBaseUrl = (process.env.REACT_APP_API_URL as string) || 'http://localhost:5059';
+                    const apiUrl = `${apiBaseUrl}/api/export/all-account-data`;
+                    const response = await fetch(apiUrl, {
+                      method: 'GET',
+                      credentials: 'include'
+                    });
+                    if (!response.ok) {
+                      const contentType = response.headers.get('content-type');
+                      if (contentType && contentType.includes('application/json')) {
+                        const errData = await response.json();
+                        throw new Error(errData.error || `Failed to export data: ${response.status}`);
+                      }
+                      const errText = await response.text();
+                      throw new Error(`Failed to export data: ${response.status}. ${errText.substring(0, 120)}`);
+                    }
+                    const blob = await response.blob();
+                    if (blob.size === 0) {
+                      throw new Error('Downloaded file is empty. Please try again.');
+                    }
+                    // File System Access API when available
+                    // @ts-ignore
+                    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+                      // @ts-ignore
+                      const fileHandle = await (window as any).showSaveFilePicker({
+                        suggestedName: fileName,
+                        types: [{
+                          description: 'Excel files',
+                          accept: {
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+                          }
+                        }]
+                      });
+                      const writable = await fileHandle.createWritable();
+                      await writable.write(blob);
+                      await writable.close();
+                      return;
+                    }
+                    // Fallback: normal browser download
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(url);
+                    }, 1000);
+                  } catch (e: any) {
+                    setError(e?.message || 'Failed to export account data');
+                  } finally {
+                    setIsExporting(false);
+                  }
+                }}
+                disabled={isExporting}
+                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {isExporting ? 'Exporting…' : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Save Account Data to Excel
+                  </>
+                )}
+              </button>
             </div>
 
-            {/* KPI Health Status Calculations */}
+            {/* Customer Profile Upload */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-gray-900 flex items-center">
+              <h4 className="font-semibold text-gray-900 mb-4">Customer Profile Upload</h4>
+              <p className="text-sm text-gray-600 mb-3">
+                Upload the <code>CS_GrowthPulse_CustomerProfile_*.xlsx</code> file to populate account profile, champions, and engagement data for this tenant.
+                Values are validated against the <strong>Reference Data</strong> sheet before applying.
+              </p>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (!session?.customer_id) {
+                    setError('No active tenant session found');
+                    return;
+                  }
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  setProfileUploading(true);
+                  setProfileErrors(null);
+                  setError('');
+                  try {
+                    const res = await fetch('/api/customer-profile/upload', {
+                      method: 'POST',
+                      credentials: 'include',
+                      body: formData,
+                    });
+                    const data = await res.json();
+                    if (!res.ok || data.status !== 'success') {
+                      if (data?.errors) {
+                        setProfileErrors(data.errors);
+                        setError(data.message || 'Customer profile validation failed');
+                      } else {
+                        setError(data.message || 'Failed to upload customer profile');
+                      }
+                    } else {
+                      setError('');
+                    }
+                  } catch (err: any) {
+                    setError(err?.message || 'Failed to upload customer profile');
+                  } finally {
+                    setProfileUploading(false);
+                    if (e.target) e.target.value = '';
+                  }
+                }}
+                disabled={profileUploading}
+                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {profileUploading && (
+                <p className="mt-2 text-sm text-gray-500">Uploading and validating profile data…</p>
+              )}
+              {profileErrors && profileErrors.length > 0 && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="text-sm font-semibold text-red-700 mb-2">
+                    Validation issues found ({profileErrors.length}). Showing first 5:
+                  </p>
+                  <ul className="text-xs text-red-700 list-disc list-inside space-y-1 max-h-40 overflow-y-auto">
+                    {profileErrors.slice(0, 5).map((err, idx) => (
+                      <li key={idx}>
+                        [{err.sheet}] {err.account} – <strong>{err.field}</strong>: “{err.value}” not in allowed{' '}
+                        {Array.isArray(err.allowed) ? err.allowed.join(', ') : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* KPI Health Status Calculations (collapsible, collapsed by default, last section) */}
+            <details 
+              className="bg-white rounded-xl shadow-sm border border-gray-100" 
+              open={kpiHealthSectionOpen}
+              onToggle={toggleKpiHealthSection}
+            >
+              <summary className="cursor-pointer px-6 py-4 flex items-center justify-between">
+                <span className="flex items-center font-semibold text-gray-900">
                   <Calculator className="h-5 w-5 mr-2 text-green-600" />
                   KPI Health Status Calculations
-                </h4>
-                <button
-                  onClick={fetchKpiReferenceRanges}
-                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                >
-                  Load KPI Reference Ranges
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                </span>
+                <span className="text-xs text-gray-500">Click to expand/collapse</span>
+              </summary>
+              <div className="p-6 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div />
+                  <button
+                    onClick={fetchKpiReferenceRanges}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                  >
+                    Load KPI Reference Ranges
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-start space-x-3">
                     <div className="bg-green-100 rounded-full p-2">
                       <Activity className="h-4 w-4 text-green-600" />
@@ -2851,9 +4109,9 @@ const CSPlatform = () => {
                       </p>
                     </div>
                   </div>
-                </div>
+                  </div>
                 
-                <div className="overflow-x-auto">
+                  <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -2949,9 +4207,9 @@ const CSPlatform = () => {
                       )}
                     </tbody>
                   </table>
-                </div>
+                  </div>
                 
-                <div className="text-center space-x-4">
+                  <div className="text-center space-x-4">
                   <button 
                     onClick={() => fetchKpiReferenceRanges()}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -2968,34 +4226,10 @@ const CSPlatform = () => {
                       Save Changes
                     </button>
                   )}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Upload Configuration */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h4 className="font-semibold text-gray-900 mb-4">Upload Configuration</h4>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Upload Mode</p>
-                    <p className="text-xs text-gray-500">Account-level KPI uploads</p>
-                  </div>
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                    Account Rollup
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">File Types</p>
-                    <p className="text-xs text-gray-500">Excel (.xlsx, .xls) and CSV files</p>
-                  </div>
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                    Supported
-                  </span>
-                </div>
-              </div>
-            </div>
+            </details>
           </div>
         )}
 
@@ -3004,9 +4238,7 @@ const CSPlatform = () => {
       </div>
 
       {/* Settings Modal */}
-      {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
-      )}
+      {/* Advanced Settings modal removed to avoid duplication; all sections are inline above */}
     </div>
   );
 };

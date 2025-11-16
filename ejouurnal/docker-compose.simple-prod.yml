@@ -1,0 +1,64 @@
+# FULFILLMENT APP - SIMPLE LOCAL PRODUCTION
+# Uses existing SQLite database file
+
+version: '3.8'
+
+services:
+  # Backend with existing SQLite
+  backend:
+    image: node:18-alpine
+    container_name: fulfillment-backend-simple-prod
+    restart: always
+    working_dir: /app
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      DB_TYPE: sqlite
+      DB_PATH: /app/data/fulfillment.db
+      JWT_SECRET: local_production_jwt_secret_123
+      CORS_ORIGIN: "*"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your_openai_key_here}
+      RATE_LIMIT_MAX: 5000
+      RATE_LIMIT_WINDOW: 60000
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./backend:/app
+      - ./backend/fulfillment.db:/app/data/fulfillment.db
+    command: sh -c "npm install && node server-fixed.js"
+    networks:
+      - fulfillment-network
+
+  # Frontend (React Production Build)
+  frontend:
+    image: nginx:alpine
+    container_name: fulfillment-frontend-simple-prod
+    restart: always
+    ports:
+      - "3006:80"
+    volumes:
+      - ./frontend/build:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - fulfillment-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: fulfillment-nginx-simple-prod
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.local-prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - fulfillment-network
+
+networks:
+  fulfillment-network:
+    driver: bridge

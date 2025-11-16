@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fulfillment App V2 - Complete Mockup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .phone-frame {
+            max-width: 390px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            height: 844px;
+            position: relative;
+        }
+        .status-bar {
+            height: 44px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+        }
+        .screen {
+            height: 800px;
+            overflow-y: auto;
+            background: #FAFBFC;
+        }
+        .streak-flame {
+            animation: flicker 1.5s ease-in-out infinite;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulsing {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .confetti {
+            position: absolute;
+            font-size: 24px;
+            animation: fall 3s linear infinite;
+        }
+        @keyframes fall {
+            0% { top: -10%; opacity: 1; }
+            100% { top: 110%; opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span>9:41</span>
+            <span>⚡📶</span>
+        </div>
+
+        <!-- Screen Content -->
+        <div class="screen" id="screen">
+            <!-- Screens will be rendered here -->
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="max-w-2xl mx-auto mt-8 bg-white rounded-xl p-6 shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">📱 V2 Mockup - Complete Journey</h2>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+            <button onclick="navigateTo('onboarding')" class="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600">
+                1️⃣ Onboarding
+            </button>
+            <button onclick="navigateTo('set-intention')" class="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600">
+                2️⃣ Set Intention
+            </button>
+            <button onclick="navigateTo('check-in-v2')" class="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600">
+                3️⃣ Check-in V2
+            </button>
+            <button onclick="navigateTo('add-details-v2')" class="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600">
+                4️⃣ Add Details V2
+            </button>
+            <button onclick="navigateTo('home-v2')" class="bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-700">
+                5️⃣ Home V2
+            </button>
+            <button onclick="navigateTo('journal-v2')" class="bg-indigo-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-indigo-600">
+                6️⃣ Journal V2
+            </button>
+            <button onclick="navigateTo('intention-dashboard')" class="bg-purple-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-700">
+                7️⃣ Dashboard
+            </button>
+            <button onclick="navigateTo('weekly-review-v2')" class="bg-pink-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-pink-600">
+                8️⃣ Weekly Review
+            </button>
+        </div>
+        <div class="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
+            <span class="font-bold">💡 Tip:</span> Click through the screens in order (1-8) to see the complete virtuous cycle!
+        </div>
+    </div>
+
+    <script>
+        let currentScreen = 'onboarding';
+        let currentDay = 1;
+        let currentWeek = 2;
+        
+        let userData = {
+            name: "Sarah",
+            intention: {
+                text: "Show up with more presence for my family",
+                microMoves: [
+                    { id: 1, name: "10-min morning walk", type: "walk", completed: [true, true, false, true, true, false, false], impact: 12, dimension: 'Mind', streak: 2 },
+                    { id: 2, name: "Read 2 chapters", type: "reading", completed: [false, true, true, false, true, false, false], impact: 6, dimension: 'Mind', streak: 0 },
+                    { id: 3, name: "Call friend", type: "social", completed: [false, false, false, true, false, false, false], impact: 10, dimension: 'Soul', streak: 0 }
+                ],
+                antiGlitter: "No phone first hour after waking",
+                weekStart: "Oct 14, 2025"
+            },
+            weeklyStats: {
+                week1: { fulfillment: 58, grade: 'C+', meaningfulDays: 3, improvement: 0 },
+                week2: { fulfillment: 71, grade: 'B', meaningfulDays: 5, improvement: 13 },
+                week3: { fulfillment: 78, grade: 'B+', meaningfulDays: 6, improvement: 7 },
+                week4: { fulfillment: 82, grade: 'A-', meaningfulDays: 6, improvement: 4 }
+            },
+            todayScores: { body: 70, mind: 82, soul: 69, purpose: 68, fulfillment: 72 },
+            checkIns: [
+                { time: '7:30 AM', dayPart: 'Morning', mood: 'good', microAct: 'Walk', impacts: ['+12 Mind', '+5 Body'] },
+                { time: '1:00 PM', dayPart: 'Day', mood: 'good', microAct: 'Meditation', impacts: ['+8 Mind'] },
+                { time: '6:00 PM', dayPart: 'Evening', mood: 'good', microAct: 'Reading', impacts: ['+6 Mind', '+4 Soul'] }
+            ],
+            totalCheckIns: 45,
+            currentStreak: 5,
+            longestStreak: 12
+        };
+
+        // SCREEN 1: ONBOARDING
+        const OnboardingScreen = () => `
+            <div class="h-full flex flex-col justify-between p-6 bg-gradient-to-br from-purple-500 to-blue-600 text-white">
+                <div class="flex-1 flex flex-col justify-center">
+                    <div class="text-6xl mb-6 text-center">🎯</div>
+                    <h1 class="text-3xl font-black text-center mb-4">Turn Intentions into Identity</h1>
+                    <p class="text-lg text-center mb-8 opacity-90">
+                        AI discovers YOUR unique formula for fulfillment
+                    </p>
+                    
+                    <div class="space-y-4 mb-8">
+                        <div class="bg-white/20 rounded-xl p-4 backdrop-blur">
+                            <div class="flex items-center gap-3">
+                                <div class="text-3xl">1️⃣</div>
+                                <div>
+                                    <div class="font-bold">Set your intention</div>
+                                    <div class="text-sm opacity-90">Break it into 3 micro-moves</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white/20 rounded-xl p-4 backdrop-blur">
+                            <div class="flex items-center gap-3">
+                                <div class="text-3xl">2️⃣</div>
+                                <div>
+                                    <div class="font-bold">Track daily (4x check-ins)</div>
+                                    <div class="text-sm opacity-90">AI learns what works for YOU</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white/20 rounded-xl p-4 backdrop-blur">
+                            <div class="flex items-center gap-3">
+                                <div class="text-3xl">3️⃣</div>
+                                <div>
+                                    <div class="font-bold">Discover your formula</div>
+                                    <div class="text-sm opacity-90">Intention → Proven actions</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="navigateTo('set-intention')" class="w-full bg-white text-purple-600 font-bold py-4 rounded-2xl text-lg shadow-lg">
+                    Start Your Journey →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 2: SET INTENTION (WITH HYBRID AI SUGGESTIONS)
+        const SetIntentionScreen = () => {
+            // AI-Generated Suggestions based on "presence" intention
+            const aiSuggestions = {
+                topTier: [
+                    { name: '10-min morning walk', impact: 12, dimension: 'Mind', reasoning: 'Walking clears mental fog, giving you the clarity to be present throughout the day', successRate: 92, selected: true },
+                    { name: 'No phone first hour after waking', impact: 6, dimension: 'Mind', reasoning: 'Protects your morning clarity, prevents reactivity before you\'re mentally ready', successRate: 88, selected: false },
+                    { name: '15-min device-free family time', impact: 12, dimension: 'Soul', reasoning: 'Direct practice of presence - undistracted attention builds connection', successRate: 85, selected: false }
+                ],
+                recommended: [
+                    { name: '5-min meditation before work', impact: 8, dimension: 'Mind', reasoning: 'Builds awareness and emotional regulation - core skills for presence', successRate: 78, selected: false },
+                    { name: 'Read 2 chapters of meaningful book', impact: 6, dimension: 'Mind', reasoning: 'Deep reading trains sustained attention - a presence skill', successRate: 81, selected: true },
+                    { name: 'Call one friend weekly', impact: 10, dimension: 'Soul', reasoning: 'Voice connection builds intimacy and reduces isolation', successRate: 83, selected: true }
+                ]
+            };
+
+            const selectedCount = [...aiSuggestions.topTier, ...aiSuggestions.recommended].filter(s => s.selected).length;
+            
+            return `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('onboarding')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Set Your Intention</h2>
+                    <button onclick="navigateTo('check-in-v2')" class="text-blue-600 font-semibold">Save</button>
+                </div>
+
+                <!-- Intention Input -->
+                <div class="mb-4">
+                    <div class="text-sm text-gray-700 mb-2 font-semibold">What's your intention this week?</div>
+                    
+                    <div class="bg-purple-50 rounded-xl p-4 border-2 border-purple-300">
+                        <textarea 
+                            class="w-full bg-transparent text-base font-semibold text-purple-900 italic outline-none resize-none" 
+                            rows="3"
+                            placeholder="e.g., Show up with more presence for my family"
+                        >${userData.intention.text}</textarea>
+                    </div>
+                </div>
+
+                <!-- AI Analysis Banner -->
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-3 mb-4 text-white">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xl">🤖</span>
+                        <span class="font-bold text-sm">AI analyzed "presence" + "family"</span>
+                    </div>
+                    <div class="text-xs opacity-90">Suggesting proven micro-moves for your intention...</div>
+                </div>
+
+                <!-- What are Micro-Moves? -->
+                <div class="bg-blue-50 rounded-lg p-3 mb-4 border border-blue-200">
+                    <div class="text-xs font-bold text-blue-900 mb-2">💡 What are Micro-Moves?</div>
+                    <div class="text-xs text-blue-800 space-y-1">
+                        <div>✅ <span class="font-semibold">GOOD:</span> "10-min morning walk" (Specific, measurable)</div>
+                        <div>❌ <span class="font-semibold">BAD:</span> "Exercise more" (Vague, hard to track)</div>
+                        <div class="mt-2 text-blue-700">Pick 3 that resonate with you, or add your own!</div>
+                    </div>
+                </div>
+
+                <!-- TOP TIER SUGGESTIONS -->
+                <div class="mb-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-lg">⭐⭐⭐</span>
+                        <div class="text-sm font-bold text-gray-900">MOST EFFECTIVE FOR PRESENCE</div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        ${aiSuggestions.topTier.map((sug, i) => `
+                            <div class="bg-white rounded-xl p-4 border-2 ${sug.selected ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full border-2 ${sug.selected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'} flex items-center justify-center flex-shrink-0 mt-1">
+                                        ${sug.selected ? '<span class="text-white text-xs font-bold">✓</span>' : ''}
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-bold text-gray-900 text-sm mb-1">${sug.name}</div>
+                                        <div class="text-xs text-gray-600 mb-2">${sug.reasoning}</div>
+                                        <div class="flex items-center gap-3">
+                                            <div class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                                +${sug.impact} ${sug.dimension}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                ${sug.successRate}% stick with it
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- RECOMMENDED TIER -->
+                <div class="mb-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-lg">⭐⭐</span>
+                        <div class="text-sm font-bold text-gray-900">ALSO RECOMMENDED</div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        ${aiSuggestions.recommended.map((sug, i) => `
+                            <div class="bg-white rounded-xl p-3 border-2 ${sug.selected ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-5 h-5 rounded-full border-2 ${sug.selected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'} flex items-center justify-center flex-shrink-0">
+                                        ${sug.selected ? '<span class="text-white text-xs font-bold">✓</span>' : ''}
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="font-semibold text-gray-900 text-xs">${sug.name}</div>
+                                            <div class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs font-semibold">
+                                                +${sug.impact} ${sug.dimension}
+                                            </div>
+                                        </div>
+                                        <div class="text-xs text-gray-500">${sug.successRate}% success rate</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- ADD YOUR OWN -->
+                <div class="mb-4">
+                    <div class="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-300">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lg">➕</span>
+                            <div class="text-sm font-bold text-gray-700">ADD YOUR OWN MICRO-MOVE</div>
+                        </div>
+                        <input 
+                            type="text" 
+                            class="w-full bg-white rounded-lg px-3 py-2 text-sm outline-none border border-gray-300"
+                            placeholder="e.g., Evening walk with kids..."
+                        />
+                        <div class="text-xs text-gray-500 mt-2">Custom moves give you full control & personalization</div>
+                    </div>
+                </div>
+
+                <!-- SELECTION SUMMARY -->
+                <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl p-4 mb-4 border border-purple-300">
+                    <div class="text-sm font-bold text-gray-900 mb-2">📊 SELECTED (${selectedCount}/3)</div>
+                    <div class="space-y-1.5">
+                        ${[...aiSuggestions.topTier, ...aiSuggestions.recommended].filter(s => s.selected).map((sug, i) => `
+                            <div class="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+                                <div class="text-xs font-semibold text-gray-900">${i + 1}. ${sug.name}</div>
+                                <div class="text-xs font-bold text-green-600">+${sug.impact} ${sug.dimension}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${selectedCount === 3 ? `
+                        <div class="mt-3 text-xs text-purple-800 bg-purple-50 rounded-lg p-2">
+                            💡 These moves are proven to boost <span class="font-bold">Mind & Soul</span> - key dimensions for "presence"
+                        </div>
+                    ` : `
+                        <div class="mt-3 text-xs text-gray-600">
+                            👆 Select ${3 - selectedCount} more micro-move${3 - selectedCount > 1 ? 's' : ''} to continue
+                        </div>
+                    `}
+                </div>
+
+                <!-- COMBO BOOST CALLOUT -->
+                <div class="bg-yellow-50 rounded-xl p-3 mb-4 border border-yellow-300">
+                    <div class="flex items-start gap-2">
+                        <span class="text-lg">⚡</span>
+                        <div>
+                            <div class="text-xs font-bold text-yellow-900 mb-1">COMBO BOOST!</div>
+                            <div class="text-xs text-yellow-800">
+                                Walk + No-phone morning = <span class="font-bold text-yellow-900">+18 Mind</span> (amplified effect!)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI GUIDANCE EXPLANATION -->
+                <div class="bg-blue-50 rounded-xl p-3 mb-4 border border-blue-200">
+                    <div class="text-xs font-semibold text-blue-900 mb-2">💡 How AI Will Guide You:</div>
+                    <div class="text-xs text-blue-800 space-y-1">
+                        <div>• Daily reminders to complete your micro-moves</div>
+                        <div>• Track which moves boost YOUR fulfillment</div>
+                        <div>• Discover combos & patterns (e.g., walk + sleep = +25!)</div>
+                        <div>• Weekly insights showing your proven formula</div>
+                        <div>• Progress: vague intention → confident identity</div>
+                    </div>
+                </div>
+
+                <!-- SAVE BUTTON -->
+                <button onclick="navigateTo('check-in-v2')" class="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold py-4 rounded-2xl shadow-lg ${selectedCount < 3 ? 'opacity-50' : ''}">
+                    ${selectedCount === 3 ? 'Save & Start Tracking →' : `Select ${3 - selectedCount} More Micro-Move${3 - selectedCount > 1 ? 's' : ''}`}
+                </button>
+            </div>
+        `;
+        };
+
+        // SCREEN 3: CHECK-IN V2 (WITH IMPACT PREVIEW)
+        const CheckInV2 = () => `
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('home-v2')" class="text-blue-600 font-semibold">← Cancel</button>
+                    <h2 class="font-bold text-gray-900">🌅 Morning Check-in</h2>
+                    <button onclick="navigateTo('add-details-v2')" class="text-blue-600 font-bold">Done</button>
+                </div>
+
+                <!-- Intention Reminder -->
+                <div class="bg-purple-50 rounded-xl p-3 mb-4 border border-purple-200">
+                    <div class="text-xs font-semibold text-purple-900 mb-1">🎯 Quick reminder:</div>
+                    <div class="text-sm text-purple-800">Did you do your morning walk? (Micro-move #1)</div>
+                </div>
+
+                <!-- Mood Selection -->
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-900 mb-2">How are you feeling?</div>
+                    <div class="flex gap-2 justify-between">
+                        ${['😢', '😕', '😐', '🙂', '😊'].map((emoji, i) => `
+                            <button class="flex-1 p-3 rounded-xl ${i === 3 ? 'bg-blue-100 border-2 border-blue-500' : 'bg-gray-100 border-2 border-transparent'}">
+                                <div class="text-3xl mb-1">${emoji}</div>
+                                <div class="text-xs ${i === 3 ? 'font-bold text-blue-900' : 'text-gray-600'}">
+                                    ${['Rough', 'Low', 'Okay', 'Good', 'Great'][i]}
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Context -->
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-900 mb-2">What's the context?</div>
+                    <div class="flex gap-2">
+                        ${['Sleep', 'Work', 'Social'].map((ctx, i) => `
+                            <button class="flex-1 py-2 rounded-lg ${i === 0 ? 'bg-blue-500 text-white font-semibold' : 'bg-gray-100 text-gray-700'}">
+                                ${ctx}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Micro-Act (Enhanced with Impact Preview) -->
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-900 mb-2">Any micro-act?</div>
+                    <div class="space-y-2">
+                        ${[
+                            { name: 'Walk', impact: '+12 Mind', isMicroMove: true },
+                            { name: 'Meditation', impact: '+8 Mind', isMicroMove: false },
+                            { name: 'Gratitude', impact: '+6 Soul', isMicroMove: false }
+                        ].map((act, i) => `
+                            <button class="w-full text-left ${i === 0 ? 'bg-purple-100 border-2 border-purple-500' : 'bg-gray-50 border border-gray-200'} rounded-xl p-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-5 h-5 rounded-full ${i === 0 ? 'bg-purple-600' : 'bg-gray-300'} flex items-center justify-center">
+                                            ${i === 0 ? '<span class="text-white text-xs font-bold">✓</span>' : ''}
+                                        </div>
+                                        <span class="${i === 0 ? 'font-bold text-gray-900' : 'text-gray-700'}">${act.name}</span>
+                                        ${act.isMicroMove ? '<span class="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full">YOUR MICRO-MOVE!</span>' : ''}
+                                    </div>
+                                    <span class="text-xs font-bold ${i === 0 ? 'text-green-600' : 'text-gray-500'}">${act.impact}</span>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Purpose Progress -->
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-900 mb-2">Made progress on your intention?</div>
+                    <div class="bg-gray-50 rounded-lg p-2 mb-2 text-xs text-gray-600">
+                        You completed: Walk ✅ → That's 1/3 micro-moves today
+                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        ${['Yes (3/3)', 'Partly (1-2)', 'No', 'Skip'].map((opt, i) => `
+                            <button class="py-2 rounded-lg text-xs font-semibold ${i === 1 ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-700'}">
+                                ${opt.split(' ')[0]}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- IMPACT PREVIEW -->
+                <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-4 mb-4 border-2 border-green-300">
+                    <div class="text-sm font-bold text-gray-900 mb-3">📊 PREDICTED IMPACT</div>
+                    <div class="text-xs text-gray-700 mb-3">Based on your selections:</div>
+                    
+                    <div class="space-y-2 mb-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-700">Mood: Good</span>
+                            <span class="text-xs font-bold text-green-600">+5 all scores</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-700">Context: Sleep</span>
+                            <span class="text-xs font-bold text-green-600">+5 Body</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-700">Walk micro-act</span>
+                            <span class="text-xs font-bold text-green-600">+12 Mind ⚡</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-700">Purpose: Partly</span>
+                            <span class="text-xs font-bold text-green-600">+8 Purpose</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-green-300 pt-3">
+                        <div class="text-sm font-bold text-gray-900 mb-2">New Scores (after this check-in):</div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>Body: 50 → <span class="font-bold text-green-600">60 ⬆️</span></div>
+                            <div>Mind: 50 → <span class="font-bold text-green-600">67 ⬆️⬆️</span></div>
+                            <div>Soul: 50 → <span class="font-bold text-green-600">55 ⬆️</span></div>
+                            <div>Purpose: 50 → <span class="font-bold text-green-600">58 ⬆️</span></div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <div class="text-sm font-bold text-gray-700">Overall: <span class="text-blue-600">60/100</span></div>
+                            <div class="text-xs text-gray-600">💡 Do 3 more "Good" check-ins to reach Meaningful (65+)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center text-xs text-gray-500">Completed in 5.2s</div>
+            </div>
+        `;
+
+        // SCREEN 4: ADD DETAILS V2
+        const AddDetailsV2 = () => `
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="navigateTo('check-in-v2')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Add Details</h2>
+                    <button onclick="navigateTo('home-v2')" class="text-blue-600 font-bold">Save</button>
+                </div>
+
+                <div class="text-sm text-gray-600 mb-4">
+                    Optional deep dive - enriches your AI journal & insights
+                </div>
+
+                <!-- Exercise Section (Expanded Example) -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-2xl">💪</span>
+                        <h3 class="font-bold text-gray-900">Activity & Exercise</h3>
+                    </div>
+
+                    <div class="bg-purple-50 rounded-lg p-3 mb-3 border border-purple-200">
+                        <div class="text-xs font-semibold text-purple-900 mb-1">🎯 Your Micro-Move:</div>
+                        <div class="text-sm text-purple-800">#1: 10-min morning walk</div>
+                        <div class="text-xs text-purple-700 mt-1">Track it here to enrich your journal!</div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-700 mb-2">Type</div>
+                            <div class="grid grid-cols-4 gap-2">
+                                ${['Walk', 'Run', 'Yoga', 'Gym', 'HIIT', 'Cycle', 'Swim', 'Other'].map((type, i) => `
+                                    <button class="py-2 px-2 rounded-lg text-xs font-semibold ${i === 0 ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-700'}">
+                                        ${type}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="text-sm font-semibold text-gray-700">Duration</div>
+                                <div class="text-sm font-bold text-purple-600">15 min</div>
+                            </div>
+                            <input type="range" min="0" max="120" value="15" class="w-full" />
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>0 min</span>
+                                <span>120 min</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-sm font-semibold text-gray-700 mb-2">Intensity</div>
+                            <div class="grid grid-cols-3 gap-2">
+                                ${['Light', 'Moderate', 'Vigorous'].map((int, i) => `
+                                    <button class="py-2 rounded-lg text-sm font-semibold ${i === 0 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'}">
+                                        ${int}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-sm font-semibold text-gray-700 mb-2">How did it feel?</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                ${['😊 Energized', '😌 Good', '😐 Okay', '😓 Exhausted'].map((feel, i) => `
+                                    <button class="py-2 rounded-lg text-sm font-semibold ${i === 0 ? 'bg-yellow-400 text-gray-900' : 'bg-gray-100 text-gray-700'}">
+                                        ${feel}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Impact Preview -->
+                    <div class="mt-4 bg-green-50 rounded-xl p-3 border border-green-200">
+                        <div class="text-xs font-semibold text-green-900 mb-2">💡 This will add to your journal:</div>
+                        <div class="text-sm text-green-800 italic">
+                            "You did a light 15-min walk this morning and felt energized afterward. This is your presence micro-move - +12 MindScore boost already showing!"
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sleep Section -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-2xl">💤</span>
+                        <h3 class="font-bold text-gray-900">Sleep</h3>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="text-sm font-semibold text-gray-700">Hours Slept</div>
+                            <div class="text-sm font-bold text-blue-600">7.5h</div>
+                        </div>
+                        <input type="range" min="0" max="12" step="0.5" value="7.5" class="w-full mb-2" />
+                        
+                        <div class="text-sm font-semibold text-gray-700 mb-2">Quality</div>
+                        <div class="flex gap-1 justify-center">
+                            ${[1,2,3,4,5].map(star => `
+                                <span class="text-2xl">${star <= 4 ? '⭐' : '☆'}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('home-v2')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl mb-20">
+                    Save All Details →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 5: HOME V2 (GAMIFIED)
+        const HomeV2 = () => {
+            const todayMicroMoves = userData.intention.microMoves.filter(m => m.completed[currentDay]);
+            const completedCount = todayMicroMoves.length;
+            const streakActive = userData.currentStreak >= 3;
+            
+            return `
+            <div class="p-4 pb-20">
+                <!-- Header -->
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Hey ${userData.name}! 👋</h1>
+                        <p class="text-sm text-gray-600">Living your intention today</p>
+                    </div>
+                    <button onclick="navigateTo('set-intention')" class="w-11 h-11 bg-gray-100 rounded-full flex items-center justify-center text-xl">⚙️</button>
+                </div>
+
+                <!-- Streak & Stats Banner -->
+                <div class="bg-gradient-to-r from-orange-400 to-red-500 rounded-2xl p-4 mb-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="text-4xl streak-flame">🔥</div>
+                            <div>
+                                <div class="text-2xl font-black">${userData.currentStreak} Day Streak!</div>
+                                <div class="text-xs opacity-90">Longest: ${userData.longestStreak} days</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm opacity-90">Total</div>
+                            <div class="text-xl font-bold">${userData.totalCheckIns}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Intention Banner -->
+                <div class="bg-gradient-to-r from-purple-500 to-purple-700 rounded-2xl p-4 mb-4 text-white">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-2xl">🎯</span>
+                        <span class="text-xs font-semibold uppercase tracking-wide opacity-90">Your Intention</span>
+                    </div>
+                    <p class="text-base font-bold italic mb-3">"${userData.intention.text}"</p>
+                    
+                    <div class="bg-white/20 rounded-xl p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold">TODAY'S PROGRESS:</span>
+                            <span class="text-sm font-black">${completedCount}/3 ✨</span>
+                        </div>
+                        ${userData.intention.microMoves.map((move, i) => {
+                            const done = i < 2;
+                            return `
+                                <div class="flex items-center justify-between mb-1 ${done ? 'opacity-100' : 'opacity-70'}">
+                                    <div class="flex items-center gap-2">
+                                        <span>${done ? '✅' : '☐'}</span>
+                                        <span class="text-sm">${move.name}</span>
+                                        ${move.streak >= 3 ? '<span class="text-xs">🔥</span>' : ''}
+                                    </div>
+                                    <span class="text-xs font-bold ${done ? 'text-green-300' : 'text-yellow-300'}">
+                                        ${done ? `+${move.impact}` : `+${move.impact} if done`}
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                        
+                        <div class="mt-3 pt-3 border-t border-white/30">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs">Intention Status:</span>
+                                <span class="text-sm font-bold ${completedCount >= 2 ? 'text-green-300' : 'text-yellow-300'}">
+                                    ${completedCount >= 2 ? 'Strong ✨' : 'Partly there'}
+                                </span>
+                            </div>
+                            ${completedCount < 3 ? `
+                                <div class="text-xs mt-2 text-yellow-200">
+                                    💡 Complete micro-move #3 (call) to fully activate today!
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Check-in Status -->
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    ${['Morning', 'Day', 'Evening', 'Night'].map((part, i) => `
+                        <div class="bg-${i < 3 ? 'green' : 'gray'}-${i < 3 ? '100' : '100'} border-2 border-${i < 3 ? 'green' : 'gray'}-${i < 3 ? '400' : '300'} rounded-xl p-2 text-center">
+                            <div class="text-xs font-semibold ${i < 3 ? 'text-green-700' : 'text-gray-500'}">${part}</div>
+                            <div class="text-lg">${i < 3 ? '✓' : '🌙'}</div>
+                            ${i < 3 ? `<div class="text-xs text-green-600 font-bold">+${[17, 8, 10][i]}</div>` : `<div class="text-xs text-gray-500">Tap to start</div>`}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Fulfillment Ring (Gamified) -->
+                <div class="bg-white rounded-2xl p-5 mb-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-900">Today's Fulfillment</h3>
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">Meaningful ✨</span>
+                    </div>
+                    
+                    <!-- Circular Progress -->
+                    <div class="relative w-48 h-48 mx-auto mb-4">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#E5E7EB" stroke-width="8"/>
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="url(#gradient)" stroke-width="8"
+                                stroke-dasharray="${userData.todayScores.fulfillment * 2.827} 283"
+                                transform="rotate(-90 50 50)"
+                                stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <div class="text-4xl font-black text-purple-600">${userData.todayScores.fulfillment}</div>
+                            <div class="text-xs text-gray-500">of 100</div>
+                        </div>
+                    </div>
+
+                    <!-- Score Breakdown with Impact -->
+                    <div class="space-y-2">
+                        ${['Body', 'Mind', 'Soul', 'Purpose'].map((dim, i) => {
+                            const scores = [userData.todayScores.body, userData.todayScores.mind, userData.todayScores.soul, userData.todayScores.purpose];
+                            const boosts = ['+5', '+32', '+4', '+8'];
+                            return `
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-semibold">${dim}</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-green-600 text-xs font-bold">${boosts[i]} ⬆️</span>
+                                            <span class="text-sm font-bold text-gray-900">${scores[i]}</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                        <div class="bg-gradient-to-r from-purple-500 to-blue-500 h-1.5 rounded-full transition-all" style="width: ${scores[i]}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div class="mt-4 p-3 bg-purple-50 rounded-xl">
+                        <div class="text-xs font-semibold text-purple-900 mb-1">💡 Why your Mind is 82:</div>
+                        <div class="text-xs text-purple-700">
+                            Walk (+12) + Meditation (+8) + Reading (+6) + Good mood (+5) + No-phone (+6) = +32!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Insights (Gamified) -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-3">💡 Active Power-Ups</h3>
+                    
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-3 mb-3 border-2 border-yellow-400">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-yellow-800">⚡ ACTIVE NOW</span>
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">✓ Used today</span>
+                                ${userData.intention.microMoves[0].streak >= 3 ? '<span class="text-xs">🔥 ' + userData.intention.microMoves[0].streak + 'x</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="font-bold text-gray-900 mb-1">Morning Walk Power-Up</div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <div class="bg-green-500 text-white px-3 py-1 rounded-full font-bold">+12 Mind</div>
+                            <div class="text-gray-600">→ Mental clarity</div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-600">
+                            Your #1 micro-move • 5/7 days this week 👏
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 rounded-xl p-3 border-2 border-purple-400">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-purple-800">🔮 COMBO BONUS</span>
+                            <span class="text-xs bg-yellow-500 text-white px-2 py-0.5 rounded-full pulsing font-bold">1 more!</span>
+                        </div>
+                        <div class="font-bold text-gray-900 mb-1">2+ Micro-Moves Combo</div>
+                        <div class="flex items-center gap-2 text-sm mb-2">
+                            <div class="bg-purple-500 text-white px-3 py-1 rounded-full font-bold">+15 Purpose</div>
+                            <div class="text-gray-600">→ Momentum!</div>
+                        </div>
+                        <div class="text-xs font-bold text-purple-900">
+                            Today: 2/3 done → Complete micro-move #3 to activate! 🎯
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="space-y-3">
+                    <button onclick="navigateTo('journal-v2')" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">📔</span>
+                            <div class="text-left">
+                                <div class="font-bold">View Today's Story</div>
+                                <div class="text-xs opacity-90">Timeline + Impact chains</div>
+                            </div>
+                        </div>
+                        <span class="text-2xl">→</span>
+                    </button>
+
+                    <button onclick="navigateTo('intention-dashboard')" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🎯</span>
+                            <div class="text-left">
+                                <div class="font-bold">Intention Dashboard</div>
+                                <div class="text-xs opacity-90">4-week progress + formula</div>
+                            </div>
+                        </div>
+                        <span class="text-2xl">→</span>
+                    </button>
+
+                    <button onclick="navigateTo('weekly-review-v2')" class="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">📊</span>
+                            <div class="text-left">
+                                <div class="font-bold">This Week's Progress</div>
+                                <div class="text-xs opacity-90">5/7 meaningful days!</div>
+                            </div>
+                        </div>
+                        <span class="text-2xl">→</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        };
+
+        // SCREEN 6: JOURNAL V2 (GENERATING)
+        const JournalGenerating = () => `
+            <div class="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                <div class="text-6xl mb-6 animate-pulse">🤖</div>
+                <h2 class="text-2xl font-bold mb-3">AI is crafting your story...</h2>
+                <p class="text-sm opacity-90 mb-6 text-center">
+                    Analyzing your check-ins, micro-moves, and intention progress
+                </p>
+                
+                <div class="w-full max-w-xs space-y-3">
+                    <div class="bg-white/20 rounded-lg p-3 backdrop-blur slide-in">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">✅</span>
+                            <span class="text-sm">Reviewing 4 check-ins...</span>
+                        </div>
+                    </div>
+                    <div class="bg-white/20 rounded-lg p-3 backdrop-blur slide-in" style="animation-delay: 0.3s">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">✅</span>
+                            <span class="text-sm">Connecting to your intention...</span>
+                        </div>
+                    </div>
+                    <div class="bg-white/20 rounded-lg p-3 backdrop-blur slide-in" style="animation-delay: 0.6s">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">✅</span>
+                            <span class="text-sm">Calculating impact chains...</span>
+                        </div>
+                    </div>
+                    <div class="bg-white/20 rounded-lg p-3 backdrop-blur slide-in" style="animation-delay: 0.9s">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">🤖</span>
+                            <span class="text-sm">Writing your personalized journal...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('journal-v2')" class="mt-8 bg-white text-purple-600 px-6 py-3 rounded-xl font-bold">
+                    Skip to Journal →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 7: JOURNAL V2
+        const JournalV2 = () => `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="navigateTo('home-v2')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Monday's Journey</h2>
+                    <button class="text-gray-400">⋯</button>
+                </div>
+
+                <!-- Intention Context -->
+                <div class="bg-purple-100 rounded-xl p-3 mb-4 border border-purple-300">
+                    <div class="text-xs font-semibold text-purple-900 mb-1">🎯 YOUR INTENTION TODAY:</div>
+                    <div class="text-sm text-purple-800 italic font-semibold">"${userData.intention.text}"</div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <span class="text-xs text-purple-700">Progress: 2/3 micro-moves ✅</span>
+                        <span class="text-xs font-bold text-purple-900">Partly there</span>
+                    </div>
+                </div>
+
+                <!-- Timeline View -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span>⏱️</span>
+                        <span>Your Day's Journey</span>
+                    </h3>
+                    
+                    ${userData.checkIns.map((ci, idx) => `
+                        <div class="relative pl-6 pb-5 ${idx < userData.checkIns.length - 1 ? 'border-l-2 border-blue-300' : ''}">
+                            <div class="absolute left-0 top-0 w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full -ml-2"></div>
+                            
+                            <div class="text-xs text-gray-500 mb-1">${ci.time}</div>
+                            <div class="font-semibold text-gray-900 mb-2">${ci.dayPart} Check-in • ${ci.mood}</div>
+                            
+                            ${ci.microAct ? `
+                                <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3 mb-2 border border-green-300">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-xl">${ci.microAct === 'Walk' ? '🚶' : ci.microAct === 'Reading' ? '📖' : '🧘'}</span>
+                                        <span class="font-bold text-gray-900">${ci.microAct}</span>
+                                        ${ci.microAct === 'Walk' || ci.microAct === 'Reading' ? '<span class="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full font-bold">MICRO-MOVE!</span>' : ''}
+                                    </div>
+                                    
+                                    <div class="bg-white rounded-lg p-2 mb-2">
+                                        <div class="text-xs font-semibold text-gray-700 mb-1">Impact Chain:</div>
+                                        ${ci.impacts.map(imp => `
+                                            <div class="flex items-center gap-1 text-xs">
+                                                <span class="font-bold text-green-600">${imp}</span>
+                                                <span class="text-gray-400">⬆️</span>
+                                            </div>
+                                        `).join('')}
+                                        ${ci.microAct === 'Walk' ? `
+                                            <div class="mt-1 pt-1 border-t border-gray-200">
+                                                <div class="text-xs text-purple-700 font-semibold">→ Mental clarity</div>
+                                                <div class="text-xs text-purple-700 font-semibold">→ PRESENCE achieved</div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <div class="text-xs italic text-gray-600">
+                                        💭 ${ci.microAct === 'Walk' ? 'Your walk gave you mental clarity - this is your #1 micro-move!' :
+                                             ci.microAct === 'Reading' ? 'Reading (micro-move #2!) deepened your presence.' :
+                                             'Meditation added to your mental clarity.'}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+
+                    <!-- Missing Opportunity -->
+                    <div class="relative pl-6">
+                        <div class="absolute left-0 top-0 w-4 h-4 bg-orange-400 rounded-full -ml-2 pulsing"></div>
+                        <div class="text-xs text-gray-500 mb-1">9:00 PM</div>
+                        <div class="font-semibold text-gray-900 mb-2">Night • Opportunity</div>
+                        
+                        <div class="bg-orange-50 rounded-lg p-3 border border-orange-300">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-lg">⚠️</span>
+                                <span class="font-bold text-gray-900">Missed Micro-Move</span>
+                            </div>
+                            <div class="text-sm text-gray-700 mb-2">☐ Call friend (Micro-move #3)</div>
+                            <div class="bg-white rounded p-2 mb-2 text-xs">
+                                <div class="font-semibold text-gray-700">Would've added:</div>
+                                <div class="font-bold text-orange-600">+10 Soul ⬆️ → Deeper connection</div>
+                                <div class="text-gray-600 mt-1">→ Would be 79/100 (vs 72 now)</div>
+                            </div>
+                            <div class="text-xs text-gray-600 italic">
+                                💭 Tomorrow: Call in evening. Social connection completes your presence formula.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Formula -->
+                <div class="bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl p-4 mb-4 text-white shadow-lg">
+                    <div class="text-sm font-bold mb-3">🧬 TODAY'S PRESENCE FORMULA</div>
+                    <div class="bg-white/20 rounded-xl p-3 backdrop-blur">
+                        <div class="text-center">
+                            <div class="font-bold mb-1">Walk + Reading</div>
+                            <div class="text-2xl my-2">↓</div>
+                            <div class="text-sm">+18 Mind, +4 Soul</div>
+                            <div class="text-2xl my-2">↓</div>
+                            <div class="text-xl font-black">72/100</div>
+                            <div class="text-xs mt-1 opacity-90">Partly Present (missing call)</div>
+                        </div>
+                        <div class="border-t border-white/30 pt-2 mt-2 text-xs text-center">
+                            With call (+10): Would be <span class="font-bold">79/100</span> 🌟
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Guidance -->
+                <div class="bg-white rounded-2xl p-4 mb-4">
+                    <h3 class="font-bold text-gray-900 mb-3">🤖 AI Guidance for Tomorrow</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-start gap-2">
+                            <span class="text-green-600 text-lg">✅</span>
+                            <div class="text-gray-700">
+                                <span class="font-semibold">Keep doing:</span> Morning walk + reading (2/3 is good!)
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-orange-600 text-lg">🎯</span>
+                            <div class="text-gray-700">
+                                <span class="font-semibold">Priority:</span> Call friend (1/7 this week, adds +10 Soul)
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-purple-600 text-lg">💎</span>
+                            <div class="text-gray-700">
+                                <span class="font-semibold">Predicted:</span> All 3 micro-moves = 82 fulfillment (your best!)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('intention-dashboard')" class="w-full bg-purple-100 text-purple-800 font-bold py-3 rounded-xl">
+                    View Your Proven Formula →
+                </button>
+            </div>
+        `;
+
+        // SCREEN 8: INTENTION DASHBOARD (GAMIFIED)
+        const IntentionDashboard = () => {
+            const week = currentWeek;
+            const stats = userData.weeklyStats[`week${week}`];
+            
+            return `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="navigateTo('home-v2')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Intention HQ</h2>
+                    <div class="w-16"></div>
+                </div>
+
+                <!-- Your Intention Card -->
+                <div class="bg-gradient-to-r from-purple-500 to-purple-700 rounded-2xl p-5 mb-4 text-white shadow-lg">
+                    <div class="text-xs font-bold uppercase tracking-wide mb-2 opacity-90">YOUR INTENTION</div>
+                    <div class="text-xl font-bold italic mb-4">"${userData.intention.text}"</div>
+                    <div class="bg-white/20 rounded-xl p-3 backdrop-blur">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-xs opacity-90">Week ${week} Progress</div>
+                                <div class="text-3xl font-black">${stats.grade}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs opacity-90">Fulfillment</div>
+                                <div class="text-3xl font-black">${stats.fulfillment}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4-Week Transformation Graph -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-900">📈 Your Transformation</h3>
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
+                            +${userData.weeklyStats.week4.fulfillment - userData.weeklyStats.week1.fulfillment}% in 4 weeks!
+                        </span>
+                    </div>
+                    
+                    <div class="flex justify-between items-end h-40 mb-4">
+                        ${[1,2,3,4].map(w => {
+                            const data = userData.weeklyStats[`week${w}`];
+                            const height = (data.fulfillment / 82) * 100;
+                            return `
+                                <div class="flex-1 flex flex-col items-center gap-2">
+                                    <div class="text-xs font-bold ${w === week ? 'text-purple-600' : 'text-gray-500'}">${data.grade}</div>
+                                    <div class="w-full flex flex-col items-center justify-end" style="height: 140px;">
+                                        <div class="text-sm font-bold mb-1 ${w === week ? 'text-purple-600' : 'text-gray-700'}">${data.fulfillment}</div>
+                                        <div class="w-12 bg-gradient-to-t ${w === week ? 'from-purple-500 to-purple-700' : 'from-gray-300 to-gray-400'} rounded-t-lg relative" style="height: ${height}%">
+                                            ${w > 1 && data.improvement > 0 ? `
+                                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-green-600">
+                                                    +${data.improvement}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-500">W${w}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-1 text-center text-xs text-gray-600 mb-3">
+                        <div>Finding</div>
+                        <div>Building</div>
+                        <div>Habits</div>
+                        <div>Mastery</div>
+                    </div>
+                </div>
+
+                <!-- Micro-Move Mastery -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-4">🎯 Micro-Move Mastery</h3>
+                    
+                    ${userData.intention.microMoves.map((move, idx) => {
+                        const completedDays = move.completed.filter(c => c).length;
+                        const completionRate = Math.round(completedDays / 7 * 100);
+                        const level = completionRate >= 80 ? 'Master' : completionRate >= 60 ? 'Pro' : completionRate >= 40 ? 'Building' : 'Starting';
+                        const levelColor = completionRate >= 80 ? 'purple' : completionRate >= 60 ? 'blue' : completionRate >= 40 ? 'green' : 'gray';
+                        
+                        return `
+                        <div class="mb-4 ${idx < userData.intention.microMoves.length - 1 ? 'pb-4 border-b border-gray-200' : ''}">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-gray-900">${move.name}</span>
+                                    ${move.streak >= 3 ? '<span class="text-lg streak-flame">🔥</span>' : ''}
+                                </div>
+                                <span class="text-xs bg-${levelColor}-100 text-${levelColor}-700 px-2 py-1 rounded-full font-bold">
+                                    ${level}
+                                </span>
+                            </div>
+                            
+                            <!-- Visual Calendar -->
+                            <div class="flex gap-1 mb-2">
+                                ${move.completed.map((done, day) => `
+                                    <div class="flex-1 h-10 ${done ? 'bg-gradient-to-t from-green-500 to-green-400' : 'bg-gray-200'} rounded flex flex-col items-center justify-center ${done ? 'shadow-md' : ''}">
+                                        <div class="text-xs ${done ? 'text-white font-bold' : 'text-gray-500'}">
+                                            ${['M','T','W','T','F','S','S'][day]}
+                                        </div>
+                                        ${done ? '<div class="text-white text-xs">✓</div>' : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-600">${completedDays}/7 days (${completionRate}%)</span>
+                                ${move.streak >= 3 ? `<span class="text-xs font-bold text-orange-600">${move.streak}-day streak! 🔥</span>` : ''}
+                            </div>
+
+                            <div class="bg-gray-50 rounded-lg p-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600">Impact per completion:</span>
+                                    <span class="font-bold text-green-600 text-sm">+${move.impact} ${move.dimension}</span>
+                                </div>
+                                <div class="text-xs text-gray-600">
+                                    Total earned this week: <span class="font-bold text-green-600">+${completedDays * move.impact}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+
+                <!-- Proven Formula Flowchart -->
+                <div class="bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl p-5 mb-4 text-white shadow-lg">
+                    <div class="text-sm font-bold mb-4 text-center">🧬 YOUR PROVEN FORMULA</div>
+                    <div class="bg-white/20 rounded-xl p-4 backdrop-blur">
+                        <div class="text-center space-y-3">
+                            <div>
+                                <div class="font-bold mb-2">MORNING ROUTINE</div>
+                                <div class="bg-white/30 rounded-lg p-3 text-sm">
+                                    🚶 Walk (10 min)<br/>
+                                    +<br/>
+                                    📵 No Phone (1 hour)
+                                </div>
+                                <div class="text-2xl my-2">↓</div>
+                                <div class="text-sm">+18 MindScore</div>
+                                <div class="text-xs opacity-90">Mental Clarity</div>
+                            </div>
+                            
+                            <div class="text-xl">+</div>
+                            
+                            <div>
+                                <div class="font-bold mb-2">EVENING ACTION</div>
+                                <div class="bg-white/30 rounded-lg p-3 text-sm">
+                                    📖 Reading<br/>
+                                    OR<br/>
+                                    📞 Friend Call
+                                </div>
+                                <div class="text-2xl my-2">↓</div>
+                                <div class="text-sm">+10 to +16 boost</div>
+                                <div class="text-xs opacity-90">Connection & Reflection</div>
+                            </div>
+                            
+                            <div class="text-xl">=</div>
+                            
+                            <div class="bg-white/40 rounded-xl p-4">
+                                <div class="text-4xl font-black mb-1">82</div>
+                                <div class="text-sm">AVG FULFILLMENT</div>
+                                <div class="text-xs mt-2 opacity-90">= PRESENCE ACHIEVED ✨</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 pt-4 border-t border-white/30 text-xs text-center space-y-1">
+                            <div>When you follow this: <span class="font-bold">82 avg</span></div>
+                            <div>When you skip: <span class="font-bold">54 avg</span></div>
+                            <div class="font-bold mt-2">Tested ${week * 7} days • ${Math.round(userData.intention.microMoves[0].completed.filter(c=>c).length / 7 * 100)}% success</div>
+                            <div class="mt-2 opacity-90">This is YOUR formula, proven by YOUR data.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('weekly-review-v2')" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl shadow-lg">
+                    View This Week's Progress →
+                </button>
+            </div>
+        `;
+        };
+
+        // SCREEN 9: WEEKLY REVIEW V2 (GAMIFIED)
+        const WeeklyReviewV2 = () => {
+            const week = currentWeek;
+            const stats = userData.weeklyStats[`week${week}`];
+            
+            return `
+            <div class="p-4 pb-20">
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="navigateTo('intention-dashboard')" class="text-blue-600 font-semibold">← Back</button>
+                    <h2 class="font-bold text-gray-900">Week ${week} Review</h2>
+                    <div class="w-16"></div>
+                </div>
+
+                <!-- Hero Stats -->
+                <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 mb-4 text-white text-center shadow-lg">
+                    <div class="text-sm font-bold uppercase tracking-wide mb-2 opacity-90">MEANINGFUL DAYS</div>
+                    <div class="flex items-baseline justify-center gap-2 mb-2">
+                        <div class="text-6xl font-black">${stats.meaningfulDays}</div>
+                        <div class="text-3xl text-white/70">/7</div>
+                    </div>
+                    ${week > 1 ? `
+                        <div class="bg-white/20 rounded-full px-4 py-2 inline-block backdrop-blur">
+                            <span class="text-sm font-bold">📈 +${stats.meaningfulDays - userData.weeklyStats[`week${week-1}`].meaningfulDays} vs last week</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Intention Progress Report Card -->
+                <div class="bg-white rounded-2xl p-5 mb-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-900">🎯 Intention Report Card</h3>
+                        <div class="text-3xl font-black text-purple-600">${stats.grade}</div>
+                    </div>
+                    
+                    <div class="bg-purple-50 rounded-xl p-3 mb-3">
+                        <div class="text-sm font-semibold text-purple-900 italic mb-2">"${userData.intention.text}"</div>
+                        <div class="w-full bg-purple-200 rounded-full h-3 mb-2">
+                            <div class="bg-gradient-to-r from-purple-500 to-purple-700 h-3 rounded-full transition-all" style="width: ${stats.fulfillment}%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-purple-700">
+                            <span>${stats.fulfillment}% fulfillment</span>
+                            <span>${stats.meaningfulDays}/7 meaningful days</span>
+                        </div>
+                    </div>
+
+                    ${week > 1 ? `
+                        <div class="bg-green-50 rounded-lg p-3">
+                            <div class="text-xs font-semibold text-green-900">📈 Weekly Improvement:</div>
+                            <div class="text-2xl font-black text-green-600">+${stats.improvement}%</div>
+                            <div class="text-xs text-green-700">
+                                ${stats.improvement >= 10 ? 'Excellent progress!' : stats.improvement >= 5 ? 'Great improvement!' : 'Steady growth!'}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Micro-Move Scorecard -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-4">📊 Micro-Move Scorecard</h3>
+                    
+                    ${userData.intention.microMoves.map((move, idx) => {
+                        const completed = move.completed.filter(c => c).length;
+                        const rate = Math.round(completed / 7 * 100);
+                        const earned = completed * move.impact;
+                        const potential = 7 * move.impact;
+                        const missed = potential - earned;
+                        
+                        return `
+                        <div class="mb-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold">#${idx + 1} ${move.name}</span>
+                                    ${move.streak >= 3 ? '<span class="streak-flame">🔥</span>' : ''}
+                                </div>
+                                <span class="text-sm font-bold ${rate >= 70 ? 'text-green-600' : rate >= 40 ? 'text-yellow-600' : 'text-orange-600'}">
+                                    ${completed}/7
+                                </span>
+                            </div>
+                            
+                            <div class="flex gap-1 mb-2">
+                                ${move.completed.map(done => `
+                                    <div class="flex-1 h-2 ${done ? 'bg-green-500' : 'bg-gray-300'} rounded"></div>
+                                `).join('')}
+                            </div>
+
+                            <div class="bg-gray-50 rounded-lg p-2 text-xs">
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-gray-600">Earned this week:</span>
+                                    <span class="font-bold text-green-600">+${earned} ${move.dimension}</span>
+                                </div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-gray-600">Potential if 7/7:</span>
+                                    <span class="font-bold text-gray-500">+${potential}</span>
+                                </div>
+                                ${missed > 0 ? `
+                                    <div class="flex justify-between text-orange-600 font-bold">
+                                        <span>Left on table:</span>
+                                        <span>-${missed} points</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="mt-2 text-xs ${rate >= 70 ? 'text-green-700' : rate >= 40 ? 'text-yellow-700' : 'text-orange-700'}">
+                                ${rate >= 70 ? '✅ Excellent! This is becoming a habit!' :
+                                  rate >= 40 ? '📈 Good progress! Aim for 5+ next week' :
+                                  '⚠️ Focus area: Try to double this next week'}
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+
+                <!-- What Worked / Opportunities -->
+                <div class="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-4">✨ This Week's Insights</h3>
+                    
+                    <div class="mb-4">
+                        <div class="font-semibold text-green-700 mb-2 flex items-center gap-2">
+                            <span>✅</span>
+                            <span>What Worked:</span>
+                        </div>
+                        <div class="space-y-1 text-sm text-gray-700">
+                            <div>• Morning walks: 5/7 days (becoming a habit!)</div>
+                            <div>• ${stats.meaningfulDays} meaningful days (up ${week > 1 ? '+' + (stats.meaningfulDays - userData.weeklyStats[`week${week-1}`].meaningfulDays) : ''})</div>
+                            <div>• Walk + No-phone combo: +18 Mind (discovered!)</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="font-semibold text-orange-700 mb-2 flex items-center gap-2">
+                            <span>🎯</span>
+                            <span>Opportunities:</span>
+                        </div>
+                        <div class="space-y-1 text-sm text-gray-700">
+                            <div>• Call friend: Only 1/7 (biggest gap!)</div>
+                            <div>• Reading: 3/7 (can improve to 5+)</div>
+                            <div>• Left ${(7-stats.meaningfulDays)*20} points on table (missed days)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Week Suggestions -->
+                <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 mb-4 border-2 border-blue-300">
+                    <h3 class="font-bold text-gray-900 mb-3">🤖 AI Suggests for Next Week:</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-start gap-2">
+                            <span class="text-purple-600 font-bold">1️⃣</span>
+                            <div class="text-gray-800">
+                                <span class="font-semibold">Priority:</span> Call friend 2x minimum (currently 1/7)
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-purple-600 font-bold">2️⃣</span>
+                            <div class="text-gray-800">
+                                <span class="font-semibold">Maintain:</span> Morning walk routine (5/7 is great!)
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-purple-600 font-bold">3️⃣</span>
+                            <div class="text-gray-800">
+                                <span class="font-semibold">Goal:</span> Hit 6+ meaningful days (you did 5 this week)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="navigateTo('set-intention')" class="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                    Set Next Week's Focus →
+                </button>
+            </div>
+        `;
+        };
+
+        // Navigation
+        function navigateTo(screen) {
+            currentScreen = screen;
+            render();
+            document.getElementById('screen').scrollTop = 0;
+        }
+
+        function render() {
+            const screenElement = document.getElementById('screen');
+            
+            switch(currentScreen) {
+                case 'onboarding':
+                    screenElement.innerHTML = OnboardingScreen();
+                    break;
+                case 'set-intention':
+                    screenElement.innerHTML = SetIntentionScreen();
+                    break;
+                case 'check-in-v2':
+                    screenElement.innerHTML = CheckInV2();
+                    break;
+                case 'add-details-v2':
+                    screenElement.innerHTML = AddDetailsV2();
+                    break;
+                case 'home-v2':
+                    screenElement.innerHTML = HomeV2();
+                    break;
+                case 'journal-generating':
+                    screenElement.innerHTML = JournalGenerating();
+                    break;
+                case 'journal-v2':
+                    screenElement.innerHTML = JournalV2();
+                    break;
+                case 'intention-dashboard':
+                    screenElement.innerHTML = IntentionDashboard();
+                    break;
+                case 'weekly-review-v2':
+                    screenElement.innerHTML = WeeklyReviewV2();
+                    break;
+                default:
+                    screenElement.innerHTML = HomeV2();
+            }
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,113 @@
+# FULFILLMENT APP - PRODUCTION DOCKER COMPOSE
+# Use this for production deployment on EC2
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: fulfillment-db-prod
+    restart: always
+    environment:
+      POSTGRES_DB: fulfillment
+      POSTGRES_USER: fulfillment_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+    networks:
+      - fulfillment-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fulfillment_user -d fulfillment"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fulfillment-backend:latest
+    container_name: fulfillment-backend-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: fulfillment
+      DB_USER: fulfillment_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    ports:
+      - "127.0.0.1:3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fulfillment-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: fulfillment-frontend:latest
+    container_name: fulfillment-frontend-prod
+    restart: always
+    ports:
+      - "127.0.0.1:3006:80"
+    depends_on:
+      - backend
+    networks:
+      - fulfillment-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: fulfillment-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - fulfillment-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  fulfillment-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
