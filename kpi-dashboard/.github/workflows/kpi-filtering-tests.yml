@@ -1,0 +1,36 @@
+name: KPI Filtering Tests
+
+on:
+  push:
+    paths:
+      - 'src/components/CSPlatform.tsx'
+      - 'src/utils/kpiFiltering.ts'
+      - 'backend/kpi_api.py'
+      - 'backend/health_score_engine.py'
+  pull_request:
+    paths:
+      - 'src/components/CSPlatform.tsx'
+      - 'src/utils/kpiFiltering.ts'
+      - 'backend/kpi_api.py'
+      - 'backend/health_score_engine.py'
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm install
+      - run: npm test -- src/utils/kpiFiltering.test.ts --coverage
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: cd backend && python3 -m pytest tests/test_kpi_filtering.py -v
