@@ -133,21 +133,25 @@ const CSPlatform = () => {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   
-  // Finviz-style heatmap toggle (local dev only - feature flag)
-  const [useFinvizHeatmap, setUseFinvizHeatmap] = useState(() => {
+  // Account Health Dashboard tab state
+  const [accountHealthTab, setAccountHealthTab] = useState<'list' | 'finviz'>(() => {
     // Check if we're in local development
     const isLocalDev = window.location.hostname === 'localhost' || 
                        window.location.hostname === '127.0.0.1' ||
                        window.location.hostname === '' ||
                        process.env.NODE_ENV === 'development';
     
-    // Always allow in development, or if explicitly enabled
-    const canUse = isLocalDev || process.env.REACT_APP_ENABLE_FINVIZ === 'true';
+    // Allow Finviz tab if local dev OR if explicitly enabled via env var
+    const canUseFinviz = isLocalDev || process.env.REACT_APP_ENABLE_FINVIZ === 'true';
     
-    if (!canUse) return false;
+    // Check localStorage for saved preference
+    const saved = localStorage.getItem('account_health_tab');
+    if (saved === 'finviz' && canUseFinviz) {
+      return 'finviz';
+    }
     
-    const saved = localStorage.getItem('use_finviz_heatmap');
-    return saved === 'true';
+    // Default to list view
+    return 'list';
   });
   
   // Settings UI preferences (persisted in localStorage)
@@ -2384,89 +2388,249 @@ const CSPlatform = () => {
     );
   };
 
-  const AccountHealthDashboard = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Account Health Dashboard</h2>
-        <button 
-          onClick={calculateCorporateRollup}
-          disabled={isCalculatingRollup}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isCalculatingRollup ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Calculator className="h-4 w-4 mr-2" />
-          )}
-          {isCalculatingRollup ? 'Calculating...' : 'Calculate Corporate Rollup'}
-        </button>
-      </div>
+  const AccountHealthDashboard = () => {
+    // Check if Finviz tab should be available
+    const isLocalDev = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.hostname === '';
+    const canUseFinviz = isLocalDev || process.env.REACT_APP_ENABLE_FINVIZ === 'true';
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-600">{error}</p>
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Account Health Dashboard</h2>
+          <button 
+            onClick={calculateCorporateRollup}
+            disabled={isCalculatingRollup}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isCalculatingRollup ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Calculator className="h-4 w-4 mr-2" />
+            )}
+            {isCalculatingRollup ? 'Calculating...' : 'Calculate Corporate Rollup'}
+          </button>
         </div>
-      )}
 
-      {isLoading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-center">
-            <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mr-3" />
-            <span className="text-gray-600">Loading accounts...</span>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-600">{error}</p>
           </div>
-        </div>
-      ) : (
-        <>
-          {/* Account Heatmap */}
+        )}
+
+        {isLoading ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Account Health Heatmap</h3>
+            <div className="flex items-center justify-center">
+              <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mr-3" />
+              <span className="text-gray-600">Loading accounts...</span>
             </div>
-            
-            {/* Finviz Heatmap Toggle (Local Dev Only) - Always visible in development */}
-            <div className="mb-4 pb-3 border-b border-gray-200">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <span className="text-sm font-medium text-gray-700">Finviz Style Heatmap:</span>
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={useFinvizHeatmap}
-                    onChange={(e) => {
-                      const enabled = e.target.checked;
-                      setUseFinvizHeatmap(enabled);
-                      localStorage.setItem('use_finviz_heatmap', enabled ? 'true' : 'false');
+          </div>
+        ) : (
+          <>
+            {/* Tab Navigation */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="border-b border-gray-200">
+                <nav className="flex -mb-px">
+                  <button
+                    onClick={() => {
+                      setAccountHealthTab('list');
+                      localStorage.setItem('account_health_tab', 'list');
                     }}
-                    className="sr-only"
-                  />
-                  <div className={`w-11 h-6 rounded-full transition-colors ${
-                    useFinvizHeatmap ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
-                      useFinvizHeatmap ? 'translate-x-5' : 'translate-x-0'
-                    }`} style={{ marginTop: '2px', marginLeft: '2px' }}></div>
-                  </div>
-                </div>
-                <span className="text-xs text-gray-500">({useFinvizHeatmap ? 'ON' : 'OFF'})</span>
-              </label>
-            </div>
-            {accounts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p>No accounts found. Upload data to get started.</p>
+                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      accountHealthTab === 'list'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    List View
+                  </button>
+                  {canUseFinviz && (
+                    <button
+                      onClick={() => {
+                        setAccountHealthTab('finviz');
+                        localStorage.setItem('account_health_tab', 'finviz');
+                      }}
+                      className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                        accountHealthTab === 'finviz'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Finviz Heatmap
+                    </button>
+                  )}
+                </nav>
               </div>
-            ) : useFinvizHeatmap ? (
+
+              <div className="p-6">
+                {accounts.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>No accounts found. Upload data to get started.</p>
+                  </div>
+                ) : accountHealthTab === 'finviz' ? (
               // Finviz-style heatmap view
               <>
                 <AccountHealthHeatmap
                   accounts={accounts}
+                  selectedAccountId={selectedAccount?.account_id || null}
                   onAccountClick={(account) => {
-                    if (selectedAccount?.account_id === account.account_id) {
+                    if (account === null) {
+                      setSelectedAccount(null);
+                    } else if (selectedAccount?.account_id === account.account_id) {
                       setSelectedAccount(null);
                     } else {
                       setSelectedAccount(account);
                     }
                   }}
                 />
+                
+                {/* Show Account Summary Card when account is selected in heatmap view */}
+                {selectedAccount && (() => {
+                  const account = accounts.find(a => a.account_id === selectedAccount.account_id);
+                  if (!account) return null;
+                  
+                  return (
+                    <div className="mt-6 bg-white rounded-lg border-2 border-gray-200 overflow-hidden">
+                      {/* Account Header */}
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-gray-900 text-lg">{account.account_name}</h4>
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                              getHealthStatus(account.health_score).color === 'green' ? 'bg-green-500' :
+                              getHealthStatus(account.health_score).color === 'yellow' ? 'bg-yellow-500' :
+                              'bg-red-500'
+                            }`}></div>
+                            <span className="text-sm text-gray-500">
+                              ▼
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Account Details Grid - Matching List View Format */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          {/* Health Score with Status */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Health Score</p>
+                            {(() => {
+                              const healthStatus = getHealthStatus(account.health_score);
+                              return (
+                                <div className="flex items-center space-x-2">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    healthStatus.color === 'green' ? 'bg-green-100 text-green-800' :
+                                    healthStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {healthStatus.status}
+                                  </span>
+                                  <span className="font-semibold text-gray-900">
+                                    {account.health_score?.toFixed(0) || 'N/A'}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          
+                          {/* Assigned CSM */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Assigned CSM</p>
+                            <p className="font-medium text-gray-900">{account.profile_metadata?.assigned_csm || 'N/A'}</p>
+                          </div>
+                          
+                          {/* Revenue */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Revenue</p>
+                            <p className="font-medium text-gray-900">${(account.revenue / 1000000).toFixed(1)}M</p>
+                          </div>
+                          
+                          {/* View KPIs Link */}
+                          <div className="flex items-end">
+                            <div className="flex items-center text-xs text-blue-600">
+                              <Eye className="h-3 w-3 mr-1" />
+                              <span>View KPIs</span>
+                            </div>
+                          </div>
+                          
+                          {/* Region */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Region</p>
+                            <p className="font-medium text-gray-900">{account.region || 'N/A'}</p>
+                          </div>
+                          
+                          {/* CSM Manager */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">CSM Manager</p>
+                            <p className="font-medium text-gray-900">{account.profile_metadata?.csm_manager || 'N/A'}</p>
+                          </div>
+                          
+                          {/* Industry */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Industry</p>
+                            <p className="font-medium text-gray-900">{account.industry || 'N/A'}</p>
+                          </div>
+                          
+                          {/* Status */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Status</p>
+                            <p className="font-medium text-gray-900 capitalize">{account.account_status || 'N/A'}</p>
+                          </div>
+                          
+                          {/* Products Used */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Products Used</p>
+                            <p className="font-medium text-gray-900">
+                              {(() => {
+                                const profileProducts = account.profile_metadata?.products_used;
+                                if (profileProducts && profileProducts.trim()) {
+                                  return profileProducts;
+                                }
+                                if (account.products_used && account.products_used.length > 0) {
+                                  return account.products_used.join(', ');
+                                }
+                                return 'N/A';
+                              })()}
+                            </p>
+                          </div>
+                          
+                          {/* Lifecycle */}
+                          {account.profile_metadata?.engagement?.lifecycle_stage && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Lifecycle</p>
+                              <p className="font-medium text-gray-900">{account.profile_metadata.engagement.lifecycle_stage}</p>
+                            </div>
+                          )}
+                          
+                          {/* Account Tier */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Account Tier</p>
+                            <p className="font-medium text-gray-900">{account.profile_metadata?.account_tier || 'N/A'}</p>
+                          </div>
+                          
+                          {/* Champion Name */}
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Champion Name</p>
+                            <p className="font-medium text-gray-900">
+                              {account.primary_champion_name || 
+                               account.profile_metadata?.champions?.[0]?.primary_champion_name || 
+                               'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Additional Info Row */}
+                        <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 grid grid-cols-2 md:grid-cols-3 gap-2">
+                          <p>Revenue: ${(account.revenue / 1000000).toFixed(1)}M</p>
+                          <p>Industry: {account.industry || 'N/A'}</p>
+                          {account.profile_metadata?.engagement?.lifecycle_stage && (
+                            <p>Lifecycle: {account.profile_metadata.engagement.lifecycle_stage}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 
                 {/* Show KPI table when account is selected in heatmap view */}
                 {selectedAccount && (() => {
@@ -2892,17 +3056,18 @@ const CSPlatform = () => {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+                )}
+              </div>
+            </div>
 
-          {/* Health Trend Chart */}
-          <TrendChart 
-            data={healthTrendData} 
-            title="Overall Health Trend (Last 12 Months)" 
-          />
+            {/* Health Trend Chart */}
+            <TrendChart 
+              data={healthTrendData} 
+              title="Overall Health Trend (Last 12 Months)" 
+            />
 
-          {/* Corporate Rollup Results */}
-          {rollupResults && (
+            {/* Corporate Rollup Results */}
+            {rollupResults && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Corporate Rollup Results</h3>
               
@@ -2955,10 +3120,10 @@ const CSPlatform = () => {
                 </ul>
               </div>
             </div>
-          )}
+            )}
 
-          {/* Products Section */}
-          {selectedAccount && products[selectedAccount.account_id] && products[selectedAccount.account_id].length > 0 && (
+            {/* Products Section */}
+            {selectedAccount && products[selectedAccount.account_id] && products[selectedAccount.account_id].length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -3119,11 +3284,12 @@ const CSPlatform = () => {
                 </table>
               </div>
             </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   if (!session) {
     return <div>Loading...</div>;

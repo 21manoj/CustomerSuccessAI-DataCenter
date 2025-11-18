@@ -87,8 +87,45 @@ def load_user(user_id):
 
 # Initialize global authentication middleware
 from auth_middleware import init_auth_middleware, get_current_customer_id, get_current_user_id
-from activity_logging import activity_logger
+# Activity logging - optional, only import if ActivityLog model exists
+try:
+    from activity_logging import activity_logger
+except ImportError:
+    # Create a dummy logger if ActivityLog model doesn't exist
+    class DummyActivityLogger:
+        def log_login(self, *args, **kwargs): pass
+        def log_logout(self, *args, **kwargs): pass
+        def log_settings_change(self, *args, **kwargs): pass
+        def log_data_upload(self, *args, **kwargs): pass
+        def log_query(self, *args, **kwargs): pass
+    activity_logger = DummyActivityLogger()
 init_auth_middleware(app)
+
+# Validate OpenAI API key support on startup
+try:
+    from validate_openai_key_support import validate_openai_key_support
+    errors, warnings = validate_openai_key_support()
+    if errors:
+        print("\n" + "="*70)
+        print("❌ OPENAI API KEY SUPPORT VALIDATION FAILED")
+        print("="*70)
+        for error in errors:
+            print(f"   ❌ {error}")
+        print("\n💡 Fix these errors before using OpenAI API key features!")
+        print("   Run: python backend/migrate_add_openai_key.py")
+        print("="*70 + "\n")
+    elif warnings:
+        print("\n" + "="*70)
+        print("⚠️  OPENAI API KEY SUPPORT WARNINGS")
+        print("="*70)
+        for warning in warnings:
+            print(f"   ⚠️  {warning}")
+        print("="*70 + "\n")
+    else:
+        print("✅ OpenAI API key support validated successfully")
+except Exception as e:
+    print(f"⚠️  Could not validate OpenAI API key support: {e}")
+    print("   Continuing startup, but OpenAI features may not work correctly")
 
 import models
 from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig
@@ -104,8 +141,9 @@ from time_series_api import time_series_api
 from cleanup_api import cleanup_api
 from health_trend_api import health_trend_api
 from health_status_api import health_status_api
-from kpi_reference_api import kpi_reference_api
-from reference_ranges_api import reference_ranges_api
+# kpi_reference_api and reference_ranges_api are deprecated - not registered
+# from kpi_reference_api import kpi_reference_api
+# from reference_ranges_api import reference_ranges_api
 from financial_projections_api import financial_projections_api
 from best_practices_api import best_practices_api
 from analytics_api import analytics_api
@@ -122,25 +160,50 @@ from direct_rag_api import direct_rag_api
 from customer_performance_summary_api import customer_perf_summary_api
 from workflow_config_api import workflow_config_api
 from export_api import export_api
+from rehydration_api import rehydration_api
 from data_quality_api import data_quality_api
 from customer_profile_api import customer_profile_api
 from enhanced_upload_api import enhanced_upload_api
 from enhanced_rag_openai_api import enhanced_rag_openai_api
+from secure_file_api import secure_file_api
+from master_file_api import master_file_api
+
+# Optional RAG APIs - only register if dependencies are available
+try:
+    from enhanced_rag_historical_api import enhanced_rag_historical_api
+    HAS_HISTORICAL_RAG = True
+except ImportError as e:
+    print(f"⚠️  Warning: enhanced_rag_historical_api not available: {e}")
+    HAS_HISTORICAL_RAG = False
+
+try:
+    from enhanced_rag_temporal_api import enhanced_rag_temporal_api
+    HAS_TEMPORAL_RAG = True
+except ImportError as e:
+    print(f"⚠️  Warning: enhanced_rag_temporal_api not available: {e}")
+    HAS_TEMPORAL_RAG = False
+
+try:
+    from enhanced_rag_qdrant_api import enhanced_rag_qdrant_api
+    HAS_QDRANT_RAG = True
+except ImportError as e:
+    print(f"⚠️  Warning: enhanced_rag_qdrant_api not available: {e}")
+    HAS_QDRANT_RAG = False
 
 app.register_blueprint(upload_api)
 app.register_blueprint(enhanced_upload_api)
 app.register_blueprint(kpi_api)
 app.register_blueprint(download_api)
+app.register_blueprint(secure_file_api)
 app.register_blueprint(data_management_api)
 app.register_blueprint(corporate_api)
 app.register_blueprint(time_series_api)
 app.register_blueprint(cleanup_api)
 app.register_blueprint(health_trend_api)
 app.register_blueprint(health_status_api)
-# Don't register kpi_reference_api - it's been replaced by kpi_reference_ranges_api
-# app.register_blueprint(kpi_reference_api)
-# Don't register reference_ranges_api - it has swapped values
-# app.register_blueprint(reference_ranges_api)
+# Deprecated APIs - not registered (replaced by kpi_reference_ranges_api)
+# kpi_reference_api - replaced by kpi_reference_ranges_api
+# reference_ranges_api - has swapped values, deprecated
 app.register_blueprint(financial_projections_api)
 app.register_blueprint(best_practices_api)
 app.register_blueprint(analytics_api)
@@ -157,14 +220,49 @@ app.register_blueprint(direct_rag_api)
 app.register_blueprint(customer_perf_summary_api)
 app.register_blueprint(workflow_config_api)
 app.register_blueprint(export_api)
-from activity_log_api import activity_log_api
-app.register_blueprint(activity_log_api)
-from governance_rag_api import governance_rag_api
-app.register_blueprint(governance_rag_api)
+app.register_blueprint(rehydration_api)
+
+# Activity log API - optional if ActivityLog model doesn't exist
+try:
+    from activity_log_api import activity_log_api
+    app.register_blueprint(activity_log_api)
+    print("✅ Registered activity_log_api")
+except ImportError as e:
+    print(f"⚠️  Warning: activity_log_api not available: {e}")
+    print("   Skipped activity_log_api (ActivityLog model may not exist)")
+
+# Governance RAG API - uses standard OpenAI (required dependency)
+try:
+    from governance_rag_api import governance_rag_api
+    app.register_blueprint(governance_rag_api)
+    print("✅ Registered governance_rag_api")
+except ImportError as e:
+    print(f"⚠️  Warning: governance_rag_api not available: {e}")
+    print("   Skipped governance_rag_api")
 app.register_blueprint(openai_key_api)
 app.register_blueprint(data_quality_api)
 app.register_blueprint(customer_profile_api)
 app.register_blueprint(enhanced_rag_openai_api)
+app.register_blueprint(master_file_api)
+
+# Register optional RAG APIs only if available
+if HAS_HISTORICAL_RAG:
+    app.register_blueprint(enhanced_rag_historical_api)
+    print("✅ Registered enhanced_rag_historical_api")
+else:
+    print("⚠️  Skipped enhanced_rag_historical_api (qdrant_client not available)")
+
+if HAS_TEMPORAL_RAG:
+    app.register_blueprint(enhanced_rag_temporal_api)
+    print("✅ Registered enhanced_rag_temporal_api")
+else:
+    print("⚠️  Skipped enhanced_rag_temporal_api (dependencies not available)")
+
+if HAS_QDRANT_RAG:
+    app.register_blueprint(enhanced_rag_qdrant_api)
+    print("✅ Registered enhanced_rag_qdrant_api")
+else:
+    print("⚠️  Skipped enhanced_rag_qdrant_api (qdrant_client not available)")
 
 # Load persisted data on startup
 @app.before_request
@@ -220,7 +318,7 @@ def get_accounts():
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         
         # Import models needed for health score calculation
-        from backend.models import KPI, HealthTrend
+        from models import KPI, HealthTrend
         
         result = []
         for account in accounts:
@@ -238,7 +336,7 @@ def get_accounts():
                 health_score = float(latest_trend.overall_health_score)
             else:
                 # Calculate health score on-the-fly from KPIs
-                from backend.playbook_recommendations_api import calculate_health_score_proxy
+                from playbook_recommendations_api import calculate_health_score_proxy
                 health_score = calculate_health_score_proxy(account.account_id)
             
             result.append({
