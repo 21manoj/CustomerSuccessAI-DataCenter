@@ -4532,6 +4532,95 @@ const CSPlatform = () => {
               </button>
             </div>
 
+            {/* Data Rehydration (Restore from Excel) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h4 className="font-semibold text-gray-900 mb-4">Data Rehydration (Restore from Backup)</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                <strong className="text-red-600">WARNING:</strong> This will <strong>REPLACE ALL EXISTING DATA</strong> for this tenant with data from the exported Excel file. 
+                All current accounts, products, and KPIs will be deleted before importing. 
+                Only use files exported from this system (with version and timestamp in filename).
+              </p>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  // Check filename format (should contain version and timestamp)
+                  const fileName = file.name;
+                  if (!fileName.includes('_v') || !fileName.match(/\d{8}_\d{6}/)) {
+                    if (!window.confirm(
+                      `Warning: File "${fileName}" does not appear to be a valid export file (missing version/timestamp).\n\n` +
+                      `Valid export files should have format: Account_Data_Export_v1_YYYYMMDD_HHMMSS.xlsx\n\n` +
+                      `Do you want to proceed anyway?`
+                    )) {
+                      if (e.target) e.target.value = '';
+                      return;
+                    }
+                  }
+                  
+                  if (!window.confirm(
+                    `⚠️ CRITICAL WARNING ⚠️\n\n` +
+                    `This will DELETE ALL existing accounts, products, and KPIs for this tenant and replace them with data from "${fileName}".\n\n` +
+                    `This action cannot be undone!\n\n` +
+                    `Are you absolutely sure you want to proceed?`
+                  )) {
+                    if (e.target) e.target.value = '';
+                    return;
+                  }
+                  
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  
+                  setIsExporting(true); // Reuse loading state
+                  setError('');
+                  
+                  try {
+                    const response = await fetch('/api/rehydrate/import', {
+                      method: 'POST',
+                      credentials: 'include',
+                      body: formData,
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                      throw new Error(data.error || `Rehydration failed: ${response.status}`);
+                    }
+                    
+                    // Show success message with results
+                    const results = data.results || {};
+                    const successMsg = `Rehydration completed successfully!\n\n` +
+                      `Deleted: ${results.accounts_deleted || 0} accounts, ${results.products_deleted || 0} products, ${results.kpis_deleted || 0} KPIs\n` +
+                      `Created: ${results.accounts_created || 0} accounts, ${results.products_created || 0} products, ${results.kpis_created || 0} KPIs\n` +
+                      (results.export_timestamp ? `Export Date: ${results.export_timestamp}\n` : '') +
+                      (results.errors && results.errors.length > 0 ? `\nErrors: ${results.errors.length}` : '');
+                    
+                    alert(successMsg);
+                    
+                    if (results.errors && results.errors.length > 0) {
+                      console.error('Rehydration errors:', results.errors);
+                    }
+                    
+                    // Refresh page to show new data
+                    window.location.reload();
+                  } catch (err: any) {
+                    setError(err?.message || 'Failed to rehydrate data');
+                    alert(`Rehydration failed: ${err?.message || 'Unknown error'}`);
+                  } finally {
+                    setIsExporting(false);
+                    if (e.target) e.target.value = '';
+                  }
+                }}
+                disabled={isExporting}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-600 file:text-white hover:file:bg-red-700 disabled:opacity-50"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Select an exported Excel file (format: Account_Data_Export_v1_YYYYMMDD_HHMMSS.xlsx)
+              </p>
+            </div>
+
             {/* Customer Profile Upload */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h4 className="font-semibold text-gray-900 mb-4">Customer Profile Upload</h4>

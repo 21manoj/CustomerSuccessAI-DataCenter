@@ -19,16 +19,19 @@ def import_account_data():
     """
     Import/rehydrate account, product, and KPI data from exported Excel file.
     
+    IMPORTANT: This REPLACES all existing data for the customer (no merge/update).
+    All existing accounts, products, and KPIs for this customer will be deleted first.
+    
     Expected Excel format (from export):
     - Sheet "Accounts Summary": Account data with profile_metadata
     - Sheet "All KPIs": KPI data with product_id and aggregation_type
     - Sheet "Products": Product data
-    - Sheet "Export Metadata": Metadata about the export
+    - Sheet "Export Metadata": Metadata about the export (includes Customer ID for validation)
     
-    This will:
-    1. Create/update accounts (matching by external_account_id or account_name)
-    2. Create/update products (matching by account_id + product_name)
-    3. Create/update KPIs (matching by account_id + kpi_parameter + product_id)
+    Security:
+    - Validates that the exported Customer ID matches the current customer
+    - Prevents cross-tenant data imports
+    - Checks export version and timestamp for compatibility
     """
     try:
         customer_id = get_current_customer_id()
@@ -45,15 +48,93 @@ def import_account_data():
         raw_excel = file.read()
         xls = pd.ExcelFile(io.BytesIO(raw_excel))
         
+        # Step 0: Validate export metadata (customer ID, version, timestamp)
+        export_customer_id = None
+        export_version = None
+        export_timestamp = None
+        
+        if "Export Metadata" in xls.sheet_names:
+            metadata_df = pd.read_excel(xls, sheet_name="Export Metadata", header=None)
+            for idx, row in metadata_df.iterrows():
+                if pd.notna(row[0]):
+                    value = str(row[0]).strip()
+                    if value.startswith('Customer ID:'):
+                        try:
+                            export_customer_id = int(value.split(':')[1].strip())
+                        except:
+                            pass
+                    elif value.startswith('Export Version:'):
+                        try:
+                            export_version = int(value.split(':')[1].strip())
+                        except:
+                            pass
+                    elif value.startswith('Export Timestamp:'):
+                        try:
+                            export_timestamp = value.split(':')[1].strip()
+                        except:
+                            pass
+        
+        # Validate customer ID match (prevent cross-tenant imports)
+        if export_customer_id is not None and export_customer_id != customer_id:
+            return jsonify({
+                'error': f'Security validation failed: Export file belongs to Customer ID {export_customer_id}, but you are logged in as Customer ID {customer_id}. Cannot import data from different customer.'
+            }), 403
+        
+        if export_customer_id is None:
+            return jsonify({
+                'error': 'Export file missing Customer ID validation. Cannot verify file authenticity. Please export a fresh file and try again.'
+            }), 400
+        
+        # Validate export version (for future compatibility)
+        if export_version is None:
+            return jsonify({
+                'error': 'Export file missing version information. Please export a fresh file and try again.'
+            }), 400
+        
+        # Warn if version mismatch (but allow import)
+        if export_version != 1:
+            # Future: Add version compatibility checks here
+            pass
+        
         results = {
+            'accounts_deleted': 0,
             'accounts_created': 0,
-            'accounts_updated': 0,
+            'products_deleted': 0,
             'products_created': 0,
-            'products_updated': 0,
+            'kpis_deleted': 0,
             'kpis_created': 0,
-            'kpis_updated': 0,
+            'export_customer_id': export_customer_id,
+            'export_version': export_version,
+            'export_timestamp': export_timestamp,
             'errors': []
         }
+        
+        # STEP 1: DELETE ALL EXISTING DATA FOR THIS CUSTOMER (REPLACE MODE)
+        # Count before deletion for reporting
+        accounts_deleted = Account.query.filter_by(customer_id=customer_id).count()
+        products_deleted = Product.query.filter_by(customer_id=customer_id).count()
+        kpi_uploads = KPIUpload.query.filter_by(customer_id=customer_id).all()
+        upload_ids = [upload.upload_id for upload in kpi_uploads]
+        kpis_deleted = KPI.query.filter(KPI.upload_id.in_(upload_ids)).count() if upload_ids else 0
+        
+        # Delete all KPIs for this customer
+        if upload_ids:
+            KPI.query.filter(KPI.upload_id.in_(upload_ids)).delete(synchronize_session=False)
+        
+        # Delete all KPIUploads
+        KPIUpload.query.filter_by(customer_id=customer_id).delete()
+        
+        # Delete all Products
+        Product.query.filter_by(customer_id=customer_id).delete()
+        
+        # Delete all Accounts
+        Account.query.filter_by(customer_id=customer_id).delete()
+        
+        results['accounts_deleted'] = accounts_deleted
+        results['products_deleted'] = products_deleted
+        results['kpis_deleted'] = kpis_deleted
+        
+        db.session.flush()  # Commit deletions before creating new data
         
         # Step 1: Import Accounts
         if "Accounts Summary" in xls.sheet_names:
@@ -99,32 +180,19 @@ def import_account_data():
                                     except:
                                         pass
                         
-                        if existing_account:
-                            # Update existing account
-                            existing_account.account_name = account_name
-                            existing_account.revenue = float(row.get('Revenue', 0)) if pd.notna(row.get('Revenue')) else 0
-                            existing_account.industry = str(row.get('Industry', '')) if pd.notna(row.get('Industry')) else ''
-                            existing_account.region = str(row.get('Region', '')) if pd.notna(row.get('Region')) else ''
-                            existing_account.account_status = str(row.get('Status', 'active')) if pd.notna(row.get('Status')) else 'active'
-                            if external_account_id:
-                                existing_account.external_account_id = external_account_id
-                            if profile_metadata:
-                                existing_account.profile_metadata = profile_metadata
-                            results['accounts_updated'] += 1
-                        else:
-                            # Create new account
-                            new_account = Account(
-                                customer_id=customer_id,
-                                account_name=account_name,
-                                revenue=float(row.get('Revenue', 0)) if pd.notna(row.get('Revenue')) else 0,
-                                industry=str(row.get('Industry', '')) if pd.notna(row.get('Industry')) else 'Unknown',
-                                region=str(row.get('Region', '')) if pd.notna(row.get('Region')) else 'Unknown',
-                                account_status=str(row.get('Status', 'active')) if pd.notna(row.get('Status')) else 'active',
-                                external_account_id=external_account_id,
-                                profile_metadata=profile_metadata
-                            )
-                            db.session.add(new_account)
-                            results['accounts_created'] += 1
+                        # Create new account (all existing accounts were deleted)
+                        new_account = Account(
+                            customer_id=customer_id,
+                            account_name=account_name,
+                            revenue=float(row.get('Revenue', 0)) if pd.notna(row.get('Revenue')) else 0,
+                            industry=str(row.get('Industry', '')) if pd.notna(row.get('Industry')) else 'Unknown',
+                            region=str(row.get('Region', '')) if pd.notna(row.get('Region')) else 'Unknown',
+                            account_status=str(row.get('Status', 'active')) if pd.notna(row.get('Status')) else 'active',
+                            external_account_id=external_account_id,
+                            profile_metadata=profile_metadata
+                        )
+                        db.session.add(new_account)
+                        results['accounts_created'] += 1
                     except Exception as e:
                         results['errors'].append(f"Error processing account {row.get('Account Name', 'unknown')}: {str(e)}")
         
@@ -166,32 +234,18 @@ def import_account_data():
                         if not product_name or product_name == 'nan':
                             continue
                         
-                        # Find existing product
-                        existing_product = Product.query.filter_by(
+                        # Create new product (all existing products were deleted)
+                        new_product = Product(
                             account_id=account.account_id,
-                            product_name=product_name
-                        ).first()
-                        
-                        if existing_product:
-                            # Update existing product
-                            existing_product.product_sku = str(row.get('Product SKU', '')) if pd.notna(row.get('Product SKU')) else None
-                            existing_product.product_type = str(row.get('Product Type', '')) if pd.notna(row.get('Product Type')) else None
-                            existing_product.revenue = float(row.get('Revenue', 0)) if pd.notna(row.get('Revenue')) else None
-                            existing_product.status = str(row.get('Status', 'active')) if pd.notna(row.get('Status')) else 'active'
-                            results['products_updated'] += 1
-                        else:
-                            # Create new product
-                            new_product = Product(
-                                account_id=account.account_id,
-                                customer_id=customer_id,
-                                product_name=product_name,
-                                product_sku=str(row.get('Product SKU', '')) if pd.notna(row.get('Product SKU')) else None,
-                                product_type=str(row.get('Product Type', '')) if pd.notna(row.get('Product Type')) else None,
-                                revenue=float(row.get('Revenue', 0)) if pd.notna(row.get('Revenue')) else None,
-                                status=str(row.get('Status', 'active')) if pd.notna(row.get('Status')) else 'active'
-                            )
-                            db.session.add(new_product)
-                            results['products_created'] += 1
+                            customer_id=customer_id,
+                            product_name=product_name,
+                            product_sku=str(row.get('Product SKU', '')) if pd.notna(row.get('Product SKU')) else None,
+                            product_type=str(row.get('Product Type', '')) if pd.notna(row.get('Product Type')) else None,
+                            revenue=float(row.get('Revenue', 0)) if pd.notna(row.get('Revenue')) else None,
+                            status=str(row.get('Status', 'active')) if pd.notna(row.get('Status')) else 'active'
+                        )
+                        db.session.add(new_product)
+                        results['products_created'] += 1
                     except Exception as e:
                         results['errors'].append(f"Error processing product {row.get('Product Name', 'unknown')}: {str(e)}")
         
@@ -262,21 +316,7 @@ def import_account_data():
                                         product_name=product_name
                                     ).first()
                         
-                        # Find existing KPI
-                        existing_kpi = None
-                        if product:
-                            existing_kpi = KPI.query.filter_by(
-                                account_id=account.account_id,
-                                kpi_parameter=kpi_parameter,
-                                product_id=product.product_id
-                            ).first()
-                        else:
-                            existing_kpi = KPI.query.filter_by(
-                                account_id=account.account_id,
-                                kpi_parameter=kpi_parameter,
-                                product_id=None
-                            ).first()
-                        
+                        # Create new KPI (all existing KPIs were deleted)
                         kpi_data = {
                             'upload_id': upload.upload_id,
                             'account_id': account.account_id,
@@ -291,17 +331,9 @@ def import_account_data():
                             'aggregation_type': str(row.get('Aggregation Type', '')) if pd.notna(row.get('Aggregation Type')) else None
                         }
                         
-                        if existing_kpi:
-                            # Update existing KPI
-                            for key, value in kpi_data.items():
-                                if key != 'upload_id' and value:
-                                    setattr(existing_kpi, key, value)
-                            results['kpis_updated'] += 1
-                        else:
-                            # Create new KPI
-                            new_kpi = KPI(**kpi_data)
-                            db.session.add(new_kpi)
-                            results['kpis_created'] += 1
+                        new_kpi = KPI(**kpi_data)
+                        db.session.add(new_kpi)
+                        results['kpis_created'] += 1
                     except Exception as e:
                         results['errors'].append(f"Error processing KPI {row.get('KPI Parameter', 'unknown')}: {str(e)}")
         

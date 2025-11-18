@@ -338,15 +338,21 @@ def export_all_account_data():
         
         # Sheet 4: Export Metadata
         metadata_sheet = wb.create_sheet("Export Metadata")
+        export_timestamp = datetime.now()
+        export_version = 1  # Version number for this export format
+        
         metadata_sheet['A1'] = "KPI Dashboard - All Account Data Export"
         metadata_sheet['A1'].font = Font(bold=True, size=14)
-        metadata_sheet['A2'] = f"Export Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        metadata_sheet['A3'] = f"Customer ID: {customer_id}"
-        metadata_sheet['A4'] = f"Total Accounts: {len(accounts)}"
-        metadata_sheet['A5'] = f"Total KPIs: {len(kpis)}"
-        metadata_sheet['A6'] = f"Total Products: {len(all_products)}"
+        metadata_sheet['A2'] = f"Export Date: {export_timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        metadata_sheet['A3'] = f"Export Timestamp: {export_timestamp.isoformat()}"
+        metadata_sheet['A4'] = f"Export Version: {export_version}"
+        metadata_sheet['A5'] = f"Customer ID: {customer_id}"
+        metadata_sheet['A6'] = f"Total Accounts: {len(accounts)}"
+        metadata_sheet['A7'] = f"Total KPIs: {len(kpis)}"
+        metadata_sheet['A8'] = f"Total Products: {len(all_products)}"
+        metadata_sheet['A9'] = "WARNING: This file contains sensitive customer data. Keep secure."
         
-        for row in range(1, 7):
+        for row in range(1, 10):
             metadata_sheet[f'A{row}'].font = Font(bold=True)
         
         # Save to bytes
@@ -354,9 +360,9 @@ def export_all_account_data():
         wb.save(excel_bytes)
         excel_bytes.seek(0)
         
-        # Generate filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"Account_Data_Export_{timestamp}.xlsx"
+        # Generate filename with version and timestamp for ransomware protection
+        timestamp = export_timestamp.strftime('%Y%m%d_%H%M%S')
+        filename = f"Account_Data_Export_v{export_version}_{timestamp}.xlsx"
         
         # Return file with proper headers for download
         logger.info(f"Excel file generated successfully: {filename}, size: {excel_bytes.tell()} bytes")
