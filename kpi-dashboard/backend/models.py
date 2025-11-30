@@ -17,6 +17,9 @@ class CustomerConfig(db.Model):
     kpi_upload_mode = db.Column(db.String, default='corporate')  # 'corporate' or 'account_rollup'
     category_weights = db.Column(db.Text)  # JSON string of category weights
     master_file_name = db.Column(db.String)  # Name of uploaded master file
+    # OpenAI API Key (encrypted)
+    openai_api_key_encrypted = db.Column(db.Text, nullable=True)  # Encrypted OpenAI API key
+    openai_api_key_updated_at = db.Column(db.DateTime, nullable=True)  # When key was last updated
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 
@@ -29,8 +32,27 @@ class Account(db.Model):
     account_status = db.Column(db.String, default='active')  # active, inactive, etc.
     industry = db.Column(db.String)
     region = db.Column(db.String)
+    external_account_id = db.Column(db.String)  # External account ID from customer profile
+    profile_metadata = db.Column(db.JSON)  # JSON field for customer profile data
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+class Product(db.Model):
+    __tablename__ = 'products'
+    product_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False)
+    product_name = db.Column(db.String(255), nullable=False)
+    product_sku = db.Column(db.String(100))
+    product_type = db.Column(db.String(100))
+    revenue = db.Column(db.Numeric(15, 2))
+    status = db.Column(db.String(50), default='active')
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'product_name', name='unique_account_product'),
+    )
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -88,6 +110,8 @@ class KPI(db.Model):
     kpi_id = db.Column(db.Integer, primary_key=True)
     upload_id = db.Column(db.Integer, db.ForeignKey('kpi_uploads.upload_id'))
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'))  # Direct account link
+    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'), nullable=True)  # Product-level KPI
+    aggregation_type = db.Column(db.String(50), nullable=True)  # 'account' or 'product'
     category = db.Column(db.String)  # Tab name
     row_index = db.Column(db.Integer)
     health_score_component = db.Column(db.String)
@@ -309,4 +333,223 @@ class QueryAudit(db.Model):
     
     # Relationships
     customer = db.relationship('Customer', backref='query_audits')
-    user = db.relationship('User', backref='query_audits') 
+    user = db.relationship('User', backref='query_audits')
+
+class ActivityLog(db.Model):
+    """Comprehensive activity logging for governance and compliance"""
+    __tablename__ = 'activity_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='SET NULL'), nullable=True, index=True)
+    
+    # Action details
+    action_type = db.Column(db.String(50), nullable=False, index=True)
+    action_category = db.Column(db.String(50), nullable=False, index=True)
+    resource_type = db.Column(db.String(50), nullable=True, index=True)
+    resource_id = db.Column(db.String(100), nullable=True)
+    
+    # Action description
+    action_description = db.Column(db.Text, nullable=False)
+    details = db.Column(db.JSON, nullable=True)
+    
+    # Change tracking
+    changed_fields = db.Column(db.JSON, nullable=True)
+    before_values = db.Column(db.JSON, nullable=True)
+    after_values = db.Column(db.JSON, nullable=True)
+    
+    # Metadata
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(500), nullable=True)
+    session_id = db.Column(db.String(255), nullable=True)
+    
+    # Status
+    status = db.Column(db.String(20), server_default='success', nullable=False)
+    error_message = db.Column(db.Text, nullable=True)
+    
+    # Timestamp
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False, index=True)
+    
+    # Relationships
+    customer_rel = db.relationship('Customer', backref='activity_logs')
+    user_rel = db.relationship('User', backref='activity_logs')
+    
+    # Indexes (defined in migration, but also specify here for clarity)
+    __table_args__ = (
+        db.Index('idx_activity_logs_customer_date', 'customer_id', 'created_at'),
+        db.Index('idx_activity_logs_user_date', 'user_id', 'created_at'),
+        db.Index('idx_activity_logs_action_type_date', 'action_type', 'created_at'),
+        db.Index('idx_activity_logs_resource', 'resource_type', 'resource_id'),
+    )
+
+class CustomerWorkflowConfig(db.Model):
+    """Configuration for n8n workflow system and playbook execution"""
+    __tablename__ = 'customer_workflow_configs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    
+    # Workflow system configuration
+    workflow_system = db.Column(db.String(50), nullable=True)  # 'n8n', 'zapier', etc.
+    n8n_instance_type = db.Column(db.String(50), nullable=True)  # 'cloud', 'self-hosted'
+    n8n_base_url = db.Column(db.String(500), nullable=True)
+    n8n_webhook_url = db.Column(db.String(500), nullable=True)
+    
+    # API key (encrypted)
+    n8n_api_key_encrypted = db.Column(db.String(500), nullable=True)
+    n8n_api_key_updated_at = db.Column(db.DateTime, nullable=True)
+    
+    # Webhook secrets (encrypted)
+    webhook_secret_encrypted = db.Column(db.String(500), nullable=True)
+    webhook_secret_old_encrypted = db.Column(db.String(500), nullable=True)  # For rotation grace period
+    webhook_secret_rotated_at = db.Column(db.DateTime, nullable=True)
+    webhook_secret_grace_period_until = db.Column(db.DateTime, nullable=True)
+    
+    # Playbook configuration
+    enabled_playbooks = db.Column(db.JSON, nullable=True)  # List of enabled playbook IDs
+    config = db.Column(db.JSON, nullable=True)  # Additional configuration
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
+    
+    # Relationships
+    customer_rel = db.relationship('Customer', backref='workflow_config')
+    
+    # Unique constraint: one config per customer
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', name='uq_customer_workflow_config'),
+    )
+
+class AccountNote(db.Model):
+    """CSM notes, meeting notes, QBR notes, and other account-related notes"""
+    __tablename__ = 'account_notes'
+    
+    note_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    
+    # Note Content
+    note_type = db.Column(db.String(50), nullable=False)  # 'meeting', 'qbr', 'call', 'email', 'general', 'interaction'
+    note_content = db.Column(db.Text, nullable=False)  # Full note text
+    note_title = db.Column(db.String(255))  # Optional title/subject
+    
+    # Metadata
+    created_by = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Optional Fields
+    meeting_date = db.Column(db.Date)  # Date of meeting/call (if applicable)
+    participants = db.Column(db.JSON)  # List of participant names
+    tags = db.Column(db.JSON)  # List of tags for categorization
+    is_important = db.Column(db.Boolean, default=False)  # Flag for important notes
+    related_playbook_id = db.Column(db.String(50))  # Link to playbook if note is playbook-related
+    
+    # Indexes
+    __table_args__ = (
+        db.Index('idx_account_note_timestamp', 'account_id', 'created_at'),
+        db.Index('idx_customer_note_timestamp', 'customer_id', 'created_at'),
+        db.Index('idx_note_type', 'note_type'),
+    )
+
+class AccountSnapshot(db.Model):
+    """Unified account snapshot capturing complete account state at a point in time"""
+    __tablename__ = 'account_snapshots'
+    
+    # Primary Key
+    snapshot_id = db.Column(db.Integer, primary_key=True)
+    
+    # Account & Customer
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    
+    # Snapshot Metadata
+    snapshot_timestamp = db.Column(db.DateTime, nullable=False, index=True)
+    snapshot_type = db.Column(db.String(50), nullable=False)  # manual, scheduled, event_driven, post_upload, post_health_calc
+    snapshot_reason = db.Column(db.String(255))  # Optional reason
+    snapshot_version = db.Column(db.Integer, default=1)  # Schema version
+    created_by = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
+    trigger_event = db.Column(db.String(100))  # Event that triggered snapshot
+    
+    # Financial
+    revenue = db.Column(db.Numeric(15, 2))
+    revenue_change_from_last = db.Column(db.Numeric(15, 2))
+    revenue_change_percent = db.Column(db.Numeric(5, 2))
+    
+    # Health Scores
+    overall_health_score = db.Column(db.Numeric(5, 2))
+    product_usage_score = db.Column(db.Numeric(5, 2))
+    support_score = db.Column(db.Numeric(5, 2))
+    customer_sentiment_score = db.Column(db.Numeric(5, 2))
+    business_outcomes_score = db.Column(db.Numeric(5, 2))
+    relationship_strength_score = db.Column(db.Numeric(5, 2))
+    health_score_change_from_last = db.Column(db.Numeric(5, 2))
+    health_score_trend = db.Column(db.String(20))  # improving, declining, stable
+    
+    # Account Status
+    account_status = db.Column(db.String(50))
+    industry = db.Column(db.String(100))
+    region = db.Column(db.String(100))
+    account_tier = db.Column(db.String(50))
+    external_account_id = db.Column(db.String(100))
+    
+    # CSM & Team
+    assigned_csm = db.Column(db.String(100))
+    csm_manager = db.Column(db.String(100))
+    account_owner = db.Column(db.String(100))
+    
+    # Products
+    products_used = db.Column(db.JSON)  # List of product names
+    product_count = db.Column(db.Integer, default=0)
+    primary_product = db.Column(db.String(100))
+    
+    # Playbooks
+    playbooks_running = db.Column(db.JSON)  # List of playbook IDs
+    playbooks_running_count = db.Column(db.Integer, default=0)
+    playbooks_completed_count = db.Column(db.Integer, default=0)
+    playbooks_completed_last_30_days = db.Column(db.Integer, default=0)
+    last_playbook_executed = db.Column(db.JSON)  # {playbook_id, date}
+    playbook_recommendations_active = db.Column(db.JSON)  # List of recommended playbooks
+    recent_playbook_report_ids = db.Column(db.JSON)  # [report_id1, report_id2, report_id3] - Last 3 reports
+    
+    # KPI Summary
+    total_kpis = db.Column(db.Integer, default=0)
+    account_level_kpis = db.Column(db.Integer, default=0)
+    product_level_kpis = db.Column(db.Integer, default=0)
+    critical_kpis_count = db.Column(db.Integer, default=0)
+    at_risk_kpis_count = db.Column(db.Integer, default=0)
+    healthy_kpis_count = db.Column(db.Integer, default=0)
+    top_critical_kpis = db.Column(db.JSON)  # [{kpi_name, value, health_status}, ...]
+    
+    # Engagement
+    lifecycle_stage = db.Column(db.String(50))
+    onboarding_status = db.Column(db.String(50))
+    last_qbr_date = db.Column(db.Date)
+    next_qbr_date = db.Column(db.Date)
+    engagement_score = db.Column(db.Numeric(5, 2))
+    
+    # Champions
+    primary_champion = db.Column(db.String(100))
+    champion_status = db.Column(db.String(50))
+    stakeholder_count = db.Column(db.Integer, default=0)
+    
+    # CSM Notes & Playbook Reports (References)
+    recent_csm_note_ids = db.Column(db.JSON)  # [note_id1, note_id2, ...] - Last 5 notes
+    # Note: recent_playbook_report_ids is already defined above in Playbooks section
+    
+    # Calculated
+    days_since_last_snapshot = db.Column(db.Integer)
+    snapshot_sequence_number = db.Column(db.Integer, default=1)
+    is_significant_change = db.Column(db.Boolean, default=False)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Indexes
+    __table_args__ = (
+        db.Index('idx_account_snapshot_timestamp', 'account_id', 'snapshot_timestamp'),
+        db.Index('idx_customer_snapshot_timestamp', 'customer_id', 'snapshot_timestamp'),
+        db.Index('idx_snapshot_type', 'snapshot_type'),
+    ) 

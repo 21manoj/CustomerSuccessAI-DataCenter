@@ -265,6 +265,95 @@ class DataIngestionSubscriber:
         except Exception as e:
             logger.error(f"Error processing KPI update: {str(e)}")
 
+class AccountSnapshotSubscriber:
+    """Subscriber that automatically creates account snapshots on data changes"""
+    
+    def __init__(self):
+        self.last_snapshot_times = {}  # Track last snapshot time per account to avoid duplicates
+        self.snapshot_cooldown = 300  # 5 minutes cooldown between snapshots for same account
+    
+    def handle_event(self, event: Event):
+        """Handle events and create snapshots when appropriate"""
+        try:
+            from account_snapshot_api import create_account_snapshot
+            from models import Account, KPIUpload
+            
+            customer_id = event.customer_id
+            event_data = event.data
+            
+            # Determine which accounts need snapshots
+            account_ids_to_snapshot = []
+            
+            if event.event_type == EventType.KPI_DATA_UPLOADED:
+                # Get account_id from upload_id
+                upload_id = event_data.get('upload_id')
+                if upload_id:
+                    kpi_upload = KPIUpload.query.get(upload_id)
+                    if kpi_upload and kpi_upload.account_id:
+                        account_ids_to_snapshot.append(kpi_upload.account_id)
+            
+            elif event.event_type == EventType.ACCOUNT_DATA_CHANGED:
+                # Get account_id from event data
+                account_id = event_data.get('account_id')
+                if account_id:
+                    account_ids_to_snapshot.append(account_id)
+            
+            elif event.event_type == EventType.HEALTH_SCORES_UPDATED:
+                # Get account_id from event data
+                account_id = event_data.get('account_id')
+                if account_id:
+                    account_ids_to_snapshot.append(account_id)
+                else:
+                    # If no specific account, snapshot all accounts for this customer
+                    accounts = Account.query.filter_by(customer_id=customer_id).all()
+                    account_ids_to_snapshot = [a.account_id for a in accounts]
+            
+            # Create snapshots for affected accounts (with cooldown check)
+            for account_id in account_ids_to_snapshot:
+                # Check cooldown to avoid creating too many snapshots
+                account_key = f"{customer_id}_{account_id}"
+                last_snapshot_time = self.last_snapshot_times.get(account_key)
+                
+                if last_snapshot_time:
+                    time_since_last = (datetime.now() - last_snapshot_time).total_seconds()
+                    if time_since_last < self.snapshot_cooldown:
+                        logger.debug(f"Skipping snapshot for account {account_id} (cooldown: {int(self.snapshot_cooldown - time_since_last)}s remaining)")
+                        continue
+                
+                # Verify account belongs to customer (security check)
+                account = Account.query.filter_by(
+                    account_id=account_id,
+                    customer_id=customer_id
+                ).first()
+                
+                if account:
+                    try:
+                        snapshot = create_account_snapshot(
+                            account_id=account_id,
+                            customer_id=customer_id,
+                            snapshot_type='event_driven',
+                            trigger_event=event.event_type.value,
+                            force_create=False  # Respect safeguard
+                        )
+                        
+                        if snapshot:
+                            self.last_snapshot_times[account_key] = datetime.now()
+                            logger.info(f"✅ Auto-created snapshot {snapshot.snapshot_id} for account {account.account_name} (trigger: {event.event_type.value})")
+                        elif snapshot is None:
+                            # Snapshot creation was skipped due to safeguard (not an error)
+                            logger.debug(f"⏸️  Skipped snapshot creation for account {account.account_name}: Recent snapshot exists (safeguard)")
+                        else:
+                            logger.warning(f"⚠️  Failed to create snapshot for account {account.account_name}")
+                    except Exception as e:
+                        logger.error(f"Error creating snapshot for account {account.account_name}: {str(e)}")
+                else:
+                    logger.warning(f"Account {account_id} not found or doesn't belong to customer {customer_id}")
+        
+        except Exception as e:
+            logger.error(f"Error processing snapshot event: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
 class EventManager:
     """Manages the event system"""
     
@@ -272,6 +361,7 @@ class EventManager:
         self.publisher = EventPublisher()
         self.rag_subscriber = RAGRebuildSubscriber()
         self.data_subscriber = DataIngestionSubscriber()
+        self.snapshot_subscriber = AccountSnapshotSubscriber()
         
         # Subscribe to events
         self._setup_subscriptions()
@@ -281,6 +371,7 @@ class EventManager:
         self.publisher.start()
         self.data_subscriber.start()
         logger.info("Event system started")
+        logger.info("✅ Account snapshot auto-creation enabled (event-driven)")
     
     def stop(self):
         """Stop the event system"""
@@ -300,6 +391,11 @@ class EventManager:
         # Data ingestion events
         self.publisher.subscribe(EventType.TEMPORAL_DATA_ADDED, self.data_subscriber.handle_event)
         self.publisher.subscribe(EventType.KPI_DATA_UPDATED, self.data_subscriber.handle_event)
+        
+        # Account snapshot events (auto-create snapshots on data changes)
+        self.publisher.subscribe(EventType.KPI_DATA_UPLOADED, self.snapshot_subscriber.handle_event)
+        self.publisher.subscribe(EventType.ACCOUNT_DATA_CHANGED, self.snapshot_subscriber.handle_event)
+        self.publisher.subscribe(EventType.HEALTH_SCORES_UPDATED, self.snapshot_subscriber.handle_event)
     
     def publish_kpi_upload(self, customer_id: int, upload_id: int, kpi_count: int):
         """Publish KPI upload event"""

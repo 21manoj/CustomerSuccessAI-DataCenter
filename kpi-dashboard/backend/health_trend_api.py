@@ -90,6 +90,24 @@ def create_health_trend():
             existing_trend.valid_kpis = data.get('valid_kpis', 0)
             existing_trend.updated_at = datetime.utcnow()
             
+            # Publish event for automatic snapshot creation
+            try:
+                from event_system import event_manager, EventType
+                event_manager.publish(
+                    EventType.HEALTH_SCORES_UPDATED,
+                    int(customer_id),
+                    {
+                        'account_id': data['account_id'],
+                        'month': data['month'],
+                        'year': data['year'],
+                        'overall_health_score': data['overall_health_score'],
+                        'action': 'health_trend_updated'
+                    },
+                    priority=2
+                )
+            except Exception as e:
+                print(f"Note: Could not publish health scores updated event: {e}")
+            
             trend = existing_trend
         else:
             # Create new trend
@@ -110,6 +128,24 @@ def create_health_trend():
             db.session.add(trend)
         
         db.session.commit()
+        
+        # Publish event for automatic snapshot creation
+        try:
+            from event_system import event_manager, EventType
+            event_manager.publish(
+                EventType.HEALTH_SCORES_UPDATED,
+                int(customer_id),
+                {
+                    'account_id': data['account_id'],
+                    'month': data['month'],
+                    'year': data['year'],
+                    'overall_health_score': data['overall_health_score'],
+                    'action': 'health_trend_created'
+                },
+                priority=2
+            )
+        except Exception as e:
+            print(f"Note: Could not publish health scores updated event: {e}")
         
         return jsonify({
             'message': 'Health trend saved successfully',
@@ -172,6 +208,24 @@ def generate_health_trends():
                 generated_count += 1
         
         db.session.commit()
+        
+        # Publish events for automatic snapshot creation
+        try:
+            from event_system import event_manager, EventType
+            for account in accounts:
+                event_manager.publish(
+                    EventType.HEALTH_SCORES_UPDATED,
+                    int(customer_id),
+                    {
+                        'account_id': account.account_id,
+                        'month': current_month,
+                        'year': current_year,
+                        'action': 'health_trends_generated'
+                    },
+                    priority=2
+                )
+        except Exception as e:
+            print(f"Note: Could not publish health scores updated events: {e}")
         
         return jsonify({
             'message': f'Generated {generated_count} health trends',

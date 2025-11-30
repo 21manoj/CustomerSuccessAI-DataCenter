@@ -5,7 +5,7 @@ Direct RAG API - Bypasses vector search issues
 
 from flask import Blueprint, request, jsonify, abort
 from auth_middleware import get_current_customer_id, get_current_user_id
-from models import db, KPI, Account, KPIUpload, PlaybookReport, QueryAudit, PlaybookTrigger
+from models import db, KPI, Account, KPIUpload, PlaybookReport, QueryAudit, PlaybookTrigger, AccountSnapshot, AccountNote
 from sqlalchemy import text
 import openai
 import os
@@ -18,15 +18,8 @@ load_dotenv()
 
 direct_rag_api = Blueprint('direct_rag_api', __name__)
 
-def get_current_customer_id():
-    """Extract and validate the X-Customer-ID header from the request."""
-    cid = get_current_customer_id()
-    if not cid:
-        abort(400, 'Authentication required (handled by middleware)')
-    try:
-        return int(cid)
-    except Exception:
-        abort(400, 'Invalid authentication (handled by middleware)')
+# Use get_current_customer_id from auth_middleware (imported above)
+# No need to redefine it here
 
 
 def get_playbook_context(customer_id, query_text):
@@ -219,6 +212,91 @@ def direct_query():
                 health_score = calculate_health_score_proxy(account.account_id)
             
             context_data.append(f"Account: {account.account_name}, Revenue: ${account.revenue:,.0f}, Health Score: {health_score:.1f}/100, Industry: {account.industry}, Region: {account.region}")
+            
+            # Add account snapshot context if available
+            # Auto-create snapshot if it doesn't exist
+            try:
+                latest_snapshot = AccountSnapshot.query.filter_by(
+                    account_id=account.account_id,
+                    customer_id=customer_id
+                ).order_by(AccountSnapshot.snapshot_timestamp.desc()).first()
+                
+                # If snapshot doesn't exist, create one automatically
+                if not latest_snapshot:
+                    print(f"📸 No snapshot found for {account.account_name}, creating one automatically...")
+                    from account_snapshot_api import create_account_snapshot
+                    latest_snapshot = create_account_snapshot(
+                        account_id=account.account_id,
+                        customer_id=customer_id,
+                        snapshot_type='rag_auto',
+                        trigger_event='rag_query_missing_snapshot',
+                        created_by=user_id,  # Pass user_id for audit
+                        force_create=False  # Respect safeguard
+                    )
+                    if latest_snapshot:
+                        print(f"✓ Auto-created snapshot {latest_snapshot.snapshot_id} for {account.account_name}")
+                    elif latest_snapshot is None:
+                        print(f"⏸️  Snapshot creation skipped for {account.account_name}: Recent snapshot exists (safeguard)")
+                        # Try to get the existing snapshot
+                        latest_snapshot = AccountSnapshot.query.filter_by(
+                            account_id=account.account_id,
+                            customer_id=customer_id
+                        ).order_by(AccountSnapshot.snapshot_timestamp.desc()).first()
+                    else:
+                        print(f"⚠️  Failed to auto-create snapshot for {account.account_name}, continuing without snapshot context")
+                
+                if latest_snapshot:
+                    revenue_change_str = ""
+                    if latest_snapshot.revenue_change_percent is not None:
+                        change_pct = float(latest_snapshot.revenue_change_percent)
+                        arrow = '↑' if change_pct > 0 else '↓'
+                        revenue_change_str = f" ({arrow} {abs(change_pct):.1f}% change)"
+                    
+                    snapshot_context = (
+                        f"\nAccount Snapshot ({latest_snapshot.snapshot_timestamp.strftime('%Y-%m-%d')}):\n"
+                        f"  Revenue: ${latest_snapshot.revenue:,.0f}{revenue_change_str}\n"
+                        f"  Health Score: {latest_snapshot.overall_health_score:.1f}/100 "
+                        f"({latest_snapshot.health_score_trend})\n"
+                        f"  CSM: {latest_snapshot.assigned_csm or 'Unassigned'}\n"
+                        f"  Products: {', '.join(latest_snapshot.products_used or [])}\n"
+                        f"  Playbooks Running: {latest_snapshot.playbooks_running_count}, "
+                        f"Completed: {latest_snapshot.playbooks_completed_count}\n"
+                        f"  Critical KPIs: {latest_snapshot.critical_kpis_count}/{latest_snapshot.total_kpis}\n"
+                    )
+                    
+                    # Add CSM notes summaries
+                    if latest_snapshot.recent_csm_note_ids:
+                        notes = AccountNote.query.filter(
+                            AccountNote.note_id.in_(latest_snapshot.recent_csm_note_ids),
+                            AccountNote.customer_id == customer_id
+                        ).order_by(AccountNote.created_at.desc()).limit(3).all()
+                        
+                        if notes:
+                            snapshot_context += "  Recent CSM Notes:\n"
+                            for note in notes:
+                                note_preview = note.note_content[:150] + "..." if len(note.note_content) > 150 else note.note_content
+                                snapshot_context += f"    - {note.note_type.title()} ({note.created_at.strftime('%Y-%m-%d')}): {note_preview}\n"
+                    
+                    # Add playbook report summaries
+                    if latest_snapshot.recent_playbook_report_ids:
+                        reports = PlaybookReport.query.filter(
+                            PlaybookReport.report_id.in_(latest_snapshot.recent_playbook_report_ids),
+                            PlaybookReport.customer_id == customer_id
+                        ).order_by(PlaybookReport.report_generated_at.desc()).all()
+                        
+                        if reports:
+                            snapshot_context += "  Recent Playbook Reports:\n"
+                            for report in reports:
+                                report_data = report.report_data or {}
+                                exec_summary = report_data.get('executive_summary', '')
+                                if exec_summary:
+                                    summary = exec_summary[:200] + "..." if len(exec_summary) > 200 else exec_summary
+                                    snapshot_context += f"    - {report.playbook_name} ({report.report_generated_at.strftime('%Y-%m-%d')}): {summary}\n"
+                    
+                    context_data.append(snapshot_context)
+                    print(f"✓ Added account snapshot context for {account.account_name}")
+            except Exception as e:
+                print(f"Note: Could not fetch account snapshot: {e}")
         
         # Add revenue time series data from actual KPITimeSeries records (customer-specific)
         # SECURITY: Only use data from the current customer to prevent cross-tenant data leakage
@@ -305,10 +383,14 @@ def direct_query():
         
         # Generate AI response
         try:
-            # Use environment variable for API key
-            api_key = os.getenv('OPENAI_API_KEY')
+            # Get API key from customer-specific encrypted storage or environment fallback
+            from openai_key_utils import get_openai_api_key
+            api_key = get_openai_api_key(customer_id)
             if not api_key:
-                return jsonify({'error': 'OpenAI API key not configured'}), 500
+                return jsonify({
+                    'error': 'OpenAI API key not configured',
+                    'message': 'Please configure your OpenAI API key in Settings > OpenAI Key Settings.'
+                }), 400
                 
             # Initialize OpenAI client with explicit httpx configuration
             import httpx

@@ -61,11 +61,30 @@ def save_execution_to_db(execution_id, execution_data, customer_id):
         
         if existing_exec:
             # Update existing execution
+            was_completed = existing_exec.status == 'completed'
             existing_exec.execution_data = execution_data
             existing_exec.status = execution_data.get('status', 'in-progress')
             existing_exec.current_step = execution_data.get('currentStep')
             existing_exec.completed_at = completed_at
             existing_exec.updated_at = datetime.utcnow()
+            
+            # Publish event if playbook just completed
+            if not was_completed and existing_exec.status == 'completed' and account_id:
+                try:
+                    from event_system import event_manager, EventType
+                    event_manager.publish(
+                        EventType.ACCOUNT_DATA_CHANGED,
+                        customer_id,
+                        {
+                            'account_id': account_id,
+                            'playbook_id': existing_exec.playbook_id,
+                            'execution_id': execution_id,
+                            'action': 'playbook_execution_completed'
+                        },
+                        priority=2
+                    )
+                except Exception as e:
+                    print(f"Note: Could not publish playbook completion event: {e}")
         else:
             # Create new execution
             new_exec = PlaybookExecution(
