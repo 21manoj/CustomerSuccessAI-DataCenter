@@ -27,7 +27,7 @@ RUN mkdir -p uploads qdrant_storage instance
 EXPOSE 5059
 
 # Set environment variables
-ENV FLASK_APP=app.py
+ENV FLASK_APP=app_v3_minimal.py
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV FLASK_RUN_HOST=0.0.0.0
@@ -35,7 +35,7 @@ ENV FLASK_RUN_PORT=5059
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5059/ || exit 1
+    CMD curl -f http://localhost:5059/api/health || exit 1
 
 # Run the application
-CMD ["python", "app.py"]
+CMD ["python", "app_v3_minimal.py"]

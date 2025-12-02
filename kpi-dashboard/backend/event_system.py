@@ -253,7 +253,7 @@ class DataIngestionSubscriber:
             from models import db, KPI
             
             data = event.data
-            kpi = KPI.query.get(data['kpi_id'])
+            kpi = db.session.get(KPI, data['kpi_id'])
             
             if kpi:
                 kpi.data = data['new_value']
@@ -288,7 +288,7 @@ class AccountSnapshotSubscriber:
                 # Get account_id from upload_id
                 upload_id = event_data.get('upload_id')
                 if upload_id:
-                    kpi_upload = KPIUpload.query.get(upload_id)
+                    kpi_upload = db.session.get(KPIUpload, upload_id)
                     if kpi_upload and kpi_upload.account_id:
                         account_ids_to_snapshot.append(kpi_upload.account_id)
             

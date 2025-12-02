@@ -76,7 +76,7 @@ def load_user(user_id):
     """Load user by ID for Flask-Login"""
     from models import User
     try:
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if user:
             # Refresh to ensure we have latest data from database (including customer_id)
             db.session.refresh(user)
@@ -87,6 +87,15 @@ def load_user(user_id):
 
 # Initialize global authentication middleware
 from auth_middleware import init_auth_middleware, get_current_customer_id, get_current_user_id
+
+# Initialize event system for automatic snapshot creation
+try:
+    from event_system import event_manager
+    event_manager.start()
+    print("✅ Event system started - Account snapshot auto-creation enabled")
+except Exception as e:
+    print(f"⚠️  Warning: Event system not available: {e}")
+    print("   Account snapshots will need to be created manually")
 # Activity logging - optional, only import if ActivityLog model exists
 try:
     from activity_logging import activity_logger
@@ -167,6 +176,7 @@ from enhanced_upload_api import enhanced_upload_api
 from enhanced_rag_openai_api import enhanced_rag_openai_api
 from secure_file_api import secure_file_api
 from master_file_api import master_file_api
+from account_snapshot_api import account_snapshot_api
 
 # Optional RAG APIs - only register if dependencies are available
 try:
@@ -221,6 +231,7 @@ app.register_blueprint(customer_perf_summary_api)
 app.register_blueprint(workflow_config_api)
 app.register_blueprint(export_api)
 app.register_blueprint(rehydration_api)
+app.register_blueprint(account_snapshot_api)
 
 # Activity log API - optional if ActivityLog model doesn't exist
 try:
@@ -446,7 +457,7 @@ def login():
             }), 403
         
         # Get customer info
-        customer = Customer.query.get(user.customer_id)
+        customer = db.session.get(Customer, user.customer_id)
         
         # Log in user - Flask-Login creates secure session
         from flask_login import login_user
@@ -573,7 +584,7 @@ def session_info():
     """
     if current_user.is_authenticated:
         from models import User, Customer
-        user = User.query.get(current_user.user_id)
+        user = db.session.get(User, current_user.user_id)
         return jsonify({
             'authenticated': True,
             'user': {
@@ -598,7 +609,74 @@ def session_refresh():
         'status': 'success',
         'expires_at': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat()
     }), 200
+# ========================================
+# GLOBAL ERROR HANDLERS
+# ========================================
+import logging
+from sqlalchemy.exc import SQLAlchemyError
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle not found errors"""
+    return jsonify({
+        'error': 'Not found',
+        'message': 'The requested resource was not found',
+        'status': 404
+    }), 404
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    """Handle internal server errors"""
+    db.session.rollback()
+    logger.error(f"Internal server error: {error}", exc_info=True)
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'An unexpected error occurred. Please try again later.',
+        'status': 500
+    }), 500
+
+@app.errorhandler(SQLAlchemyError)
+def handle_db_error(error):
+    """Handle database errors"""
+    db.session.rollback()
+    logger.error(f"Database error: {error}", exc_info=True)
+    return jsonify({
+        'error': 'Database error',
+        'message': 'A database error occurred. Please try again.',
+        'status': 500
+    }), 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    """Handle all unhandled exceptions"""
+    db.session.rollback()
+    logger.error(f"Unhandled exception: {error}", exc_info=True)
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'An unexpected error occurred. Please contact support.',
+        'status': 500
+    }), 500
+
+# Request logging
+@app.before_request
+def log_request_info():
+    """Log incoming requests"""
+    if request.path.startswith('/api/'):
+        logger.info(f"API Request: {request.method} {request.path}")
+
+@app.after_request
+def log_response_info(response):
+    """Log API responses"""
+    if request.path.startswith('/api/'):
+        logger.info(f"API Response: {request.method} {request.path} -> {response.status_code}")
+    return response
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

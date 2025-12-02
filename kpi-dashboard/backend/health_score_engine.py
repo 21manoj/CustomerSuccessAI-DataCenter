@@ -175,26 +175,52 @@ class HealthScoreEngine:
         # For higher_is_better=False: high < medium < low (lower values are better)
         if higher_is_better:
             # Higher values are better: low < medium < high
-            if value <= ranges['low']['max']:
+            # Check ranges in order: low, medium, high
+            if ranges['low']['min'] <= value <= ranges['low']['max']:
                 status = 'low'
                 color = ranges['low']['color']
-            elif value <= ranges['medium']['max']:
+            elif ranges['medium']['min'] <= value <= ranges['medium']['max']:
                 status = 'medium'
                 color = ranges['medium']['color']
-            else:
+            elif ranges['high']['min'] <= value <= ranges['high']['max']:
                 status = 'high'
                 color = ranges['high']['color']
+            else:
+                # Value outside all ranges - determine closest range
+                if value < ranges['low']['min']:
+                    status = 'low'
+                    color = ranges['low']['color']
+                elif value > ranges['high']['max']:
+                    status = 'high'
+                    color = ranges['high']['color']
+                else:
+                    # Fallback to medium if somehow in between
+                    status = 'medium'
+                    color = ranges['medium']['color']
         else:
             # Lower values are better: high < medium < low
-            if value <= ranges['high']['max']:
+            # Check ranges in order: high, medium, low
+            if ranges['high']['min'] <= value <= ranges['high']['max']:
                 status = 'high'
                 color = ranges['high']['color']
-            elif value <= ranges['medium']['max']:
+            elif ranges['medium']['min'] <= value <= ranges['medium']['max']:
                 status = 'medium'
                 color = ranges['medium']['color']
-            else:
+            elif ranges['low']['min'] <= value <= ranges['low']['max']:
                 status = 'low'
                 color = ranges['low']['color']
+            else:
+                # Value outside all ranges - determine closest range
+                if value < ranges['high']['min']:
+                    status = 'high'
+                    color = ranges['high']['color']
+                elif value > ranges['low']['max']:
+                    status = 'low'
+                    color = ranges['low']['color']
+                else:
+                    # Fallback to medium if somehow in between
+                    status = 'medium'
+                    color = ranges['medium']['color']
         
         # Calculate score (0-100) based on position within the range
         if status == 'low':

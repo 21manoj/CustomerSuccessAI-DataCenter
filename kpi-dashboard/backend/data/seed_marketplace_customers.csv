@@ -1,0 +1,23 @@
+customer_id,company_name,signup_date,customer_segment,instances_rented_30d,avg_host_quality_score,interruptible_pct,on_demand_pct,reserved_pct,avg_price_vs_market,monthly_spend,contract_value_annual,csm_assigned,industry,use_case,health_score,churn_risk,expansion_potential,host_switches_30d,days_since_last_rental,support_tickets_30d
+MKTC-2022,Weekend Warriors,2025-01-05,Casual,15,4.5,80.9,7.4,11.8,-12.6,1956.61,23479.31,David Kim,Autonomous Vehicles,Data Analytics,17,High,Low,22,29,12
+MKTC-2033,Deal Seeker ML,2024-11-20,Casual,5,4.3,85.1,10.0,4.9,4.5,2244.31,26931.77,Jennifer Liu,Healthcare AI,Model Inference,17,High,Low,18,30,11
+MKTC-2014,Prototype Systems,2024-08-21,Regular,18,5.3,57.4,31.2,11.4,-1.2,5256.13,63073.58,David Kim,Biotechnology,LLM Training,23,High,Medium,18,22,12
+MKTC-2029,Community AI,2024-08-27,Casual,10,4.0,76.5,9.7,13.9,-11.8,3891.69,46700.32,Emily Watson,E-commerce,Data Analytics,25,High,Low,20,20,6
+MKTC-2007,Freelance ML,2025-04-28,Regular,22,5.3,75.2,16.2,8.6,-17.9,8069.27,96831.24,David Kim,Healthcare AI,LLM Training,31,High,Medium,10,15,11
+MKTC-2025,Lean AI Corp,2025-06-20,Casual,7,6.5,81.9,5.2,13.0,-6.4,3257.4,39088.78,Emily Watson,Healthcare AI,LLM Training,47,Medium,Low,6,8,5
+MKTC-2003,Blockchain Compute,2025-03-03,Power User,48,6.2,55.8,34.5,9.7,,-0.6,10705.68,128468.21,Michael Rodriguez,Autonomous Vehicles,Model Inference,50,Medium,Medium,6,14,4
+MKTC-2018,PhD Computing,2024-10-13,Casual,6,6.9,86.0,4.3,9.7,-14.6,1604.42,19253.01,Jennifer Liu,Autonomous Vehicles,LLM Training,50,Medium,Low,10,9,3
+MKTC-2009,University AI Dept,2025-06-25,Regular,12,6.6,69.6,27.4,3.0,-19.5,8468.63,101623.58,Michael Rodriguez,Media & Entertainment,Scientific Computing,51,Medium,Medium,6,14,3
+MKTC-2028,Crowdsourced Compute,2024-08-23,Casual,7,7.4,86.7,9.7,3.6,-11.7,2516.86,30202.37,Jennifer Liu,E-commerce,Scientific Computing,61,Low,Low,4,3,2
+MKTC-2030,Shared Resources,2025-09-29,Casual,10,7.3,68.8,20.3,10.9,-16.8,808.21,9698.51,David Kim,Enterprise SaaS,Image Generation,62,Low,Low,3,0,2
+MKTC-2032,Bargain Hunter AI,2025-10-03,Casual,13,7.4,68.4,11.8,19.8,-28.1,2631.05,31572.61,Sarah Chen,Media & Entertainment,LLM Training,65,Low,Low,4,3,0
+MKTC-2020,Hackathon AI,2024-07-30,Casual,15,8.4,90.5,-9.9,19.3,-23.2,2218.08,26616.91,Emily Watson,Media & Entertainment,LLM Training,66,Low,Low,3,3,1
+MKTC-2019,Thesis Work Labs,2024-08-17,Casual,6,7.8,72.6,26.3,1.1,-29.1,1536.86,18442.35,Emily Watson,Healthcare AI,Scientific Computing,66,Low,Low,4,2,0
+MKTC-2017,Research Collective,2024-12-24,Casual,8,8.1,78.6,16.0,5.4,-15.9,2156.41,25876.94,Emily Watson,Financial Services,LLM Training,66,Low,Low,4,2,1
+MKTC-2008,Academic Research Lab,2025-06-06,Regular,22,7.8,63.6,34.7,1.6,-25.0,5291.47,63497.62,Sarah Chen,Enterprise SaaS,Video Processing,67,Low,Medium,3,3,1
+MKTC-2012,Cost-Conscious AI,2024-09-12,Regular,11,7.9,62.9,28.7,8.4,-29.7,5430.43,65165.12,David Kim,Gaming,Model Inference,67,Low,Medium,4,2,2
+MKTC-2027,DIY AI Systems,2025-01-14,Crowdsourced,10,9.2,80.9,14.5,4.6,-29.5,2032.16,24385.87,Jennifer Liu,Enterprise SaaS,Scientific Computing,68,Low,Low,2,2,2
+MKTC-2015,Bootstrap AI,2025-02-06,Casual,8,9.0,67.4,22.2,10.3,-18.9,1136.44,13637.27,Michael Rodriguez,Gaming,Image Generation,68,Low,Low,2,2,1
+MKTC-2005,Spot Instance Labs,2025-03-19,Regular,23,7.2,64.0,20.7,15.3,-12.9,5316.17,63794.04,David Kim,Media & Entertainment,LLM Training,68,Low,Medium,3,0,1
+MKTC-2026,Scrappy ML Labs,2025-09-17,Casual,5,9.1,80.8,13.1,6.1,-20.6,3274.2,39290.4,David Kim,Autonomous Vehicles,Data Analytics,72,Low,Low,2,0,1
+

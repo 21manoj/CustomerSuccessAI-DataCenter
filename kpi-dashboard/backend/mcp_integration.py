@@ -123,7 +123,8 @@ class MCPIntegration:
         from models import Account, KPI, HealthTrend
         
         with app.app_context():
-            account = Account.query.get(account_id)
+            from extensions import db
+            account = db.session.get(Account, account_id)
             if not account:
                 return {'error': 'Account not found'}
             

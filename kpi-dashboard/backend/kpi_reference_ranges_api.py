@@ -122,7 +122,7 @@ def update_kpi_reference_range(range_id):
         data = request.json
         
         # Find the reference range
-        ref_range = KPIReferenceRange.query.get(range_id)
+        ref_range = db.session.get(KPIReferenceRange, range_id)
         if not ref_range:
             return jsonify({
                 'status': 'error',
@@ -235,7 +235,7 @@ def bulk_update_kpi_reference_ranges():
             if not range_id:
                 continue
                 
-            ref_range = KPIReferenceRange.query.get(range_id)
+            ref_range = db.session.get(KPIReferenceRange, range_id)
             if not ref_range:
                 continue
             

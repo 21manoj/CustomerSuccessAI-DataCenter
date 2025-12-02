@@ -317,7 +317,7 @@ def get_kpi_financial_impact(kpi_name):
         total_potential_impact = 0
         
         for kpi in kpis:
-            account = Account.query.get(kpi.account_id)
+            account = db.session.get(Account, kpi.account_id)
             if not account:
                 continue
             

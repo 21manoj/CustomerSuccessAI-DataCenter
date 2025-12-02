@@ -13,15 +13,7 @@ import re
 
 enhanced_rag_openai_api = Blueprint('enhanced_rag_openai_api', __name__)
 
-def get_current_customer_id():
-    """Extract and validate the X-Customer-ID header from the request."""
-    cid = get_current_customer_id()
-    if not cid:
-        abort(400, 'Authentication required (handled by middleware)')
-    try:
-        return int(cid)
-    except Exception:
-        abort(400, 'Invalid authentication (handled by middleware)')
+# Use get_current_customer_id from auth_middleware (imported at top)
 
 @enhanced_rag_openai_api.route('/api/rag-openai/build', methods=['POST'])
 def build_enhanced_knowledge_base():
@@ -316,6 +308,32 @@ def get_accounts_by_revenue():
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': f'Failed to get accounts: {str(e)}'}), 500
+
+@enhanced_rag_openai_api.route('/api/rag-openai/status', methods=['GET'])
+def get_knowledge_base_status():
+    """Check if knowledge base is built for the customer"""
+    customer_id = get_current_customer_id()
+    
+    try:
+        rag_system = get_rag_system(customer_id)
+        
+        # Check if knowledge base is built
+        is_built = rag_system.faiss_index is not None and len(rag_system.kpi_data) > 0
+        
+        return jsonify({
+            'customer_id': customer_id,
+            'is_built': is_built,
+            'status': 'ready' if is_built else 'not_built',
+            'kpi_count': len(rag_system.kpi_data) if is_built else 0,
+            'account_count': len(rag_system.account_data) if is_built else 0
+        })
+    except Exception as e:
+        return jsonify({
+            'customer_id': customer_id,
+            'is_built': False,
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/query-simple', methods=['POST'])
 def simple_query():

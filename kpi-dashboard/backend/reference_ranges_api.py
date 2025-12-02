@@ -62,7 +62,7 @@ def update_reference_range(range_id):
             }), 400
         
         # Find the reference range
-        ref_range = KPIReferenceRange.query.get(range_id)
+        ref_range = db.session.get(KPIReferenceRange, range_id)
         if not ref_range:
             return jsonify({
                 'success': False,
@@ -132,7 +132,7 @@ def bulk_update_reference_ranges():
                     errors.append(f"Missing range_id for range: {range_data}")
                     continue
                 
-                ref_range = KPIReferenceRange.query.get(range_id)
+                ref_range = db.session.get(KPIReferenceRange, range_id)
                 if not ref_range:
                     errors.append(f"Reference range not found for ID: {range_id}")
                     continue

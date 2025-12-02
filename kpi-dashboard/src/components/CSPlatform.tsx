@@ -132,6 +132,8 @@ const CSPlatform = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [accountSnapshot, setAccountSnapshot] = useState<any | null>(null);
+  const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   
   // Account Health Dashboard tab state
   const [accountHealthTab, setAccountHealthTab] = useState<'list' | 'finviz'>(() => {
@@ -410,6 +412,60 @@ const CSPlatform = () => {
       fetchKPIs();
     }
   }, [session?.customer_id]);
+
+  // Fetch account snapshot for more context
+  const fetchAccountSnapshot = async (accountId: number) => {
+    if (!session?.customer_id) return;
+    
+    setLoadingSnapshot(true);
+    try {
+      const response = await fetch(`/api/account-snapshots/latest?account_id=${accountId}`, {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success' && data.snapshot) {
+          setAccountSnapshot(data.snapshot);
+        } else {
+          // No snapshot exists, create one automatically
+          console.log('No snapshot found, creating one automatically...');
+          const createResponse = await fetch('/api/account-snapshots/create', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              account_id: accountId,
+              snapshot_type: 'manual',
+              reason: 'User clicked account in Health tab'
+            }),
+          });
+          
+          if (createResponse.ok) {
+            const createData = await createResponse.json();
+            if (createData.snapshots && createData.snapshots.length > 0) {
+              // Fetch the newly created snapshot
+              const newSnapshotResponse = await fetch(`/api/account-snapshots/latest?account_id=${accountId}`, {
+                credentials: 'include',
+              });
+              if (newSnapshotResponse.ok) {
+                const newSnapshotData = await newSnapshotResponse.json();
+                if (newSnapshotData.status === 'success' && newSnapshotData.snapshot) {
+                  setAccountSnapshot(newSnapshotData.snapshot);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching account snapshot:', err);
+    } finally {
+      setLoadingSnapshot(false);
+    }
+  };
 
   // Fetch products for all accounts
   const fetchProducts = async (accountId: number) => {
@@ -1595,11 +1651,14 @@ const CSPlatform = () => {
                 <div key={account.account_id} className="border border-gray-200 rounded-lg overflow-hidden">
                   {/* Account Header Button */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (selectedAccount?.account_id === account.account_id) {
                         setSelectedAccount(null);
+                        setAccountSnapshot(null);
                       } else {
                         setSelectedAccount(account);
+                        // Fetch account snapshot for more context
+                        await fetchAccountSnapshot(account.account_id);
                       }
                     }}
                     className={`w-full p-3 text-left transition-all hover:bg-gray-50 ${
@@ -1628,9 +1687,85 @@ const CSPlatform = () => {
                     </div>
                   </button>
 
-                  {/* Expandable KPI Table */}
+                  {/* Expandable Account Details with Snapshot Context */}
                   {selectedAccount?.account_id === account.account_id && (
                     <div className="border-t border-gray-200 bg-gray-50 p-3">
+                      {/* Account Snapshot Context Section */}
+                      {accountSnapshot && (
+                        <div className="mb-4 p-4 bg-white rounded-lg border border-blue-200 shadow-sm">
+                          <div className="flex items-center justify-between mb-3">
+                            <h6 className="text-sm font-semibold text-blue-900">
+                              📸 Account Snapshot Context
+                            </h6>
+                            <span className="text-xs text-gray-500">
+                              {new Date(accountSnapshot.snapshot_timestamp).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            {accountSnapshot.health_score_trend && (
+                              <div>
+                                <p className="text-gray-500 mb-1">Health Trend</p>
+                                <p className={`font-medium ${
+                                  accountSnapshot.health_score_trend === 'improving' ? 'text-green-600' :
+                                  accountSnapshot.health_score_trend === 'declining' ? 'text-red-600' :
+                                  'text-gray-600'
+                                }`}>
+                                  {accountSnapshot.health_score_trend === 'improving' ? '↑ Improving' :
+                                   accountSnapshot.health_score_trend === 'declining' ? '↓ Declining' :
+                                   '→ Stable'}
+                                </p>
+                              </div>
+                            )}
+                            {accountSnapshot.revenue_change_percent !== null && accountSnapshot.revenue_change_percent !== undefined && (
+                              <div>
+                                <p className="text-gray-500 mb-1">Revenue Change</p>
+                                <p className={`font-medium ${
+                                  accountSnapshot.revenue_change_percent > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {accountSnapshot.revenue_change_percent > 0 ? '↑' : '↓'} {Math.abs(accountSnapshot.revenue_change_percent).toFixed(1)}%
+                                </p>
+                              </div>
+                            )}
+                            {accountSnapshot.playbooks_running_count !== undefined && (
+                              <div>
+                                <p className="text-gray-500 mb-1">Playbooks</p>
+                                <p className="font-medium text-gray-900">
+                                  {accountSnapshot.playbooks_running_count} running, {accountSnapshot.playbooks_completed_count} completed
+                                </p>
+                              </div>
+                            )}
+                            {accountSnapshot.critical_kpis_count !== undefined && accountSnapshot.total_kpis !== undefined && (
+                              <div>
+                                <p className="text-gray-500 mb-1">KPI Status</p>
+                                <p className="font-medium text-gray-900">
+                                  {accountSnapshot.critical_kpis_count}/{accountSnapshot.total_kpis} critical
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          {accountSnapshot.recent_csm_note_ids && accountSnapshot.recent_csm_note_ids.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <p className="text-xs text-gray-500 mb-1">Recent CSM Activity</p>
+                              <p className="text-xs text-gray-700">
+                                {accountSnapshot.recent_csm_note_ids.length} recent note(s) available
+                              </p>
+                            </div>
+                          )}
+                          {accountSnapshot.recent_playbook_report_ids && accountSnapshot.recent_playbook_report_ids.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-500 mb-1">Recent Playbook Reports</p>
+                              <p className="text-xs text-gray-700">
+                                {accountSnapshot.recent_playbook_report_ids.length} recent report(s) available
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {loadingSnapshot && (
+                        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-xs text-blue-700">Loading account snapshot context...</p>
+                        </div>
+                      )}
                       <div className="mb-3">
                         <h6 className="text-sm font-semibold text-gray-900 mb-1">
                           KPIs for {account.account_name}
@@ -2475,13 +2610,17 @@ const CSPlatform = () => {
                 <AccountHealthHeatmap
                   accounts={accounts}
                   selectedAccountId={selectedAccount?.account_id || null}
-                  onAccountClick={(account) => {
+                  onAccountClick={async (account) => {
                     if (account === null) {
                       setSelectedAccount(null);
+                      setAccountSnapshot(null);
                     } else if (selectedAccount?.account_id === account.account_id) {
                       setSelectedAccount(null);
+                      setAccountSnapshot(null);
                     } else {
                       setSelectedAccount(account);
+                      // Fetch account snapshot for more context
+                      await fetchAccountSnapshot(account.account_id);
                     }
                   }}
                 />
@@ -2493,6 +2632,47 @@ const CSPlatform = () => {
                   
                   return (
                     <div className="mt-6 bg-white rounded-lg border-2 border-gray-200 overflow-hidden">
+                      {/* Account Snapshot Context Banner */}
+                      {accountSnapshot && (
+                        <div className="p-3 bg-blue-50 border-b border-blue-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h6 className="text-xs font-semibold text-blue-900">
+                              📸 Snapshot Context ({new Date(accountSnapshot.snapshot_timestamp).toLocaleDateString()})
+                            </h6>
+                            <div className="flex items-center space-x-3 text-xs">
+                              {accountSnapshot.health_score_trend && (
+                                <span className={`${
+                                  accountSnapshot.health_score_trend === 'improving' ? 'text-green-600' :
+                                  accountSnapshot.health_score_trend === 'declining' ? 'text-red-600' :
+                                  'text-gray-600'
+                                }`}>
+                                  {accountSnapshot.health_score_trend === 'improving' ? '↑ Improving' :
+                                   accountSnapshot.health_score_trend === 'declining' ? '↓ Declining' :
+                                   '→ Stable'}
+                                </span>
+                              )}
+                              {accountSnapshot.revenue_change_percent !== null && accountSnapshot.revenue_change_percent !== undefined && (
+                                <span className={accountSnapshot.revenue_change_percent > 0 ? 'text-green-600' : 'text-red-600'}>
+                                  Revenue: {accountSnapshot.revenue_change_percent > 0 ? '↑' : '↓'} {Math.abs(accountSnapshot.revenue_change_percent).toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-4 text-xs text-gray-600">
+                            {accountSnapshot.playbooks_running_count !== undefined && (
+                              <span>Playbooks: {accountSnapshot.playbooks_running_count} running</span>
+                            )}
+                            {accountSnapshot.critical_kpis_count !== undefined && (
+                              <span>Critical KPIs: {accountSnapshot.critical_kpis_count}/{accountSnapshot.total_kpis}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {loadingSnapshot && (
+                        <div className="p-2 bg-blue-50 border-b border-blue-200">
+                          <p className="text-xs text-blue-700">Loading snapshot context...</p>
+                        </div>
+                      )}
                       {/* Account Header */}
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-3">

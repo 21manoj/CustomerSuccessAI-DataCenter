@@ -597,13 +597,34 @@ const RAGAnalysis: React.FC = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to execute query');
+        // Try to get the actual error message from the response
+        let errorMessage = 'Failed to execute query';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || 'Failed to execute query';
+        }
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();
       
-      if (result.error && result.error.includes('Knowledge base not built')) {
-        setError('Knowledge base not built. Please build the knowledge base first by clicking the "Build Knowledge Base" button.');
+      if (result.error) {
+        // Check for specific error types
+        if (result.error.includes('Knowledge base not built')) {
+          setError('Knowledge base not built. Please build the knowledge base first by clicking the "Build Knowledge Base" button.');
+          return;
+        }
+        if (result.error.includes('API key') || result.error.includes('OpenAI') || result.error.includes('401') || result.error.includes('Incorrect API key')) {
+          setError('OpenAI API key is missing or invalid. Please configure your OpenAI API key in Settings > OpenAI Key Settings.');
+          return;
+        }
+        // For other errors, show the actual error message
+        setError(result.error);
         return;
       }
       

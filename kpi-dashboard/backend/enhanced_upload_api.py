@@ -44,17 +44,21 @@ def upload_excel_enhanced():
     user_id = int(user_id)
     
     try:
-        # Save file temporarily for format detection
-        filename = secure_filename(file.filename)
-        temp_path = f"/tmp/{filename}"
-        file.save(temp_path)
+        # Use secure file handler for temporary storage
+        from secure_file_handler import get_secure_file_handler
+        handler = get_secure_file_handler(customer_id=customer_id)
+        
+        # Save file temporarily for format detection (will be cleaned up)
+        temp_path, error = handler.save_file(file, file.filename)
+        if error:
+            return jsonify({'error': f'File upload failed: {error}'}), 400
         
         # Detect file format
         format_detector = FormatDetector()
         format_info = format_detector.detect_format(temp_path)
         
         if format_info.format_type == 'unknown' or format_info.confidence < 0.5:
-            os.remove(temp_path)
+            handler.delete_file(os.path.basename(temp_path))
             return jsonify({
                 'error': 'Unsupported file format',
                 'detected_format': format_info.format_type,
@@ -65,7 +69,7 @@ def upload_excel_enhanced():
         # Validate format
         is_valid, validation_errors = format_detector.validate_format(temp_path, format_info)
         if not is_valid:
-            os.remove(temp_path)
+            handler.delete_file(os.path.basename(temp_path))
             return jsonify({
                 'error': 'File format validation failed',
                 'errors': validation_errors,
@@ -79,11 +83,11 @@ def upload_excel_enhanced():
         kpi_data = adapter.process(temp_path, customer_id, account_name)
         
         if not kpi_data:
-            os.remove(temp_path)
+            handler.delete_file(os.path.basename(temp_path))
             return jsonify({'error': 'No valid KPI data found in file'}), 400
         
         # Clean up temp file
-        os.remove(temp_path)
+        handler.delete_file(os.path.basename(temp_path))
         
         # Get or create customer configuration
         config = CustomerConfig.query.filter_by(customer_id=customer_id).first()

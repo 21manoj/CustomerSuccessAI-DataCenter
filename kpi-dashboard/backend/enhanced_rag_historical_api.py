@@ -224,6 +224,35 @@ def get_historical_collection_info():
     except Exception as e:
         return jsonify({'error': f'Failed to get collection info: {str(e)}'}), 500
 
+@enhanced_rag_historical_api.route('/api/rag-historical/status', methods=['GET'])
+def get_historical_status():
+    """Get status of historical knowledge base"""
+    customer_id = get_current_customer_id()
+    
+    try:
+        rag_system = get_historical_rag_system(customer_id)
+        
+        # Check if knowledge base is built by checking if collection exists
+        try:
+            collection_info = rag_system.qdrant_client.get_collection(rag_system.collection_name)
+            is_built = collection_info.vectors_count > 0
+        except Exception:
+            is_built = False
+        
+        return jsonify({
+            'customer_id': customer_id,
+            'is_built': is_built,
+            'status': 'ready' if is_built else 'not_built',
+            'collection_name': rag_system.collection_name if is_built else None
+        })
+    except Exception as e:
+        return jsonify({
+            'customer_id': customer_id,
+            'is_built': False,
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
 def _detect_historical_query_type(query_text: str) -> str:
     """Auto-detect query type based on keywords"""
     query_lower = query_text.lower()

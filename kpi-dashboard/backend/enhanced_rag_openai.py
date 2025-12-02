@@ -24,7 +24,8 @@ class EnhancedRAGSystemOpenAI:
     def __init__(self):
         """Initialize the enhanced RAG system with OpenAI and FAISS"""
         # Initialize OpenAI client
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        # API key will be retrieved per-request from customer-specific storage
+        # Don't set global openai.api_key here - use get_openai_api_key(customer_id) instead
         
         # Initialize embedding model
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -345,7 +346,13 @@ class EnhancedRAGSystemOpenAI:
         """
         
         try:
-            client = openai.OpenAI(api_key=openai.api_key)
+            # Get customer-specific API key (encrypted from database or env fallback)
+            from openai_key_utils import get_openai_api_key
+            api_key = get_openai_api_key(self.customer_id)
+            if not api_key:
+                return "OpenAI API key is not configured. Please configure your OpenAI API key in Settings > OpenAI Key Settings."
+            
+            client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
@@ -356,8 +363,15 @@ class EnhancedRAGSystemOpenAI:
                 temperature=0.3
             )
             return response.choices[0].message.content
+        except openai.AuthenticationError as e:
+            return "OpenAI API key is invalid or expired. Please update your API key in Settings > OpenAI Key Settings."
+        except openai.APIError as e:
+            return f"OpenAI API error: {str(e)}. Please check your API key and account status."
         except Exception as e:
-            return f"Error generating response: {str(e)}"
+            error_msg = str(e)
+            if 'API key' in error_msg or '401' in error_msg or 'authentication' in error_msg.lower():
+                return "OpenAI API key is missing or invalid. Please configure your API key in Settings > OpenAI Key Settings."
+            return f"Error generating response: {error_msg}"
     
     def _prepare_context(self, results: List[Dict]) -> str:
         """Prepare context from search results"""

@@ -52,8 +52,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        
-      credentials: 'include'},
+        },
+        credentials: 'include',
         body: JSON.stringify({
           company_name: formData.company_name,
           admin_name: formData.admin_name,

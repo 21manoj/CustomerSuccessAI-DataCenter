@@ -471,7 +471,7 @@ def create_snapshot():
                 created_snapshots.append({
                     'snapshot_id': snapshot.snapshot_id,
                     'account_id': snapshot.account_id,
-                    'account_name': Account.query.get(snapshot.account_id).account_name if Account.query.get(snapshot.account_id) else None,
+                    'account_name': (account.account_name if (account := db.session.get(Account, snapshot.account_id)) else None),
                     'snapshot_timestamp': snapshot.snapshot_timestamp.isoformat(),
                     'overall_health_score': float(snapshot.overall_health_score) if snapshot.overall_health_score else None
                 })
@@ -551,7 +551,7 @@ def get_snapshots():
         
         result = []
         for snapshot in snapshots:
-            account = Account.query.get(snapshot.account_id)
+            account = db.session.get(Account, snapshot.account_id)
             result.append({
                 'snapshot_id': snapshot.snapshot_id,
                 'account_id': snapshot.account_id,
@@ -605,7 +605,7 @@ def get_latest_snapshot():
                 'message': 'No snapshot found for this account'
             }), 404
         
-        account = Account.query.get(account_id)
+        account = db.session.get(Account, account_id)
         
         return jsonify({
             'status': 'success',

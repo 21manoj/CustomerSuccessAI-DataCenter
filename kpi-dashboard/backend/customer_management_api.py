@@ -111,7 +111,7 @@ def get_customer_kb_status(customer_id):
     """Get knowledge base status for a specific customer"""
     try:
         # Check if customer exists
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         
@@ -150,7 +150,7 @@ def build_customer_knowledge_base(customer_id):
     """Build knowledge base for a specific customer"""
     try:
         # Check if customer exists
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         
@@ -186,7 +186,7 @@ def get_customer_data_summary(customer_id):
     """Get data summary for a specific customer"""
     try:
         # Check if customer exists
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
         

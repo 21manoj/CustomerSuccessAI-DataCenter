@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Health Trend API for tracking and retrieving monthly health score trends.
+
+FIXED: Removed invalid account.health_score references
+FIXED: Now properly gets health scores from HealthTrend table
 """
 
 from flask import Blueprint, request, jsonify
@@ -9,6 +12,9 @@ from datetime import datetime, timedelta
 from extensions import db
 from models import HealthTrend, Account, Customer
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 health_trend_api = Blueprint('health_trend_api', __name__)
 
@@ -53,7 +59,7 @@ def get_health_trends():
         })
         
     except Exception as e:
-        print(f"Error fetching health trends: {e}")
+        logger.error(f"Error fetching health trends: {e}", exc_info=True)
         return jsonify({'error': 'Failed to fetch health trends'}), 500
 
 @health_trend_api.route('/api/health-trends', methods=['POST'])
@@ -106,7 +112,7 @@ def create_health_trend():
                     priority=2
                 )
             except Exception as e:
-                print(f"Note: Could not publish health scores updated event: {e}")
+                logger.warning(f"Could not publish health scores updated event: {e}")
             
             trend = existing_trend
         else:
@@ -145,7 +151,7 @@ def create_health_trend():
                 priority=2
             )
         except Exception as e:
-            print(f"Note: Could not publish health scores updated event: {e}")
+            logger.warning(f"Could not publish health scores updated event: {e}")
         
         return jsonify({
             'message': 'Health trend saved successfully',
@@ -153,7 +159,7 @@ def create_health_trend():
         })
         
     except Exception as e:
-        print(f"Error saving health trend: {e}")
+        logger.error(f"Error saving health trend: {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'error': 'Failed to save health trend'}), 500
 
@@ -225,7 +231,7 @@ def generate_health_trends():
                     priority=2
                 )
         except Exception as e:
-            print(f"Note: Could not publish health scores updated events: {e}")
+            logger.warning(f"Could not publish health scores updated events: {e}")
         
         return jsonify({
             'message': f'Generated {generated_count} health trends',
@@ -233,6 +239,188 @@ def generate_health_trends():
         })
         
     except Exception as e:
-        print(f"Error generating health trends: {e}")
+        logger.error(f"Error generating health trends: {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'error': 'Failed to generate health trends'}), 500
+
+
+# ========================================
+# HELPER FUNCTIONS
+# ========================================
+
+def get_latest_health_score(account_id, customer_id):
+    """
+    Helper function to get the latest health score for an account.
+    
+    This is used by other modules that need health scores.
+    
+    Args:
+        account_id: Account ID
+        customer_id: Customer ID (for security validation)
+    
+    Returns:
+        float: Latest health score, or None if not found
+    """
+    latest_trend = HealthTrend.query.filter_by(
+        account_id=account_id,
+        customer_id=customer_id
+    ).order_by(
+        HealthTrend.year.desc(),
+        HealthTrend.month.desc()
+    ).first()
+    
+    if latest_trend and latest_trend.overall_health_score:
+        return float(latest_trend.overall_health_score)
+    
+    return None
+
+
+def evaluate_voc_triggers(customer_id, triggers):
+    """
+    Evaluate VoC Sprint trigger conditions.
+    
+    FIXED: Now properly gets health scores from HealthTrend table instead of
+    accessing non-existent account.health_score attribute.
+    """
+    nps_threshold = triggers.get('nps_threshold', 10)
+    csat_threshold = triggers.get('csat_threshold', 3.6)
+    churn_risk_threshold = triggers.get('churn_risk_threshold', 0.30)
+    health_score_drop_threshold = triggers.get('health_score_drop_threshold', 10)
+    
+    # Get all accounts for this customer
+    accounts = Account.query.filter_by(customer_id=customer_id).all()
+    
+    triggered_accounts = []
+    
+    for account in accounts:
+        account_triggers = []
+        
+        # ✅ FIXED: Get health score from HealthTrend table (not account.health_score)
+        latest_trend = HealthTrend.query.filter_by(
+            account_id=account.account_id,
+            customer_id=customer_id
+        ).order_by(
+            HealthTrend.year.desc(),
+            HealthTrend.month.desc()
+        ).first()
+        
+        # Use 50.0 as default if no health trend exists yet
+        health_score = float(latest_trend.overall_health_score) if latest_trend else 50.0
+        
+        # Check NPS (simulated - using health_score as proxy)
+        if health_score < nps_threshold * 10:  # Scale to 0-100
+            account_triggers.append(f"Low health score ({health_score:.1f}) as NPS proxy")
+        
+        # Check CSAT (using health_score / 20 as CSAT proxy on 0-5 scale)
+        csat_proxy = health_score / 20.0
+        if csat_proxy < csat_threshold:
+            account_triggers.append(f"Low CSAT proxy ({csat_proxy:.2f})")
+        
+        # Check churn risk (using account status)
+        if account.account_status == 'At Risk':
+            account_triggers.append("Account marked as 'At Risk'")
+        
+        # Check health score drop (would need historical data for proper implementation)
+        if health_score < 50:
+            account_triggers.append(f"Low health score ({health_score:.1f})")
+        
+        if account_triggers:
+            triggered_accounts.append({
+                'account_id': account.account_id,
+                'account_name': account.account_name,
+                'health_score': health_score,
+                'triggers': account_triggers
+            })
+    
+    triggered = len(triggered_accounts) > 0
+    
+    return {
+        'triggered': triggered,
+        'message': f'VoC Sprint triggered for {len(triggered_accounts)} account(s)' if triggered else 'No accounts meet VoC Sprint trigger conditions',
+        'details': {
+            'nps_threshold': nps_threshold,
+            'csat_threshold': csat_threshold,
+            'churn_risk_threshold': churn_risk_threshold,
+            'health_score_drop_threshold': health_score_drop_threshold
+        },
+        'affected_accounts': triggered_accounts
+    }
+
+
+def evaluate_activation_triggers(customer_id, triggers):
+    """
+    Evaluate Activation Blitz trigger conditions.
+    
+    FIXED: Now properly gets health scores from HealthTrend table instead of
+    accessing non-existent account.health_score attribute.
+    """
+    adoption_index_threshold = triggers.get('adoption_index_threshold', 60)
+    active_users_threshold = triggers.get('active_users_threshold', 50)
+    dau_mau_threshold = triggers.get('dau_mau_threshold', 0.25)
+    unused_feature_check = triggers.get('unused_feature_check', True)
+    
+    # Get all accounts for this customer
+    accounts = Account.query.filter_by(customer_id=customer_id).all()
+    
+    triggered_accounts = []
+    
+    for account in accounts:
+        account_triggers = []
+        
+        # ✅ FIXED: Get health score from HealthTrend table (not account.health_score)
+        latest_trend = HealthTrend.query.filter_by(
+            account_id=account.account_id,
+            customer_id=customer_id
+        ).order_by(
+            HealthTrend.year.desc(),
+            HealthTrend.month.desc()
+        ).first()
+        
+        # Use 60.0 as default if no health trend exists yet
+        adoption_proxy = float(latest_trend.overall_health_score) if latest_trend else 60.0
+        
+        # Check adoption index (using health_score as proxy)
+        if adoption_proxy < adoption_index_threshold:
+            account_triggers.append(f"Low adoption index ({adoption_proxy:.1f})")
+        
+        # Check active users (simulated - would come from usage data)
+        # For now, we'll simulate based on account revenue
+        active_users_proxy = int(account.revenue / 1000) if account.revenue else 0
+        if active_users_proxy < active_users_threshold:
+            account_triggers.append(f"Low active users (~{active_users_proxy})")
+        
+        # Check DAU/MAU (simulated)
+        dau_mau_proxy = 0.15 if adoption_proxy < 60 else 0.30
+        if dau_mau_proxy < dau_mau_threshold:
+            account_triggers.append(f"Low DAU/MAU ratio (~{dau_mau_proxy:.2f})")
+        
+        # Check for unused features (simulated)
+        if unused_feature_check:
+            # Get KPI count as proxy for feature usage
+            from models import KPI
+            kpi_count = KPI.query.filter_by(account_id=account.account_id).count()
+            if kpi_count < 10:  # Arbitrary threshold
+                account_triggers.append(f"Limited feature usage ({kpi_count} KPIs tracked)")
+        
+        if account_triggers:
+            triggered_accounts.append({
+                'account_id': account.account_id,
+                'account_name': account.account_name,
+                'adoption_index': adoption_proxy,
+                'active_users': active_users_proxy,
+                'triggers': account_triggers
+            })
+    
+    triggered = len(triggered_accounts) > 0
+    
+    return {
+        'triggered': triggered,
+        'message': f'Activation Blitz triggered for {len(triggered_accounts)} account(s)' if triggered else 'No accounts meet Activation Blitz trigger conditions',
+        'details': {
+            'adoption_index_threshold': adoption_index_threshold,
+            'active_users_threshold': active_users_threshold,
+            'dau_mau_threshold': dau_mau_threshold,
+            'unused_feature_check': unused_feature_check
+        },
+        'affected_accounts': triggered_accounts
+    }

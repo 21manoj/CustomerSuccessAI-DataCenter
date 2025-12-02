@@ -422,7 +422,7 @@ def export_all_account_data():
         for row, execution in enumerate(executions, 2):
             account_name = ''
             if execution.account_id:
-                account = Account.query.get(execution.account_id)
+                account = db.session.get(Account, execution.account_id)
                 account_name = account.account_name if account else ''
             
             executions_sheet.cell(row=row, column=1, value=execution.execution_id)
@@ -551,7 +551,7 @@ def export_all_account_data():
         
         health_trends = HealthTrend.query.filter_by(customer_id=customer_id).all()
         for row, trend in enumerate(health_trends, 2):
-            account = Account.query.get(trend.account_id)
+            account = db.session.get(Account, trend.account_id)
             account_name = account.account_name if account else ''
             
             health_trends_sheet.cell(row=row, column=1, value=trend.trend_id)
@@ -595,7 +595,7 @@ def export_all_account_data():
         
         time_series = KPITimeSeries.query.filter_by(customer_id=customer_id).all()
         for row, ts in enumerate(time_series, 2):
-            account = Account.query.get(ts.account_id)
+            account = db.session.get(Account, ts.account_id)
             account_name = account.account_name if account else ''
             
             time_series_sheet.cell(row=row, column=1, value=ts.id)

@@ -374,6 +374,17 @@ class ActivityLog(db.Model):
     customer_rel = db.relationship('Customer', backref='activity_logs')
     user_rel = db.relationship('User', backref='activity_logs')
     
+    # Property aliases for backward compatibility
+    @property
+    def user(self):
+        """Alias for user_rel for backward compatibility"""
+        return self.user_rel
+    
+    @property
+    def customer(self):
+        """Alias for customer_rel for backward compatibility"""
+        return self.customer_rel
+    
     # Indexes (defined in migration, but also specify here for clarity)
     __table_args__ = (
         db.Index('idx_activity_logs_customer_date', 'customer_id', 'created_at'),
