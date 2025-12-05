@@ -11,6 +11,37 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
+def _get_secret_key(environment='development'):
+    """Get secret key with environment-specific fail-safe"""
+    secret_key = os.environ.get('SECRET_KEY')
+    
+    if secret_key:
+        # Validate length
+        if len(secret_key) < 32:
+            raise ValueError(
+                f"SECRET_KEY too short ({len(secret_key)} chars). "
+                "Must be at least 32 characters!"
+            )
+        return secret_key
+    
+    # DEVELOPMENT: Auto-generate temporary key with warning
+    if environment == 'development':
+        temp_key = secrets.token_hex(32)
+        logger.warning(
+            "⚠️  SECRET_KEY not set. Using auto-generated temporary key for development. "
+            "Run 'python backend/generate_secret_key.py' to create persistent key."
+        )
+        print("⚠️  WARNING: Using temporary SECRET_KEY (will change on restart)")
+        print("⚠️  Run: python backend/generate_secret_key.py")
+        return temp_key
+    
+    # PRODUCTION: Fail hard
+    raise ValueError(
+        "❌ CRITICAL: SECRET_KEY not set in production! "
+        "Application cannot start without secret key. "
+        "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+
 class Config:
     """Base configuration"""
     
@@ -19,39 +50,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Security - Secret Key with Fail-Safe
-    @staticmethod
-    def get_secret_key(environment='development'):
-        """Get secret key with environment-specific fail-safe"""
-        secret_key = os.environ.get('SECRET_KEY')
-        
-        if secret_key:
-            # Validate length
-            if len(secret_key) < 32:
-                raise ValueError(
-                    f"SECRET_KEY too short ({len(secret_key)} chars). "
-                    "Must be at least 32 characters!"
-                )
-            return secret_key
-        
-        # DEVELOPMENT: Auto-generate temporary key with warning
-        if environment == 'development':
-            temp_key = secrets.token_hex(32)
-            logger.warning(
-                "⚠️  SECRET_KEY not set. Using auto-generated temporary key for development. "
-                "Run 'python backend/generate_secret_key.py' to create persistent key."
-            )
-            print("⚠️  WARNING: Using temporary SECRET_KEY (will change on restart)")
-            print("⚠️  Run: python backend/generate_secret_key.py")
-            return temp_key
-        
-        # PRODUCTION: Fail hard
-        raise ValueError(
-            "❌ CRITICAL: SECRET_KEY not set in production! "
-            "Application cannot start without secret key. "
-            "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
-        )
-    
-    SECRET_KEY = get_secret_key(os.environ.get('FLASK_ENV', 'development'))
+    SECRET_KEY = _get_secret_key(os.environ.get('FLASK_ENV', 'development'))
     
     # Flask-Session Configuration
     SESSION_TYPE = 'sqlalchemy'  # Database-backed sessions

@@ -359,6 +359,42 @@ const CSPlatform = () => {
           product_name: kpi.product_name,
         }));
         console.log('Transformed KPIs:', transformedKPIs.length, 'KPIs'); // Debug log
+        const productLevelCount = transformedKPIs.filter(k => k.product_id !== null && k.product_id !== undefined).length;
+        console.log(`Transformed KPIs: ${productLevelCount} product-level, ${transformedKPIs.length - productLevelCount} account-level`);
+        if (productLevelCount > 0) {
+          console.log('Sample product-level KPIs:', transformedKPIs.filter(k => k.product_id).slice(0, 3).map(k => ({
+            kpi_id: k.kpi_id,
+            account_id: k.account_id,
+            account_name: k.account_name,
+            product_id: k.product_id,
+            product_name: k.product_name || 'NULL',
+            kpi_parameter: k.kpi_parameter,
+            has_product_name: !!k.product_name
+          })));
+          
+          // Check for TechVision specifically
+          const techvisionKPIs = transformedKPIs.filter(k => k.account_name === 'TechVision');
+          const techvisionProductKPIs = techvisionKPIs.filter(k => k.product_id !== null && k.product_id !== undefined);
+          if (techvisionProductKPIs.length > 0) {
+            console.log(`TechVision: Found ${techvisionProductKPIs.length} product-level KPIs in transformed data`);
+            console.log('TechVision product KPIs:', techvisionProductKPIs.map(k => ({
+              kpi_id: k.kpi_id,
+              product_id: k.product_id,
+              product_name: k.product_name || 'NULL',
+              kpi_parameter: k.kpi_parameter
+            })));
+          } else {
+            console.log(`TechVision: ⚠️  NO product-level KPIs found in transformed data!`);
+            console.log('TechVision all KPIs:', techvisionKPIs.slice(0, 5).map(k => ({
+              kpi_id: k.kpi_id,
+              product_id: k.product_id,
+              product_name: k.product_name,
+              kpi_parameter: k.kpi_parameter
+            })));
+          }
+        } else {
+          console.log('⚠️  NO PRODUCT-LEVEL KPIs in transformed data at all!');
+        }
         setKpiData(transformedKPIs);
       } else {
         setError('Failed to fetch KPIs');
@@ -378,6 +414,7 @@ const CSPlatform = () => {
     
     for (const kpi of sortedKPIs) {
       // Create a unique key: account_id + kpi_parameter + (product_id or 'account')
+      // IMPORTANT: Use product_id to distinguish product-level from account-level KPIs
       const productKey = kpi.product_id ? `product_${kpi.product_id}` : 'account';
       const key = `${kpi.account_id}_${kpi.kpi_parameter}_${productKey}`;
       
@@ -387,7 +424,20 @@ const CSPlatform = () => {
       }
     }
     
-    return Array.from(kpiMap.values());
+    const result = Array.from(kpiMap.values());
+    const productLevelCount = result.filter(k => k.product_id !== null && k.product_id !== undefined).length;
+    console.log(`DEBUG Deduplication: Total KPIs after deduplication: ${result.length} (${productLevelCount} product-level, ${result.length - productLevelCount} account-level)`);
+    if (productLevelCount > 0) {
+      console.log('DEBUG Deduplication: Sample product-level KPIs:', result.filter(k => k.product_id).slice(0, 3).map(k => ({
+        kpi_id: k.kpi_id,
+        account_id: k.account_id,
+        product_id: k.product_id,
+        product_name: k.product_name,
+        kpi_parameter: k.kpi_parameter
+      })));
+    }
+    
+    return result;
   }, [kpiData]);
 
   useEffect(() => {
@@ -1830,8 +1880,10 @@ const CSPlatform = () => {
                                 
                                 // Account has products (1, 2, 3, or more) - show uniform format
                                 // Get all product-level KPIs (for any number of products)
+                                // IMPORTANT: Include KPIs that have product_id (even if product_name is missing)
                                 const productKPIs = allAccountKPIs.filter(kpi => 
-                                  kpi.product_id !== null && kpi.product_id !== undefined
+                                  kpi.product_id !== null && 
+                                  kpi.product_id !== undefined
                                 );
                                 
                                 // Get account-level KPIs
@@ -1860,8 +1912,10 @@ const CSPlatform = () => {
                               })().map((kpi) => (
                                   <tr key={kpi.kpi_id} className="hover:bg-gray-50">
                                     <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900">
-                                      {kpi.product_name ? (
-                                        <span className="font-medium text-blue-600">{kpi.product_name}</span>
+                                      {kpi.product_id ? (
+                                        <span className="font-medium text-blue-600">
+                                          {kpi.product_name || `Product ${kpi.product_id}`}
+                                        </span>
                                       ) : (
                                         <span className="text-gray-500 italic">Account Level</span>
                                       )}
@@ -2044,6 +2098,13 @@ const CSPlatform = () => {
       );
       
       console.log(`DEBUG: Found ${productKPIs.length} product-level KPIs`);
+      console.log(`DEBUG: Sample product KPIs:`, productKPIs.slice(0, 3).map(k => ({
+        kpi_id: k.kpi_id,
+        account_id: k.account_id,
+        product_id: k.product_id,
+        product_name: k.product_name,
+        kpi_parameter: k.kpi_parameter
+      })));
       
       productKPIs.forEach(kpi => {
         const productName = kpi.product_name!.trim();
@@ -2083,18 +2144,35 @@ const CSPlatform = () => {
         }
         
         // Add account if not already added (in case account wasn't in profile data)
+        // IMPORTANT: Only add accounts that exist in the accounts array (from database)
+        // This prevents showing accounts that don't exist in the database
         const account = accounts.find(a => a.account_id === kpi.account_id);
         if (account && !groups[groupKey].accounts.find(a => a.account_id === account.account_id)) {
           groups[groupKey].accounts.push(account);
           groups[groupKey].totalRevenue += account.revenue || 0;
         }
+        // If account not found in accounts array, skip it (don't add non-existent accounts)
       });
       
-      console.log(`DEBUG: Product groups after adding KPIs:`, Object.keys(groups).map(key => ({
+      // Filter out any accounts that don't exist in the accounts array
+      // This ensures we only show accounts that are actually in the database
+      const validAccountIds = new Set(accounts.map(a => a.account_id));
+      for (const groupKey in groups) {
+        groups[groupKey].accounts = groups[groupKey].accounts.filter(acc => 
+          validAccountIds.has(acc.account_id)
+        );
+        // Recalculate total revenue after filtering
+        groups[groupKey].totalRevenue = groups[groupKey].accounts.reduce(
+          (sum, acc) => sum + (acc.revenue || 0), 0
+        );
+      }
+      
+      console.log(`DEBUG: Product groups after adding KPIs and filtering:`, Object.keys(groups).map(key => ({
         key,
         displayName: groups[key].displayName,
         kpiCount: groups[key].kpis.length,
-        accountCount: groups[key].accounts.length
+        accountCount: groups[key].accounts.length,
+        accountNames: groups[key].accounts.map(a => a.account_name).join(', ')
       })));
       
       return groups;
@@ -2448,37 +2526,50 @@ const CSPlatform = () => {
                                 return kpiProductName === targetProductName || kpiProductName === displayNameNormalized;
                               });
                               
+                              console.log(`DEBUG Product Health: Product "${displayName}" - Found ${productKPIs.length} product-level KPIs`);
+                              
                               // If we found product-level KPIs, use them
                               if (productKPIs.length > 0) {
                                 return productKPIs;
                               }
                               
-                              // Fallback: If no product-level KPIs, check if account has products
-                              // If account has products but no product KPIs, return empty (will be created)
-                              // Only show account-level KPIs if account has NO products
+                              // Fallback: If no product-level KPIs found, show account-level KPIs for accounts using this product
+                              // This ensures we show relevant KPIs even when product-level data hasn't been created yet
                               const accountsWithThisProduct = group.accounts;
                               const fallbackKPIs: KPI[] = [];
                               
                               accountsWithThisProduct.forEach(account => {
-                                const profileProducts = account.profile_metadata?.products_used;
-                                const accountProductsList = profileProducts && profileProducts.trim() 
-                                  ? profileProducts.split(',').map(p => p.trim()).filter(p => p)
-                                  : (account.products_used || []);
+                                // Get account-level KPIs for this account
+                                // Filter out parameters that have product-level KPIs for other products
+                                const accountKPIs = deduplicatedKpiData.filter(kpi => 
+                                  kpi.account_id === account.account_id && 
+                                  !kpi.product_id // Account-level only
+                                );
                                 
-                                const accountProductKPIs = deduplicatedKpiData.filter(kpi => 
+                                // Get all product-level KPIs for this account to identify which parameters are product-specific
+                                const allProductKPIsForAccount = deduplicatedKpiData.filter(kpi => 
                                   kpi.account_id === account.account_id && kpi.product_id
                                 );
-                                const hasProducts = accountProductsList.length > 0 || accountProductKPIs.length > 0;
+                                const productLevelParameters = new Set(
+                                  allProductKPIsForAccount.map(kpi => kpi.kpi_parameter).filter(p => p)
+                                );
                                 
-                                // Only use account-level KPIs if account has NO products
-                                if (!hasProducts) {
-                                  const accountKPIs = deduplicatedKpiData.filter(kpi => 
-                                    kpi.account_id === account.account_id && 
-                                    !kpi.product_id
-                                  );
-                                  fallbackKPIs.push(...accountKPIs);
-                                }
+                                // Show account-level KPIs that:
+                                // 1. Are aggregates (aggregation_type set), OR
+                                // 2. Don't have product-level KPIs for this account
+                                const relevantAccountKPIs = accountKPIs.filter(kpi => {
+                                  if (productLevelParameters.has(kpi.kpi_parameter)) {
+                                    // Only show if it's an aggregate
+                                    return kpi.aggregation_type !== null && kpi.aggregation_type !== undefined;
+                                  }
+                                  // Show all other account-level KPIs
+                                  return true;
+                                });
+                                
+                                fallbackKPIs.push(...relevantAccountKPIs);
                               });
+                              
+                              console.log(`DEBUG Product Health: Product "${displayName}" - Using ${fallbackKPIs.length} account-level KPIs as fallback`);
                               
                               return fallbackKPIs;
                             })()).map((kpi) => {
@@ -2871,26 +2962,85 @@ const CSPlatform = () => {
                               // Get all KPIs for this account
                               const allAccountKPIs = deduplicatedKpiData.filter(kpi => kpi.account_id === account.account_id);
                               
+                              console.log(`DEBUG Account Detail: Account ${account.account_name} (ID: ${account.account_id})`);
+                              console.log(`DEBUG Account Detail: Total KPIs in deduplicatedKpiData: ${allAccountKPIs.length}`);
+                              
+                              // Check for product-level KPIs FIRST (before checking metadata)
+                              const accountProductKPIs = allAccountKPIs.filter(kpi => 
+                                kpi.product_id !== null && 
+                                kpi.product_id !== undefined
+                              );
+                              
+                              console.log(`DEBUG Account Detail: Product-level KPIs found in deduplicatedKpiData: ${accountProductKPIs.length}`);
+                              if (accountProductKPIs.length > 0) {
+                                console.log(`DEBUG Account Detail: Product-level KPIs details:`, accountProductKPIs.map(k => ({
+                                  kpi_id: k.kpi_id,
+                                  product_id: k.product_id,
+                                  product_name: k.product_name || 'NULL',
+                                  kpi_parameter: k.kpi_parameter,
+                                  has_product_name: !!k.product_name
+                                })));
+                                
+                                // Group by product
+                                const byProduct: {[key: string]: number} = {};
+                                accountProductKPIs.forEach(k => {
+                                  const key = k.product_name || `Product_${k.product_id}`;
+                                  byProduct[key] = (byProduct[key] || 0) + 1;
+                                });
+                                console.log(`DEBUG Account Detail: Product-level KPIs by product:`, byProduct);
+                              } else {
+                                console.log(`DEBUG Account Detail: ⚠️  NO PRODUCT-LEVEL KPIs FOUND in deduplicatedKpiData!`);
+                                console.log(`DEBUG Account Detail: Sample of allAccountKPIs:`, allAccountKPIs.slice(0, 5).map(k => ({
+                                  kpi_id: k.kpi_id,
+                                  product_id: k.product_id,
+                                  product_name: k.product_name,
+                                  kpi_parameter: k.kpi_parameter
+                                })));
+                              }
+                              
                               // Check if account has products (from profile metadata, products_used array, or product-level KPIs)
                               const profileProducts = account.profile_metadata?.products_used;
                               const accountProductsList = profileProducts && profileProducts.trim() 
                                 ? profileProducts.split(',').map(p => p.trim()).filter(p => p)
                                 : (account.products_used || []);
-                              const accountProductKPIs = allAccountKPIs.filter(kpi => 
-                                kpi.product_id !== null && kpi.product_id !== undefined
-                              );
+                              
                               const hasProducts = accountProductsList.length > 0 || accountProductKPIs.length > 0;
+                              
+                              console.log(`DEBUG Account Detail: Products from metadata: ${accountProductsList.join(', ')}`);
+                              console.log(`DEBUG Account Detail: Has products: ${hasProducts} (metadata: ${accountProductsList.length}, KPIs: ${accountProductKPIs.length})`);
                               
                               if (!hasProducts) {
                                 // Account has no products - show only account-level KPIs
-                                return allAccountKPIs.filter(kpi => kpi.product_id === null || kpi.product_id === undefined);
+                                const accountLevelOnly = allAccountKPIs.filter(kpi => kpi.product_id === null || kpi.product_id === undefined);
+                                console.log(`DEBUG Account Detail: No products, showing ${accountLevelOnly.length} account-level KPIs`);
+                                return accountLevelOnly;
                               }
                               
                               // Account has products (1, 2, 3, or more) - show uniform format
                               // Get all product-level KPIs (for any number of products)
+                              // IMPORTANT: Include KPIs that have product_id (even if product_name is missing)
+                              // This handles cases where product_id exists but Product table join failed
                               const productKPIs = allAccountKPIs.filter(kpi => 
-                                kpi.product_id !== null && kpi.product_id !== undefined
+                                kpi.product_id !== null && 
+                                kpi.product_id !== undefined
                               );
+                              
+                              console.log(`DEBUG Account Detail: Found ${productKPIs.length} product-level KPIs to display`);
+                              if (productKPIs.length > 0) {
+                                // Group by product to verify all products are represented
+                                const kpisByProduct: {[productName: string]: number} = {};
+                                productKPIs.forEach(k => {
+                                  const productName = k.product_name || `Product ${k.product_id}`;
+                                  kpisByProduct[productName] = (kpisByProduct[productName] || 0) + 1;
+                                });
+                                console.log(`DEBUG Account Detail: Product KPIs by product:`, kpisByProduct);
+                                console.log(`DEBUG Account Detail: Product KPIs sample:`, productKPIs.slice(0, 3).map(k => ({
+                                  kpi_id: k.kpi_id,
+                                  product_id: k.product_id,
+                                  product_name: k.product_name || 'MISSING',
+                                  kpi_parameter: k.kpi_parameter
+                                })));
+                              }
                               
                               // Get account-level KPIs
                               // For parameters that have product-level KPIs, only show account-level if:
@@ -2912,14 +3062,19 @@ const CSPlatform = () => {
                                 return true;
                               });
                               
+                              console.log(`DEBUG Account Detail: Found ${accountLevelKPIs.length} account-level KPIs to display`);
+                              console.log(`DEBUG Account Detail: Total KPIs to display: ${productKPIs.length + accountLevelKPIs.length}`);
+                              
                               // Combine: product-level KPIs first, then account-level KPIs
                               // This ensures uniform display for accounts with 1, 2, 3, or more products
                               return [...productKPIs, ...accountLevelKPIs];
                             })().map((kpi) => (
                               <tr key={kpi.kpi_id} className="hover:bg-gray-50">
                                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                                  {kpi.product_name ? (
-                                    <span className="font-medium text-blue-600">{kpi.product_name}</span>
+                                  {kpi.product_id ? (
+                                    <span className="font-medium text-blue-600">
+                                      {kpi.product_name || `Product ${kpi.product_id}`}
+                                    </span>
                                   ) : (
                                     <span className="text-gray-500 italic">Account Level</span>
                                   )}
@@ -3418,14 +3573,15 @@ const CSPlatform = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {kpiData
+                    {deduplicatedKpiData
                       .filter(kpi => {
                         if (!selectedAccount) return false;
                         if (viewMode === 'product' && selectedProduct?.productId) {
-                          return kpi.product_id === selectedProduct.productId;
+                          // Product view: show only KPIs for the selected product
+                          return kpi.product_id === selectedProduct.productId && kpi.account_id === selectedAccount.account_id;
                         }
-                        // Account-level view: show account-level KPIs only (no product_id)
-                        return (kpi.account_id === selectedAccount.account_id || kpi.account_id === null) && !kpi.product_id;
+                        // Account-level view: show ALL KPIs for this account (both account-level and product-level)
+                        return kpi.account_id === selectedAccount.account_id;
                       })
                       .map((kpi) => (
                         <tr key={kpi.kpi_id} className="hover:bg-gray-50">
