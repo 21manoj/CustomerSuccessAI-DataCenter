@@ -335,9 +335,9 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
     <div className="space-y-8">
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Customer Success Playbooks</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Customer Success AI Agents</h2>
         <p className="text-gray-600">
-          Strategic playbooks to drive customer success outcomes. Choose a playbook to get started.
+          Strategic AI agents to drive customer success outcomes. Choose an agent to get started.
         </p>
       </div>
 
@@ -372,7 +372,7 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
                 }}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
-                Start Playbook
+                Start AI Agent
               </button>
             </div>
           </div>

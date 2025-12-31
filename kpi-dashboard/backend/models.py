@@ -26,16 +26,23 @@ class CustomerConfig(db.Model):
 class Account(db.Model):
     __tablename__ = 'accounts'
     account_id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'))
-    account_name = db.Column(db.String, nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_name = db.Column(db.String, nullable=False, index=True)
     revenue = db.Column(db.Numeric(15, 2), default=0)
-    account_status = db.Column(db.String, default='active')  # active, inactive, etc.
-    industry = db.Column(db.String)
-    region = db.Column(db.String)
-    external_account_id = db.Column(db.String)  # External account ID from customer profile
+    account_status = db.Column(db.String, default='active', index=True)  # active, inactive, etc.
+    industry = db.Column(db.String, index=True)
+    region = db.Column(db.String, index=True)
+    external_account_id = db.Column(db.String, index=True)  # External account ID from customer profile
     profile_metadata = db.Column(db.JSON)  # JSON field for customer profile data
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_account_customer_status', 'customer_id', 'account_status'),
+        db.Index('idx_account_customer_industry', 'customer_id', 'industry'),
+        db.Index('idx_account_customer_region', 'customer_id', 'region'),
+    )
 
 class Product(db.Model):
     __tablename__ = 'products'
@@ -96,41 +103,55 @@ class User(db.Model):
 class KPIUpload(db.Model):
     __tablename__ = 'kpi_uploads'
     upload_id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'))
-    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'))  # Link to account
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    uploaded_at = db.Column(db.DateTime, server_default=db.func.now())
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), index=True)  # Link to account
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), index=True)
+    uploaded_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
     version = db.Column(db.Integer, nullable=False)
     original_filename = db.Column(db.String)
     raw_excel = db.Column(db.LargeBinary)  # Store original file
     parsed_json = db.Column(db.JSON)       # Optionally store parsed structure
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_upload_customer_uploaded', 'customer_id', 'uploaded_at'),
+        db.Index('idx_upload_account_uploaded', 'account_id', 'uploaded_at'),
+    )
 
 class KPI(db.Model):
     __tablename__ = 'kpis'
     kpi_id = db.Column(db.Integer, primary_key=True)
-    upload_id = db.Column(db.Integer, db.ForeignKey('kpi_uploads.upload_id'))
-    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'))  # Direct account link
-    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'), nullable=True)  # Product-level KPI
-    aggregation_type = db.Column(db.String(50), nullable=True)  # 'account' or 'product'
-    category = db.Column(db.String)  # Tab name
+    upload_id = db.Column(db.Integer, db.ForeignKey('kpi_uploads.upload_id'), index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)  # Direct account link
+    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'), nullable=True, index=True)  # Product-level KPI
+    aggregation_type = db.Column(db.String(50), nullable=True, index=True)  # 'account' or 'product'
+    category = db.Column(db.String, index=True)  # Tab name
     row_index = db.Column(db.Integer)
-    health_score_component = db.Column(db.String)
+    health_score_component = db.Column(db.String, index=True)
     weight = db.Column(db.String)
     data = db.Column(db.String)
     source_review = db.Column(db.String)
-    kpi_parameter = db.Column(db.String)
-    impact_level = db.Column(db.String)
+    kpi_parameter = db.Column(db.String, index=True)  # Frequently queried
+    impact_level = db.Column(db.String, index=True)
     measurement_frequency = db.Column(db.String)
     last_edited_by = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    last_edited_at = db.Column(db.DateTime)
+    last_edited_at = db.Column(db.DateTime, index=True)
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_kpi_account_category', 'account_id', 'category'),
+        db.Index('idx_kpi_account_parameter', 'account_id', 'kpi_parameter'),
+        db.Index('idx_kpi_account_aggregation', 'account_id', 'aggregation_type'),
+        db.Index('idx_kpi_upload_account', 'upload_id', 'account_id'),
+    )
 
 class HealthTrend(db.Model):
     __tablename__ = 'health_trends'
     trend_id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False)
-    month = db.Column(db.Integer, nullable=False)  # 1-12
-    year = db.Column(db.Integer, nullable=False)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    month = db.Column(db.Integer, nullable=False, index=True)  # 1-12
+    year = db.Column(db.Integer, nullable=False, index=True)
     overall_health_score = db.Column(db.Numeric(5, 2), nullable=False)  # 0.00-100.00
     product_usage_score = db.Column(db.Numeric(5, 2))
     support_score = db.Column(db.Numeric(5, 2))
@@ -139,11 +160,15 @@ class HealthTrend(db.Model):
     relationship_strength_score = db.Column(db.Numeric(5, 2))
     total_kpis = db.Column(db.Integer, default=0)
     valid_kpis = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     
     # Ensure unique combination of account, month, and year
-    __table_args__ = (db.UniqueConstraint('account_id', 'month', 'year', name='unique_account_month_year'),)
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'month', 'year', name='unique_account_month_year'),
+        db.Index('idx_health_trend_account_date', 'account_id', 'year', 'month'),
+        db.Index('idx_health_trend_customer_date', 'customer_id', 'year', 'month'),
+    )
 
 class KPIReferenceRange(db.Model):
     __tablename__ = 'kpi_reference_ranges'
@@ -198,7 +223,12 @@ class KPITimeSeries(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     
     # Ensure unique combination of kpi, month, and year
-    __table_args__ = (db.UniqueConstraint('kpi_id', 'month', 'year', name='unique_kpi_month_year'),)
+    __table_args__ = (
+        db.UniqueConstraint('kpi_id', 'month', 'year', name='unique_kpi_month_year'),
+        db.Index('idx_time_series_kpi_date', 'kpi_id', 'year', 'month'),
+        db.Index('idx_time_series_account_date', 'account_id', 'year', 'month'),
+        db.Index('idx_time_series_customer_date', 'customer_id', 'year', 'month'),
+    )
 
 class PlaybookTrigger(db.Model):
     __tablename__ = 'playbook_triggers'

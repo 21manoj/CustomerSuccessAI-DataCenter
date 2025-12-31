@@ -161,20 +161,17 @@ def _execute_deterministic_query(query: str, classification: Dict, customer_id: 
 
 def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Dict:
     """
-    Execute RAG query via AI analysis
+    Execute RAG query via Qdrant VDB + OpenAI embeddings
     Provides insights, reasoning, and recommendations
+    Uses Qdrant vector database for semantic search with OpenAI text-embedding-3-large
     """
     try:
-        # Import RAG system (lazy import to avoid circular dependencies)
-        from enhanced_rag_openai import get_rag_system
+        # Import Qdrant RAG system (default and recommended)
+        from enhanced_rag_qdrant import get_qdrant_rag_system
         
-        rag_system = get_rag_system(customer_id)
+        rag_system = get_qdrant_rag_system(customer_id)
         
-        # Ensure knowledge base is built
-        if not rag_system.faiss_index:
-            rag_system.build_knowledge_base(customer_id)
-        
-        # Execute RAG query
+        # Execute RAG query (knowledge base will be built automatically if needed)
         rag_result = rag_system.query(query, classification['query_type'])
         
         return {
@@ -185,9 +182,11 @@ def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Di
                 'query_type': rag_result.get('query_type')
             },
             'metadata': {
-                'source': 'rag_system',
+                'source': 'qdrant_rag_system',
+                'vector_db': 'Qdrant',
+                'embedding_model': 'text-embedding-3-large',
                 'precision': 'ai_generated',
-                'execution_time_ms': '1000-3000',
+                'execution_time_ms': '1000-5000',
                 'cost': '$0.01-0.05',
                 'ai_model': 'GPT-4'
             }
@@ -199,7 +198,7 @@ def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Di
             'error': str(e),
             'result': {},
             'metadata': {
-                'source': 'rag_system',
+                'source': 'qdrant_rag_system',
                 'execution_failed': True
             }
         }

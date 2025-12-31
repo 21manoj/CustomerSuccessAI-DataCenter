@@ -13,15 +13,8 @@ import re
 
 enhanced_rag_qdrant_api = Blueprint('enhanced_rag_qdrant_api', __name__)
 
-def get_current_customer_id():
-    """Extract and validate the X-Customer-ID header from the request."""
-    cid = get_current_customer_id()
-    if not cid:
-        abort(400, 'Authentication required (handled by middleware)')
-    try:
-        return int(cid)
-    except Exception:
-        abort(400, 'Invalid authentication (handled by middleware)')
+# Use get_current_customer_id from auth_middleware (imported at top)
+# No need to redefine it here
 
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/build', methods=['POST'])
 def build_qdrant_knowledge_base():
@@ -46,7 +39,7 @@ def build_qdrant_knowledge_base():
 
 @enhanced_rag_qdrant_api.route('/api/rag-qdrant/query', methods=['POST'])
 def qdrant_query():
-    """Query the Qdrant RAG system with OpenAI GPT-4 analysis"""
+    """Query the Qdrant RAG system with OpenAI GPT-4 analysis using hierarchical collection + query_type prompts"""
     customer_id = get_current_customer_id()
     data = request.json
     
@@ -55,6 +48,7 @@ def qdrant_query():
     
     query_text = data['query']
     query_type = data.get('query_type', 'general')
+    collection = data.get('collection')  # Optional collection parameter
     
     # Auto-detect query type based on keywords
     if not query_type or query_type == 'auto':
@@ -63,8 +57,8 @@ def qdrant_query():
     try:
         rag_system = get_qdrant_rag_system(customer_id)
         
-        # Query the Qdrant RAG system
-        result = rag_system.query(query_text, query_type)
+        # Query the Qdrant RAG system with collection parameter (optional, will infer if not provided)
+        result = rag_system.query(query_text, query_type, collection=collection)
         
         return jsonify(result)
     except Exception as e:

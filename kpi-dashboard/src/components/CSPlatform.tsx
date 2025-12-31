@@ -707,11 +707,14 @@ const CSPlatform = () => {
   };
 
   const fetchPerformanceSummary = async () => {
+    if (!session?.customer_id) return;
+    
     try {
       const response = await fetch('/api/customer-performance/summary', {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-Customer-ID': session.customer_id.toString(),
         },
       });
       
@@ -1778,7 +1781,7 @@ const CSPlatform = () => {
                             )}
                             {accountSnapshot.playbooks_running_count !== undefined && (
                               <div>
-                                <p className="text-gray-500 mb-1">Playbooks</p>
+                                <p className="text-gray-500 mb-1">CS AI Agents</p>
                                 <p className="font-medium text-gray-900">
                                   {accountSnapshot.playbooks_running_count} running, {accountSnapshot.playbooks_completed_count} completed
                                 </p>
@@ -2751,7 +2754,7 @@ const CSPlatform = () => {
                           </div>
                           <div className="flex items-center space-x-4 text-xs text-gray-600">
                             {accountSnapshot.playbooks_running_count !== undefined && (
-                              <span>Playbooks: {accountSnapshot.playbooks_running_count} running</span>
+                              <span>CS AI Agents: {accountSnapshot.playbooks_running_count} running</span>
                             )}
                             {accountSnapshot.critical_kpis_count !== undefined && (
                               <span>Critical KPIs: {accountSnapshot.critical_kpis_count}/{accountSnapshot.total_kpis}</span>
@@ -3637,18 +3640,9 @@ const CSPlatform = () => {
       <header className="bg-white border-b border-gray-200 shadow-md px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
-            {/* Company Logo */}
-            <img 
-              src="/company-logo.png" 
-              alt="Company Logo" 
-              className="h-14 w-auto object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
             {/* Centered Title */}
             <div className="flex-1 text-center">
-              <h1 className="text-xl font-bold text-gray-900">Customer Success Value Management System - A Triad Partner AI Solution</h1>
+              <h1 className="text-xl font-bold text-gray-900">Customer Success Value Management System - CS Pulse Growth</h1>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -3675,7 +3669,7 @@ const CSPlatform = () => {
           { id: 'accounts', label: 'Account Health', icon: Users },
           { id: 'products', label: 'Product Health', icon: Target },
           { id: 'rag-analysis', label: 'AI Insights', icon: MessageSquare },
-          { id: 'insights', label: 'Playbooks', icon: MessageSquare },
+          { id: 'insights', label: 'CS AI Agents', icon: MessageSquare },
           { id: 'settings', label: 'Settings', icon: Settings },
           { id: 'reports', label: 'Reports', icon: FileText }
         ].map(item => (

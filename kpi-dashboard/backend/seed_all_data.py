@@ -19,12 +19,24 @@ from extensions import db
 from models import Customer, User, KPIReferenceRange
 from health_score_config import KPI_REFERENCE_RANGES
 from werkzeug.security import generate_password_hash
+from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'instance', 'kpi_dashboard.db')
 
+# Load environment variables
+env_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path=env_path)
+
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
+# Use PostgreSQL if DATABASE_URL is set, otherwise use SQLite
+database_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+if database_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print(f"✅ Using PostgreSQL database")
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
+    print(f"⚠️  Using SQLite database: {DB_PATH}")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -128,11 +140,16 @@ def main():
     print("\n" + "="*70)
     print("COMPREHENSIVE SEED SCRIPT FOR KPI DASHBOARD")
     print("="*70)
-    print(f"\nDatabase: {DB_PATH}")
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+    if database_url:
+        print(f"\nDatabase: PostgreSQL")
+    else:
+        print(f"\nDatabase: {DB_PATH}")
     
     with app.app_context():
-        # Check if database exists
-        if not os.path.exists(DB_PATH):
+        # For PostgreSQL, database should already exist
+        # For SQLite, check if database exists
+        if not database_url and not os.path.exists(DB_PATH):
             print(f"\n❌ ERROR: Database not found at {DB_PATH}")
             print("   Please run 'python3 create_db_minimal.py' first to create the database.")
             sys.exit(1)

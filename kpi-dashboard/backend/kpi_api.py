@@ -304,19 +304,20 @@ def get_all_kpis():
     try:
         customer_id = get_current_customer_id()
         
-        # Get KPIs with account and product information for this customer
-        kpis = db.session.query(KPI, Account, Product).join(
+        # Get KPIs with account, product, and upload information for this customer
+        # NOTE: Use Account.customer_id for filtering so KPIs without an upload still return.
+        kpis = db.session.query(KPI, Account, Product, KPIUpload).outerjoin(
             KPIUpload, KPI.upload_id == KPIUpload.upload_id
         ).join(
-            Account, KPI.account_id == Account.account_id, isouter=True
+            Account, KPI.account_id == Account.account_id
         ).outerjoin(
             Product, KPI.product_id == Product.product_id
         ).filter(
-            KPIUpload.customer_id == customer_id
+            Account.customer_id == customer_id
         ).all()
         
         result = []
-        for kpi, account, product in kpis:
+        for kpi, account, product, upload in kpis:
             result.append({
                 'kpi_id': kpi.kpi_id,
                 'account_id': kpi.account_id,
@@ -337,7 +338,9 @@ def get_all_kpis():
                 'impact_level': kpi.impact_level,
                 'measurement_frequency': kpi.measurement_frequency,
                 'last_edited_by': kpi.last_edited_by,
-                'last_edited_at': kpi.last_edited_at.isoformat() if kpi.last_edited_at else None
+                'last_edited_at': kpi.last_edited_at.isoformat() if kpi.last_edited_at else None,
+                'upload_id': kpi.upload_id,
+                'upload_filename': upload.original_filename if upload else None
             })
         
         return jsonify(result)

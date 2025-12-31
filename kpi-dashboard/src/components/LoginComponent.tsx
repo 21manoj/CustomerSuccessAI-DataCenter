@@ -7,11 +7,13 @@ interface LoginProps {
     customer_id: number; 
     user_id: string; 
     user_name: string; 
-    email: string; 
+    email: string;
+    vertical?: string;
   }) => void;
 }
 
 const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
+  const [vertical, setVertical] = useState('saas'); // Default to SaaS
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,9 +30,9 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        
-      credentials: 'include'},
-        body: JSON.stringify({ email, password })
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, vertical })
     });
 
       // Check content type before parsing
@@ -46,13 +48,20 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
 
       const data = await response.json();
       
+      // Get vertical from response or use the one selected
+      const sessionVertical = data.vertical || vertical;
+      
       const session = {
-        customer_id: data.user?.customer_id || 1,
-        user_id: data.user?.user_id?.toString() || '1',
-        user_name: data.user?.customer_name || 'User',
-        email: data.user?.email || ''
+        customer_id: data.user?.customer_id || data.customer_id || 1,
+        user_id: data.user?.user_id?.toString() || data.user_id?.toString() || '1',
+        user_name: data.user?.customer_name || data.user_name || 'User',
+        email: data.user?.email || data.email || '',
+        vertical: sessionVertical
     };
 
+      // Store vertical in localStorage
+      localStorage.setItem('vertical', sessionVertical);
+      
       onLogin(session);
     } catch (err) {
       if (err instanceof Error && err.message.includes('JSON')) {
@@ -69,25 +78,8 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center flex flex-col items-center">
-          {/* Company Logo - Replace with your company logo */}
-          <div className="mx-auto mb-6">
-            <img 
-              src="/company-logo.png" 
-              alt="Company Logo" 
-              className="h-32 w-auto object-contain"
-              onError={(e) => {
-                // Fallback to gradient icon if logo not found
-                e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                if (fallback) fallback.style.display = 'flex';
-              }}
-            />
-            <div className="h-24 w-24 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl items-center justify-center mx-auto" style={{display: 'none'}}>
-              <TrendingUp className="h-12 w-12 text-white" />
-            </div>
-          </div>
           <h2 className="text-2xl font-bold text-gray-900 text-center">Customer Success Value Management System</h2>
-          <p className="mt-2 text-sm text-gray-600 text-center">A Triad Partner AI Solution</p>
+          <p className="mt-2 text-sm text-gray-600 text-center">CS Pulse Growth</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">
@@ -97,6 +89,24 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
+
+            {/* Vertical Selector */}
+            <div>
+              <label htmlFor="vertical" className="block text-sm font-medium text-gray-700 mb-2">
+                Customer Type
+              </label>
+              <select
+                id="vertical"
+                name="vertical"
+                value={vertical}
+                onChange={(e) => setVertical(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="saas">SaaS Customer Success</option>
+                <option value="datacenter">Data Center</option>
+              </select>
+            </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -151,7 +161,7 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
                 disabled={isLoading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? 'Signing in...' : `Login to ${vertical === 'datacenter' ? 'Data Center' : 'SaaS'} Portal`}
               </button>
             </div>
           </form>
@@ -170,10 +180,10 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
             <p className="text-sm text-gray-700 text-center">
               For demo credentials, please email{' '}
               <a 
-                href="mailto:info@triadpartners.ai" 
+                href="mailto:support@cspulsegrowth.com" 
                 className="text-blue-600 hover:text-blue-800 font-medium underline"
               >
-                info@triadpartners.ai
+                support@cspulsegrowth.com
               </a>
             </p>
           </div>

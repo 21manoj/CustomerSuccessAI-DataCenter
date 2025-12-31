@@ -108,10 +108,10 @@ export default function PlaybookReports({ customerId }: PlaybookReportsProps) {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
           <FileText className="h-8 w-8 text-blue-600" />
-          Playbook Execution Reports
+          CS AI Agent Execution Reports
         </h2>
         <p className="text-gray-600">
-          Comprehensive reports with RACI, outcomes, and exit criteria for all playbook executions
+          Comprehensive reports with RACI, outcomes, and exit criteria for all AI agent executions
         </p>
       </div>
 
@@ -119,9 +119,9 @@ export default function PlaybookReports({ customerId }: PlaybookReportsProps) {
       {executions.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
           <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Playbook Executions Yet</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No AI Agent Executions Yet</h3>
           <p className="text-gray-600">
-            Start a playbook from the Playbooks tab to see execution reports here.
+            Start an agent session from the CS AI Agents tab to see execution reports here.
           </p>
         </div>
       ) : (

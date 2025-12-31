@@ -45,8 +45,20 @@ def _get_secret_key(environment='development'):
 class Config:
     """Base configuration"""
     
-    # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///instance/kpi_dashboard.db')
+    # Database - REQUIRE PostgreSQL
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        raise ValueError(
+            "❌ ERROR: DATABASE_URL environment variable is required.\n"
+            "Please set DATABASE_URL to a PostgreSQL connection string.\n"
+            "Example: postgresql://user:password@localhost:5432/dbname"
+        )
+    if not database_url.startswith('postgresql://') and not database_url.startswith('postgres://'):
+        raise ValueError(
+            f"❌ ERROR: DATABASE_URL must be PostgreSQL. Got: {database_url[:50]}...\n"
+            "Please set DATABASE_URL to a PostgreSQL connection string."
+        )
+    SQLALCHEMY_DATABASE_URI = database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Security - Secret Key with Fail-Safe
@@ -119,7 +131,7 @@ class Config:
     RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'memory://')
     
     # CORS
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:8005').split(',')
 
 class DevelopmentConfig(Config):
     """Development configuration"""

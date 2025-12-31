@@ -143,19 +143,33 @@ def is_public_endpoint(path):
 
 def get_current_customer_id():
     """
-    Get customer ID from authenticated user session.
+    Get customer ID from authenticated user session or header fallback.
     
-    SECURITY: This replaces all instances of request.headers.get('X-Customer-ID')
+    SECURITY: Prefers Flask-Login session, falls back to X-Customer-ID header for compatibility.
     
     Returns:
-        int: customer_id from current_user session
-        None: if not authenticated
+        int: customer_id from current_user session or header
+        None: if not authenticated and no header provided
     """
-    if not current_user.is_authenticated:
-        logger.error("get_current_customer_id() called but user not authenticated")
-        return None
+    # First try Flask-Login session (preferred)
+    try:
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            return current_user.customer_id
+    except (AttributeError, RuntimeError):
+        # Flask-Login not initialized or not in request context
+        pass
     
-    return current_user.customer_id
+    # Fallback to header for compatibility (when Flask-Login not set up)
+    customer_id_header = request.headers.get('X-Customer-ID')
+    if customer_id_header:
+        try:
+            return int(customer_id_header)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid X-Customer-ID header value: {customer_id_header}")
+            return None
+    
+    logger.warning("get_current_customer_id() called but user not authenticated and no X-Customer-ID header")
+    return None
 
 
 def get_current_user_id():

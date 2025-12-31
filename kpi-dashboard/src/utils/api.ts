@@ -5,8 +5,8 @@ export const getApiBaseUrl = (): string => {
     return process.env.REACT_APP_API_URL;
   }
   
-  // In development, use localhost
-  return 'http://localhost:5059';
+  // In development, use localhost (matches proxy in package.json)
+  return 'http://localhost:8001';
 };
 
 export const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {

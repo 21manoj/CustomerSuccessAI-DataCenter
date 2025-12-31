@@ -79,6 +79,7 @@ interface QueryTemplate {
   icon: React.ComponentType<any>;
   color: string;
   query_type: 'revenue_analysis' | 'account_analysis' | 'kpi_analysis' | 'general' | 'trend_analysis' | 'temporal_analysis';
+  collection?: 'quantitative' | 'qualitative' | 'historical';  // Optional collection for hierarchical prompts
 }
 
 interface ConversationMessage {
@@ -97,7 +98,7 @@ const RAGAnalysis: React.FC = () => {
   const [customQuery, setCustomQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<QueryTemplate | null>(null);
   const [isKnowledgeBaseBuilt, setIsKnowledgeBaseBuilt] = useState(false);
-  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal'>('working');
+  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal'>('qdrant');
   const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
   const statusCheckRef = useRef<boolean>(false);
   
@@ -163,7 +164,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Which accounts have the highest revenue?',
       icon: TrendingUp,
       color: 'bg-green-500',
-      query_type: 'revenue_analysis'
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'revenue-total',
@@ -173,7 +175,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What is the total revenue across all accounts?',
       icon: BarChart3,
       color: 'bg-green-500',
-      query_type: 'revenue_analysis'
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'revenue-growth',
@@ -183,7 +186,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me revenue growth analysis and trends',
       icon: TrendingUp,
       color: 'bg-green-500',
-      query_type: 'revenue_analysis'
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'revenue-industry',
@@ -193,7 +197,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'How does revenue vary by industry?',
       icon: BarChart3,
       color: 'bg-green-500',
-      query_type: 'revenue_analysis'
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
     },
 
     // Account Health & Performance
@@ -205,7 +210,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me account health scores and performance',
       icon: Users,
       color: 'bg-blue-500',
-      query_type: 'account_analysis'
+      query_type: 'account_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'account-risk',
@@ -215,7 +221,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Which accounts are at risk of churn?',
       icon: AlertTriangle,
       color: 'bg-red-500',
-      query_type: 'account_analysis'
+      query_type: 'account_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'account-performance',
@@ -225,7 +232,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Which accounts are performing best?',
       icon: Target,
       color: 'bg-blue-500',
-      query_type: 'account_analysis'
+      query_type: 'account_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'account-engagement',
@@ -235,7 +243,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me account engagement analysis',
       icon: Users,
       color: 'bg-blue-500',
-      query_type: 'account_analysis'
+      query_type: 'account_analysis',
+      collection: 'quantitative'
     },
 
     // KPI Performance
@@ -247,7 +256,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What are the top performing KPIs?',
       icon: Target,
       color: 'bg-purple-500',
-      query_type: 'kpi_analysis'
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'kpi-customer-satisfaction',
@@ -257,7 +267,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me customer satisfaction analysis',
       icon: MessageSquare,
       color: 'bg-purple-500',
-      query_type: 'kpi_analysis'
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'kpi-categories',
@@ -267,7 +278,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'How are different KPI categories performing?',
       icon: BarChart3,
       color: 'bg-purple-500',
-      query_type: 'kpi_analysis'
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
     },
     {
       id: 'kpi-trends',
@@ -277,7 +289,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What are the key trends in our KPI performance?',
       icon: TrendingUp,
       color: 'bg-purple-500',
-      query_type: 'kpi_analysis'
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
     },
 
     // Industry & Regional Analysis
@@ -289,7 +302,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'How do we perform across different industries?',
       icon: BarChart3,
       color: 'bg-orange-500',
-      query_type: 'general'
+      query_type: 'general',
+      collection: 'quantitative'
     },
     {
       id: 'regional-analysis',
@@ -299,7 +313,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me regional performance analysis',
       icon: BarChart3,
       color: 'bg-orange-500',
-      query_type: 'general'
+      query_type: 'general',
+      collection: 'quantitative'
     },
 
     // Historical Trend Analysis
@@ -311,7 +326,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me trends across all KPIs and accounts over time',
       icon: LineChart,
       color: 'bg-indigo-500',
-      query_type: 'trend_analysis'
+      query_type: 'trend_analysis',
+      collection: 'historical'
     },
     {
       id: 'kpi-trends-historical',
@@ -321,7 +337,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me historical trends in Time to First Value over time',
       icon: TrendingUp,
       color: 'bg-indigo-500',
-      query_type: 'trend_analysis'
+      query_type: 'trend_analysis',
+      collection: 'historical'
     },
     {
       id: 'account-trends-historical',
@@ -331,7 +348,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Show me how account performance has changed over time',
       icon: Users,
       color: 'bg-indigo-500',
-      query_type: 'trend_analysis'
+      query_type: 'trend_analysis',
+      collection: 'historical'
     },
     {
       id: 'health-evolution',
@@ -341,7 +359,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'How have health scores evolved over time?',
       icon: Activity,
       color: 'bg-indigo-500',
-      query_type: 'trend_analysis'
+      query_type: 'trend_analysis',
+      collection: 'historical'
     },
     {
       id: 'temporal-patterns',
@@ -351,7 +370,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What temporal patterns and seasonality do you see in the data?',
       icon: Calendar,
       color: 'bg-indigo-500',
-      query_type: 'temporal_analysis'
+      query_type: 'temporal_analysis',
+      collection: 'historical'
     },
     {
       id: 'predictive-insights',
@@ -361,7 +381,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What predictions can you make based on historical trends?',
       icon: Clock,
       color: 'bg-indigo-500',
-      query_type: 'trend_analysis'
+      query_type: 'trend_analysis',
+      collection: 'historical'
     },
 
     // Monthly Revenue Analysis
@@ -373,7 +394,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Which accounts have the highest revenue across last 4 months? please provide month details as well?',
       icon: Calendar,
       color: 'bg-purple-500',
-      query_type: 'revenue_analysis'
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'  // Current state analysis, not historical trends
     },
     {
       id: 'revenue-trends',
@@ -383,7 +405,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Analyze revenue trends and patterns over the last 6 months',
       icon: TrendingUp,
       color: 'bg-purple-500',
-      query_type: 'trend_analysis'
+      query_type: 'trend_analysis',
+      collection: 'historical'  // Focus on trends over time
     },
     {
       id: 'top-accounts-monthly',
@@ -393,7 +416,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'Which accounts performed best each month? Show monthly rankings',
       icon: BarChart3,
       color: 'bg-purple-500',
-      query_type: 'account_analysis'
+      query_type: 'account_analysis',
+      collection: 'historical'  // Monthly rankings = temporal analysis
     },
 
     // Strategic Insights
@@ -405,7 +429,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What strategic recommendations do you have for improving our business?',
       icon: Lightbulb,
       color: 'bg-yellow-500',
-      query_type: 'general'
+      query_type: 'general',
+      collection: 'quantitative'  // Based on quantitative data analysis
     },
     {
       id: 'growth-opportunities',
@@ -415,7 +440,8 @@ const RAGAnalysis: React.FC = () => {
       query: 'What growth opportunities do you see in our data?',
       icon: Zap,
       color: 'bg-yellow-500',
-      query_type: 'general'
+      query_type: 'general',
+      collection: 'quantitative'  // Based on quantitative data analysis
     }
   ];
 
@@ -554,7 +580,7 @@ const RAGAnalysis: React.FC = () => {
     }
   };
 
-  const executeQuery = async (query: string, queryType: string = 'general') => {
+  const executeQuery = async (query: string, queryType: string = 'general', template?: QueryTemplate) => {
     if (!session?.customer_id) return;
     
     setIsLoading(true);
@@ -592,6 +618,7 @@ const RAGAnalysis: React.FC = () => {
         body: JSON.stringify({
           query,
           query_type: queryType,
+          collection: template?.collection,  // Include collection if available from template parameter
           conversation_history: recentHistory
         })
       });
@@ -649,12 +676,13 @@ const RAGAnalysis: React.FC = () => {
   const handleTemplateClick = (template: QueryTemplate) => {
     setSelectedTemplate(template);
     setCustomQuery(template.query);
-    executeQuery(template.query, template.query_type);
+    // Pass template to executeQuery so collection can be included
+    executeQuery(template.query, template.query_type, template);
   };
 
   const handleCustomQuery = () => {
     if (customQuery.trim()) {
-      executeQuery(customQuery.trim());
+      executeQuery(customQuery.trim(), 'general', undefined);  // No template for custom queries
     }
   };
   

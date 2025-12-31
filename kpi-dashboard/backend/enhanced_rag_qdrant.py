@@ -11,7 +11,6 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import openai
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
@@ -26,9 +25,9 @@ class EnhancedRAGSystemQdrant:
         # Initialize OpenAI client - will be set at query time
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
         
-        # Initialize embedding model
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.embedding_dimension = 384  # all-MiniLM-L6-v2 dimension
+        # Use OpenAI's text-embedding-3-large model
+        self.embedding_model = 'text-embedding-3-large'
+        self.embedding_dimension = 3072  # text-embedding-3-large dimension
         
         # Initialize Qdrant client with local file storage fallback
         try:
@@ -41,19 +40,56 @@ class EnhancedRAGSystemQdrant:
             print("✅ Connected to Qdrant server")
         except Exception as e:
             print(f"⚠️ Qdrant server not available, using local file storage: {e}")
-            # Use unique storage path to avoid conflicts
-            import time
-            unique_id = int(time.time() * 1000) % 100000
-            self.qdrant_client = QdrantClient(path=f"./qdrant_storage_{unique_id}")
+            # Use fixed storage path for consistency (all instances use same storage)
+            self.qdrant_client = QdrantClient(path="./qdrant_storage")
         
         # Configuration
-        self.collection_name = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_vectors')
+        # Use per-customer collections for tenant isolation (SECURITY)
+        # Collection name will be set based on customer_id in build_knowledge_base()
+        self.collection_name_base = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_vectors')
+        self.collection_name = None  # Will be set per customer
         self.top_k = int(os.getenv('RAG_TOP_K', 10))
         self.similarity_threshold = float(os.getenv('RAG_SIMILARITY_THRESHOLD', 0.01))
         self.customer_id = None
+        self.openai_client = None  # Will be initialized when needed
+    
+    def _get_openai_client(self, customer_id: int = None):
+        """Get OpenAI client with API key"""
+        if self.openai_client is None:
+            # Try to get customer-specific API key first
+            try:
+                from openai_key_utils import get_openai_api_key
+                if customer_id:
+                    api_key = get_openai_api_key(customer_id)
+                    if api_key:
+                        self.openai_api_key = api_key
+            except Exception as e:
+                print(f"⚠️ Could not get customer-specific OpenAI key: {e}")
+            
+            # Fallback to environment variable
+            if not self.openai_api_key:
+                self.openai_api_key = os.getenv('OPENAI_API_KEY')
+            
+            if not self.openai_api_key:
+                raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or configure customer-specific key.")
+            
+            self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
         
-        # Ensure collection exists
-        self._ensure_collection_exists()
+        return self.openai_client
+    
+    def _generate_embedding(self, text: str, customer_id: int = None) -> List[float]:
+        """Generate embedding using OpenAI's text-embedding-3-large model"""
+        client = self._get_openai_client(customer_id)
+        
+        try:
+            response = client.embeddings.create(
+                model=self.embedding_model,
+                input=text
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            print(f"❌ Error generating embedding: {e}")
+            raise
         
     def _ensure_collection_exists(self):
         """Ensure Qdrant collection exists with proper configuration"""
@@ -63,24 +99,32 @@ class EnhancedRAGSystemQdrant:
             collection_names = [col.name for col in collections.collections]
             
             if self.collection_name not in collection_names:
-                print(f"🔧 Creating Qdrant collection: {self.collection_name}")
+                print(f"🔧 Creating Qdrant collection: {self.collection_name} with dimension {self.embedding_dimension}")
                 self.qdrant_client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
-                        size=self.embedding_dimension,
+                        size=self.embedding_dimension,  # 3072 for text-embedding-3-large
                         distance=Distance.COSINE
                     )
                 )
-                print(f"✅ Collection {self.collection_name} created successfully")
+                print(f"✅ Collection {self.collection_name} created successfully with {self.embedding_dimension} dimensions")
             else:
-                # Check if collection has data
+                # Check if collection has correct dimension
                 try:
                     collection_info = self.qdrant_client.get_collection(self.collection_name)
+                    current_dim = collection_info.config.params.vectors.size
+                    if current_dim != self.embedding_dimension:
+                        print(f"⚠️ Collection {self.collection_name} has dimension {current_dim}, but we need {self.embedding_dimension}")
+                        print(f"⚠️ Please delete the collection and recreate it, or use a different collection name")
+                        raise ValueError(f"Collection dimension mismatch: {current_dim} vs {self.embedding_dimension}")
+                    
                     if collection_info.points_count > 0:
-                        print(f"✅ Collection {self.collection_name} already exists with {collection_info.points_count} points")
+                        print(f"✅ Collection {self.collection_name} already exists with {collection_info.points_count} points (dimension: {current_dim})")
                     else:
-                        print(f"✅ Collection {self.collection_name} exists but is empty")
+                        print(f"✅ Collection {self.collection_name} exists but is empty (dimension: {current_dim})")
                 except Exception as e:
+                    if "dimension mismatch" in str(e):
+                        raise
                     print(f"✅ Collection {self.collection_name} already exists")
                 
         except Exception as e:
@@ -91,10 +135,20 @@ class EnhancedRAGSystemQdrant:
     
     def build_knowledge_base(self, customer_id: int):
         """Build Qdrant vector database from KPI and account data for specific customer"""
-        print(f"🔍 Building Qdrant knowledge base for customer {customer_id}...")
+        print(f"🔍 Building Qdrant knowledge base for customer {customer_id} using OpenAI text-embedding-3-large...")
         
         # Store customer ID for this instance
         self.customer_id = customer_id
+        
+        # Set per-customer collection name for tenant isolation (SECURITY)
+        self.collection_name = f"{self.collection_name_base}_customer_{customer_id}"
+        print(f"🔒 Using per-customer collection: {self.collection_name} (tenant isolation enabled)")
+        
+        # Ensure collection exists (will create if needed)
+        self._ensure_collection_exists()
+        
+        # Initialize OpenAI client with customer-specific key if available
+        self._get_openai_client(customer_id)
         
         # Fetch all KPIs for the customer
         kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).all()
@@ -119,8 +173,8 @@ class EnhancedRAGSystemQdrant:
             # Create rich text representation
             kpi_text = self._create_kpi_text(kpi, account)
             
-            # Generate embedding
-            embedding = self.embedding_model.encode([kpi_text])[0].tolist()
+            # Generate embedding using OpenAI
+            embedding = self._generate_embedding(kpi_text, customer_id)
             
             # Store data
             kpi_record = {
@@ -145,7 +199,7 @@ class EnhancedRAGSystemQdrant:
             # Store account data separately
             if account and account.account_id not in [a['account_id'] for a in account_data]:
                 account_text = self._create_account_text(account)
-                account_embedding = self.embedding_model.encode([account_text])[0].tolist()
+                account_embedding = self._generate_embedding(account_text, customer_id)
                 
                 account_record = {
                     'account_id': account.account_id,
@@ -165,7 +219,7 @@ class EnhancedRAGSystemQdrant:
         for month_year, data in monthly_revenue_data.items():
             month, year = month_year
             temporal_text = self._create_temporal_text(month, year, data)
-            embedding = self.embedding_model.encode([temporal_text])[0].tolist()
+            embedding = self._generate_embedding(temporal_text, customer_id)
             
             temporal_data.append({
                 'text': temporal_text,
@@ -298,60 +352,80 @@ class EnhancedRAGSystemQdrant:
             traceback.print_exc()
             raise
     
-    def query(self, query_text: str, query_type: str = 'general') -> Dict[str, Any]:
-        """Query the enhanced RAG system using Qdrant"""
+    def query(self, query_text: str, query_type: str = 'general', collection: Optional[str] = None) -> Dict[str, Any]:
+        """Query the enhanced RAG system using Qdrant with collection-aware prompts"""
         if not self.customer_id:
             return {'error': 'Knowledge base not built for this customer'}
+        if not self.collection_name:
+            return {'error': 'Collection name not set. Must build knowledge base first.'}
         
-        # Generate query embedding
-        query_embedding = self.embedding_model.encode([query_text])[0].tolist()
+        # Generate query embedding using OpenAI
+        query_embedding = self._generate_embedding(query_text, self.customer_id)
         
-        # Search Qdrant with customer filter
+        # Search Qdrant - No filter needed since collection is per-customer (tenant isolated)
+        # All data in this collection belongs to self.customer_id
         try:
-            search_results = self.qdrant_client.search(
+            # Use query_points with direct vector (newer API)
+            query_response = self.qdrant_client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_embedding,
-                query_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="customer_id",
-                            match=MatchValue(value=self.customer_id)
-                        )
-                    ]
-                ),
+                query=query_embedding,  # Direct vector list
+                # No customer_id filter needed - collection is already tenant-isolated
                 limit=self.top_k,
                 with_payload=True
             )
             
+            # Extract results from QueryResponse
+            search_results = query_response.points if hasattr(query_response, 'points') else []
+            
             # Filter by similarity threshold (very permissive)
             relevant_results = []
             for result in search_results:
+                # Extract score and payload from ScoredPoint
+                # Try different attribute names for score
+                score = None
+                if hasattr(result, 'score'):
+                    score = result.score
+                elif hasattr(result, 'similarity'):
+                    score = result.similarity
+                
+                # Extract payload
+                payload = {}
+                if hasattr(result, 'payload'):
+                    payload = result.payload if result.payload else {}
+                elif hasattr(result, 'payloads'):
+                    payload = result.payloads[0] if result.payloads else {}
+                
                 # Accept all results with any positive score
-                if result.score > 0:
+                if score is not None and score > 0:
                     relevant_results.append({
-                        'similarity': float(result.score),
-                        'text': result.payload.get('text', ''),
+                        'similarity': float(score),
+                        'text': payload.get('text', ''),
                         'metadata': {
-                            'type': result.payload.get('type', 'unknown'),
-                            'kpi_id': result.payload.get('kpi_id'),
-                            'account_id': result.payload.get('account_id'),
-                            'account_name': result.payload.get('account_name'),
-                            'revenue': result.payload.get('revenue'),
-                            'industry': result.payload.get('industry'),
-                            'region': result.payload.get('region'),
-                            'category': result.payload.get('category'),
-                            'kpi_parameter': result.payload.get('kpi_parameter'),
-                            'data': result.payload.get('data'),
-                            'impact_level': result.payload.get('impact_level')
+                            'type': payload.get('type', 'unknown'),
+                            'kpi_id': payload.get('kpi_id'),
+                            'account_id': payload.get('account_id'),
+                            'account_name': payload.get('account_name'),
+                            'revenue': payload.get('revenue'),
+                            'industry': payload.get('industry'),
+                            'region': payload.get('region'),
+                            'category': payload.get('category'),
+                            'kpi_parameter': payload.get('kpi_parameter'),
+                            'data': payload.get('data'),
+                            'impact_level': payload.get('impact_level')
                         }
                     })
             
-            # Generate response using OpenAI
-            response = self._generate_openai_response(query_text, relevant_results, query_type)
+            # Infer collection if not provided
+            if not collection:
+                collection = self._infer_collection_from_query_type(query_type)
+            
+            # Generate response using OpenAI with collection-aware prompts
+            response = self._generate_openai_response(query_text, relevant_results, query_type, collection)
             
             return {
                 'query': query_text,
                 'query_type': query_type,
+                'collection': collection,  # Include collection in response
                 'customer_id': self.customer_id,
                 'results_count': len(relevant_results),
                 'similarity_threshold': self.similarity_threshold,
@@ -362,31 +436,16 @@ class EnhancedRAGSystemQdrant:
         except Exception as e:
             return {'error': f'Query failed: {str(e)}'}
     
-    def _generate_openai_response(self, query: str, results: List[Dict], query_type: str) -> str:
-        """Generate response using OpenAI GPT-4"""
+    def _generate_openai_response(self, query: str, results: List[Dict], query_type: str, collection: Optional[str] = None) -> str:
+        """Generate response using OpenAI GPT-4 with hierarchical collection + query_type prompts"""
         if not results:
             return "I couldn't find relevant information to answer your query."
         
         # Prepare context from results
         context = self._prepare_context(results)
         
-        # Create system prompt based on query type
-        if query_type == 'revenue_analysis':
-            system_prompt = """You are a business analyst specializing in KPI and revenue analysis. 
-            Analyze the provided KPI and account data to answer questions about revenue, growth, and business performance.
-            Focus on revenue drivers, account performance, and business insights. Provide specific metrics and actionable recommendations."""
-        elif query_type == 'account_analysis':
-            system_prompt = """You are a customer success analyst. 
-            Analyze account performance, engagement, and health scores to provide insights about customer relationships and risk assessment.
-            Focus on account health, engagement patterns, and retention strategies."""
-        elif query_type == 'kpi_analysis':
-            system_prompt = """You are a KPI specialist. 
-            Analyze KPI performance, trends, and impact levels to provide insights about business metrics and recommendations.
-            Focus on performance optimization and strategic insights."""
-        else:
-            system_prompt = """You are a business intelligence analyst. 
-            Analyze the provided data to answer questions about business performance, KPIs, and customer insights.
-            Provide comprehensive analysis with specific recommendations."""
+        # Get collection-level base prompt and query_type-specific prompt
+        system_prompt = self._get_combined_system_prompt(collection, query_type)
         
         user_prompt = f"""
         Query: {query}
@@ -420,6 +479,125 @@ class EnhancedRAGSystemQdrant:
         except Exception as e:
             return f"Error generating response: {str(e)}"
     
+    def _infer_collection_from_query_type(self, query_type: str) -> str:
+        """Infer collection from query_type if not explicitly provided"""
+        QUANTITATIVE_TYPES = ['revenue_analysis', 'account_analysis', 'kpi_analysis', 'general']
+        HISTORICAL_TYPES = ['trend_analysis', 'temporal_analysis']
+        
+        if query_type in QUANTITATIVE_TYPES:
+            return 'quantitative'
+        elif query_type in HISTORICAL_TYPES:
+            return 'historical'
+        else:
+            return 'quantitative'  # Default fallback
+    
+    def _get_collection_base_prompt(self, collection: str) -> str:
+        """Get collection-level base prompt"""
+        COLLECTION_PROMPTS = {
+            'quantitative': """You are analyzing QUANTITATIVE data from structured databases:
+- KPI metrics, health scores, revenue figures, account statistics
+- Numerical values, rankings, comparisons
+- Precise, measurable, factual data
+
+CRITICAL GUIDELINES:
+1. Base answers STRICTLY on numeric values from the data
+2. Provide specific metrics, scores, percentages, rankings
+3. Use quantitative comparisons (e.g., "Account A has 45% higher revenue than Account B")
+4. Avoid speculation - only use data explicitly provided
+5. Cite specific numbers from the data
+
+Data Sources: PostgreSQL (KPIs, Accounts, Health Scores, Revenue)
+Response Style: Metrics-focused, precise, data-driven""",
+            
+            'qualitative': """You are analyzing QUALITATIVE data from unstructured text sources:
+- Emails, meeting transcripts, support tickets, notes
+- Sentiment, tone, themes, context, communication patterns
+- Subjective interpretation, textual analysis
+
+CRITICAL GUIDELINES:
+1. Analyze sentiment, tone, and underlying themes
+2. Extract contextual insights from communications
+3. Identify patterns and trends in qualitative feedback
+4. Synthesize information from multiple text sources
+5. Provide evidence-based interpretations
+
+Data Sources: PostgreSQL (qualitative_signals, account_notes, playbook_reports)
+Response Style: Theme-focused, context-aware, sentiment-driven""",
+            
+            'historical': """You are analyzing HISTORICAL and TEMPORAL data:
+- Time-series data, trends over time, evolution patterns
+- Seasonal patterns, predictive insights, historical comparisons
+- Temporal relationships, growth trajectories
+
+CRITICAL GUIDELINES:
+1. Focus on trends, patterns, and evolution over time
+2. Identify temporal relationships and seasonality
+3. Compare current vs. historical performance
+4. Provide predictive insights based on historical patterns
+5. Highlight significant changes and trend directions
+
+Data Sources: PostgreSQL (kpi_time_series, health_trends, historical snapshots)
+Response Style: Trend-focused, temporal, predictive"""
+        }
+        
+        return COLLECTION_PROMPTS.get(collection, COLLECTION_PROMPTS['quantitative'])
+    
+    def _get_query_type_specific_prompt(self, query_type: str) -> str:
+        """Get query_type-specific prompt focus"""
+        QUERY_TYPE_PROMPTS = {
+            'revenue_analysis': """SPECIFIC FOCUS: Revenue Analysis
+- Focus on revenue drivers, account performance, and business insights
+- Provide specific metrics and actionable recommendations
+- Analyze revenue patterns, growth, and financial performance""",
+            
+            'account_analysis': """SPECIFIC FOCUS: Account Analysis
+- Focus on account health, engagement patterns, and retention strategies
+- Analyze customer relationships and risk assessment
+- Provide insights about account performance and engagement""",
+            
+            'kpi_analysis': """SPECIFIC FOCUS: KPI Analysis
+- Focus on performance optimization and strategic insights
+- Analyze KPI performance, trends, and impact levels
+- Provide insights about business metrics and recommendations""",
+            
+            'trend_analysis': """SPECIFIC FOCUS: Trend Analysis
+- Focus on identifying patterns and trends over time
+- Analyze historical evolution and changes
+- Provide insights about directional changes and patterns""",
+            
+            'temporal_analysis': """SPECIFIC FOCUS: Temporal Analysis
+- Focus on time-based patterns, seasonality, and cyclical trends
+- Analyze temporal relationships and time-series data
+- Provide insights about time-dependent patterns""",
+            
+            'qualitative_analysis': """SPECIFIC FOCUS: Qualitative Analysis
+- Focus on sentiment, tone, and communication themes
+- Analyze text data, context, and qualitative signals
+- Provide insights based on textual and contextual information"""
+        }
+        
+        return QUERY_TYPE_PROMPTS.get(query_type, """SPECIFIC FOCUS: General Business Intelligence
+- Provide comprehensive analysis with specific recommendations
+- Analyze the provided data to answer questions about business performance, KPIs, and customer insights
+- Use available data to provide actionable insights""")
+    
+    def _get_combined_system_prompt(self, collection: Optional[str], query_type: str) -> str:
+        """Get combined collection + query_type system prompt using hierarchical approach"""
+        # Infer collection if not provided
+        if not collection:
+            collection = self._infer_collection_from_query_type(query_type)
+        
+        # Get collection-level base prompt
+        base_prompt = self._get_collection_base_prompt(collection)
+        
+        # Get query_type-specific prompt
+        specific_prompt = self._get_query_type_specific_prompt(query_type)
+        
+        # Combine prompts hierarchically
+        combined_prompt = f"{base_prompt}\n\n{specific_prompt}"
+        
+        return combined_prompt
+    
     def _prepare_context(self, results: List[Dict]) -> str:
         """Prepare context from search results"""
         context_parts = []
@@ -446,27 +624,22 @@ class EnhancedRAGSystemQdrant:
         """Analyze revenue drivers across accounts using Qdrant"""
         try:
             # Query for revenue-related data
-            search_results = self.qdrant_client.search(
+            revenue_embedding = self._generate_embedding("revenue business outcomes financial performance", self.customer_id)
+            query_response = self.qdrant_client.query_points(
                 collection_name=self.collection_name,
-                query_vector=self.embedding_model.encode(["revenue business outcomes financial performance"])[0].tolist(),
-                query_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="customer_id",
-                            match=MatchValue(value=customer_id)
-                        )
-                    ]
-                ),
+                query=revenue_embedding,  # Direct vector list
+                # No customer_id filter needed - collection is per-customer (tenant isolated)
                 limit=50,
                 with_payload=True
             )
+            search_results = query_response.points if hasattr(query_response, 'points') else []
             
             # Process results
             accounts = {}
             total_revenue = 0
             
             for result in search_results:
-                payload = result.payload
+                payload = getattr(result, 'payload', {}) if hasattr(result, 'payload') else {}
                 if payload.get('type') == 'account':
                     account_id = payload.get('account_id')
                     if account_id not in accounts:
@@ -494,26 +667,21 @@ class EnhancedRAGSystemQdrant:
         """Find accounts at risk of churn using Qdrant"""
         try:
             # Query for risk-related data
-            search_results = self.qdrant_client.search(
+            risk_embedding = self._generate_embedding("churn risk satisfaction engagement health score", self.customer_id)
+            query_response = self.qdrant_client.query_points(
                 collection_name=self.collection_name,
-                query_vector=self.embedding_model.encode(["churn risk satisfaction engagement health score"])[0].tolist(),
-                query_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="customer_id",
-                            match=MatchValue(value=customer_id)
-                        )
-                    ]
-                ),
+                query=risk_embedding,  # Direct vector list
+                # No customer_id filter needed - collection is per-customer (tenant isolated)
                 limit=50,
                 with_payload=True
             )
+            search_results = query_response.points if hasattr(query_response, 'points') else []
             
             # Process results
             risk_indicators = []
             
             for result in search_results:
-                payload = result.payload
+                payload = getattr(result, 'payload', {}) if hasattr(result, 'payload') else {}
                 if payload.get('type') == 'kpi':
                     kpi_param = payload.get('kpi_parameter', '').lower()
                     if any(keyword in kpi_param for keyword in ['churn', 'risk', 'flag', 'satisfaction']):
@@ -543,12 +711,19 @@ class EnhancedRAGSystemQdrant:
             collection_info = self.qdrant_client.get_collection(self.collection_name)
             return {
                 'collection_name': self.collection_name,
-                'vectors_count': collection_info.vectors_count,
-                'indexed_vectors_count': collection_info.indexed_vectors_count,
-                'status': collection_info.status
+                'dimension': self.embedding_dimension,
+                'embedding_model': self.embedding_model,
+                'vectors_count': collection_info.points_count,
+                'indexed_vectors_count': collection_info.indexed_vectors_count if hasattr(collection_info, 'indexed_vectors_count') else collection_info.points_count,
+                'status': str(collection_info.status) if hasattr(collection_info, 'status') else 'unknown'
             }
         except Exception as e:
-            return {'error': f'Failed to get collection info: {str(e)}'}
+            return {
+                'collection_name': self.collection_name,
+                'dimension': self.embedding_dimension,
+                'embedding_model': self.embedding_model,
+                'error': f'Failed to get collection info: {str(e)}'
+            }
     
     def _aggregate_monthly_revenue(self, time_series_data, kpis, account_lookup):
         """Aggregate monthly revenue data from time-series records and account data"""
@@ -672,8 +847,15 @@ def get_qdrant_rag_system(customer_id: int) -> EnhancedRAGSystemQdrant:
     if customer_id not in qdrant_rag_systems:
         qdrant_rag_systems[customer_id] = EnhancedRAGSystemQdrant()
         qdrant_rag_systems[customer_id].customer_id = customer_id
+        # Set per-customer collection name for tenant isolation
+        collection_name_base = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_vectors')
+        qdrant_rag_systems[customer_id].collection_name = f"{collection_name_base}_customer_{customer_id}"
     else:
         # Ensure customer_id is set
         qdrant_rag_systems[customer_id].customer_id = customer_id
+        # Ensure collection_name is set
+        if not qdrant_rag_systems[customer_id].collection_name:
+            collection_name_base = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_vectors')
+            qdrant_rag_systems[customer_id].collection_name = f"{collection_name_base}_customer_{customer_id}"
     
     return qdrant_rag_systems[customer_id]

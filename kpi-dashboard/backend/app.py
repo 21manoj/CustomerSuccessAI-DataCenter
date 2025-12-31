@@ -7,24 +7,39 @@ from flask import request, jsonify
 import datetime
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+from dotenv import load_dotenv
+
+# Load environment variables - explicitly load from backend directory
+basedir = os.path.abspath(os.path.dirname(__file__))
+env_path = os.path.join(basedir, '.env')
+load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
-# Use local path for development, Docker path for production
-import os
-if os.path.exists('/app/instance'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
+# Database configuration - REQUIRE PostgreSQL via DATABASE_URL
+database_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+if database_url:
+    # Ensure it's PostgreSQL
+    if not database_url.startswith('postgresql://') and not database_url.startswith('postgres://'):
+        raise ValueError(
+            f"❌ ERROR: DATABASE_URL must be PostgreSQL. Got: {database_url[:50]}...\n"
+            "Please set DATABASE_URL to a PostgreSQL connection string.\n"
+            "Example: postgresql://user:password@localhost:5432/dbname"
+        )
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print(f"✅ Using PostgreSQL database: {database_url[:50]}..." if len(database_url) > 50 else f"✅ Using PostgreSQL database: {database_url}")
 else:
-    # Local development
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    instance_path = os.path.join(os.path.dirname(basedir), 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-    db_path = os.path.join(instance_path, 'kpi_dashboard.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    raise ValueError(
+        "❌ ERROR: DATABASE_URL environment variable is required.\n"
+        "Please set DATABASE_URL to a PostgreSQL connection string.\n"
+        "Example: postgresql://user:password@localhost:5432/dbname"
+    )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-CORS(app)
+# CORS configuration - allow frontend on port 8005
+CORS(app, origins=['http://localhost:8005', 'http://localhost:3000'], supports_credentials=True)
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -65,6 +80,9 @@ from playbook_recommendations_api import playbook_recommendations_api
 from feature_toggle_api import feature_toggle_api
 from registration_api import registration_api
 from kpi_reference_ranges_api import kpi_reference_ranges_api
+from customer_performance_summary_api import customer_perf_summary_api
+from api_routes_dc import api_routes_dc
+from agents.signal_analyst_api import signal_analyst_api
 
 # Initialize Chroma client and collection for KPI VDB (lazy loading)
 global_chroma_client = None
@@ -123,6 +141,9 @@ app.register_blueprint(playbook_recommendations_api)
 app.register_blueprint(feature_toggle_api)
 app.register_blueprint(registration_api)
 app.register_blueprint(kpi_reference_ranges_api)
+app.register_blueprint(customer_perf_summary_api)
+app.register_blueprint(api_routes_dc)
+app.register_blueprint(signal_analyst_api)
 
 @app.route('/')
 def home():
@@ -254,15 +275,40 @@ def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    vertical = data.get('vertical', 'saas')  # Default to 'saas' if not provided
+    
+    # Validate vertical
+    valid_verticals = ['saas', 'datacenter']
+    if vertical not in valid_verticals:
+        return jsonify({'message': f'Invalid vertical. Must be one of: {", ".join(valid_verticals)}'}), 400
+    
     user = User.query.filter_by(email=email).first()
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({'message': 'Invalid email or password'}), 401
+    
+    # Get customer to check/store vertical preference
+    customer = Customer.query.filter_by(customer_id=user.customer_id).first()
+    
+    # Store vertical preference in customer if not already set (optional - can be stored in session only)
+    # For now, we'll just return it in the response
+    
     return jsonify({
         'customer_id': user.customer_id,
         'user_id': user.user_id,
         'user_name': user.user_name,
-        'email': user.email
+        'email': user.email,
+        'vertical': vertical,
+        'user': {
+            'customer_id': user.customer_id,
+            'user_id': user.user_id,
+            'user_name': user.user_name,
+            'email': user.email,
+            'customer_name': customer.customer_name if customer else 'Unknown'
+        }
     }), 200
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5059) 
+    port = int(os.getenv('FLASK_RUN_PORT', os.getenv('PORT', 8001)))
+    host = os.getenv('FLASK_RUN_HOST', '0.0.0.0')
+    debug = os.getenv('FLASK_ENV') == 'development'
+    app.run(debug=debug, host=host, port=port) 
