@@ -165,7 +165,9 @@ def get_current_customer_id():
         try:
             return int(customer_id_header)
         except (ValueError, TypeError):
-            logger.warning(f"Invalid X-Customer-ID header value: {customer_id_header}")
+            # May be a UUID-style identifier — return as string
+            if customer_id_header.strip():
+                return customer_id_header.strip()
             return None
     
     logger.warning("get_current_customer_id() called but user not authenticated and no X-Customer-ID header")

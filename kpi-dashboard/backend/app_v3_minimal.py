@@ -178,6 +178,14 @@ from secure_file_api import secure_file_api
 from master_file_api import master_file_api
 from account_snapshot_api import account_snapshot_api
 
+# Signal Analyst Agent API - optional (requires qdrant dependencies)
+try:
+    from agents.signal_analyst_api import signal_analyst_api
+    HAS_SIGNAL_ANALYST = True
+except ImportError as e:
+    print(f"⚠️  Warning: signal_analyst_api not available: {e}")
+    HAS_SIGNAL_ANALYST = False
+
 # Optional RAG APIs - only register if dependencies are available
 try:
     from enhanced_rag_historical_api import enhanced_rag_historical_api
@@ -274,6 +282,12 @@ if HAS_QDRANT_RAG:
     print("✅ Registered enhanced_rag_qdrant_api")
 else:
     print("⚠️  Skipped enhanced_rag_qdrant_api (qdrant_client not available)")
+
+if HAS_SIGNAL_ANALYST:
+    app.register_blueprint(signal_analyst_api)
+    print("✅ Registered signal_analyst_api")
+else:
+    print("⚠️  Skipped signal_analyst_api (dependencies not available)")
 
 # Load persisted data on startup
 @app.before_request

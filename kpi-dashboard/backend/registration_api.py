@@ -1,15 +1,20 @@
 """
 Customer Registration API
 
-Allows new customers to self-register and create their own accounts
+Allows new customers to self-register and create their own accounts.
+Supports multi-vertical UUID generation (dual-write with legacy integer IDs).
 """
 
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Customer, User, CustomerConfig
 from werkzeug.security import generate_password_hash
+from id_generator import generate_id, resolve_vertical_prefix, VALID_VERTICALS
 import json
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 registration_api = Blueprint('registration_api', __name__)
 
@@ -36,7 +41,17 @@ def register_customer():
         email = data.get('email', '').strip()
         password = data.get('password', '')
         phone = data.get('phone', '').strip()
-        
+
+        # Optional: vertical for multi-vertical UUID support
+        # Defaults to 'saas' for backward compatibility
+        vertical = data.get('vertical', 'saas').strip().lower()
+        try:
+            vertical_prefix = resolve_vertical_prefix(vertical)
+        except ValueError:
+            return jsonify({
+                'error': f"Invalid vertical '{vertical}'. Valid options: {sorted(VALID_VERTICALS)}"
+            }), 400
+
         # Validation
         if not company_name:
             return jsonify({'error': 'Company name is required'}), 400
@@ -75,25 +90,37 @@ def register_customer():
         if existing_user:
             return jsonify({'error': 'Email already registered'}), 409
         
-        # Create customer with domain identification
+        # Create customer with domain identification + UUID dual-write
+        customer_uuid = generate_id(vertical, 'customer')
         customer = Customer(
             customer_name=company_name,
             email=data.get('company_email', email),
             phone=phone,
             domain=email_domain
         )
+        # Dual-write: set uuid + vertical if columns exist (Phase 1 migration)
+        if hasattr(Customer, 'uuid'):
+            customer.uuid = customer_uuid
+        if hasattr(Customer, 'vertical'):
+            customer.vertical = vertical_prefix
         db.session.add(customer)
         db.session.flush()
-        
+
         customer_id = customer.customer_id
-        
-        # Create admin user
+        logger.info(f"Created customer: id={customer_id}, uuid={customer_uuid}, vertical={vertical_prefix}")
+
+        # Create admin user with UUID dual-write
+        user_uuid = generate_id(vertical, 'user')
         user = User(
             customer_id=customer_id,
             user_name=admin_name,
             email=email,
             password_hash=generate_password_hash(password)
         )
+        if hasattr(User, 'uuid'):
+            user.uuid = user_uuid
+        if hasattr(User, 'customer_uuid'):
+            user.customer_uuid = customer_uuid
         db.session.add(user)
         db.session.flush()
         
@@ -175,7 +202,10 @@ def register_customer():
             'status': 'success',
             'message': 'Registration successful',
             'customer_id': customer_id,
+            'customer_uuid': customer_uuid,
+            'vertical': vertical_prefix,
             'user_id': user.user_id,
+            'user_uuid': user_uuid,
             'email': email,
             'company_name': company_name
         }), 201
@@ -228,20 +258,30 @@ def add_user_to_customer():
         if existing_username:
             return jsonify({'error': f'Username {user_name} already exists for this customer'}), 409
         
-        # Create user
+        # Determine vertical from parent customer
+        cust_vertical = getattr(customer, 'vertical', None) or 'saas'
+        cust_uuid = getattr(customer, 'uuid', None)
+
+        # Create user with UUID dual-write
+        user_uuid = generate_id(cust_vertical, 'user')
         user = User(
             customer_id=customer.customer_id,
             user_name=user_name,
             email=email,
             password_hash=generate_password_hash(password)
         )
+        if hasattr(User, 'uuid'):
+            user.uuid = user_uuid
+        if hasattr(User, 'customer_uuid') and cust_uuid:
+            user.customer_uuid = cust_uuid
         db.session.add(user)
         db.session.commit()
-        
+
         return jsonify({
             'status': 'success',
             'message': 'User added successfully',
             'user_id': user.user_id,
+            'user_uuid': user_uuid,
             'customer_id': customer.customer_id,
             'customer_name': customer.customer_name,
             'email': email

@@ -3,9 +3,14 @@ from auth_middleware import get_current_customer_id, get_current_user_id
 from werkzeug.utils import secure_filename
 import pandas as pd
 from extensions import db
-from models import KPIUpload, KPI, CustomerConfig, Account
+from models import KPIUpload, KPI, CustomerConfig, Account, Customer
+from id_generator import generate_id
+from resolve_identifier import get_customer_vertical
 import io
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 upload_api = Blueprint('upload_api', __name__)
 
@@ -46,7 +51,12 @@ def upload_excel():
         if existing_account:
             return jsonify({'error': f'Account "{account_name}" already exists for this customer'}), 400
         
-        # Create new account
+        # Create new account with UUID dual-write
+        vertical = get_customer_vertical(db, customer_id) or 'saas'
+        customer_obj = db.session.get(Customer, customer_id)
+        customer_uuid = getattr(customer_obj, 'uuid', None) if customer_obj else None
+
+        account_uuid = generate_id(vertical, 'account')
         account = Account(
             customer_id=customer_id,
             account_name=account_name,
@@ -55,9 +65,14 @@ def upload_excel():
             region='Unknown',
             account_status='active'
         )
+        if hasattr(Account, 'uuid'):
+            account.uuid = account_uuid
+        if hasattr(Account, 'customer_uuid') and customer_uuid:
+            account.customer_uuid = customer_uuid
         db.session.add(account)
         db.session.flush()  # Get the account_id
         account_id = account.account_id
+        logger.info(f"Created account: id={account_id}, uuid={account_uuid}, vertical={vertical}")
     else:
         return jsonify({'error': 'Account name is required'}), 400
 
@@ -153,6 +168,7 @@ def upload_excel():
     latest_upload = KPIUpload.query.filter_by(customer_id=customer_id).order_by(KPIUpload.version.desc()).first()
     new_version = (latest_upload.version + 1) if latest_upload else 1
     
+    upload_uuid = generate_id(vertical, 'upload')
     upload = KPIUpload(
         customer_id=customer_id,
         user_id=user_id,
@@ -161,12 +177,19 @@ def upload_excel():
         raw_excel=raw_excel,
         account_id=account_id  # Always use account_id now
     )
-    
+    if hasattr(KPIUpload, 'uuid'):
+        upload.uuid = upload_uuid
+    if hasattr(KPIUpload, 'customer_uuid') and customer_uuid:
+        upload.customer_uuid = customer_uuid
+    if hasattr(KPIUpload, 'account_uuid'):
+        upload.account_uuid = account_uuid
+
     db.session.add(upload)
     db.session.flush()  # Get the upload_id
-    
-    # Store KPIs
+
+    # Store KPIs with UUID dual-write
     for kpi_row in kpi_data:
+        kpi_uuid = generate_id(vertical, 'kpi')
         kpi = KPI(
             upload_id=upload.upload_id,
             account_id=account_id,  # Always use account_id now
@@ -180,6 +203,12 @@ def upload_excel():
             impact_level=kpi_row['impact_level'],
             measurement_frequency=kpi_row['measurement_frequency']
         )
+        if hasattr(KPI, 'uuid'):
+            kpi.uuid = kpi_uuid
+        if hasattr(KPI, 'account_uuid'):
+            kpi.account_uuid = account_uuid
+        if hasattr(KPI, 'upload_uuid'):
+            kpi.upload_uuid = upload_uuid
         db.session.add(kpi)
     
     db.session.commit()
