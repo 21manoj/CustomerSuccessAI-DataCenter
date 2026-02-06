@@ -8,6 +8,7 @@ from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, Account, Customer
+from resolve_identifier import resolve_customer_id
 from health_score_engine import HealthScoreEngine
 import json
 
@@ -24,23 +25,22 @@ def get_kpi_health_status():
     if not customer_id:
         return jsonify({"error": "X-Customer-ID header is required"}), 400
     
-    try:
-        customer_id = int(customer_id)
-    except ValueError:
+    customer_id = resolve_customer_id(db, customer_id)
+    if customer_id is None:
         return jsonify({"error": "Invalid X-Customer-ID"}), 400
-    
+
     # Build query
     query = KPI.query.join(Account).filter(Account.customer_id == customer_id)
-    
+
     if account_id:
         try:
             account_id = int(account_id)
             query = query.filter(KPI.account_id == account_id)
         except ValueError:
             return jsonify({"error": "Invalid account_id"}), 400
-    
+
     kpis = query.all()
-    
+
     health_statuses = []
     for kpi in kpis:
         # Debug logging for TTFV
@@ -90,23 +90,22 @@ def get_health_status_summary():
     if not customer_id:
         return jsonify({"error": "X-Customer-ID header is required"}), 400
     
-    try:
-        customer_id = int(customer_id)
-    except ValueError:
+    customer_id = resolve_customer_id(db, customer_id)
+    if customer_id is None:
         return jsonify({"error": "Invalid X-Customer-ID"}), 400
-    
+
     # Build query
     query = KPI.query.join(Account).filter(Account.customer_id == customer_id)
-    
+
     if account_id:
         try:
             account_id = int(account_id)
             query = query.filter(KPI.account_id == account_id)
         except ValueError:
             return jsonify({"error": "Invalid account_id"}), 400
-    
+
     kpis = query.all()
-    
+
     # Count health statuses
     status_counts = {'Healthy': 0, 'Risk': 0, 'Critical': 0, 'Unknown': 0}
     category_breakdown = {}

@@ -11,6 +11,7 @@ from auth_middleware import get_current_customer_id, get_current_user_id
 from datetime import datetime, timedelta
 from extensions import db
 from models import HealthTrend, Account, Customer
+from resolve_identifier import resolve_customer_id
 import json
 import logging
 
@@ -27,9 +28,10 @@ def get_health_trends():
         
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400
-        
+        customer_id = resolve_customer_id(db, customer_id)
+
         # Build query
-        query = HealthTrend.query.filter_by(customer_id=int(customer_id))
+        query = HealthTrend.query.filter_by(customer_id=customer_id)
         
         if account_id:
             query = query.filter_by(account_id=int(account_id))
@@ -71,7 +73,8 @@ def create_health_trend():
         
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400
-        
+        customer_id = resolve_customer_id(db, customer_id)
+
         required_fields = ['account_id', 'month', 'year', 'overall_health_score']
         for field in required_fields:
             if field not in data:
@@ -101,7 +104,7 @@ def create_health_trend():
                 from event_system import event_manager, EventType
                 event_manager.publish(
                     EventType.HEALTH_SCORES_UPDATED,
-                    int(customer_id),
+                    customer_id,
                     {
                         'account_id': data['account_id'],
                         'month': data['month'],
@@ -119,7 +122,7 @@ def create_health_trend():
             # Create new trend
             trend = HealthTrend(
                 account_id=data['account_id'],
-                customer_id=int(customer_id),
+                customer_id=customer_id,
                 month=data['month'],
                 year=data['year'],
                 overall_health_score=data['overall_health_score'],
@@ -140,7 +143,7 @@ def create_health_trend():
             from event_system import event_manager, EventType
             event_manager.publish(
                 EventType.HEALTH_SCORES_UPDATED,
-                int(customer_id),
+                customer_id,
                 {
                     'account_id': data['account_id'],
                     'month': data['month'],
@@ -171,9 +174,10 @@ def generate_health_trends():
         
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400
-        
+        customer_id = resolve_customer_id(db, customer_id)
+
         # Get all accounts for the customer
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
         
         if not accounts:
             return jsonify({'error': 'No accounts found for customer'}), 404
@@ -198,7 +202,7 @@ def generate_health_trends():
             if not existing_trend:
                 trend = HealthTrend(
                     account_id=account.account_id,
-                    customer_id=int(customer_id),
+                    customer_id=customer_id,
                     month=current_month,
                     year=current_year,
                     overall_health_score=sample_score,
@@ -221,7 +225,7 @@ def generate_health_trends():
             for account in accounts:
                 event_manager.publish(
                     EventType.HEALTH_SCORES_UPDATED,
-                    int(customer_id),
+                    customer_id,
                     {
                         'account_id': account.account_id,
                         'month': current_month,

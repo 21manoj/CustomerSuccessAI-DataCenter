@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import KPI, KPIUpload, Account
+from resolve_identifier import resolve_customer_id
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -608,8 +609,9 @@ def analyze_account_growth():
         customer_id = get_current_customer_id()
         if not customer_id:
             return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
-        
-        analysis = account_rag_system.analyze_account_growth(int(customer_id))
+        customer_id = resolve_customer_id(db, customer_id)
+
+        analysis = account_rag_system.analyze_account_growth(customer_id)
         return jsonify(analysis)
     except Exception as e:
         print(f"Error in account growth analysis: {str(e)}")
@@ -627,14 +629,15 @@ def query_account_analytics():
         query = data.get('query', '').lower()
         
         # Build account knowledge base
-        accounts = account_rag_system.build_account_knowledge_base(int(customer_id))
-        
+        customer_id = resolve_customer_id(db, customer_id)
+        accounts = account_rag_system.build_account_knowledge_base(customer_id)
+
         if not accounts:
             return jsonify({'error': 'No accounts found'}), 404
-        
+
         # Analyze query type and provide relevant insights
         if 'growth' in query or 'best' in query:
-            analysis = account_rag_system.analyze_account_growth(int(customer_id))
+            analysis = account_rag_system.analyze_account_growth(customer_id)
             return jsonify({
                 'query': query,
                 'analysis': analysis,
@@ -917,7 +920,7 @@ def generate_insights(query_type, search_results, kpi_data):
         customer_id = get_current_customer_id()
         if customer_id:
             try:
-                health_analysis = analyze_health_scores(int(customer_id))
+                health_analysis = analyze_health_scores(resolve_customer_id(db, customer_id))
                 insights['summary'] = f"Corporate overall health score: {health_analysis['corporate_scores']['overall']:.1f}%"
                 insights['recommendations'] = [
                     f"Best performing account: {health_analysis['best_performing_accounts'][0]['account_name']} ({health_analysis['best_performing_accounts'][0]['health_scores']['overall']:.1f}%)",
@@ -994,8 +997,8 @@ def get_health_scores():
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
-    
+    customer_id = resolve_customer_id(db, customer_id)
+
     try:
         analysis = analyze_health_scores(customer_id)
         return jsonify(analysis)

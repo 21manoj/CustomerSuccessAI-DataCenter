@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 import pandas as pd
 from extensions import db
 from models import KPIUpload, KPI, CustomerConfig, Account
+from resolve_identifier import resolve_customer_id
 import io
 from datetime import datetime
 import os
@@ -40,9 +41,9 @@ def upload_excel_enhanced():
     if not account_name:
         return jsonify({'error': 'Account name is required'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     user_id = int(user_id)
-    
+
     try:
         # Use secure file handler for temporary storage
         from secure_file_handler import get_secure_file_handler

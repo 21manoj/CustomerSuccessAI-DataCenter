@@ -5,7 +5,7 @@ import pandas as pd
 from extensions import db
 from models import KPIUpload, KPI, CustomerConfig, Account, Customer
 from id_generator import generate_id
-from resolve_identifier import get_customer_vertical
+from resolve_identifier import get_customer_vertical, resolve_customer_id
 import io
 from datetime import datetime
 import logging
@@ -30,9 +30,9 @@ def upload_excel():
     if not user_id:
         return jsonify({'error': 'Missing X-User-ID header'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     user_id = int(user_id)
-    
+
     # Get customer configuration
     config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
     if not config:

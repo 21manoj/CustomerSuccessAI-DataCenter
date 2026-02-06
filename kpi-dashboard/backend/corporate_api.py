@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 import pandas as pd
 from extensions import db
 from models import KPIUpload, KPI, CustomerConfig, Account
+from resolve_identifier import resolve_customer_id
 import io
 from datetime import datetime
 from health_score_engine import HealthScoreEngine
@@ -32,9 +33,9 @@ def upload_corporate_metadata():
     if not user_id:
         return jsonify({'error': 'Missing X-User-ID header'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     user_id = int(user_id)
-    
+
     filename = secure_filename(file.filename)
     raw_excel = file.read()
     file.seek(0)
@@ -105,11 +106,11 @@ def get_corporate_companies():
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
-    
+    customer_id = resolve_customer_id(db, customer_id)
+
     # Get all accounts for this customer
     accounts = Account.query.filter_by(customer_id=customer_id).all()
-    
+
     companies = []
     for account in accounts:
         companies.append({
@@ -181,8 +182,8 @@ def get_corporate_rollup():
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
-    
+    customer_id = resolve_customer_id(db, customer_id)
+
     print(f"DEBUG: Processing corporate rollup for customer {customer_id}")
     
     # Get all accounts for this customer

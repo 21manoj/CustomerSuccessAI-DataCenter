@@ -12,6 +12,7 @@ import json
 
 from extensions import db
 from models import Account, KPI, KPITimeSeries, HealthTrend
+from resolve_identifier import resolve_customer_id
 
 financial_projections_api = Blueprint('financial_projections_api', __name__)
 
@@ -95,7 +96,7 @@ def get_account_financial_projections(account_id):
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     months = request.args.get('months', 12, type=int)
     
     try:
@@ -234,7 +235,7 @@ def get_corporate_financial_projections():
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     months = request.args.get('months', 12, type=int)
     
     try:
@@ -301,7 +302,7 @@ def get_kpi_financial_impact(kpi_name):
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     
     try:
         # Get KPI data across all accounts

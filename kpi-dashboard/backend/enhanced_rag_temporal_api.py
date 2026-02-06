@@ -6,6 +6,8 @@ Provides monthly revenue tracking and time-series analysis capabilities
 
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
+from extensions import db
+from resolve_identifier import resolve_customer_id
 from enhanced_rag_temporal import temporal_rag_system
 
 # Create blueprint
@@ -19,7 +21,7 @@ def build_temporal_knowledge_base():
         if not customer_id:
             return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
-        customer_id = int(customer_id)
+        customer_id = resolve_customer_id(db, customer_id)
         
         # Build knowledge base
         temporal_rag_system.build_knowledge_base(customer_id)
@@ -41,7 +43,7 @@ def query_temporal_rag():
         if not customer_id:
             return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
-        customer_id = int(customer_id)
+        customer_id = resolve_customer_id(db, customer_id)
         
         data = request.get_json()
         query = data.get('query', '')
@@ -69,7 +71,7 @@ def get_monthly_revenue():
         if not customer_id:
             return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
-        customer_id = int(customer_id)
+        customer_id = resolve_customer_id(db, customer_id)
         
         # Query for monthly revenue data
         result = temporal_rag_system.query(
@@ -93,7 +95,7 @@ def get_revenue_trends():
         if not customer_id:
             return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
-        customer_id = int(customer_id)
+        customer_id = resolve_customer_id(db, customer_id)
         
         # Query for revenue trends
         result = temporal_rag_system.query(
@@ -117,7 +119,7 @@ def get_top_accounts_monthly():
         if not customer_id:
             return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
-        customer_id = int(customer_id)
+        customer_id = resolve_customer_id(db, customer_id)
         
         # Query for top accounts by month
         result = temporal_rag_system.query(
@@ -141,7 +143,7 @@ def get_temporal_status():
         if not customer_id:
             return jsonify({"error": "Authentication required (handled by middleware)"}), 400
         
-        customer_id = int(customer_id)
+        customer_id = resolve_customer_id(db, customer_id)
         
         # Check if knowledge base is built
         if temporal_rag_system.customer_id != customer_id:

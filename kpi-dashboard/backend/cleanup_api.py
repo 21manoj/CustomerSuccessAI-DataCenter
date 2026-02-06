@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from extensions import db
 from models import KPIUpload, KPI, Account, CustomerConfig
+from resolve_identifier import resolve_customer_id
 from werkzeug.utils import secure_filename
 import io
 from datetime import datetime
@@ -25,7 +26,7 @@ def bulk_cleanup_and_upload():
     if not directory_path:
         return jsonify({'error': 'Missing directory_path'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     user_id = int(user_id)
     
     try:
@@ -257,7 +258,7 @@ def get_cleanup_status():
     if not customer_id:
         return jsonify({'error': 'Authentication required (handled by middleware)'}), 400
     
-    customer_id = int(customer_id)
+    customer_id = resolve_customer_id(db, customer_id)
     
     try:
         # Count current data
