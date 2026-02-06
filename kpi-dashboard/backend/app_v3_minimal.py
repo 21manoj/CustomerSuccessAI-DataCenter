@@ -284,8 +284,13 @@ else:
     print("⚠️  Skipped enhanced_rag_qdrant_api (qdrant_client not available)")
 
 if HAS_SIGNAL_ANALYST:
-    app.register_blueprint(signal_analyst_api)
-    print("✅ Registered signal_analyst_api")
+    # Guard against double-registration (may already be registered by DC2_S or other modules)
+    existing_names = {bp.name for bp in app.blueprints.values()} if hasattr(app, 'blueprints') else set()
+    if 'signal_analyst_api' not in existing_names:
+        app.register_blueprint(signal_analyst_api)
+        print("✅ Registered signal_analyst_api")
+    else:
+        print("ℹ️  signal_analyst_api already registered, skipping")
 else:
     print("⚠️  Skipped signal_analyst_api (dependencies not available)")
 
