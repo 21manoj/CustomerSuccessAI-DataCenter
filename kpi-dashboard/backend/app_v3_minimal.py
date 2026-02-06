@@ -515,7 +515,11 @@ def login():
                 'email': user.email,
                 'user_name': user.user_name,
                 'customer_id': user.customer_id,
-                'customer_name': customer.customer_name if customer else 'Unknown'
+                'customer_name': customer.customer_name if customer else 'Unknown',
+                # UUID migration: include UUIDs alongside integer IDs
+                'customer_uuid': getattr(customer, 'uuid', None) if customer else None,
+                'user_uuid': getattr(user, 'uuid', None),
+                'vertical': getattr(customer, 'vertical', None) if customer else None,
             },
             'session_expires': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat() if not remember else None
         })

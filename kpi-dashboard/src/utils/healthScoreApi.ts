@@ -69,7 +69,8 @@ const getCustomerId = (): string | null => {
     const session = localStorage.getItem('session');
     if (session) {
       const parsed = JSON.parse(session);
-      return String(parsed.customer_id || '');
+      // UUID migration: prefer customer_uuid when available
+      return parsed.customer_uuid || String(parsed.customer_id || '');
     }
   } catch (e) {
     // Ignore

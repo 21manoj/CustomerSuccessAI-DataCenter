@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 
 interface KPICardProps {
   tenantId: number | null;
@@ -37,7 +38,7 @@ const KPICard_dc: React.FC<KPICardProps> = ({ tenantId, kpiId, kpiName, value, u
       const response = await fetch(`/api/dc/kpis`, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || '',
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
 

@@ -24,6 +24,7 @@ import {
 } from '../utils/dataQualityApi';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './shared/Tabs';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 import { apiCall } from '../utils/api';
 
 const ExecutiveDashboard: React.FC = () => {
@@ -57,7 +58,7 @@ const ExecutiveDashboard: React.FC = () => {
       const accountsResponse = await apiCall('/api/accounts', {
         method: 'GET',
         headers: session?.customer_id ? {
-          'X-Customer-ID': String(session.customer_id)
+          'X-Customer-ID': getCustomerIdentifier(session)
         } : {}
       });
       

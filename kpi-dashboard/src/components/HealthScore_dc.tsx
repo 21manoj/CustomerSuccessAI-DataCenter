@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 
 interface HealthScoreProps {
   tenantId: number | null;
@@ -32,7 +33,7 @@ const HealthScore_dc: React.FC<HealthScoreProps> = ({ tenantId }) => {
       const response = await fetch(url, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || '',
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
 

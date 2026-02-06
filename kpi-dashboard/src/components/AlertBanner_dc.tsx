@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, X, CheckCircle, Info } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 
 interface Alert {
   alert_id: string;
@@ -40,7 +41,7 @@ const AlertBanner_dc: React.FC<AlertBannerProps> = ({ tenantId }) => {
       const response = await fetch(`/api/dc/alerts/${tenantId}`, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || '',
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
 

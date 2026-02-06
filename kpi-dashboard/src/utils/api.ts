@@ -1,4 +1,15 @@
 // API utility functions
+
+/**
+ * Get the best customer identifier for X-Customer-ID header.
+ * Prefers UUID when available (from UUID migration), falls back to integer ID.
+ * Backend resolve_customer_id() handles both formats.
+ */
+export const getCustomerIdentifier = (session: { customer_id: number; customer_uuid?: string } | null): string => {
+  if (!session) return '1';
+  return session.customer_uuid || session.customer_id.toString();
+};
+
 export const getApiBaseUrl = (): string => {
   // In Docker, use the environment variable
   if (process.env.REACT_APP_API_URL) {

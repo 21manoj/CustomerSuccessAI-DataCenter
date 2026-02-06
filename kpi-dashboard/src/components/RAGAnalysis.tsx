@@ -22,6 +22,7 @@ import {
   LineChart,
 } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 
 interface RAGResponse {
   query: string;
@@ -475,7 +476,7 @@ const RAGAnalysis: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'Content-Type': 'application/json'
         }
       });
@@ -534,7 +535,7 @@ const RAGAnalysis: React.FC = () => {
         const statusResponse = await fetch('/api/direct-rag/status', {
           method: 'GET',
           headers: {
-            'X-Customer-ID': session.customer_id.toString()
+            'X-Customer-ID': getCustomerIdentifier(session)
           }
         });
         
@@ -553,7 +554,7 @@ const RAGAnalysis: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'Content-Type': 'application/json'
         }
       });
@@ -612,7 +613,7 @@ const RAGAnalysis: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

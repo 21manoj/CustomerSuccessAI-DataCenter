@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { TrendingUp, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (session: { 
-    customer_id: number; 
-    user_id: string; 
-    user_name: string; 
+  onLogin: (session: {
+    customer_id: number;
+    user_id: string;
+    user_name: string;
     email: string;
     vertical?: string;
+    customer_uuid?: string;
+    user_uuid?: string;
   }) => void;
 }
 
@@ -56,7 +58,10 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         user_id: data.user?.user_id?.toString() || data.user_id?.toString() || '1',
         user_name: data.user?.customer_name || data.user_name || 'User',
         email: data.user?.email || data.email || '',
-        vertical: sessionVertical
+        vertical: data.user?.vertical || sessionVertical,
+        // UUID migration: store UUIDs from login response
+        customer_uuid: data.user?.customer_uuid || undefined,
+        user_uuid: data.user?.user_uuid || undefined,
     };
 
       // Store vertical in localStorage

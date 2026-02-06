@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 import { Server, Activity, AlertTriangle, TrendingUp, Users, Zap, BarChart3, Upload, Target, MessageSquare, Settings, FileText, LogOut, ChevronDown, ChevronRight, TrendingDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import KPICard_dc from './KPICard_dc';
@@ -92,7 +93,7 @@ const Dashboard_dc: React.FC = () => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -115,7 +116,7 @@ const Dashboard_dc: React.FC = () => {
       const accountsResponse = await fetch('/api/accounts', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || '',
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
 
@@ -138,7 +139,7 @@ const Dashboard_dc: React.FC = () => {
       const kpisResponse = await fetch('/api/kpis/customer/all', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || '',
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
 
@@ -200,7 +201,7 @@ const Dashboard_dc: React.FC = () => {
       const response = await fetch('/api/kpis/customer/all', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
 

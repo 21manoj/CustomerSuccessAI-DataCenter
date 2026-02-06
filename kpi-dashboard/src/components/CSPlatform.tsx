@@ -28,6 +28,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 import RAGAnalysis from './RAGAnalysis';
 import SettingsModal from './Settings';
 import PlaybookAutomationSettings from './PlaybookAutomationSettings';
@@ -288,7 +289,7 @@ const CSPlatform = () => {
       const response = await fetch('/api/accounts', {
         credentials: 'include', // Include session cookies for authentication
         headers: {
-          'X-Customer-ID': session.customer_id.toString(), // Keep for backward compatibility
+          'X-Customer-ID': getCustomerIdentifier(session), // Keep for backward compatibility
         },
       });
       
@@ -335,7 +336,7 @@ const CSPlatform = () => {
         const response = await fetch('/api/kpis/customer/all', {
           credentials: 'include',
           headers: {
-            'X-Customer-ID': session.customer_id.toString(),
+            'X-Customer-ID': getCustomerIdentifier(session),
           },
         });
       
@@ -525,7 +526,7 @@ const CSPlatform = () => {
       const response = await fetch(`/api/accounts/${accountId}/products`, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -575,7 +576,7 @@ const CSPlatform = () => {
       const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'X-User-ID': session.user_id.toString(),
         },
         body: formData,
@@ -618,7 +619,7 @@ const CSPlatform = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'X-User-ID': session.user_id.toString()
         },
         body: JSON.stringify({ directory_path: cleanupDirectory.trim() })
@@ -657,7 +658,7 @@ const CSPlatform = () => {
       const response = await fetch('/api/master-file/upload', {
         method: 'POST',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'X-User-ID': session.user_id.toString(),
         },
         body: formData,
@@ -683,7 +684,7 @@ const CSPlatform = () => {
       const response = await fetch('/api/health-status/kpis', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -714,7 +715,7 @@ const CSPlatform = () => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -834,7 +835,7 @@ const CSPlatform = () => {
       const response = await fetch('/api/master-file/weights', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -865,7 +866,7 @@ const CSPlatform = () => {
       const response = await fetch(url, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -903,7 +904,7 @@ const CSPlatform = () => {
       const response = await fetch('/api/time-series/stats', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
       
@@ -925,7 +926,7 @@ const CSPlatform = () => {
         `/api/time-series/kpi-trends?kpi_name=${encodeURIComponent(kpiName)}&account_id=${accountId}&months=7`,
         {
           headers: {
-            'X-Customer-ID': session.customer_id.toString(),
+            'X-Customer-ID': getCustomerIdentifier(session),
           },
         }
       );
@@ -948,7 +949,7 @@ const CSPlatform = () => {
         `/api/time-series/account-health?account_id=${accountId}&months=7`,
         {
           headers: {
-            'X-Customer-ID': session.customer_id.toString(),
+            'X-Customer-ID': getCustomerIdentifier(session),
           },
         }
       );
@@ -1334,7 +1335,7 @@ const CSPlatform = () => {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'X-User-ID': session.user_id.toString(),
         },
       });
@@ -1560,7 +1561,7 @@ const CSPlatform = () => {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            'X-Customer-ID': session.customer_id.toString(),
+            'X-Customer-ID': getCustomerIdentifier(session),
           },
           body: JSON.stringify({ query }),
         });

@@ -7,6 +7,9 @@ class Customer(db.Model):
     email = db.Column(db.String, unique=True)
     phone = db.Column(db.String)
     domain = db.Column(db.String, unique=True, nullable=True)  # Email domain for multi-tenant identification
+    # UUID migration columns (added by phase1a_add_uuid_columns.py)
+    uuid = db.Column(db.String(60), nullable=True, unique=True)  # e.g. saas_cust_019c3409-...
+    vertical = db.Column(db.String(20), nullable=True)  # saas, dc, msp
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 
@@ -34,6 +37,9 @@ class Account(db.Model):
     region = db.Column(db.String, index=True)
     external_account_id = db.Column(db.String, index=True)  # External account ID from customer profile
     profile_metadata = db.Column(db.JSON)  # JSON field for customer profile data
+    # UUID migration columns (added by phase1a_add_uuid_columns.py)
+    uuid = db.Column(db.String(60), nullable=True, unique=True)  # e.g. saas_acct_019c3409-...
+    customer_uuid = db.Column(db.String(60), nullable=True)  # FK to customers.uuid
     created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     
@@ -70,6 +76,9 @@ class User(db.Model):
     password_hash = db.Column(db.String(128))
     active = db.Column(db.Boolean, default=True)  # For account deactivation
     last_login = db.Column(db.DateTime)
+    # UUID migration columns (added by phase1a_add_uuid_columns.py)
+    uuid = db.Column(db.String(60), nullable=True, unique=True)  # e.g. saas_user_019c3409-...
+    customer_uuid = db.Column(db.String(60), nullable=True)  # FK to customers.uuid
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     

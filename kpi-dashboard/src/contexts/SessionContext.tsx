@@ -6,6 +6,9 @@ type Session = {
   user_name: string;
   email: string;
   vertical?: string;
+  // UUID migration: UUIDs alongside integer IDs
+  customer_uuid?: string;
+  user_uuid?: string;
 };
 
 const SessionContext = createContext<{
