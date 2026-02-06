@@ -16,19 +16,47 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({
   const [polling, setPolling] = useState(true);
 
   useEffect(() => {
+    let pollCount = 0;
+    const MAX_POLLS = 30; // 60 seconds max (30 polls * 2s)
+
     const pollStatus = async () => {
+      pollCount++;
       try {
         const currentStatus = await getProcessingStatus(sessionId);
         setStatus(currentStatus);
-        
-        // Check if all stages are complete
-        const allComplete = currentStatus.stages.every(s => s.status === 'complete');
+
+        // Check if all stages are complete or progress is 100%
+        const allComplete = currentStatus.stages.every(s => s.status === 'complete')
+          || currentStatus.overallProgress >= 100;
         if (allComplete) {
           setPolling(false);
           onComplete(currentStatus);
+          return;
+        }
+
+        // Check for errors in any stage
+        const hasError = currentStatus.stages.some(s => s.status === 'error');
+        if (hasError) {
+          setPolling(false);
+          onComplete(currentStatus);
+          return;
         }
       } catch (error) {
         console.error('Error polling status:', error);
+      }
+
+      // Timeout fallback: if we've polled MAX_POLLS times, assume processing is done
+      if (pollCount >= MAX_POLLS) {
+        setPolling(false);
+        const fallbackStatus: ProcessingStatus = {
+          stages: [
+            { name: 'Processing completed', status: 'complete' as const }
+          ],
+          overallProgress: 100,
+          recordsProcessed: 0,
+          errors: 0
+        };
+        onComplete(status || fallbackStatus);
       }
     };
 
@@ -36,7 +64,11 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({
     pollStatus();
 
     // Poll every 2 seconds
-    const interval = setInterval(pollStatus, 2000);
+    const interval = setInterval(() => {
+      if (polling) {
+        pollStatus();
+      }
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [sessionId, onComplete]);

@@ -6,13 +6,15 @@ interface SmartUploadZoneProps {
   acceptedFormats?: string[];
   maxSizeBytes?: number;
   showPreview?: boolean;
+  onBack?: () => void;
 }
 
 const SmartUploadZone: React.FC<SmartUploadZoneProps> = ({
   onFileSelect,
   acceptedFormats = ['.csv', '.xlsx', '.xls'],
   maxSizeBytes = 10 * 1024 * 1024, // 10MB
-  showPreview = true
+  showPreview = true,
+  onBack
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -162,13 +164,21 @@ const SmartUploadZone: React.FC<SmartUploadZoneProps> = ({
           </p>
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 flex items-center justify-between">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="px-4 py-2 text-gray-700 hover:text-gray-900"
+            >
+              &larr; Back
+            </button>
+          )}
           <button
             onClick={() => {
               // Use sample data option
               console.log('Use sample data');
             }}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium ml-auto"
           >
             Don't have data yet? Use Sample Data to explore
           </button>

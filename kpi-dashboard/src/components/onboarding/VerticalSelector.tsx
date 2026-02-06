@@ -18,8 +18,8 @@ const VerticalSelector: React.FC<VerticalSelectorProps> = ({
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-12">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">👋 Welcome to CS Pulse Growth!</h1>
-          <p className="text-lg text-gray-600">Let's get you started with the SaaS Customer Success framework.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to CS Pulse for Data Centers</h1>
+          <p className="text-lg text-gray-600">Let's get you started with the Data Center Infrastructure framework.</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
@@ -67,7 +67,7 @@ const VerticalSelector: React.FC<VerticalSelectorProps> = ({
 
           <div className="text-center mt-4">
             <p className="text-sm text-gray-500">
-              This framework includes 59 KPIs across 5 pillars: Product Usage, Support, Customer Sentiment, Business Outcomes, and Relationship Strength
+              This framework includes 31 KPIs across 5 pillars: Infrastructure & Performance, Service Delivery, Customer Sentiment, Business Outcomes, and Relationship Strength
             </p>
           </div>
         </div>

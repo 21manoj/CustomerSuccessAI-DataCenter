@@ -1,7 +1,6 @@
 import React from 'react';
 import { CheckCircle, BarChart3, AlertTriangle, Target, ArrowRight } from 'lucide-react';
 import { ImportSummary } from '../../utils/onboardingApi';
-import { useNavigate } from 'react-router-dom';
 
 interface SuccessSummaryProps {
   summary: ImportSummary;
@@ -9,7 +8,6 @@ interface SuccessSummaryProps {
 }
 
 const SuccessSummary: React.FC<SuccessSummaryProps> = ({ summary, onAction }) => {
-  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-12">
@@ -51,10 +49,7 @@ const SuccessSummary: React.FC<SuccessSummaryProps> = ({ summary, onAction }) =>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">What would you like to do next?</h3>
           <div className="space-y-3">
             <button
-              onClick={() => {
-                onAction('dashboard');
-                navigate('/executive-dashboard');
-              }}
+              onClick={() => onAction('dashboard')}
               className="w-full flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -63,12 +58,9 @@ const SuccessSummary: React.FC<SuccessSummaryProps> = ({ summary, onAction }) =>
               </div>
               <span className="text-sm text-gray-600">See your health scores</span>
             </button>
-            
+
             <button
-              onClick={() => {
-                onAction('alerts');
-                navigate('/dashboard');
-              }}
+              onClick={() => onAction('alerts')}
               className="w-full flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -77,12 +69,9 @@ const SuccessSummary: React.FC<SuccessSummaryProps> = ({ summary, onAction }) =>
               </div>
               <span className="text-sm text-gray-600">Check critical accounts</span>
             </button>
-            
+
             <button
-              onClick={() => {
-                onAction('assistant');
-                navigate('/dashboard');
-              }}
+              onClick={() => onAction('assistant')}
               className="w-full flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -102,10 +91,7 @@ const SuccessSummary: React.FC<SuccessSummaryProps> = ({ summary, onAction }) =>
             Take a Quick Tour
           </button>
           <button
-            onClick={() => {
-              onAction('dashboard');
-              navigate('/executive-dashboard');
-            }}
+            onClick={() => onAction('dashboard')}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             Go to Dashboard
