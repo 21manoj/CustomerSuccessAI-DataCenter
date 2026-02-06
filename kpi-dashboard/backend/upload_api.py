@@ -51,25 +51,19 @@ def upload_excel():
         if existing_account:
             return jsonify({'error': f'Account "{account_name}" already exists for this customer'}), 400
         
-<<<<<<< Updated upstream
         # Create new account with UUID dual-write
         vertical = get_customer_vertical(db, customer_id) or 'saas'
         customer_obj = db.session.get(Customer, customer_id)
         customer_uuid = getattr(customer_obj, 'uuid', None) if customer_obj else None
 
         account_uuid = generate_id(vertical, 'account')
-=======
-        # Create new account with all required fields
->>>>>>> Stashed changes
         account = Account(
             customer_id=customer_id,
             account_name=account_name,
             revenue=0,  # Default revenue
             industry='Unknown',
             region='Unknown',
-            account_status='active',
-            external_account_id=None,  # Will be set if provided
-            vertical='DC2_S'  # Default vertical for data center customers
+            account_status='active'
         )
         if hasattr(Account, 'uuid'):
             account.uuid = account_uuid
