@@ -14,7 +14,7 @@ from datetime import datetime
 import openai
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
-from models import db, KPI, Account, KPIUpload, CustomerConfig, PlaybookReport
+from models import db, KPI, Account, KPIUpload, CustomerConfig, PlaybookReport, DC2SKPI, User
 from query_cache import get_query_cache, cache_query_result, get_cached_query_result
 
 # Load environment variables
@@ -47,11 +47,61 @@ class EnhancedRAGSystemOpenAI:
         # Store customer ID for this instance
         self.customer_id = customer_id
         
-        # Fetch all KPIs for the customer
-        kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).all()
+        # Check if customer uses DC vertical by checking accounts
+        dc_accounts = Account.query.filter(
+            Account.customer_id == customer_id,
+            Account.vertical == 'dc2_s'
+        ).first()
+        is_dc_customer = dc_accounts is not None
         
-        # Fetch all accounts for the customer
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        # Fetch KPIs based on vertical
+        if is_dc_customer:
+            print(f"📊 Building knowledge base for DC vertical customer {customer_id}")
+            # For DC customers, use DC2SKPI table
+            dc_kpis_raw = DC2SKPI.query.join(Account).filter(
+                Account.customer_id == customer_id,
+                Account.vertical == 'dc2_s'
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+            
+            # Deduplicate: keep only latest measurement per (account_id, kpi_code)
+            seen = {}
+            dc_kpis = []
+            for dc_kpi in dc_kpis_raw:
+                key = (dc_kpi.account_id, dc_kpi.kpi_code)
+                if key not in seen:
+                    seen[key] = dc_kpi
+                    dc_kpis.append(dc_kpi)
+            
+            # Create account lookup first
+            accounts = Account.query.filter(
+                Account.customer_id == customer_id,
+                Account.vertical == 'dc2_s'
+            ).all()
+            account_lookup = {acc.account_id: acc for acc in accounts}
+            
+            # Convert DC2SKPI to KPI-like format for processing
+            class MockKPI:
+                def __init__(self, dc_kpi, account):
+                    self.kpi_id = dc_kpi.kpi_id
+                    self.account_id = dc_kpi.account_id
+                    self.category = dc_kpi.pillar or 'Uncategorized'
+                    self.kpi_parameter = dc_kpi.kpi_code or 'Unknown KPI'
+                    self.data = str(dc_kpi.value) if dc_kpi.value is not None else '0'
+                    self.impact_level = 'Medium'  # Default for DC
+                    self.source_review = 'DC Data Source'
+                    self.measurement_frequency = 'Monthly'  # Default
+                    self.upload_id = None  # DC KPIs don't have upload_id
+            
+            # Convert DC KPIs
+            kpis = []
+            for dc_kpi in dc_kpis:
+                account = account_lookup.get(dc_kpi.account_id)
+                kpis.append(MockKPI(dc_kpi, account))
+        else:
+            # For SaaS customers, use standard KPI table
+            print(f"📊 Building knowledge base for SaaS customer {customer_id}")
+            kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).all()
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
         
         # Create account lookup
         account_lookup = {acc.account_id: acc for acc in accounts}

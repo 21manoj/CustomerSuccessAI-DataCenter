@@ -9,7 +9,7 @@ import numpy as np
 from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 import openai
-from models import db, KPI, Account, KPIUpload
+from models import db, KPI, Account, KPIUpload, DC2SKPI, User
 
 class WorkingRAGSystem:
     def __init__(self):
@@ -26,19 +26,74 @@ class WorkingRAGSystem:
         self.customer_id = None
         
     def build_knowledge_base(self, customer_id: int):
-        """Build knowledge base for customer"""
-        print(f"🔍 Building working knowledge base for customer {customer_id}...")
+        """Build knowledge base for customer - supports both SaaS and DC verticals"""
+        print(f"🔍 Building working knowledge base for customer {customer_id} (no VDB, pure in-memory)...")
         
         self.customer_id = customer_id
         self.vectors = []
         self.data = []
         
-        # Fetch KPIs for the customer
-        kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).all()
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        # Check if customer uses DC vertical by checking accounts
+        dc_accounts = Account.query.filter(
+            Account.customer_id == customer_id,
+            Account.vertical == 'dc2_s'
+        ).first()
+        is_dc_customer = dc_accounts is not None
         
-        # Create account lookup
-        account_lookup = {acc.account_id: acc for acc in accounts}
+        # Fetch KPIs based on vertical
+        if is_dc_customer:
+            print(f"📊 Building knowledge base for DC vertical customer {customer_id}")
+            # For DC customers, use DC2SKPI table
+            dc_kpis_raw = DC2SKPI.query.join(Account).filter(
+                Account.customer_id == customer_id,
+                Account.vertical == 'dc2_s'
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+            
+            # Deduplicate: keep only latest measurement per (account_id, kpi_code)
+            seen = {}
+            dc_kpis = []
+            for dc_kpi in dc_kpis_raw:
+                key = (dc_kpi.account_id, dc_kpi.kpi_code)
+                if key not in seen:
+                    seen[key] = dc_kpi
+                    dc_kpis.append(dc_kpi)
+            
+            # Create account lookup
+            accounts = Account.query.filter(
+                Account.customer_id == customer_id,
+                Account.vertical == 'dc2_s'
+            ).all()
+            account_lookup = {acc.account_id: acc for acc in accounts}
+            
+            # Convert DC2SKPI to KPI-like format
+            class MockKPI:
+                def __init__(self, dc_kpi, account):
+                    self.kpi_id = dc_kpi.kpi_id
+                    self.account_id = dc_kpi.account_id
+                    self.category = dc_kpi.pillar or 'Uncategorized'
+                    self.kpi_parameter = dc_kpi.kpi_code or 'Unknown KPI'
+                    self.data = str(dc_kpi.value) if dc_kpi.value is not None else '0'
+                    self.impact_level = 'Medium'
+                    self.source_review = 'DC Data Source'
+                    self.measurement_frequency = 'Monthly'
+                    self.upload_id = None
+            
+            kpis = []
+            for dc_kpi in dc_kpis:
+                account = account_lookup.get(dc_kpi.account_id)
+                kpis.append(MockKPI(dc_kpi, account))
+        else:
+            # For SaaS customers, use standard KPI table
+            print(f"📊 Building knowledge base for SaaS customer {customer_id}")
+            kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).all()
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
+        
+        # Create account lookup (if not already created for DC)
+        if not is_dc_customer:
+            account_lookup = {acc.account_id: acc for acc in accounts}
+        else:
+            # Account lookup already created for DC above
+            pass
         
         # Process KPIs
         for kpi in kpis:

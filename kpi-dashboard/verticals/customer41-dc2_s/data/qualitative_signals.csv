@@ -1,0 +1,905 @@
+account_id,account_name,date,signal_type,from_contact,to_contact,summary,sentiment
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-13,meeting,Dr. Williams,James Park,Routine technical sync meeting completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-01,escalation,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-16,email,Dr. Williams,James Park,Concerns about cooling efficiency raised,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-21,meeting,Customer Team,James Park,Monthly business review conducted,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-20,email,Customer Team,James Park,Project milestone delayed due to resource constraints,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-08,meeting,Dr. Williams,James Park,Security compliance audit findings,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-10,escalation,Dr. Williams,James Park,Security compliance audit findings,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-01-03,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-10,email,Dr. Williams,James Park,Successful QBR with expansion discussion initiated,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-02,meeting,Dr. Williams,James Park,Monthly business review conducted,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-10,email,Customer Team,James Park,Unexpected system downtime reported,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-19,email,Customer Team,James Park,System health check completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-23,meeting,Customer Team,James Park,Scheduled maintenance window executed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-28,email,Dr. Williams,James Park,Unexpected system downtime reported,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-08,email,Dr. Williams,James Park,Escalation from operations team regarding performance,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-02-19,meeting,Dr. Williams,James Park,Unexpected system downtime reported,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-03,email,Dr. Williams,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-17,email,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-05,meeting,Customer Team,James Park,Escalation from operations team regarding performance,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-06,meeting,Customer Team,James Park,Unexpected system downtime reported,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-12,meeting,Dr. Williams,James Park,System health check completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-17,meeting,Dr. Williams,James Park,Project milestone delayed due to resource constraints,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-02,meeting,Dr. Williams,James Park,Support ticket unresolved >48 hours,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-17,email,Dr. Williams,James Park,Scheduled maintenance window executed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-17,email,Dr. Williams,James Park,Executive sponsor praised team collaboration,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-12,meeting,Dr. Williams,James Park,Support ticket unresolved >48 hours,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-03,escalation,Customer Team,James Park,Security compliance audit findings,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-12,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-23,meeting,Dr. Williams,James Park,Security compliance audit findings,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-02,meeting,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-03-31,meeting,Dr. Williams,James Park,Integration challenges with existing systems,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-19,email,Dr. Williams,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-16,email,Dr. Williams,James Park,System health check completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-01,meeting,Dr. Williams,James Park,Escalation from operations team regarding performance,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-04-30,escalation,Customer Team,James Park,Project milestone delayed due to resource constraints,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-21,meeting,Dr. Williams,James Park,Concerns about cooling efficiency raised,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-23,meeting,Customer Team,James Park,Documentation review and updates,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-27,email,Dr. Williams,James Park,Regular operational status update provided,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-23,email,Dr. Williams,James Park,Concerns about cooling efficiency raised,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-05-09,escalation,Customer Team,James Park,Budget concerns raised during planning meeting,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-19,escalation,Dr. Williams,James Park,Budget concerns raised during planning meeting,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-12,email,Dr. Williams,James Park,Support ticket unresolved >48 hours,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-23,meeting,Dr. Williams,James Park,Project milestone delayed due to resource constraints,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-19,email,Dr. Williams,James Park,Scheduled maintenance window executed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-22,email,Customer Team,James Park,Security compliance audit findings,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-16,escalation,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-16,email,Dr. Williams,James Park,Scheduled maintenance window executed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-06-15,escalation,Customer Team,James Park,Integration challenges with existing systems,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-23,email,Dr. Williams,James Park,Training session on new features delivered,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-11,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-11,email,Dr. Williams,James Park,Routine technical sync meeting completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-18,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-06,meeting,Customer Team,James Park,Training session on new features delivered,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-05,email,Customer Team,James Park,Reference call completed successfully with prospect,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-08-11,meeting,Dr. Williams,James Park,Executive sponsor praised team collaboration,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-08-07,email,Dr. Williams,James Park,Reference call completed successfully with prospect,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-08-11,meeting,Customer Team,James Park,Project milestone delayed due to resource constraints,negative
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-07-31,meeting,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-08-03,email,Dr. Williams,James Park,Regular operational status update provided,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-08-14,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-09,email,Customer Team,James Park,System health check completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-25,meeting,Customer Team,James Park,Scheduled maintenance window executed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-04,email,Dr. Williams,James Park,Monthly business review conducted,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-23,meeting,Dr. Williams,James Park,Exceeded performance benchmarks this quarter,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-17,email,Customer Team,James Park,Documentation review and updates,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-24,email,Customer Team,James Park,Team member completed advanced certification,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-10-16,email,Dr. Williams,James Park,Successfully deployed new workload ahead of schedule,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-10-21,email,Customer Team,James Park,Team member completed advanced certification,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-10-10,email,Dr. Williams,James Park,Regular operational status update provided,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-10-11,email,Dr. Williams,James Park,Positive feedback on recent infrastructure upgrade,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-09-28,meeting,Dr. Williams,James Park,Monthly business review conducted,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-10-07,meeting,Dr. Williams,James Park,Quarterly capacity planning review,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-13,meeting,Dr. Williams,James Park,Exceeded performance benchmarks this quarter,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-08,meeting,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-03,meeting,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-17,email,Dr. Williams,James Park,System health check completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-16,email,Customer Team,James Park,Training session on new features delivered,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-05,email,Dr. Williams,James Park,Successful QBR with expansion discussion initiated,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-22,email,Customer Team,James Park,Reference call completed successfully with prospect,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-17,email,Customer Team,James Park,Reference call completed successfully with prospect,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-13,email,Customer Team,James Park,Team member completed advanced certification,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-11-27,email,Dr. Williams,James Park,Successful QBR with expansion discussion initiated,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-16,meeting,Dr. Williams,James Park,Routine technical sync meeting completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-14,email,Customer Team,James Park,Regular operational status update provided,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-14,meeting,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-18,email,Customer Team,James Park,System health check completed,neutral
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-18,email,Customer Team,James Park,Reference call completed successfully with prospect,positive
+41001,E2E Full Test Corporation 1769027604 - Datacenter East,2024-12-24,email,Dr. Williams,James Park,Reference call completed successfully with prospect,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-15,meeting,Customer Team,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-21,escalation,Customer Team,Michael Rodriguez,Security compliance audit findings,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-22,email,Customer Team,Michael Rodriguez,Executive sponsor praised team collaboration,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-11,email,Customer Team,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-25,meeting,Dr. Davis,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-29,meeting,Dr. Davis,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-07,email,Customer Team,Michael Rodriguez,Successfully deployed new workload ahead of schedule,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-23,meeting,Customer Team,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-21,email,Customer Team,Michael Rodriguez,Documentation review and updates,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-01-27,meeting,Customer Team,Michael Rodriguez,Regular operational status update provided,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-13,email,Customer Team,Michael Rodriguez,Monthly business review conducted,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-28,email,Customer Team,Michael Rodriguez,Reference call completed successfully with prospect,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-17,meeting,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-13,meeting,Customer Team,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-21,meeting,Customer Team,Michael Rodriguez,Quarterly capacity planning review,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-21,email,Customer Team,Michael Rodriguez,Reference call completed successfully with prospect,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-13,email,Dr. Davis,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-04,meeting,Customer Team,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-05,email,Dr. Davis,Michael Rodriguez,Early adoption of new AI acceleration features,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-02-15,meeting,Customer Team,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-14,email,Customer Team,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-28,meeting,Customer Team,Michael Rodriguez,Reference call completed successfully with prospect,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-08,meeting,Dr. Davis,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-05,meeting,Dr. Davis,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-01,meeting,Customer Team,Michael Rodriguez,Documentation review and updates,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-21,meeting,Dr. Davis,Michael Rodriguez,Monthly business review conducted,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-27,meeting,Customer Team,Michael Rodriguez,Quarterly capacity planning review,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-06,email,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-02,email,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-03-22,meeting,Dr. Davis,Michael Rodriguez,Unexpected system downtime reported,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-07,email,Customer Team,Michael Rodriguez,System health check completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-06,email,Dr. Davis,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-21,email,Customer Team,Michael Rodriguez,Scheduled maintenance window executed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-22,email,Dr. Davis,Michael Rodriguez,Monthly business review conducted,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-01,meeting,Dr. Davis,Michael Rodriguez,System health check completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-19,email,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-05-06,email,Dr. Davis,Michael Rodriguez,Quarterly capacity planning review,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-05-12,meeting,Dr. Davis,Michael Rodriguez,Early adoption of new AI acceleration features,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-04-30,email,Dr. Davis,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-05-26,email,Customer Team,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-05-28,email,Dr. Davis,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-05-18,email,Customer Team,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-06-07,email,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-06-01,email,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-06-19,meeting,Dr. Davis,Michael Rodriguez,Executive sponsor praised team collaboration,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-06-15,email,Dr. Davis,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-06-15,email,Customer Team,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-06-01,email,Dr. Davis,Michael Rodriguez,Quarterly capacity planning review,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-20,email,Customer Team,Michael Rodriguez,Executive sponsor praised team collaboration,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-14,email,Dr. Davis,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-15,meeting,Dr. Davis,Michael Rodriguez,Early adoption of new AI acceleration features,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-09,email,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-05,meeting,Dr. Davis,Michael Rodriguez,Regular operational status update provided,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-09,email,Customer Team,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-12,meeting,Dr. Davis,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-07-30,meeting,Customer Team,Michael Rodriguez,Quarterly capacity planning review,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-22,meeting,Customer Team,Michael Rodriguez,Training session on new features delivered,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-22,email,Customer Team,Michael Rodriguez,Executive sponsor praised team collaboration,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-23,email,Dr. Davis,Michael Rodriguez,System health check completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-17,email,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-09-02,email,Customer Team,Michael Rodriguez,Regular operational status update provided,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-09-16,email,Customer Team,Michael Rodriguez,Team member completed advanced certification,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-28,meeting,Dr. Davis,Michael Rodriguez,Training session on new features delivered,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-08-31,email,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-09-05,email,Dr. Davis,Michael Rodriguez,Successfully deployed new workload ahead of schedule,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-09-09,email,Dr. Davis,Michael Rodriguez,Regular operational status update provided,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-18,meeting,Customer Team,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-25,meeting,Dr. Davis,Michael Rodriguez,Security compliance audit findings,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-09-29,email,Dr. Davis,Michael Rodriguez,Concerns about cooling efficiency raised,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-05,escalation,Customer Team,Michael Rodriguez,Support ticket unresolved >48 hours,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-06,email,Customer Team,Michael Rodriguez,System health check completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-06,meeting,Dr. Davis,Michael Rodriguez,Executive sponsor praised team collaboration,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-05,meeting,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-16,email,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-27,email,Customer Team,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-07,escalation,Dr. Davis,Michael Rodriguez,Escalation from operations team regarding performance,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-27,email,Customer Team,Michael Rodriguez,Scheduled maintenance window executed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-10-29,email,Dr. Davis,Michael Rodriguez,System health check completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-12,escalation,Dr. Davis,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-15,escalation,Dr. Davis,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-21,meeting,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-02,email,Dr. Davis,Michael Rodriguez,Scheduled maintenance window executed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-12-10,escalation,Customer Team,Michael Rodriguez,Unexpected system downtime reported,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-12-04,email,Customer Team,Michael Rodriguez,Successfully deployed new workload ahead of schedule,positive
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-12-17,email,Customer Team,Michael Rodriguez,System health check completed,neutral
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-12-09,email,Dr. Davis,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-12-16,email,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-12-14,meeting,Customer Team,Michael Rodriguez,Support ticket unresolved >48 hours,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-27,email,Customer Team,Michael Rodriguez,Escalation from operations team regarding performance,negative
+41002,E2E Full Test Corporation 1769027604 - Cloud Ops,2024-11-26,email,Dr. Davis,Michael Rodriguez,System health check completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-07,meeting,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-26,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-03,email,Customer Team,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-19,email,Dr. Brown,James Park,Reference call completed successfully with prospect,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-18,meeting,Dr. Brown,James Park,Reference call completed successfully with prospect,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-23,email,Dr. Brown,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-21,meeting,Customer Team,James Park,Quarterly capacity planning review,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-04,email,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-16,email,Customer Team,James Park,Scheduled maintenance window executed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-01-16,email,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-02,meeting,Dr. Brown,James Park,Routine technical sync meeting completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-27,escalation,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-07,email,Dr. Brown,James Park,Training session on new features delivered,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-09,meeting,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-03,email,Customer Team,James Park,Scheduled maintenance window executed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-01,meeting,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-17,meeting,Dr. Brown,James Park,Reference call completed successfully with prospect,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-25,email,Customer Team,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-22,email,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-02-22,email,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-15,email,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-03,email,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-21,meeting,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-28,email,Dr. Brown,James Park,Regular operational status update provided,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-12,escalation,Customer Team,James Park,Budget concerns raised during planning meeting,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-12,meeting,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-20,email,Dr. Brown,James Park,Executive sponsor praised team collaboration,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-27,email,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-23,email,Customer Team,James Park,Scheduled maintenance window executed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-03-03,meeting,Customer Team,James Park,Team member completed advanced certification,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-19,meeting,Dr. Brown,James Park,Routine technical sync meeting completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-03,email,Dr. Brown,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-21,meeting,Customer Team,James Park,Training session on new features delivered,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-11,meeting,Dr. Brown,James Park,Executive sponsor praised team collaboration,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-06,email,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-23,email,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-09,email,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-05,email,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-05,email,Dr. Brown,James Park,Training session on new features delivered,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-02,meeting,Dr. Brown,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-26,meeting,Dr. Brown,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-04-30,escalation,Dr. Brown,James Park,Security compliance audit findings,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-17,meeting,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-15,meeting,Dr. Brown,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-06,email,Customer Team,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-13,escalation,Customer Team,James Park,Project milestone delayed due to resource constraints,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-04,meeting,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-25,email,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-05,email,Customer Team,James Park,Regular operational status update provided,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-05-04,email,Dr. Brown,James Park,Reference call completed successfully with prospect,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-26,email,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-15,email,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-17,email,Dr. Brown,James Park,Scheduled maintenance window executed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-03,escalation,Customer Team,James Park,Escalation from operations team regarding performance,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-04,email,Customer Team,James Park,Monthly business review conducted,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-03,email,Customer Team,James Park,Executive sponsor praised team collaboration,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-27,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-25,meeting,Dr. Brown,James Park,Reference call completed successfully with prospect,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-07,escalation,Customer Team,James Park,Support ticket unresolved >48 hours,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-16,meeting,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-06-30,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-04,meeting,Customer Team,James Park,Integration challenges with existing systems,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-08,email,Customer Team,James Park,Executive sponsor praised team collaboration,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-16,email,Dr. Brown,James Park,Monthly business review conducted,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-22,email,Dr. Brown,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-27,email,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-27,meeting,Customer Team,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-10,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-25,email,Dr. Brown,James Park,Unexpected system downtime reported,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-07-18,email,Customer Team,James Park,Routine technical sync meeting completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-04,email,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-15,email,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-14,email,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-19,escalation,Dr. Brown,James Park,Budget concerns raised during planning meeting,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-06,meeting,Customer Team,James Park,Executive sponsor praised team collaboration,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-11,email,Customer Team,James Park,Reference call completed successfully with prospect,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-11,meeting,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-13,email,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-09,email,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-06,email,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-31,email,Dr. Brown,James Park,Routine technical sync meeting completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-03,meeting,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-15,meeting,Customer Team,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-01,email,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-09,email,Dr. Brown,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-25,email,Customer Team,James Park,System health check completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-15,email,Customer Team,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-04,meeting,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-09-02,email,Dr. Brown,James Park,Budget concerns raised during planning meeting,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-08-29,email,Customer Team,James Park,Routine technical sync meeting completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-04,meeting,Dr. Brown,James Park,Routine technical sync meeting completed,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-13,escalation,Customer Team,James Park,Unexpected system downtime reported,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-04,email,Dr. Brown,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-06,email,Customer Team,James Park,Security compliance audit findings,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-22,email,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-22,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-14,email,Customer Team,James Park,Security compliance audit findings,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-19,email,Dr. Brown,James Park,Successful QBR with expansion discussion initiated,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-08,meeting,Customer Team,James Park,Monthly business review conducted,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-10,meeting,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-07,email,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-10,meeting,Dr. Brown,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-08,email,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-03,email,Dr. Brown,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-12,meeting,Dr. Brown,James Park,Monthly business review conducted,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-17,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-02,meeting,Customer Team,James Park,Team member completed advanced certification,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-04,email,Dr. Brown,James Park,Regular operational status update provided,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-03,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-10-31,meeting,Customer Team,James Park,Positive feedback on recent infrastructure upgrade,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-30,email,Dr. Brown,James Park,Training session on new features delivered,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-28,email,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-22,meeting,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-23,email,Dr. Brown,James Park,Quarterly capacity planning review,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-04,meeting,Dr. Brown,James Park,Team member completed advanced certification,positive
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-21,email,Customer Team,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-11-30,meeting,Customer Team,James Park,Documentation review and updates,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-23,meeting,Customer Team,James Park,Quarterly capacity planning review,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-14,email,Dr. Brown,James Park,Training session on new features delivered,neutral
+41003,E2E Full Test Corporation 1769027604 - AI Lab,2024-12-04,email,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-01-02,email,Customer Team,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-01-22,email,Dr. Davis,Michael Rodriguez,Reference call completed successfully with prospect,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-01-20,email,Dr. Davis,Michael Rodriguez,Early adoption of new AI acceleration features,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-01-13,email,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-01-29,email,Customer Team,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-01-20,email,Dr. Davis,Michael Rodriguez,Reference call completed successfully with prospect,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-02-26,email,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-02-28,email,Dr. Davis,Michael Rodriguez,Early adoption of new AI acceleration features,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-02-23,email,Dr. Davis,Michael Rodriguez,Team member completed advanced certification,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-02-23,email,Customer Team,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-02-23,email,Customer Team,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-02-05,meeting,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-29,escalation,Customer Team,Michael Rodriguez,Escalation from operations team regarding performance,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-09,meeting,Customer Team,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-18,email,Customer Team,Michael Rodriguez,Team member completed advanced certification,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-08,meeting,Dr. Davis,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-06,email,Dr. Davis,Michael Rodriguez,Scheduled maintenance window executed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-25,email,Dr. Davis,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-04-06,email,Customer Team,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-03-31,email,Customer Team,Michael Rodriguez,Security compliance audit findings,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-04-10,meeting,Customer Team,Michael Rodriguez,System health check completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-04-06,meeting,Dr. Davis,Michael Rodriguez,Security compliance audit findings,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-04-13,meeting,Dr. Davis,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-04-27,meeting,Customer Team,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-05-17,email,Dr. Davis,Michael Rodriguez,Monthly business review conducted,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-05-13,meeting,Dr. Davis,Michael Rodriguez,Successful QBR with expansion discussion initiated,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-05-24,email,Customer Team,Michael Rodriguez,Reference call completed successfully with prospect,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-05-18,email,Customer Team,Michael Rodriguez,Monthly business review conducted,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-05-18,meeting,Customer Team,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-05-05,meeting,Dr. Davis,Michael Rodriguez,Monthly business review conducted,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-05,escalation,Dr. Davis,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-07,meeting,Customer Team,Michael Rodriguez,Executive sponsor praised team collaboration,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-17,email,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-16,escalation,Customer Team,Michael Rodriguez,Security compliance audit findings,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-22,meeting,Customer Team,Michael Rodriguez,Team member completed advanced certification,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-21,email,Dr. Davis,Michael Rodriguez,Escalation from operations team regarding performance,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-20,escalation,Customer Team,Michael Rodriguez,Integration challenges with existing systems,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-26,meeting,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-06-29,email,Customer Team,Michael Rodriguez,Escalation from operations team regarding performance,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-12,email,Customer Team,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-20,escalation,Customer Team,Michael Rodriguez,Security compliance audit findings,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-23,escalation,Customer Team,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-18,meeting,Dr. Davis,Michael Rodriguez,System health check completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-18,escalation,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-03,email,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-07-12,email,Dr. Davis,Michael Rodriguez,Escalation from operations team regarding performance,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-17,escalation,Dr. Davis,Michael Rodriguez,Unexpected system downtime reported,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-22,meeting,Customer Team,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-14,email,Customer Team,Michael Rodriguez,Concerns about cooling efficiency raised,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-25,meeting,Customer Team,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-06,email,Dr. Davis,Michael Rodriguez,Security compliance audit findings,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-25,escalation,Dr. Davis,Michael Rodriguez,Unexpected system downtime reported,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-01,email,Dr. Davis,Michael Rodriguez,Support ticket unresolved >48 hours,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-08-05,escalation,Dr. Davis,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-09-05,meeting,Customer Team,Michael Rodriguez,Quarterly capacity planning review,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-09-14,email,Customer Team,Michael Rodriguez,Scheduled maintenance window executed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-09-09,email,Dr. Davis,Michael Rodriguez,Budget concerns raised during planning meeting,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-09-07,meeting,Customer Team,Michael Rodriguez,Training session on new features delivered,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-09-04,email,Customer Team,Michael Rodriguez,Monthly business review conducted,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-09-07,email,Dr. Davis,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-07,email,Dr. Davis,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-07,email,Customer Team,Michael Rodriguez,Regular operational status update provided,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-06,email,Customer Team,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-05,email,Customer Team,Michael Rodriguez,Training session on new features delivered,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-12,email,Dr. Davis,Michael Rodriguez,Regular operational status update provided,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-05,email,Dr. Davis,Michael Rodriguez,Monthly business review conducted,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-11-21,email,Customer Team,Michael Rodriguez,Monthly business review conducted,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-11-13,meeting,Dr. Davis,Michael Rodriguez,Project milestone delayed due to resource constraints,negative
+41004,E2E Full Test Corporation 1769027604 - Production,2024-11-12,meeting,Customer Team,Michael Rodriguez,Routine technical sync meeting completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-11-12,email,Customer Team,Michael Rodriguez,Successfully deployed new workload ahead of schedule,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-10-30,meeting,Customer Team,Michael Rodriguez,System health check completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-11-06,email,Customer Team,Michael Rodriguez,Positive feedback on recent infrastructure upgrade,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-12-23,email,Customer Team,Michael Rodriguez,Team member completed advanced certification,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-12-02,email,Dr. Davis,Michael Rodriguez,Exceeded performance benchmarks this quarter,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-12-02,email,Customer Team,Michael Rodriguez,Quarterly capacity planning review,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-12-18,email,Customer Team,Michael Rodriguez,Successfully deployed new workload ahead of schedule,positive
+41004,E2E Full Test Corporation 1769027604 - Production,2024-12-21,meeting,Customer Team,Michael Rodriguez,System health check completed,neutral
+41004,E2E Full Test Corporation 1769027604 - Production,2024-12-23,email,Dr. Davis,Michael Rodriguez,Integration challenges with existing systems,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-16,email,Dr. Brown,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-14,email,Dr. Brown,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-17,meeting,Customer Team,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-24,meeting,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-08,email,Dr. Brown,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-09,escalation,Dr. Brown,Sarah Chen,Budget concerns raised during planning meeting,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-01-31,email,Customer Team,Sarah Chen,Regular operational status update provided,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-22,email,Customer Team,Sarah Chen,Executive sponsor praised team collaboration,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-09,escalation,Dr. Brown,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-18,meeting,Dr. Brown,Sarah Chen,Successful QBR with expansion discussion initiated,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-18,email,Dr. Brown,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-08,email,Dr. Brown,Sarah Chen,Training session on new features delivered,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-08,email,Customer Team,Sarah Chen,Team member completed advanced certification,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-08,meeting,Dr. Brown,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-19,email,Customer Team,Sarah Chen,Team member completed advanced certification,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-02-18,email,Dr. Brown,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-21,meeting,Customer Team,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-16,meeting,Customer Team,Sarah Chen,Scheduled maintenance window executed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-12,meeting,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-21,meeting,Customer Team,Sarah Chen,Unexpected system downtime reported,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-15,meeting,Customer Team,Sarah Chen,Budget concerns raised during planning meeting,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-13,email,Customer Team,Sarah Chen,Training session on new features delivered,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-17,email,Dr. Brown,Sarah Chen,Successful QBR with expansion discussion initiated,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-25,email,Customer Team,Sarah Chen,Reference call completed successfully with prospect,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-20,email,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-03-07,meeting,Dr. Brown,Sarah Chen,Routine technical sync meeting completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-04-11,email,Dr. Brown,Sarah Chen,Scheduled maintenance window executed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-04-19,email,Dr. Brown,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-04-11,email,Customer Team,Sarah Chen,Quarterly capacity planning review,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-04-17,email,Dr. Brown,Sarah Chen,Reference call completed successfully with prospect,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-04-10,email,Dr. Brown,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-04-04,meeting,Dr. Brown,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-15,email,Customer Team,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-12,email,Dr. Brown,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-02,email,Customer Team,Sarah Chen,Team member completed advanced certification,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-10,email,Customer Team,Sarah Chen,Reference call completed successfully with prospect,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-04,meeting,Customer Team,Sarah Chen,Security compliance audit findings,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-12,escalation,Dr. Brown,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-24,email,Dr. Brown,Sarah Chen,Integration challenges with existing systems,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-05-01,email,Dr. Brown,Sarah Chen,Quarterly capacity planning review,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-11,email,Dr. Brown,Sarah Chen,Project milestone delayed due to resource constraints,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-11,meeting,Dr. Brown,Sarah Chen,Integration challenges with existing systems,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-05,meeting,Customer Team,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-25,meeting,Customer Team,Sarah Chen,Support ticket unresolved >48 hours,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-10,escalation,Customer Team,Sarah Chen,Integration challenges with existing systems,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-10,email,Customer Team,Sarah Chen,Budget concerns raised during planning meeting,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-12,email,Dr. Brown,Sarah Chen,Support ticket unresolved >48 hours,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-06-02,email,Dr. Brown,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-07-17,email,Dr. Brown,Sarah Chen,Scheduled maintenance window executed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-07-02,meeting,Dr. Brown,Sarah Chen,Executive sponsor praised team collaboration,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-07-21,meeting,Dr. Brown,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-07-26,email,Dr. Brown,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-07-21,email,Customer Team,Sarah Chen,Team member completed advanced certification,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-07-16,meeting,Customer Team,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-06,email,Customer Team,Sarah Chen,Reference call completed successfully with prospect,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-06,email,Dr. Brown,Sarah Chen,Scheduled maintenance window executed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-24,email,Dr. Brown,Sarah Chen,Team member completed advanced certification,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-11,meeting,Dr. Brown,Sarah Chen,Regular operational status update provided,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-13,email,Customer Team,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-19,email,Dr. Brown,Sarah Chen,Reference call completed successfully with prospect,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-24,meeting,Dr. Brown,Sarah Chen,Routine technical sync meeting completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-25,email,Customer Team,Sarah Chen,Quarterly capacity planning review,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-07,email,Dr. Brown,Sarah Chen,Routine technical sync meeting completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-09,email,Dr. Brown,Sarah Chen,Executive sponsor praised team collaboration,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-12,meeting,Dr. Brown,Sarah Chen,Executive sponsor praised team collaboration,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-22,meeting,Customer Team,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-08-29,email,Dr. Brown,Sarah Chen,Team member completed advanced certification,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-16,email,Customer Team,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-07,email,Dr. Brown,Sarah Chen,Training session on new features delivered,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-10,escalation,Dr. Brown,Sarah Chen,Project milestone delayed due to resource constraints,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-10,email,Dr. Brown,Sarah Chen,Early adoption of new AI acceleration features,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-18,meeting,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-18,meeting,Dr. Brown,Sarah Chen,Routine technical sync meeting completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-03,email,Customer Team,Sarah Chen,Monthly business review conducted,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-10-07,email,Customer Team,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-10-10,meeting,Customer Team,Sarah Chen,Scheduled maintenance window executed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-10-05,meeting,Customer Team,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-09-29,email,Customer Team,Sarah Chen,Reference call completed successfully with prospect,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-10-19,email,Customer Team,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-10-07,email,Customer Team,Sarah Chen,Successful QBR with expansion discussion initiated,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-03,escalation,Customer Team,Sarah Chen,Support ticket unresolved >48 hours,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-10-30,meeting,Dr. Brown,Sarah Chen,Project milestone delayed due to resource constraints,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-15,escalation,Dr. Brown,Sarah Chen,Integration challenges with existing systems,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-12,escalation,Dr. Brown,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-23,meeting,Dr. Brown,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-16,meeting,Customer Team,Sarah Chen,Integration challenges with existing systems,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-04,email,Dr. Brown,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-11-19,meeting,Customer Team,Sarah Chen,Security compliance audit findings,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-19,email,Customer Team,Sarah Chen,Documentation review and updates,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-23,email,Dr. Brown,Sarah Chen,Support ticket unresolved >48 hours,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-05,email,Dr. Brown,Sarah Chen,Escalation from operations team regarding performance,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-22,email,Dr. Brown,Sarah Chen,Quarterly capacity planning review,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-07,email,Dr. Brown,Sarah Chen,Successfully deployed new workload ahead of schedule,positive
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-11,email,Dr. Brown,Sarah Chen,System health check completed,neutral
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-08,meeting,Customer Team,Sarah Chen,Budget concerns raised during planning meeting,negative
+41005,E2E Full Test Corporation 1769027604 - Development,2024-12-20,escalation,Dr. Brown,Sarah Chen,Support ticket unresolved >48 hours,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-06,email,Customer Team,David Kim,Project milestone delayed due to resource constraints,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-04,email,Dr. Davis,David Kim,Exceeded performance benchmarks this quarter,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-15,meeting,Dr. Davis,David Kim,Routine technical sync meeting completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-20,email,Customer Team,David Kim,Support ticket unresolved >48 hours,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-19,email,Dr. Davis,David Kim,Exceeded performance benchmarks this quarter,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-11,email,Dr. Davis,David Kim,Documentation review and updates,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-02-08,email,Customer Team,David Kim,System health check completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-31,email,Customer Team,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-01-31,email,Customer Team,David Kim,Reference call completed successfully with prospect,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-02-23,email,Customer Team,David Kim,Monthly business review conducted,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-02-14,meeting,Customer Team,David Kim,Successful QBR with expansion discussion initiated,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-02-13,meeting,Dr. Davis,David Kim,Team member completed advanced certification,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-14,meeting,Dr. Davis,David Kim,Successfully deployed new workload ahead of schedule,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-04,meeting,Dr. Davis,David Kim,Quarterly capacity planning review,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-08,meeting,Dr. Davis,David Kim,Project milestone delayed due to resource constraints,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-13,email,Customer Team,David Kim,Escalation from operations team regarding performance,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-12,email,Customer Team,David Kim,Unexpected system downtime reported,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-04,escalation,Customer Team,David Kim,Budget concerns raised during planning meeting,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-29,email,Dr. Davis,David Kim,Reference call completed successfully with prospect,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-03-20,meeting,Customer Team,David Kim,Unexpected system downtime reported,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-21,email,Dr. Davis,David Kim,Reference call completed successfully with prospect,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-11,email,Dr. Davis,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-28,email,Customer Team,David Kim,Routine technical sync meeting completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-28,email,Customer Team,David Kim,Quarterly capacity planning review,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-18,meeting,Dr. Davis,David Kim,Reference call completed successfully with prospect,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-13,email,Customer Team,David Kim,Team member completed advanced certification,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-05-02,email,Dr. Davis,David Kim,Security compliance audit findings,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-05-16,email,Dr. Davis,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-04-30,meeting,Customer Team,David Kim,Monthly business review conducted,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-05-13,email,Customer Team,David Kim,Quarterly capacity planning review,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-05-26,escalation,Dr. Davis,David Kim,Integration challenges with existing systems,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-05-25,meeting,Dr. Davis,David Kim,Regular operational status update provided,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-10,meeting,Customer Team,David Kim,Team member completed advanced certification,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-08,email,Customer Team,David Kim,Documentation review and updates,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-19,email,Customer Team,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-24,meeting,Dr. Davis,David Kim,Documentation review and updates,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-05-31,email,Dr. Davis,David Kim,Regular operational status update provided,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-09,email,Dr. Davis,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-29,meeting,Customer Team,David Kim,Monthly business review conducted,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-06-29,meeting,Customer Team,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-07-17,email,Dr. Davis,David Kim,System health check completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-07-22,email,Dr. Davis,David Kim,Successfully deployed new workload ahead of schedule,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-07-01,email,Dr. Davis,David Kim,Exceeded performance benchmarks this quarter,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-07-21,email,Customer Team,David Kim,System health check completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-08-10,email,Dr. Davis,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-08-10,email,Customer Team,David Kim,Routine technical sync meeting completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-08-18,meeting,Dr. Davis,David Kim,Successfully deployed new workload ahead of schedule,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-08-09,email,Customer Team,David Kim,Monthly business review conducted,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-08-18,email,Dr. Davis,David Kim,Positive feedback on recent infrastructure upgrade,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-08-07,meeting,Customer Team,David Kim,System health check completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-09-18,email,Customer Team,David Kim,Team member completed advanced certification,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-09-10,email,Dr. Davis,David Kim,Successfully deployed new workload ahead of schedule,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-09-16,email,Customer Team,David Kim,Monthly business review conducted,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-09-02,email,Customer Team,David Kim,Positive feedback on recent infrastructure upgrade,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-09-05,escalation,Dr. Davis,David Kim,Support ticket unresolved >48 hours,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-09-25,escalation,Customer Team,David Kim,Support ticket unresolved >48 hours,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-11,email,Customer Team,David Kim,Exceeded performance benchmarks this quarter,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-16,email,Customer Team,David Kim,Executive sponsor praised team collaboration,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-12,email,Dr. Davis,David Kim,Successful QBR with expansion discussion initiated,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-08,email,Dr. Davis,David Kim,Successfully deployed new workload ahead of schedule,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-04,email,Customer Team,David Kim,Exceeded performance benchmarks this quarter,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-11,meeting,Customer Team,David Kim,Successfully deployed new workload ahead of schedule,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-11-07,email,Dr. Davis,David Kim,Training session on new features delivered,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-11-24,email,Dr. Davis,David Kim,System health check completed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-11-19,meeting,Customer Team,David Kim,Monthly business review conducted,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-11-07,email,Dr. Davis,David Kim,Budget concerns raised during planning meeting,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-30,email,Customer Team,David Kim,Budget concerns raised during planning meeting,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-10-29,meeting,Dr. Davis,David Kim,Team member completed advanced certification,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-12-22,email,Dr. Davis,David Kim,Scheduled maintenance window executed,neutral
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-12-09,meeting,Dr. Davis,David Kim,Early adoption of new AI acceleration features,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-12-13,email,Dr. Davis,David Kim,Team member completed advanced certification,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-12-03,meeting,Dr. Davis,David Kim,Project milestone delayed due to resource constraints,negative
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-12-18,email,Dr. Davis,David Kim,Positive feedback on recent infrastructure upgrade,positive
+41006,E2E Full Test Corporation 1769027604 - HQ Operations,2024-12-14,email,Customer Team,David Kim,Reference call completed successfully with prospect,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-04,email,Dr. Brown,James Park,Monthly business review conducted,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-13,escalation,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-27,email,Customer Team,James Park,Monthly business review conducted,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-14,email,Customer Team,James Park,System health check completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-24,meeting,Customer Team,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-22,meeting,Dr. Brown,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-23,email,Customer Team,James Park,Budget concerns raised during planning meeting,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-01-04,meeting,Dr. Brown,James Park,Regular operational status update provided,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-03,email,Dr. Brown,James Park,Regular operational status update provided,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-27,email,Dr. Brown,James Park,Monthly business review conducted,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-19,meeting,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-20,email,Customer Team,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-17,meeting,Dr. Brown,James Park,System health check completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-15,escalation,Dr. Brown,James Park,Budget concerns raised during planning meeting,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-25,escalation,Dr. Brown,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-02-26,email,Dr. Brown,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-20,email,Customer Team,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-11,meeting,Customer Team,James Park,Monthly business review conducted,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-18,email,Dr. Brown,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-17,email,Customer Team,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-08,email,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-23,email,Dr. Brown,James Park,Quarterly capacity planning review,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-04,email,Customer Team,James Park,Team member completed advanced certification,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-03-15,email,Dr. Brown,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-23,meeting,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-23,escalation,Customer Team,James Park,Support ticket unresolved >48 hours,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-11,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-04,escalation,Dr. Brown,James Park,Support ticket unresolved >48 hours,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-03,email,Dr. Brown,James Park,Regular operational status update provided,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-14,email,Dr. Brown,James Park,Routine technical sync meeting completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-26,email,Dr. Brown,James Park,Documentation review and updates,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-04-02,meeting,Dr. Brown,James Park,Support ticket unresolved >48 hours,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-22,meeting,Dr. Brown,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-09,email,Customer Team,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-26,meeting,Dr. Brown,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-04,meeting,Dr. Brown,James Park,Support ticket unresolved >48 hours,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-17,meeting,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-16,escalation,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-28,email,Customer Team,James Park,Budget concerns raised during planning meeting,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-03,email,Customer Team,James Park,Documentation review and updates,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-11,meeting,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-16,meeting,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-25,email,Dr. Brown,James Park,Monthly business review conducted,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-14,meeting,Customer Team,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-23,email,Customer Team,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-05-31,email,Dr. Brown,James Park,Regular operational status update provided,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-24,meeting,Customer Team,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-25,escalation,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-04,email,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-21,escalation,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-07,meeting,Dr. Brown,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-12,email,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-26,meeting,Customer Team,James Park,Successful QBR with expansion discussion initiated,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-06-29,email,Customer Team,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-21,email,Customer Team,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-07-21,escalation,Customer Team,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-24,email,Customer Team,James Park,Successfully deployed new workload ahead of schedule,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-11,email,Dr. Brown,James Park,System health check completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-22,escalation,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-01,email,Customer Team,James Park,Routine technical sync meeting completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-11,meeting,Dr. Brown,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-21,meeting,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-03,meeting,Dr. Brown,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-08-08,meeting,Customer Team,James Park,Quarterly capacity planning review,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-04,meeting,Customer Team,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-19,meeting,Dr. Brown,James Park,Security compliance audit findings,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-14,email,Customer Team,James Park,Scheduled maintenance window executed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-18,meeting,Customer Team,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-23,escalation,Dr. Brown,James Park,Project milestone delayed due to resource constraints,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-11,email,Customer Team,James Park,Budget concerns raised during planning meeting,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-10,email,Dr. Brown,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-09,email,Customer Team,James Park,Documentation review and updates,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-09,meeting,Dr. Brown,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-18,email,Dr. Brown,James Park,Scheduled maintenance window executed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-12,email,Dr. Brown,James Park,System health check completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-09-27,meeting,Customer Team,James Park,Training session on new features delivered,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-20,meeting,Customer Team,James Park,Exceeded performance benchmarks this quarter,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-09,escalation,Dr. Brown,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-07,escalation,Customer Team,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-14,email,Customer Team,James Park,Regular operational status update provided,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-11-11,escalation,Dr. Brown,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-11-22,meeting,Customer Team,James Park,Quarterly capacity planning review,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-11-18,escalation,Customer Team,James Park,Support ticket unresolved >48 hours,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-31,meeting,Dr. Brown,James Park,Routine technical sync meeting completed,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-11-02,escalation,Dr. Brown,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-28,escalation,Customer Team,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-10-27,email,Dr. Brown,James Park,Early adoption of new AI acceleration features,positive
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-11-07,escalation,Customer Team,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-09,email,Customer Team,James Park,Regular operational status update provided,neutral
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-07,meeting,Dr. Brown,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-23,email,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-18,email,Customer Team,James Park,Concerns about cooling efficiency raised,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-17,escalation,Customer Team,James Park,Escalation from operations team regarding performance,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-21,escalation,Dr. Brown,James Park,Unexpected system downtime reported,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-12-11,email,Dr. Brown,James Park,Integration challenges with existing systems,negative
+41007,E2E Full Test Corporation 1769027604 - Regional Office,2024-11-30,email,Customer Team,James Park,Quarterly capacity planning review,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-06,email,Customer Team,Lisa Anderson,Documentation review and updates,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-21,email,Customer Team,Lisa Anderson,Escalation from operations team regarding performance,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-13,email,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-03,escalation,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-26,email,Customer Team,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-05,meeting,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-10,meeting,Dr. Brown,Lisa Anderson,Escalation from operations team regarding performance,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-01-10,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-07,escalation,Dr. Brown,Lisa Anderson,Integration challenges with existing systems,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-20,email,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-04,meeting,Dr. Brown,Lisa Anderson,Early adoption of new AI acceleration features,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-16,email,Dr. Brown,Lisa Anderson,Routine technical sync meeting completed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-11,email,Dr. Brown,Lisa Anderson,Escalation from operations team regarding performance,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-17,email,Dr. Brown,Lisa Anderson,Security compliance audit findings,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-17,meeting,Dr. Brown,Lisa Anderson,Regular operational status update provided,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-02-14,meeting,Dr. Brown,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-10,meeting,Customer Team,Lisa Anderson,Support ticket unresolved >48 hours,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-03,escalation,Dr. Brown,Lisa Anderson,Unexpected system downtime reported,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-09,email,Customer Team,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-23,email,Dr. Brown,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-27,email,Customer Team,Lisa Anderson,System health check completed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-06,escalation,Customer Team,Lisa Anderson,Support ticket unresolved >48 hours,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-20,email,Dr. Brown,Lisa Anderson,Security compliance audit findings,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-03-06,meeting,Customer Team,Lisa Anderson,Support ticket unresolved >48 hours,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-03,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-01,meeting,Dr. Brown,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-22,email,Dr. Brown,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-28,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-12,meeting,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-08,email,Dr. Brown,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-02,email,Dr. Brown,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-12,meeting,Customer Team,Lisa Anderson,System health check completed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-05-14,email,Dr. Brown,Lisa Anderson,Monthly business review conducted,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-05-20,email,Dr. Brown,Lisa Anderson,Monthly business review conducted,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-05-16,meeting,Dr. Brown,Lisa Anderson,Integration challenges with existing systems,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-05-24,meeting,Customer Team,Lisa Anderson,Documentation review and updates,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-05-25,meeting,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-05-14,escalation,Dr. Brown,Lisa Anderson,Integration challenges with existing systems,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-30,meeting,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-04-30,email,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-20,email,Dr. Brown,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-21,email,Dr. Brown,Lisa Anderson,Quarterly capacity planning review,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-24,email,Dr. Brown,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-24,meeting,Dr. Brown,Lisa Anderson,Integration challenges with existing systems,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-18,meeting,Customer Team,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-10,meeting,Dr. Brown,Lisa Anderson,System health check completed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-05,meeting,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-15,meeting,Dr. Brown,Lisa Anderson,Security compliance audit findings,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-07-16,meeting,Dr. Brown,Lisa Anderson,Executive sponsor praised team collaboration,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-07-02,meeting,Dr. Brown,Lisa Anderson,Team member completed advanced certification,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-07-18,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-07-03,escalation,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-06-30,email,Dr. Brown,Lisa Anderson,Documentation review and updates,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-07-19,email,Dr. Brown,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-13,email,Dr. Brown,Lisa Anderson,Team member completed advanced certification,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-18,email,Customer Team,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-17,meeting,Dr. Brown,Lisa Anderson,Integration challenges with existing systems,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-15,email,Dr. Brown,Lisa Anderson,Reference call completed successfully with prospect,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-16,email,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-10,meeting,Dr. Brown,Lisa Anderson,System health check completed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-09-16,meeting,Dr. Brown,Lisa Anderson,Team member completed advanced certification,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-09-18,email,Dr. Brown,Lisa Anderson,Monthly business review conducted,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-09-25,meeting,Dr. Brown,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-09-20,meeting,Dr. Brown,Lisa Anderson,Scheduled maintenance window executed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-09-19,email,Customer Team,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-08-29,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-03,email,Dr. Brown,Lisa Anderson,Scheduled maintenance window executed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-02,meeting,Dr. Brown,Lisa Anderson,Escalation from operations team regarding performance,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-08,meeting,Customer Team,Lisa Anderson,Reference call completed successfully with prospect,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-09-27,email,Dr. Brown,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-14,meeting,Customer Team,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-20,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-11-13,meeting,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-27,meeting,Customer Team,Lisa Anderson,Team member completed advanced certification,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-11-07,meeting,Dr. Brown,Lisa Anderson,Monthly business review conducted,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-11-05,email,Customer Team,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-11-24,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-10-31,meeting,Dr. Brown,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-11-27,meeting,Dr. Brown,Lisa Anderson,Regular operational status update provided,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-12-19,meeting,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-12-09,email,Dr. Brown,Lisa Anderson,Documentation review and updates,neutral
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-12-02,escalation,Dr. Brown,Lisa Anderson,Support ticket unresolved >48 hours,negative
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-12-11,meeting,Dr. Brown,Lisa Anderson,Early adoption of new AI acceleration features,positive
+41008,E2E Full Test Corporation 1769027604 - Research Center,2024-12-24,meeting,Dr. Brown,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-07,email,Dr. Miller,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-17,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-12,email,Dr. Miller,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-19,meeting,Customer Team,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-20,escalation,Dr. Miller,Lisa Anderson,Support ticket unresolved >48 hours,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-02,email,Customer Team,Lisa Anderson,System health check completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-15,email,Customer Team,Lisa Anderson,System health check completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-01-26,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-21,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-10,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-17,email,Customer Team,Lisa Anderson,Team member completed advanced certification,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-20,email,Dr. Miller,Lisa Anderson,Security compliance audit findings,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-08,escalation,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-07,meeting,Dr. Miller,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-06,email,Dr. Miller,Lisa Anderson,Unexpected system downtime reported,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-02-22,email,Dr. Miller,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-09,email,Dr. Miller,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-22,meeting,Dr. Miller,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-20,email,Dr. Miller,Lisa Anderson,Executive sponsor praised team collaboration,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-02,email,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-28,escalation,Dr. Miller,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-07,email,Dr. Miller,Lisa Anderson,Unexpected system downtime reported,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-01,meeting,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-03-15,email,Customer Team,Lisa Anderson,Reference call completed successfully with prospect,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-17,email,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-20,meeting,Dr. Miller,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-09,meeting,Dr. Miller,Lisa Anderson,Support ticket unresolved >48 hours,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-15,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-08,email,Dr. Miller,Lisa Anderson,Escalation from operations team regarding performance,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-09,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-10,meeting,Customer Team,Lisa Anderson,Routine technical sync meeting completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-04-21,email,Customer Team,Lisa Anderson,Budget concerns raised during planning meeting,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-13,email,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-01,meeting,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-05,email,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-15,meeting,Dr. Miller,Lisa Anderson,Unexpected system downtime reported,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-01,meeting,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-12,escalation,Dr. Miller,Lisa Anderson,Integration challenges with existing systems,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-14,email,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-05-16,email,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-13,email,Customer Team,Lisa Anderson,Unexpected system downtime reported,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-24,email,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-12,meeting,Dr. Miller,Lisa Anderson,Monthly business review conducted,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-08,meeting,Customer Team,Lisa Anderson,Routine technical sync meeting completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-27,email,Dr. Miller,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-18,email,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-25,email,Dr. Miller,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-21,meeting,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-07-08,email,Customer Team,Lisa Anderson,System health check completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-07-23,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-07-06,email,Customer Team,Lisa Anderson,Executive sponsor praised team collaboration,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-06-30,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-07-08,meeting,Dr. Miller,Lisa Anderson,Scheduled maintenance window executed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-07-11,email,Dr. Miller,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-19,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-04,email,Dr. Miller,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-22,email,Dr. Miller,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-10,meeting,Dr. Miller,Lisa Anderson,Team member completed advanced certification,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-11,email,Customer Team,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-21,email,Dr. Miller,Lisa Anderson,Training session on new features delivered,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-28,email,Dr. Miller,Lisa Anderson,Scheduled maintenance window executed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-30,meeting,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-08-29,email,Dr. Miller,Lisa Anderson,Routine technical sync meeting completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-09-22,email,Customer Team,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-09-01,meeting,Customer Team,Lisa Anderson,Routine technical sync meeting completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-09-19,meeting,Dr. Miller,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-20,email,Customer Team,Lisa Anderson,Executive sponsor praised team collaboration,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-20,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-20,meeting,Dr. Miller,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-11,email,Dr. Miller,Lisa Anderson,Reference call completed successfully with prospect,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-01,meeting,Customer Team,Lisa Anderson,Executive sponsor praised team collaboration,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-11,email,Customer Team,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-24,email,Dr. Miller,Lisa Anderson,Monthly business review conducted,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-17,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-12,email,Dr. Miller,Lisa Anderson,Executive sponsor praised team collaboration,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-14,email,Customer Team,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-12,escalation,Customer Team,Lisa Anderson,Escalation from operations team regarding performance,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-10-30,email,Dr. Miller,Lisa Anderson,Documentation review and updates,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-23,meeting,Dr. Miller,Lisa Anderson,Regular operational status update provided,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-12,email,Dr. Miller,Lisa Anderson,Integration challenges with existing systems,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-05,email,Customer Team,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-24,meeting,Dr. Miller,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-16,email,Dr. Miller,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-19,email,Dr. Miller,Lisa Anderson,Reference call completed successfully with prospect,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-29,email,Customer Team,Lisa Anderson,System health check completed,neutral
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-16,escalation,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-12-10,meeting,Dr. Miller,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+41009,E2E Full Test Corporation 1769027604 - Data Center West,2024-11-29,email,Customer Team,Lisa Anderson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-13,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-07,email,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-15,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-09,email,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-01,meeting,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-05,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-15,email,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-23,email,Customer Team,Tom Johnson,Scheduled maintenance window executed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-03,meeting,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-01-21,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-12,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-07,meeting,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-26,meeting,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-01,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-20,meeting,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-08,email,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-02,meeting,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-25,email,Customer Team,Tom Johnson,Scheduled maintenance window executed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-03,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-02-10,meeting,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-02,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-07,email,Dr. Smith,Tom Johnson,Budget concerns raised during planning meeting,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-18,email,Customer Team,Tom Johnson,Reference call completed successfully with prospect,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-09,email,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-22,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-11,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-13,escalation,Dr. Smith,Tom Johnson,Project milestone delayed due to resource constraints,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-21,email,Customer Team,Tom Johnson,System health check completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-02,meeting,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-03-05,meeting,Dr. Smith,Tom Johnson,Documentation review and updates,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-04-16,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-04-16,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-04-21,meeting,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-04-13,email,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-04-20,meeting,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-04-04,email,Customer Team,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-05-26,email,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-05-19,escalation,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-05-15,email,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-05-21,email,Dr. Smith,Tom Johnson,Documentation review and updates,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-05-24,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-05-17,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-26,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-16,meeting,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-24,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-09,email,Dr. Smith,Tom Johnson,Quarterly capacity planning review,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-18,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-01,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-29,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-07-02,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-07-18,email,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-06-29,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-07-22,email,Dr. Smith,Tom Johnson,Regular operational status update provided,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-07-22,email,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-17,email,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-10,meeting,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-20,meeting,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-02,escalation,Dr. Smith,Tom Johnson,Security compliance audit findings,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-26,email,Dr. Smith,Tom Johnson,Team member completed advanced certification,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-25,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-09-08,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-08-28,meeting,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-09-13,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-09-18,email,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-09-24,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-09-18,email,Customer Team,Tom Johnson,System health check completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-17,meeting,Dr. Smith,Tom Johnson,Project milestone delayed due to resource constraints,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-11,email,Customer Team,Tom Johnson,Security compliance audit findings,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-01,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-13,meeting,Dr. Smith,Tom Johnson,Concerns about cooling efficiency raised,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-13,email,Dr. Smith,Tom Johnson,Integration challenges with existing systems,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-17,meeting,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-15,meeting,Dr. Smith,Tom Johnson,Security compliance audit findings,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-09-30,meeting,Dr. Smith,Tom Johnson,Budget concerns raised during planning meeting,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-11,meeting,Dr. Smith,Tom Johnson,Budget concerns raised during planning meeting,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-15,email,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-08,escalation,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-01,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-12,email,Customer Team,Tom Johnson,Security compliance audit findings,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-27,escalation,Dr. Smith,Tom Johnson,Support ticket unresolved >48 hours,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-10-27,escalation,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-01,email,Dr. Smith,Tom Johnson,Concerns about cooling efficiency raised,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-12-22,meeting,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-12-20,email,Dr. Smith,Tom Johnson,Budget concerns raised during planning meeting,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-12-23,email,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-28,escalation,Customer Team,Tom Johnson,Security compliance audit findings,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-12-03,email,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-11-28,meeting,Customer Team,Tom Johnson,System health check completed,neutral
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-12-22,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+41010,E2E Full Test Corporation 1769027604 - Infrastructure,2024-12-02,escalation,Customer Team,Tom Johnson,Concerns about cooling efficiency raised,negative

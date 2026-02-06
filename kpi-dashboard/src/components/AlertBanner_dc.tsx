@@ -38,7 +38,7 @@ const AlertBanner_dc: React.FC<AlertBannerProps> = ({ tenantId }) => {
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/dc/alerts/${tenantId}`, {
+      const response = await fetch(`/api/dc2s/alerts/${tenantId}`, {
         credentials: 'include',
         headers: {
           'X-Customer-ID': getCustomerIdentifier(session),
@@ -48,6 +48,9 @@ const AlertBanner_dc: React.FC<AlertBannerProps> = ({ tenantId }) => {
       if (response.ok) {
         const data = await response.json();
         setAlerts(data.alerts || []);
+      } else if (response.status === 404) {
+        // Endpoint not implemented yet - show no alerts
+        setAlerts([]);
       }
     } catch (error) {
       console.error('Error loading alerts:', error);

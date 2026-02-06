@@ -52,8 +52,8 @@ def query_temporal_rag():
         if not query:
             return jsonify({"error": "Query is required"}), 400
         
-        # Execute query
-        result = temporal_rag_system.query(query, query_type)
+        # Execute query (pass customer_id for per-customer collection)
+        result = temporal_rag_system.query(query, query_type, customer_id=customer_id)
         
         if "error" in result:
             return jsonify(result), 400
@@ -73,10 +73,11 @@ def get_monthly_revenue():
         
         customer_id = resolve_customer_id(db, customer_id)
         
-        # Query for monthly revenue data
+        # Query for monthly revenue data (pass customer_id for per-customer collection)
         result = temporal_rag_system.query(
             "Show me monthly revenue breakdown for the last 6 months with account details",
-            "revenue_analysis"
+            "revenue_analysis",
+            customer_id=customer_id
         )
         
         if "error" in result:
@@ -97,10 +98,11 @@ def get_revenue_trends():
         
         customer_id = resolve_customer_id(db, customer_id)
         
-        # Query for revenue trends
+        # Query for revenue trends (pass customer_id for per-customer collection)
         result = temporal_rag_system.query(
             "Analyze revenue trends and patterns over time, identify growth or decline patterns",
-            "trend_analysis"
+            "trend_analysis",
+            customer_id=customer_id
         )
         
         if "error" in result:
@@ -121,10 +123,11 @@ def get_top_accounts_monthly():
         
         customer_id = resolve_customer_id(db, customer_id)
         
-        # Query for top accounts by month
+        # Query for top accounts by month (pass customer_id for per-customer collection)
         result = temporal_rag_system.query(
             "Which accounts performed best each month? Show monthly rankings and revenue changes",
-            "account_analysis"
+            "account_analysis",
+            customer_id=customer_id
         )
         
         if "error" in result:

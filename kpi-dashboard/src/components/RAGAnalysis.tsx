@@ -99,7 +99,7 @@ const RAGAnalysis: React.FC = () => {
   const [customQuery, setCustomQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<QueryTemplate | null>(null);
   const [isKnowledgeBaseBuilt, setIsKnowledgeBaseBuilt] = useState(false);
-  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal'>('qdrant');
+  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'qdrant-cloud' | 'historical' | 'temporal'>('qdrant-cloud');
   const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
   const statusCheckRef = useRef<boolean>(false);
   
@@ -467,7 +467,7 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-historical/status';
       } else if (vectorDb === 'temporal') {
         endpoint = '/api/rag-temporal/status';
-      } else if (vectorDb === 'qdrant') {
+      } else if (vectorDb === 'qdrant' || vectorDb === 'qdrant-cloud') {
         endpoint = '/api/rag-qdrant/status';
       } else {
         endpoint = '/api/rag-openai/status';
@@ -494,8 +494,21 @@ const RAGAnalysis: React.FC = () => {
           }
         } else {
           if (result.is_built) {
-            setIsKnowledgeBaseBuilt(true);
-            localStorage.setItem('knowledgeBaseBuilt', 'true');
+            // Check if rebuild is needed (e.g., products missing)
+            if (result.needs_rebuild || (result.has_products === false && result.points_count > 0)) {
+              // Knowledge base exists but is missing product data - enable rebuild
+              setIsKnowledgeBaseBuilt(false);
+              localStorage.removeItem('knowledgeBaseBuilt');
+              // Set error message to indicate rebuild is needed
+              setError('Knowledge base exists but is missing product data. Please rebuild to include products.');
+            } else {
+              setIsKnowledgeBaseBuilt(true);
+              localStorage.setItem('knowledgeBaseBuilt', 'true');
+              // Clear any previous error if rebuild is not needed
+              if (error && error.includes('missing product data')) {
+                setError('');
+              }
+            }
           } else {
             setIsKnowledgeBaseBuilt(false);
             localStorage.removeItem('knowledgeBaseBuilt');
@@ -528,7 +541,7 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-historical/build';
       } else if (vectorDb === 'temporal') {
         endpoint = '/api/rag-temporal/build';
-      } else if (vectorDb === 'qdrant') {
+      } else if (vectorDb === 'qdrant' || vectorDb === 'qdrant-cloud') {
         endpoint = '/api/rag-qdrant/build';
       } else if (vectorDb === 'working') {
         // Direct RAG doesn't need build, just check status
@@ -595,7 +608,7 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-historical/query';
       } else if (vectorDb === 'temporal') {
         endpoint = '/api/rag-temporal/query';
-      } else if (vectorDb === 'qdrant') {
+      } else if (vectorDb === 'qdrant' || vectorDb === 'qdrant-cloud') {
         endpoint = '/api/rag-qdrant/query';
       } else if (vectorDb === 'working') {
         endpoint = '/api/direct-rag/query';
@@ -731,13 +744,14 @@ const RAGAnalysis: React.FC = () => {
             <label className="text-sm font-medium text-gray-700">Analysis Type:</label>
             <select
               value={vectorDb}
-              onChange={(e) => setVectorDb(e.target.value as 'working' | 'faiss' | 'qdrant' | 'historical' | 'temporal')}
+              onChange={(e) => setVectorDb(e.target.value as 'working' | 'faiss' | 'qdrant' | 'qdrant-cloud' | 'historical' | 'temporal')}
               className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isBuilding}
             >
-              <option value="working">Working RAG System</option>
-              <option value="qdrant">Current Data (Qdrant)</option>
-              <option value="faiss">Current Data (FAISS)</option>
+              <option value="qdrant-cloud">Qdrant Cloud (Recommended)</option>
+              <option value="qdrant">Qdrant (Local/Self-hosted)</option>
+              <option value="faiss">FAISS (In-Memory Fallback)</option>
+              <option value="working">Working RAG System (Simple)</option>
               <option value="historical">Historical Analysis</option>
               <option value="temporal">Monthly Revenue Analysis</option>
             </select>
@@ -757,9 +771,13 @@ const RAGAnalysis: React.FC = () => {
             )}
             {(vectorDb === 'historical' ? isHistoricalBuilt : isKnowledgeBaseBuilt) 
               ? (vectorDb === 'historical' ? 'Historical Data Ready' : 
-                 vectorDb === 'temporal' ? 'Monthly Analysis Ready' : 'Knowledge Base Ready')
+                 vectorDb === 'temporal' ? 'Monthly Analysis Ready' : 
+                 vectorDb === 'qdrant-cloud' ? 'Qdrant Cloud Ready' :
+                 'Knowledge Base Ready')
               : (vectorDb === 'historical' ? 'Build Historical Analysis' : 
-                 vectorDb === 'temporal' ? 'Build Monthly Analysis' : 'Build Knowledge Base')
+                 vectorDb === 'temporal' ? 'Build Monthly Analysis' : 
+                 vectorDb === 'qdrant-cloud' ? 'Build Qdrant Cloud Knowledge Base' :
+                 'Build Knowledge Base')
             }
           </button>
         </div>
@@ -775,6 +793,8 @@ const RAGAnalysis: React.FC = () => {
                 ? 'Historical analysis data is ready for trend queries' 
                 : vectorDb === 'temporal'
                 ? 'Monthly revenue analysis is ready for temporal queries'
+                : vectorDb === 'qdrant-cloud'
+                ? 'Qdrant Cloud knowledge base is ready for queries'
                 : 'Knowledge base is ready for queries'
               }
             </span>

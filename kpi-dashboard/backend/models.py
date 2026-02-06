@@ -1,5 +1,12 @@
 from extensions import db
+from datetime import datetime
 
+# Import product analytics models
+try:
+    from product_analytics_models import ProductCatalog, ProductTrend, ProductAggregateTrend
+except ImportError:
+    # Models will be available after tables are created
+    pass 
 class Customer(db.Model):
     __tablename__ = 'customers'
     customer_id = db.Column(db.Integer, primary_key=True)
@@ -17,12 +24,36 @@ class CustomerConfig(db.Model):
     __tablename__ = 'customer_configs'
     config_id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), unique=True)
+    
+    # ============================================================
+    # EXISTING SaaS FIELDS (DO NOT MODIFY - KEEP AS IS)
+    # ============================================================
     kpi_upload_mode = db.Column(db.String, default='corporate')  # 'corporate' or 'account_rollup'
     category_weights = db.Column(db.Text)  # JSON string of category weights
     master_file_name = db.Column(db.String)  # Name of uploaded master file
     # OpenAI API Key (encrypted)
     openai_api_key_encrypted = db.Column(db.Text, nullable=True)  # Encrypted OpenAI API key
     openai_api_key_updated_at = db.Column(db.DateTime, nullable=True)  # When key was last updated
+    
+    # ============================================================
+    # NEW DC2_S FIELDS (ADDED FOR PHASE 1 MIGRATION)
+    # ============================================================
+    
+    # Vertical identifier
+    vertical = db.Column(db.String(50), default='saas')  # 'saas' or 'dc2_s'
+    
+    # DC2_S Configuration (JSON blobs)
+    dc2s_pillar_weights = db.Column(db.JSON, nullable=True)     # {"AI": 0.25, "CH": 0.20, ...}
+    dc2s_enabled_kpis = db.Column(db.JSON, nullable=True)       # ["AI-KPI1", "CUSTOM-GPU-1", ...]
+    dc2s_kpi_overrides = db.Column(db.JSON, nullable=True)      # {"AI-KPI1": {"target": 90}, ...}
+    dc2s_kpi_weights = db.Column(db.JSON, nullable=True)        # {"AI": {"AI-KPI1": 0.4, ...}, ...}
+    dc2s_kpi_definitions = db.Column(db.JSON, nullable=True)    # Custom KPI definitions
+    
+    # Metadata
+    config_version = db.Column(db.String(20), default='1.0')
+    customized_by = db.Column(db.String(255))
+    
+    # Timestamps (already exist, don't duplicate)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 
@@ -34,6 +65,7 @@ class Account(db.Model):
     revenue = db.Column(db.Numeric(15, 2), default=0)
     account_status = db.Column(db.String, default='active', index=True)  # active, inactive, etc.
     industry = db.Column(db.String, index=True)
+    vertical = db.Column(db.String(50))
     region = db.Column(db.String, index=True)
     external_account_id = db.Column(db.String, index=True)  # External account ID from customer profile
     profile_metadata = db.Column(db.JSON)  # JSON field for customer profile data
@@ -81,7 +113,8 @@ class User(db.Model):
     customer_uuid = db.Column(db.String(60), nullable=True)  # FK to customers.uuid
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
-    
+    vertical = db.Column(db.String(50))
+    role = db.Column(db.String(50))    
     # Ensure username is unique within each customer domain
     # Email must be unique globally
     __table_args__ = (
@@ -602,4 +635,193 @@ class AccountSnapshot(db.Model):
         db.Index('idx_account_snapshot_timestamp', 'account_id', 'snapshot_timestamp'),
         db.Index('idx_customer_snapshot_timestamp', 'customer_id', 'snapshot_timestamp'),
         db.Index('idx_snapshot_type', 'snapshot_type'),
-    ) 
+    )
+class DC2SKPI(db.Model):
+    """DC2_S Vertical KPI Table - separate from SaaS kpis table"""
+    __tablename__ = 'dc2s_kpis'
+    
+    kpi_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    kpi_code = db.Column(db.String(50), nullable=False, index=True)
+    value = db.Column(db.Numeric(10, 2), nullable=False)
+    target = db.Column(db.Numeric(10, 2))
+    pillar = db.Column(db.String(10), index=True)
+    weight = db.Column(db.Numeric(5, 4))
+    status = db.Column(db.String(20))
+    measured_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'kpi_code', 'measured_at', name='unique_dc2s_kpi'),
+        db.Index('idx_dc2s_account_code', 'account_id', 'kpi_code'),
+    )
+    
+    def to_dict(self):
+        return {
+            'kpi_id': self.kpi_id,
+            'account_id': self.account_id,
+            'kpi_code': self.kpi_code,
+            'value': float(self.value),
+            'target': float(self.target) if self.target else None,
+            'pillar': self.pillar,
+            'weight': float(self.weight) if self.weight else None,
+            'status': self.status,
+            'measured_at': self.measured_at.isoformat() if self.measured_at else None
+        }
+
+
+class QualitativeSignal(db.Model):
+    """Qualitative Signals - Customer engagement signals (emails, meetings, tickets, etc.)"""
+    __tablename__ = 'qualitative_signals'
+    
+    # Match existing table schema exactly
+    signal_id = db.Column(db.String(50), primary_key=True)  # VARCHAR(50) in existing table
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    signal_date = db.Column(db.Date, nullable=False, index=True)
+    signal_type = db.Column(db.String(50), nullable=True, index=True)  # email, meeting, ticket, etc.
+    # Use 'content' not 'signal_text' - matches existing table column name
+    content = db.Column(db.Text, nullable=True)  # Existing table uses 'content' not 'signal_text'
+    sentiment = db.Column(db.String(50), nullable=True, index=True)  # positive, negative, neutral
+    # Additional columns that exist in the table
+    stakeholder_level = db.Column(db.String(50), nullable=True)
+    stakeholder_title = db.Column(db.String(255), nullable=True)
+    sentiment_score = db.Column(db.Numeric, nullable=True)
+    keywords = db.Column(db.Text, nullable=True)
+    is_narrative_signal = db.Column(db.Boolean, nullable=True)
+    
+    def to_dict(self):
+        return {
+            'signal_id': self.signal_id,
+            'account_id': self.account_id,
+            'signal_date': self.signal_date.isoformat() if self.signal_date else None,
+            'signal_type': self.signal_type,
+            'signal_text': self.content,  # Map content to signal_text for API compatibility
+            'content': self.content,
+            'sentiment': self.sentiment,
+            'stakeholder_level': self.stakeholder_level,
+            'stakeholder_title': self.stakeholder_title,
+            'sentiment_score': float(self.sentiment_score) if self.sentiment_score else None,
+            'keywords': self.keywords,
+            'is_narrative_signal': self.is_narrative_signal
+        }
+
+
+# ============================================================
+# L1/L2/L3 SCORE TABLES FOR DC2_S
+# ============================================================
+
+class KPIScore(db.Model):
+    """L1: Individual KPI scores (0-100 normalized scale)"""
+    __tablename__ = 'kpi_scores'
+    
+    score_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    measurement_month = db.Column(db.Date, nullable=False, index=True)
+    
+    # KPI Information
+    kpi_code = db.Column(db.String(50), nullable=False, index=True)  # Can be catalog or CUSTOM-*
+    kpi_value = db.Column(db.Numeric(10, 2))        # Raw measured value
+    kpi_target = db.Column(db.Numeric(10, 2))       # Target value
+    kpi_score = db.Column(db.Numeric(5, 2))         # Normalized 0-100 score
+    kpi_status = db.Column(db.String(20))           # excellent, good, warning, critical
+    
+    # Metadata
+    calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'kpi_code', 'measurement_month', name='unique_kpi_score'),
+        db.Index('idx_kpi_score_account_month', 'account_id', 'measurement_month'),
+        db.Index('idx_kpi_score_code', 'kpi_code'),
+    )
+    
+    def to_dict(self):
+        return {
+            'score_id': self.score_id,
+            'account_id': self.account_id,
+            'kpi_code': self.kpi_code,
+            'kpi_value': float(self.kpi_value) if self.kpi_value else None,
+            'kpi_target': float(self.kpi_target) if self.kpi_target else None,
+            'kpi_score': float(self.kpi_score) if self.kpi_score else None,
+            'kpi_status': self.kpi_status,
+            'measurement_month': self.measurement_month.isoformat() if self.measurement_month else None
+        }
+
+
+class PillarScore(db.Model):
+    """L2: Pillar scores (weighted average of KPI scores)"""
+    __tablename__ = 'pillar_scores'
+    
+    pillar_score_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    measurement_month = db.Column(db.Date, nullable=False, index=True)
+    
+    # Pillar Information
+    pillar_code = db.Column(db.String(10), nullable=False, index=True)  # AI, CH, DV, EX, OS
+    pillar_score = db.Column(db.Numeric(5, 2))      # 0-100 weighted average
+    pillar_status = db.Column(db.String(20))        # excellent, good, warning, critical
+    
+    # Contributing KPIs (for transparency)
+    contributing_kpis = db.Column(db.JSON)  # {"AI-KPI1": 85, "AI-KPI2": 90, "CUSTOM-GPU-1": 88}
+    kpi_weights = db.Column(db.JSON)        # {"AI-KPI1": 0.4, "AI-KPI2": 0.35, "CUSTOM-GPU-1": 0.25}
+    
+    # Metadata
+    calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'pillar_code', 'measurement_month', name='unique_pillar_score'),
+        db.Index('idx_pillar_score_account_month', 'account_id', 'measurement_month'),
+        db.Index('idx_pillar_score_pillar', 'pillar_code'),
+    )
+    
+    def to_dict(self):
+        return {
+            'pillar_score_id': self.pillar_score_id,
+            'account_id': self.account_id,
+            'pillar_code': self.pillar_code,
+            'pillar_score': float(self.pillar_score) if self.pillar_score else None,
+            'pillar_status': self.pillar_status,
+            'contributing_kpis': self.contributing_kpis,
+            'kpi_weights': self.kpi_weights,
+            'measurement_month': self.measurement_month.isoformat() if self.measurement_month else None
+        }
+
+
+class HealthScore(db.Model):
+    """L3: Overall health score (weighted average of pillar scores)"""
+    __tablename__ = 'health_scores'
+    
+    health_score_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    measurement_month = db.Column(db.Date, nullable=False, index=True)
+    
+    # Health Information
+    health_score = db.Column(db.Numeric(5, 2))      # 0-100 weighted average
+    health_status = db.Column(db.String(20))        # excellent, good, warning, critical
+    trend = db.Column(db.String(20))                # improving, declining, stable
+    change_from_last_month = db.Column(db.Numeric(5, 2))
+    
+    # Contributing Pillars (for transparency)
+    contributing_pillars = db.Column(db.JSON)  # {"AI": 85, "CH": 90, "DV": 80, "EX": 88, "OS": 92}
+    pillar_weights = db.Column(db.JSON)        # {"AI": 0.25, "CH": 0.20, "DV": 0.15, "EX": 0.20, "OS": 0.20}
+    
+    # Metadata
+    calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'measurement_month', name='unique_health_score'),
+        db.Index('idx_health_score_account_month', 'account_id', 'measurement_month'),
+        db.Index('idx_health_score_status', 'health_status'),
+    )
+    
+    def to_dict(self):
+        return {
+            'health_score_id': self.health_score_id,
+            'account_id': self.account_id,
+            'health_score': float(self.health_score) if self.health_score else None,
+            'health_status': self.health_status,
+            'trend': self.trend,
+            'change_from_last_month': float(self.change_from_last_month) if self.change_from_last_month else None,
+            'contributing_pillars': self.contributing_pillars,
+            'pillar_weights': self.pillar_weights,
+            'measurement_month': self.measurement_month.isoformat() if self.measurement_month else None
+        }

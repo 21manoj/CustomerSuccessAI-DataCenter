@@ -1,0 +1,102 @@
+{
+  "config_version": "1.0.0",
+  "source": "Supermicro 100-account 12-month simulation",
+  "baseline_accuracy": 0.70,
+  "target_accuracy": 0.85,
+  "convergence_iterations": 150,
+  "last_updated": "2024-12-31",
+  "confidence_level": "high",
+  
+  "pillar_weights_L2": {
+    "P1_deployment_velocity": 0.15,
+    "P2_operational_stability": 0.20,
+    "P3_ai_workload_performance": 0.25,
+    "P4_channel_partner_health": 0.15,
+    "P5_expansion_readiness": 0.25
+  },
+  
+  "kpi_weights_L1": {
+    "P1_deployment_velocity": {
+      "time_to_first_workload": 0.20,
+      "installation_completion_rate": 0.18,
+      "rack_integration_complexity": 0.18,
+      "configuration_drift": 0.15,
+      "support_ticket_density": 0.15,
+      "firmware_update_lag": 0.14
+    },
+    "P2_operational_stability": {
+      "rma_frequency_rate": 0.20,
+      "mtbf": 0.18,
+      "critical_incident_rate": 0.17,
+      "unplanned_downtime": 0.13,
+      "support_ticket_velocity": 0.12,
+      "thermal_power_alerts": 0.12,
+      "firmware_stability": 0.08
+    },
+    "P3_ai_workload_performance": {
+      "gpu_utilization_rate": 0.22,
+      "training_job_completion": 0.20,
+      "inference_latency": 0.15,
+      "storage_io_efficiency": 0.15,
+      "network_fabric_health": 0.15,
+      "workload_density_trend": 0.13
+    },
+    "P4_channel_partner_health": {
+      "partner_engagement_score": 0.22,
+      "account_ownership_clarity": 0.20,
+      "joint_business_plan": 0.15,
+      "partner_nps": 0.15,
+      "cosell_activity": 0.15,
+      "partner_escalation_rate": 0.13
+    },
+    "P5_expansion_readiness": {
+      "capacity_utilization_trajectory": 0.18,
+      "workload_growth_velocity": 0.18,
+      "next_gen_upgrade_signals": 0.15,
+      "competitive_displacement_risk": 0.15,
+      "expansion_probability_90d": 0.15,
+      "days_since_last_expansion": 0.10,
+      "strategic_account_value": 0.09
+    }
+  },
+  
+  "effective_weights_top_10": {
+    "gpu_utilization_rate": 0.055,
+    "training_job_completion": 0.050,
+    "capacity_utilization_trajectory": 0.045,
+    "workload_growth_velocity": 0.045,
+    "rma_frequency_rate": 0.040,
+    "expansion_probability_90d": 0.0375,
+    "inference_latency": 0.0375,
+    "mtbf": 0.036,
+    "critical_incident_rate": 0.034,
+    "partner_engagement_score": 0.033
+  },
+  
+  "validation_thresholds": {
+    "churn_risk_high": 0.70,
+    "churn_risk_medium": 0.40,
+    "expansion_probability_high": 0.70,
+    "expansion_probability_medium": 0.40,
+    "health_critical": 40,
+    "health_at_risk": 70
+  },
+  
+  "learning_parameters": {
+    "learning_rate": 0.05,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "update_frequency": "weekly",
+    "convergence_threshold": 0.85,
+    "max_iterations": 200
+  },
+  
+  "metadata": {
+    "simulation_accounts": 100,
+    "simulation_duration_months": 12,
+    "vertical": "data_center_infrastructure",
+    "use_case": "AI_GPU_workloads",
+    "total_kpis": 35,
+    "total_pillars": 5
+  }
+}

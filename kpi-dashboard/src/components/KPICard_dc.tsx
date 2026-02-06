@@ -34,8 +34,8 @@ const KPICard_dc: React.FC<KPICardProps> = ({ tenantId, kpiId, kpiName, value, u
     
     setLoading(true);
     try {
-      // Load KPI data for tenant
-      const response = await fetch(`/api/dc/kpis`, {
+      // Load KPI data for tenant - use the account-specific endpoint
+      const response = await fetch(`/api/dc2s/accounts/${tenantId}/kpis`, {
         credentials: 'include',
         headers: {
           'X-Customer-ID': getCustomerIdentifier(session),
@@ -44,7 +44,10 @@ const KPICard_dc: React.FC<KPICardProps> = ({ tenantId, kpiId, kpiName, value, u
 
       if (response.ok) {
         const data = await response.json();
-        setKpiData(data);
+        // The endpoint returns { kpis: [...], account_name: "...", ... }
+        // For KPICard, we might want to use the first KPI or a specific one
+        // For now, just store the response
+        setKpiData(data.kpis && data.kpis.length > 0 ? data.kpis[0] : data);
       }
     } catch (error) {
       console.error('Error loading KPI data:', error);

@@ -1,0 +1,311 @@
+#!/usr/bin/env python3
+"""
+DC2_S Vertical API Routes
+Matches the pattern of your existing SaaS API files
+"""
+
+from flask import Blueprint, request, jsonify
+from auth_middleware import get_current_customer_id, get_current_user_id
+from extensions import db
+from models import Account, DC2SKPI, User
+from datetime import datetime
+import logging
+
+# Import DC2_S vertical modules
+from .kpi_definitions import DC2S_KPIS
+from .pillar_weights import (
+    PILLAR_WEIGHTS, 
+    calculate_overall_health, 
+    calculate_pillar_scores
+)
+logger = logging.getLogger(__name__)
+
+dc2s_api = Blueprint('dc2s_api', __name__)
+
+@dc2s_api.route('/accounts', methods=['GET'])
+def get_dc2s_accounts():
+    """
+    Get all DC2_S accounts for current user's customer
+    GET /api/dc2s/accounts
+    """
+    try:
+        customer_id = get_current_customer_id()
+        
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+        
+        # Get all DC2_S accounts for this customer
+        accounts = Account.query.filter(
+            Account.customer_id == int(customer_id),
+            Account.vertical == 'dc2_s'
+        ).all()
+        
+        results = []
+        for account in accounts:
+            # Get latest KPIs
+            kpis = DC2SKPI.query.filter_by(
+                account_id=account.account_id
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+            
+            # Get latest measurement time
+            latest_kpis = {}
+            if kpis:
+                latest_time = kpis[0].measured_at
+                latest_kpis = {
+                    kpi.kpi_code: float(kpi.value) 
+                    for kpi in kpis 
+                    if kpi.measured_at == latest_time
+                }
+            
+            # Calculate health scores
+            overall_health = calculate_overall_health(latest_kpis)
+            pillar_scores = calculate_pillar_scores(latest_kpis)
+            
+            # Determine status
+            if overall_health >= 80:
+                status = 'healthy'
+            elif overall_health >= 60:
+                status = 'risk'
+            else:
+                status = 'critical'
+            
+            results.append({
+                'account_id': account.account_id,
+                'account_name': account.account_name,
+                'industry': account.industry,
+                'region': account.region,
+                'overall_health': round(overall_health, 1),
+                'status': status,
+                'pillar_scores': {
+                    'P1': round(pillar_scores.get('P1', 0), 1),
+                    'P2': round(pillar_scores.get('P2', 0), 1),
+                    'P3': round(pillar_scores.get('P3', 0), 1),
+                    'P4': round(pillar_scores.get('P4', 0), 1),
+                    'P5': round(pillar_scores.get('P5', 0), 1),
+                },
+                'metadata': account.profile_metadata or {},
+                'kpi_count': len(latest_kpis),
+                'last_measured': latest_time.isoformat() if kpis else None
+            })
+        
+        return jsonify({
+            'accounts': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching DC2_S accounts: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch accounts'}), 500
+
+
+@dc2s_api.route('/accounts/<int:account_id>', methods=['GET'])
+def get_dc2s_account_detail(account_id):
+    """
+    Get detailed information for a specific DC2_S account
+    GET /api/dc2s/accounts/123
+    """
+    try:
+        customer_id = get_current_customer_id()
+        
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+        
+        # Get account
+        account = Account.query.filter_by(
+            account_id=account_id,
+            customer_id=int(customer_id),
+            vertical='dc2_s'
+        ).first()
+        
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+        
+        # Get all KPIs for this account
+        kpis = DC2SKPI.query.filter_by(
+            account_id=account_id
+        ).order_by(DC2SKPI.measured_at.desc()).all()
+        
+        # Get latest KPIs
+        latest_kpis = {}
+        if kpis:
+            latest_time = kpis[0].measured_at
+            latest_kpis = {
+                kpi.kpi_code: float(kpi.value) 
+                for kpi in kpis 
+                if kpi.measured_at == latest_time
+            }
+        
+        # Calculate health
+        overall_health = calculate_overall_health(latest_kpis)
+        pillar_scores = calculate_pillar_scores(latest_kpis)
+        
+        # Group KPIs by pillar
+        kpis_by_pillar = {}
+        for kpi_code, value in latest_kpis.items():
+            if kpi_code in DC2S_KPIS:
+                kpi_def = DC2S_KPIS[kpi_code]
+                pillar = kpi_def['pillar']
+                
+                if pillar not in kpis_by_pillar:
+                    kpis_by_pillar[pillar] = []
+                
+                kpis_by_pillar[pillar].append({
+                    'code': kpi_code,
+                    'name': kpi_def['name'],
+                    'value': value,
+                    'target': kpi_def.get('target'),
+                    'unit': kpi_def.get('unit', ''),
+                    'weight': kpi_def['weight']
+                })
+        
+        return jsonify({
+            'account_id': account.account_id,
+            'account_name': account.account_name,
+            'industry': account.industry,
+            'region': account.region,
+            'vertical': account.vertical,
+            'overall_health': round(overall_health, 1),
+            'pillar_scores': {
+                'P1': round(pillar_scores.get('P1', 0), 1),
+                'P2': round(pillar_scores.get('P2', 0), 1),
+                'P3': round(pillar_scores.get('P3', 0), 1),
+                'P4': round(pillar_scores.get('P4', 0), 1),
+                'P5': round(pillar_scores.get('P5', 0), 1),
+            },
+            'kpis_by_pillar': kpis_by_pillar,
+            'metadata': account.profile_metadata or {},
+            'total_kpis': len(latest_kpis),
+            'last_measured': kpis[0].measured_at.isoformat() if kpis else None
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching DC2_S account detail: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch account details'}), 500
+
+
+@dc2s_api.route('/kpis', methods=['GET'])
+def get_dc2s_kpi_definitions():
+    """
+    Get DC2_S KPI definitions
+    GET /api/dc2s/kpis
+    """
+    try:
+        return jsonify({
+            'kpis': DC2S_KPIS,
+            'pillar_weights': PILLAR_WEIGHTS,
+            'total_kpis': len(DC2S_KPIS)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching DC2_S KPI definitions: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch KPI definitions'}), 500
+
+
+@dc2s_api.route('/accounts/<int:account_id>/kpis', methods=['GET'])
+def get_dc2s_account_kpis(account_id):
+    """
+    Get KPIs for a specific account
+    GET /api/dc2s/accounts/123/kpis
+    """
+    try:
+        customer_id = get_current_customer_id()
+        
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+        
+        # Verify account belongs to customer
+        account = Account.query.filter_by(
+            account_id=account_id,
+            customer_id=int(customer_id),
+            vertical='dc2_s'
+        ).first()
+        
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+        
+        # Get KPIs
+        kpis = DC2SKPI.query.filter_by(
+            account_id=account_id
+        ).order_by(DC2SKPI.measured_at.desc()).all()
+        
+        return jsonify({
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'kpis': [kpi.to_dict() for kpi in kpis],
+            'total': len(kpis)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching DC2_S account KPIs: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch KPIs'}), 500
+
+
+@dc2s_api.route('/health-summary', methods=['GET'])
+def get_dc2s_health_summary():
+    """
+    Get health summary across all DC2_S accounts for current customer
+    GET /api/dc2s/health-summary
+    """
+    try:
+        customer_id = get_current_customer_id()
+        
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+        
+        # Get all DC2_S accounts
+        accounts = Account.query.filter(
+            Account.customer_id == int(customer_id),
+            Account.vertical == 'dc2_s'
+        ).all()
+        
+        health_scores = []
+        healthy_count = 0
+        risk_count = 0
+        critical_count = 0
+        
+        for account in accounts:
+            # Get latest KPIs
+            kpis = DC2SKPI.query.filter_by(
+                account_id=account.account_id
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+            
+            if kpis:
+                latest_time = kpis[0].measured_at
+                latest_kpis = {
+                    kpi.kpi_code: float(kpi.value) 
+                    for kpi in kpis 
+                    if kpi.measured_at == latest_time
+                }
+                
+                health = calculate_overall_health(latest_kpis)
+                health_scores.append(health)
+                
+                if health >= 80:
+                    healthy_count += 1
+                elif health >= 60:
+                    risk_count += 1
+                else:
+                    critical_count += 1
+        
+        avg_health = sum(health_scores) / len(health_scores) if health_scores else 0
+        
+        return jsonify({
+            'total_accounts': len(accounts),
+            'average_health': round(avg_health, 1),
+            'healthy_accounts': healthy_count,
+            'risk_accounts': risk_count,
+            'critical_accounts': critical_count,
+            'health_distribution': {
+                'healthy': healthy_count,
+                'risk': risk_count,
+                'critical': critical_count
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching DC2_S health summary: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch health summary'}), 500
+
+
+# Export blueprint
+__all__ = ['dc2s_api']

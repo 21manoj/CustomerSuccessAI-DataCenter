@@ -1,0 +1,21 @@
+account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
+29001,CloudScale AI Labs,Emily Watson,88,expansion,1900198.6017362336,159,On-Premise,Small
+29002,DataFlow Systems,James Park,60,onboarding,1936507.5039818287,373,Hybrid,Enterprise
+29003,QuantumLeap Computing,Emily Watson,92,expansion,4511609.532427815,401,Cloud,Medium
+29004,TechVanguard Inc,Lisa Anderson,72,adoption,2152922.102712539,132,On-Premise,Large
+29005,InnovateDC Solutions,Michael Rodriguez,75,value_realization,4956088.769008582,207,Cloud,Enterprise
+29006,HyperScale Networks,James Park,86,expansion,752170.3687332573,250,Hybrid,Small
+29007,NeuralNet Enterprises,Tom Johnson,45,at_risk,3177483.1470866725,436,Cloud,Large
+29008,CyberCore Industries,Emily Watson,82,adoption,2403809.279534967,85,On-Premise,Small
+29009,FusionTech Group,David Kim,88,advocacy,705077.5397731459,193,Hybrid,Large
+29010,VelocityData Corp,Emily Watson,60,onboarding,909143.2691236088,103,On-Premise,Medium
+29011,ApexCloud Systems,David Kim,92,expansion,4376311.754000805,429,On-Premise,Medium
+29012,TitanCompute Inc,Michael Rodriguez,72,adoption,4102635.4906831672,486,On-Premise,Medium
+29013,CloudScale AI Labs,Rachel Martinez,75,adoption,1126948.082875949,321,On-Premise,Large
+29014,DataFlow Systems,Sarah Chen,86,advocacy,4946081.302941175,120,Hybrid,Medium
+29015,QuantumLeap Computing,David Kim,45,onboarding,2682149.976477689,461,On-Premise,Medium
+29016,TechVanguard Inc,Emily Watson,82,value_realization,1581521.4906116042,358,On-Premise,Large
+29017,InnovateDC Solutions,Tom Johnson,88,expansion,2869284.293546664,115,Hybrid,Small
+29018,HyperScale Networks,Tom Johnson,60,onboarding,2372126.965649169,201,On-Premise,Large
+29019,NeuralNet Enterprises,Tom Johnson,92,expansion,1223148.8487910652,110,Cloud,Small
+29020,CyberCore Industries,Sarah Chen,72,value_realization,1497305.2088247756,117,On-Premise,Small

@@ -1,0 +1,11 @@
+account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
+44001,E2E Full Test Corporation 1769027854 - Datacenter East,Emily Watson,88,advocacy,3275313.597738086,299,On-Premise,Medium
+44002,E2E Full Test Corporation 1769027854 - Cloud Ops,James Park,60,onboarding,2668920.8948472296,452,Hybrid,Medium
+44003,E2E Full Test Corporation 1769027854 - AI Lab,Lisa Anderson,92,advocacy,587791.0213072824,435,On-Premise,Enterprise
+44004,E2E Full Test Corporation 1769027854 - Production,Lisa Anderson,72,adoption,1125119.3421608175,137,Hybrid,Small
+44005,E2E Full Test Corporation 1769027854 - Development,Lisa Anderson,75,value_realization,3305308.571517496,143,On-Premise,Enterprise
+44006,E2E Full Test Corporation 1769027854 - HQ Operations,Tom Johnson,86,expansion,2341790.526279169,336,Hybrid,Small
+44007,E2E Full Test Corporation 1769027854 - Regional Office,Tom Johnson,45,at_risk,1667406.1969658525,175,Cloud,Large
+44008,E2E Full Test Corporation 1769027854 - Research Center,Lisa Anderson,82,value_realization,2956345.507318786,114,Cloud,Large
+44009,E2E Full Test Corporation 1769027854 - Data Center West,Rachel Martinez,88,expansion,1049194.260527973,146,On-Premise,Medium
+44010,E2E Full Test Corporation 1769027854 - Infrastructure,Michael Rodriguez,60,onboarding,969496.2870562443,303,Cloud,Small

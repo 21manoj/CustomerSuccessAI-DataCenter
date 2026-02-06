@@ -1,0 +1,26 @@
+week_number,date,phase,event_type,description,sentiment,sentiment_value,health_score_before,health_score_after,outcome,csm_action_type,csm_action_desc,csm_response_hours,csm_cost
+2,2024-01-08,at_risk,contract_discussion,Budget review: $2.1M contract questioned by finance,negative,-0.5,70,67.1,"Financial concerns remain, cautious",,,,
+3,2024-01-15,at_risk,budget_review,CFO: 'Should we switch providers?' - Budget under review,negative,-0.6,67.1,66.83,"Financial concerns remain, cautious",,,,
+5,2024-01-29,at_risk,budget_review,CFO: 'Should we switch providers?' - Budget under review,negative,-0.6,65.21,64.6,"Financial concerns remain, cautious",,,,
+11,2024-03-11,at_risk,contract_discussion,Pricing compromise reached - 12% discount negotiated,positive,0.5,57.55,54.95,"Financial concerns remain, cautious",,,,
+13,2024-03-25,at_risk,contract_discussion,Pricing compromise reached - 12% discount negotiated,positive,0.5,53.21,52.95,"Financial concerns remain, cautious",,,,
+14,2024-04-01,at_risk,budget_review,CFO: 'Should we switch providers?' - Budget under review,negative,-0.6,52.95,50.76,"Financial concerns remain, cautious",,,,
+15,2024-04-08,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,50.76,49.07,"Crisis mitigation in progress, situation critical",,,,
+15,2024-04-08,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,50.76,49.07,"Crisis mitigation in progress, situation critical",,,,
+16,2024-04-15,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,49.07,47.0,"Crisis mitigation in progress, situation critical",,,,
+17,2024-04-22,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,47.0,45.22,"Crisis mitigation in progress, situation critical",,,,
+18,2024-04-29,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,45.22,45.0,"Crisis mitigation in progress, situation critical",,,,
+19,2024-05-06,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,45.0,43.97,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+20,2024-05-13,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,43.97,43.3,"Crisis mitigation in progress, situation critical",executive_sponsor,Executive sponsor assigned immediately,2,25000
+20,2024-05-13,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,43.97,43.3,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+21,2024-05-20,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,43.3,40.38,"Crisis mitigation in progress, situation critical",executive_sponsor,Executive sponsor assigned immediately,2,25000
+21,2024-05-20,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,43.3,40.38,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+22,2024-05-27,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,40.38,38.94,"Crisis mitigation in progress, situation critical",executive_sponsor,Executive sponsor assigned immediately,2,25000
+22,2024-05-27,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,40.38,38.94,"Crisis mitigation in progress, situation critical",,,,
+23,2024-06-03,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,38.94,37.95,"Crisis mitigation in progress, situation critical",,,,
+23,2024-06-03,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,38.94,37.95,"Crisis mitigation in progress, situation critical",,,,
+24,2024-06-10,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,37.95,35.37,"Crisis mitigation in progress, situation critical",,,,
+24,2024-06-10,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,37.95,35.37,"Crisis mitigation in progress, situation critical",,,,
+25,2024-06-17,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,35.37,32.67,"Crisis mitigation in progress, situation critical",,,,
+26,2024-06-24,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,32.67,30.16,"Crisis mitigation in progress, situation critical",,,,
+26,2024-06-24,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,32.67,30.16,"Crisis mitigation in progress, situation critical",,,,

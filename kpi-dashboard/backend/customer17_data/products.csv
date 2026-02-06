@@ -1,0 +1,19 @@
+account_id,product_id,product_name,quantity,adoption_date,status,usage_level,utilization_percent,monthly_spend,satisfaction_score,primary_product,expansion_potential,churn_risk,last_usage_date,feature_adoption_rate,notes
+17001,PRD-004,Multi-Datacenter,1,2024-01-22,Active,Low,,75260.32,7.2,False,Very Low,High,2024-12-31,77,Multi-Datacenter for AI Compute Corp
+17001,PRD-003,Premium Support,320,2024-03-20,Active,Low,,114351.36,8.6,False,Very Low,High,2024-12-31,47,Added DURING CRISIS. Critical for recovery. AI Compute Corp
+17002,PRD-007,Training & Certification,1,2024-01-28,Active,Active,,128118.24,9.0,False,High,Medium,2024-12-31,82,Training & Certification for CloudScale Dynamics
+17002,PRD-004,Multi-Datacenter,1,2024-01-28,Active,Medium,,142379.76,7.3,False,Very Low,High,2024-12-31,97,Multi-Datacenter for CloudScale Dynamics
+17003,PRD-002,GPU Cloud - A100,256,2024-01-07,Active,Active,68.5,953177.14,7.4,True,Very Low,High,2024-12-31,82,GPU Cloud - A100 for DataForge Systems
+17003,PRD-007,Training & Certification,1,2024-01-07,Active,Active,,28504.22,7.5,False,Low,Very Low,2024-12-31,64,Training & Certification for DataForge Systems
+17004,PRD-006,Managed Services,1,2024-01-25,Active,Active,,88331.27,7.7,False,High,Medium,2024-12-31,57,Managed Services for NeuralNet Industries
+17005,PRD-001,GPU Cloud - H100,320,2024-01-06,Active,Active,83.0,1000789.63,8.5,True,High,High,2024-12-31,55,GPU Cloud - H100 for QuantumCloud Solutions
+17005,PRD-002,GPU Cloud - A100,320,2024-01-06,Active,Low,76.7,704112.87,8.1,True,High,High,2024-12-31,68,GPU Cloud - A100 for QuantumCloud Solutions
+17005,PRD-004,Multi-Datacenter,1,2024-01-06,Active,Active,,154513.72,7.2,False,Very Low,High,2024-12-31,92,Multi-Datacenter for QuantumCloud Solutions
+17006,PRD-003,Premium Support,256,2024-01-06,Active,Medium,,102554.35,8.2,False,Medium,High,2024-12-31,73,Premium Support for SecureAI Labs
+17007,PRD-003,Premium Support,384,2024-01-06,Active,Active,,143006.94,7.4,False,Low,High,2024-12-31,75,Premium Support for TechVantage Data
+17007,PRD-006,Managed Services,1,2024-01-06,Active,Active,,36058.3,9.5,False,High,Low,2024-12-31,78,Managed Services for TechVantage Data
+17007,PRD-005,AI Platform Suite,384,2024-01-06,Active,Medium,,86674.59,7.8,False,Very Low,Very Low,2024-12-31,72,AI Platform Suite for TechVantage Data
+17008,PRD-006,Managed Services,1,2024-01-23,Active,Low,,161358.52,8.1,False,Medium,Very Low,2024-12-31,75,Managed Services for InnovateCompute Inc
+17008,PRD-004,Multi-Datacenter,1,2024-01-23,Active,Active,,194810.88,7.2,False,Low,Low,2024-12-31,87,Multi-Datacenter for InnovateCompute Inc
+17009,PRD-005,AI Platform Suite,64,2024-01-24,Active,Medium,,190972.97,7.8,False,High,Medium,2024-12-31,96,AI Platform Suite for SmartData Enterprises
+17010,PRD-002,GPU Cloud - A100,320,2024-01-05,Active,Active,78.1,1295841.74,9.0,True,High,Very Low,2024-12-31,71,GPU Cloud - A100 for FutureCompute Systems

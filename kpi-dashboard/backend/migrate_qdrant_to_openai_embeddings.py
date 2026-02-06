@@ -40,17 +40,20 @@ db.init_app(app)
 def delete_collection_if_needed(collection_name: str, required_dimension: int = 3072):
     """Delete collection if it exists with wrong dimensions"""
     try:
-        # Initialize Qdrant client
-        try:
-            qdrant_client = QdrantClient(
-                host=os.getenv('QDRANT_HOST', 'localhost'),
-                port=int(os.getenv('QDRANT_PORT', 6333))
-            )
-            qdrant_client.get_collections()
-            print("✅ Connected to Qdrant server")
-        except Exception as e:
-            print(f"⚠️ Qdrant server not available, using local file storage: {e}")
-            qdrant_client = QdrantClient(path="./qdrant_storage")
+        # Initialize Qdrant Cloud client (required)
+        qdrant_url = os.getenv('QDRANT_URL')
+        qdrant_api_key = os.getenv('QDRANT_API_KEY')
+        
+        if not qdrant_url or not qdrant_api_key:
+            raise ValueError("QDRANT_URL and QDRANT_API_KEY are required for Qdrant Cloud connection")
+        
+        qdrant_client = QdrantClient(
+            url=qdrant_url,
+            api_key=qdrant_api_key,
+            timeout=30
+        )
+        qdrant_client.get_collections()
+        print("✅ Connected to Qdrant Cloud")
         
         # Check if collection exists
         collections = qdrant_client.get_collections()

@@ -85,7 +85,7 @@ class Config:
     REMEMBER_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
     
     # Idle Timeout
-    SESSION_IDLE_TIMEOUT = timedelta(minutes=30)  # 30 minutes idle = logout
+    SESSION_IDLE_TIMEOUT = timedelta(hours=2)  # 2 hours idle = logout (increased from 30 min for better UX)
     
     # Flask-Login Configuration
     LOGIN_DISABLED = False
@@ -97,7 +97,7 @@ class Config:
     
     # RAG System
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    QDRANT_URL = os.getenv('QDRANT_URL', 'http://localhost:6333')
+    QDRANT_URL = os.getenv('QDRANT_URL')  # Required - no default (must use Qdrant Cloud)
     QDRANT_API_KEY = os.getenv('QDRANT_API_KEY')
     
     # Feature Toggles (can be overridden by environment variables)
@@ -139,6 +139,11 @@ class DevelopmentConfig(Config):
     TESTING = False
     SESSION_COOKIE_SECURE = False  # Allow HTTP in development
     REMEMBER_COOKIE_SECURE = False
+    # In development, use None to allow cookies across localhost ports (proxy setup)
+    # This allows cookies to work when frontend (8005) proxies to backend (5059)
+    # Note: SameSite=None typically requires Secure=True, but browsers allow it
+    # for localhost in development
+    SESSION_COOKIE_SAMESITE = None  # Allow cross-port cookies in development
     
     # Enable all features in development
     FEATURE_FORMAT_DETECTION = True

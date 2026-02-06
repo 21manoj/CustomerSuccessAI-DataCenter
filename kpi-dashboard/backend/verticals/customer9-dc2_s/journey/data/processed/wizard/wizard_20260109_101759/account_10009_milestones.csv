@@ -1,0 +1,2 @@
+week_number,milestone_date,milestone_type,milestone_outcome,leading_indicators,arr_impact,confidence_at_time,primary_drivers,signal_breakdown
+30,2024-07-22,churn_contract_terminated,churned,"['Contract terminated', 'Customer migrated to AWS', 'Final health: 30.8']",-3800000,1.0,,

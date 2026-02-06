@@ -14,9 +14,9 @@ from enum import Enum
 import logging
 import schedule
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure logging with centralized config
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 class FeedbackType(Enum):
     """Types of user feedback"""

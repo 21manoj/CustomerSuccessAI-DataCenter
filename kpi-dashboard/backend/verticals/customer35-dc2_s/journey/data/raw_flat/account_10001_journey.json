@@ -1,0 +1,518 @@
+{
+  "account_id": "45000",
+  "account_name": "CloudScale AI Labs",
+  "pattern_type": "proactive_growth",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-30",
+  "starting_health": 92.54,
+  "ending_health": 98.85,
+  "lowest_health": 92.33,
+  "highest_health": 99,
+  "total_weeks": 52,
+  "events": [
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "growth",
+      "event_type": "technical_issue",
+      "description": "Capacity alert: 89% GPU utilization - High success usage",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 93.69,
+      "health_score_after": 94.91,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Proactive capacity planning and forecasting",
+        "response_time_hours": 48,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to VP - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.69,
+      "health_score_after": 94.91,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New workload enablement and training",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to VP - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.69,
+      "health_score_after": 94.91,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New workload enablement and training",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 9,
+      "date": "2024-02-26",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Proactive capacity planning session - Strategic planning",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.91,
+      "health_score_after": 96.27,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Proactive capacity planning and forecasting",
+        "response_time_hours": 48,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 9,
+      "date": "2024-02-26",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Proactive capacity planning session - Strategic planning",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.91,
+      "health_score_after": 96.27,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New workload enablement and training",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 9,
+      "date": "2024-02-26",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Proactive capacity planning session - Strategic planning",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.91,
+      "health_score_after": 96.27,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New workload enablement and training",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 10,
+      "date": "2024-03-04",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to VP - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 96.27,
+      "health_score_after": 96.88,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New workload enablement and training",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 10,
+      "date": "2024-03-04",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Proactive capacity planning session - Strategic planning",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 96.27,
+      "health_score_after": 96.88,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New workload enablement and training",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 10,
+      "date": "2024-03-04",
+      "phase": "growth",
+      "event_type": "technical_issue",
+      "description": "Capacity alert: 89% GPU utilization - High success usage",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 96.27,
+      "health_score_after": 96.88,
+      "outcome": "Opportunity identified, expansion planned",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Proactive capacity planning and forecasting",
+        "response_time_hours": 48,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 11,
+      "date": "2024-03-11",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Quarterly business review - All metrics exceeding targets",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 96.88,
+      "health_score_after": 98.23,
+      "outcome": "Opportunity identified, expansion planned"
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Expansion approved: $5M additional capacity",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 99,
+      "health_score_after": 98.91,
+      "outcome": "Strategic partnership, sustained growth",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement: 100% capacity increase",
+        "response_time_hours": 120,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Expansion approved: $5M additional capacity",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 99,
+      "health_score_after": 98.91,
+      "outcome": "Strategic partnership, sustained growth",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement: 100% capacity increase",
+        "response_time_hours": 120,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 17,
+      "date": "2024-04-22",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Quarterly business review - All metrics exceeding targets",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 98.75,
+      "health_score_after": 98.73,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 20 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.68,
+      "health_score_after": 98.69,
+      "outcome": "Strategic partnership, sustained growth",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Long-term strategic planning session",
+        "response_time_hours": 96,
+        "cost_estimate": 4000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 20 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.68,
+      "health_score_after": 98.69,
+      "outcome": "Strategic partnership, sustained growth",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Long-term strategic planning session",
+        "response_time_hours": 96,
+        "cost_estimate": 4000
+      }
+    },
+    {
+      "week_number": 22,
+      "date": "2024-05-27",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.77,
+      "health_score_after": 98.72,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 99,
+      "health_score_after": 98.81,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 28,
+      "date": "2024-07-08",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.95,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Executive steering committee meeting - Strategic partner status",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 99,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 30 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 99,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 32,
+      "date": "2024-08-05",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 99,
+      "health_score_after": 98.91,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 33,
+      "date": "2024-08-12",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.91,
+      "health_score_after": 98.91,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.91,
+      "health_score_after": 98.9,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 38,
+      "date": "2024-09-16",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Quarterly business review - All metrics exceeding targets",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 99,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 39,
+      "date": "2024-09-23",
+      "phase": "growth",
+      "event_type": "qbr",
+      "description": "Outstanding QBR: NPS 10, 95% feature adoption",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 99,
+      "health_score_after": 98.87,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 40 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.87,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 40 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.87,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Executive steering committee meeting - Strategic partner status",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98.87,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 48,
+      "date": "2024-11-25",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Quarterly business review - All metrics exceeding targets",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 98.48,
+      "health_score_after": 98.45,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 50 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.64,
+      "health_score_after": 98.8,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 50 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.64,
+      "health_score_after": 98.8,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "Performance milestone: 50 weeks of excellence",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98.64,
+      "health_score_after": 98.8,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 51,
+      "date": "2024-12-16",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Quarterly business review - All metrics exceeding targets",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 98.8,
+      "health_score_after": 99,
+      "outcome": "Strategic partnership, sustained growth"
+    },
+    {
+      "week_number": 52,
+      "date": "2024-12-23",
+      "phase": "growth",
+      "event_type": "meeting",
+      "description": "Quarterly business review - All metrics exceeding targets",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 99,
+      "health_score_after": 98.85,
+      "outcome": "Strategic partnership, sustained growth"
+    }
+  ],
+  "summary": {
+    "pattern_type": "proactive_growth",
+    "total_events": 34,
+    "capacity_alert_week": 8,
+    "expansion_week": 15,
+    "total_csm_investment": 71000.0,
+    "health_gained": 6.85,
+    "financial_impact": "$5M ARR expansion (100% growth)",
+    "key_success_factors": [
+      "Proactive capacity monitoring caught issue early",
+      "Response time: 1 week (vs 13 weeks for churn)",
+      "Executive engagement maintained throughout",
+      "Strategic planning vs reactive firefighting",
+      "Champion health strong (promoted during journey)",
+      "Expansion identified as opportunity, not crisis"
+    ],
+    "csm_roi": "6,250% (Investment: $80K, Return: $50M over 5 years)"
+  }
+}

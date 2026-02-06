@@ -1,0 +1,4 @@
+account_id,customer_id,account_name,industry,vertical,region,account_status
+266001,266,Account-1,Technology,dc2_s,us-west-2,active
+266002,266,Account-2,Technology,dc2_s,us-west-2,active
+266003,266,Account-3,Technology,dc2_s,us-west-2,active

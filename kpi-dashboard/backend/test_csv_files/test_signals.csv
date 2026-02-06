@@ -1,0 +1,2 @@
+signal_id,account_id,signal_date,signal_type,signal_text,sentiment
+67a99cea-0657-4673-80c1-c7d25b5bb265,274000,2024-01-01,health_check,Test signal,positive

@@ -2,6 +2,8 @@
 Qdrant Integration Helper for Signal Analyst Agent
 
 Retrieves signals from existing Qdrant collections and converts them to SignalData format
+
+FIXED VERSION: Now directly queries kpi_dashboard_vectors_customer_{customer_id} collection
 """
 
 from typing import List, Dict, Optional
@@ -69,12 +71,11 @@ def query_qdrant_for_signals(
     """
     Query Qdrant collection for signals related to an account
     
-    This function uses the RAG system's internal query method to search for signals.
-    Note: Currently uses the main collection. For separate quantitative/qualitative/historical
-    collections, the RAG system would need to be extended.
+    FIXED: Now directly queries kpi_dashboard_vectors_customer_{customer_id} collection
+    instead of using RAG abstraction layer that looked for non-existent collections.
     
     Args:
-        rag_system: Instance of EnhancedRAGSystemQdrant
+        rag_system: Instance of EnhancedRAGSystemQdrant (contains qdrant_client)
         account_id: Account ID to query for
         customer_id: Customer ID (for tenant isolation)
         collection_type: Type of collection ('quantitative', 'qualitative', 'historical')
@@ -85,6 +86,16 @@ def query_qdrant_for_signals(
         List of SignalData objects
     """
     try:
+        # Get Qdrant client from RAG system
+        qdrant_client = rag_system.qdrant_client
+        
+        # Use per-customer collection for ALL signal types (quantitative, qualitative, temporal)
+        # All data types go into the same customer-specific collection
+        # Use payload metadata to distinguish signal types instead of separate collections
+        collection_name = f"kpi_dashboard_vectors_customer_{customer_id}"
+        
+        logger.info(f"Querying Qdrant collection: {collection_name} for account {account_id} (type: {collection_type})")
+        
         # Generate query text if not provided
         if not query_text:
             if collection_type == 'quantitative':
@@ -94,35 +105,52 @@ def query_qdrant_for_signals(
             else:  # historical
                 query_text = f"account {account_id} historical trends patterns time series churn expansion outcomes"
         
-        # Query the RAG system with appropriate collection type
-        # Note: The RAG system's query method handles the collection internally
-        result = rag_system.query(query_text, query_type='general', collection=collection_type)
+        # Generate embedding for the query using RAG system's _generate_embedding method
+        query_embedding = rag_system._generate_embedding(query_text, customer_id)
         
-        # Check for errors
-        if 'error' in result:
-            logger.warning(f"Qdrant query error: {result['error']}")
-            return []
+        # Query Qdrant directly using query_points (the correct method name)
+        query_response = qdrant_client.query_points(
+            collection_name=collection_name,
+            query=query_embedding,  # Direct embedding vector
+            limit=top_k * 3,  # Get more results, then filter by account_id
+            with_payload=True
+        )
         
-        # Extract relevant results
-        relevant_results = result.get('relevant_results', [])
+        # Extract results from query_response
+        search_results = query_response.points
         
-        # Convert to SignalData format
-        signal_data_list = convert_qdrant_results_to_signal_data(relevant_results)
-        
-        # Filter by account_id if metadata contains it
+        # Convert results to SignalData format and filter by account_id
         filtered_signals = []
-        for signal in signal_data_list:
-            payload = signal.payload
-            signal_account_id = payload.get('account_id')
-            
-            # Include if account_id matches or if no account_id (general signals)
-            if not signal_account_id or str(signal_account_id) == str(account_id):
-                filtered_signals.append(signal)
         
-        return filtered_signals[:top_k]
+        for result in search_results:
+            payload = result.payload
+            
+            # Filter by account_id - only include signals for this specific account
+            result_account_id = payload.get('account_id')
+            if result_account_id and str(result_account_id) == str(account_id):
+                # Create SignalData with similarity score from Qdrant
+                # Qdrant query_points returns results with 'score' attribute
+                signal = SignalData(
+                    similarity=float(result.score),
+                    payload=payload
+                )
+                filtered_signals.append(signal)
+                
+                # Stop when we have enough signals
+                if len(filtered_signals) >= top_k:
+                    break
+        
+        logger.info(
+            f"Retrieved {len(filtered_signals)} {collection_type} signals for account {account_id} "
+            f"from collection {collection_name}"
+        )
+        
+        return filtered_signals
         
     except Exception as e:
+        collection_name = f"kpi_dashboard_vectors_customer_{customer_id}"
         logger.error(f"Error querying Qdrant for signals: {e}", exc_info=True)
+        logger.error(f"Collection: {collection_name}, Account: {account_id}, Type: {collection_type}")
         return []
 
 

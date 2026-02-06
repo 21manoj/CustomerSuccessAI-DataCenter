@@ -1,0 +1,11 @@
+account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
+43001,E2E Full Test Corporation 1769027805 - Datacenter East,Michael Rodriguez,88,expansion,2121899.848495909,200,On-Premise,Large
+43002,E2E Full Test Corporation 1769027805 - Cloud Ops,Sarah Chen,60,onboarding,3774440.9455656325,461,On-Premise,Large
+43003,E2E Full Test Corporation 1769027805 - AI Lab,Tom Johnson,92,expansion,4642635.140974849,457,Hybrid,Large
+43004,E2E Full Test Corporation 1769027805 - Production,David Kim,72,value_realization,2168868.0200419193,315,On-Premise,Small
+43005,E2E Full Test Corporation 1769027805 - Development,Michael Rodriguez,75,adoption,2377157.028471442,491,Hybrid,Medium
+43006,E2E Full Test Corporation 1769027805 - HQ Operations,Emily Watson,86,expansion,612232.8633936769,99,Hybrid,Medium
+43007,E2E Full Test Corporation 1769027805 - Regional Office,David Kim,45,onboarding,2867068.506480862,490,On-Premise,Enterprise
+43008,E2E Full Test Corporation 1769027805 - Research Center,Rachel Martinez,82,adoption,3287126.3756472403,311,Hybrid,Enterprise
+43009,E2E Full Test Corporation 1769027805 - Data Center West,David Kim,88,advocacy,2724382.331399802,221,Hybrid,Enterprise
+43010,E2E Full Test Corporation 1769027805 - Infrastructure,Michael Rodriguez,60,onboarding,2519611.563548263,259,Hybrid,Large

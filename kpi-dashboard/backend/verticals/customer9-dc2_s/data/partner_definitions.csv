@@ -1,0 +1,5 @@
+partner_id,partner_name,partner_tier,relationship_strength,certification_rate,account_count,total_arr,avg_satisfaction_score,specialization,geographic_focus,notes
+P001,TechSolutions Inc,Strategic,strong,92,5,17000000,8.5,Enterprise AI Infrastructure,"US-East, US-Central","Strongest partner, mix of accounts (4 strong, 1 recovery)"
+P002,CloudScale Partners,Tier 1,strong,88,2,14400000,8.8,"High-Growth Startups, Healthcare AI",US-West,"High-performing partner, both accounts very strong"
+P003,DataCenter Pros,Tier 1,moderate,75,2,2150000,6.5,"Mid-Market, Cost-Conscious Customers","US-West, US-East","Weaker partner, both accounts struggling"
+P004,Quantum Resellers,Tier 2,weak,62,1,0,4.5,Research Institutions,US-Central,"Failed relationship, account churned"

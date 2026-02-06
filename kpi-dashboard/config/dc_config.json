@@ -1,0 +1,44 @@
+{
+  "vertical": "datacenter",
+  "name": "Data Center",
+  "description": "Data Center Customer Success Management System",
+  "version": "1.0.0",
+  "kpis": {
+    "total": 31,
+    "pillars": [
+      "Infrastructure & Performance",
+      "Service Delivery",
+      "Customer Sentiment",
+      "Business Outcomes",
+      "Relationship Strength"
+    ]
+  },
+  "category_weights": {
+    "Infrastructure & Performance": 0.30,
+    "Service Delivery": 0.25,
+    "Customer Sentiment": 0.15,
+    "Business Outcomes": 0.20,
+    "Relationship Strength": 0.10
+  },
+  "health_thresholds": {
+    "healthy": 70,
+    "at_risk": 50,
+    "critical": 0
+  },
+  "features": {
+    "enable_alerts": true,
+    "enable_recommendations": true,
+    "enable_playbooks": true,
+    "enable_trends": true
+  },
+  "api": {
+    "prefix": "/api/dc",
+    "endpoints": {
+      "kpis": "/api/dc/kpis",
+      "health_score": "/api/dc/health-score",
+      "alerts": "/api/dc/alerts",
+      "recommendations": "/api/dc/recommendations"
+    }
+  }
+}
+

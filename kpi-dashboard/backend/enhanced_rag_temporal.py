@@ -34,27 +34,38 @@ class EnhancedRAGTemporalSystem:
         self.qdrant_client = None
         
         # Configuration
-        self.collection_name = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_temporal')
+        # Use per-customer collections for tenant isolation (SECURITY)
+        # Collection name will be set based on customer_id in build_knowledge_base()
+        self.collection_name_base = os.getenv('QDRANT_COLLECTION', 'kpi_dashboard_temporal')
+        self.collection_name = None  # Will be set per customer
         self.top_k = int(os.getenv('RAG_TOP_K', 10))
         self.similarity_threshold = float(os.getenv('RAG_SIMILARITY_THRESHOLD', 0.3))
         self.customer_id = None
         
-        # Ensure collection exists
-        self._ensure_collection_exists()
+        # Note: Collection will be created per-customer in build_knowledge_base()
+        # Do NOT create a shared collection in __init__
     
     def _get_qdrant_client(self):
-        """Lazy load the Qdrant client"""
+        """Lazy load the Qdrant client - ONLY supports Qdrant Cloud (via URL)"""
         if self.qdrant_client is None:
+            qdrant_url = os.getenv('QDRANT_URL')
+            qdrant_api_key = os.getenv('QDRANT_API_KEY')
+            
+            if not qdrant_url or not qdrant_api_key:
+                raise ValueError("QDRANT_URL and QDRANT_API_KEY are required for Qdrant Cloud connection")
+            
             try:
                 self.qdrant_client = QdrantClient(
-                    host=os.getenv('QDRANT_HOST', 'localhost'),
-                    port=int(os.getenv('QDRANT_PORT', 6333))
+                    url=qdrant_url,
+                    api_key=qdrant_api_key,
+                    timeout=30
                 )
+                # Test connection
+                self.qdrant_client.get_collections()
+                print(f"✅ Connected to Qdrant Cloud: {qdrant_url}")
             except Exception as e:
-                print(f"❌ Error with Qdrant collection: {e}")
-                # Fallback to local file-based storage with unique path
-                self.qdrant_client = QdrantClient(path=f"./qdrant_temporal_storage_{self.customer_id or 'default'}")
-                print("🔄 Using local file-based Qdrant storage")
+                print(f"❌ Qdrant Cloud connection failed: {str(e)[:100]}")
+                raise Exception(f"Qdrant Cloud connection failed: {str(e)[:100]}")
         return self.qdrant_client
     
     def _get_embedding_model(self):
@@ -88,20 +99,13 @@ class EnhancedRAGTemporalSystem:
                 else:
                     print(f"✅ Using existing Qdrant collection: {self.collection_name}")
             except Exception as e:
-                # If we can't get collections, try to create the collection directly
-                print(f"Could not get collections, creating directly: {e}")
-                client.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=VectorParams(
-                        size=self.embedding_dimension,
-                        distance=Distance.COSINE
-                    )
-                )
-                print(f"✅ Created Qdrant collection: {self.collection_name}")
+                # Qdrant Cloud connection failed - raise exception
+                print(f"❌ Error accessing Qdrant Cloud collections: {str(e)[:100]}")
+                raise Exception(f"Qdrant Cloud connection failed: {str(e)[:100]}")
                 
         except Exception as e:
-            print(f"❌ Error with Qdrant collection: {e}")
-            raise e
+            print(f"❌ Error with Qdrant Cloud collection: {str(e)[:100]}")
+            raise
     
     def build_knowledge_base(self, customer_id: int):
         """Build Qdrant vector database from KPI, account, and time-series data for specific customer"""
@@ -109,6 +113,10 @@ class EnhancedRAGTemporalSystem:
         
         # Store customer ID for this instance
         self.customer_id = customer_id
+        
+        # Set per-customer collection name for tenant isolation (SECURITY)
+        self.collection_name = f"{self.collection_name_base}_customer_{customer_id}"
+        print(f"🔒 Using per-customer collection: {self.collection_name} (tenant isolation enabled)")
         
         # Fetch all KPIs for the customer
         kpis = KPI.query.join(KPIUpload).filter(KPIUpload.customer_id == customer_id).all()
@@ -380,7 +388,8 @@ class EnhancedRAGTemporalSystem:
             return {
                 "query": query,
                 "query_type": query_type,
-                "customer_id": self.customer_id,
+                "customer_id": query_customer_id,
+                "collection_name": collection_name,
                 "results_count": len(relevant_results),
                 "similarity_threshold": self.similarity_threshold,
                 "response": ai_response,

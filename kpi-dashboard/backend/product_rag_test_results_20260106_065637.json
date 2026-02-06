@@ -1,0 +1,114 @@
+{
+  "timestamp": "2026-01-06T06:56:37.356884",
+  "customer_id": 1,
+  "total_queries": 5,
+  "successful": 5,
+  "failed": 0,
+  "results": [
+    {
+      "query": "Which products are commonly used across accounts?",
+      "status": "success",
+      "duration": 13.97980809211731,
+      "response": "Based on the data provided, the products that are commonly used across accounts are the \"Analytics Platform\" and the \"Core Platform\". Here are the specific details:\n\n1. \"Analytics Platform\" is used by the following accounts:\n   - CloudPrime with a revenue of $2,596,324\n   - CloudMaster with a revenue of $2,569,162\n   - CloudVantage with a revenue of $2,692,083\n   - InfoTech with a revenue of $3,825,187\n   - TechVision with a revenue of $4,483,658\n   - DataWise with a revenue of $3,006,339\n\nThis product is used by a total of 6 accounts, generating a combined revenue of approximately $19,172,753.\n\n2. \"Core Platform\" is used by the following accounts:\n   - DataWise with a revenue of $3,006,339\n   - CloudScale with a revenue of $3,387,462\n   - InfoTech with a revenue of $3,825,187\n   - InfoDynamics with a revenue of $2,721,928\n\nThis product is used by a total of 4 accounts, generating a combined revenue of approximately $12,940,916.\n\nIn conclusion, the \"Analytics Platform\" is the most widely used product across the accounts, followed by the \"Core Platform\".",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 1069,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which products have low health scores?",
+      "status": "success",
+      "duration": 12.399796962738037,
+      "response": "The data provided does not contain specific health scores for the products. Therefore, it is not possible to determine which products have low health scores based on the available data. \n\nHowever, the data does provide information on the usage of various products by different accounts, as well as their associated revenues. Here are some key insights:\n\n1. The 'Analytics Platform' is used by two accounts: 'InfoDynamics' and 'DataPulse'. The revenue generated from this product is $2,721,928 for 'InfoDynamics' and $3,343,020 for 'DataPulse'.\n\n2. The 'Core Platform' is also used by 'InfoDynamics' and 'DataPulse', generating revenues of $2,721,928 and $3,343,020 respectively.\n\n3. The 'Mobile App' is used by the 'DataStream' account and generates a revenue of $4,041,581.\n\nPlease provide health scores for the products to further analyze which products have low health scores.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": true,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 879,
+        "quality_score": 8
+      },
+      "metadata": {
+        "results_count": 6,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which products have low adoption rates?",
+      "status": "success",
+      "duration": 1.1101830005645752,
+      "response": "I couldn't find relevant information to answer your query.",
+      "quality": {
+        "mentions_products": false,
+        "mentions_accounts": false,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": false,
+        "has_recommendations": false,
+        "length": 58,
+        "quality_score": 0
+      },
+      "metadata": {
+        "results_count": 0,
+        "query_type": "product_analysis",
+        "has_relevant_results": false
+      }
+    },
+    {
+      "query": "Which products generate the most revenue?",
+      "status": "success",
+      "duration": 13.747194766998291,
+      "response": "Based on the available data, the product that generates the most revenue is the \"Mobile App\". Here are the specific revenue figures for the \"Mobile App\" across different accounts:\n\n1. DataStream: $4,041,581\n2. DigitalFirst: $2,932,426\n3. CloudMaster: $2,569,162\n4. TechAdvance: $2,401,436\n5. InfoCore: $3,363,576\n6. NetCore: $2,647,360\n7. GlobalSystems: $3,244,639\n8. DataForge: $1,092,056\n9. TechNova: $2,413,475\n\nThe \"Analytics Platform\" is also used by the CloudMaster account and generates a revenue of $2,569,162.\n\nIn summary, the \"Mobile App\" is the highest revenue-generating product across multiple accounts. The account that generates the highest revenue from the \"Mobile App\" is DataStream with a revenue of $4,041,581.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 729,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 12,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which accounts use multiple products?",
+      "status": "success",
+      "duration": 11.287328004837036,
+      "response": "Based on the available data, the following accounts use multiple products:\n\n1. CloudMaster: This account uses two products - 'Integration Hub' and 'Analytics Platform'. The revenue generated from CloudMaster is $2,569,162 for each product.\n\nPlease note that the data provided does not indicate any other accounts using multiple products. All other accounts listed (InnovateTech, GlobalSystems, NetCore, FutureTech, DataDrive, DataCo Inc, InfoTech, and SmartData Corp) each use one product - either 'Integration Hub' or 'Core Platform'. \n\nIt's important to note that 'Integration Hub' is the most widely used product, adopted by seven different accounts. The revenue generated from this product ranges from $2,312,740 (DataDrive) to $4,141,049 (DataCo Inc).\n\nThe 'Core Platform' is used by two accounts - FutureTech and InfoTech, generating revenues of $3,259,724 and $3,825,187 respectively.\n\nThe 'Analytics Platform' is only used by one account - CloudMaster, generating a revenue of $2,569,162.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 996,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
+48001,E2E Full Test Corporation 1769028173 - Datacenter East,Michael Rodriguez,88,advocacy,969129.1131584116,202,Hybrid,Large
+48002,E2E Full Test Corporation 1769028173 - Cloud Ops,Michael Rodriguez,60,at_risk,2698127.804385952,309,Hybrid,Enterprise
+48003,E2E Full Test Corporation 1769028173 - AI Lab,Rachel Martinez,92,advocacy,4278085.746136915,178,On-Premise,Medium
+48004,E2E Full Test Corporation 1769028173 - Production,Michael Rodriguez,72,adoption,4425729.960321882,274,Hybrid,Large
+48005,E2E Full Test Corporation 1769028173 - Development,Emily Watson,75,value_realization,2807987.036893548,455,Cloud,Small
+48006,E2E Full Test Corporation 1769028173 - HQ Operations,Lisa Anderson,86,expansion,2996359.4530545757,130,Hybrid,Medium
+48007,E2E Full Test Corporation 1769028173 - Regional Office,Lisa Anderson,45,at_risk,1744266.934616232,484,On-Premise,Medium
+48008,E2E Full Test Corporation 1769028173 - Research Center,Michael Rodriguez,82,adoption,2781670.462535411,403,Cloud,Large
+48009,E2E Full Test Corporation 1769028173 - Data Center West,Michael Rodriguez,88,advocacy,925532.56664369,422,On-Premise,Small
+48010,E2E Full Test Corporation 1769028173 - Infrastructure,Michael Rodriguez,60,at_risk,4592028.420520265,448,Hybrid,Large

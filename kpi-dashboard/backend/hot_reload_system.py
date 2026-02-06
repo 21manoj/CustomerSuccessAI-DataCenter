@@ -16,8 +16,9 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure logging with centralized config
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 class HotReloadHandler(FileSystemEventHandler):
     """File system event handler for hot reloading"""

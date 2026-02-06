@@ -3,7 +3,7 @@ Prompt templates for Signal Analyst Agent
 Carefully engineered for accuracy and consistency
 """
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 class SignalAnalystPrompts:
     """
@@ -79,6 +79,7 @@ Apply general customer success principles to predict outcomes.
         account_id: str,
         account_name: str,
         account_arr: float,
+        health_score: Optional[float],
         quantitative_context: str,
         qualitative_context: str,
         historical_context: str,
@@ -88,8 +89,21 @@ Apply general customer success principles to predict outcomes.
         """
         Get user prompt for analysis
         """
+        from typing import Optional
         
         arr_context = f"${account_arr:,.0f}" if account_arr else "Unknown"
+        
+        # Format health score context
+        if health_score is not None:
+            if health_score >= 67:
+                health_status = "Healthy"
+            elif health_score >= 34:
+                health_status = "At-Risk"
+            else:
+                health_status = "Critical"
+            health_context = f"{health_score:.1f}/100 ({health_status})"
+        else:
+            health_context = "Not available"
         
         prompt = f"""Analyze the following account and predict the most likely outcome within {time_horizon_days} days.
 
@@ -97,6 +111,7 @@ Apply general customer success principles to predict outcomes.
 - Account ID: {account_id}
 - Account Name: {account_name}
 - Annual Recurring Revenue: {arr_context}
+- Overall Health Score: {health_context}
 
 **QUANTITATIVE SIGNALS** ({quantitative_context.count('Signal') if quantitative_context else 0} signals)
 {quantitative_context if quantitative_context else "No quantitative signals available"}
@@ -148,7 +163,7 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
     }}
   }},
   
-  "reasoning": "<detailed explanation of your prediction, 3-5 sentences>",
+  "reasoning": "<detailed explanation in markdown format. Use headers (##), bold text (**text**), numbered lists (1.), and bullet points (-) to structure your response. Example format: ## Overall Health Status: **STATUS** followed by ## Top Risk Factors with numbered list, ## Immediate Actions with bullet points, and ## Estimated Churn Risk: **X%** with explanation paragraph>",
   
   "key_insights": [
     "<insight 1>",
@@ -168,14 +183,22 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
 }}
 
 **CRITICAL RULES**:
-1. Base predictions ONLY on signals provided, not assumptions
-2. If signals conflict, explain the conflict and weight them appropriately
-3. Consider signal recency (recent signals matter more)
-4. Consider signal severity (critical signals override low severity)
-5. Look for patterns across quantitative + qualitative signals
-6. External signals (funding, exec changes) can override internal signals
-7. Be honest about confidence - if data is sparse or contradictory, say so
-8. Provide SPECIFIC actions, not vague advice ("Schedule call with CTO" not "Improve engagement")
+1. **Account Health Context**: Use the overall health score as primary context for all predictions:
+   - Health score < 50 = High churn risk, focus on retention
+   - Health score 50-70 = At-risk, monitor closely and engage proactively
+   - Health score > 70 = Healthy, focus on expansion opportunities
+2. **Temporal Correlation**: Signals grouped by WEEK or MONTH are likely related:
+   - If Signal A in Week 5 and KPI change in Week 6 → likely cause-and-effect
+   - Multiple signals in same week/month → correlated events
+   - Look for temporal sequences: Week N (signal) → Week N+1 (KPI change) → Week N+2 (health drop)
+3. Base predictions ONLY on signals provided, not assumptions
+4. If signals conflict, explain the conflict and weight them appropriately
+5. Consider signal recency (recent signals matter more, especially last 4 weeks)
+6. Consider signal severity (critical signals override low severity)
+7. Look for patterns across quantitative + qualitative signals
+8. External signals (funding, exec changes) can override internal signals
+9. Be honest about confidence - if data is sparse or contradictory, say so
+10. Provide SPECIFIC actions, not vague advice ("Schedule call with CTO" not "Improve engagement")
 """
         
         return prompt.strip()

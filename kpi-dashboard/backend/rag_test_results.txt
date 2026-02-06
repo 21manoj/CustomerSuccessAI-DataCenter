@@ -1,0 +1,225 @@
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+================================================================================
+RAG QUERY TEMPLATES TEST SUITE
+================================================================================
+
+[1/4] Logging in...
+✅ Login successful (customer_id: 1)
+
+[2/4] Checking knowledge base status...
+✅ Knowledge base is built
+
+[3/4] Testing all query templates...
+================================================================================
+
+[1/26] Testing: Top Revenue Accounts
+   Category: Revenue Analysis
+   Query: Which accounts have the highest revenue?
+   ✅ PASSED: The accounts with the highest revenue are:
+
+1. TechVision with a revenue of $4,483,658
+2. TechMatrix with a revenue of $4,297,589
+3. DataCo Inc with a revenue of $4,141,049
+
+[2/26] Testing: Total Revenue Overview
+   Category: Revenue Analysis
+   Query: What is the total revenue across all accounts?
+   ✅ PASSED: The total revenue across all accounts is $108,248,932. This is calculated by summing the revenue of each individual account provided in the available data.
+
+[3/26] Testing: Revenue Growth Analysis
+   Category: Revenue Analysis
+   Query: Show me revenue growth analysis and trends
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information to analyze revenue growth trends as the revenue
+
+[4/26] Testing: Industry Revenue Breakdown
+   Category: Revenue Analysis
+   Query: How does revenue vary by industry?
+   ✅ PASSED: Based on the available data, the revenue varies by industry as follows:
+
+- Manufacturing: Accounts like TechVision, SmartData Corp, AgileWorks, CloudServices LLC, TechHub, GlobalSystems, DataFlow, Tec...
+
+[5/26] Testing: Account Health Overview
+   Category: Account Health
+   Query: Show me account health scores and performance
+   ❌ FAILED: Request timeout (30s)
+
+[6/26] Testing: At-Risk Accounts
+   Category: Account Health
+   Query: Which accounts are at risk of churn?
+   ✅ PASSED: The accounts at risk of churn based on their health scores are: 
+
+- InfoFlow with a health score of 65.8/100
+- DataStream with a health score of 61.4/100
+- InfoTech with a health score of 64.2/100
+- I...
+
+[7/26] Testing: Account Performance Ranking
+   Category: Account Health
+   Query: Which accounts are performing best?
+   ✅ PASSED: The top performing accounts based on revenue and health score are:
+
+1. TechVision with a revenue of $4,483,658 and a health score of 68.7/100
+2. TechMatrix with a revenue of $4,297,589 and a health sc...
+
+[8/26] Testing: Account Engagement Analysis
+   Category: Account Health
+   Query: Show me account engagement analysis
+   ✅ PASSED: Based on the available data, the accounts with the highest engagement are GlobalSystems and TechCorp Solutions. GlobalSystems showed a significant improvement in health score from 62 to 82 and executi...
+
+[9/26] Testing: Top Performing KPIs
+   Category: KPI Performance
+   Query: What are the top performing KPIs?
+   ✅ PASSED: The top performing KPIs are not explicitly mentioned in the available data. However, based on the account data, we can infer that Health Score and Revenue are key performance indicators, with the high...
+
+[10/26] Testing: Customer Satisfaction Analysis
+   Category: KPI Performance
+   Query: Show me customer satisfaction analysis
+   ✅ PASSED: Based on the available data, the customer satisfaction analysis can be derived from the health scores and recent playbook insights. The account with the highest health score is DataDrive with a score ...
+
+[11/26] Testing: KPI Category Performance
+   Category: KPI Performance
+   Query: How are different KPI categories performing?
+   ✅ PASSED: The available data does not provide specific KPI categories or their performance metrics. However, it does provide Health Scores for each account, which range from 60.0/100 (TechBridge) to 77.8/100 (D...
+
+[12/26] Testing: KPI Trends & Patterns
+   Category: KPI Performance
+   Query: What are the key trends in our KPI performance?
+   ✅ PASSED: Based on the available data, the key trends in KPI performance are:
+
+- Health scores range from 60.0/100 to 77.8/100, indicating varying account health across the portfolio.
+- Recent playbook executio...
+
+[13/26] Testing: Industry Performance
+   Category: Industry Analysis
+   Query: How do we perform across different industries?
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: Based on the available data, we have accounts in the Manufacturing, Technology, Finance, Retail, and
+
+[14/26] Testing: Regional Performance
+   Category: Regional Analysis
+   Query: Show me regional performance analysis
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information to provide a regional performance analysis. The
+
+[15/26] Testing: Overall Trend Analysis
+   Category: Historical Analysis
+   Query: Show me trends across all KPIs and accounts over time
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I don't have that specific information in the current data. The available data does not provide a ti
+
+[16/26] Testing: KPI Trend Analysis
+   Category: Historical Analysis
+   Query: Show me historical trends in Time to First Value over time
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information on historical trends in Time to First Value ove
+
+[17/26] Testing: Account Performance Trends
+   Category: Historical Analysis
+   Query: Show me how account performance has changed over time
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information on how account performance has changed over tim
+
+[18/26] Testing: Health Score Evolution
+   Category: Historical Analysis
+   Query: How have health scores evolved over time?
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I don't have that specific information in the current data. The available data does not provide a ti
+
+[19/26] Testing: Temporal Patterns
+   Category: Historical Analysis
+   Query: What temporal patterns and seasonality do you see in the data?
+   ✅ PASSED: I'm sorry, but the current data provided does not include any temporal or seasonality patterns. It only includes account details, playbook insights, and playbook trigger thresholds. To analyze tempora...
+
+[20/26] Testing: Predictive Insights
+   Category: Historical Analysis
+   Query: What predictions can you make based on historical trends?
+   ✅ PASSED: Based on historical playbook insights, the Renewal Safeguard playbook has been successful in improving the health score and reducing renewal risk for GlobalSystems. For TechCorp Solutions, the VoC Spr...
+
+[21/26] Testing: Monthly Revenue Breakdown
+   Category: Monthly Revenue Analysis
+   Query: Which accounts have the highest revenue across last 4 months? please provide month details as well?
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific month-by-month revenue data for the last 4 months. The avai
+
+[22/26] Testing: Revenue Trends & Patterns
+   Category: Monthly Revenue Analysis
+   Query: Analyze revenue trends and patterns over the last 6 months
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I cannot analyze revenue trends and patterns over the last 6 months as the provided d
+
+[23/26] Testing: Top Accounts by Month
+   Category: Monthly Revenue Analysis
+   Query: Which accounts performed best each month? Show monthly rankings
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific monthly performance data for each account. The available da
+
+[24/26] Testing: Strategic Recommendations
+   Category: Strategic Insights
+   Query: What strategic recommendations do you have for improving our business?
+   ✅ PASSED: Based on the available data, I recommend the following:
+
+1. Implement the 'Renewal Safeguard' playbook for accounts with a health score below the threshold of 70, similar to the successful execution w...
+
+[25/26] Testing: Growth Opportunities
+   Category: Strategic Insights
+   Query: What growth opportunities do you see in our data?
+   ✅ PASSED: Based on the data, growth opportunities can be identified in the following areas:
+
+1. TechCorp Solutions: After the successful VoC Sprint, there's an improvement in NPS and CSAT scores. Continue monit...
+
+[26/26] Testing: Multi-Product Accounts
+   Category: Product Analysis
+   Query: Which accounts use more than 1 product?
+   ⚠️  WARNING: ⚠️  Response may indicate missing data: I don't have that specific information in the current data. The available data does not provide deta
+
+================================================================================
+[4/4] TEST SUMMARY
+================================================================================
+
+✅ Passed: 14/26
+⚠️  Warnings: 11/26
+❌ Failed: 1/26
+
+❌ FAILED QUERIES:
+   - Account Health Overview (Account Health)
+     Query: Show me account health scores and performance
+     Error: Request timeout (30s)
+
+
+⚠️  QUERIES WITH WARNINGS:
+   - Revenue Growth Analysis (Revenue Analysis)
+     Query: Show me revenue growth analysis and trends
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information to analyze revenue growth trends as the revenue
+
+   - Industry Performance (Industry Analysis)
+     Query: How do we perform across different industries?
+     Warning: ⚠️  Response may indicate missing data: Based on the available data, we have accounts in the Manufacturing, Technology, Finance, Retail, and
+
+   - Regional Performance (Regional Analysis)
+     Query: Show me regional performance analysis
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information to provide a regional performance analysis. The
+
+   - Overall Trend Analysis (Historical Analysis)
+     Query: Show me trends across all KPIs and accounts over time
+     Warning: ⚠️  Response may indicate missing data: I don't have that specific information in the current data. The available data does not provide a ti
+
+   - KPI Trend Analysis (Historical Analysis)
+     Query: Show me historical trends in Time to First Value over time
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information on historical trends in Time to First Value ove
+
+   - Account Performance Trends (Historical Analysis)
+     Query: Show me how account performance has changed over time
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific information on how account performance has changed over tim
+
+   - Health Score Evolution (Historical Analysis)
+     Query: How have health scores evolved over time?
+     Warning: ⚠️  Response may indicate missing data: I don't have that specific information in the current data. The available data does not provide a ti
+
+   - Monthly Revenue Breakdown (Monthly Revenue Analysis)
+     Query: Which accounts have the highest revenue across last 4 months? please provide month details as well?
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific month-by-month revenue data for the last 4 months. The avai
+
+   - Revenue Trends & Patterns (Monthly Revenue Analysis)
+     Query: Analyze revenue trends and patterns over the last 6 months
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I cannot analyze revenue trends and patterns over the last 6 months as the provided d
+
+   - Top Accounts by Month (Monthly Revenue Analysis)
+     Query: Which accounts performed best each month? Show monthly rankings
+     Warning: ⚠️  Response may indicate missing data: I'm sorry, but I don't have the specific monthly performance data for each account. The available da
+
+   - Multi-Product Accounts (Product Analysis)
+     Query: Which accounts use more than 1 product?
+     Warning: ⚠️  Response may indicate missing data: I don't have that specific information in the current data. The available data does not provide deta
+

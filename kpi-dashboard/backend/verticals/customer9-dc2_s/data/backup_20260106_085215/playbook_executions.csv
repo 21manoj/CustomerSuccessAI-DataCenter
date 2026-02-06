@@ -1,0 +1,29 @@
+execution_id,account_id,playbook_id,playbook_name,execution_date,trigger_kpi,trigger_value,actions_taken,outcome_kpi_change,business_impact,success,confidence_score
+PB-10001-001,10001,PB-02,RMA Prevention,2024-02-15,OS-KPI7,2.8,"Proactive thermal monitoring, component batch analysis",2.8% → 1.9%,$45K potential RMA savings,True,0.92
+PB-10001-002,10001,PB-03,GPU Optimization,2024-04-10,AI-KPI1,68.0,"Workload optimization, scheduling improvements",68% → 74%,"Efficiency improvement, capacity headroom",True,0.88
+PB-10001-003,10001,PB-04,Capacity Planning,2024-05-20,AI-KPI1,78.0,"Capacity forecast, expansion ROI analysis, proactive quote",78% → expansion planning initiated,$2M expansion opportunity identified,True,0.95
+PB-10001-004,10001,PB-06,Customer Engagement,2024-03-30,Quarterly QBR,1.0,"Executive QBR, value realization review",NPS 8 → 9,Executive sponsor engagement strengthened,True,0.9
+PB-10001-005,10001,PB-03,GPU Optimization,2024-06-15,AI-KPI1,82.0,Pre-expansion optimization to maximize capacity,82% → 85%,Extended runway before expansion needed,True,0.87
+PB-10001-006,10001,PB-06,Customer Engagement,2024-06-30,Quarterly QBR,2.0,Expansion proposal QBR,Expansion approved,$2M expansion closed,True,0.94
+PB-10001-007,10001,PB-04,Capacity Planning,2024-08-10,AI-KPI1,89.0,"Phase 3 capacity planning, multi-year roadmap",Strategic partnership discussions initiated,3-year commitment secured,True,0.91
+PB-10001-008,10001,PB-06,Customer Engagement,2024-09-30,Quarterly QBR,3.0,"Innovation workshop, new use case exploration",Additional $3M pipeline identified,Reference customer status granted,True,0.93
+PB-10001-009,10001,PB-04,Capacity Planning,2024-11-15,AI-KPI1,87.0,"2025 capacity roadmap, budget planning",H1 2025 expansion budgeted,$3M+ pipeline for next year,True,0.89
+PB-10001-010,10001,PB-06,Customer Engagement,2024-12-30,Quarterly QBR,4.0,"Year-end review, strategic planning session",NPS 9 → 10,"Strategic partnership, 100% ARR growth achieved",True,0.96
+PB-10007-001,10007,PB-02,RMA Prevention (War Room),2024-02-03,OS-KPI7,3.8,"Emergency war room, exec sponsor assigned, thermal optimization, proactive RMA",3.8% → 2.1%,"$67K saved, 72hrs downtime prevented, churn prevented",True,0.94
+PB-10007-002,10007,PB-05,Health Monitoring,2024-03-15,Health Score,50.0,"Root cause analysis, enhanced monitoring, daily check-ins",Health 50 → 62,"Trust rebuilding, relationship recovery",True,0.88
+PB-10007-003,10007,PB-06,Customer Engagement,2024-04-10,Budget pressure signals,,"Executive QBR, flexible payment terms, 12% discount","Budget approved, retention secured",$2.1M ARR retained,True,0.85
+PB-10007-004,10007,PB-05,Health Monitoring,2024-05-20,Health Score,68.0,"Continued monitoring, performance optimization",Health 68 → 78,"Stability demonstrated, confidence restored",True,0.91
+PB-10007-005,10007,PB-06,Customer Engagement,2024-07-15,New champion (VP Ops),,"Cultivation of new champion, robotics use case exploration","Champion engaged, expansion discussions",Expansion opportunity identified,True,0.87
+PB-10007-006,10007,PB-04,Capacity Planning,2024-10-05,AI-KPI1,78.0,"Expansion ROI analysis, robotics workload planning",Expansion readiness 88,$900K expansion approved,True,0.92
+PB-10002-001,10002,PB-05,Health Monitoring,2024-05-10,Health Score,65.0,"Health check, issue identification",Health 65 → 75,Recovery initiated,True,0.82
+PB-10002-002,10002,PB-03,GPU Optimization,2024-07-20,AI-KPI1,52.0,Utilization optimization,52% → 65%,Efficiency improved,True,0.79
+PB-10002-003,10002,PB-06,Customer Engagement,2024-09-30,Quarterly QBR,3.0,Relationship strengthening,Health 75 → 82,$600K expansion potential,True,0.84
+PB-10004-001,10004,PB-04,Capacity Planning,2024-04-15,AI-KPI1,76.0,First expansion planning,$1.5M expansion,Rapid growth supported,True,0.93
+PB-10004-002,10004,PB-03,GPU Optimization,2024-06-10,AI-KPI1,88.0,Pre-expansion optimization,Maximized current capacity,Extended runway 45 days,True,0.89
+PB-10004-003,10004,PB-04,Capacity Planning,2024-08-20,AI-KPI1,82.0,Second expansion planning,$2.2M expansion,Continued rapid growth,True,0.91
+PB-10004-004,10004,PB-06,Customer Engagement,2024-06-30,Quarterly QBR,2.0,Growth planning QBR,Multi-year commitment,Strategic partnership,True,0.94
+PB-10004-005,10004,PB-06,Customer Engagement,2024-12-15,Year-end review,,2025 strategic roadmap,Reference customer status,148% growth achieved,True,0.95
+PB-10008-001,10008,PB-04,Capacity Planning,2024-06-10,AI-KPI1,79.0,Competitive defense expansion,"$1.8M expansion, beat Dell",Competitive win,True,0.92
+PB-10008-002,10008,PB-06,Customer Engagement,2024-03-30,Quarterly QBR,1.0,Executive relationship building,Executive sponsor engaged,Strategic partnership,True,0.9
+PB-10008-003,10008,PB-04,Capacity Planning,2024-10-15,AI-KPI1,85.0,Second phase expansion,$900K expansion,49% total growth,True,0.88
+PB-10008-004,10008,PB-06,Customer Engagement,2024-12-20,Year-end review,,2025 roadmap planning,Multi-year commitment,Strategic account status,True,0.93

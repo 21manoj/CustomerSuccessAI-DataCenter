@@ -30,10 +30,17 @@ class EnhancedRAGHistoricalSystem:
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.embedding_dimension = 384
         
-        # Initialize Qdrant client
+        # Initialize Qdrant client - ONLY supports Qdrant Cloud (via URL)
+        qdrant_url = os.getenv('QDRANT_URL')
+        qdrant_api_key = os.getenv('QDRANT_API_KEY')
+        
+        if not qdrant_url or not qdrant_api_key:
+            raise ValueError("QDRANT_URL and QDRANT_API_KEY are required for Qdrant Cloud connection")
+        
         self.qdrant_client = QdrantClient(
-            host=os.getenv('QDRANT_HOST', 'localhost'),
-            port=int(os.getenv('QDRANT_PORT', 6333))
+            url=qdrant_url,
+            api_key=qdrant_api_key,
+            timeout=30
         )
         
         # Configuration
@@ -66,9 +73,7 @@ class EnhancedRAGHistoricalSystem:
                 
         except Exception as e:
             print(f"❌ Error ensuring collection exists: {str(e)}")
-            # Fallback to local file-based storage
-            self.qdrant_client = QdrantClient(path="./qdrant_historical_storage")
-            self._ensure_collection_exists()
+            raise Exception(f"Qdrant Cloud connection failed: {str(e)[:100]}")
     
     def build_historical_knowledge_base(self, customer_id: int):
         """Build comprehensive knowledge base with historical data"""

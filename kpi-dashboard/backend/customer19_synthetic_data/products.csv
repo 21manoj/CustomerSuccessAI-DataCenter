@@ -1,0 +1,9 @@
+id,name,category
+DC-GPU-H100,DGX H100 Systems,Compute
+DC-COOL-LQ,Liquid Cooling Solutions,Infrastructure
+DC-STOR-NVMe,NVMe Storage Arrays,Storage
+DC-NET-IB,InfiniBand Networking,Networking
+DC-MGMT-SW,Management Software Suite,Software
+DC-SUP-PREM,Premier Support,Services
+DC-SEC-ADV,Advanced Security,Security
+DC-MON-AI,AI-Powered Monitoring,Monitoring

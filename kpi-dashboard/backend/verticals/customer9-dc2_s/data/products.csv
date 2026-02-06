@@ -1,0 +1,8 @@
+product_id,product_name,product_category,product_tier,gpu_type,description,target_use_case,price_per_gpu_monthly,minimum_commitment_gpus,contract_term_months,performance_benchmark,launched_date
+PRD-001,GPU Cloud - H100,Compute,Premium,NVIDIA H100,Latest generation GPU for AI training and inference,"Large language models, advanced AI research",4500.0,32.0,12.0,3.5x faster than A100,2023-06-01
+PRD-002,GPU Cloud - A100,Compute,Standard,NVIDIA A100,Production-grade GPU for AI workloads,"AI training, inference, data analytics",2800.0,16.0,12.0,20x faster than V100,2022-01-01
+PRD-003,Premium Support,Support,Premium,,24/7 premium support with <1hr response SLA,Mission-critical workloads,200.0,,12.0,,2022-01-01
+PRD-004,Multi-Datacenter,Infrastructure,Enterprise,,Multi-region deployment with data replication,"Global workloads, disaster recovery",500.0,64.0,24.0,,2023-01-01
+PRD-005,AI Platform Suite,Platform,Enterprise,,Full AI development platform with MLOps tools,End-to-end AI development,300.0,,12.0,,2023-03-01
+PRD-006,Managed Services,Services,Premium,,Fully managed infrastructure with dedicated team,Customers needing hands-off management,400.0,32.0,12.0,,2023-09-01
+PRD-007,Training & Certification,Professional Services,Standard,,Training programs and certifications,Team enablement,,,,,2022-01-01

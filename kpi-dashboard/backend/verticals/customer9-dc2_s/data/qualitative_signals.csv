@@ -1,0 +1,321 @@
+signal_id,account_id,signal_date,signal_type,stakeholder_level,stakeholder_title,content,sentiment,sentiment_score,keywords,is_narrative_signal
+SIG-10001-2024-01-01-42,10001,2024-01-01,email,Manager,Engineering Manager,Budget approved for growth,positive,0.75,"expansion,budget",True
+SIG-10001-2024-01-08-9,10001,2024-01-08,call,VP,VP Engineering,Technical review meeting,neutral,0.25,,True
+SIG-10001-2024-02-01-36,10001,2024-02-01,slack,Manager,Engineering Manager,CTO wants to scale up,positive,0.6,,True
+SIG-10001-2024-02-03-19,10001,2024-02-03,call,Manager,Operations Manager,Technical review meeting,neutral,-0.22,,True
+SIG-10001-2024-02-08-27,10001,2024-02-08,meeting,C-suite,CFO,Champion advocating for more investment,positive,0.71,,True
+SIG-10001-2024-02-12-18,10001,2024-02-12,call,VP,VP Engineering,Technical review meeting,neutral,0.23,,True
+SIG-10001-2024-02-15-28,10001,2024-02-15,call,C-suite,CEO,Regular check-in call,neutral,0.26,,True
+SIG-10001-2024-02-23-23,10001,2024-02-23,email,Manager,IT Manager,Expansion approved for Q{q},positive,0.73,expansion,True
+SIG-10001-2024-03-17-12,10001,2024-03-17,call,Manager,Engineering Manager,Innovation workshop - new use cases,positive,0.57,,True
+SIG-10001-2024-03-18-8,10001,2024-03-18,email,VP,VP Operations,Checking in on project status,neutral,-0.11,,True
+SIG-10001-2024-03-18-17,10001,2024-03-18,slack,Manager,Operations Manager,Training session completed,neutral,-0.01,,True
+SIG-10001-2024-04-02-31,10001,2024-04-02,meeting,Director,Director ML,"Great QBR, discussing expansion",positive,0.76,expansion,True
+SIG-10001-2024-04-06-29,10001,2024-04-06,meeting,Manager,Engineering Manager,Executive sponsor very engaged,positive,0.67,,True
+SIG-10001-2024-04-08-49,10001,2024-04-08,email,VP,VP Engineering,Really satisfied with support response,positive,0.66,satisfaction,True
+SIG-10001-2024-04-22-45,10001,2024-04-22,email,Director,Director Infrastructure,CFO approved expansion budget,positive,0.84,"expansion,budget",True
+SIG-10001-2024-04-24-11,10001,2024-04-24,email,Director,Director IT,Thinking about additional use cases,positive,0.66,,True
+SIG-10001-2024-04-28-46,10001,2024-04-28,call,VP,VP Data,"Great QBR, discussing expansion",positive,0.58,expansion,True
+SIG-10001-2024-05-05-37,10001,2024-05-05,call,Manager,IT Manager,Training session,neutral,-0.21,,True
+SIG-10001-2024-05-06-51,10001,2024-05-06,slack,C-suite,CIO,Want to add more GPUs,positive,0.83,,True
+SIG-10001-2024-05-17-41,10001,2024-05-17,slack,Manager,Engineering Manager,Thinking about additional use cases,positive,0.87,,True
+SIG-10001-2024-05-17-59,10001,2024-05-17,meeting,C-suite,CFO,Innovation workshop - new use cases,positive,0.64,,True
+SIG-10001-2024-05-22-24,10001,2024-05-22,meeting,Director,Director IT,Planning session for Phase 2,positive,0.71,,True
+SIG-10001-2024-05-27-5,10001,2024-05-27,call,VP,VP Operations,Innovation workshop - new use cases,positive,0.53,,True
+SIG-10001-2024-06-08-35,10001,2024-06-08,email,Director,Director Infrastructure,Want to add more GPUs,positive,0.92,,True
+SIG-10001-2024-06-09-3,10001,2024-06-09,slack,VP,VP Engineering,Thinking about additional use cases,positive,0.54,,True
+SIG-10001-2024-06-14-52,10001,2024-06-14,meeting,VP,VP Operations,Champion advocating for more investment,positive,0.52,,True
+SIG-10001-2024-06-14-54,10001,2024-06-14,meeting,VP,VP IT,Innovation workshop - new use cases,positive,0.88,,True
+SIG-10001-2024-06-19-44,10001,2024-06-19,meeting,C-suite,CTO,"Great QBR, discussing expansion",positive,0.9,expansion,True
+SIG-10001-2024-06-20-4,10001,2024-06-20,email,Director,Director ML,Thinking about additional use cases,positive,0.54,,True
+SIG-10001-2024-06-26-47,10001,2024-06-26,call,Manager,Engineering Manager,Training session,neutral,-0.2,,True
+SIG-10001-2024-07-01-53,10001,2024-07-01,call,Director,Director IT,Innovation workshop - new use cases,positive,0.8,,True
+SIG-10001-2024-07-02-1,10001,2024-07-02,email,Director,Director ML,CTO wants to scale up,positive,0.59,,True
+SIG-10001-2024-07-06-15,10001,2024-07-06,slack,Manager,IT Manager,CTO wants to scale up,positive,0.84,,True
+SIG-10001-2024-07-09-30,10001,2024-07-09,call,VP,VP Data,Technical review meeting,neutral,-0.19,,True
+SIG-10001-2024-07-18-43,10001,2024-07-18,email,Manager,Engineering Manager,CTO wants to scale up,positive,0.52,,True
+SIG-10001-2024-07-22-56,10001,2024-07-22,meeting,Manager,Operations Manager,Monthly sync,neutral,-0.12,,True
+SIG-10001-2024-08-04-22,10001,2024-08-04,email,C-suite,CFO,CFO approved expansion budget,positive,0.6,"expansion,budget",True
+SIG-10001-2024-08-18-20,10001,2024-08-18,meeting,Director,Director ML,Planning session for Phase 2,positive,0.84,,True
+SIG-10001-2024-08-26-25,10001,2024-08-26,email,Director,Director Infrastructure,Thinking about additional use cases,positive,0.68,,True
+SIG-10001-2024-09-04-16,10001,2024-09-04,email,Director,Director IT,Planning to expand capacity,positive,0.57,,True
+SIG-10001-2024-09-10-39,10001,2024-09-10,email,Manager,IT Manager,Following up on our meeting,neutral,0.23,,True
+SIG-10001-2024-09-13-50,10001,2024-09-13,call,VP,VP Engineering,"Great QBR, discussing expansion",positive,0.89,expansion,True
+SIG-10001-2024-09-23-38,10001,2024-09-23,slack,Manager,Operations Manager,Team is very happy with performance,positive,0.8,satisfaction,True
+SIG-10001-2024-09-27-57,10001,2024-09-27,email,VP,VP IT,Budget approved for growth,positive,0.7,"expansion,budget",True
+SIG-10001-2024-09-28-14,10001,2024-09-28,meeting,C-suite,CTO,Training session,neutral,-0.23,,True
+SIG-10001-2024-09-28-32,10001,2024-09-28,email,Director,Director ML,Expansion approved for Q{q},positive,0.77,expansion,True
+SIG-10001-2024-10-03-34,10001,2024-10-03,meeting,Director,Director Infrastructure,Executive sponsor very engaged,positive,0.8,,True
+SIG-10001-2024-10-23-10,10001,2024-10-23,meeting,VP,VP Data,Executive sponsor very engaged,positive,0.62,,True
+SIG-10001-2024-11-04-0,10001,2024-11-04,email,VP,VP Engineering,CTO wants to scale up,positive,0.54,,True
+SIG-10001-2024-11-07-58,10001,2024-11-07,call,Manager,Operations Manager,Executive sponsor very engaged,positive,0.8,,True
+SIG-10001-2024-11-08-6,10001,2024-11-08,slack,Manager,Engineering Manager,Thinking about additional use cases,positive,0.63,,True
+SIG-10001-2024-11-14-13,10001,2024-11-14,email,Director,Director Infrastructure,CTO wants to scale up,positive,0.61,,True
+SIG-10001-2024-11-23-2,10001,2024-11-23,email,Director,Director ML,Board impressed with results,positive,0.81,"executive_scrutiny,satisfaction",True
+SIG-10001-2024-11-27-7,10001,2024-11-27,email,VP,VP IT,Expansion approved for Q{q},positive,0.77,expansion,True
+SIG-10001-2024-11-28-33,10001,2024-11-28,email,Manager,Engineering Manager,CFO approved expansion budget,positive,0.77,"expansion,budget",True
+SIG-10001-2024-12-02-26,10001,2024-12-02,slack,C-suite,CIO,Want to add more GPUs,positive,0.86,,True
+SIG-10001-2024-12-04-48,10001,2024-12-04,email,Director,Director ML,Budget approved for growth,positive,0.66,"expansion,budget",True
+SIG-10001-2024-12-07-21,10001,2024-12-07,email,Director,Director Infrastructure,Budget approved for growth,positive,0.9,"expansion,budget",True
+SIG-10001-2024-12-10-55,10001,2024-12-10,meeting,VP,VP IT,Planning session for Phase 2,positive,0.56,,True
+SIG-10001-2024-12-18-40,10001,2024-12-18,email,VP,VP IT,Planning to expand capacity,positive,0.81,,True
+SIG-10002-2024-02-16-2,10002,2024-02-16,email,VP,VP Engineering,Training session completed,neutral,0.0,,False
+SIG-10002-2024-02-20-4,10002,2024-02-20,email,Director,Director IT,Following up on our meeting,neutral,-0.03,,False
+SIG-10002-2024-03-06-15,10002,2024-03-06,call,Manager,Engineering Manager,"Champion unavailable, delegates disengaged",negative,-0.71,,False
+SIG-10002-2024-04-18-17,10002,2024-04-18,slack,Director,Director ML,Want to add more GPUs,positive,0.81,,False
+SIG-10002-2024-05-15-3,10002,2024-05-15,email,Manager,Engineering Manager,Checking in on project status,neutral,0.22,,False
+SIG-10002-2024-06-23-6,10002,2024-06-23,meeting,C-suite,CIO,Positive ROI review meeting,positive,0.74,,False
+SIG-10002-2024-07-12-16,10002,2024-07-12,email,VP,VP IT,Checking in on project status,neutral,0.17,,False
+SIG-10002-2024-08-07-13,10002,2024-08-07,email,C-suite,CEO,CTO wants to scale up,positive,0.85,,False
+SIG-10002-2024-10-05-19,10002,2024-10-05,email,Director,Director Infrastructure,Dell reached out with competitive offer,negative,-0.44,competitive_threat,False
+SIG-10002-2024-10-06-7,10002,2024-10-06,slack,VP,VP IT,CFO approved expansion budget,positive,0.52,"expansion,budget",False
+SIG-10002-2024-10-15-18,10002,2024-10-15,email,VP,VP Data,Quarterly review scheduled,neutral,0.19,,False
+SIG-10002-2024-10-21-1,10002,2024-10-21,meeting,Manager,Operations Manager,Training session,neutral,-0.21,,False
+SIG-10002-2024-10-21-5,10002,2024-10-21,meeting,Director,Director ML,Positive ROI review meeting,positive,0.55,,False
+SIG-10002-2024-11-03-0,10002,2024-11-03,call,Director,Director IT,Planning session for Phase 2,positive,0.7,,False
+SIG-10002-2024-11-14-12,10002,2024-11-14,email,VP,VP Operations,Training session completed,neutral,0.27,,False
+SIG-10002-2024-11-20-9,10002,2024-11-20,email,Director,Director ML,Budget under review,negative,-0.78,budget,False
+SIG-10002-2024-11-21-8,10002,2024-11-21,email,Director,Director Infrastructure,Really satisfied with support response,positive,0.61,satisfaction,False
+SIG-10002-2024-11-23-10,10002,2024-11-23,email,Director,Director ML,Training session completed,neutral,0.04,,False
+SIG-10002-2024-11-26-11,10002,2024-11-26,email,Director,Director IT,CTO wants to scale up,positive,0.54,,False
+SIG-10002-2024-12-17-14,10002,2024-12-17,email,Director,Director ML,CFO approved expansion budget,positive,0.67,"expansion,budget",False
+SIG-10003-2024-01-06-38,10003,2024-01-06,meeting,VP,VP Data,Status update call,neutral,0.11,,True
+SIG-10003-2024-01-09-55,10003,2024-01-09,call,VP,VP IT,Emergency meeting about outage,negative,-0.79,operational_issue,True
+SIG-10003-2024-01-12-9,10003,2024-01-12,email,Manager,IT Manager,Touching base on progress,neutral,0.15,,True
+SIG-10003-2024-01-18-52,10003,2024-01-18,email,Manager,Engineering Manager,Monthly checkpoint,neutral,0.27,,True
+SIG-10003-2024-01-19-18,10003,2024-01-19,email,Director,Director Infrastructure,Monthly checkpoint,neutral,0.26,,True
+SIG-10003-2024-01-19-33,10003,2024-01-19,meeting,VP,VP Engineering,Training session,neutral,0.26,,True
+SIG-10003-2024-01-25-2,10003,2024-01-25,email,Manager,Operations Manager,Monthly checkpoint,neutral,-0.27,,True
+SIG-10003-2024-01-27-31,10003,2024-01-27,email,VP,VP Engineering,Checking in on project status,neutral,0.02,,True
+SIG-10003-2024-01-28-21,10003,2024-01-28,meeting,VP,VP IT,Status update call,neutral,0.12,,True
+SIG-10003-2024-02-03-19,10003,2024-02-03,call,VP,VP IT,Monthly sync,neutral,0.18,,True
+SIG-10003-2024-02-03-26,10003,2024-02-03,meeting,Director,Director ML,Status update call,neutral,0.09,,True
+SIG-10003-2024-02-05-0,10003,2024-02-05,email,Director,Director ML,Monthly checkpoint,neutral,-0.05,,True
+SIG-10003-2024-02-07-16,10003,2024-02-07,meeting,VP,VP Data,"Champion unavailable, delegates disengaged",negative,-0.89,,True
+SIG-10003-2024-02-07-30,10003,2024-02-07,meeting,Director,Director IT,Monthly sync,neutral,-0.13,,True
+SIG-10003-2024-02-08-7,10003,2024-02-08,email,VP,VP Data,Monthly checkpoint,neutral,-0.1,,True
+SIG-10003-2024-02-10-51,10003,2024-02-10,meeting,C-suite,CFO,Technical review meeting,neutral,-0.11,,True
+SIG-10003-2024-02-15-17,10003,2024-02-15,call,VP,VP Engineering,Escalation call with exec team,negative,-0.42,,True
+SIG-10003-2024-02-15-54,10003,2024-02-15,email,Manager,Operations Manager,Checking in on project status,neutral,0.23,,True
+SIG-10003-2024-02-16-53,10003,2024-02-16,email,Director,Director Infrastructure,Technical issues impacting production,negative,-0.41,operational_issue,True
+SIG-10003-2024-02-17-50,10003,2024-02-17,call,Director,Director ML,Technical review meeting,neutral,-0.14,,True
+SIG-10003-2024-02-19-46,10003,2024-02-19,call,Manager,IT Manager,Training session,neutral,-0.05,,True
+SIG-10003-2024-02-19-58,10003,2024-02-19,call,VP,VP IT,Status update call,neutral,0.12,,True
+SIG-10003-2024-02-21-41,10003,2024-02-21,email,C-suite,CEO,Quarterly review scheduled,neutral,0.18,,True
+SIG-10003-2024-02-28-3,10003,2024-02-28,email,Director,Director IT,Touching base on progress,neutral,0.06,,True
+SIG-10003-2024-03-01-44,10003,2024-03-01,slack,Manager,Operations Manager,AWS looking attractive,negative,-0.43,competitive_threat,True
+SIG-10003-2024-03-02-32,10003,2024-03-02,meeting,Director,Director ML,Status update call,neutral,-0.24,,True
+SIG-10003-2024-03-11-57,10003,2024-03-11,meeting,Director,Director Infrastructure,Escalation call with exec team,negative,-0.41,,True
+SIG-10003-2024-03-15-6,10003,2024-03-15,email,VP,VP IT,Dell reached out with competitive offer,negative,-0.91,competitive_threat,True
+SIG-10003-2024-03-16-28,10003,2024-03-16,email,Manager,Operations Manager,Budget under review,negative,-0.76,budget,True
+SIG-10003-2024-03-17-43,10003,2024-03-17,meeting,Director,Director Infrastructure,"Champion unavailable, delegates disengaged",negative,-0.77,,True
+SIG-10003-2024-03-19-37,10003,2024-03-19,meeting,Director,Director ML,"Champion unavailable, delegates disengaged",negative,-0.83,,True
+SIG-10003-2024-03-19-45,10003,2024-03-19,call,Director,Director IT,Budget pressure discussion,negative,-0.45,budget,True
+SIG-10003-2024-03-22-11,10003,2024-03-22,meeting,VP,VP Data,Escalation call with exec team,negative,-0.41,,True
+SIG-10003-2024-03-22-47,10003,2024-03-22,email,VP,VP Data,Considering alternatives,negative,-0.59,,True
+SIG-10003-2024-03-26-25,10003,2024-03-26,email,Director,Director Infrastructure,Dell reached out with competitive offer,negative,-0.94,competitive_threat,True
+SIG-10003-2024-03-26-40,10003,2024-03-26,meeting,Manager,Engineering Manager,Budget pressure discussion,negative,-0.89,budget,True
+SIG-10003-2024-03-27-56,10003,2024-03-27,slack,Director,Director ML,Technical issues impacting production,negative,-0.65,operational_issue,True
+SIG-10003-2024-04-04-34,10003,2024-04-04,meeting,C-suite,CEO,Escalation call with exec team,negative,-0.87,,True
+SIG-10003-2024-04-06-13,10003,2024-04-06,email,VP,VP IT,Budget under review,negative,-0.53,budget,True
+SIG-10003-2024-04-06-22,10003,2024-04-06,slack,VP,VP Data,Technical issues impacting production,negative,-0.71,operational_issue,True
+SIG-10003-2024-04-09-14,10003,2024-04-09,call,VP,VP Engineering,Budget pressure discussion,negative,-0.94,budget,True
+SIG-10003-2024-04-09-29,10003,2024-04-09,email,Director,Director Infrastructure,Board questioning the investment,negative,-0.54,executive_scrutiny,True
+SIG-10003-2024-04-10-39,10003,2024-04-10,email,VP,VP Data,Board questioning the investment,negative,-0.57,executive_scrutiny,True
+SIG-10003-2024-04-13-59,10003,2024-04-13,call,Director,Director ML,Status update call,neutral,0.28,,True
+SIG-10003-2024-04-14-8,10003,2024-04-14,call,VP,VP Engineering,Competitor comparison meeting,negative,-0.74,competitive_threat,True
+SIG-10003-2024-04-15-5,10003,2024-04-15,email,Director,Director IT,Technical issues impacting production,negative,-0.61,operational_issue,True
+SIG-10003-2024-04-15-27,10003,2024-04-15,email,VP,VP Operations,Considering alternatives,negative,-0.58,,True
+SIG-10003-2024-04-19-24,10003,2024-04-19,email,C-suite,CTO,Experiencing performance issues,negative,-0.68,operational_issue,True
+SIG-10003-2024-04-20-4,10003,2024-04-20,call,VP,VP Data,Escalation call with exec team,negative,-0.54,,True
+SIG-10003-2024-04-27-48,10003,2024-04-27,email,C-suite,CTO,Budget under review,negative,-0.89,budget,True
+SIG-10003-2024-04-28-49,10003,2024-04-28,slack,Director,Director IT,Technical issues impacting production,negative,-0.72,operational_issue,True
+SIG-10003-2024-05-01-12,10003,2024-05-01,meeting,Director,Director ML,Status update call,neutral,-0.22,,True
+SIG-10003-2024-05-02-15,10003,2024-05-02,email,Director,Director IT,Following up on our meeting,neutral,0.15,,True
+SIG-10003-2024-05-07-1,10003,2024-05-07,email,VP,VP Operations,Concerned about recent downtime,negative,-0.46,operational_issue,True
+SIG-10003-2024-05-08-36,10003,2024-05-08,email,Manager,IT Manager,AWS looking attractive,negative,-0.41,competitive_threat,True
+SIG-10003-2024-05-09-23,10003,2024-05-09,email,Manager,IT Manager,Technical issues impacting production,negative,-0.82,operational_issue,True
+SIG-10003-2024-05-10-35,10003,2024-05-10,email,Director,Director Infrastructure,AWS looking attractive,negative,-0.62,competitive_threat,True
+SIG-10003-2024-05-24-42,10003,2024-05-24,slack,VP,VP Data,Considering alternatives,negative,-0.57,,True
+SIG-10003-2024-05-26-10,10003,2024-05-26,email,VP,VP Data,Technical issues impacting production,negative,-0.93,operational_issue,True
+SIG-10003-2024-05-26-20,10003,2024-05-26,meeting,Director,Director ML,Competitor comparison meeting,negative,-0.59,competitive_threat,True
+SIG-10004-2024-01-09-5,10004,2024-01-09,email,Manager,Operations Manager,CTO wants to scale up,positive,0.69,,False
+SIG-10004-2024-01-11-14,10004,2024-01-11,meeting,Manager,Operations Manager,Status update call,neutral,-0.15,,False
+SIG-10004-2024-01-20-8,10004,2024-01-20,meeting,VP,VP Engineering,Planning session for Phase 2,positive,0.94,,False
+SIG-10004-2024-01-21-10,10004,2024-01-21,email,Director,Director Infrastructure,Expansion approved for Q{q},positive,0.66,expansion,False
+SIG-10004-2024-02-17-9,10004,2024-02-17,call,Director,Director ML,Positive ROI review meeting,positive,0.89,,False
+SIG-10004-2024-03-03-13,10004,2024-03-03,slack,C-suite,CFO,Team is very happy with performance,positive,0.86,satisfaction,False
+SIG-10004-2024-05-08-6,10004,2024-05-08,email,VP,VP Data,Expansion approved for Q{q},positive,0.55,expansion,False
+SIG-10004-2024-06-04-3,10004,2024-06-04,meeting,Director,Director ML,"Great QBR, discussing expansion",positive,0.63,expansion,False
+SIG-10004-2024-06-14-16,10004,2024-06-14,call,Manager,IT Manager,Training session,neutral,0.28,,False
+SIG-10004-2024-07-02-2,10004,2024-07-02,email,VP,VP Engineering,Want to add more GPUs,positive,0.6,,False
+SIG-10004-2024-08-20-7,10004,2024-08-20,meeting,Director,Director IT,Executive sponsor very engaged,positive,0.63,,False
+SIG-10004-2024-08-23-4,10004,2024-08-23,call,Director,Director IT,"Great QBR, discussing expansion",positive,0.91,expansion,False
+SIG-10004-2024-08-23-17,10004,2024-08-23,slack,Director,Director ML,Thinking about additional use cases,positive,0.54,,False
+SIG-10004-2024-09-05-1,10004,2024-09-05,email,Manager,IT Manager,Want to add more GPUs,positive,0.92,,False
+SIG-10004-2024-09-11-12,10004,2024-09-11,email,Director,Director Infrastructure,Budget approved for growth,positive,0.78,"expansion,budget",False
+SIG-10004-2024-10-23-19,10004,2024-10-23,meeting,VP,VP Engineering,Innovation workshop - new use cases,positive,0.89,,False
+SIG-10004-2024-10-27-18,10004,2024-10-27,email,C-suite,CTO,Really satisfied with support response,positive,0.64,satisfaction,False
+SIG-10004-2024-11-07-15,10004,2024-11-07,call,C-suite,CTO,Champion advocating for more investment,positive,0.56,,False
+SIG-10004-2024-12-22-11,10004,2024-12-22,call,Director,Director Infrastructure,Executive sponsor very engaged,positive,0.52,,False
+SIG-10004-2024-12-28-0,10004,2024-12-28,email,C-suite,CFO,Really satisfied with support response,positive,0.7,satisfaction,False
+SIG-10005-2024-01-27-13,10005,2024-01-27,email,VP,VP IT,Planning to expand capacity,positive,0.66,,False
+SIG-10005-2024-02-18-8,10005,2024-02-18,call,Manager,Operations Manager,Technical review meeting,neutral,0.18,,False
+SIG-10005-2024-02-23-19,10005,2024-02-23,meeting,Director,Director ML,Champion advocating for more investment,positive,0.77,,False
+SIG-10005-2024-03-16-5,10005,2024-03-16,slack,C-suite,CTO,Checking in on project status,neutral,-0.03,,False
+SIG-10005-2024-05-20-15,10005,2024-05-20,meeting,VP,VP Operations,Technical review meeting,neutral,0.1,,False
+SIG-10005-2024-06-20-0,10005,2024-06-20,email,Manager,Engineering Manager,Board questioning the investment,negative,-0.58,executive_scrutiny,False
+SIG-10005-2024-07-12-1,10005,2024-07-12,call,VP,VP Engineering,Technical review meeting,neutral,0.21,,False
+SIG-10005-2024-08-21-18,10005,2024-08-21,meeting,VP,VP Operations,Status update call,neutral,-0.12,,False
+SIG-10005-2024-09-08-9,10005,2024-09-08,email,C-suite,CIO,Team is very happy with performance,positive,0.66,satisfaction,False
+SIG-10005-2024-09-10-14,10005,2024-09-10,email,Director,Director IT,Considering alternatives,negative,-0.88,,False
+SIG-10005-2024-10-02-3,10005,2024-10-02,meeting,Manager,IT Manager,Status update call,neutral,0.16,,False
+SIG-10005-2024-10-05-4,10005,2024-10-05,email,Director,Director ML,Following up on our meeting,neutral,-0.28,,False
+SIG-10005-2024-10-10-6,10005,2024-10-10,slack,VP,VP Operations,Following up on our meeting,neutral,-0.03,,False
+SIG-10005-2024-10-12-10,10005,2024-10-12,slack,C-suite,CEO,Following up on our meeting,neutral,-0.11,,False
+SIG-10005-2024-11-03-12,10005,2024-11-03,meeting,VP,VP Operations,Technical review meeting,neutral,-0.04,,False
+SIG-10005-2024-11-25-17,10005,2024-11-25,meeting,Director,Director Infrastructure,Monthly sync,neutral,0.08,,False
+SIG-10005-2024-11-26-2,10005,2024-11-26,email,VP,VP IT,Training session completed,neutral,-0.07,,False
+SIG-10005-2024-12-15-7,10005,2024-12-15,call,Manager,IT Manager,"Champion unavailable, delegates disengaged",negative,-0.76,,False
+SIG-10005-2024-12-20-16,10005,2024-12-20,slack,C-suite,CEO,Expansion approved for Q{q},positive,0.52,expansion,False
+SIG-10005-2024-12-24-11,10005,2024-12-24,meeting,VP,VP Engineering,Technical review meeting,neutral,0.28,,False
+SIG-10006-2024-01-02-5,10006,2024-01-02,meeting,Manager,Operations Manager,Status update call,neutral,-0.13,,False
+SIG-10006-2024-01-05-10,10006,2024-01-05,call,Director,Director ML,Competitor comparison meeting,negative,-0.46,competitive_threat,False
+SIG-10006-2024-01-10-2,10006,2024-01-10,call,VP,VP Operations,Performance concerns raised,negative,-0.44,,False
+SIG-10006-2024-01-28-6,10006,2024-01-28,email,VP,VP IT,Monthly checkpoint,neutral,-0.08,,False
+SIG-10006-2024-02-14-13,10006,2024-02-14,call,Director,Director IT,Regular check-in call,neutral,0.06,,False
+SIG-10006-2024-03-11-11,10006,2024-03-11,email,VP,VP IT,AWS looking attractive,negative,-0.76,competitive_threat,False
+SIG-10006-2024-03-15-19,10006,2024-03-15,email,VP,VP IT,AWS looking attractive,negative,-0.68,competitive_threat,False
+SIG-10006-2024-03-17-15,10006,2024-03-17,meeting,Manager,Engineering Manager,"Champion unavailable, delegates disengaged",negative,-0.82,,False
+SIG-10006-2024-03-17-18,10006,2024-03-17,email,Director,Director IT,Monthly checkpoint,neutral,-0.11,,False
+SIG-10006-2024-05-21-14,10006,2024-05-21,call,Director,Director IT,Emergency meeting about outage,negative,-0.63,operational_issue,False
+SIG-10006-2024-06-18-9,10006,2024-06-18,call,VP,VP Data,Competitor comparison meeting,negative,-0.93,competitive_threat,False
+SIG-10006-2024-06-28-0,10006,2024-06-28,call,Manager,IT Manager,Escalation call with exec team,negative,-0.53,,False
+SIG-10006-2024-07-02-7,10006,2024-07-02,email,Director,Director ML,Not seeing expected ROI,negative,-0.67,,False
+SIG-10006-2024-07-17-17,10006,2024-07-17,slack,Manager,Operations Manager,Checking in on project status,neutral,-0.26,,False
+SIG-10006-2024-08-01-4,10006,2024-08-01,email,Director,Director ML,Frustrated with support response time,negative,-0.63,,False
+SIG-10006-2024-09-09-8,10006,2024-09-09,meeting,Director,Director ML,Regular check-in call,neutral,-0.06,,False
+SIG-10006-2024-09-18-1,10006,2024-09-18,email,C-suite,CIO,Frustrated with support response time,negative,-0.87,,False
+SIG-10006-2024-09-18-12,10006,2024-09-18,meeting,Director,Director ML,Performance concerns raised,negative,-0.77,,False
+SIG-10006-2024-10-23-16,10006,2024-10-23,email,VP,VP Operations,Not seeing expected ROI,negative,-0.57,,False
+SIG-10006-2024-12-11-3,10006,2024-12-11,email,Manager,IT Manager,Technical issues impacting production,negative,-0.47,operational_issue,False
+SIG-10007-2024-01-02-34,10007,2024-01-02,slack,Manager,IT Manager,Expansion approved for Q{q},positive,0.72,expansion,True
+SIG-10007-2024-01-05-48,10007,2024-01-05,email,Director,Director IT,Expansion approved for Q{q},positive,0.62,expansion,True
+SIG-10007-2024-01-10-6,10007,2024-01-10,email,VP,VP Operations,CTO wants to scale up,positive,0.69,,True
+SIG-10007-2024-01-15-54,10007,2024-01-15,slack,Manager,Operations Manager,Thinking about additional use cases,positive,0.76,,True
+SIG-10007-2024-01-26-28,10007,2024-01-26,email,Manager,Operations Manager,Planning to expand capacity,positive,0.53,,True
+SIG-10007-2024-02-01-52,10007,2024-02-01,meeting,VP,VP Operations,Budget pressure discussion,negative,-0.66,budget,True
+SIG-10007-2024-02-03-40,10007,2024-02-03,meeting,Director,Director Infrastructure,Escalation call with exec team,negative,-0.64,,True
+SIG-10007-2024-02-04-23,10007,2024-02-04,email,Director,Director Infrastructure,Technical issues impacting production,negative,-0.75,operational_issue,True
+SIG-10007-2024-02-12-43,10007,2024-02-12,call,VP,VP IT,Competitor comparison meeting,negative,-0.83,competitive_threat,True
+SIG-10007-2024-02-15-18,10007,2024-02-15,slack,C-suite,CFO,Not seeing expected ROI,negative,-0.42,,True
+SIG-10007-2024-02-16-32,10007,2024-02-16,meeting,VP,VP Engineering,Budget pressure discussion,negative,-0.67,budget,True
+SIG-10007-2024-02-17-58,10007,2024-02-17,meeting,Director,Director ML,Performance concerns raised,negative,-0.76,,True
+SIG-10007-2024-03-05-30,10007,2024-03-05,call,C-suite,CEO,Escalation call with exec team,negative,-0.94,,True
+SIG-10007-2024-03-07-16,10007,2024-03-07,meeting,Manager,Operations Manager,Competitor comparison meeting,negative,-0.45,competitive_threat,True
+SIG-10007-2024-03-09-17,10007,2024-03-09,slack,Manager,IT Manager,Checking in on project status,neutral,0.22,,True
+SIG-10007-2024-03-17-0,10007,2024-03-17,email,C-suite,CIO,Following up on our meeting,neutral,0.02,,True
+SIG-10007-2024-03-28-46,10007,2024-03-28,meeting,C-suite,CEO,Emergency meeting about outage,negative,-0.54,operational_issue,True
+SIG-10007-2024-04-04-27,10007,2024-04-04,call,C-suite,CFO,Monthly sync,neutral,0.28,,True
+SIG-10007-2024-04-13-47,10007,2024-04-13,email,VP,VP IT,AWS looking attractive,negative,-0.62,competitive_threat,True
+SIG-10007-2024-04-17-53,10007,2024-04-17,meeting,VP,VP Data,"Champion unavailable, delegates disengaged",negative,-0.93,,True
+SIG-10007-2024-04-19-31,10007,2024-04-19,email,C-suite,CIO,Dell reached out with competitive offer,negative,-0.89,competitive_threat,True
+SIG-10007-2024-04-20-13,10007,2024-04-20,email,VP,VP IT,Checking in on project status,neutral,0.15,,True
+SIG-10007-2024-04-21-4,10007,2024-04-21,email,VP,VP Engineering,Monthly checkpoint,neutral,0.29,,True
+SIG-10007-2024-04-28-26,10007,2024-04-28,slack,VP,VP IT,Concerned about recent downtime,negative,-0.73,operational_issue,True
+SIG-10007-2024-05-11-2,10007,2024-05-11,email,C-suite,CTO,Checking in on project status,neutral,0.22,,True
+SIG-10007-2024-05-20-42,10007,2024-05-20,email,Director,Director ML,Technical issues impacting production,negative,-0.83,operational_issue,True
+SIG-10007-2024-05-22-50,10007,2024-05-22,meeting,Director,Director ML,Technical review meeting,neutral,-0.06,,True
+SIG-10007-2024-06-14-39,10007,2024-06-14,email,Manager,Operations Manager,Technical issues impacting production,negative,-0.91,operational_issue,True
+SIG-10007-2024-07-04-37,10007,2024-07-04,email,Director,Director IT,Checking in on project status,neutral,0.22,,True
+SIG-10007-2024-07-11-3,10007,2024-07-11,call,Director,Director IT,"Great QBR, discussing expansion",positive,0.78,expansion,True
+SIG-10007-2024-07-15-38,10007,2024-07-15,meeting,Manager,IT Manager,Status update call,neutral,0.14,,True
+SIG-10007-2024-07-17-57,10007,2024-07-17,call,Director,Director ML,Champion advocating for more investment,positive,0.85,,True
+SIG-10007-2024-07-19-11,10007,2024-07-19,email,Director,Director ML,Thinking about additional use cases,positive,0.62,,True
+SIG-10007-2024-07-23-10,10007,2024-07-23,call,VP,VP Data,Positive ROI review meeting,positive,0.55,,True
+SIG-10007-2024-07-28-44,10007,2024-07-28,call,Director,Director IT,Innovation workshop - new use cases,positive,0.75,,True
+SIG-10007-2024-08-01-1,10007,2024-08-01,meeting,Director,Director ML,Regular check-in call,neutral,-0.02,,True
+SIG-10007-2024-08-01-21,10007,2024-08-01,slack,VP,VP Operations,Expansion approved for Q{q},positive,0.79,expansion,True
+SIG-10007-2024-08-02-15,10007,2024-08-02,call,C-suite,CTO,Champion advocating for more investment,positive,0.84,,True
+SIG-10007-2024-08-03-35,10007,2024-08-03,email,C-suite,CFO,Training session completed,neutral,0.07,,True
+SIG-10007-2024-08-10-9,10007,2024-08-10,email,VP,VP IT,CFO approved expansion budget,positive,0.63,"expansion,budget",True
+SIG-10007-2024-08-19-8,10007,2024-08-19,meeting,VP,VP IT,Innovation workshop - new use cases,positive,0.5,,True
+SIG-10007-2024-08-20-25,10007,2024-08-20,slack,C-suite,CTO,Planning to expand capacity,positive,0.7,,True
+SIG-10007-2024-08-23-22,10007,2024-08-23,meeting,C-suite,CEO,Champion advocating for more investment,positive,0.95,,True
+SIG-10007-2024-09-07-29,10007,2024-09-07,call,VP,VP Operations,Planning session for Phase 2,positive,0.5,,True
+SIG-10007-2024-09-12-19,10007,2024-09-12,email,VP,VP Engineering,Budget approved for growth,positive,0.67,"expansion,budget",True
+SIG-10007-2024-10-02-33,10007,2024-10-02,slack,Director,Director Infrastructure,Monthly checkpoint,neutral,0.09,,True
+SIG-10007-2024-10-02-51,10007,2024-10-02,email,VP,VP Operations,Really satisfied with support response,positive,0.63,satisfaction,True
+SIG-10007-2024-10-15-56,10007,2024-10-15,slack,C-suite,CEO,Quarterly review scheduled,neutral,-0.04,,True
+SIG-10007-2024-10-18-36,10007,2024-10-18,email,Director,Director Infrastructure,Monthly checkpoint,neutral,0.0,,True
+SIG-10007-2024-10-18-41,10007,2024-10-18,meeting,VP,VP Data,Innovation workshop - new use cases,positive,0.52,,True
+SIG-10007-2024-10-22-45,10007,2024-10-22,email,VP,VP IT,Training session completed,neutral,-0.09,,True
+SIG-10007-2024-10-28-12,10007,2024-10-28,call,C-suite,CIO,Champion advocating for more investment,positive,0.85,,True
+SIG-10007-2024-11-14-49,10007,2024-11-14,meeting,VP,VP Engineering,Champion advocating for more investment,positive,0.69,,True
+SIG-10007-2024-11-22-14,10007,2024-11-22,meeting,Manager,Operations Manager,Regular check-in call,neutral,-0.11,,True
+SIG-10007-2024-11-23-5,10007,2024-11-23,meeting,Director,Director ML,Regular check-in call,neutral,-0.11,,True
+SIG-10007-2024-11-26-7,10007,2024-11-26,email,Director,Director Infrastructure,CFO approved expansion budget,positive,0.81,"expansion,budget",True
+SIG-10007-2024-11-27-59,10007,2024-11-27,email,VP,VP Operations,CFO approved expansion budget,positive,0.57,"expansion,budget",True
+SIG-10007-2024-12-21-55,10007,2024-12-21,email,C-suite,CTO,Board impressed with results,positive,0.86,"executive_scrutiny,satisfaction",True
+SIG-10007-2024-12-22-20,10007,2024-12-22,email,Director,Director Infrastructure,Expansion approved for Q{q},positive,0.8,expansion,True
+SIG-10007-2024-12-23-24,10007,2024-12-23,meeting,Director,Director ML,Status update call,neutral,0.09,,True
+SIG-10008-2024-01-24-12,10008,2024-01-24,email,Director,Director ML,Board impressed with results,positive,0.77,"executive_scrutiny,satisfaction",False
+SIG-10008-2024-01-27-9,10008,2024-01-27,meeting,Manager,IT Manager,"Great QBR, discussing expansion",positive,0.5,expansion,False
+SIG-10008-2024-02-15-16,10008,2024-02-15,meeting,Director,Director IT,Champion advocating for more investment,positive,0.81,,False
+SIG-10008-2024-03-01-6,10008,2024-03-01,slack,VP,VP Data,Technical issues impacting production,negative,-0.59,operational_issue,False
+SIG-10008-2024-04-09-0,10008,2024-04-09,email,Manager,IT Manager,Training session completed,neutral,0.12,,False
+SIG-10008-2024-05-11-7,10008,2024-05-11,email,Director,Director IT,CFO approved expansion budget,positive,0.6,"expansion,budget",False
+SIG-10008-2024-05-19-15,10008,2024-05-19,email,Director,Director IT,Quarterly review scheduled,neutral,-0.26,,False
+SIG-10008-2024-05-23-3,10008,2024-05-23,slack,Director,Director IT,Budget approved for growth,positive,0.6,"expansion,budget",False
+SIG-10008-2024-08-09-11,10008,2024-08-09,email,VP,VP Data,Really satisfied with support response,positive,0.82,satisfaction,False
+SIG-10008-2024-08-11-14,10008,2024-08-11,email,VP,VP Data,Considering alternatives,negative,-0.43,,False
+SIG-10008-2024-09-08-5,10008,2024-09-08,email,VP,VP Data,Following up on our meeting,neutral,0.11,,False
+SIG-10008-2024-09-09-4,10008,2024-09-09,meeting,C-suite,CFO,Escalation call with exec team,negative,-0.92,,False
+SIG-10008-2024-10-12-18,10008,2024-10-12,meeting,Director,Director IT,Technical review meeting,neutral,0.16,,False
+SIG-10008-2024-10-20-10,10008,2024-10-20,slack,VP,VP Data,Board impressed with results,positive,0.88,"executive_scrutiny,satisfaction",False
+SIG-10008-2024-10-22-2,10008,2024-10-22,call,VP,VP IT,Technical review meeting,neutral,-0.13,,False
+SIG-10008-2024-11-10-17,10008,2024-11-10,email,Manager,IT Manager,Board impressed with results,positive,0.7,"executive_scrutiny,satisfaction",False
+SIG-10008-2024-11-13-13,10008,2024-11-13,meeting,C-suite,CEO,Escalation call with exec team,negative,-0.41,,False
+SIG-10008-2024-11-25-19,10008,2024-11-25,call,Director,Director IT,Training session,neutral,-0.25,,False
+SIG-10008-2024-12-23-1,10008,2024-12-23,meeting,Director,Director IT,Training session,neutral,-0.13,,False
+SIG-10008-2024-12-24-8,10008,2024-12-24,email,Manager,IT Manager,Experiencing performance issues,negative,-0.44,operational_issue,False
+SIG-10009-2024-01-08-10,10009,2024-01-08,email,C-suite,CEO,Planning to expand capacity,positive,0.83,,False
+SIG-10009-2024-01-12-14,10009,2024-01-12,meeting,Director,Director Infrastructure,"Champion unavailable, delegates disengaged",negative,-0.72,,False
+SIG-10009-2024-03-09-9,10009,2024-03-09,call,Director,Director ML,Innovation workshop - new use cases,positive,0.69,,False
+SIG-10009-2024-03-10-15,10009,2024-03-10,call,Director,Director ML,Champion advocating for more investment,positive,0.89,,False
+SIG-10009-2024-03-22-13,10009,2024-03-22,meeting,VP,VP Operations,Status update call,neutral,0.03,,False
+SIG-10009-2024-03-26-16,10009,2024-03-26,email,VP,VP Data,Touching base on progress,neutral,0.02,,False
+SIG-10009-2024-04-26-19,10009,2024-04-26,call,Director,Director Infrastructure,Technical review meeting,neutral,0.22,,False
+SIG-10009-2024-05-08-12,10009,2024-05-08,call,VP,VP IT,Escalation call with exec team,negative,-0.78,,False
+SIG-10009-2024-05-24-3,10009,2024-05-24,email,C-suite,CFO,CFO approved expansion budget,positive,0.53,"expansion,budget",False
+SIG-10009-2024-06-28-1,10009,2024-06-28,email,VP,VP Data,Following up on our meeting,neutral,0.24,,False
+SIG-10009-2024-07-06-5,10009,2024-07-06,call,Manager,Operations Manager,Status update call,neutral,-0.08,,False
+SIG-10009-2024-07-08-17,10009,2024-07-08,email,C-suite,CIO,Want to add more GPUs,positive,0.54,,False
+SIG-10009-2024-07-12-4,10009,2024-07-12,meeting,C-suite,CEO,Status update call,neutral,-0.28,,False
+SIG-10009-2024-07-15-6,10009,2024-07-15,slack,VP,VP Operations,Budget under review,negative,-0.88,budget,False
+SIG-10009-2024-07-15-11,10009,2024-07-15,email,Manager,Engineering Manager,Board impressed with results,positive,0.73,"executive_scrutiny,satisfaction",False
+SIG-10009-2024-08-22-8,10009,2024-08-22,meeting,VP,VP Operations,Technical review meeting,neutral,-0.02,,False
+SIG-10009-2024-08-26-2,10009,2024-08-26,email,VP,VP Engineering,CTO wants to scale up,positive,0.71,,False
+SIG-10009-2024-09-13-7,10009,2024-09-13,call,VP,VP Engineering,Regular check-in call,neutral,0.29,,False
+SIG-10009-2024-10-04-0,10009,2024-10-04,meeting,Director,Director IT,Planning session for Phase 2,positive,0.57,,False
+SIG-10009-2024-12-27-18,10009,2024-12-27,email,Director,Director IT,Team is very happy with performance,positive,0.89,satisfaction,False
+SIG-10010-2024-01-03-18,10010,2024-01-03,email,Director,Director IT,Following up on our meeting,neutral,-0.19,,False
+SIG-10010-2024-01-17-8,10010,2024-01-17,call,Manager,Operations Manager,"Great QBR, discussing expansion",positive,0.84,expansion,False
+SIG-10010-2024-02-17-17,10010,2024-02-17,email,Manager,Operations Manager,AWS looking attractive,negative,-0.69,competitive_threat,False
+SIG-10010-2024-04-20-13,10010,2024-04-20,call,VP,VP Data,Regular check-in call,neutral,-0.08,,False
+SIG-10010-2024-05-13-2,10010,2024-05-13,meeting,VP,VP IT,Monthly sync,neutral,0.23,,False
+SIG-10010-2024-06-01-19,10010,2024-06-01,meeting,Director,Director IT,Budget pressure discussion,negative,-0.44,budget,False
+SIG-10010-2024-06-02-10,10010,2024-06-02,meeting,Director,Director Infrastructure,Status update call,neutral,-0.29,,False
+SIG-10010-2024-06-10-0,10010,2024-06-10,email,Manager,Operations Manager,Board questioning the investment,negative,-0.54,executive_scrutiny,False
+SIG-10010-2024-07-02-4,10010,2024-07-02,email,C-suite,CTO,Touching base on progress,neutral,0.26,,False
+SIG-10010-2024-07-05-9,10010,2024-07-05,email,Director,Director ML,Frustrated with support response time,negative,-0.67,,False
+SIG-10010-2024-07-15-14,10010,2024-07-15,slack,VP,VP Engineering,Checking in on project status,neutral,0.3,,False
+SIG-10010-2024-08-04-3,10010,2024-08-04,call,Director,Director Infrastructure,Escalation call with exec team,negative,-0.75,,False
+SIG-10010-2024-08-08-1,10010,2024-08-08,call,VP,VP Operations,Monthly sync,neutral,-0.11,,False
+SIG-10010-2024-08-18-6,10010,2024-08-18,meeting,VP,VP Data,Status update call,neutral,-0.02,,False
+SIG-10010-2024-09-18-11,10010,2024-09-18,email,Director,Director IT,Training session completed,neutral,-0.29,,False
+SIG-10010-2024-10-24-5,10010,2024-10-24,email,VP,VP Data,Touching base on progress,neutral,0.2,,False
+SIG-10010-2024-11-25-15,10010,2024-11-25,meeting,VP,VP Data,"Great QBR, discussing expansion",positive,0.79,expansion,False
+SIG-10010-2024-12-06-16,10010,2024-12-06,call,Director,Director Infrastructure,Planning session for Phase 2,positive,0.94,,False
+SIG-10010-2024-12-22-12,10010,2024-12-22,slack,VP,VP Engineering,Touching base on progress,neutral,-0.21,,False
+SIG-10010-2024-12-26-7,10010,2024-12-26,email,Director,Director ML,CTO wants to scale up,positive,0.95,,False

@@ -1,0 +1,11 @@
+account_id,account_name,archetype,archetype_name,starting_health,ending_health,health_change,trajectory_type,volatility,risk_level,total_events,risk_indicators
+1009000,Account 1009000,volatile_uncertain,Volatile/Uncertain,90.04,92.48,2.4399999999999977,volatile,5.83,high,96,
+{ACCOUNT_ID_START+1},Account {ACCOUNT_ID_START+1},volatile_uncertain,Volatile/Uncertain,90.07,92.34,2.2700000000000102,volatile,5.63,high,103,
+{ACCOUNT_ID_START+2},Account {ACCOUNT_ID_START+2},volatile_uncertain,Volatile/Uncertain,90.11,94.14,4.030000000000001,volatile,5.81,high,97,
+10004,Account 10004,volatile_uncertain,Volatile/Uncertain,90.05,96.56,6.510000000000005,volatile,5.73,high,100,
+10005,Account 10005,volatile_uncertain,Volatile/Uncertain,89.95,93.79,3.8400000000000034,volatile,5.71,high,100,
+10006,Account 10006,volatile_uncertain,Volatile/Uncertain,90.13,90.83,0.7000000000000028,volatile,5.96,high,92,
+10007,Account 10007,volatile_uncertain,Volatile/Uncertain,90.07,92.33,2.260000000000005,volatile,5.84,high,96,
+10008,Account 10008,volatile_uncertain,Volatile/Uncertain,90.07,92.01,1.940000000000012,volatile,5.82,high,97,
+10009,Account 10009,volatile_uncertain,Volatile/Uncertain,89.96,95.5,5.540000000000006,volatile,5.87,high,95,unstable_trajectory
+10010,Account 10010,volatile_uncertain,Volatile/Uncertain,90.03,94.23,4.200000000000003,volatile,5.51,high,108,

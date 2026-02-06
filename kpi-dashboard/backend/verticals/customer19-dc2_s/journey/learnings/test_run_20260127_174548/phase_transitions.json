@@ -1,0 +1,16 @@
+{
+  "healthy\u2192growth": {
+    "from_phase": "healthy",
+    "to_phase": "growth",
+    "probability": 0.0380952380952381,
+    "avg_weeks_between": 1.0,
+    "sample_size": 8
+  },
+  "at_risk\u2192crisis": {
+    "from_phase": "at_risk",
+    "to_phase": "crisis",
+    "probability": 0.1111111111111111,
+    "avg_weeks_between": 1.0,
+    "sample_size": 2
+  }
+}

@@ -7,7 +7,7 @@ Flask Blueprint for Signal Analyst Agent endpoints
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id
 from extensions import db
-from models import Account, KPI, AccountNote, Customer
+from models import Account, KPI, AccountNote, Customer, DC2SKPI, QualitativeSignal
 from enhanced_rag_qdrant import get_qdrant_rag_system
 from openai_key_utils import get_openai_api_key
 
@@ -21,6 +21,7 @@ from .qdrant_integration import (
     convert_qdrant_results_to_signal_data
 )
 from .signal_converter import convert_database_models_to_signals
+from .signal_deduplicator import deduplicate_signals
 
 import logging
 
@@ -80,9 +81,31 @@ def analyze_account():
             return jsonify({'error': 'Account not found'}), 404
         
         # Get vertical type from customer or default to 'saas'
-        # TODO: Store vertical in customer model or config
-        vertical = 'saas'  # Default, should be retrieved from customer config
+        # Check customer config for vertical
+        vertical = 'saas'  # Default
+        try:
+            from models import CustomerConfig
+            config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+            if config and config.vertical:
+                vertical = config.vertical
+        except Exception as e:
+            logger.warning(f"Could not load customer config: {e}")
+        
         agent_vertical_type = map_vertical_to_agent_type(vertical)
+        
+        # Load customer pillar weights for DC2_S customers
+        pillar_weights = None
+        if vertical == 'dc2_s':
+            try:
+                from utils.config_loader import ConfigLoader
+                config_loader = ConfigLoader(customer_id)
+                pillar_weights = config_loader.get_pillar_weights()
+                logger.info(f"Using customer's pillar weights: {pillar_weights}")
+            except Exception as e:
+                logger.warning(f"Could not load pillar weights, using defaults: {e}")
+                pillar_weights = {
+                    'AI': 0.25, 'CH': 0.20, 'DV': 0.15, 'EX': 0.20, 'OS': 0.20
+                }
         
         # Validate and get analysis parameters
         valid_analysis_types = ['comprehensive', 'churn_risk', 'expansion_opportunity', 'health_analysis']
@@ -103,6 +126,87 @@ def analyze_account():
         
         use_qdrant = data.get('use_qdrant', True)
         use_database = data.get('use_database', True)
+        
+        # Get or calculate health score
+        overall_health_score = None
+        
+        # DC2_S: use KPI-based health from dc2s_kpis (same as /api/dc2s/health-score/:id)
+        if vertical == 'dc2_s':
+            try:
+                from models import DC2SKPI
+                from verticals.dc2_s.api_routes import calculate_kpi_health
+                kpis = DC2SKPI.query.filter_by(account_id=account_id_int).order_by(DC2SKPI.measured_at.desc()).all()
+                latest_kpis = {}
+                for kpi in kpis:
+                    if kpi.kpi_code not in latest_kpis:
+                        latest_kpis[kpi.kpi_code] = kpi
+                kpi_values = {kpi_code: float(kpi.value) for kpi_code, kpi in latest_kpis.items()}
+                if kpi_values:
+                    overall_health_score, _ = calculate_kpi_health(kpi_values, customer_id=customer_id)
+                    overall_health_score = round(float(overall_health_score), 1)
+                    logger.info(f"DC2_S health score for account {account_id}: {overall_health_score}/100")
+                else:
+                    logger.info(f"DC2_S: No KPI data for account {account_id}, health score will be omitted")
+            except Exception as e:
+                logger.warning(f"DC2_S health score calculation failed: {e}", exc_info=True)
+        
+        # SaaS / fallback: HealthTrend and HealthScoreStorageService
+        if overall_health_score is None:
+            try:
+                from models import HealthTrend
+                from health_score_storage import HealthScoreStorageService
+                from datetime import datetime, timedelta
+                
+                health_trend = HealthTrend.query.filter_by(
+                    account_id=account_id_int,
+                    customer_id=customer_id
+                ).order_by(HealthTrend.created_at.desc()).first()
+                
+                should_recalculate = False
+                if health_trend and health_trend.overall_health_score:
+                    health_score_age = (datetime.utcnow() - health_trend.created_at).total_seconds() / (24 * 3600)
+                    if health_score_age > 7:
+                        should_recalculate = True
+                    else:
+                        overall_health_score = float(health_trend.overall_health_score)
+                        logger.info(f"Using existing health score: {overall_health_score:.1f} (age: {health_score_age:.1f} days)")
+                else:
+                    should_recalculate = True
+                
+                if should_recalculate and overall_health_score is None:
+                    storage_service = HealthScoreStorageService()
+                    health_scores = storage_service._calculate_account_health_scores(account, customer_id)
+                    overall_health_score = health_scores.get('overall', 0)
+                    now = datetime.utcnow()
+                    month, year = now.month, now.year
+                    existing_trend = HealthTrend.query.filter_by(
+                        account_id=account_id_int, month=month, year=year
+                    ).first()
+                    if existing_trend:
+                        existing_trend.overall_health_score = overall_health_score
+                        existing_trend.updated_at = now
+                        db.session.commit()
+                    else:
+                        new_trend = HealthTrend(
+                            account_id=account_id_int, customer_id=customer_id, month=month, year=year,
+                            overall_health_score=overall_health_score,
+                            product_usage_score=health_scores.get('product_usage', 0),
+                            support_score=health_scores.get('support', 0),
+                            customer_sentiment_score=health_scores.get('customer_sentiment', 0),
+                            business_outcomes_score=health_scores.get('business_outcomes', 0),
+                            relationship_strength_score=health_scores.get('relationship_strength', 0),
+                            total_kpis=health_scores.get('total_kpis', 0),
+                            valid_kpis=health_scores.get('valid_kpis', 0)
+                        )
+                        db.session.add(new_trend)
+                        db.session.commit()
+                    logger.info(f"✅ Health score for account {account.account_name}: {overall_health_score:.1f}/100")
+            except Exception as e:
+                logger.warning(f"Error getting/calculating health score: {e}", exc_info=True)
+        
+        # Ensure numeric for agent (0-100); None becomes 0 only for display fallback
+        if overall_health_score is not None:
+            overall_health_score = max(0, min(100, float(overall_health_score)))
         
         # Collect signals
         quantitative_signals = []
@@ -139,11 +243,34 @@ def analyze_account():
         # Option 2: Get signals from database
         if use_database:
             try:
-                # Get KPIs for this account (account_id_int already validated above)
-                kpis = KPI.query.filter_by(
-                    account_id=account_id_int,
-                    customer_id=customer_id
-                ).limit(50).all()
+                # Determine if this is a DC customer by checking account vertical or DC2S KPIs
+                is_dc_customer = False
+                if account.vertical and account.vertical.lower() in ['dc2s', 'dc', 'datacenter']:
+                    is_dc_customer = True
+                else:
+                    # Check if account has DC2S KPIs
+                    dc_kpi_check = DC2SKPI.query.filter_by(account_id=account_id_int).first()
+                    if dc_kpi_check:
+                        is_dc_customer = True
+                
+                kpis = None
+                dc_kpis = None
+                
+                if is_dc_customer:
+                    # Get DC2S KPIs for Data Center accounts
+                    logger.info(f"Fetching DC2S KPIs for account {account_id_int}")
+                    dc_kpis = DC2SKPI.query.filter_by(
+                        account_id=account_id_int
+                    ).order_by(DC2SKPI.measured_at.desc()).limit(50).all()
+                    logger.info(f"Found {len(dc_kpis)} DC2S KPIs for account {account_id_int}")
+                else:
+                    # Get SaaS KPIs for regular accounts
+                    logger.info(f"Fetching SaaS KPIs for account {account_id_int}")
+                    kpis = KPI.query.filter_by(
+                        account_id=account_id_int,
+                        customer_id=customer_id
+                    ).limit(50).all()
+                    logger.info(f"Found {len(kpis)} SaaS KPIs for account {account_id_int}")
                 
                 # Get account notes (account_id_int already validated above)
                 notes = AccountNote.query.filter_by(
@@ -151,19 +278,52 @@ def analyze_account():
                     customer_id=customer_id
                 ).order_by(AccountNote.created_at.desc()).limit(20).all()
                 
-                # Convert to signals
+                # Get qualitative signals from QualitativeSignal table (from signals.csv uploads)
+                from .qualitative_signal_converter import convert_qualitative_signals_to_signal_data
+                qual_signals_from_db = QualitativeSignal.query.filter_by(
+                    account_id=account_id_int
+                ).order_by(QualitativeSignal.signal_date.desc()).limit(30).all()
+                
+                logger.info(f"Found {len(qual_signals_from_db)} qualitative signals from QualitativeSignal table for account {account_id_int}")
+                
+                # Convert qualitative signals to SignalData
+                qual_signal_data = convert_qualitative_signals_to_signal_data(qual_signals_from_db)
+                
+                # Convert to signals (include health score for temporal grouping)
                 db_signals = convert_database_models_to_signals(
                     account=account,
                     kpis=kpis,
-                    notes=notes
+                    dc_kpis=dc_kpis,
+                    notes=notes,
+                    account_health_score=overall_health_score
                 )
+                
+                # Add qualitative signals from QualitativeSignal table
+                db_signals['qualitative_signals'].extend(qual_signal_data)
+                logger.info(f"Added {len(qual_signal_data)} qualitative signals from QualitativeSignal table")
                 
                 quantitative_signals.extend(db_signals['quantitative_signals'])
                 qualitative_signals.extend(db_signals['qualitative_signals'])
                 historical_patterns.extend(db_signals['historical_patterns'])
                 
+                logger.info(f"Converted {len(db_signals['quantitative_signals'])} quantitative signals from database")
+                logger.info(f"Converted {len(db_signals['qualitative_signals'])} qualitative signals from database")
+            
             except Exception as e:
-                logger.warning(f"Error retrieving signals from database: {e}")
+                logger.warning(f"Error retrieving signals from database: {e}", exc_info=True)
+        
+        # ✅ DEDUPLICATE signals before sending to LLM
+        # Prefer database source (has exact data, no embedding loss)
+        quantitative_signals = deduplicate_signals(quantitative_signals, prefer_source='database')
+        qualitative_signals = deduplicate_signals(qualitative_signals, prefer_source='database')
+        historical_patterns = deduplicate_signals(historical_patterns, prefer_source='database')
+        
+        logger.info(
+            f"Final signal counts after deduplication: "
+            f"{len(quantitative_signals)} quantitative, "
+            f"{len(qualitative_signals)} qualitative, "
+            f"{len(historical_patterns)} historical patterns"
+        )
         
         # Get OpenAI API key
         openai_api_key = get_openai_api_key(customer_id)
@@ -172,13 +332,14 @@ def analyze_account():
                 'error': 'OpenAI API key not configured. Please configure it in Settings > OpenAI Key Settings.'
             }), 400
         
-        # Build agent input
+        # Build agent input (include health score)
         agent_input = SignalAnalystInput(
             account_id=account_id,
             customer_id=customer_id,
             vertical_type=agent_vertical_type,
             account_name=account.account_name,
             account_arr=float(account.revenue) if account.revenue else None,
+            health_score=overall_health_score,
             quantitative_signals=quantitative_signals,
             qualitative_signals=qualitative_signals,
             historical_patterns=historical_patterns,
@@ -199,7 +360,37 @@ def analyze_account():
         # Convert to JSON-serializable format
         result_dict = analysis_result.model_dump()
         
-        return jsonify(result_dict)
+        # Override with computed health score so report is never 0 when we have DC2_S/KPI data
+        if overall_health_score is not None:
+            agent_health = result_dict.get('health_score')
+            result_dict['health_score'] = overall_health_score
+            # If agent returned bogus values (0 health or 85% churn / 10% expansion), derive churn/expansion from real score
+            bogus = (agent_health == 0 or agent_health is None) or (
+                result_dict.get('churn_probability') == 85 and result_dict.get('expansion_probability') == 10
+            )
+            if bogus:
+                hs = float(overall_health_score)
+                result_dict['churn_probability'] = 80 if hs < 50 else (40 if hs < 70 else 15)
+                result_dict['expansion_probability'] = 5 if hs < 50 else (30 if hs < 80 else 75)
+        
+        # Add API-level metadata
+        import time
+        result_dict['_metadata'] = {
+            'endpoint': '/api/signal-analyst/analyze',
+            'model': 'gpt-4o',
+            'cost_tracked': True,
+            'timestamp': time.time()
+        }
+        
+        logger.info(
+            "Returning analysis result to client",
+            extra={
+                'account_id': account_id,
+                'response_size_bytes': len(str(result_dict))
+            }
+        )
+        
+        return jsonify(result_dict), 200
         
     except AnalysisError as e:
         logger.error(f"Analysis error: {e}", exc_info=True)

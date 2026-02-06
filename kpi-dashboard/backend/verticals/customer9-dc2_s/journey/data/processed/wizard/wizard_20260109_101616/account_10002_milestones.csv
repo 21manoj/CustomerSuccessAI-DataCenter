@@ -1,0 +1,2 @@
+week_number,milestone_date,milestone_type,milestone_outcome,leading_indicators,arr_impact,confidence_at_time,primary_drivers,signal_breakdown
+7,2024-02-12,expansion_capacity_alert,capacity_constrained,"['Capacity utilization: 90.95%', 'GPU utilization: 70.82%', 'Expansion readiness: 78.65', 'Health: 80.86']",0,0.85,"[{'driver': 'Capacity constraints', 'weight': 0.45}, {'driver': 'High utilization', 'weight': 0.35}, {'driver': 'Growth trajectory', 'weight': 0.2}]","{'S1_capacity': 90.95, 'P2_gpu': 70.82, 'S7_expansion_readiness': 78.65}"

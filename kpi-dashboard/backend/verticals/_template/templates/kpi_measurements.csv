@@ -1,0 +1,4 @@
+account_id,kpi_code,measurement_date,value,unit,source,notes
+10001,AI-KPI1,2025-12-23,85.5,%,System Monitoring,GPU Utilization
+10001,CH-KPI1,2025-12-23,82.0,score,Health Calculator,Overall Health Score
+10001,DV-KPI1,2025-12-23,12,days,Deployment System,Time to First Workload

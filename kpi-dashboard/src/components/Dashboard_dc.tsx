@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
-import { Server, Activity, AlertTriangle, TrendingUp, Users, Zap, BarChart3, Upload, Target, MessageSquare, Settings, FileText, LogOut, ChevronDown, ChevronRight, TrendingDown } from 'lucide-react';
+import { Activity, AlertTriangle, Users, Zap, BarChart3, Upload, Target, MessageSquare, Settings, FileText, LogOut, ChevronDown, ChevronRight, TrendingDown, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import KPICard_dc from './KPICard_dc';
 import HealthScore_dc from './HealthScore_dc';
@@ -14,6 +14,9 @@ import TenantList_dc from './TenantList_dc';
 import AlertBanner_dc from './AlertBanner_dc';
 import KPIChart_dc from './KPIChart_dc';
 import PlaybookPanel_dc from './PlaybookPanel_dc';
+import OpenAIKeySettings from './OpenAIKeySettings';
+import RAGAnalysis from './RAGAnalysis';
+import SignalAnalyst from './SignalAnalyst';
 
 interface PerformanceSummary {
   summary: {
@@ -48,7 +51,24 @@ interface Tenant {
   tenant_id: number;
   tenant_name: string;
   health_score: number;
-  status: 'healthy' | 'at_risk' | 'critical';
+  status: 'healthy' | 'at_risk' | 'critical' | 'risk';
+  industry?: string;
+  region?: string;
+  account_status?: string;
+  metadata?: {
+    account_tier?: string;
+    assigned_csm?: string;
+    csm_manager?: string;
+    products_used?: string;
+    engagement?: {
+      lifecycle_stage?: string;
+    };
+    champions?: Array<{
+      primary_champion_name?: string;
+    }>;
+  };
+  kpi_count?: number;
+  last_measured?: string;
 }
 
 interface KPI {
@@ -60,6 +80,11 @@ interface KPI {
   account_name?: string;
   upload_id?: number;
   upload_filename?: string;
+  // DC-specific fields
+  unit?: string;
+  target?: number;
+  status?: 'healthy' | 'at_risk' | 'critical';
+  value?: number;
 }
 
 const Dashboard_dc: React.FC = () => {
@@ -69,11 +94,11 @@ const Dashboard_dc: React.FC = () => {
   const [kpiData, setKpiData] = useState<KPI[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'kpis' | 'alerts' | 'upload' | 'settings' | 'insights'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'kpis' | 'analytics' | 'rag-analysis' | 'alerts' | 'upload' | 'reports' | 'settings' | 'insights'>('dashboard');
   const [expandedCategories, setExpandedCategories] = useState<{[key: string]: boolean}>({});
   const [categoryPages, setCategoryPages] = useState<{[key: string]: number}>({});
   const itemsPerPage = 50;
-  const [selectedMonth, setSelectedMonth] = useState<number>(7); // Default to latest month (7)
+  // DC KPIs don't use monthly data - removed selectedMonth state
   const [tenantKPIs, setTenantKPIs] = useState<KPI[]>([]);
   const [loadingTenantKPIs, setLoadingTenantKPIs] = useState(false);
   const [perfSummary, setPerfSummary] = useState<PerformanceSummary | null>(null);
@@ -83,7 +108,9 @@ const Dashboard_dc: React.FC = () => {
       loadDashboardData();
       fetchPerformanceSummary();
     }
-  }, [session]);
+    // Note: loadDashboardData and fetchPerformanceSummary are stable functions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.customer_id]);
 
   const fetchPerformanceSummary = async () => {
     if (!session?.customer_id) return;
@@ -112,8 +139,8 @@ const Dashboard_dc: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load tenants (accounts)
-      const accountsResponse = await fetch('/api/accounts', {
+      // Load tenants (accounts) - use DC-specific endpoint
+      const accountsResponse = await fetch('/api/dc2s/accounts', {
         credentials: 'include',
         headers: {
           'X-Customer-ID': getCustomerIdentifier(session),
@@ -124,19 +151,26 @@ const Dashboard_dc: React.FC = () => {
         const accountsData = await accountsResponse.json();
         const accountsArray = Array.isArray(accountsData) ? accountsData : (accountsData.accounts || []);
         
-        // Transform to tenants format
+        // Transform to tenants format with full profile data (matching SaaS Account Health Dashboard)
         const tenantsData: Tenant[] = accountsArray.map((acc: any) => ({
           tenant_id: acc.account_id,
           tenant_name: acc.account_name,
-          health_score: acc.health_score || 0,
-          status: acc.health_score >= 70 ? 'healthy' : acc.health_score >= 50 ? 'at_risk' : 'critical'
+          health_score: acc.overall_health || acc.health_score || 0,
+          status: (acc.status === 'risk' ? 'at_risk' : acc.status || (acc.overall_health >= 80 ? 'healthy' : acc.overall_health >= 60 ? 'at_risk' : 'critical')),
+          industry: acc.industry,
+          region: acc.region,
+          account_status: acc.account_status || 'Active',
+          metadata: acc.metadata || {},
+          kpi_count: acc.kpi_count,
+          last_measured: acc.last_measured,
         }));
         
         setTenants(tenantsData);
+        console.log('✅ Loaded tenants with profile data:', tenantsData.length);
       }
 
-      // Load KPIs
-      const kpisResponse = await fetch('/api/kpis/customer/all', {
+      // Load KPIs - use DC-specific endpoint
+      const kpisResponse = await fetch('/api/dc2s/kpis/all', {
         credentials: 'include',
         headers: {
           'X-Customer-ID': getCustomerIdentifier(session),
@@ -145,21 +179,22 @@ const Dashboard_dc: React.FC = () => {
 
       if (kpisResponse.ok) {
         const kpisData = await kpisResponse.json();
+        // Transform DC KPIs to match KPI interface (compatible with SaaS format)
         const transformedKPIs: KPI[] = kpisData.map((kpi: any) => ({
           kpi_id: kpi.kpi_id,
-          category: kpi.category || 'Uncategorized',
-          kpi_parameter: kpi.kpi_parameter,
+          category: kpi.category || kpi.pillar || 'Uncategorized',
+          kpi_parameter: kpi.kpi_parameter || kpi.kpi_code,
           data: kpi.data || '0',
           account_id: kpi.account_id,
           account_name: kpi.account_name,
-          upload_id: kpi.upload_id,
-          upload_filename: kpi.upload_filename || kpi.original_filename,
+          upload_id: kpi.upload_id || null,
+          upload_filename: kpi.upload_filename || null,
         }));
         setKpiData(transformedKPIs);
-        console.log('Loaded KPIs:', transformedKPIs.length);
+        console.log('Loaded DC KPIs:', transformedKPIs.length);
       }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -177,12 +212,7 @@ const Dashboard_dc: React.FC = () => {
     }));
   };
 
-  // Extract month number from upload filename (e.g., "Month_1.csv" -> 1)
-  const getMonthFromFilename = (filename: string | undefined): number | null => {
-    if (!filename) return null;
-    const match = filename.match(/Month[_\s](\d+)/i);
-    return match ? parseInt(match[1]) : null;
-  };
+  // DC KPIs use measured_at timestamps, not monthly uploads - removed getMonthFromFilename
 
   // Fetch KPIs for selected tenant
   useEffect(() => {
@@ -191,6 +221,8 @@ const Dashboard_dc: React.FC = () => {
     } else {
       setTenantKPIs([]);
     }
+    // Note: fetchTenantKPIs is a stable function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTenant, session?.customer_id]);
 
   const fetchTenantKPIs = async () => {
@@ -198,7 +230,8 @@ const Dashboard_dc: React.FC = () => {
     
     try {
       setLoadingTenantKPIs(true);
-      const response = await fetch('/api/kpis/customer/all', {
+      // Use DC-specific endpoint for tenant KPIs
+      const response = await fetch(`/api/dc2s/accounts/${selectedTenant}/kpis`, {
         credentials: 'include',
         headers: {
           'X-Customer-ID': getCustomerIdentifier(session),
@@ -207,26 +240,39 @@ const Dashboard_dc: React.FC = () => {
 
       if (response.ok) {
         const kpisData = await response.json();
-        console.log('Fetched KPIs for tenant:', selectedTenant, 'Total:', kpisData.length);
-        const tenantKPIsData: KPI[] = kpisData
-          .filter((kpi: any) => kpi.account_id === selectedTenant)
-          .map((kpi: any) => {
-            const uploadFilename = kpi.upload_filename || kpi.original_filename;
-            const month = getMonthFromFilename(uploadFilename);
-            console.log('KPI:', kpi.kpi_parameter, 'Filename:', uploadFilename, 'Month:', month);
-            return {
-              kpi_id: kpi.kpi_id,
-              category: kpi.category || 'Uncategorized',
-              kpi_parameter: kpi.kpi_parameter,
-              data: kpi.data || '0',
-              account_id: kpi.account_id,
-              account_name: kpi.account_name,
-              upload_id: kpi.upload_id,
-              upload_filename: uploadFilename,
-            };
-          });
-        console.log('Filtered tenant KPIs:', tenantKPIsData.length);
+        console.log('✅ Fetched KPIs for tenant:', selectedTenant, 'Total:', kpisData.kpis?.length || 0);
+        console.log('✅ KPIs data structure:', {
+          hasKpis: !!kpisData.kpis,
+          kpisLength: kpisData.kpis?.length,
+          total: kpisData.total,
+          accountName: kpisData.account_name
+        });
+        
+        // Transform DC2S KPI format to match KPI interface (endpoint now returns SaaS-compatible format)
+        const tenantKPIsData: KPI[] = (kpisData.kpis || []).map((kpi: any) => {
+          return {
+            kpi_id: kpi.kpi_id,
+            category: kpi.category || kpi.pillar || 'Uncategorized',
+            kpi_parameter: kpi.kpi_parameter || kpi.kpi_code,
+            data: kpi.data || String(kpi.value || '0'),
+            account_id: kpi.account_id,
+            account_name: kpisData.account_name || '',
+            upload_id: null,
+            upload_filename: null, // DC KPIs don't have upload filenames - they use measured_at
+            // Additional DC-specific fields
+            unit: kpi.unit || '',
+            target: kpi.target,
+            status: kpi.status, // healthy/at_risk/critical
+            value: kpi.value,
+          };
+        });
+        console.log('✅ Transformed tenant KPIs:', tenantKPIsData.length);
+        console.log('✅ Sample transformed KPI:', tenantKPIsData[0]);
         setTenantKPIs(tenantKPIsData);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ KPIs endpoint error:', response.status, errorText);
+        setTenantKPIs([]);
       }
     } catch (error) {
       console.error('Error loading tenant KPIs:', error);
@@ -235,17 +281,11 @@ const Dashboard_dc: React.FC = () => {
     }
   };
 
-  // Filter tenant KPIs by selected month
-  const filteredTenantKPIs = tenantKPIs.filter(kpi => {
-    const kpiMonth = getMonthFromFilename(kpi.upload_filename);
-    const matches = kpiMonth === selectedMonth;
-    if (!matches && kpiMonth !== null) {
-      console.log(`KPI ${kpi.kpi_parameter}: Month ${kpiMonth} !== Selected ${selectedMonth}`);
-    }
-    return matches;
-  });
+  // DC KPIs don't have monthly uploads like SaaS - they use measured_at timestamps
+  // Show all KPIs regardless of month selection (since there's only one measurement per KPI)
+  const filteredTenantKPIs = tenantKPIs;
   
-  console.log('Selected month:', selectedMonth, 'Total tenant KPIs:', tenantKPIs.length, 'Filtered:', filteredTenantKPIs.length);
+  console.log('Total tenant KPIs:', tenantKPIs.length, '(DC KPIs show all measurements, not filtered by month)');
 
   const healthyCount = tenants.filter(t => t.status === 'healthy').length;
   const atRiskCount = tenants.filter(t => t.status === 'at_risk').length;
@@ -301,9 +341,12 @@ const Dashboard_dc: React.FC = () => {
               { id: 'dashboard', label: 'Data Center Dashboard', icon: BarChart3 },
               { id: 'tenants', label: 'Tenants', icon: Users },
               { id: 'kpis', label: 'KPIs', icon: Target },
+              { id: 'analytics', label: 'Analytics', icon: Activity },
+              { id: 'rag-analysis', label: 'AI Insights', icon: MessageSquare },
               { id: 'insights', label: 'CS AI Agents', icon: Zap },
               { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
               { id: 'upload', label: 'Data Integration', icon: Upload },
+              { id: 'reports', label: 'Reports', icon: FileText },
               { id: 'settings', label: 'Settings', icon: Settings },
             ].map(item => (
               <button
@@ -488,135 +531,205 @@ const Dashboard_dc: React.FC = () => {
 
         {activeTab === 'tenants' && (
           <div className="space-y-6">
-            {/* Month Slider */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Select Month</h3>
-                <span className="text-sm font-medium text-blue-600">Month {selectedMonth} of 7</span>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="7"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-2">
-                <span>Month 1</span>
-                <span>Month 2</span>
-                <span>Month 3</span>
-                <span>Month 4</span>
-                <span>Month 5</span>
-                <span>Month 6</span>
-                <span>Month 7</span>
-              </div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Tenant Health Dashboard</h2>
             </div>
 
-            {/* Tenant List */}
-            <TenantList_dc
-              tenants={tenants}
-              onSelectTenant={setSelectedTenant}
-              selectedTenant={selectedTenant}
-            />
-
-            {/* Tenant KPIs Display */}
-            {selectedTenant && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    KPIs for {tenants.find(t => t.tenant_id === selectedTenant)?.tenant_name} - Month {selectedMonth}
-                  </h3>
-                  {loadingTenantKPIs && (
-                    <Activity className="h-5 w-5 animate-spin text-blue-600" />
-                  )}
-                </div>
-
-                {loadingTenantKPIs ? (
-                  <div className="text-center py-8">
-                    <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-                    <p className="text-gray-600">Loading KPIs...</p>
-                  </div>
-                ) : filteredTenantKPIs.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">No KPIs found for Month {selectedMonth}</p>
-                    <p className="text-xs text-gray-500">
-                      Total tenant KPIs: {tenantKPIs.length} | 
-                      Available months: {Array.from(new Set(tenantKPIs.map(k => getMonthFromFilename(k.upload_filename)).filter(m => m !== null))).sort().join(', ')}
-                    </p>
+            {/* Tenant List with Profile Cards */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="p-6">
+                {tenants.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>No tenants found. Upload data to get started.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {Array.from(new Set(filteredTenantKPIs.map(kpi => kpi.category))).map((categoryName, index) => {
-                      const categoryKPIs = filteredTenantKPIs.filter(kpi => kpi.category === categoryName);
-                      const categoryData = categoryKPIs.filter(k => k.data && k.data !== '0' && k.data !== '');
-                      const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500'];
-                      const categoryColor = colors[index % colors.length];
-                      const categoryKey = `tenant-${selectedTenant}-${categoryName}`;
-                      const isExpanded = expandedCategories[categoryKey];
+                    {tenants.map((tenant) => {
+                      const isSelected = selectedTenant === tenant.tenant_id;
                       
                       return (
-                        <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100">
-                          {/* Category Header */}
-                          <div 
-                            className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => toggleCategory(categoryKey)}
+                        <div key={tenant.tenant_id} className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                          {/* Tenant Header Button */}
+                          <button
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedTenant(null);
+                              } else {
+                                setSelectedTenant(tenant.tenant_id);
+                              }
+                            }}
+                            className={`w-full p-4 text-left transition-all hover:bg-gray-50 ${
+                              isSelected 
+                                ? 'bg-blue-50 border-blue-500' 
+                                : 'bg-white'
+                            }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                {isExpanded ? (
-                                  <ChevronDown className="h-5 w-5 text-gray-500" />
-                                ) : (
-                                  <ChevronRight className="h-5 w-5 text-gray-500" />
-                                )}
-                                <h3 className="font-semibold text-gray-900">{categoryName}</h3>
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <div className="text-sm text-gray-500">
-                                  {categoryData.length}/{categoryKPIs.length} KPIs with data
-                                </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-medium text-white ${categoryColor}`}>
-                                  {categoryKPIs.length} KPIs
-                                </div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-gray-900 text-lg">{tenant.tenant_name}</h4>
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  tenant.health_score >= 80 ? 'bg-green-500' :
+                                  tenant.health_score >= 60 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}></div>
+                                <span className="text-sm text-gray-500">
+                                  {isSelected ? '▼' : '▶'}
+                                </span>
                               </div>
                             </div>
                             
-                            {/* Progress Bar */}
-                            <div className="mt-3">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full ${categoryColor}`}
-                                  style={{ width: `${Math.round((categoryData.length / Math.max(categoryKPIs.length, 1)) * 100)}%` }}
-                                ></div>
+                            {/* Tenant Details Grid - Matching SaaS Format */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                              {/* Health Score with Status */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Health Score</p>
+                                {(() => {
+                                  const healthStatus = tenant.health_score >= 80 ? { status: 'Healthy', color: 'green' } :
+                                                       tenant.health_score >= 60 ? { status: 'At Risk', color: 'yellow' } :
+                                                       { status: 'Critical', color: 'red' };
+                                  return (
+                                    <div className="flex items-center space-x-2">
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                        healthStatus.color === 'green' ? 'bg-green-100 text-green-800' :
+                                        healthStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
+                                      }`}>
+                                        {healthStatus.status}
+                                      </span>
+                                      <span className="font-semibold text-gray-900">
+                                        {tenant.health_score?.toFixed(0) || 'N/A'}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Coverage: {Math.round((categoryData.length / Math.max(categoryKPIs.length, 1)) * 100)}%
+                              
+                              {/* Region */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Region</p>
+                                <p className="font-medium text-gray-900">{tenant.region || 'N/A'}</p>
+                              </div>
+                              
+                              {/* Status */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Status</p>
+                                <p className="font-medium text-gray-900 capitalize">{tenant.account_status || 'N/A'}</p>
+                              </div>
+                              
+                              {/* Account Tier */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Account Tier</p>
+                                <p className="font-medium text-gray-900">{tenant.metadata?.account_tier || 'N/A'}</p>
+                              </div>
+                              
+                              {/* Assigned CSM */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Assigned CSM</p>
+                                <p className="font-medium text-gray-900">{tenant.metadata?.assigned_csm || 'N/A'}</p>
+                              </div>
+                              
+                              {/* CSM Manager */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">CSM Manager</p>
+                                <p className="font-medium text-gray-900">{tenant.metadata?.csm_manager || 'N/A'}</p>
+                              </div>
+                              
+                              {/* Products Used */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Products Used</p>
+                                <p className="font-medium text-gray-900">{tenant.metadata?.products_used || 'N/A'}</p>
+                              </div>
+                              
+                              {/* Champion Name */}
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Champion Name</p>
+                                <p className="font-medium text-gray-900">
+                                  {tenant.metadata?.champions?.[0]?.primary_champion_name || 'N/A'}
+                                </p>
                               </div>
                             </div>
-                          </div>
-                          
-                          {/* Collapsible Content - Table View */}
-                          {isExpanded && (
-                            <div className="border-t border-gray-100 p-4">
-                              <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                  <thead className="bg-gray-50">
-                                    <tr>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">KPI Parameter</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="bg-white divide-y divide-gray-200">
-                                    {categoryKPIs.map((kpi) => (
-                                      <tr key={kpi.kpi_id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{kpi.kpi_parameter}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{kpi.data}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                            
+                            {/* Additional Info Row */}
+                            <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 grid grid-cols-2 md:grid-cols-3 gap-2">
+                              <p>Industry: {tenant.industry || 'N/A'}</p>
+                              {tenant.metadata?.engagement?.lifecycle_stage && (
+                                <p>Lifecycle: {tenant.metadata.engagement.lifecycle_stage}</p>
+                              )}
+                              {tenant.kpi_count !== undefined && (
+                                <p>KPIs: {tenant.kpi_count}</p>
+                              )}
+                            </div>
+                            
+                            {/* View KPIs Link */}
+                            <div className="mt-3 flex items-center text-xs text-blue-600">
+                              <Eye className="h-3 w-3 mr-1" />
+                              {isSelected ? 'Hide KPIs' : 'View KPIs'}
+                            </div>
+                          </button>
+
+                          {/* Expandable KPI Table */}
+                          {isSelected && (
+                            <div className="border-t border-gray-200 bg-gray-50 p-4">
+                              <div className="mb-4">
+                                <h5 className="text-lg font-semibold text-gray-900 mb-2">
+                                  KPIs for {tenant.tenant_name}
+                                </h5>
+                                <p className="text-sm text-gray-600">
+                                  Showing {filteredTenantKPIs.length} KPIs
+                                </p>
                               </div>
+                              
+                              {loadingTenantKPIs ? (
+                                <div className="text-center py-8">
+                                  <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+                                  <p className="text-gray-600">Loading KPIs...</p>
+                                </div>
+                              ) : filteredTenantKPIs.length === 0 ? (
+                                <div className="text-center py-8">
+                                  <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                  <p className="text-gray-600 mb-2">No KPIs found for this tenant</p>
+                                </div>
+                              ) : (
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full divide-y divide-gray-200 bg-white rounded-lg">
+                                    <thead className="bg-gray-100">
+                                      <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KPI Parameter</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                      {filteredTenantKPIs.map((kpi) => (
+                                        <tr key={kpi.kpi_id} className="hover:bg-gray-50">
+                                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.category}</td>
+                                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.kpi_parameter}</td>
+                                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.data}</td>
+                                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                                            {kpi.target !== undefined ? `${kpi.target}${kpi.unit ? ` ${kpi.unit}` : ''}` : 'N/A'}
+                                          </td>
+                                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{kpi.unit || 'N/A'}</td>
+                                          <td className="px-4 py-2 whitespace-nowrap text-sm">
+                                            {kpi.status && (
+                                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                kpi.status === 'healthy' ? 'bg-green-100 text-green-800' :
+                                                kpi.status === 'at_risk' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
+                                              }`}>
+                                                {kpi.status.charAt(0).toUpperCase() + kpi.status.slice(1)}
+                                              </span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -625,7 +738,130 @@ const Dashboard_dc: React.FC = () => {
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Data Center Analytics</h2>
+              <p className="text-gray-600 mb-6">Customer Success Value Analytics for Data Center tenants</p>
+              
+              {/* Health Score Trends */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Health Score Trends</h3>
+                {selectedTenant ? (
+                  <div className="space-y-4">
+                    <HealthScore_dc tenantId={selectedTenant} />
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Select a tenant to view health score trends</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Tenant Performance Summary */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Tenant Performance Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-800 mb-1">Healthy Tenants</div>
+                    <div className="text-2xl font-bold text-green-900">{healthyCount}</div>
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="text-sm font-medium text-yellow-800 mb-1">At Risk Tenants</div>
+                    <div className="text-2xl font-bold text-yellow-900">{atRiskCount}</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="text-sm font-medium text-red-800 mb-1">Critical Tenants</div>
+                    <div className="text-2xl font-bold text-red-900">{criticalCount}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI Coverage Analytics */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">KPI Coverage Analytics</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-600">Total KPIs</div>
+                      <div className="text-xl font-bold text-gray-900">{kpiData.length}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">KPIs with Data</div>
+                      <div className="text-xl font-bold text-green-600">
+                        {kpiData.filter(k => k.data && k.data !== '0' && k.data !== '').length}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Coverage</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        {kpiData.length > 0 
+                          ? Math.round((kpiData.filter(k => k.data && k.data !== '0' && k.data !== '').length / kpiData.length) * 100)
+                          : 0}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Tenants Tracked</div>
+                      <div className="text-xl font-bold text-purple-600">{tenants.length}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Signal Analyst AI-Powered Analysis */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">AI-Powered Account Analysis</h2>
+                <p className="text-gray-600">
+                  Get AI-powered insights about account churn risk, expansion opportunities, and recommended actions
+                </p>
+              </div>
+              {selectedTenant ? (
+                <SignalAnalyst
+                  accountId={selectedTenant}
+                  accountName={tenants.find(t => t.tenant_id === selectedTenant)?.tenant_name || `Tenant #${selectedTenant}`}
+                />
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">Select a tenant to run AI-powered analysis</p>
+                  <p className="text-sm text-gray-500">
+                    Go to the Tenants tab and select a tenant to view AI analysis
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'rag-analysis' && (
+          <RAGAnalysis />
+        )}
+
+        {activeTab === 'reports' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">CS AI Agent Execution Reports</h2>
+              <p className="text-gray-600 mb-6">Reports for Data Center AI agent executions</p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                <FileText className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No AI Agent Executions Yet</h3>
+                <p className="text-gray-600 mb-4">
+                  Data Center uses a recommendations-only model for CS AI Agents.
+                </p>
+                <p className="text-sm text-gray-500">
+                  View recommended AI agents in the "CS AI Agents" tab. Since DC uses pillar-based recommendations
+                  rather than executable playbooks, execution reports are not applicable.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -801,9 +1037,37 @@ const Dashboard_dc: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Settings</h2>
-            <p className="text-gray-600">Data Center configuration settings</p>
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Settings & Configuration</h2>
+              <p className="text-gray-600 mb-6">Data Center configuration settings</p>
+              
+              {/* OpenAI API Key Settings */}
+              <details className="bg-white rounded-xl shadow-sm border border-gray-100 mb-4" open>
+                <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-900 flex items-center">
+                  <Settings className="h-5 w-5 mr-2 text-blue-600" />
+                  OpenAI API Key
+                </summary>
+                <div className="p-4 border-t border-gray-100">
+                  <OpenAIKeySettings isAuthenticated={Boolean(session)} />
+                </div>
+              </details>
+
+              {/* DC-Specific Settings */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Center Settings</h3>
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-900 mb-2">
+                      <strong>Data Center Vertical Configuration</strong>
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      Data Center settings are automatically configured based on your tenant's vertical type (dc2_s).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

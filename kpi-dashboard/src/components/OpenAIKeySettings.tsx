@@ -181,42 +181,52 @@ const OpenAIKeySettings: React.FC<OpenAIKeySettingsProps> = ({ isAuthenticated }
       )}
 
       {/* API Key Input */}
-      <div className="space-y-2">
-        <label htmlFor="openai-key" className="block text-sm font-medium text-gray-700">
-          OpenAI API Key
-        </label>
-        <div className="relative">
-          <input
-            id="openai-key"
-            type={showKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={hasKey ? 'Enter new key to update...' : 'sk-...'}
-            className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            disabled={saving || loading}
-          />
-          <button
-            type="button"
-            onClick={() => setShowKey(!showKey)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-            disabled={saving || loading}
-          >
-            {showKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-          </button>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (apiKey.trim() && !saving && !loading) {
+            handleSave();
+          }
+        }}
+        className="space-y-4"
+      >
+        <div className="space-y-2">
+          <label htmlFor="openai-key" className="block text-sm font-medium text-gray-700">
+            OpenAI API Key
+          </label>
+          <div className="relative">
+            <input
+              id="openai-key"
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={hasKey ? 'Enter new key to update...' : 'sk-...'}
+              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={saving || loading}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              disabled={saving || loading}
+            >
+              {showKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Your API key is encrypted and stored securely. Only you can see or update it.
+          </p>
         </div>
-        <p className="text-xs text-gray-500">
-          Your API key is encrypted and stored securely. Only you can see or update it.
-        </p>
-      </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving || loading || !apiKey.trim()}
-          className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {saving ? (
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={saving || loading || !apiKey.trim()}
+            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {saving ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               Saving...
@@ -230,6 +240,7 @@ const OpenAIKeySettings: React.FC<OpenAIKeySettingsProps> = ({ isAuthenticated }
         </button>
         {hasKey && (
           <button
+            type="button"
             onClick={handleDelete}
             disabled={saving || loading}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -238,6 +249,7 @@ const OpenAIKeySettings: React.FC<OpenAIKeySettingsProps> = ({ isAuthenticated }
           </button>
         )}
       </div>
+      </form>
 
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

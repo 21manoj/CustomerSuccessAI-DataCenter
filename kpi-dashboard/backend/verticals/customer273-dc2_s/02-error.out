@@ -1,0 +1,185 @@
+================================================================================
+CUSTOMER 9 DATA LOADER - Smart Version with Auto-Cleanup
+================================================================================
+
+✅ Database: configured
+✅ Data Directory: ./data
+✅ Customer ID: 9
+✅ Database connection successful
+
+
+================================================================================
+CHECKING FOR EXISTING CUSTOMER 9 DATA
+================================================================================
+
+⚠️  Found existing Customer 9 data:
+   Customers: 1
+   Accounts: 10
+
+🗑️  Deleting existing Customer 9 data...
+
+   ✅ Deleted 28 rows from playbook_executions
+   ✅ Deleted 113 rows from expansion_readiness_scores
+   ✅ Deleted 113 rows from account_health_history
+   ✅ Deleted 320 rows from qualitative_signals
+   ✅ Deleted 24 rows from account_products
+   ✅ Deleted 10 rows from account_profiles
+   ✅ Deleted 10 rows from accounts
+   ✅ Deleted 34 rows from kpi_definitions
+   ✅ Deleted 7 rows from products
+   ✅ Deleted 4 rows from partner_definitions
+   ✅ Deleted 1 rows from customers
+
+✅ Successfully deleted all Customer 9 data
+
+================================================================================
+STARTING DATA LOAD
+================================================================================
+
+📁 Found 12 CSV files in ./data
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Customer profile
+   File: customers.csv
+   Table: customers
+   📈 Rows: 1 | Columns: 56
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 1 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Partner profiles
+   File: partner_definitions.csv
+   Table: partner_definitions
+   📈 Rows: 4 | Columns: 11
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 4 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Basic accounts
+   File: accounts.csv
+   Table: accounts
+   📈 Rows: 10 | Columns: 20
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 10 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Detailed account profiles (100+ attributes)
+   File: account_profiles.csv
+   Table: account_profiles
+   📈 Rows: 10 | Columns: 121
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 10 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: KPI metadata (38 attributes)
+   File: kpi_definitions_complete_33_corrected.csv
+   Table: kpi_definitions
+   📈 Rows: 34 | Columns: 29
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 34 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: KPI measurements (time series)
+   File: kpi_measurements.csv
+   Table: kpi_measurements
+   📈 Rows: 3696 | Columns: 9
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 3696 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Qualitative signals (engagement, sentiment)
+   File: qualitative_signals.csv
+   Table: qualitative_signals
+   📈 Rows: 320 | Columns: 11
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 320 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Account health over time
+   File: account_health_history.csv
+   Table: account_health_history
+   📈 Rows: 113 | Columns: 11
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 113 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Expansion readiness tracking
+   File: expansion_readiness_scores.csv
+   Table: expansion_readiness_scores
+   📈 Rows: 113 | Columns: 11
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 113 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Playbook execution history
+   File: playbook_executions.csv
+   Table: playbook_executions
+   📈 Rows: 28 | Columns: 12
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 28 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Product catalog
+   File: products.csv
+   Table: products
+   📈 Rows: 7 | Columns: 12
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 7 rows in database
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Loading: Account-product usage (24 rows)
+   File: account_products.csv
+   Table: account_products
+   📈 Rows: 24 | Columns: 16
+   ⏳ Loading to PostgreSQL... ✅
+   ✅ Verified: 24 rows in database
+
+================================================================================
+LOAD SUMMARY
+================================================================================
+  ✅ Successful: 12
+  ❌ Failed: 0
+  ⏭️  Skipped: 0
+  📊 Total: 12
+
+
+================================================================================
+DATA INTEGRITY VERIFICATION
+================================================================================
+
+📊 Record Counts:
+Table                                         Count     Status
+────────────────────────────────────────────────────────────
+customers                                         2 ⚠️ (exp: 1)
+partner_definitions                               4          ✅
+accounts                                         46 ⚠️ (exp: 10)
+account_profiles                                 10          ✅
+kpi_definitions                                  34          ✅
+kpi_measurements                               3696          ✅
+qualitative_signals                             320          ✅
+account_health_history                          113          ✅
+expansion_readiness_scores                      113          ✅
+playbook_executions                              28          ✅
+products                                          7          ✅
+account_products                                 24          ✅
+────────────────────────────────────────────────────────────
+TOTAL                                          4397
+
+🔗 Foreign Key Integrity:
+────────────────────────────────────────────────────────────────────────────────
+  Accounts → Customers                               ✅ PASS
+  Account Profiles → Accounts                        ✅ PASS
+  KPI Measurements → Accounts                        ✅ PASS
+  KPI Measurements → KPI Definitions                 ✅ PASS
+  Account Products → Accounts                        ✅ PASS
+  Account Products → Products                        ✅ PASS
+
+🎯 Customer 9 Specific Checks:
+────────────────────────────────────────────────────────────────────────────────
+  ✅ Customer 9: GPU Cloud Enterprises
+  ✅ Accounts: 10 (expected: 10)
+
+================================================================================
+⚠️  WARNING: All data loaded but integrity checks failed
+================================================================================
+

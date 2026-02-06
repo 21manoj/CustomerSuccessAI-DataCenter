@@ -15,8 +15,18 @@ PUBLIC_ENDPOINTS = [
     '/api/login',
     '/api/register',
     '/api/health',
+    '/api/upload/health',  # Upload API health check
     '/api/forgot-password',
     '/api/reset-password',
+    # Onboarding endpoints - must be public for new customer creation
+    '/api/onboarding/complete',
+    '/api/onboarding/provision',
+    '/api/onboarding/upload',  # Upload endpoint for onboarding workflow
+    '/api/onboarding/process-data',
+    '/api/onboarding/register-journey-api',
+    '/api/onboarding/processing-status',
+    '/api/onboarding/templates',  # Template download endpoints
+    '/api/onboarding/validate-csv',  # CSV validation endpoint
 ]
 
 # Public path prefixes (for static files)
@@ -58,8 +68,24 @@ def init_auth_middleware(app):
         
         # Check if this is an API endpoint
         if request.path.startswith('/api/'):
+            # DEBUG: Log authentication status
+            from flask import session
+            logger.info(f"[DEBUG auth_middleware] Checking {request.path}")
+            # User model defines is_authenticated as a METHOD, not a property, so we need to call it
+            is_auth = current_user.is_authenticated() if callable(current_user.is_authenticated) else (current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False)
+            logger.info(f"[DEBUG auth_middleware] current_user.is_authenticated: {is_auth}")
+            logger.info(f"[DEBUG auth_middleware] current_user type: {type(current_user)}")
+            if hasattr(current_user, 'email'):
+                logger.info(f"[DEBUG auth_middleware] current_user.email: {current_user.email}")
+            logger.info(f"[DEBUG auth_middleware] Cookies: {request.cookies}")
+            try:
+                session_dict = dict(session) if hasattr(session, '__iter__') else 'N/A'
+                logger.info(f"[DEBUG auth_middleware] Session: {session_dict}")
+            except Exception as e:
+                logger.info(f"[DEBUG auth_middleware] Session error: {e}")
+            
             # Require authentication for all API endpoints
-            if not current_user.is_authenticated:
+            if not is_auth:
                 logger.warning(f"Unauthorized API access attempt: {request.path} from {request.remote_addr}")
                 return jsonify({
                     'error': 'Authentication required',
@@ -91,8 +117,10 @@ def init_auth_middleware(app):
         """
         Check if user has been idle too long and log them out.
         
-        Idle timeout: 30 minutes of inactivity
+        Idle timeout: 2 hours of inactivity (increased from 30 minutes for better UX)
+        Note: Only checks if last_activity exists. If missing, assume it's a new session.
         """
+        # Only check idle timeout for authenticated users
         if not current_user.is_authenticated:
             return None
         
@@ -100,26 +128,36 @@ def init_auth_middleware(app):
         from datetime import datetime, timedelta
         
         last_activity_str = session.get('last_activity')
-        if last_activity_str:
-            try:
-                last_activity = datetime.fromisoformat(last_activity_str)
-                idle_duration = datetime.utcnow() - last_activity
+        
+        # If last_activity doesn't exist, this is likely a new session or first request
+        # Set it now and allow the request to proceed
+        if not last_activity_str:
+            # First request - initialize last_activity
+            session['last_activity'] = datetime.utcnow().isoformat()
+            session.modified = True
+            return None
+        
+        try:
+            last_activity = datetime.fromisoformat(last_activity_str)
+            idle_duration = datetime.utcnow() - last_activity
+            
+            # Check if idle for more than the configured timeout (default: 2 hours)
+            idle_timeout = app.config.get('SESSION_IDLE_TIMEOUT', timedelta(hours=2))
+            if idle_duration > idle_timeout:
+                from flask_login import logout_user
+                logger.info(f"User {current_user.email if hasattr(current_user, 'email') else 'unknown'} logged out due to inactivity ({idle_duration.seconds // 60} minutes)")
+                logout_user()
+                session.clear()
                 
-                # Check if idle for more than 30 minutes
-                idle_timeout = app.config.get('SESSION_IDLE_TIMEOUT', timedelta(minutes=30))
-                if idle_duration > idle_timeout:
-                    from flask_login import logout_user
-                    logger.info(f"User {current_user.email} logged out due to inactivity ({idle_duration.seconds // 60} minutes)")
-                    logout_user()
-                    session.clear()
-                    
-                    return jsonify({
-                        'error': 'Session expired',
-                        'message': 'Your session expired due to inactivity. Please log in again.',
-                        'reason': 'idle_timeout'
-                    }), 401
-            except Exception as e:
-                logger.error(f"Error checking idle timeout: {e}")
+                return jsonify({
+                    'error': 'Session expired',
+                    'message': f'Your session expired due to inactivity ({idle_duration.seconds // 60} minutes). Please log in again.',
+                    'reason': 'idle_timeout',
+                    'idle_minutes': idle_duration.seconds // 60
+                }), 401
+        except Exception as e:
+            logger.error(f"Error checking idle timeout: {e}")
+            # On error, allow request to proceed (fail open for better UX)
         
         return None
     

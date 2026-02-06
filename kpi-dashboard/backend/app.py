@@ -78,10 +78,11 @@ from playbook_execution_api import playbook_execution_api
 from playbook_reports_api import playbook_reports_api
 from playbook_recommendations_api import playbook_recommendations_api
 from feature_toggle_api import feature_toggle_api
+from verticals.dc2_s.api_routes import dc2s_api
 from registration_api import registration_api
 from kpi_reference_ranges_api import kpi_reference_ranges_api
 from customer_performance_summary_api import customer_perf_summary_api
-from api_routes_dc import api_routes_dc
+# REMOVED BY CLEANUP: from api_routes_dc import api_routes_dc
 from agents.signal_analyst_api import signal_analyst_api
 
 # Initialize Chroma client and collection for KPI VDB (lazy loading)
@@ -142,9 +143,11 @@ app.register_blueprint(feature_toggle_api)
 app.register_blueprint(registration_api)
 app.register_blueprint(kpi_reference_ranges_api)
 app.register_blueprint(customer_perf_summary_api)
-app.register_blueprint(api_routes_dc)
+# app.register_blueprint(api_routes_dc)
 app.register_blueprint(signal_analyst_api)
-
+# DC2_S Vertical
+app.register_blueprint(dc2s_api, url_prefix='/api/dc2s')
+print("✅ Registered DC2_S API: /api/dc2s/*")
 @app.route('/')
 def home():
     """Root endpoint for health check and timestamp."""
@@ -289,15 +292,18 @@ def login():
     # Get customer to check/store vertical preference
     customer = Customer.query.filter_by(customer_id=user.customer_id).first()
     
-    # Store vertical preference in customer if not already set (optional - can be stored in session only)
-    # For now, we'll just return it in the response
+    # Map database vertical to frontend vertical
+    # Database: 'dc2_s', 'saas'
+    # Frontend: 'datacenter', 'saas'
+    user_vertical = user.vertical or vertical
+    frontend_vertical = 'datacenter' if user_vertical == 'dc2_s' else user_vertical
     
     return jsonify({
         'customer_id': user.customer_id,
         'user_id': user.user_id,
         'user_name': user.user_name,
         'email': user.email,
-        'vertical': vertical,
+        'vertical': frontend_vertical,  # Now uses user's vertical from DB
         'user': {
             'customer_id': user.customer_id,
             'user_id': user.user_id,

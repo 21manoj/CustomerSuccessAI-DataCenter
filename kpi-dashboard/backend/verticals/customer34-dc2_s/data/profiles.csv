@@ -1,0 +1,6 @@
+account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
+34001,E2E Complete Test Corporation - Datacenter East,Lisa Anderson,88,expansion,723300.7559968906,121,On-Premise,Medium
+34002,E2E Complete Test Corporation - Cloud Ops,David Kim,60,at_risk,1973491.274131649,68,Hybrid,Medium
+34003,E2E Complete Test Corporation - AI Lab,Michael Rodriguez,92,advocacy,3792648.2548514707,118,On-Premise,Medium
+34004,E2E Complete Test Corporation - Production,Sarah Chen,72,adoption,4326278.199137485,384,Cloud,Small
+34005,E2E Complete Test Corporation - Development,Tom Johnson,75,value_realization,1743656.9821639515,113,Cloud,Medium

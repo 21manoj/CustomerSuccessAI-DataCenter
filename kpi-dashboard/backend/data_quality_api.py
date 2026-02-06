@@ -1,17 +1,55 @@
 #!/usr/bin/env python3
 """
 Data Quality API
-Provides report of common data hygiene issues and remediation helpers
+Provides report of common data hygiene issues and remediation helpers.
+Includes KPI range validation: discrepancies between uploaded KPI values
+and defined reference ranges (DC2_S KPI definitions).
 """
 
 from flask import Blueprint, jsonify
 from extensions import db
-from models import Account, Product, KPI
-from sqlalchemy import and_
+from models import Account, Product, KPI, DC2SKPI
+from sqlalchemy import and_, text
+from auth_middleware import get_current_customer_id
 from collections import defaultdict
 import re
 
 data_quality_api = Blueprint('data_quality_api', __name__)
+
+
+def _get_dc2s_kpi_ranges():
+    """Load DC2_S KPI definitions and return (valid_min, valid_max) per kpi_code (union of healthy/risk/critical)."""
+    try:
+        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+    except ImportError:
+        return {}
+    out = {}
+    for kpi_code, defn in DC2S_KPIS.items():
+        ranges = defn.get('ranges') or {}
+        mins, maxs = [], []
+        for band in ('healthy', 'risk', 'critical'):
+            r = ranges.get(band, {})
+            if isinstance(r.get('min'), (int, float)):
+                mins.append(float(r['min']))
+            if isinstance(r.get('max'), (int, float)):
+                maxs.append(float(r['max']))
+        if mins and maxs:
+            out[kpi_code] = {'min': min(mins), 'max': max(maxs), 'name': defn.get('name', kpi_code), 'unit': defn.get('unit', '')}
+    return out
+
+
+def _normalize_kpi_code(kpi_code, dc2s_codes):
+    """Map AI/CH/DV/EX/OS pillar codes to P1-P5 for DC2S_KPIS lookup."""
+    if kpi_code in dc2s_codes:
+        return kpi_code
+    if '-' in str(kpi_code):
+        parts = str(kpi_code).split('-', 1)
+        if len(parts) == 2 and parts[0] in ('AI', 'CH', 'DV', 'EX', 'OS'):
+            catalog = {'AI': 'P3', 'CH': 'P4', 'DV': 'P1', 'EX': 'P5', 'OS': 'P2'}
+            lookup = catalog.get(parts[0], '') + '-' + parts[1]
+            if lookup in dc2s_codes:
+                return lookup
+    return None
 
 
 def _parse_percent(value: str):
@@ -84,6 +122,88 @@ def get_data_quality_report():
     return jsonify({
         'summary': summary,
         'details': report,
+    })
+
+
+@data_quality_api.route('/api/data-quality/kpi-range-discrepancies', methods=['GET'])
+def get_kpi_range_discrepancies():
+    """
+    GET /api/data-quality/kpi-range-discrepancies
+    Returns KPI measurements that fall outside defined reference ranges (DC2_S).
+    Tenant-scoped: only customer's accounts. Use to ensure nothing enters the system
+    (onboarding or manual CSV) that disagrees with KPI ranges.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'status': 'error', 'message': 'Authentication required'}), 401
+        customer_id = int(customer_id)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 401
+
+    ranges_map = _get_dc2s_kpi_ranges()
+    if not ranges_map:
+        return jsonify({
+            'summary': {'total_checked': 0, 'out_of_range_count': 0, 'accounts_affected': 0},
+            'discrepancies': [],
+            'message': 'No DC2_S KPI range definitions available'
+        })
+
+    # dc2s_kpis for this customer's accounts
+    account_ids = db.session.query(Account.account_id).filter(Account.customer_id == customer_id).all()
+    account_ids = [a[0] for a in account_ids]
+    if not account_ids:
+        return jsonify({
+            'summary': {'total_checked': 0, 'out_of_range_count': 0, 'accounts_affected': 0},
+            'discrepancies': []
+        })
+
+    kpis = DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids)).all()
+    account_names = {a.account_id: a.account_name for a in Account.query.filter(Account.account_id.in_(account_ids)).all()}
+
+    discrepancies = []
+    for row in kpis:
+        try:
+            val = float(row.value)
+        except (TypeError, ValueError):
+            discrepancies.append({
+                'account_id': row.account_id,
+                'account_name': account_names.get(row.account_id, ''),
+                'kpi_code': row.kpi_code,
+                'kpi_name': row.kpi_code,
+                'value': str(row.value),
+                'expected_min': None,
+                'expected_max': None,
+                'unit': '',
+                'severity': 'invalid_value'
+            })
+            continue
+        lookup = _normalize_kpi_code(row.kpi_code, ranges_map) or row.kpi_code
+        r = ranges_map.get(lookup)
+        if not r:
+            continue
+        lo, hi = r['min'], r['max']
+        if val < lo or val > hi:
+            discrepancies.append({
+                'account_id': row.account_id,
+                'account_name': account_names.get(row.account_id, ''),
+                'kpi_code': row.kpi_code,
+                'kpi_name': r.get('name', row.kpi_code),
+                'value': val,
+                'expected_min': lo,
+                'expected_max': hi,
+                'unit': r.get('unit', ''),
+                'severity': 'out_of_range'
+            })
+
+    accounts_affected = len({d['account_id'] for d in discrepancies})
+    return jsonify({
+        'summary': {
+            'total_checked': len(kpis),
+            'out_of_range_count': len(discrepancies),
+            'accounts_affected': accounts_affected
+        },
+        'discrepancies': discrepancies
     })
 
 

@@ -1,0 +1,26 @@
+                                                  Table "public.journey_events"
+         Column          |            Type             | Collation | Nullable |                     Default                      
+-------------------------+-----------------------------+-----------+----------+--------------------------------------------------
+ event_id                | integer                     |           | not null | nextval('journey_events_event_id_seq'::regclass)
+ journey_account_id      | integer                     |           |          | 
+ week_number             | integer                     |           | not null | 
+ event_date              | date                        |           | not null | 
+ phase                   | character varying(50)       |           |          | 
+ event_type              | character varying(100)      |           |          | 
+ description             | text                        |           |          | 
+ sentiment_level         | character varying(50)       |           |          | 
+ sentiment_value         | numeric(3,2)                |           |          | 
+ health_score_before     | numeric(5,2)                |           |          | 
+ health_score_after      | numeric(5,2)                |           |          | 
+ health_impact           | numeric(5,2)                |           |          | 
+ outcome                 | text                        |           |          | 
+ csm_action_type         | character varying(100)      |           |          | 
+ csm_action_description  | text                        |           |          | 
+ csm_response_time_hours | numeric(8,2)                |           |          | 
+ csm_action_cost         | numeric(10,2)               |           |          | 
+ created_at              | timestamp without time zone |           |          | now()
+Indexes:
+    "journey_events_pkey" PRIMARY KEY, btree (event_id)
+Foreign-key constraints:
+    "journey_events_journey_account_id_fkey" FOREIGN KEY (journey_account_id) REFERENCES journey_accounts(journey_account_id)
+

@@ -1,0 +1,429 @@
+{
+  "timestamp": "2026-01-03T10:12:47.613496",
+  "customer_id": 1,
+  "total_queries": 20,
+  "successful": 20,
+  "failed": 0,
+  "results": [
+    {
+      "query": "Which products are commonly used across accounts?",
+      "status": "success",
+      "duration": 18.375813961029053,
+      "response": "Based on the data provided, the products that are commonly used across accounts are the \"Analytics Platform\" and the \"Core Platform\". \n\nThe \"Analytics Platform\" is used by the following accounts:\n1. CloudPrime: Revenue generated is $2,596,324\n2. CloudMaster: Revenue generated is $2,569,162\n3. InfoTech: Revenue generated is $3,825,187\n4. CloudVantage: Revenue generated is $2,692,083\n5. TechVision: Revenue generated is $4,483,658\n6. DataSphere: Revenue generated is $2,938,620\n\nThe \"Core Platform\" is used by the following accounts:\n1. DataWise: Revenue generated is $3,006,339\n2. CloudScale: Revenue generated is $3,387,462\n3. InfoDynamics: Revenue generated is $2,721,928\n4. InfoTech: Revenue generated is $3,825,187\n\nIn total, the \"Analytics Platform\" is used by 6 accounts and the \"Core Platform\" is used by 4 accounts. \n\nIn terms of revenue, the \"Analytics Platform\" has generated a total of $19,105,034 across all accounts, while the \"Core Platform\" has generated a total of $12,941,916. \n\nTherefore, the \"Analytics Platform\" is the most widely used product and also generates the highest revenue.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 1105,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "What products are widely used across most accounts?",
+      "status": "success",
+      "duration": 15.210180044174194,
+      "response": "Based on the quantitative data from the structured databases, the products that are widely used across most accounts are the \"Core Platform\" and the \"Analytics Platform\". \n\nThe \"Core Platform\" is used by the following accounts: \n- InfoTech with a revenue of $3,825,187\n- DataWise with a revenue of $3,006,339\n- FutureTech with a revenue of $3,259,724\n- SecureNet with a revenue of $3,843,848\n- CloudScale with a revenue of $3,387,462\n- CloudEdge with a revenue of $3,541,105\n\nThe \"Analytics Platform\" is used by the following accounts: \n- InfoTech with a revenue of $3,825,187\n- CloudMaster with a revenue of $2,569,162\n- TechVision with a revenue of $4,483,658\n- CloudPrime with a revenue of $2,596,324\n\nIn terms of revenue, the \"Core Platform\" generates a total of $20,863,665 across six accounts and the \"Analytics Platform\" generates a total of $13,474,331 across four accounts. \n\nIn conclusion, the \"Core Platform\" and the \"Analytics Platform\" are the most widely used products across the accounts. The \"Core Platform\" is the most widely used product with six accounts using it, followed by the \"Analytics Platform\" which is used by four accounts.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 1152,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "List all product names used by our customers",
+      "status": "success",
+      "duration": 17.728888750076294,
+      "response": "Based on the data, the following products are used by our customers:\n\n1. Mobile App:\n   - Used by 7 accounts: CloudMaster, TechAdvance, DataStream, TechNova, GlobalSystems, DataForge, and DigitalFirst.\n   - The revenue generated from these accounts ranges from $1,092,056 (DataForge) to $4,041,581 (DataStream).\n\n2. Analytics Platform:\n   - Used by 1 account: CloudPrime.\n   - The revenue generated from this account is $2,596,324.\n\n3. Core Platform:\n   - Used by 1 account: CloudScale.\n   - The revenue generated from this account is $3,387,462.\n\n4. Integration Hub:\n   - Used by 1 account: CloudMaster.\n   - The revenue generated from this account is $2,569,162.\n\nIn total, the Mobile App is the most widely used product, adopted by 7 out of the 10 accounts mentioned. The Analytics Platform, Core Platform, and Integration Hub are each used by one account. The Mobile App also generates the highest total revenue, with a range of $1,092,056 to $4,041,581 per account. \n\nIt's worth noting that the Mobile App is used across various industries and regions, including Retail, Manufacturing, and regions such as Europe, North America, Latin America, and Asia Pacific. This indicates a broad market acceptance of this product. \n\nThe other products (Analytics Platform, Core Platform, Integration Hub) are each used by one account, and the industries and regions for these accounts are not specified in the data. \n\nIn conclusion, the Mobile App is our most popular and highest revenue-generating product. The other products have less adoption and generate less revenue in comparison.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 1580,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which products are most popular across accounts?",
+      "status": "success",
+      "duration": 22.9740149974823,
+      "response": "Based on the available data, the most popular products across accounts are the \"Mobile App\" and the \"Analytics Platform\".\n\n1. \"Mobile App\": This product is used by one account, DataStream, and has generated a revenue of $4,041,581. The industry of the account using this product is Retail, and the region is North America.\n\n2. \"Analytics Platform\": This product is used by multiple accounts including CloudMaster, CloudPrime, InfoTech, DataSphere, TechVision, InfoDynamics, DataWise, CloudVantage, and TechHub. The revenue generated by this product varies across accounts, with the highest being $4,483,658 from the TechVision account and the lowest being $2,569,162 from the CloudMaster account. The industries of the accounts using this product range from Retail, Finance, Manufacturing, Healthcare, and Technology, and the regions include Europe, Latin America, and some unknown regions.\n\nIn terms of popularity, the \"Analytics Platform\" is more widely used across different accounts and industries, suggesting a broader appeal and versatility. However, the \"Mobile App\" has generated a significant amount of revenue from a single account, indicating a high value for specific use cases or industries.\n\nHere are the specific metrics for each product:\n\n- \"Mobile App\": \n  - Accounts using product: 1 (DataStream)\n  - Total Revenue: $4,041,581\n\n- \"Analytics Platform\":\n  - Accounts using product: 9 (CloudMaster, CloudPrime, InfoTech, DataSphere, TechVision, InfoDynamics, DataWise, CloudVantage, TechHub)\n  - Total Revenue: $28,169,301\n\nIn conclusion, while the \"Mobile App\" has a high revenue per account, the \"Analytics Platform\" is more widely used and has generated more total revenue.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": true,
+        "mentions_kpis": true,
+        "has_specific_data": true,
+        "has_recommendations": true,
+        "length": 1691,
+        "quality_score": 10
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Show me product adoption across accounts",
+      "status": "success",
+      "duration": 1.205993890762329,
+      "response": "I couldn't find relevant information to answer your query.",
+      "quality": {
+        "mentions_products": false,
+        "mentions_accounts": false,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": false,
+        "has_recommendations": false,
+        "length": 58,
+        "quality_score": 0
+      },
+      "metadata": {
+        "results_count": 0,
+        "query_type": "product_analysis",
+        "has_relevant_results": false
+      }
+    },
+    {
+      "query": "What is the health score for Core Platform?",
+      "status": "success",
+      "duration": 8.551261186599731,
+      "response": "The query asks for the health score of the product \"Core Platform\". However, the provided data does not include any specific health score for the product \"Core Platform\". The available data only provides information on which accounts are using the product, the revenue generated from each account, the status of the product, and the industry and region of each account. \n\nFor instance, the product \"Core Platform\" is used by accounts such as InfoDynamics, DataPulse, CloudScale, SecureNet, TechHub, CloudEdge, TechAdvance, InfoFlow, TechBridge, and TechCorp Solutions. The revenue generated from these accounts ranges from $2,057,114 (TechBridge) to $4,133,534 (InfoFlow). \n\nWithout the specific health score data for the product \"Core Platform\", it is not possible to provide an accurate health score. Please provide the relevant data to get a precise health score for the product \"Core Platform\".",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": true,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 898,
+        "quality_score": 8
+      },
+      "metadata": {
+        "results_count": 14,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which products have low health scores?",
+      "status": "success",
+      "duration": 11.538894176483154,
+      "response": "The available data does not provide specific health scores for the products. Therefore, it is not possible to identify which products have low health scores based on the current data. The data provided includes information about the product names, the accounts using these products, and the revenue generated from these products, but no health scores. \n\nHere are the products mentioned in the data:\n\n1. Analytics Platform - Used by InfoDynamics and DataPulse, generating revenues of $2,721,928 and $3,343,020 respectively.\n2. Core Platform - Used by InfoDynamics and DataPulse, generating revenues of $2,721,928 and $3,343,020 respectively.\n3. Mobile App - Used by DataStream, generating a revenue of $4,041,581.\n\nPlease provide the health scores for these products to further analyze which products have low health scores.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": true,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 823,
+        "quality_score": 8
+      },
+      "metadata": {
+        "results_count": 5,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Show me products that need attention",
+      "status": "success",
+      "duration": 19.215766191482544,
+      "response": "Based on the available data, the following products are being used by various accounts:\n\n1. **Analytics Platform**:\n   - Used by accounts: CloudMaster and DataPulse\n   - Total revenue generated: $5,912,182 ($2,569,162 from CloudMaster and $3,343,020 from DataPulse)\n\n2. **Integration Hub**:\n   - Used by accounts: CloudMaster, GlobalSystems, DataDrive, DataPulse, InnovateTech, and SmartData Corp\n   - Total revenue generated: $19,353,908 ($2,569,162 from CloudMaster, $3,244,639 from GlobalSystems, $2,312,740 from DataDrive, $3,343,020 from DataPulse, $4,050,051 from InnovateTech, and $3,833,296 from SmartData Corp)\n\n3. **Core Platform**:\n   - Used by account: DataPulse\n   - Total revenue generated: $3,343,020\n\n4. **Mobile App**:\n   - Used by account: GlobalSystems\n   - Total revenue generated: $3,244,639\n\nThe **Integration Hub** is the most widely used product with six accounts utilizing it, generating the highest total revenue of $19,353,908. The **Analytics Platform** is used by two accounts and has generated a total revenue of $5,912,182. The **Core Platform** and **Mobile App** are each used by one account, generating revenues of $3,343,020 and $3,244,639 respectively.\n\nBased on these metrics, the **Integration Hub** and **Analytics Platform** are the products that need the most attention due to their wide usage and high revenue generation.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": true,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 1363,
+        "quality_score": 7
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "What products are underperforming?",
+      "status": "success",
+      "duration": 13.999203205108643,
+      "response": "Based on the revenue figures, the underperforming products are as follows:\n\n1. Product Name: Mobile App - Used by Account: TechAdvance - Revenue: $2,401,436\n2. Product Name: Core Platform - Used by Account: TechAdvance - Revenue: $2,401,436\n3. Product Name: Mobile App - Used by Account: TechNova - Revenue: $2,413,475\n4. Product Name: Analytics Platform - Used by Account: CloudMaster - Revenue: $2,569,162\n5. Product Name: Core Platform - Used by Account: DataWise - Revenue: $3,006,339\n6. Product Name: Mobile App - Used by Account: DigitalFirst - Revenue: $2,932,426\n\nThese products have the lowest revenue figures among the products listed. The Mobile App used by TechAdvance and the Core Platform used by TechAdvance are the least performing with a revenue of $2,401,436 each. The Mobile App used by TechNova is slightly better with a revenue of $2,413,475. The Analytics Platform used by CloudMaster has a revenue of $2,569,162. The Core Platform used by DataWise and the Mobile App used by DigitalFirst have revenues of $3,006,339 and $2,932,426 respectively. \n\nIt's recommended to investigate the reasons behind the lower performance of these products. Factors could include product features, customer satisfaction, market competition, pricing, or marketing strategies.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": true,
+        "length": 1278,
+        "quality_score": 7
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Compare product health scores across all products",
+      "status": "success",
+      "duration": 15.125422954559326,
+      "response": "Based on the provided data, we have four products being used by different accounts. Here is a breakdown of each product:\n\n1. Analytics Platform: This product is used by two accounts - DataPulse and InfoDynamics. The revenue generated from the Analytics Platform is $3,343,020 for DataPulse and $2,721,928 for InfoDynamics. \n\n2. Core Platform: This product is used by DataPulse and generates a revenue of $3,343,020. \n\n3. Mobile App: This product is used by DataStream and generates a revenue of $4,041,581. \n\nUnfortunately, the health scores for these products are not provided in the data. Therefore, a comparison of product health scores across all products cannot be made. However, if we consider revenue as a proxy for product health, the Mobile App used by DataStream is the highest revenue-generating product, followed by the Analytics Platform used by DataPulse and the Core Platform, also used by DataPulse. The Analytics Platform used by InfoDynamics generates the least revenue. \n\nPlease note that this analysis is based on the assumption that higher revenue indicates better product health, which may not always be the case. Other factors such as customer satisfaction, product reliability, and user engagement are also important indicators of product health.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": true,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": true,
+        "length": 1270,
+        "quality_score": 9
+      },
+      "metadata": {
+        "results_count": 4,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which products have low adoption rates?",
+      "status": "success",
+      "duration": 1.1732048988342285,
+      "response": "I couldn't find relevant information to answer your query.",
+      "quality": {
+        "mentions_products": false,
+        "mentions_accounts": false,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": false,
+        "has_recommendations": false,
+        "length": 58,
+        "quality_score": 0
+      },
+      "metadata": {
+        "results_count": 0,
+        "query_type": "product_analysis",
+        "has_relevant_results": false
+      }
+    },
+    {
+      "query": "Compare product performance across accounts",
+      "status": "success",
+      "duration": 12.80495285987854,
+      "response": "Based on the quantitative data provided, the product \"Analytics Platform\" is widely used across multiple accounts, with varying levels of revenue generated from each account. Here are the specific metrics:\n\n1. TechVision: The Analytics Platform generates the highest revenue of $4,483,658 from this account. This account is in the Manufacturing industry and is based in Latin America.\n\n2. CloudMaster: This account generates the second-lowest revenue of $2,569,162 from the Analytics Platform. It belongs to the Retail industry and is located in Europe.\n\n3. TechHub: The Analytics Platform generates a revenue of $3,335,310 from this account. This account is also in the Manufacturing industry and is based in Europe.\n\n4. InfoTech: This account contributes $3,825,187 in revenue from the Analytics Platform. It is in the Finance industry and is located in Latin America.\n\n5. CloudVantage: This account generates a revenue of $2,692,083 from the Analytics Platform. The industry and region for this account are unknown.\n\n6. CloudPrime: This account contributes $2,596,324 in revenue from the Analytics Platform. The industry and region for this account are unknown.\n\n7. TechNova: This account generates the lowest revenue of $2,413,475 from the Analytics Platform. The industry and region for this account are unknown.\n\n8. DataSphere: This account contributes $2,938,620 in revenue from the Analytics Platform. The industry and region for this account are unknown.\n\n9. DataWise: This account generates a revenue of $3,006,339 from the Analytics Platform. It is in the Technology industry and is based in Latin America.\n\nIn addition to the Analytics Platform, the product \"Mobile App\" is used by the account DataStream, generating a revenue of $4,041,581. This account is in the Retail industry and is based in North America.\n\nBased on these metrics, it is clear that the Analytics Platform is a widely adopted product across various industries and regions, with the highest revenue generated from the TechVision account. The Mobile App also shows promising revenue figures from the DataStream account. Further analysis could be done to identify strategies for increasing adoption and revenue from these products across other accounts.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": true,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 2233,
+        "quality_score": 7
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "What is the product activation rate for Core Platform?",
+      "status": "success",
+      "duration": 1.2145440578460693,
+      "response": "I couldn't find relevant information to answer your query.",
+      "quality": {
+        "mentions_products": false,
+        "mentions_accounts": false,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": false,
+        "has_recommendations": false,
+        "length": 58,
+        "quality_score": 0
+      },
+      "metadata": {
+        "results_count": 0,
+        "query_type": "product_analysis",
+        "has_relevant_results": false
+      }
+    },
+    {
+      "query": "Show me accounts where Mobile App has low adoption",
+      "status": "success",
+      "duration": 15.097330093383789,
+      "response": "Based on the data provided, the product \"Mobile App\" is used by the following accounts:\n\n1. TechAdvance\n2. DigitalFirst\n3. InfoCore\n4. GlobalSystems\n5. TechNova\n6. TechBridge\n7. DataForge\n8. CloudMaster\n9. DataStream\n10. NetCore\n\nThe revenue generated from the \"Mobile App\" for each account is as follows:\n\n1. TechAdvance: $2,401,436\n2. DigitalFirst: $2,932,426\n3. InfoCore: $3,363,576\n4. GlobalSystems: $3,244,639\n5. TechNova: $2,413,475\n6. TechBridge: $2,057,114\n7. DataForge: $1,092,056\n8. CloudMaster: $2,569,162\n9. DataStream: $4,041,581\n10. NetCore: $2,647,360\n\nThe data does not provide specific metrics on the adoption rate of the \"Mobile App\" by these accounts. However, the revenue figures suggest that the product is generating significant income across multiple accounts, which could indicate a high level of adoption. To determine which accounts have low adoption of the \"Mobile App\", further data on usage metrics, such as active users or frequency of use, would be required.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": true,
+        "has_specific_data": true,
+        "has_recommendations": true,
+        "length": 989,
+        "quality_score": 8
+      },
+      "metadata": {
+        "results_count": 10,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Compare API Gateway performance across different accounts",
+      "status": "success",
+      "duration": 16.029731035232544,
+      "response": "Based on the data provided, the product \"API Gateway\" is used by a variety of accounts with varying revenues. Here's a breakdown of the product's performance across these accounts:\n\n1. CloudVantage: The API Gateway product generates a revenue of $2,692,083 for this account. \n\n2. CloudScale: This account generates a higher revenue of $3,387,462 from the API Gateway product.\n\n3. CloudServices LLC: This account has the highest revenue among the listed accounts at $3,406,977 from the API Gateway product.\n\n4. DataSphere: The API Gateway product generates a revenue of $2,938,620 for this account.\n\n5. NetCore: This account generates a revenue of $2,647,360 from the API Gateway product.\n\n6. InfoCore: The API Gateway product generates a revenue of $3,363,576 for this account.\n\n7. TechFusion: This account has the lowest revenue among the listed accounts at $1,728,925 from the API Gateway product.\n\n8. AgileWorks: This account generates a high revenue of $3,556,956 from the API Gateway product.\n\n9. DataFlow: The API Gateway product generates a revenue of $3,049,111 for this account.\n\n10. InfoFlow: This account generates the highest revenue of $4,133,534 from the API Gateway product.\n\nFrom this data, it is clear that the API Gateway product is most profitable when used by the InfoFlow account, followed by CloudServices LLC and AgileWorks. The least profitable account for this product is TechFusion. \n\nIt may be beneficial to investigate why the product performs better in some accounts than others. Factors could include the industry of the account, the region in which it operates, or the way the product is utilized within the account. This could provide insights into how to increase product performance across all accounts.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 1737,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 19,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "What are the product-level KPIs for accounts with low adoption?",
+      "status": "success",
+      "duration": 1.2083179950714111,
+      "response": "I couldn't find relevant information to answer your query.",
+      "quality": {
+        "mentions_products": false,
+        "mentions_accounts": false,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": false,
+        "has_recommendations": false,
+        "length": 58,
+        "quality_score": 0
+      },
+      "metadata": {
+        "results_count": 0,
+        "query_type": "product_analysis",
+        "has_relevant_results": false
+      }
+    },
+    {
+      "query": "Show me revenue trends by product",
+      "status": "success",
+      "duration": 7.813978910446167,
+      "response": "Based on the available data, the product \"Mobile App\" used by the account \"DataStream\" has generated a revenue of $4,041,581. This product is active and is being used in the retail industry, specifically in the North America region. \n\nUnfortunately, the data does not provide information on the SKU, type, or category of the product, which could have provided further insights into the product's performance. \n\nGiven the substantial revenue generated by the \"Mobile App\", it is recommended to continue its usage and possibly explore opportunities for expanding its deployment in the retail industry, particularly in North America. \n\nPlease note that this analysis is based solely on the available data and does not include any trends over time as no temporal data is provided. For a more comprehensive analysis, it would be beneficial to have access to data over a specific timeframe.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": true,
+        "length": 884,
+        "quality_score": 7
+      },
+      "metadata": {
+        "results_count": 1,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "Which products generate the most revenue?",
+      "status": "success",
+      "duration": 11.899870872497559,
+      "response": "Based on the available data, the product that generates the most revenue is the \"Mobile App\". Here is the revenue generated by the \"Mobile App\" from various accounts:\n\n1. DataStream: $4,041,581\n2. DigitalFirst: $2,932,426\n3. CloudMaster: $2,569,162\n4. TechAdvance: $2,401,436\n5. NetCore: $2,647,360\n6. InfoCore: $3,363,576\n7. GlobalSystems: $3,244,639\n8. DataForge: $1,092,056\n9. TechNova: $2,413,475\n\nThe \"Analytics Platform\" used by the CloudMaster account also generates substantial revenue of $2,569,162. \n\nIn summary, the \"Mobile App\" product is widely used by multiple accounts and generates the highest revenue. The account that contributes the most to this revenue is DataStream with a contribution of $4,041,581. \n\nRecommendation: Given its high revenue generation, it would be beneficial to focus on the \"Mobile App\" product, possibly exploring ways to expand its usage to other accounts or enhance its features to increase its value proposition.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": true,
+        "length": 956,
+        "quality_score": 7
+      },
+      "metadata": {
+        "results_count": 12,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    },
+    {
+      "query": "What is the average health score per product?",
+      "status": "success",
+      "duration": 1.346482753753662,
+      "response": "I couldn't find relevant information to answer your query.",
+      "quality": {
+        "mentions_products": false,
+        "mentions_accounts": false,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": false,
+        "has_recommendations": false,
+        "length": 58,
+        "quality_score": 0
+      },
+      "metadata": {
+        "results_count": 0,
+        "query_type": "product_analysis",
+        "has_relevant_results": false
+      }
+    },
+    {
+      "query": "Which accounts use multiple products?",
+      "status": "success",
+      "duration": 7.344344139099121,
+      "response": "Based on the data provided, the account that uses multiple products is CloudMaster. Specifically, CloudMaster uses two products: the Integration Hub and the Analytics Platform.\n\nHere are the details for each product:\n\n1. Product Name: Integration Hub\n   - Used by Account: CloudMaster\n   - Product Revenue: $2,569,162\n   - Product Status: Active\n   - Industry: Retail\n   - Region: Europe\n\n2. Product Name: Analytics Platform\n   - Used by Account: CloudMaster\n   - Product Revenue: $2,569,162\n   - Product Status: Active\n   - Industry: Retail\n   - Region: Europe\n\nNo other accounts are listed as using multiple products in the provided data.",
+      "quality": {
+        "mentions_products": true,
+        "mentions_accounts": true,
+        "mentions_health_scores": false,
+        "mentions_kpis": false,
+        "has_specific_data": true,
+        "has_recommendations": false,
+        "length": 640,
+        "quality_score": 6
+      },
+      "metadata": {
+        "results_count": 20,
+        "query_type": "product_analysis",
+        "has_relevant_results": true
+      }
+    }
+  ]
+}

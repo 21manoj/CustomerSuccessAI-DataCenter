@@ -14,8 +14,9 @@ import queue
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure logging with centralized config
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 class EventType(Enum):
     """Event types for the system"""
@@ -363,6 +364,17 @@ class EventManager:
         self.data_subscriber = DataIngestionSubscriber()
         self.snapshot_subscriber = AccountSnapshotSubscriber()
         
+        # Product Health Subscriber
+        try:
+            from product_health_subscriber import ProductHealthSubscriber
+            self.product_health_subscriber = ProductHealthSubscriber()
+        except ImportError:
+            self.product_health_subscriber = None
+            logger.warning("ProductHealthSubscriber not available")
+        
+        # Health Score Rollup Subscriber (initialized in _setup_subscriptions)
+        self.health_score_subscriber = None
+        
         # Subscribe to events
         self._setup_subscriptions()
     
@@ -396,6 +408,23 @@ class EventManager:
         self.publisher.subscribe(EventType.KPI_DATA_UPLOADED, self.snapshot_subscriber.handle_event)
         self.publisher.subscribe(EventType.ACCOUNT_DATA_CHANGED, self.snapshot_subscriber.handle_event)
         self.publisher.subscribe(EventType.HEALTH_SCORES_UPDATED, self.snapshot_subscriber.handle_event)
+        
+        # Product health events (auto-calculate product health on data changes)
+        if self.product_health_subscriber:
+            self.publisher.subscribe(EventType.KPI_DATA_UPLOADED, self.product_health_subscriber.handle_event)
+            self.publisher.subscribe(EventType.ACCOUNT_DATA_CHANGED, self.product_health_subscriber.handle_event)
+            self.publisher.subscribe(EventType.HEALTH_SCORES_UPDATED, self.product_health_subscriber.handle_event)
+            logger.info("✅ Product health auto-calculation enabled (event-driven)")
+        
+        # Health score rollup events (auto-calculate health scores on KPI upload)
+        try:
+            from health_score_rollup_subscriber import HealthScoreRollupSubscriber
+            self.health_score_subscriber = HealthScoreRollupSubscriber()
+            self.publisher.subscribe(EventType.KPI_DATA_UPLOADED, self.health_score_subscriber.handle_event)
+            logger.info("✅ Health score rollup auto-calculation enabled (event-driven)")
+        except ImportError as e:
+            self.health_score_subscriber = None
+            logger.warning(f"HealthScoreRollupSubscriber not available: {e}")
     
     def publish_kpi_upload(self, customer_id: int, upload_id: int, kpi_count: int):
         """Publish KPI upload event"""

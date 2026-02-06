@@ -1,0 +1,909 @@
+account_id,account_name,date,signal_type,from_contact,to_contact,summary,sentiment
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-22,escalation,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-13,email,Dr. Johnson,Lisa Anderson,Quarterly capacity planning review,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-10,email,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-28,email,Dr. Johnson,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-10,email,Dr. Johnson,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-28,escalation,Dr. Johnson,Lisa Anderson,Integration challenges with existing systems,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-27,email,Dr. Johnson,Lisa Anderson,Reference call completed successfully with prospect,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-12,email,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-03,meeting,Dr. Johnson,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-14,escalation,Dr. Johnson,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-15,meeting,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-01-31,email,Dr. Johnson,Lisa Anderson,Routine technical sync meeting completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-11,email,Dr. Johnson,Lisa Anderson,Routine technical sync meeting completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-03,meeting,Dr. Johnson,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-05,meeting,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-02-22,email,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-01,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-26,email,Dr. Johnson,Lisa Anderson,Reference call completed successfully with prospect,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-17,meeting,Dr. Johnson,Lisa Anderson,Scheduled maintenance window executed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-23,escalation,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-19,escalation,Dr. Johnson,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-21,meeting,Customer Team,Lisa Anderson,Support ticket unresolved >48 hours,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-09,meeting,Dr. Johnson,Lisa Anderson,Security compliance audit findings,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-17,email,Dr. Johnson,Lisa Anderson,Documentation review and updates,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-22,email,Customer Team,Lisa Anderson,Escalation from operations team regarding performance,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-17,meeting,Dr. Johnson,Lisa Anderson,Support ticket unresolved >48 hours,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-03-31,meeting,Dr. Johnson,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-18,escalation,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-12,email,Dr. Johnson,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-08,escalation,Dr. Johnson,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-03,meeting,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-04-21,meeting,Dr. Johnson,Lisa Anderson,Routine technical sync meeting completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-16,meeting,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-23,email,Customer Team,Lisa Anderson,Documentation review and updates,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-13,email,Customer Team,Lisa Anderson,System health check completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-04,meeting,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-23,escalation,Customer Team,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-13,meeting,Dr. Johnson,Lisa Anderson,Escalation from operations team regarding performance,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-24,email,Dr. Johnson,Lisa Anderson,Documentation review and updates,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-04,email,Dr. Johnson,Lisa Anderson,Regular operational status update provided,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-21,email,Customer Team,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-12,email,Dr. Johnson,Lisa Anderson,Integration challenges with existing systems,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-25,meeting,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-14,meeting,Dr. Johnson,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-04,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-04,email,Dr. Johnson,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-05-31,meeting,Customer Team,Lisa Anderson,System health check completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-02,email,Dr. Johnson,Lisa Anderson,Regular operational status update provided,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-07-21,email,Dr. Johnson,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-06-30,email,Dr. Johnson,Lisa Anderson,Quarterly capacity planning review,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-07-07,email,Dr. Johnson,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-07-22,email,Customer Team,Lisa Anderson,System health check completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-07-13,email,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-07-27,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-08-02,meeting,Dr. Johnson,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-08-08,escalation,Dr. Johnson,Lisa Anderson,Support ticket unresolved >48 hours,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-08-12,email,Customer Team,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-08-14,email,Dr. Johnson,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-07-29,email,Dr. Johnson,Lisa Anderson,System health check completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-08-12,meeting,Customer Team,Lisa Anderson,Team member completed advanced certification,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-09-20,email,Customer Team,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-09-03,escalation,Customer Team,Lisa Anderson,Concerns about cooling efficiency raised,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-09-18,email,Dr. Johnson,Lisa Anderson,Scheduled maintenance window executed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-08-29,meeting,Customer Team,Lisa Anderson,Escalation from operations team regarding performance,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-09-10,email,Dr. Johnson,Lisa Anderson,Routine technical sync meeting completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-09-23,meeting,Dr. Johnson,Lisa Anderson,Early adoption of new AI acceleration features,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-09,email,Dr. Johnson,Lisa Anderson,System health check completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-12,meeting,Dr. Johnson,Lisa Anderson,Monthly business review conducted,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-15,email,Dr. Johnson,Lisa Anderson,System health check completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-03,meeting,Dr. Johnson,Lisa Anderson,Quarterly capacity planning review,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-19,meeting,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-02,meeting,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-11-22,meeting,Dr. Johnson,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-11-10,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-30,email,Dr. Johnson,Lisa Anderson,Reference call completed successfully with prospect,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-29,meeting,Dr. Johnson,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-10-31,escalation,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-11-24,email,Dr. Johnson,Lisa Anderson,Routine technical sync meeting completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-20,meeting,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-07,email,Customer Team,Lisa Anderson,Routine technical sync meeting completed,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-02,email,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-24,email,Dr. Johnson,Lisa Anderson,Early adoption of new AI acceleration features,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-01,email,Dr. Johnson,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-11-28,meeting,Customer Team,Lisa Anderson,Reference call completed successfully with prospect,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-14,meeting,Dr. Johnson,Lisa Anderson,Monthly business review conducted,neutral
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-04,email,Dr. Johnson,Lisa Anderson,Reference call completed successfully with prospect,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-11-26,meeting,Customer Team,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+53001,E2E Full Test Corporation 1769028363 - Datacenter East,2024-12-17,email,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-10,meeting,Dr. Johnson,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-19,meeting,Customer Team,Sarah Chen,Executive sponsor praised team collaboration,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-06,email,Dr. Johnson,Sarah Chen,Scheduled maintenance window executed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-18,email,Dr. Johnson,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-24,email,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-18,escalation,Dr. Johnson,Sarah Chen,Escalation from operations team regarding performance,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-05,email,Customer Team,Sarah Chen,Reference call completed successfully with prospect,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-04,email,Dr. Johnson,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-05,meeting,Customer Team,Sarah Chen,Security compliance audit findings,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-01-02,email,Dr. Johnson,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-16,meeting,Dr. Johnson,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-20,email,Dr. Johnson,Sarah Chen,Executive sponsor praised team collaboration,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-13,meeting,Dr. Johnson,Sarah Chen,Documentation review and updates,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-04,email,Dr. Johnson,Sarah Chen,Exceeded performance benchmarks this quarter,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-16,email,Dr. Johnson,Sarah Chen,Regular operational status update provided,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-17,email,Dr. Johnson,Sarah Chen,Scheduled maintenance window executed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-19,meeting,Customer Team,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-25,email,Dr. Johnson,Sarah Chen,System health check completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-17,meeting,Customer Team,Sarah Chen,Training session on new features delivered,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-02-10,email,Dr. Johnson,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-03,email,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-14,meeting,Dr. Johnson,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-13,email,Customer Team,Sarah Chen,Successfully deployed new workload ahead of schedule,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-08,escalation,Customer Team,Sarah Chen,Unexpected system downtime reported,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-28,email,Customer Team,Sarah Chen,Successfully deployed new workload ahead of schedule,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-11,meeting,Customer Team,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-01,email,Dr. Johnson,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-21,meeting,Dr. Johnson,Sarah Chen,Project milestone delayed due to resource constraints,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-20,meeting,Customer Team,Sarah Chen,Integration challenges with existing systems,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-03-28,meeting,Dr. Johnson,Sarah Chen,Successfully deployed new workload ahead of schedule,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-04-06,meeting,Customer Team,Sarah Chen,Executive sponsor praised team collaboration,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-04-02,email,Customer Team,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-04-11,email,Customer Team,Sarah Chen,Executive sponsor praised team collaboration,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-04-24,email,Dr. Johnson,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-04-11,meeting,Dr. Johnson,Sarah Chen,Scheduled maintenance window executed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-04-11,escalation,Dr. Johnson,Sarah Chen,Escalation from operations team regarding performance,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-04,meeting,Dr. Johnson,Sarah Chen,Escalation from operations team regarding performance,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-08,email,Dr. Johnson,Sarah Chen,System health check completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-14,email,Dr. Johnson,Sarah Chen,System health check completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-18,email,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-22,email,Customer Team,Sarah Chen,Reference call completed successfully with prospect,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-03,email,Customer Team,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-06-17,meeting,Customer Team,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-06-08,email,Dr. Johnson,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-06-16,email,Customer Team,Sarah Chen,System health check completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-05-30,email,Dr. Johnson,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-06-01,meeting,Dr. Johnson,Sarah Chen,Routine technical sync meeting completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-06-18,email,Dr. Johnson,Sarah Chen,Routine technical sync meeting completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-11,meeting,Customer Team,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-02,email,Customer Team,Sarah Chen,Training session on new features delivered,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-15,email,Customer Team,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-02,email,Customer Team,Sarah Chen,Documentation review and updates,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-04,meeting,Customer Team,Sarah Chen,Concerns about cooling efficiency raised,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-15,email,Customer Team,Sarah Chen,Support ticket unresolved >48 hours,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-07-31,email,Dr. Johnson,Sarah Chen,Team member completed advanced certification,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-05,meeting,Dr. Johnson,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-22,email,Dr. Johnson,Sarah Chen,Training session on new features delivered,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-03,meeting,Dr. Johnson,Sarah Chen,Documentation review and updates,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-24,email,Customer Team,Sarah Chen,Documentation review and updates,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-18,email,Customer Team,Sarah Chen,Scheduled maintenance window executed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-09-13,email,Customer Team,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-28,email,Dr. Johnson,Sarah Chen,System health check completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-09-07,email,Dr. Johnson,Sarah Chen,Regular operational status update provided,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-09-25,email,Dr. Johnson,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-09-13,email,Dr. Johnson,Sarah Chen,Training session on new features delivered,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-08-28,email,Dr. Johnson,Sarah Chen,Documentation review and updates,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-21,escalation,Dr. Johnson,Sarah Chen,Project milestone delayed due to resource constraints,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-22,email,Customer Team,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-16,email,Customer Team,Sarah Chen,Routine technical sync meeting completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-14,meeting,Customer Team,Sarah Chen,Security compliance audit findings,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-21,meeting,Dr. Johnson,Sarah Chen,Support ticket unresolved >48 hours,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-08,escalation,Dr. Johnson,Sarah Chen,Budget concerns raised during planning meeting,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-17,email,Dr. Johnson,Sarah Chen,Budget concerns raised during planning meeting,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-11,email,Dr. Johnson,Sarah Chen,Successfully deployed new workload ahead of schedule,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-06,email,Dr. Johnson,Sarah Chen,Security compliance audit findings,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-28,email,Dr. Johnson,Sarah Chen,Monthly business review conducted,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-12,email,Customer Team,Sarah Chen,System health check completed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-21,meeting,Customer Team,Sarah Chen,Integration challenges with existing systems,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-17,meeting,Dr. Johnson,Sarah Chen,Scheduled maintenance window executed,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-03,escalation,Customer Team,Sarah Chen,Unexpected system downtime reported,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-10-28,escalation,Customer Team,Sarah Chen,Integration challenges with existing systems,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-17,email,Customer Team,Sarah Chen,Positive feedback on recent infrastructure upgrade,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-06,email,Customer Team,Sarah Chen,Executive sponsor praised team collaboration,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-11-26,email,Dr. Johnson,Sarah Chen,Quarterly capacity planning review,neutral
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-16,email,Dr. Johnson,Sarah Chen,Unexpected system downtime reported,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-08,meeting,Customer Team,Sarah Chen,Integration challenges with existing systems,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-16,escalation,Customer Team,Sarah Chen,Unexpected system downtime reported,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-06,email,Dr. Johnson,Sarah Chen,Early adoption of new AI acceleration features,positive
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-08,escalation,Customer Team,Sarah Chen,Budget concerns raised during planning meeting,negative
+53002,E2E Full Test Corporation 1769028363 - Cloud Ops,2024-12-01,escalation,Customer Team,Sarah Chen,Escalation from operations team regarding performance,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-26,email,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-07,email,Customer Team,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-11,email,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-11,meeting,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-22,meeting,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-22,meeting,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-06,meeting,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-01,meeting,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-16,escalation,Dr. Smith,Tom Johnson,Unexpected system downtime reported,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-03,meeting,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-09,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-13,meeting,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-14,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-11,email,Dr. Smith,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-06,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-31,meeting,Dr. Smith,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-01-31,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-04,email,Dr. Smith,Tom Johnson,System health check completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-12,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-02-17,escalation,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-11,meeting,Dr. Smith,Tom Johnson,System health check completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-02,meeting,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-26,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-28,meeting,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-03,email,Customer Team,Tom Johnson,Scheduled maintenance window executed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-08,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-10,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-05,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-03,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-03-15,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-27,email,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-10,meeting,Dr. Smith,Tom Johnson,Regular operational status update provided,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-13,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-01,escalation,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-26,email,Dr. Smith,Tom Johnson,Documentation review and updates,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-19,email,Dr. Smith,Tom Johnson,System health check completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-06,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-20,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-14,meeting,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-04-01,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-05,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-13,email,Dr. Smith,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-20,meeting,Customer Team,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-05,email,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-08,email,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-18,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-16,meeting,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-15,email,Dr. Smith,Tom Johnson,Documentation review and updates,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-14,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-01,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-18,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-17,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-04,email,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-06,meeting,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-01,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-17,email,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-18,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-07,meeting,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-05-30,email,Dr. Smith,Tom Johnson,Security compliance audit findings,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-06-10,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-22,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-20,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-27,email,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-18,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-07,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-27,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-19,meeting,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-13,meeting,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-16,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-07-06,email,Dr. Smith,Tom Johnson,Regular operational status update provided,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-08,email,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-02,email,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-18,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-23,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-22,meeting,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-21,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-01,email,Customer Team,Tom Johnson,System health check completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-23,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-04,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-19,email,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-29,email,Dr. Smith,Tom Johnson,Regular operational status update provided,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-10,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-10,meeting,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-06,meeting,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-25,meeting,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-08,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-07,meeting,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-08-28,escalation,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-07,email,Dr. Smith,Tom Johnson,Quarterly capacity planning review,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-09-01,email,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-22,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-17,meeting,Dr. Smith,Tom Johnson,Unexpected system downtime reported,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-19,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-24,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-13,email,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-10,meeting,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-13,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-15,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-21,email,Dr. Smith,Tom Johnson,Support ticket unresolved >48 hours,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-12,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-17,email,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-18,meeting,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-23,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-07,meeting,Dr. Smith,Tom Johnson,Executive sponsor praised team collaboration,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-22,escalation,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-03,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-10-28,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-16,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-19,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-08,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-08,email,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-12,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-27,meeting,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-09,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-02,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-16,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-08,meeting,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-28,email,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-12-11,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53003,E2E Full Test Corporation 1769028363 - AI Lab,2024-11-30,meeting,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-01-24,email,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-01-06,email,Dr. Miller,Tom Johnson,Early adoption of new AI acceleration features,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-01-03,meeting,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-01-05,meeting,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-01-09,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-01-21,escalation,Dr. Miller,Tom Johnson,Support ticket unresolved >48 hours,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-02-20,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-02-18,meeting,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-02-27,email,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-02-04,email,Dr. Miller,Tom Johnson,Team member completed advanced certification,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-02-03,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-02-26,meeting,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-03-29,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-03-11,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-03-18,meeting,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-03-20,meeting,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-03-29,meeting,Dr. Miller,Tom Johnson,Executive sponsor praised team collaboration,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-03-01,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-18,email,Dr. Miller,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-22,meeting,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-06,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-23,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-19,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-01,meeting,Dr. Miller,Tom Johnson,Concerns about cooling efficiency raised,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-04-30,email,Dr. Miller,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-05-08,email,Dr. Miller,Tom Johnson,System health check completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-05-07,email,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-05-05,meeting,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-05-10,email,Dr. Miller,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-05-27,meeting,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-11,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-06,email,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-04,meeting,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-17,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-17,meeting,Customer Team,Tom Johnson,Concerns about cooling efficiency raised,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-06,email,Dr. Miller,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-16,email,Dr. Miller,Tom Johnson,Routine technical sync meeting completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-06-09,email,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-14,email,Dr. Miller,Tom Johnson,Integration challenges with existing systems,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-18,escalation,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-06,email,Dr. Miller,Tom Johnson,Quarterly capacity planning review,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-27,meeting,Customer Team,Tom Johnson,Unexpected system downtime reported,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-18,meeting,Dr. Miller,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-08,meeting,Customer Team,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-21,escalation,Dr. Miller,Tom Johnson,Unexpected system downtime reported,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-07-01,meeting,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-01,meeting,Dr. Miller,Tom Johnson,Security compliance audit findings,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-09,email,Dr. Miller,Tom Johnson,Security compliance audit findings,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-12,escalation,Customer Team,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-25,meeting,Dr. Miller,Tom Johnson,Integration challenges with existing systems,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-05,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-24,meeting,Customer Team,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-11,meeting,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-05,escalation,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-09-24,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-09-17,meeting,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-09-20,meeting,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-08-30,meeting,Dr. Miller,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-09-08,meeting,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-09-25,email,Dr. Miller,Tom Johnson,Monthly business review conducted,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-20,email,Customer Team,Tom Johnson,Reference call completed successfully with prospect,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-23,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-01,email,Dr. Miller,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-25,email,Dr. Miller,Tom Johnson,System health check completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-05,escalation,Dr. Miller,Tom Johnson,Security compliance audit findings,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-17,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-09,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-19,email,Dr. Miller,Tom Johnson,Reference call completed successfully with prospect,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-05,email,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-23,meeting,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-10-29,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-18,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-12-10,escalation,Dr. Miller,Tom Johnson,Security compliance audit findings,negative
+53004,E2E Full Test Corporation 1769028363 - Production,2024-12-14,email,Dr. Miller,Tom Johnson,System health check completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-28,meeting,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-27,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-12-07,email,Dr. Miller,Tom Johnson,Routine technical sync meeting completed,neutral
+53004,E2E Full Test Corporation 1769028363 - Production,2024-11-30,email,Dr. Miller,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-27,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-24,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-08,email,Dr. Miller,Tom Johnson,Team member completed advanced certification,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-20,email,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-12,meeting,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-09,meeting,Dr. Miller,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-24,email,Dr. Miller,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-07,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-10,meeting,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-31,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-24,email,Customer Team,Tom Johnson,Reference call completed successfully with prospect,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-09,email,Dr. Miller,Tom Johnson,Monthly business review conducted,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-24,email,Dr. Miller,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-01-31,email,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-16,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-02-20,meeting,Customer Team,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-03,email,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-20,email,Customer Team,Tom Johnson,System health check completed,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-02,email,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-27,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-18,email,Dr. Miller,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-08,email,Dr. Miller,Tom Johnson,Budget concerns raised during planning meeting,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-02,meeting,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-28,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-01,email,Dr. Miller,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-03-29,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-04-03,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-04-23,email,Dr. Miller,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-04-07,meeting,Dr. Miller,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-04-15,email,Dr. Miller,Tom Johnson,Reference call completed successfully with prospect,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-04-14,email,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-04-06,email,Dr. Miller,Tom Johnson,Monthly business review conducted,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-28,email,Dr. Miller,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-27,email,Dr. Miller,Tom Johnson,Budget concerns raised during planning meeting,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-09,email,Dr. Miller,Tom Johnson,Budget concerns raised during planning meeting,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-15,escalation,Dr. Miller,Tom Johnson,Concerns about cooling efficiency raised,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-11,email,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-15,email,Dr. Miller,Tom Johnson,Concerns about cooling efficiency raised,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-15,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-05-16,meeting,Customer Team,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-04,escalation,Dr. Miller,Tom Johnson,Concerns about cooling efficiency raised,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-24,email,Dr. Miller,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-12,meeting,Dr. Miller,Tom Johnson,Monthly business review conducted,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-01,escalation,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-15,meeting,Dr. Miller,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-07,email,Dr. Miller,Tom Johnson,Security compliance audit findings,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-13,meeting,Dr. Miller,Tom Johnson,Budget concerns raised during planning meeting,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-05,meeting,Dr. Miller,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-07-12,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-07-07,email,Dr. Miller,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-30,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-06-30,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-07-11,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-07-10,email,Customer Team,Tom Johnson,Reference call completed successfully with prospect,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-14,email,Dr. Miller,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-03,email,Dr. Miller,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-08,meeting,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-07-31,email,Dr. Miller,Tom Johnson,Documentation review and updates,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-19,meeting,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-10,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-19,email,Dr. Miller,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-19,email,Customer Team,Tom Johnson,Executive sponsor praised team collaboration,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-06,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-07-30,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-02,meeting,Dr. Miller,Tom Johnson,Reference call completed successfully with prospect,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-31,email,Dr. Miller,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-24,email,Dr. Miller,Tom Johnson,Early adoption of new AI acceleration features,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-08-28,email,Dr. Miller,Tom Johnson,Routine technical sync meeting completed,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-07,meeting,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-19,email,Dr. Miller,Tom Johnson,Security compliance audit findings,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-14,meeting,Customer Team,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-12,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-22,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-10,email,Dr. Miller,Tom Johnson,Reference call completed successfully with prospect,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-09-30,meeting,Dr. Miller,Tom Johnson,Routine technical sync meeting completed,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-02,meeting,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-23,meeting,Dr. Miller,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-16,meeting,Dr. Miller,Tom Johnson,Reference call completed successfully with prospect,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-09,email,Dr. Miller,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-02,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-11-04,email,Dr. Miller,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-28,email,Dr. Miller,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-10-27,email,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-11-01,meeting,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-11-01,escalation,Dr. Miller,Tom Johnson,Concerns about cooling efficiency raised,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-11-14,meeting,Customer Team,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-11-04,escalation,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-11-21,meeting,Dr. Miller,Tom Johnson,Regular operational status update provided,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-22,email,Dr. Miller,Tom Johnson,Support ticket unresolved >48 hours,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-14,email,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-21,escalation,Dr. Miller,Tom Johnson,Unexpected system downtime reported,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-21,escalation,Dr. Miller,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-14,meeting,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-05,escalation,Dr. Miller,Tom Johnson,Concerns about cooling efficiency raised,negative
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-21,email,Dr. Miller,Tom Johnson,Training session on new features delivered,neutral
+53005,E2E Full Test Corporation 1769028363 - Development,2024-12-14,email,Dr. Miller,Tom Johnson,Scheduled maintenance window executed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-01-08,meeting,Customer Team,Rachel Martinez,Training session on new features delivered,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-01-09,email,Dr. Brown,Rachel Martinez,Training session on new features delivered,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-01-25,meeting,Dr. Brown,Rachel Martinez,Regular operational status update provided,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-01-20,email,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-01-08,meeting,Customer Team,Rachel Martinez,Scheduled maintenance window executed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-01-15,meeting,Dr. Brown,Rachel Martinez,Reference call completed successfully with prospect,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-27,meeting,Customer Team,Rachel Martinez,Concerns about cooling efficiency raised,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-14,escalation,Dr. Brown,Rachel Martinez,Support ticket unresolved >48 hours,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-01,email,Customer Team,Rachel Martinez,Early adoption of new AI acceleration features,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-13,email,Customer Team,Rachel Martinez,Successful QBR with expansion discussion initiated,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-25,email,Dr. Brown,Rachel Martinez,Reference call completed successfully with prospect,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-03,meeting,Dr. Brown,Rachel Martinez,Unexpected system downtime reported,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-11,meeting,Customer Team,Rachel Martinez,Project milestone delayed due to resource constraints,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-02-12,meeting,Dr. Brown,Rachel Martinez,Support ticket unresolved >48 hours,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-11,email,Dr. Brown,Rachel Martinez,Project milestone delayed due to resource constraints,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-17,meeting,Dr. Brown,Rachel Martinez,System health check completed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-25,escalation,Customer Team,Rachel Martinez,Escalation from operations team regarding performance,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-19,meeting,Customer Team,Rachel Martinez,Security compliance audit findings,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-02,meeting,Dr. Brown,Rachel Martinez,Concerns about cooling efficiency raised,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-05,escalation,Customer Team,Rachel Martinez,Security compliance audit findings,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-13,email,Customer Team,Rachel Martinez,Security compliance audit findings,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-03-09,email,Customer Team,Rachel Martinez,Scheduled maintenance window executed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-04-12,meeting,Dr. Brown,Rachel Martinez,Scheduled maintenance window executed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-04-01,meeting,Dr. Brown,Rachel Martinez,Training session on new features delivered,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-04-23,email,Dr. Brown,Rachel Martinez,Documentation review and updates,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-04-17,meeting,Customer Team,Rachel Martinez,System health check completed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-04-26,meeting,Dr. Brown,Rachel Martinez,Routine technical sync meeting completed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-04-24,meeting,Dr. Brown,Rachel Martinez,Successfully deployed new workload ahead of schedule,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-28,meeting,Dr. Brown,Rachel Martinez,Project milestone delayed due to resource constraints,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-14,email,Customer Team,Rachel Martinez,Support ticket unresolved >48 hours,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-20,escalation,Dr. Brown,Rachel Martinez,Unexpected system downtime reported,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-28,email,Dr. Brown,Rachel Martinez,Escalation from operations team regarding performance,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-25,email,Customer Team,Rachel Martinez,Budget concerns raised during planning meeting,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-15,email,Customer Team,Rachel Martinez,Documentation review and updates,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-20,escalation,Customer Team,Rachel Martinez,Support ticket unresolved >48 hours,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-01,email,Customer Team,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-06-03,meeting,Customer Team,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-06-22,email,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-06-16,meeting,Customer Team,Rachel Martinez,Regular operational status update provided,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-30,email,Customer Team,Rachel Martinez,Positive feedback on recent infrastructure upgrade,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-06-16,email,Customer Team,Rachel Martinez,Concerns about cooling efficiency raised,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-05-30,email,Dr. Brown,Rachel Martinez,Executive sponsor praised team collaboration,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-07-24,meeting,Customer Team,Rachel Martinez,Regular operational status update provided,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-07-22,meeting,Dr. Brown,Rachel Martinez,Executive sponsor praised team collaboration,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-07-26,email,Customer Team,Rachel Martinez,Scheduled maintenance window executed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-07-13,meeting,Customer Team,Rachel Martinez,Reference call completed successfully with prospect,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-07-20,email,Customer Team,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-07-26,meeting,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-09,email,Dr. Brown,Rachel Martinez,Team member completed advanced certification,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-04,meeting,Customer Team,Rachel Martinez,Successful QBR with expansion discussion initiated,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-20,email,Customer Team,Rachel Martinez,Quarterly capacity planning review,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-23,email,Dr. Brown,Rachel Martinez,Reference call completed successfully with prospect,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-19,meeting,Dr. Brown,Rachel Martinez,Positive feedback on recent infrastructure upgrade,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-25,email,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-09-07,email,Customer Team,Rachel Martinez,Early adoption of new AI acceleration features,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-09-18,email,Dr. Brown,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-08-29,meeting,Dr. Brown,Rachel Martinez,Quarterly capacity planning review,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-09-11,email,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-09-08,meeting,Dr. Brown,Rachel Martinez,Team member completed advanced certification,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-09-16,meeting,Customer Team,Rachel Martinez,Concerns about cooling efficiency raised,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-10-18,meeting,Customer Team,Rachel Martinez,System health check completed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-10-24,email,Customer Team,Rachel Martinez,Escalation from operations team regarding performance,negative
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-10-13,email,Customer Team,Rachel Martinez,Early adoption of new AI acceleration features,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-10-04,meeting,Dr. Brown,Rachel Martinez,Early adoption of new AI acceleration features,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-10-04,meeting,Dr. Brown,Rachel Martinez,Training session on new features delivered,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-10-04,email,Dr. Brown,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-08,email,Customer Team,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-17,email,Customer Team,Rachel Martinez,Successfully deployed new workload ahead of schedule,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-13,meeting,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-15,meeting,Dr. Brown,Rachel Martinez,Reference call completed successfully with prospect,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-15,meeting,Customer Team,Rachel Martinez,Executive sponsor praised team collaboration,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-05,email,Dr. Brown,Rachel Martinez,Scheduled maintenance window executed,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-12-17,meeting,Customer Team,Rachel Martinez,Exceeded performance benchmarks this quarter,positive
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-12-07,email,Customer Team,Rachel Martinez,Regular operational status update provided,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-11-28,email,Dr. Brown,Rachel Martinez,Monthly business review conducted,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-12-24,email,Customer Team,Rachel Martinez,Regular operational status update provided,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-12-11,email,Customer Team,Rachel Martinez,Quarterly capacity planning review,neutral
+53006,E2E Full Test Corporation 1769028363 - HQ Operations,2024-12-15,email,Dr. Brown,Rachel Martinez,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-25,email,Dr. Davis,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-13,email,Dr. Davis,Emily Watson,Monthly business review conducted,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-10,email,Dr. Davis,Emily Watson,Documentation review and updates,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-03,meeting,Customer Team,Emily Watson,Security compliance audit findings,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-11,email,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-02,escalation,Customer Team,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-09,email,Customer Team,Emily Watson,Successful QBR with expansion discussion initiated,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-01-17,email,Customer Team,Emily Watson,Budget concerns raised during planning meeting,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-02,email,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-09,meeting,Dr. Davis,Emily Watson,Team member completed advanced certification,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-16,email,Dr. Davis,Emily Watson,Security compliance audit findings,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-17,meeting,Customer Team,Emily Watson,Team member completed advanced certification,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-04,email,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-25,escalation,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-01,email,Dr. Davis,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-02-22,meeting,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-09,email,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-02,email,Dr. Davis,Emily Watson,Successful QBR with expansion discussion initiated,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-02,meeting,Dr. Davis,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-07,meeting,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-17,escalation,Customer Team,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-26,email,Dr. Davis,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-07,meeting,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-22,email,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-03-31,meeting,Dr. Davis,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-11,email,Dr. Davis,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-21,email,Customer Team,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-21,email,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-26,escalation,Customer Team,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-06,meeting,Customer Team,Emily Watson,Budget concerns raised during planning meeting,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-12,meeting,Customer Team,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-04-28,email,Dr. Davis,Emily Watson,Security compliance audit findings,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-14,email,Dr. Davis,Emily Watson,Security compliance audit findings,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-22,meeting,Customer Team,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-27,email,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-03,meeting,Customer Team,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-27,email,Customer Team,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-28,meeting,Customer Team,Emily Watson,Unexpected system downtime reported,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-16,escalation,Customer Team,Emily Watson,Budget concerns raised during planning meeting,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-05-23,meeting,Customer Team,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-24,email,Customer Team,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-02,email,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-14,meeting,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-13,email,Customer Team,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-14,escalation,Customer Team,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-01,meeting,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-14,email,Dr. Davis,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-07,email,Customer Team,Emily Watson,Unexpected system downtime reported,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-16,escalation,Dr. Davis,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-01,email,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-25,email,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-19,meeting,Dr. Davis,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-13,email,Dr. Davis,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-24,email,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-06-29,escalation,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-07-13,email,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-04,email,Dr. Davis,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-25,meeting,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-19,meeting,Customer Team,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-22,email,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-07,escalation,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-19,escalation,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-02,email,Customer Team,Emily Watson,Successfully deployed new workload ahead of schedule,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-18,email,Customer Team,Emily Watson,Regular operational status update provided,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-24,email,Dr. Davis,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-07,escalation,Customer Team,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-02,email,Customer Team,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-03,escalation,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-03,email,Dr. Davis,Emily Watson,Monthly business review conducted,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-08-28,escalation,Dr. Davis,Emily Watson,Budget concerns raised during planning meeting,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-13,email,Dr. Davis,Emily Watson,System health check completed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-25,escalation,Customer Team,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-20,email,Dr. Davis,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-03,meeting,Dr. Davis,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-18,meeting,Dr. Davis,Emily Watson,Regular operational status update provided,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-15,email,Dr. Davis,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-12,email,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-09-29,email,Customer Team,Emily Watson,Scheduled maintenance window executed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-02,email,Dr. Davis,Emily Watson,Unexpected system downtime reported,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-10,meeting,Customer Team,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-11-09,escalation,Dr. Davis,Emily Watson,Budget concerns raised during planning meeting,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-29,escalation,Dr. Davis,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-29,email,Customer Team,Emily Watson,Documentation review and updates,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-11-06,escalation,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-10-30,email,Dr. Davis,Emily Watson,Early adoption of new AI acceleration features,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-11-12,meeting,Dr. Davis,Emily Watson,Routine technical sync meeting completed,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-11-08,meeting,Customer Team,Emily Watson,Project milestone delayed due to resource constraints,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-11-24,email,Dr. Davis,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-23,escalation,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-11-28,escalation,Dr. Davis,Emily Watson,Unexpected system downtime reported,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-15,meeting,Customer Team,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-22,meeting,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-16,email,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-11,escalation,Customer Team,Emily Watson,Escalation from operations team regarding performance,negative
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-19,email,Dr. Davis,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53007,E2E Full Test Corporation 1769028363 - Regional Office,2024-12-22,meeting,Customer Team,Emily Watson,Training session on new features delivered,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-26,email,Customer Team,Lisa Anderson,Quarterly capacity planning review,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-04,escalation,Dr. Smith,Lisa Anderson,Support ticket unresolved >48 hours,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-29,email,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-07,email,Customer Team,Lisa Anderson,Executive sponsor praised team collaboration,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-20,meeting,Dr. Smith,Lisa Anderson,Security compliance audit findings,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-29,meeting,Dr. Smith,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-06,meeting,Dr. Smith,Lisa Anderson,Concerns about cooling efficiency raised,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-01-01,email,Dr. Smith,Lisa Anderson,Reference call completed successfully with prospect,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-09,email,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-24,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-16,email,Dr. Smith,Lisa Anderson,Unexpected system downtime reported,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-15,email,Customer Team,Lisa Anderson,System health check completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-06,meeting,Dr. Smith,Lisa Anderson,Scheduled maintenance window executed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-09,escalation,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-28,email,Dr. Smith,Lisa Anderson,System health check completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-02-08,escalation,Dr. Smith,Lisa Anderson,Unexpected system downtime reported,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-23,email,Customer Team,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-12,meeting,Customer Team,Lisa Anderson,Documentation review and updates,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-25,email,Customer Team,Lisa Anderson,Documentation review and updates,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-11,email,Dr. Smith,Lisa Anderson,Monthly business review conducted,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-20,meeting,Dr. Smith,Lisa Anderson,Unexpected system downtime reported,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-18,escalation,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-10,meeting,Customer Team,Lisa Anderson,Security compliance audit findings,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-19,email,Dr. Smith,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-16,escalation,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-22,meeting,Dr. Smith,Lisa Anderson,Concerns about cooling efficiency raised,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-17,email,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-16,email,Dr. Smith,Lisa Anderson,System health check completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-12,meeting,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-07,email,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-04-02,meeting,Customer Team,Lisa Anderson,Budget concerns raised during planning meeting,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-03-31,escalation,Dr. Smith,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-19,meeting,Dr. Smith,Lisa Anderson,Security compliance audit findings,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-09,meeting,Dr. Smith,Lisa Anderson,Quarterly capacity planning review,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-04,meeting,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-12,meeting,Dr. Smith,Lisa Anderson,Unexpected system downtime reported,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-18,escalation,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-16,meeting,Customer Team,Lisa Anderson,Support ticket unresolved >48 hours,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-19,meeting,Customer Team,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-05-16,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-26,meeting,Customer Team,Lisa Anderson,Executive sponsor praised team collaboration,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-10,email,Customer Team,Lisa Anderson,System health check completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-22,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-18,meeting,Dr. Smith,Lisa Anderson,Integration challenges with existing systems,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-09,meeting,Dr. Smith,Lisa Anderson,Escalation from operations team regarding performance,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-19,escalation,Dr. Smith,Lisa Anderson,Project milestone delayed due to resource constraints,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-13,escalation,Dr. Smith,Lisa Anderson,Integration challenges with existing systems,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-06-26,escalation,Customer Team,Lisa Anderson,Integration challenges with existing systems,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-20,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-21,email,Customer Team,Lisa Anderson,Early adoption of new AI acceleration features,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-17,email,Dr. Smith,Lisa Anderson,Exceeded performance benchmarks this quarter,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-24,meeting,Dr. Smith,Lisa Anderson,Successful QBR with expansion discussion initiated,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-02,email,Dr. Smith,Lisa Anderson,Routine technical sync meeting completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-22,email,Dr. Smith,Lisa Anderson,System health check completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-08-10,email,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-08-23,email,Dr. Smith,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-08-20,meeting,Dr. Smith,Lisa Anderson,Successfully deployed new workload ahead of schedule,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-08-18,meeting,Dr. Smith,Lisa Anderson,Routine technical sync meeting completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-07-30,meeting,Dr. Smith,Lisa Anderson,Documentation review and updates,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-08-20,email,Dr. Smith,Lisa Anderson,System health check completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-09-12,meeting,Customer Team,Lisa Anderson,Training session on new features delivered,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-08-31,email,Dr. Smith,Lisa Anderson,Routine technical sync meeting completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-09-02,email,Customer Team,Lisa Anderson,Routine technical sync meeting completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-09-05,meeting,Dr. Smith,Lisa Anderson,Documentation review and updates,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-09-05,meeting,Customer Team,Lisa Anderson,Team member completed advanced certification,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-09-14,meeting,Customer Team,Lisa Anderson,Escalation from operations team regarding performance,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-10-20,email,Customer Team,Lisa Anderson,Scheduled maintenance window executed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-10-01,email,Dr. Smith,Lisa Anderson,Documentation review and updates,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-10-20,email,Dr. Smith,Lisa Anderson,Scheduled maintenance window executed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-10-22,email,Dr. Smith,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-09-30,email,Customer Team,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-10-25,meeting,Customer Team,Lisa Anderson,Regular operational status update provided,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-10-28,email,Customer Team,Lisa Anderson,Team member completed advanced certification,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-11-11,email,Dr. Smith,Lisa Anderson,Routine technical sync meeting completed,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-11-14,email,Customer Team,Lisa Anderson,Monthly business review conducted,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-11-01,meeting,Customer Team,Lisa Anderson,Team member completed advanced certification,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-11-06,meeting,Dr. Smith,Lisa Anderson,Executive sponsor praised team collaboration,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-11-12,email,Dr. Smith,Lisa Anderson,Quarterly capacity planning review,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-12-19,email,Dr. Smith,Lisa Anderson,Executive sponsor praised team collaboration,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-12-12,meeting,Customer Team,Lisa Anderson,Reference call completed successfully with prospect,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-12-21,meeting,Customer Team,Lisa Anderson,Positive feedback on recent infrastructure upgrade,positive
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-12-12,meeting,Customer Team,Lisa Anderson,Escalation from operations team regarding performance,negative
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-12-08,email,Customer Team,Lisa Anderson,Documentation review and updates,neutral
+53008,E2E Full Test Corporation 1769028363 - Research Center,2024-12-06,email,Customer Team,Lisa Anderson,System health check completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-13,meeting,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-14,meeting,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-23,meeting,Dr. Smith,Tom Johnson,Budget concerns raised during planning meeting,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-02,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-11,meeting,Dr. Smith,Tom Johnson,System health check completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-19,email,Dr. Smith,Tom Johnson,System health check completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-15,email,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-19,email,Customer Team,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-12,meeting,Dr. Smith,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-02,email,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-24,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-15,email,Dr. Smith,Tom Johnson,System health check completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-05,email,Customer Team,Tom Johnson,Monthly business review conducted,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-12,meeting,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-01-31,email,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-02-09,meeting,Dr. Smith,Tom Johnson,Unexpected system downtime reported,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-02,meeting,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-21,escalation,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-03,email,Dr. Smith,Tom Johnson,Escalation from operations team regarding performance,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-16,email,Dr. Smith,Tom Johnson,Routine technical sync meeting completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-22,meeting,Dr. Smith,Tom Johnson,Integration challenges with existing systems,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-25,email,Dr. Smith,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-05,email,Dr. Smith,Tom Johnson,Security compliance audit findings,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-03-25,meeting,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-14,email,Dr. Smith,Tom Johnson,Monthly business review conducted,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-06,meeting,Customer Team,Tom Johnson,Unexpected system downtime reported,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-12,meeting,Dr. Smith,Tom Johnson,Support ticket unresolved >48 hours,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-18,meeting,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-05,email,Customer Team,Tom Johnson,Integration challenges with existing systems,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-24,email,Dr. Smith,Tom Johnson,Budget concerns raised during planning meeting,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-02,email,Customer Team,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-06,meeting,Dr. Smith,Tom Johnson,Support ticket unresolved >48 hours,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-12,email,Dr. Smith,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-26,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-15,escalation,Customer Team,Tom Johnson,Escalation from operations team regarding performance,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-27,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-04-30,email,Dr. Smith,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-07,meeting,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-13,email,Customer Team,Tom Johnson,Documentation review and updates,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-05-12,email,Customer Team,Tom Johnson,Security compliance audit findings,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-13,escalation,Customer Team,Tom Johnson,Support ticket unresolved >48 hours,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-07,escalation,Customer Team,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-23,meeting,Customer Team,Tom Johnson,Budget concerns raised during planning meeting,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-01,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-23,email,Customer Team,Tom Johnson,System health check completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-03,escalation,Customer Team,Tom Johnson,Concerns about cooling efficiency raised,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-24,email,Dr. Smith,Tom Johnson,Escalation from operations team regarding performance,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-07,email,Dr. Smith,Tom Johnson,Reference call completed successfully with prospect,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-07-08,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-07-25,email,Customer Team,Tom Johnson,Early adoption of new AI acceleration features,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-07-16,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-07-24,email,Dr. Smith,Tom Johnson,Project milestone delayed due to resource constraints,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-06-30,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-07-04,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-08-19,meeting,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-08-01,email,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-08-16,email,Customer Team,Tom Johnson,System health check completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-08-08,email,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-08-17,email,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-08-03,email,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-17,email,Dr. Smith,Tom Johnson,Regular operational status update provided,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-11,email,Dr. Smith,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-16,email,Customer Team,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-06,email,Dr. Smith,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-24,meeting,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-01,email,Customer Team,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-28,escalation,Dr. Smith,Tom Johnson,Unexpected system downtime reported,negative
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-09-29,email,Dr. Smith,Tom Johnson,Early adoption of new AI acceleration features,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-10-19,meeting,Customer Team,Tom Johnson,Routine technical sync meeting completed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-10-24,meeting,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-10-16,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-10-22,meeting,Dr. Smith,Tom Johnson,Team member completed advanced certification,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-11-09,meeting,Dr. Smith,Tom Johnson,Regular operational status update provided,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-11-21,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-11-23,email,Dr. Smith,Tom Johnson,Positive feedback on recent infrastructure upgrade,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-11-01,meeting,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-11-08,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-10-27,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-14,email,Customer Team,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-06,email,Dr. Smith,Tom Johnson,Successfully deployed new workload ahead of schedule,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-01,email,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-24,meeting,Dr. Smith,Tom Johnson,Scheduled maintenance window executed,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-06,meeting,Customer Team,Tom Johnson,Team member completed advanced certification,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-11-27,email,Customer Team,Tom Johnson,Training session on new features delivered,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-20,email,Dr. Smith,Tom Johnson,Exceeded performance benchmarks this quarter,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-05,email,Dr. Smith,Tom Johnson,Successful QBR with expansion discussion initiated,positive
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-23,email,Customer Team,Tom Johnson,Regular operational status update provided,neutral
+53009,E2E Full Test Corporation 1769028363 - Data Center West,2024-12-10,email,Customer Team,Tom Johnson,Quarterly capacity planning review,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-08,email,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-03,escalation,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-12,email,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-29,email,Dr. Davis,Emily Watson,Successfully deployed new workload ahead of schedule,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-10,email,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-05,email,Customer Team,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-14,meeting,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-01,meeting,Dr. Davis,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-11,email,Customer Team,Emily Watson,Monthly business review conducted,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-01-23,email,Dr. Davis,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-26,email,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-18,meeting,Dr. Davis,Emily Watson,Security compliance audit findings,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-01,email,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-28,email,Customer Team,Emily Watson,Scheduled maintenance window executed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-23,email,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-28,email,Dr. Davis,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-21,email,Customer Team,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-14,email,Dr. Davis,Emily Watson,Executive sponsor praised team collaboration,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-12,meeting,Customer Team,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-02-19,meeting,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-02,meeting,Dr. Davis,Emily Watson,Reference call completed successfully with prospect,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-01,email,Dr. Davis,Emily Watson,Regular operational status update provided,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-11,meeting,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-13,email,Dr. Davis,Emily Watson,Regular operational status update provided,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-12,email,Dr. Davis,Emily Watson,Project milestone delayed due to resource constraints,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-21,email,Customer Team,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-02,email,Dr. Davis,Emily Watson,Executive sponsor praised team collaboration,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-05,meeting,Customer Team,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-24,meeting,Dr. Davis,Emily Watson,Successfully deployed new workload ahead of schedule,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-03-01,meeting,Dr. Davis,Emily Watson,Quarterly capacity planning review,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-04-16,email,Customer Team,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-04-20,email,Customer Team,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-04-04,email,Dr. Davis,Emily Watson,Quarterly capacity planning review,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-04-26,meeting,Customer Team,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-04-11,meeting,Customer Team,Emily Watson,Reference call completed successfully with prospect,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-04-28,email,Customer Team,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-05-15,email,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-05-22,meeting,Dr. Davis,Emily Watson,Support ticket unresolved >48 hours,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-05-11,email,Customer Team,Emily Watson,Monthly business review conducted,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-05-21,meeting,Customer Team,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-05-15,email,Customer Team,Emily Watson,System health check completed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-05-15,escalation,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-06-22,email,Customer Team,Emily Watson,Scheduled maintenance window executed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-06-26,email,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-06-19,email,Customer Team,Emily Watson,Regular operational status update provided,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-06-25,meeting,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-06-16,meeting,Customer Team,Emily Watson,Early adoption of new AI acceleration features,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-06-27,email,Dr. Davis,Emily Watson,Executive sponsor praised team collaboration,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-16,email,Customer Team,Emily Watson,Scheduled maintenance window executed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-05,meeting,Dr. Davis,Emily Watson,Successfully deployed new workload ahead of schedule,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-06,email,Customer Team,Emily Watson,Successful QBR with expansion discussion initiated,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-18,meeting,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-25,email,Customer Team,Emily Watson,Reference call completed successfully with prospect,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-16,meeting,Customer Team,Emily Watson,Regular operational status update provided,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-08-09,email,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-08-11,meeting,Customer Team,Emily Watson,Successful QBR with expansion discussion initiated,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-08-09,email,Dr. Davis,Emily Watson,Executive sponsor praised team collaboration,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-08-22,email,Customer Team,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-29,email,Customer Team,Emily Watson,Successful QBR with expansion discussion initiated,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-07-29,meeting,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-09-08,meeting,Customer Team,Emily Watson,Monthly business review conducted,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-09-10,meeting,Customer Team,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-09-19,email,Customer Team,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-09-02,email,Dr. Davis,Emily Watson,Positive feedback on recent infrastructure upgrade,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-09-10,email,Dr. Davis,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-09-02,email,Dr. Davis,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-14,email,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-10,meeting,Dr. Davis,Emily Watson,Exceeded performance benchmarks this quarter,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-10,meeting,Dr. Davis,Emily Watson,System health check completed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-25,email,Customer Team,Emily Watson,Monthly business review conducted,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-04,email,Customer Team,Emily Watson,Reference call completed successfully with prospect,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-03,meeting,Dr. Davis,Emily Watson,Team member completed advanced certification,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-01,email,Customer Team,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-16,email,Customer Team,Emily Watson,Budget concerns raised during planning meeting,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-31,escalation,Customer Team,Emily Watson,Project milestone delayed due to resource constraints,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-23,email,Dr. Davis,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-20,email,Dr. Davis,Emily Watson,Scheduled maintenance window executed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-07,email,Customer Team,Emily Watson,Quarterly capacity planning review,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-22,meeting,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-10,escalation,Dr. Davis,Emily Watson,Budget concerns raised during planning meeting,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-10,meeting,Customer Team,Emily Watson,Reference call completed successfully with prospect,positive
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-10-30,meeting,Dr. Davis,Emily Watson,System health check completed,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-07,email,Dr. Davis,Emily Watson,Integration challenges with existing systems,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-01,email,Dr. Davis,Emily Watson,Escalation from operations team regarding performance,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-19,email,Customer Team,Emily Watson,Training session on new features delivered,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-19,escalation,Customer Team,Emily Watson,Concerns about cooling efficiency raised,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-11-30,escalation,Customer Team,Emily Watson,Security compliance audit findings,negative
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-22,email,Customer Team,Emily Watson,Regular operational status update provided,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-08,email,Dr. Davis,Emily Watson,Monthly business review conducted,neutral
+53010,E2E Full Test Corporation 1769028363 - Infrastructure,2024-12-01,meeting,Customer Team,Emily Watson,Security compliance audit findings,negative

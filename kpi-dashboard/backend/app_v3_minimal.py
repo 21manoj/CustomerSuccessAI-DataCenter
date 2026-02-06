@@ -10,6 +10,8 @@ from flask_cors import CORS
 from flask_session import Session
 from flask_login import LoginManager, current_user
 from extensions import db
+from utils.logging_config import initialize_logging
+
 import datetime
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -33,19 +35,22 @@ else:
 # Enable debug mode for better error messages
 app.config['DEBUG'] = True
 
-# Use local path for development, Docker path for production
-if os.path.exists('/app/instance'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////app/instance/kpi_dashboard.db'
+# Database configuration - USE POSTGRESQL (no more SQLite!)
+database_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+if database_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print(f"✅ Using PostgreSQL database: {database_url[:50]}..." if len(database_url) > 50 else f"✅ Using PostgreSQL database: {database_url}")
 else:
-    # Local development
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    instance_path = os.path.join(os.path.dirname(basedir), 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-    db_path = os.path.join(instance_path, 'kpi_dashboard.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    raise ValueError(
+        "❌ ERROR: DATABASE_URL environment variable is required.\n"
+        "Please set DATABASE_URL to a PostgreSQL connection string.\n"
+        "Example: postgresql://user:password@localhost:5432/dbname"
+    )
 
 # Enable CORS with credentials support
-CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', ['http://localhost:3000']))
+# Allow both common frontend ports
+default_origins = ['http://localhost:3000', 'http://localhost:8005', 'http://127.0.0.1:3000', 'http://127.0.0.1:8005']
+CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', default_origins))
 
 # Initialize extensions
 db.init_app(app)
@@ -70,7 +75,8 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.session_protection = 'strong'
-
+# Initialize structured logging FIRST
+logger = initialize_logging()
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by ID for Flask-Login"""
@@ -167,6 +173,14 @@ from registration_api import registration_api
 from kpi_reference_ranges_api import kpi_reference_ranges_api
 from direct_rag_api import direct_rag_api
 from customer_performance_summary_api import customer_perf_summary_api
+
+# Product Analytics API - Initialize flag first
+PRODUCT_ANALYTICS_AVAILABLE = False
+try:
+    from product_analytics_api import product_analytics_api
+    PRODUCT_ANALYTICS_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Product Analytics API not available: {e}")
 from workflow_config_api import workflow_config_api
 from export_api import export_api
 from rehydration_api import rehydration_api
@@ -177,6 +191,52 @@ from enhanced_rag_openai_api import enhanced_rag_openai_api
 from secure_file_api import secure_file_api
 from master_file_api import master_file_api
 from account_snapshot_api import account_snapshot_api
+from wizard_blueprint import wizard_bp
+# Config-aware onboarding API (V2)
+try:
+    from onboarding_api_v2_config_aware import onboarding_api as onboarding_api_v2
+    ONBOARDING_API_V2_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Config-aware Onboarding API V2 not available: {e}")
+    ONBOARDING_API_V2_AVAILABLE = False
+    onboarding_api_v2 = None
+
+# Keep old onboarding_api for backward compatibility
+from onboarding_api import onboarding_api
+
+# Config-aware upload API (V2)
+try:
+    from upload_api_v2_config_aware import upload_api as upload_api_v2
+    UPLOAD_API_V2_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Config-aware Upload API V2 not available: {e}")
+    UPLOAD_API_V2_AVAILABLE = False
+    upload_api_v2 = None
+
+# Improved upload API (V3) with duplicate handling
+try:
+    from upload_api_v3_improved_duplicates import upload_api_v3_improved
+    UPLOAD_API_V3_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Upload API V3 (improved duplicates) not available: {e}")
+    UPLOAD_API_V3_AVAILABLE = False
+    upload_api_v3_improved = None
+
+# Signal Analyst Agent API
+try:
+    from agents.signal_analyst_api import signal_analyst_api
+    HAS_SIGNAL_ANALYST_API = True
+except ImportError as e:
+    print(f"⚠️  Warning: Signal Analyst API not available: {e}")
+    HAS_SIGNAL_ANALYST_API = False
+
+# DC2_S Vertical API
+try:
+    from verticals.dc2_s.api_routes import dc2s_api
+    HAS_DC2S_API = True
+except ImportError as e:
+    print(f"⚠️  Warning: DC2_S API not available: {e}")
+    HAS_DC2S_API = False
 
 # Signal Analyst Agent API - optional (requires qdrant dependencies)
 try:
@@ -190,14 +250,14 @@ except ImportError as e:
 try:
     from enhanced_rag_historical_api import enhanced_rag_historical_api
     HAS_HISTORICAL_RAG = True
-except ImportError as e:
+except Exception as e:
     print(f"⚠️  Warning: enhanced_rag_historical_api not available: {e}")
     HAS_HISTORICAL_RAG = False
 
 try:
     from enhanced_rag_temporal_api import enhanced_rag_temporal_api
     HAS_TEMPORAL_RAG = True
-except ImportError as e:
+except Exception as e:
     print(f"⚠️  Warning: enhanced_rag_temporal_api not available: {e}")
     HAS_TEMPORAL_RAG = False
 
@@ -208,7 +268,21 @@ except ImportError as e:
     print(f"⚠️  Warning: enhanced_rag_qdrant_api not available: {e}")
     HAS_QDRANT_RAG = False
 
-app.register_blueprint(upload_api)
+# Register upload API (V3 improved duplicates takes precedence, then V2, then legacy)
+# IMPORTANT: V3 supports multi-file-type uploads with duplicate handling
+# V2 and legacy are KPI-only and should NOT be registered if V3 is available
+if UPLOAD_API_V3_AVAILABLE:
+    app.register_blueprint(upload_api_v3_improved, url_prefix='/api')
+    print("✅ Registered Upload API V3 (Improved Duplicates): /api/upload/*")
+    print("   - Multi-file-type support (kpis, signals, accounts, products, profiles, customers)")
+    print("   - Duplicate handling strategies (skip, update, error, replace)")
+    print("   - Config-aware filtering for KPIs")
+elif UPLOAD_API_V2_AVAILABLE:
+    app.register_blueprint(upload_api_v2, url_prefix='/api')
+    print("⚠️  Registered Config-Aware Upload API V2: /api/upload/* (V3 not available, using V2)")
+else:
+    app.register_blueprint(upload_api)
+    print("⚠️  Registered Upload API (legacy) - V3 and V2 not available")
 app.register_blueprint(enhanced_upload_api)
 app.register_blueprint(kpi_api)
 app.register_blueprint(download_api)
@@ -241,6 +315,11 @@ app.register_blueprint(export_api)
 app.register_blueprint(rehydration_api)
 app.register_blueprint(account_snapshot_api)
 
+# Product Analytics API
+if PRODUCT_ANALYTICS_AVAILABLE:
+    app.register_blueprint(product_analytics_api)
+    print("✅ Registered product_analytics_api")
+
 # Activity log API - optional if ActivityLog model doesn't exist
 try:
     from activity_log_api import activity_log_api
@@ -263,6 +342,42 @@ app.register_blueprint(data_quality_api)
 app.register_blueprint(customer_profile_api)
 app.register_blueprint(enhanced_rag_openai_api)
 app.register_blueprint(master_file_api)
+
+# Register Signal Analyst Agent API if available
+if HAS_SIGNAL_ANALYST_API:
+    app.register_blueprint(signal_analyst_api)
+    print("✅ Registered Signal Analyst API: /api/signal-analyst/*")
+
+# Register DC2_S API if available
+if HAS_DC2S_API:
+    app.register_blueprint(dc2s_api, url_prefix='/api/dc2s')
+    print("✅ Registered DC2_S API: /api/dc2s/*")
+
+# Register DC2_S Config API (Phase 1 Migration)
+try:
+    from dc2s_config_api import dc2s_config_api
+    # Blueprint already has url_prefix='/api/dc2s/config', so don't add it again
+    app.register_blueprint(dc2s_config_api)
+    print("✅ Registered DC2_S Config API: /api/dc2s/config/*")
+except ImportError as e:
+    print(f"⚠️  Warning: DC2_S Config API not available: {e}")
+
+# Register DC2_S Scores API (Phase 2 Migration)
+try:
+    from dc2s_scores_api import dc2s_scores_api
+    app.register_blueprint(dc2s_scores_api)
+    print("✅ Registered DC2_S Scores API: /api/dc2s/scores/*")
+except ImportError as e:
+    print(f"⚠️  Warning: DC2_S Scores API not available: {e}")
+
+# Dynamic Journey API - Works for ALL customers automatically!
+# No hardcoding required - discovers journey files based on account ID
+try:
+    from journey_api_dynamic import register_dynamic_journey_api
+    register_dynamic_journey_api(app)
+except ImportError as e:
+    print(f"⚠️  Warning: Dynamic Journey API not available: {e}")
+    print("   Journey endpoints will not be available")
 
 # Register optional RAG APIs only if available
 if HAS_HISTORICAL_RAG:
@@ -326,15 +441,33 @@ def health_check():
         'message': 'KPI Dashboard V5 Backend is running'
     })
 
-@app.route('/api/accounts', methods=['GET'])
-def get_accounts():
+# Note: /api/accounts is handled by kpi_api blueprint - removed duplicate endpoint
+# The endpoint in kpi_api.py uses get_current_customer_id() which should work correctly
+# @app.route('/api/accounts', methods=['GET'])
+def get_accounts_deprecated():
     """
     Get accounts for the customer.
     
     SECURITY: Requires authentication. Uses customer_id from session.
     """
+    print("=" * 80)
+    print("[DEBUG /api/accounts] ENDPOINT CALLED")
+    print("=" * 80)
+    
+    # DEBUG: Log authentication status
+    # User model defines is_authenticated as a METHOD, not a property, so we need to call it
+    is_auth = current_user.is_authenticated() if callable(current_user.is_authenticated) else (current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False)
+    print(f"[DEBUG /api/accounts] current_user.is_authenticated: {is_auth}")
+    logger.info(f"[DEBUG /api/accounts] current_user.is_authenticated: {is_auth}")
+    logger.info(f"[DEBUG /api/accounts] current_user type: {type(current_user)}")
+    if hasattr(current_user, 'email'):
+        logger.info(f"[DEBUG /api/accounts] current_user.email: {current_user.email}")
+    if hasattr(current_user, 'customer_id'):
+        logger.info(f"[DEBUG /api/accounts] current_user.customer_id: {current_user.customer_id}")
+    
     # SECURITY FIX: Require authentication
-    if not current_user.is_authenticated:
+    if not is_auth:
+        logger.warning(f"[DEBUG /api/accounts] User not authenticated, returning 401")
         return jsonify({
             'error': 'Authentication required',
             'message': 'Please log in to access this resource'
@@ -343,11 +476,39 @@ def get_accounts():
     try:
         # SECURITY FIX: Get customer_id from authenticated user session (not headers!)
         customer_id = current_user.customer_id
+        print(f"[DEBUG /api/accounts] customer_id: {customer_id}")
+        logger.info(f"[DEBUG /api/accounts] customer_id: {customer_id}")
         
-        # Get accounts from database
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        # Get user's vertical for additional filtering (prevents cross-vertical data leakage)
+        # Use getattr to safely get vertical without triggering a database refresh
+        user_vertical = getattr(current_user, 'vertical', None)
+        print(f"[DEBUG /api/accounts] user_vertical: {user_vertical}")
+        logger.info(f"[DEBUG /api/accounts] user_vertical: {user_vertical}")
+        
+        # Get accounts from database - filter by customer_id AND vertical for isolation
+        query = Account.query.filter_by(customer_id=customer_id)
+        initial_count = query.count()
+        print(f"[DEBUG /api/accounts] Initial query count: {initial_count}")
+        logger.info(f"[DEBUG /api/accounts] Initial query count: {initial_count}")
+        
+        # Additional security: Filter by vertical to prevent cross-vertical data leakage
+        # DC users (vertical='dc2_s') should see ALL accounts for their customer (DC accounts may have various vertical values)
+        # SaaS users (vertical='saas' or None) should only see SaaS accounts
+        if user_vertical == 'dc2_s':
+            # DC users: Show ALL accounts for Customer 9 (DC accounts may have vertical='dc2_s' or other journey states)
+            # Don't filter by vertical - Customer 9 accounts have various vertical values (Success Story, Churned, etc.)
+            # All accounts belong to Customer 9, so they should all be visible
+            pass  # No additional filtering needed - already filtered by customer_id
+        elif user_vertical == 'saas' or user_vertical is None:
+            # SaaS users see accounts with vertical='saas' or vertical=None (legacy)
+            query = query.filter((Account.vertical == 'saas') | (Account.vertical.is_(None)))
+        
+        accounts = query.all()
+        print(f"[DEBUG /api/accounts] Found {len(accounts)} accounts after filtering")
+        logger.info(f"[DEBUG /api/accounts] Found {len(accounts)} accounts after filtering")
         
         # Import models needed for health score calculation
+        # Note: Don't import Product here as it may have schema mismatches from restore
         from models import KPI, HealthTrend
         
         result = []
@@ -366,19 +527,25 @@ def get_accounts():
                 health_score = float(latest_trend.overall_health_score)
             else:
                 # Calculate health score on-the-fly from KPIs
-                from playbook_recommendations_api import calculate_health_score_proxy
-                health_score = calculate_health_score_proxy(account.account_id)
+                try:
+                    from playbook_recommendations_api import calculate_health_score_proxy
+                    health_score = calculate_health_score_proxy(account.account_id)
+                except Exception as health_error:
+                    # If health score calculation fails, default to None (will show as N/A in UI)
+                    # Don't log the error to avoid transaction issues
+                    health_score = None
+                    db.session.rollback()  # Clear any failed transaction
             
             result.append({
                 'account_id': account.account_id,
                 'customer_id': account.customer_id,
                 'account_name': account.account_name,
                 'revenue': account.revenue,
-                'status': account.status,
+                'status': account.account_status,
                 'industry': account.industry,
                 'region': account.region,
                 'health_score': health_score,
-                'account_status': account.status,
+                'account_status': account.account_status,
                 'created_at': account.created_at.isoformat() if account.created_at else None
             })
         
@@ -389,9 +556,16 @@ def get_accounts():
         })
         
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in /api/accounts: {str(e)}")
+        print(error_trace)
+        logger.error(f"ERROR in /api/accounts: {str(e)}")
+        logger.error(error_trace)
         return jsonify({
             'status': 'error',
-            'message': f'Failed to fetch accounts: {str(e)}'
+            'message': f'Failed to fetch accounts: {str(e)}',
+            'error_detail': str(e)
         }), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -403,9 +577,9 @@ def login():
     No more X-Customer-ID headers - session handles authentication.
     """
     try:
-        data = request.json
-        email = data.get('email')
-        password = data.get('password')
+        data = request.json or {}
+        email = data.get('email') or (data.get('username') if isinstance(data.get('username'), str) else None)
+        password = data.get('password') or data.get('passwd')  # accept 'password' or 'passwd'
         remember = data.get('remember', False)  # Remember me checkbox
         
         if not email or not password:
@@ -476,7 +650,36 @@ def login():
             }), 403
         
         # Get customer info
-        customer = db.session.get(Customer, user.customer_id)
+        try:
+            customer = db.session.get(Customer, user.customer_id)
+        except Exception as customer_error:
+            # If customer lookup fails, continue with None (shouldn't happen but handle gracefully)
+            print(f"Warning: Could not load customer {user.customer_id}: {customer_error}")
+            customer = None
+            db.session.rollback()  # Reset transaction
+        
+        # Map database vertical to frontend vertical
+        # Database: 'DC2_S', 'dc2_s', 'dc2-s', 'saas', None
+        # Frontend: 'datacenter', 'saas'
+        user_vertical = user.vertical if hasattr(user, 'vertical') and user.vertical else None
+        
+        # Handle case-insensitive mapping: DC2_S, dc2_s, dc2-s -> datacenter
+        if user_vertical:
+            user_vertical_normalized = user_vertical.lower().replace('-', '_').replace(' ', '_')
+            if user_vertical_normalized in ['dc2_s', 'dc2s', 'datacenter']:
+                frontend_vertical = 'datacenter'
+            elif user_vertical_normalized == 'saas':
+                frontend_vertical = 'saas'
+            else:
+                # Default to datacenter if it looks like a DC vertical variant
+                frontend_vertical = 'datacenter' if 'dc' in user_vertical_normalized or 'datacenter' in user_vertical_normalized else 'saas'
+        else:
+            # If no vertical set, check the selected vertical from request
+            selected_vertical = data.get('vertical', 'saas')
+            frontend_vertical = 'datacenter' if selected_vertical == 'datacenter' else 'saas'
+        
+        # Debug logging
+        print(f"🔍 Login vertical mapping: DB='{user_vertical}' -> Frontend='{frontend_vertical}'")
         
         # Log in user - Flask-Login creates secure session
         from flask_login import login_user
@@ -521,6 +724,7 @@ def login():
                 'user_uuid': getattr(user, 'uuid', None),
                 'vertical': getattr(customer, 'vertical', None) if customer else None,
             },
+            'vertical': frontend_vertical,  # Return mapped vertical
             'session_expires': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat() if not remember else None
         })
         
@@ -635,15 +839,23 @@ def session_refresh():
 # ========================================
 # GLOBAL ERROR HANDLERS
 # ========================================
-import logging
 from sqlalchemy.exc import SQLAlchemyError
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# Configure logging with centralized config
+from logging_config import configure_logging, get_logger
+import logging
+import os
+
+# Configure logging based on environment
+log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+log_file = os.getenv('LOG_FILE', 'backend.log')
+configure_logging(
+    level=getattr(logging, log_level, logging.INFO),
+    log_file=log_file if log_file else None,
+    console=True,
+    file_handler=bool(log_file)
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 @app.errorhandler(404)
 def not_found(error):
@@ -700,6 +912,38 @@ def log_response_info(response):
     if request.path.startswith('/api/'):
         logger.info(f"API Response: {request.method} {request.path} -> {response.status_code}")
     return response
+# Register Wizard A Blueprint (last to avoid conflicts)
+app.register_blueprint(wizard_bp)
+print("✅ Wizard A blueprint registered")
+
+# Register Onboarding API (V2 config-aware takes precedence)
+if ONBOARDING_API_V2_AVAILABLE:
+    app.register_blueprint(onboarding_api_v2, url_prefix='/api/onboarding')
+    print("✅ Registered Config-Aware Onboarding API V2: /api/onboarding/*")
+else:
+    app.register_blueprint(onboarding_api)
+    print("✅ Registered Onboarding API (legacy)")
+
+# Admin API (Wizard B & C endpoints)
+try:
+    from admin_api import admin_bp
+    app.register_blueprint(admin_bp)
+    print("✅ Registered Admin API: /api/admin/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Admin API not available: {e}")
+
+@app.route('/debug/routes')
+def list_routes():
+    """Debug endpoint to see all registered routes"""
+    import urllib.parse
+    output = []
+    for rule in app.url_map.iter_rules():
+        methods = ','.join(sorted(rule.methods - {'HEAD', 'OPTIONS'}))
+        line = urllib.parse.unquote(f"{rule.endpoint:50s} {methods:20s} {rule.rule}")
+        output.append(line)
+    
+    return '<br>'.join(sorted(output))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

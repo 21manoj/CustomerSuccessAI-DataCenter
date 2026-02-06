@@ -1,0 +1,166 @@
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+======================================================================
+PHASE 1 CONFIG API TEST SUITE
+======================================================================
+✅ Authenticated as dc2s_super@gpucloud.com
+
+======================================================================
+TEST 1: GET Configuration
+======================================================================
+Status: 404
+❌ GET config failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST 2: Add Custom KPI
+======================================================================
+Status: 404
+❌ Add custom KPI failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST 3: Update Pillar Weights
+======================================================================
+Status: 404
+❌ Update pillar weights failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST 4: Delete Custom KPI
+======================================================================
+Status: 404
+❌ Delete custom KPI failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST SUMMARY
+======================================================================
+❌ FAIL - get_config
+❌ FAIL - add_custom_kpi
+❌ FAIL - update_pillar_weights
+❌ FAIL - delete_custom_kpi
+
+Results: 0/4 tests passed
+⚠️  SOME TESTS FAILED - Review output above
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+======================================================================
+PHASE 1 CONFIG API TEST SUITE
+======================================================================
+✅ Authenticated as dc2s_super@gpucloud.com
+
+======================================================================
+TEST 1: GET Configuration
+======================================================================
+Status: 404
+❌ GET config failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST 2: Add Custom KPI
+======================================================================
+Status: 404
+❌ Add custom KPI failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST 3: Update Pillar Weights
+======================================================================
+Status: 404
+❌ Update pillar weights failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST 4: Delete Custom KPI
+======================================================================
+Status: 404
+❌ Delete custom KPI failed: {"error":"Not found","message":"The requested resource was not found","status":404}
+
+
+======================================================================
+TEST SUMMARY
+======================================================================
+❌ FAIL - get_config
+❌ FAIL - add_custom_kpi
+❌ FAIL - update_pillar_weights
+❌ FAIL - delete_custom_kpi
+
+Results: 0/4 tests passed
+⚠️  SOME TESTS FAILED - Review output above
+  File "/Users/manojgupta/CustomerSuccessAI-DataCenter/kpi-dashboard/backend/test_phase1_config_api.py", line 43
+    response = session.get(f"{BASE_URL}/api/dc2s/config/")
+    ^
+IndentationError: expected an indented block
+
+=== PHASE 1 TESTING SUMMARY ===
+
+✅ Backend Server: Running on port 5059
+✅ Blueprint Registration: dc2s_config_api registered
+✅ Authentication: Working (dc2s_super@gpucloud.com)
+✅ Routes Defined: 6 endpoints defined
+❌ API Endpoints: All returning 404
+
+Issue: Routes are defined but not accessible in running server.
+This appears to be a Flask routing/module loading issue.
+
+See PHASE_1_TEST_STATUS.md for detailed investigation.
+
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+======================================================================
+PHASE 1 CONFIG API TEST SUITE
+======================================================================
+✅ Authenticated as dc2s_super@gpucloud.com
+
+======================================================================
+TEST 1: GET Configuration
+======================================================================
+Status: 200
+✅ GET config successful
+   Customer ID: 9
+   Is Default: False
+   Enabled KPIs: 33
+   Pillar Weights: {'AI': 0.25, 'CH': 0.2, 'DV': 0.15, 'EX': 0.2, 'OS': 0.2}
+
+======================================================================
+TEST 2: Add Custom KPI
+======================================================================
+Status: 200
+✅ Custom KPI added successfully
+   KPI Code: CUSTOM-GPU-TEMP
+
+======================================================================
+TEST 3: Update Pillar Weights
+======================================================================
+Status: 200
+✅ Pillar weights updated successfully
+   New weights: {'AI': 0.3, 'CH': 0.2, 'DV': 0.15, 'EX': 0.2, 'OS': 0.15}
+
+======================================================================
+TEST 4: Delete Custom KPI
+======================================================================
+Status: 200
+✅ Custom KPI deleted successfully
+
+======================================================================
+TEST SUMMARY
+======================================================================
+✅ PASS - get_config
+✅ PASS - add_custom_kpi
+✅ PASS - update_pillar_weights
+✅ PASS - delete_custom_kpi
+
+Results: 4/4 tests passed
+✅ ALL CONFIG API TESTS PASSED!
+
+=== PHASE 1 COMPLETE ===
+
+✅ All 4 API tests passing
+✅ Backend server running on port 5059
+✅ All endpoints accessible and working
+✅ Customer 9 configuration verified
+
+Phase 1: 100% COMPLETE
+Ready for Phase 2!
+

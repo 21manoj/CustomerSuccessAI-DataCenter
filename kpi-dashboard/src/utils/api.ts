@@ -16,8 +16,9 @@ export const getApiBaseUrl = (): string => {
     return process.env.REACT_APP_API_URL;
   }
   
-  // In development, use localhost (matches proxy in package.json)
-  return 'http://localhost:8001';
+  // In development, use relative URLs (proxy handles routing)
+  // This works with Vite proxy or React dev server proxy
+  return '';
 };
 
 export const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
@@ -25,11 +26,22 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}): Prom
   const url = `${baseUrl}${endpoint}`;
   
   const defaultOptions: RequestInit = {
+    credentials: 'include', // Always include cookies for session auth
     headers: {
       'Content-Type': 'application/json',
       ...options.headers
     }
-    };
+  };
   
-  return fetch(url, { ...defaultOptions, ...options });
+  // Merge options, with user-provided options taking precedence
+  const mergedOptions: RequestInit = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers
+    }
+  };
+  
+  return fetch(url, mergedOptions);
 };

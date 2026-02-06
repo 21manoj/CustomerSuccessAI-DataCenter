@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard A - Data Generation & Training</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .wizard-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .wizard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .wizard-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .wizard-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .wizard-content {
+            padding: 30px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        
+        .form-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .progress-overlay.active {
+            display: flex;
+        }
+        
+        .progress-modal {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 15px;
+            margin: 20px 0;
+            height: 30px;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .phase-status {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .phase-status.completed {
+            background: #d1fae5;
+        }
+        
+        .phase-status.running {
+            background: #e0e7ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <h1>🧙 Wizard A - Data Generation & Training</h1>
+            <p>Generate synthetic customer journeys and train predictive models</p>
+        </div>
+        
+        <div class="wizard-content">
+            <form id="wizardForm">
+                <!-- Basic Configuration -->
+                <div class="form-section">
+                    <h3>📊 Basic Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="accounts">Number of Accounts</label>
+                        <input type="number" id="accounts" value="10" min="10" max="500">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="weeks">Weeks per Account</label>
+                        <input type="number" id="weeks" value="52" min="10" max="104">
+                    </div>
+                </div>
+                
+                <!-- Pattern Mix -->
+                <div class="form-section">
+                    <h3>🎭 Pattern Mix</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                        Distribution of journey patterns (must sum to 100%)
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Crisis: <span id="crisis-value">25</span>%</label>
+                        <input type="range" id="crisis-slider" min="0" max="100" value="25" style="width: 100%">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Churn: <span id="churn-value">25</span>%</label>
+                        <input type="range" id="churn-slider" min="0" max="100" value="25" style="width: 100%">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Stable: <span id="stable-value">25</span>%</label>
+                        <input type="range" id="stable-slider" min="0" max="100" value="25" style="width: 100%">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Expansion: <span id="expansion-value">25</span>%</label>
+                        <input type="range" id="expansion-slider" min="0" max="100" value="25" style="width: 100%">
+                    </div>
+                    
+                    <p style="margin-top: 10px; font-weight: 600; color: #667eea;">
+                        Total: <span id="total-percentage">100</span>%
+                    </p>
+                </div>
+                
+                <!-- Database Mode -->
+                <div class="form-section">
+                    <h3>💾 Database Mode</h3>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="db-mode" value="clean" checked>
+                            Clean (delete existing data)
+                        </label>
+                        <label>
+                            <input type="radio" name="db-mode" value="append">
+                            Append (keep existing data)
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="saveConfig()">💾 Save Config</button>
+                    <button type="button" class="btn-secondary" onclick="dryRun()">👁️ Dry Run</button>
+                    <button type="button" class="btn-danger" onclick="resetForm()">🗑️ Reset</button>
+                    <button type="button" class="btn-primary" onclick="startGeneration()">🚀 Generate & Train</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Progress Overlay -->
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-modal">
+            <h2 style="margin-bottom: 20px;">🔄 Running Pipeline...</h2>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%">0%</div>
+            </div>
+            
+            <div id="phaseStatus"></div>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="btn-danger" onclick="cancelRun()">Cancel Run</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentRunId = null;
+        let pollInterval = null;
+        
+        // Update slider values
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const id = this.id.replace('-slider', '');
+                document.getElementById(id + '-value').textContent = this.value;
+                updateTotal();
+            });
+        });
+        
+        function updateTotal() {
+            const crisis = parseInt(document.getElementById('crisis-slider').value);
+            const churn = parseInt(document.getElementById('churn-slider').value);
+            const stable = parseInt(document.getElementById('stable-slider').value);
+            const expansion = parseInt(document.getElementById('expansion-slider').value);
+            const total = crisis + churn + stable + expansion;
+            document.getElementById('total-percentage').textContent = total;
+            
+            if (total !== 100) {
+                document.getElementById('total-percentage').style.color = '#dc3545';
+            } else {
+                document.getElementById('total-percentage').style.color = '#28a745';
+            }
+        }
+        
+        function getFormConfig() {
+            return {
+                accounts: parseInt(document.getElementById('accounts').value),
+                weeks_per_account: parseInt(document.getElementById('weeks').value),
+                pattern_mix: {
+                    crisis: parseFloat(document.getElementById('crisis-slider').value) / 100,
+                    churn: parseFloat(document.getElementById('churn-slider').value) / 100,
+                    stable: parseFloat(document.getElementById('stable-slider').value) / 100,
+                    expansion: parseFloat(document.getElementById('expansion-slider').value) / 100
+                },
+                database: {
+                    mode: document.querySelector('input[name="db-mode"]:checked').value,
+                    backup: true,
+                    rollback_on_failure: true
+                }
+            };
+        }
+        
+        async function dryRun() {
+            const config = getFormConfig();
+            
+            try {
+                const response = await fetch('/admin/wizard/validate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Validation Passed!\n\nEstimates:\n- Total Predictions: ${result.estimates.total_predictions}\n- Estimated Time: ${result.estimates.time_minutes} minutes\n- Estimated Cost: $${result.estimates.cost}`);
+                } else {
+                    alert(`❌ Validation Failed:\n\n${result.errors.join('\n')}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        async function startGeneration() {
+            const config = getFormConfig();
+            
+            // Validate total percentage
+            const total = Object.values(config.pattern_mix).reduce((a, b) => a + b, 0);
+            if (Math.abs(total - 1.0) > 0.01) {
+                alert('❌ Pattern mix must sum to 100%');
+                return;
+            }
+            
+            // Confirm
+            if (!confirm(`Generate ${config.accounts} accounts with ${config.weeks_per_account} weeks each?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/wizard/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentRunId = result.run_id;
+                    document.getElementById('progressOverlay').classList.add('active');
+                    startStatusPolling();
+                } else {
+                    alert(`❌ Failed to start: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        function startStatusPolling() {
+            pollInterval = setInterval(updateStatus, 2000);
+            updateStatus();
+        }
+        
+        function stopStatusPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+        
+        async function updateStatus() {
+            if (!currentRunId) return;
+            
+            try {
+                const response = await fetch(`/admin/wizard/status/${currentRunId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateProgressUI(result);
+                    
+                    if (result.status === 'completed') {
+                        stopStatusPolling();
+                        showResults(result);
+                    } else if (result.status === 'failed') {
+                        stopStatusPolling();
+                        showError(result);
+                    }
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+        
+        function updateProgressUI(status) {
+            const progress = status.progress || {};
+            const phases = Object.keys(progress);
+            
+            let totalProgress = 0;
+            if (phases.length > 0) {
+                totalProgress = phases.reduce((sum, phase) => sum + progress[phase], 0) / phases.length;
+            }
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = `${totalProgress}%`;
+            progressBar.textContent = `${Math.round(totalProgress)}%`;
+            
+            const phaseStatusDiv = document.getElementById('phaseStatus');
+            phaseStatusDiv.innerHTML = phases.map(phase => {
+                const percent = progress[phase];
+                const statusClass = percent === 100 ? 'completed' : percent > 0 ? 'running' : 'pending';
+                
+                return `
+                    <div class="phase-status ${statusClass}">
+                        <strong>${phase.replace('_', ' ').toUpperCase()}:</strong> ${percent}%
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function showResults(result) {
+            document.getElementById('progressOverlay').classList.remove('active');
+            alert(`✅ Pipeline Completed!\n\nRun ID: ${result.run_id}\n\nCheck outputs/wizard_runs/${result.run_id}/ for results.`);
+        }
+        
+        function showError(result) {
+            document.getElementById('progressOverlay').classList.remove('active');
+            alert(`❌ Pipeline Failed:\n\n${result.error_message || 'Unknown error'}\n\nRun ID: ${result.run_id}`);
+        }
+        
+        function cancelRun() {
+            if (!currentRunId) return;
+            if (!confirm('Cancel this run?')) return;
+            
+            stopStatusPolling();
+            document.getElementById('progressOverlay').classList.remove('active');
+            alert('Run cancelled');
+        }
+        
+        function saveConfig() {
+            const config = getFormConfig();
+            const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'wizard_config.json';
+            a.click();
+        }
+        
+        function resetForm() {
+            if (!confirm('Reset all settings?')) return;
+            location.reload();
+        }
+        
+        // Load default config on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/admin/wizard/config');
+                const result = await response.json();
+                
+                if (result.success && result.config) {
+                    console.log('Loaded config:', result.config);
+                    // Populate form if needed
+                }
+            } catch (error) {
+                console.error('Failed to load config:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+account_id,date,kpi_name,kpi_value
+1001,2025-01-01,deployment_time,30
+1001,2025-01-01,uptime_percentage,99.9
+1002,2025-01-01,deployment_time,45

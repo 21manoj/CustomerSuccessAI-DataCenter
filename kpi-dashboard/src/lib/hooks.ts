@@ -182,8 +182,10 @@ export function usePlaybookExecution(executionId: string) {
  * Hook for playbook definitions
  */
 export function usePlaybookDefinitions() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [loading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [error] = useState<string | null>(null);
 
   // Get playbook by ID
   const getPlaybook = useCallback((id: string): PlaybookDefinition | undefined => {

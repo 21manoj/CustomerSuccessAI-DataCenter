@@ -1,0 +1,52 @@
+{
+  "proactive_growth": {
+    "pattern_type": "proactive_growth",
+    "n_accounts": 8,
+    "avg_starting_health": 75.0,
+    "avg_ending_health": 97.93125,
+    "health_change": 22.93125,
+    "avg_lowest_health": 74.82875000000001,
+    "avg_highest_health": 98.0,
+    "avg_duration_weeks": 52.0,
+    "avg_total_events": 143.0,
+    "common_phases": [
+      "growth",
+      "healthy"
+    ],
+    "phase_distribution": {
+      "healthy": 18.356643356643357,
+      "growth": 81.64335664335664
+    },
+    "avg_csm_investment": 346250.0,
+    "financial_impact": "40% ARR expansion",
+    "early_warning_signals": [],
+    "success_factors": [
+      "Average CSM investment: $346,250",
+      "High engagement: 143 events/account",
+      "Early health improvement: 8/8 accounts"
+    ]
+  },
+  "ignored_churn": {
+    "pattern_type": "ignored_churn",
+    "n_accounts": 2,
+    "avg_starting_health": 70.0,
+    "avg_ending_health": 15.0,
+    "health_change": -55.0,
+    "avg_lowest_health": 15.0,
+    "avg_highest_health": 70.0,
+    "avg_duration_weeks": 52.0,
+    "avg_total_events": 26.0,
+    "common_phases": [
+      "crisis",
+      "at_risk"
+    ],
+    "phase_distribution": {
+      "at_risk": 34.61538461538461,
+      "crisis": 65.38461538461539
+    },
+    "avg_csm_investment": 87500.0,
+    "financial_impact": "100% ARR lost - churn",
+    "early_warning_signals": [],
+    "success_factors": []
+  }
+}

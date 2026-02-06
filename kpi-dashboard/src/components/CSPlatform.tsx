@@ -283,7 +283,12 @@ const CSPlatform = () => {
 
   // Fetch accounts from backend
   const fetchAccounts = async () => {
-    if (!session?.customer_id) return;
+    if (!session?.customer_id) {
+      console.log('[fetchAccounts] No session or customer_id, skipping');
+      return;
+    }
+    
+    console.log(`[fetchAccounts] Fetching accounts for customer_id: ${session.customer_id}`);
     
     try {
       const response = await fetch('/api/accounts', {
@@ -295,11 +300,15 @@ const CSPlatform = () => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Accounts API response:', data); // Debug log
+        console.log('[fetchAccounts] Accounts API response:', data); // Debug log
+        console.log(`[fetchAccounts] Response type: ${Array.isArray(data) ? 'array' : 'object'}`);
         
         // Handle both old format (direct array) and new format ({accounts: []})
         const accountsArray = Array.isArray(data) ? data : (data.accounts || []);
-        console.log('Accounts array:', accountsArray); // Debug log
+        console.log(`[fetchAccounts] Accounts array length: ${accountsArray.length}`);
+        if (accountsArray.length > 0) {
+          console.log(`[fetchAccounts] First account ID: ${accountsArray[0].account_id}, Customer ID: ${accountsArray[0].customer_id}`);
+        }
         
         // Transform backend data to match our interface
         const transformedAccounts: Account[] = accountsArray.map((acc: any) => ({
@@ -442,9 +451,11 @@ const CSPlatform = () => {
   }, [kpiData]);
 
   useEffect(() => {
-    console.log('Session changed:', session); // Debug log
+    console.log('[useEffect] Session changed:', session); // Debug log
     if (session?.customer_id) {
-      console.log('Fetching accounts for customer:', session.customer_id); // Debug log
+      console.log('[useEffect] Fetching accounts for customer:', session.customer_id); // Debug log
+      // Clear any cached accounts when customer changes
+      setAccounts([]);
       fetchAccounts();
       fetchCategoryWeights();
       fetchHealthTrendData();
@@ -453,7 +464,9 @@ const CSPlatform = () => {
       fetchTimeSeriesStats();
       fetchPerformanceSummary();
     } else {
-      console.log('No customer_id in session'); // Debug log
+      console.log('[useEffect] No customer_id in session'); // Debug log
+      // Clear accounts if no session
+      setAccounts([]);
     }
   }, [session?.customer_id]);
 
@@ -1980,6 +1993,7 @@ const CSPlatform = () => {
     const [productFilter, setProductFilter] = useState<string>('');
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [expandedAccounts, setExpandedAccounts] = useState<{[productName: string]: boolean}>({});
 
     // Helper function to normalize product names for consistent grouping
     // Normalizes to lowercase and trims whitespace for matching
@@ -2395,12 +2409,16 @@ const CSPlatform = () => {
               const isExpanded = selectedProduct === productName;
               const displayName = group?.displayName || productName;
               
+              // ✅ FILTER: Only count product-relevant KPIs from "Product Usage KPI" and "Support KPI" pillars
+              const PRODUCT_RELEVANT_CATEGORIES = ['Product Usage KPI', 'Support KPI'];
+              
               // Count only product-level KPIs for this specific product
               // First try group.kpis (already matched), then search all KPI data as fallback
               let productLevelKPICount = group.kpis.filter(kpi => 
                 kpi.product_id !== null && 
                 kpi.product_id !== undefined && 
-                kpi.product_name
+                kpi.product_name &&
+                PRODUCT_RELEVANT_CATEGORIES.includes(kpi.category || '') // ✅ Filter to product-relevant pillars
               ).length;
               
               // Always search all KPI data to find matching product KPIs (even if group.kpis is empty)
@@ -2411,12 +2429,29 @@ const CSPlatform = () => {
                 const kpiProductName = normalizeProductName(kpi.product_name.trim());
                 const targetProductName = normalizeProductName(productName);
                 const displayNameNormalized = normalizeProductName(displayName);
-                return kpiProductName === targetProductName || kpiProductName === displayNameNormalized;
+                const productMatches = kpiProductName === targetProductName || kpiProductName === displayNameNormalized;
+                
+                // ✅ FILTER: Only include KPIs from product-relevant pillars
+                const isProductRelevant = PRODUCT_RELEVANT_CATEGORIES.includes(kpi.category || '');
+                
+                return productMatches && isProductRelevant;
               });
               
               // Use the count from all product KPIs (more accurate)
               if (allProductKPIs.length > 0) {
                 productLevelKPICount = allProductKPIs.length;
+              }
+              
+              // Also count account-level KPIs from product-relevant pillars for fallback count
+              const accountLevelKPIsFromPillars = deduplicatedKpiData.filter(kpi => {
+                if (kpi.product_id !== null && kpi.product_id !== undefined) return false; // Exclude product-level
+                const accountHasProduct = group.accounts.some(acc => acc.account_id === kpi.account_id);
+                return accountHasProduct && PRODUCT_RELEVANT_CATEGORIES.includes(kpi.category || '');
+              });
+              
+              // If no product-level KPIs, use account-level count from relevant pillars
+              if (productLevelKPICount === 0) {
+                productLevelKPICount = accountLevelKPIsFromPillars.length;
               }
               
               return (
@@ -2472,7 +2507,7 @@ const CSPlatform = () => {
                           KPIs for {displayName}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          Showing {productLevelKPICount} Product-Level KPIs across {group.accounts.length} accounts
+                          Showing {productLevelKPICount} Product-Relevant KPIs (Product Usage & Support pillars) across {group.accounts.length} accounts
                         </p>
                       </div>
 

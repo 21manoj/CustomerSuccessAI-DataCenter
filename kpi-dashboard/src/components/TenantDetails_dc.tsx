@@ -25,7 +25,7 @@ const TenantDetails_dc: React.FC<TenantDetailsProps> = ({ tenantId, tenantName }
     setLoading(true);
     try {
       // Load tenant details
-      const response = await fetch(`/api/dc/health-score/${tenantId}`, {
+      const response = await fetch(`/api/dc2s/health-score/${tenantId}`, {
         credentials: 'include',
       });
 

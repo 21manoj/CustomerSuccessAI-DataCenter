@@ -69,9 +69,14 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
   // Fetch accounts on mount
   useEffect(() => {
     const fetchAccounts = async () => {
+      if (!customerId) {
+        console.log('[Playbooks] No customerId provided, skipping account fetch');
+        return;
+      }
       try {
         const response = await fetch('/api/accounts', {
-          headers: { 'X-Customer-ID': (customerId || 1).toString() }
+          credentials: 'include', // Use session cookies
+          headers: { 'X-Customer-ID': customerId.toString() }
         });
         if (response.ok) {
           const data = await response.json();

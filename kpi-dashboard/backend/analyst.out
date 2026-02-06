@@ -1,0 +1,1520 @@
+======================================================================
+SIGNAL ANALYST V2 - BATCH ANALYSIS FOR ALL ACCOUNTS
+======================================================================
+Started: 2026-01-04 20:35:08
+Output file: analyst.out
+
+======================================================================
+FETCHING ACCOUNTS FOR CUSTOMER 5
+======================================================================
+
+Found 16 accounts to analyze
+
+
+======================================================================
+STARTING BATCH ANALYSIS
+======================================================================
+
+
+######################################################################
+# ACCOUNT 1 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 370: CloudScale AI Labs
+======================================================================
+
+Account: CloudScale AI Labs
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 370
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 0 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~63 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 129
+  Claude output tokens: 337
+  Embedding cost: $0.0
+  Claude cost: $0.00544
+  Total cost: $0.00544
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: CloudScale AI Labs
+
+## Overall Health Status: **CRITICAL** 🔴
+
+## Top 3 Risk Factors:
+
+1. **Zero Revenue Generation**
+   - ARR of $0.00 indicates no active paid contracts
+   - Company may be in evaluation phase or have stalled purchasing decision
+
+2. **Missing Engagement Data**
+   - No KPI metrics available to assess product adoption or satisfaction
+   - Lack of visibility into customer interaction levels
+
+3. **AI Infrastructure Market Pressure**
+   - High-competition industry with rapid technology cycles
+   - Customers often have multiple vendor options and switching flexibility
+
+## Immediate CSM Actions (Next 7 Days):
+
+1. **Emergency Customer Outreach** (Day 1-2)
+   - Schedule urgent call with primary stakeholder
+   - Assess current evaluation status and purchasing timeline
+
+2. **Stakeholder Mapping** (Day 3-4)
+   - Identify decision makers and influencers
+   - Document budget authority and procurement process
+
+3. **Value Demonstration** (Day 5-7)
+   - Prepare customized ROI analysis for their AI workloads
+   - Offer extended trial or proof-of-concept engagement
+
+## Estimated Churn Risk: **95%**
+
+**Rationale:** Zero revenue with missing engagement data suggests minimal commitment. Without immediate intervention and clear path to purchase, this prospect will likely evaluate competitors or delay indefinitely.
+
+**Priority Level:** Immediate escalation required.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 0 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00544
+
+
+######################################################################
+# ACCOUNT 2 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 371: CloudScale AI Labs
+======================================================================
+
+Account: CloudScale AI Labs
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 371
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 279
+  Claude output tokens: 294
+  Embedding cost: $0.0
+  Claude cost: $0.00525
+  Total cost: $0.00525
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: CloudScale AI Labs
+
+## Overall Health Status: **AT-RISK**
+
+Despite strong KPI performance, the **$0 ARR** indicates this is either a trial/pilot customer or experiencing severe payment issues, creating significant churn risk.
+
+## Top 3 Risk Factors
+
+1. **Zero Revenue Status** - $0 ARR is the primary red flag, suggesting no committed spend despite good engagement metrics
+2. **Trial/Pilot Limbo** - Strong KPI performance without revenue conversion indicates potential stalled commercial discussions
+3. **Value Realization Gap** - High engagement metrics may not translate to perceived business value warranting investment
+
+## Immediate CSM Actions (Next 7 Days)
+
+1. **Revenue Status Audit** - Confirm if this is trial/pilot phase or billing issue; escalate payment problems immediately
+2. **Commercial Acceleration** - Schedule executive alignment call to discuss conversion timeline and budget approval process
+3. **ROI Documentation** - Create business case presentation showing concrete value delivered based on strong KPI performance
+
+## Estimated Churn Risk: **75%**
+
+High churn probability due to zero revenue despite positive engagement. Without immediate commercial progression, strong usage metrics become meaningless for retention.
+
+**Critical Priority**: Convert engagement into committed spend within 30 days or risk complete account loss.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00525
+
+
+######################################################################
+# ACCOUNT 3 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 372: CloudScale AI Labs
+======================================================================
+
+Account: CloudScale AI Labs
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 372
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 279
+  Claude output tokens: 353
+  Embedding cost: $0.0
+  Claude cost: $0.00613
+  Total cost: $0.00613
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: CloudScale AI Labs
+
+## Overall Health Status: **AT-RISK**
+
+Despite strong KPI performance, the **$0 ARR indicates this is likely a trial/pilot customer** who hasn't converted to paid services yet.
+
+## Top 3 Risk Factors
+
+1. **Zero Revenue Conversion Risk** - $0 ARR suggests customer is in evaluation phase without committed spend, creating high churn probability if not converted soon
+
+2. **Over-Performance Without Monetization** - All KPIs significantly exceed targets, indicating heavy usage/engagement that isn't being captured as revenue opportunity
+
+3. **Potential Resource Drain** - High utilization metrics (P5-KPI7: 85%, P5-KPI2: 15 units) without corresponding revenue suggests unsustainable free/trial usage
+
+## Immediate CSM Actions (Next 7 Days)
+
+1. **Schedule conversion discussion** - Book meeting with decision-makers to discuss moving from trial to paid contract
+2. **Quantify business value** - Prepare ROI analysis showing performance gains from current high engagement levels
+3. **Create urgency** - Establish trial end date and pricing proposal based on current usage patterns
+4. **Identify budget/procurement process** - Understand their purchasing timeline and requirements
+
+## Estimated Churn Risk: **75%**
+
+High risk due to zero revenue despite strong engagement. Without immediate conversion to paid services, this account will likely churn when trial period ends or budget constraints arise.
+
+**Priority: Convert to revenue within 30 days or risk total loss of engaged prospect.**
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00613
+
+
+######################################################################
+# ACCOUNT 4 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 373: Nexus Research Institute
+======================================================================
+
+Account: Nexus Research Institute
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 373
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 280
+  Claude output tokens: 352
+  Embedding cost: $0.0
+  Claude cost: $0.00612
+  Total cost: $0.00612
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+## ACCOUNT HEALTH ANALYSIS: Nexus Research Institute
+
+### 1. Overall Health Status: **AT-RISK**
+
+Despite strong KPI performance, the $0 ARR is a critical red flag indicating this is either a trial customer, pilot program, or payment/billing issue.
+
+### 2. Top 3 Risk Factors:
+
+**CRITICAL:**
+- **Zero Revenue ($0 ARR)** - No financial commitment despite resource utilization
+- **High engagement without monetization** - Strong usage (P5-KPI7: 78/50, P5-KPI1: 78/70) suggests value realization but no conversion
+
+**MODERATE:**
+- **Research institute profile** - Academic institutions often have budget constraints and longer procurement cycles
+
+### 3. Immediate CSM Actions (Next 7 Days):
+
+1. **DAY 1-2:** Emergency account review - Verify billing status, contract terms, and payment processing
+2. **DAY 3-4:** Schedule stakeholder meeting to discuss commercialization timeline and budget approval process
+3. **DAY 5-7:** Present ROI analysis showing value delivered vs. current usage patterns to accelerate purchase decision
+
+### 4. Estimated Churn Risk: **85%**
+
+**Rationale:** While technical engagement is excellent, zero revenue with high utilization typically indicates either:
+- Trial period ending without conversion intent
+- Budget/procurement barriers preventing purchase
+- Potential migration to free/alternative solutions
+
+**Immediate priority:** Convert strong product-market fit into revenue commitment within 30 days.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00612
+
+
+######################################################################
+# ACCOUNT 5 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 374: Quantum Computing Corp
+======================================================================
+
+Account: Quantum Computing Corp
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 374
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 279
+  Claude output tokens: 342
+  Embedding cost: $0.0
+  Claude cost: $0.00597
+  Total cost: $0.00597
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: Quantum Computing Corp
+
+## Overall Health Status: **AT-RISK**
+
+Despite all KPIs being above target, the **$0 ARR indicates this is a prospect/trial account**, creating inherent conversion risk.
+
+## Top 3 Risk Factors:
+
+1. **Revenue Conversion Risk (HIGH)**
+   - Evidence: $0 ARR with active engagement metrics suggests prolonged evaluation phase
+   - Risk: Extended trials often lead to no-purchase decisions
+
+2. **Over-Engagement Without Commitment (MEDIUM)**
+   - Evidence: P5-KPI7 at 164% of target (82 vs 50) indicates heavy usage without financial commitment
+   - Risk: Getting value without paying reduces purchase urgency
+
+3. **Decision Timeline Uncertainty (MEDIUM)**
+   - Evidence: High performance across all metrics but no revenue conversion
+   - Risk: Unclear buying timeline or budget approval process
+
+## Immediate Actions (Next 7 Days):
+
+1. **Schedule Executive Business Review** - Connect with decision-makers to discuss ROI findings and implementation timeline
+2. **Present Formal Proposal** - Leverage current high usage metrics to justify investment and create purchase urgency
+3. **Identify Budget/Authority** - Qualify purchasing process, budget approval chain, and decision timeline
+
+## Estimated Churn Risk: **60%**
+
+High-performing trial accounts without clear conversion paths historically convert at ~40% rate in enterprise hardware sales.
+
+**Priority: Convert trial engagement into signed contract within 30 days.**
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00597
+
+
+######################################################################
+# ACCOUNT 6 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 375: DataVision Analytics
+======================================================================
+
+Account: DataVision Analytics
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 375
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~104 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 279
+  Claude output tokens: 351
+  Embedding cost: $0.0
+  Claude cost: $0.0061
+  Total cost: $0.0061
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: DataVision Analytics
+
+## Overall Health Status: **AT-RISK**
+
+Despite being in the high-growth AI infrastructure sector, this account shows concerning patterns with zero ARR and multiple underperforming KPIs across critical areas.
+
+## Top 3 Risk Factors
+
+1. **Zero Revenue Generation** - $0 ARR indicates either pre-revenue trial phase or stalled monetization, creating immediate churn risk without financial commitment
+
+2. **Performance Degradation (P2-KPI4: 99.2%)** - Missing 99.5% target suggests potential hardware reliability issues or suboptimal configuration affecting core GPU performance
+
+3. **Engagement Decline (P3 KPIs: 62/87 vs 65/90 targets)** - Both P3 metrics underperforming indicates reduced platform adoption and user satisfaction
+
+## Immediate Actions (Next 7 Days)
+
+1. **Emergency Health Check Call** - Schedule within 24hrs to assess technical issues and contract status
+2. **Performance Audit** - Deploy technical team to investigate P2-KPI4 performance gap and optimize GPU utilization
+3. **Usage Analysis** - Review P3 engagement patterns to identify adoption barriers and create targeted training plan
+4. **Commercial Review** - If trial phase, accelerate conversion discussions; if contracted, assess renewal timeline
+
+## Estimated Churn Risk: **75%**
+
+High risk due to zero revenue commitment combined with technical performance issues and declining engagement metrics in mission-critical AI infrastructure deployment.
+
+**Immediate escalation to senior CSM recommended.**
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00610
+
+
+######################################################################
+# ACCOUNT 7 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 376: ML Solutions Inc
+======================================================================
+
+Account: ML Solutions Inc
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 376
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 278
+  Claude output tokens: 430
+  Embedding cost: $0.0
+  Claude cost: $0.00728
+  Total cost: $0.00729
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: ML Solutions Inc
+
+## Overall Health Status: **CRITICAL**
+
+**Rationale:** Zero ARR with 100% KPIs below target indicates a prospect/trial account in serious jeopardy of churning before conversion.
+
+## Top 3 Risk Factors
+
+1. **Complete Revenue Risk (Zero ARR)**
+   - Evidence: $0.00 ARR suggests trial/pilot phase with no committed revenue
+   - Impact: No financial commitment = highest churn probability
+
+2. **Poor Product Adoption (P5-KPI1: 65/70, P5-KPI2: 4/5)**
+   - Evidence: Core usage metrics significantly below targets
+   - Impact: Low engagement indicates value realization failure
+
+3. **Service/Performance Issues (P2-KPI4: 98.8/99.5, P3 metrics below target)**
+   - Evidence: Technical performance and operational metrics underperforming
+   - Impact: Hardware reliability concerns in AI infrastructure are deal-killers
+
+## Immediate CSM Actions (Next 7 Days)
+
+1. **Emergency Stakeholder Meeting** (Day 1-2)
+   - Schedule C-level call to understand evaluation timeline and blockers
+   - Assess budget approval status and decision criteria
+
+2. **Technical Deep Dive** (Day 3-4)
+   - Deploy solutions engineer to address performance gaps
+   - Optimize GPU configuration for their ML workloads
+   - Document performance improvements achieved
+
+3. **Value Demonstration** (Day 5-7)
+   - Create custom ROI analysis showing GPU performance benefits
+   - Facilitate reference customer call in AI infrastructure space
+   - Present accelerated deployment plan with pricing incentives
+
+## Estimated Churn Risk: **85%**
+
+**Justification:** Zero revenue + universal KPI misses + AI infrastructure requirements demand near-perfect performance = extremely high churn probability without immediate intervention.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00729
+
+
+######################################################################
+# ACCOUNT 8 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 377: IntelliTech Systems
+======================================================================
+
+Account: IntelliTech Systems
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 377
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~104 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 281
+  Claude output tokens: 358
+  Embedding cost: $0.0
+  Claude cost: $0.00621
+  Total cost: $0.00621
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+## ACCOUNT HEALTH ANALYSIS: IntelliTech Systems
+
+### Overall Health Status: **AT-RISK**
+
+### Top 3 Risk Factors:
+
+1. **Zero Revenue with Below-Target Performance** (Critical)
+   - $0 ARR indicates trial/pilot phase with 3 out of 6 KPIs underperforming
+   - Risk of failing to convert to paying customer
+
+2. **Poor User Adoption** (High Risk)
+   - P5-KPI1 at 55.0 vs 70.0 target suggests low user engagement/utilization
+   - P3-KPI1 at 60.0 vs 65.0 target indicates adoption challenges
+
+3. **Service Quality Issues** (Medium Risk)
+   - P2-KPI4 at 99.3% vs 99.5% target shows performance degradation
+   - Could impact perception during critical evaluation period
+
+### Immediate CSM Actions (Next 7 Days):
+
+1. **Schedule urgent stakeholder call** to assess pilot satisfaction and conversion timeline
+2. **Conduct technical health check** - investigate P2-KPI4 performance issues and implement fixes
+3. **Launch adoption acceleration program** - provide training sessions and use case workshops to improve P5-KPI1 and P3-KPI1
+
+### Estimated Churn Risk: **65%**
+
+**Rationale**: Zero revenue status combined with multiple underperforming KPIs during what appears to be an evaluation period creates high conversion failure risk. Immediate intervention required to demonstrate value and address technical concerns.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00621
+
+
+######################################################################
+# ACCOUNT 9 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 378: Neural Networks Ltd
+======================================================================
+
+Account: Neural Networks Ltd
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 378
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 278
+  Claude output tokens: 411
+  Embedding cost: $0.0
+  Claude cost: $0.007
+  Total cost: $0.007
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# ACCOUNT HEALTH ANALYSIS: Neural Networks Ltd
+
+## Overall Health Status: **AT-RISK**
+
+Despite being in a high-growth AI infrastructure sector, this $0 ARR account shows concerning performance gaps across multiple KPIs, indicating potential implementation challenges or unmet expectations.
+
+## Top 3 Risk factors:
+
+1. **Service Level Performance Gap (P2-KPI4: 99.0/99.5)** - Even a 0.5% miss in what appears to be an uptime/reliability metric is critical for AI infrastructure clients who require maximum availability for training workloads.
+
+2. **Engagement/Satisfaction Concerns (P5-KPI1: 62.0/70.0)** - 11% below target suggests user adoption issues or dissatisfaction with current solution performance.
+
+3. **Operational Efficiency Issues (P3 KPIs)** - Both P3-KPI1 (64.0/65.0) and P3-KPI2 (86.0/90.0) are underperforming, indicating potential technical implementation or support response problems.
+
+## Immediate CSM Actions (Next 7 Days):
+
+1. **Schedule executive check-in** within 48 hours to address service level concerns and understand business impact
+2. **Conduct technical review** with their infrastructure team to identify root causes of performance gaps
+3. **Deploy specialist support** to resolve P2-KPI4 reliability issues immediately
+4. **Assess expansion readiness** - $0 ARR suggests trial/pilot phase; determine conversion timeline and blockers
+
+## Estimated Churn Risk: **65%**
+
+The combination of zero revenue, below-target performance across 4/6 KPIs, and reliability concerns in a mission-critical AI infrastructure environment creates high churn probability without immediate intervention.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00700
+
+
+######################################################################
+# ACCOUNT 10 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 379: StartupAI Ventures
+======================================================================
+
+Account: StartupAI Ventures
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 379
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~104 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 281
+  Claude output tokens: 489
+  Embedding cost: $0.0
+  Claude cost: $0.00818
+  Total cost: $0.00818
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# ACCOUNT HEALTH ANALYSIS: StartupAI Ventures
+
+## 🔴 OVERALL STATUS: CRITICAL
+
+**Churn Risk: 85-90%**
+
+## TOP 3 RISK FACTORS
+
+### 1. **ZERO REVENUE WITH POOR ENGAGEMENT** 
+- $0 ARR despite being in AI infrastructure (high-growth sector)
+- P5-KPI7 at 22.0 vs 50.0 target (56% below target)
+- Indicates lack of product adoption or stalled purchasing process
+
+### 2. **SEVERE SATISFACTION/VALUE REALIZATION ISSUES**
+- P5-KPI2 at -2.0 (NEGATIVE score vs +5.0 target)
+- P5-KPI1 at 38.0 vs 70.0 target (46% gap)
+- Customer experiencing significant friction or unmet expectations
+
+### 3. **DECLINING TECHNICAL PERFORMANCE**
+- P2-KPI4 at 98.2% vs 99.5% target (system reliability concerns)
+- P3 KPIs both underperforming (P3-KPI1: 35% gap, P3-KPI2: 16% gap)
+- Technical issues likely compounding satisfaction problems
+
+## IMMEDIATE CSM ACTIONS (Next 7 Days)
+
+### Days 1-2: **EMERGENCY INTERVENTION**
+- Schedule executive-level call with startup founders
+- Conduct comprehensive health check on their technical setup
+- Identify immediate blockers preventing revenue conversion
+
+### Days 3-5: **RAPID REMEDIATION**
+- Deploy technical support team to resolve P2-KPI4 performance issues
+- Create custom onboarding plan addressing their AI infrastructure needs
+- Provide proof-of-concept or pilot program to demonstrate value
+
+### Days 6-7: **COMMITMENT SECURING**
+- Present revised commercial proposal with startup-friendly terms
+- Establish 30-day success milestones with clear deliverables
+- Secure executive sponsorship and implementation timeline
+
+**ESCALATION REQUIRED: Involve VP of Customer Success and Technical Leadership immediately.**
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00818
+
+
+######################################################################
+# ACCOUNT 11 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 380: Legacy Systems Co
+======================================================================
+
+Account: Legacy Systems Co
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 380
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 278
+  Claude output tokens: 387
+  Embedding cost: $0.0
+  Claude cost: $0.00664
+  Total cost: $0.00664
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+## ACCOUNT HEALTH ANALYSIS: Legacy Systems Co
+
+### 1. Overall Health Status: **CRITICAL**
+
+### 2. Top 3 Risk Factors
+
+**HIGHEST RISK: Zero Revenue ($0 ARR)**
+- Complete lack of monetization despite being in high-value AI infrastructure market
+- Indicates potential trial/pilot stage or stalled commercial conversion
+
+**CRITICAL: Extremely Low Engagement (P5-KPI2: 1.0/5.0)**
+- 80% below target suggests minimal platform usage/adoption
+- Combined with low P5-KPI7 (28.0/50.0) indicates poor user activation
+
+**HIGH RISK: Performance/Satisfaction Issues (Multiple KPIs Below Target)**
+- P5-KPI1 (42.0/70.0): 40% below target
+- P3-KPI1 (48.0/65.0): 26% below target
+- Even high-reliability metric P2-KPI4 missing 99.5% target
+
+### 3. Immediate CSM Actions (Next 7 Days)
+
+**Day 1-2:** Emergency stakeholder call to understand commercial timeline and technical blockers
+**Day 3-4:** Conduct technical health check - identify why engagement is critically low
+**Day 5-7:** Develop joint success plan with specific usage milestones and commercial pathway
+
+### 4. Estimated Churn Risk: **85-95%**
+
+**Rationale:** Zero revenue + minimal engagement creates extremely high churn probability. Account appears to be in evaluation phase with poor adoption metrics, suggesting likely non-conversion rather than traditional churn.
+
+**URGENT:** Immediate intervention required to prevent account loss.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00664
+
+
+######################################################################
+# ACCOUNT 12 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 381: Budget AI Labs
+======================================================================
+
+Account: Budget AI Labs
+ARR: $0.00
+Industry: ai_infrastructure
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 0 relevant signals for account 381
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~105 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 278
+  Claude output tokens: 390
+  Embedding cost: $0.0
+  Claude cost: $0.00668
+  Total cost: $0.00669
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+## ACCOUNT HEALTH ANALYSIS: Budget AI Labs
+
+### 1. Overall Health Status: **CRITICAL**
+
+### 2. Top 3 Risk Factors
+
+1. **Zero Revenue with Poor Engagement** (P5-KPI7: 18.0/50.0)
+   - $0 ARR indicates no active contracts despite being in AI infrastructure
+   - Extremely low engagement signals lack of product adoption
+
+2. **Negative Growth Trajectory** (P5-KPI2: -3.0/5.0) 
+   - Negative score suggests declining interest or failed pilot program
+   - Combined with low adoption (P5-KPI1: 35.0/70.0) indicates fundamental product-market fit issues
+
+3. **Technical Implementation Struggles** (P3-KPI1: 38.0/65.0, P3-KPI2: 72.0/90.0)
+   - Low technical adoption suggests integration challenges
+   - Performance issues (P2-KPI4: 97.8/99.5) may be blocking progression to paid contracts
+
+### 3. Immediate CSM Actions (Next 7 Days)
+
+1. **Emergency stakeholder call** - Schedule within 24 hours to understand roadblocks and budget constraints
+2. **Technical rescue mission** - Deploy solutions engineer to resolve performance issues and improve adoption
+3. **Pilot program restructure** - Propose scaled-down proof-of-concept with clear success metrics and timeline
+
+### 4. Estimated Churn Risk: **95%**
+
+**Rationale**: Zero revenue, negative growth, and universal underperformance across all KPIs indicate imminent churn without immediate intervention. The account requires emergency retention protocols.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 0 most relevant
+  Analysis cost: $0.00669
+
+
+######################################################################
+# ACCOUNT 13 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 1001: CloudScale AI Labs
+======================================================================
+
+Account: CloudScale AI Labs
+ARR: $2,400,000.00
+Industry: AI Research
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 4 relevant signals for account 1001
+   1. Score: 0.377 - Budget concerns raised
+   2. Score: 0.377 - Budget concerns raised
+   3. Score: 0.375 - Budget concerns raised
+   4. Score: 0.375 - Budget concerns raised
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~180 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 459
+  Claude output tokens: 462
+  Embedding cost: $0.0
+  Claude cost: $0.00831
+  Total cost: $0.00831
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# ACCOUNT HEALTH ANALYSIS: CloudScale AI Labs
+
+## 🔴 **OVERALL STATUS: CRITICAL**
+
+---
+
+## **TOP 3 RISK FACTORS**
+
+1. **Persistent Budget Constraints** ⚠️
+   - Evidence: 4 budget-related escalations over 10 months (Feb-Dec 2024)
+   - Pattern shows escalating severity (emails → escalations)
+   - Most recent escalation in December indicates ongoing financial pressure
+
+2. **Declining Product Adoption** 📉
+   - Evidence: P2-KPI1 consistently at 2.0 vs target of 2.6 (23% below target)
+   - Multiple instances suggest systematic underutilization of GPU resources
+   - Low adoption despite $2.4M ARR indicates value realization issues
+
+3. **Escalation Trend Acceleration** 🚨
+   - Evidence: 2 escalations in Q4 2024 vs scattered emails earlier
+   - Shows deteriorating relationship and unresolved issues
+   - Customer moving to more formal complaint channels
+
+---
+
+## **IMMEDIATE CSM ACTIONS (Next 7 Days)**
+
+1. **Executive Stakeholder Meeting** (Day 1-2)
+   - Schedule C-level call to address budget concerns directly
+   - Present ROI analysis and usage optimization opportunities
+
+2. **Technical Health Check** (Day 3-4)
+   - Audit current GPU utilization patterns
+   - Identify quick wins to improve P2-KPI1 performance
+   - Propose resource optimization to reduce costs
+
+3. **Retention Plan Development** (Day 5-7)
+   - Create custom pricing proposal or payment terms
+   - Develop 90-day success plan with measurable milestones
+   - Prepare contract modification options
+
+---
+
+## **CHURN RISK: 75%**
+
+**Rationale:** High ARR customer with consistent budget pressures, poor product adoption, and escalating complaint pattern indicates imminent renewal risk. Immediate intervention required.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 4 most relevant
+  Analysis cost: $0.00831
+
+
+######################################################################
+# ACCOUNT 14 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 1002: FinServe Corp
+======================================================================
+
+Account: FinServe Corp
+ARR: $1,800,000.00
+Industry: Financial Services
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 3 relevant signals for account 1002
+   1. Score: 0.387 - Budget concerns raised
+   2. Score: 0.385 - Budget concerns raised
+   3. Score: 0.385 - Budget concerns raised
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~162 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 419
+  Claude output tokens: 403
+  Embedding cost: $0.0
+  Claude cost: $0.0073
+  Total cost: $0.0073
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# ACCOUNT HEALTH ANALYSIS: FinServe Corp
+
+## 1. Overall Health Status: **AT-RISK**
+
+Despite strong ARR ($1.8M), multiple concerning signals indicate potential account degradation.
+
+## 2. Top 3 Risk Factors
+
+**RISK 1: Persistent Budget Constraints (HIGH)**
+- Evidence: Repeated budget concerns across 6+ months (April-October 2024)
+- Escalation progression: Meeting → Email → Formal Escalation
+- Financial services sector facing regulatory/market pressures
+
+**RISK 2: Performance Issues (MEDIUM)**
+- Evidence: 3 instances of P2-KPI1 significantly below target (2.0 vs 2.6 target)
+- 23% performance gap suggests potential infrastructure strain
+- Could drive customer dissatisfaction and contract renegotiation pressure
+
+**RISK 3: Unresolved Technical Concerns (MEDIUM)**
+- Evidence: Budget concerns coinciding with performance issues
+- Pattern suggests customer may be questioning ROI on current GPU investment
+- Risk of downsizing or vendor evaluation
+
+## 3. Immediate CSM Actions (Next 7 Days)
+
+**Day 1-2:** Executive stakeholder outreach to understand budget timeline and constraints
+**Day 3-4:** Technical deep-dive session to address P2-KPI1 performance gaps
+**Day 5:** Present ROI analysis demonstrating value delivery despite performance issues
+**Day 6-7:** Develop flexible contract/payment options to address budget concerns
+
+## 4. Estimated Churn Risk: **35%**
+
+**Rationale:** High-value account with operational dependency (positive P3-KPIs) but facing financial pressure and performance gaps. Immediate intervention can likely retain account with modified terms.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 3 most relevant
+  Analysis cost: $0.00730
+
+
+######################################################################
+# ACCOUNT 15 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 1003: Quantum Research Institute
+======================================================================
+
+Account: Quantum Research Institute
+ARR: $3,200,000.00
+Industry: Scientific Research
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 1 relevant signals for account 1003
+   1. Score: 0.384 - Budget concerns raised
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~129 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 337
+  Claude output tokens: 373
+  Embedding cost: $0.0
+  Claude cost: $0.00661
+  Total cost: $0.00661
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+## ACCOUNT HEALTH ANALYSIS: Quantum Research Institute
+
+### 1. OVERALL HEALTH STATUS: **AT-RISK**
+
+### 2. TOP 3 RISK FACTORS
+
+1. **Consistent Performance Issues (P2-KPI1)**
+   - All P2-KPI1 metrics at 2.0 vs. target 2.6 (23% below target)
+   - Suggests potential hardware underutilization or technical problems
+   - Critical for research workloads requiring optimal GPU performance
+
+2. **Budget Pressure Escalation**
+   - Recent escalation regarding budget concerns (May 19, 2024)
+   - High ARR account ($3.2M) expressing cost sensitivity
+   - Scientific research sector often faces funding constraints
+
+3. **Mixed Performance Signals**
+   - While P3-KPI1 exceeds targets, the P2 performance gaps indicate underlying issues
+   - Performance inconsistency may impact research productivity and ROI perception
+
+### 3. IMMEDIATE CSM ACTIONS (Next 7 Days)
+
+1. **Schedule executive meeting** with Quantum's IT and Finance leadership to address budget concerns and demonstrate value realization
+2. **Conduct technical deep-dive** with their engineering team to diagnose P2-KPI1 performance gaps and optimize configurations
+3. **Prepare cost-benefit analysis** showing research output improvements and potential flexible pricing options
+
+### 4. ESTIMATED CHURN RISK: **35%**
+
+**Rationale:** High-value account with technical performance issues combined with budget pressures creates significant renewal risk, but strong P3 performance and research dependency on GPU infrastructure provide retention opportunities.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 1 most relevant
+  Analysis cost: $0.00661
+
+
+######################################################################
+# ACCOUNT 16 of 16
+######################################################################
+
+======================================================================
+ANALYZING ACCOUNT 1007: Legacy Manufacturing
+======================================================================
+
+Account: Legacy Manufacturing
+ARR: $2,100,000.00
+Industry: Manufacturing
+
+----------------------------------------------------------------------
+SMART RETRIEVAL: VECTOR SEARCH
+----------------------------------------------------------------------
+
+Search query: 'account health risks concerns performance issues budget constraints'
+
+1. Searching signals collection...
+   Retrieved 30 points from Qdrant
+   Found 5 relevant signals for account 1007
+   1. Score: 0.379 - Budget concerns raised
+   2. Score: 0.379 - Budget concerns raised
+   3. Score: 0.379 - Budget concerns raised
+   4. Score: 0.377 - Budget concerns raised
+   5. Score: 0.373 - Budget concerns raised
+
+2. Searching KPI patterns collection...
+   Found 0 relevant KPI patterns
+
+3. Getting recent KPI values from PostgreSQL...
+   Retrieved 6 recent KPI measurements
+
+----------------------------------------------------------------------
+BUILDING ANALYSIS PROMPT
+----------------------------------------------------------------------
+
+Prompt size: ~195 words
+
+----------------------------------------------------------------------
+CALLING CLAUDE API...
+----------------------------------------------------------------------
+
+API Usage:
+  OpenAI embedding tokens: 8
+  Claude input tokens: 497
+  Claude output tokens: 394
+  Embedding cost: $0.0
+  Claude cost: $0.0074
+  Total cost: $0.0074
+
+----------------------------------------------------------------------
+SIGNAL ANALYST RECOMMENDATIONS:
+----------------------------------------------------------------------
+# Account Health Analysis: Legacy Manufacturing
+
+## 1. Overall Health Status: **AT-RISK**
+
+## 2. Top 3 Risk Factors
+
+**Risk Factor 1: Persistent Budget Constraints**
+- Evidence: 5 documented instances of budget concerns from April-December 2024, including escalation
+- Impact: High-value account ($2.1M ARR) showing financial stress across multiple touchpoints
+
+**Risk Factor 2: Performance Issues with P3-KPI1**
+- Evidence: All P3-KPI1 metrics below target (56.0, 58.0, 60.0 vs. 65.0 target)
+- Impact: Consistent underperformance may indicate GPU utilization or configuration issues
+
+**Risk Factor 3: Declining Satisfaction Trajectory**
+- Evidence: Budget concerns escalated to formal escalation status by April 2024
+- Impact: Customer frustration increasing over 8-month period without resolution
+
+## 3. Immediate CSM Actions (Next 7 Days)
+
+1. **Schedule Executive Business Review** - Connect with C-level stakeholders to address budget concerns and demonstrate ROI/cost optimization opportunities
+2. **Technical Performance Audit** - Deploy technical team to analyze P3-KPI1 underperformance and provide optimization recommendations
+3. **Financial Solutions Workshop** - Present flexible payment terms, usage optimization, or phased implementation options to address budget constraints
+
+## 4. Estimated Churn Risk: **65%**
+
+**Rationale**: High ARR account with 8+ months of unresolved budget issues, declining technical performance, and formal escalation indicates significant churn probability without immediate intervention.
+
+**Recommended escalation to**: VP Customer Success and Sales leadership for retention strategy coordination.
+
+----------------------------------------------------------------------
+ANALYSIS SUMMARY:
+----------------------------------------------------------------------
+  PostgreSQL KPIs: 6 current values
+  Vector search signals: 5 most relevant
+  Analysis cost: $0.00740
+
+
+======================================================================
+BATCH ANALYSIS COMPLETE
+======================================================================
+Completed: 2026-01-04 20:38:29
+
+Summary:
+  Total accounts analyzed: 16
+  Successful: 16
+  Failed: 0
+  Total cost: $0.10664
+
+Per-account average cost: $0.00666
+
+======================================================================
+ACCOUNT-BY-ACCOUNT SUMMARY
+======================================================================
+
+Account 370: CloudScale AI Labs
+  ✅ Success | KPIs: 0 | Signals: 0 | Cost: $0.00544
+
+Account 371: CloudScale AI Labs
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00525
+
+Account 372: CloudScale AI Labs
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00613
+
+Account 373: Nexus Research Institute
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00612
+
+Account 374: Quantum Computing Corp
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00597
+
+Account 375: DataVision Analytics
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00610
+
+Account 376: ML Solutions Inc
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00729
+
+Account 377: IntelliTech Systems
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00621
+
+Account 378: Neural Networks Ltd
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00700
+
+Account 379: StartupAI Ventures
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00818
+
+Account 380: Legacy Systems Co
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00664
+
+Account 381: Budget AI Labs
+  ✅ Success | KPIs: 6 | Signals: 0 | Cost: $0.00669
+
+Account 1001: CloudScale AI Labs
+  ✅ Success | KPIs: 6 | Signals: 4 | Cost: $0.00831
+
+Account 1002: FinServe Corp
+  ✅ Success | KPIs: 6 | Signals: 3 | Cost: $0.00730
+
+Account 1003: Quantum Research Institute
+  ✅ Success | KPIs: 6 | Signals: 1 | Cost: $0.00661
+
+Account 1007: Legacy Manufacturing
+  ✅ Success | KPIs: 6 | Signals: 5 | Cost: $0.00740

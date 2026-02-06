@@ -51,7 +51,19 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
       const data = await response.json();
       
       // Get vertical from response or use the one selected
-      const sessionVertical = data.vertical || vertical;
+      // Map backend vertical values to frontend values
+      let sessionVertical = data.vertical || vertical;
+      
+      // Safety net: Map dc2_s/dc2-s/DC2_S to datacenter for frontend routing
+      if (sessionVertical && (sessionVertical.toLowerCase() === 'dc2_s' || sessionVertical.toLowerCase() === 'dc2-s')) {
+        sessionVertical = 'datacenter';
+      }
+      
+      // Ensure valid vertical values
+      if (sessionVertical !== 'datacenter' && sessionVertical !== 'saas') {
+        // Default to datacenter if user selected datacenter, otherwise saas
+        sessionVertical = vertical === 'datacenter' ? 'datacenter' : 'saas';
+      }
       
       const session = {
         customer_id: data.user?.customer_id || data.customer_id || 1,

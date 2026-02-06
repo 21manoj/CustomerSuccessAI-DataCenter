@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+"""
+DC2_S Vertical Setup Script - FINAL VERSION
+Creates DC2_S user, accounts, and KPIs using new vertical structure
+
+Prerequisites:
+1. Run migrate_verticals_simple.py first
+2. Add DC2SKPI model to models.py
+3. Add vertical/role columns to User and Account models
+4. Restart Flask app
+
+This creates:
+- User: dc_super1 (vertical='dc2_s', role='supermicro_internal')
+- 10 DC2_S accounts with profile_metadata
+- ~120 KPIs in dc2s_kpis table (separate from SaaS kpis)
+"""
+
+import sys
+import os
+from datetime import datetime
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+from app import app, db
+from models import User, Account, DC2SKPI
+from werkzeug.security import generate_password_hash
+
+# Import DC2_S KPI definitions - CORRECTED for YOUR files
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'verticals', 'dc2_s'))
+from kpi_definitions import DC2S_KPIS, DC2S_PILLARS
+from pillar_weights import get_current_weights
+
+# Import sample accounts
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'integrations'))
+from sample_accounts import SAMPLE_ACCOUNTS
+
+def create_dc2s_user():
+    """Create DC2_S superuser"""
+    
+    print("Creating DC2_S user...")
+    
+    # Check if exists
+    existing = User.query.filter_by(user_name='dc_super1').first()
+    if existing:
+        print(f"⚠️  User 'dc_super1' already exists (ID: {existing.user_id})")
+        response = input("Delete and recreate? (yes/no): ")
+        if response.lower() != 'yes':
+            return existing
+        db.session.delete(existing)
+        db.session.commit()
+    
+    # Create user with vertical/role
+    user = User(
+        customer_id=1,  # Supermicro
+        user_name='dc_super1',
+        email='dc_super1@supermicro.com',
+        password_hash=generate_password_hash('dc_super321'),
+        active=True,
+        vertical='dc2_s',  # NEW: Vertical assignment
+        role='supermicro_internal',  # NEW: Role
+        created_at=datetime.utcnow()
+    )
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    print(f"✅ Created user: {user.user_name}")
+    print(f"   User ID: {user.user_id}")
+    print(f"   Vertical: {user.vertical}")
+    print(f"   Role: {user.role}")
+    print()
+    
+    return user
+
+def create_dc2s_account(account_data):
+    """Create single DC2_S account with metadata"""
+    
+    # Store DC2_S-specific data in profile_metadata
+    # Handle optional fields gracefully
+    metadata = {
+        'vertical': 'dc2_s',
+        'gpu_count': account_data.get('gpu_count', 64),
+        'gpu_model': account_data.get('gpu_model', 'H100'),
+        'deployment_value': account_data.get('deployment_value', 5000000),
+        'deployment_type': 'on_premise',
+        'phase': 'performance',
+        'partner_tier': 'direct',
+        'days_since_deployment': account_data.get('days_since_deployment', 30)
+    }
+    
+    account = Account(
+        customer_id=1,  # Supermicro
+        account_name=account_data.get('account_name', 'Unknown Account'),
+        industry='ai_infrastructure',
+        region='US',
+        vertical='dc2_s',  # NEW: Vertical tag
+        profile_metadata=metadata,
+        created_at=datetime.utcnow()
+    )
+    
+    db.session.add(account)
+    db.session.commit()
+    
+    return account
+
+def save_dc2s_kpis(account_id, kpi_values):
+    """Save DC2_S KPIs to dc2s_kpis table"""
+    
+    count = 0
+    for kpi_code, value in kpi_values.items():
+        if kpi_code not in DC2S_KPIS:
+            continue
+        
+        kpi_def = DC2S_KPIS[kpi_code]
+        
+        # Extract target value - handle dict or simple number
+        target_raw = kpi_def.get('target')
+        if isinstance(target_raw, dict):
+            target_value = target_raw.get('value')
+        else:
+            target_value = target_raw
+        
+        # Create KPI record in dc2s_kpis table
+        kpi = DC2SKPI(
+            account_id=account_id,
+            kpi_code=kpi_code,
+            value=value,
+            target=target_value,  # Now a simple number
+            pillar=kpi_def.get('pillar', kpi_def.get('l1_category')),
+            weight=kpi_def.get('weight', 0.0),
+            measured_at=datetime.utcnow()
+        )
+        
+        db.session.add(kpi)
+        count += 1
+    
+    db.session.commit()
+    return count
+
+def calculate_status(kpis):
+    """Calculate health status from KPI values - matching YOUR structure"""
+    
+    weights = get_current_weights()
+    
+    # Calculate weighted health score
+    total_score = 0
+    total_weight = 0
+    
+    for kpi_code, value in kpis.items():
+        if kpi_code in DC2S_KPIS:
+            kpi_def = DC2S_KPIS[kpi_code]
+            pillar = kpi_def.get('pillar', kpi_def.get('l1_category', 'Unknown'))
+            
+            # Get pillar weight
+            pillar_weight = weights.get(pillar, {}).get('weight', 0.2)
+            
+            # Extract target value - handle dict or simple number
+            target_raw = kpi_def.get('target', 100)
+            if isinstance(target_raw, dict):
+                target = target_raw.get('value', 100)
+                operator = target_raw.get('operator', '>')
+            else:
+                target = target_raw
+                operator = '>'
+            
+            # Simple scoring: closer to target = higher score
+            if target and target > 0:
+                if operator == '<':
+                    # Lower is better
+                    score = min(100, (target / max(value, 0.01)) * 100)
+                else:
+                    # Higher is better (default)
+                    score = min(100, (value / target) * 100)
+            else:
+                score = value
+            
+            total_score += score * pillar_weight
+            total_weight += pillar_weight
+    
+    health = total_score / total_weight if total_weight > 0 else 0
+    
+    if health >= 80:
+        return 'healthy', health
+    elif health >= 60:
+        return 'risk', health
+    else:
+        return 'critical', health
+
+def setup_dc2s_vertical():
+    """Complete DC2_S vertical setup"""
+    
+    print()
+    print("🚀 DC2_S VERTICAL SETUP")
+    print("=" * 60)
+    print()
+    print("This will create:")
+    print("  • 1 DC2_S user (dc_super1)")
+    print("  • 10 DC2_S accounts")
+    print("  • ~120 KPIs in dc2s_kpis table")
+    print()
+    
+    # Create user
+    user = create_dc2s_user()
+    
+    # Create accounts
+    print()
+    print("Creating DC2_S accounts...")
+    print()
+    
+    created_accounts = []
+    
+    for account_data in SAMPLE_ACCOUNTS:
+        # Create account
+        account = create_dc2s_account(account_data)
+        
+        # Save KPIs
+        kpi_count = save_dc2s_kpis(account.account_id, account_data['kpi_values'])
+        
+        # Calculate health
+        status, health = calculate_status(account_data['kpi_values'])
+        
+        created_accounts.append({
+            'account': account,
+            'kpi_count': kpi_count,
+            'health': health,
+            'status': status
+        })
+        
+        status_emoji = '🟢' if status == 'healthy' else '🟡' if status == 'risk' else '🔴'
+        print(f"{status_emoji} {account.account_name}")
+        print(f"   Account ID: {account.account_id}")
+        print(f"   Health: {health:.1f}/100 ({status})")
+        print(f"   KPIs: {kpi_count}")
+        print()
+    
+    # Summary
+    print("=" * 60)
+    print("✅ DC2_S VERTICAL SETUP COMPLETE!")
+    print("=" * 60)
+    print()
+    print(f"Created:")
+    print(f"  • User: {user.user_name} (ID: {user.user_id})")
+    print(f"  • Accounts: {len(created_accounts)}")
+    print(f"  • Total KPIs: {sum(a['kpi_count'] for a in created_accounts)}")
+    print()
+    
+    # Health distribution
+    healthy = sum(1 for a in created_accounts if a['status'] == 'healthy')
+    risk = sum(1 for a in created_accounts if a['status'] == 'risk')
+    critical = sum(1 for a in created_accounts if a['status'] == 'critical')
+    
+    print("Health Distribution:")
+    print(f"  🟢 Healthy: {healthy} accounts")
+    print(f"  🟡 Risk: {risk} accounts")
+    print(f"  🔴 Critical: {critical} accounts")
+    print()
+    
+    print("Test Login:")
+    print(f"  Username: dc_super1")
+    print(f"  Password: dc_super321")
+    print()
+    
+    print("Verify Data:")
+    print(f"  python3 -c \"from app import app, db; from models import DC2SKPI, Account, User; \\")
+    print(f"    with app.app_context(): \\")
+    print(f"      print('DC2_S Users:', User.query.filter_by(vertical='dc2_s').count()); \\")
+    print(f"      print('DC2_S Accounts:', Account.query.filter_by(vertical='dc2_s').count()); \\")
+    print(f"      print('DC2_S KPIs:', DC2SKPI.query.count())\"")
+    print()
+
+if __name__ == "__main__":
+    with app.app_context():
+        setup_dc2s_vertical()

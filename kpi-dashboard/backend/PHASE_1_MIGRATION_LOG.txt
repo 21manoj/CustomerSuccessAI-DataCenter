@@ -1,0 +1,374 @@
+⚠️  SECRET_KEY not set. Using auto-generated temporary key for development. Run 'python backend/generate_secret_key.py' to create persistent key.
+⚠️  WARNING: Using temporary SECRET_KEY (will change on restart)
+⚠️  Run: python backend/generate_secret_key.py
+✅ Using PostgreSQL database: postgresql://dcuser:dcpass123@localhost:5432/cs_pu...
+13:07:07 - INFO - ======================================================================
+13:07:07 - INFO - Logging initialized
+13:07:07 - INFO - Log level: INFO
+13:07:07 - INFO - Log file: logs/signal_analyst.log
+13:07:07 - INFO - Error log: logs/signal_analyst_errors.log
+13:07:07 - INFO - Cost log: logs/api_costs.log
+13:07:07 - INFO - ======================================================================
+2026-01-23 13:07:07 - event_system - WARNING - ProductHealthSubscriber not available
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: kpi_data_uploaded
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: kpi_data_updated
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: account_data_changed
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: temporal_data_added
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: rag_rebuild_requested
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: temporal_data_added
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: kpi_data_updated
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: kpi_data_uploaded
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: account_data_changed
+2026-01-23 13:07:07 - event_system - INFO - Subscribed to event: health_scores_updated
+2026-01-23 13:07:07 - event_system - INFO - Event publisher started
+2026-01-23 13:07:07 - event_system - INFO - Data ingestion subscriber started
+2026-01-23 13:07:07 - event_system - INFO - Event system started
+2026-01-23 13:07:07 - event_system - INFO - ✅ Account snapshot auto-creation enabled (event-driven)
+✅ Event system started - Account snapshot auto-creation enabled
+2026-01-23 13:07:07 - auth_middleware - INFO - ✅ Authentication middleware initialized
+2026-01-23 13:07:07 - auth_middleware - INFO -    Public endpoints: ['/api/login', '/api/register', '/api/health', '/api/forgot-password', '/api/reset-password', '/api/onboarding/complete', '/api/onboarding/provision', '/api/onboarding/upload', '/api/onboarding/process-data', '/api/onboarding/register-journey-api', '/api/onboarding/processing-status', '/api/onboarding/templates']
+2026-01-23 13:07:07 - auth_middleware - INFO -    All other /api/* endpoints require authentication
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+✅ OpenAI API key support validated successfully
+DEBUG: corporate_api.py module loaded/reloaded
+2026-01-23 13:07:18 - faiss.loader - INFO - Loading faiss.
+2026-01-23 13:07:18 - faiss.loader - INFO - Successfully loaded faiss.
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_used" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+⚠️  Warning: Wizard models not found. Database features disabled.
+⚠️  Warning: Wizard models not found. Database features disabled.
+13:07:33 - INFO - ======================================================================
+13:07:33 - INFO - Logging initialized
+13:07:33 - INFO - Log level: INFO
+13:07:33 - INFO - Log file: logs/signal_analyst.log
+13:07:33 - INFO - Error log: logs/signal_analyst_errors.log
+13:07:33 - INFO - Cost log: logs/api_costs.log
+13:07:33 - INFO - ======================================================================
+DC2_S Vertical v1.0.0 loaded successfully
+  - 38 KPIs across 5 pillars
+  - 6 playbooks configured
+  - 3 partner tiers defined
+✅ Registered product_analytics_api
+✅ Registered activity_log_api
+✅ Registered governance_rag_api
+✅ Registered Signal Analyst API: /api/signal-analyst/*
+✅ Registered DC2_S API: /api/dc2s/*
+✅ Registered DC2_S Config API: /api/dc2s/config/*
+✅ Registered dynamic journey API at /api/journey/<account_id> (works for ALL customers)
+✅ Registered enhanced_rag_historical_api
+✅ Registered enhanced_rag_temporal_api
+✅ Registered enhanced_rag_qdrant_api
+✅ Wizard A blueprint registered
+✅ Onboarding API registered
+✅ Registered Admin API: /api/admin/*
+======================================================================
+PHASE 1 DATABASE MIGRATION
+======================================================================
+
+Step 1: Extending customer_configs table...
+  ✅ Added column: vertical
+  ✅ Added column: dc2s_pillar_weights
+  ✅ Added column: dc2s_enabled_kpis
+  ✅ Added column: dc2s_kpi_overrides
+  ✅ Added column: dc2s_kpi_weights
+  ✅ Added column: dc2s_kpi_definitions
+  ✅ Added column: config_version
+  ✅ Added column: customized_by
+  ✅ customer_configs table extended
+
+Step 2: Creating score tables...
+  ✅ kpi_scores table created/verified
+  ✅ pillar_scores table created/verified
+  ✅ health_scores table created/verified
+
+======================================================================
+✅ PHASE 1 MIGRATION COMPLETE!
+======================================================================
+
+Verification:
+  ✅ kpi_scores exists
+  ✅ pillar_scores exists
+  ✅ health_scores exists
+
+CustomerConfig DC2_S fields:
+  ✅ vertical
+  ✅ dc2s_pillar_weights
+  ✅ dc2s_enabled_kpis
+  ✅ dc2s_kpi_overrides
+  ✅ dc2s_kpi_weights
+  ✅ dc2s_kpi_definitions
+  ✅ config_version
+  ✅ customized_by
+
+✅ Migration successful! Ready for Phase 1 testing.
+⚠️  SECRET_KEY not set. Using auto-generated temporary key for development. Run 'python backend/generate_secret_key.py' to create persistent key.
+⚠️  WARNING: Using temporary SECRET_KEY (will change on restart)
+⚠️  Run: python backend/generate_secret_key.py
+✅ Using PostgreSQL database: postgresql://dcuser:dcpass123@localhost:5432/cs_pu...
+13:07:46 - INFO - ======================================================================
+13:07:46 - INFO - Logging initialized
+13:07:46 - INFO - Log level: INFO
+13:07:46 - INFO - Log file: logs/signal_analyst.log
+13:07:46 - INFO - Error log: logs/signal_analyst_errors.log
+13:07:46 - INFO - Cost log: logs/api_costs.log
+13:07:46 - INFO - ======================================================================
+2026-01-23 13:07:46 - event_system - WARNING - ProductHealthSubscriber not available
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: kpi_data_uploaded
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: kpi_data_updated
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: account_data_changed
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: temporal_data_added
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: rag_rebuild_requested
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: temporal_data_added
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: kpi_data_updated
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: kpi_data_uploaded
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: account_data_changed
+2026-01-23 13:07:46 - event_system - INFO - Subscribed to event: health_scores_updated
+2026-01-23 13:07:46 - event_system - INFO - Event publisher started
+2026-01-23 13:07:46 - event_system - INFO - Data ingestion subscriber started
+2026-01-23 13:07:46 - event_system - INFO - Event system started
+2026-01-23 13:07:46 - event_system - INFO - ✅ Account snapshot auto-creation enabled (event-driven)
+✅ Event system started - Account snapshot auto-creation enabled
+2026-01-23 13:07:46 - auth_middleware - INFO - ✅ Authentication middleware initialized
+2026-01-23 13:07:46 - auth_middleware - INFO -    Public endpoints: ['/api/login', '/api/register', '/api/health', '/api/forgot-password', '/api/reset-password', '/api/onboarding/complete', '/api/onboarding/provision', '/api/onboarding/upload', '/api/onboarding/process-data', '/api/onboarding/register-journey-api', '/api/onboarding/processing-status', '/api/onboarding/templates']
+2026-01-23 13:07:46 - auth_middleware - INFO -    All other /api/* endpoints require authentication
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+✅ OpenAI API key support validated successfully
+DEBUG: corporate_api.py module loaded/reloaded
+2026-01-23 13:07:52 - faiss.loader - INFO - Loading faiss.
+2026-01-23 13:07:52 - faiss.loader - INFO - Successfully loaded faiss.
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_used" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+⚠️  Warning: Wizard models not found. Database features disabled.
+⚠️  Warning: Wizard models not found. Database features disabled.
+13:07:59 - INFO - ======================================================================
+13:07:59 - INFO - Logging initialized
+13:07:59 - INFO - Log level: INFO
+13:07:59 - INFO - Log file: logs/signal_analyst.log
+13:07:59 - INFO - Error log: logs/signal_analyst_errors.log
+13:07:59 - INFO - Cost log: logs/api_costs.log
+13:07:59 - INFO - ======================================================================
+DC2_S Vertical v1.0.0 loaded successfully
+  - 38 KPIs across 5 pillars
+  - 6 playbooks configured
+  - 3 partner tiers defined
+✅ Registered product_analytics_api
+✅ Registered activity_log_api
+✅ Registered governance_rag_api
+✅ Registered Signal Analyst API: /api/signal-analyst/*
+✅ Registered DC2_S API: /api/dc2s/*
+✅ Registered DC2_S Config API: /api/dc2s/config/*
+✅ Registered dynamic journey API at /api/journey/<account_id> (works for ALL customers)
+✅ Registered enhanced_rag_historical_api
+✅ Registered enhanced_rag_temporal_api
+✅ Registered enhanced_rag_qdrant_api
+✅ Wizard A blueprint registered
+✅ Onboarding API registered
+✅ Registered Admin API: /api/admin/*
+======================================================================
+INITIALIZING CUSTOMER 9 DC2_S CONFIGURATION
+======================================================================
+
+🔍 Discovering KPIs used by Customer 9...
+   Found 33 unique KPIs
+
+📊 KPI Distribution:
+   AI: 0 KPIs
+   CH: 0 KPIs
+   DV: 0 KPIs
+   EX: 0 KPIs
+   OS: 0 KPIs
+
+⚠️  Unmapped KPIs (33):
+   - CH-KPI4
+   - EX-KPI6
+   - EX-KPI1
+   - OS-KPI3
+   - CH-KPI6
+   - AI-KPI2
+   - DV-KPI4
+   - CH-KPI3
+   - AI-KPI5
+   - EX-KPI8
+   - CH-KPI1
+   - DV-KPI6
+   - OS-KPI2
+   - OS-KPI1
+   - OS-KPI7
+   - EX-KPI3
+   - EX-KPI5
+   - CH-KPI5
+   - DV-KPI5
+   - AI-KPI6
+   - AI-KPI1
+   - OS-KPI5
+   - OS-KPI4
+   - AI-KPI3
+   - DV-KPI2
+   - EX-KPI7
+   - AI-KPI4
+   - EX-KPI4
+   - OS-KPI6
+   - DV-KPI1
+   - EX-KPI2
+   - CH-KPI2
+   - DV-KPI3
+
+📝 Creating new config...
+
+======================================================================
+✅ CUSTOMER 9 CONFIGURATION INITIALIZED!
+======================================================================
+
+Configuration Summary:
+  • Total KPIs: 33
+  • AI KPIs: 0
+  • CH KPIs: 0
+  • DV KPIs: 0
+  • EX KPIs: 0
+  • OS KPIs: 0
+
+Next steps:
+  1. Test config API: curl http://localhost:5059/api/dc2s/config
+  2. Proceed to Phase 2 (Score Calculator)
+
+
+⚠️  Customer 9 already has DC2_S config
+Do you want to overwrite? (yes/no): 🔍 Discovering KPIs used by Customer 9...
+   Found 33 unique KPIs
+
+📊 KPI Distribution:
+   AI: 6 KPIs
+   CH: 6 KPIs
+   DV: 6 KPIs
+   EX: 8 KPIs
+   OS: 7 KPIs
+
+📝 Updating existing config...
+
+======================================================================
+✅ CUSTOMER 9 CONFIGURATION INITIALIZED!
+======================================================================
+
+Configuration Summary:
+  • Total KPIs: 33
+  • AI KPIs: 6
+  • CH KPIs: 6
+  • DV KPIs: 6
+  • EX KPIs: 8
+  • OS KPIs: 7
+
+Next steps:
+  1. Test config API: curl http://localhost:5059/api/dc2s/config
+  2. Proceed to Phase 2 (Score Calculator)
+
+⚠️  SECRET_KEY not set. Using auto-generated temporary key for development. Run 'python backend/generate_secret_key.py' to create persistent key.
+⚠️  WARNING: Using temporary SECRET_KEY (will change on restart)
+⚠️  Run: python backend/generate_secret_key.py
+✅ Using PostgreSQL database: postgresql://dcuser:dcpass123@localhost:5432/cs_pu...
+13:10:36 - INFO - ======================================================================
+13:10:36 - INFO - Logging initialized
+13:10:36 - INFO - Log level: INFO
+13:10:36 - INFO - Log file: logs/signal_analyst.log
+13:10:36 - INFO - Error log: logs/signal_analyst_errors.log
+13:10:36 - INFO - Cost log: logs/api_costs.log
+13:10:36 - INFO - ======================================================================
+2026-01-23 13:10:36 - event_system - WARNING - ProductHealthSubscriber not available
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: kpi_data_uploaded
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: kpi_data_updated
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: account_data_changed
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: temporal_data_added
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: rag_rebuild_requested
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: temporal_data_added
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: kpi_data_updated
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: kpi_data_uploaded
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: account_data_changed
+2026-01-23 13:10:36 - event_system - INFO - Subscribed to event: health_scores_updated
+2026-01-23 13:10:36 - event_system - INFO - Event publisher started
+2026-01-23 13:10:36 - event_system - INFO - Data ingestion subscriber started
+2026-01-23 13:10:36 - event_system - INFO - Event system started
+2026-01-23 13:10:36 - event_system - INFO - ✅ Account snapshot auto-creation enabled (event-driven)
+✅ Event system started - Account snapshot auto-creation enabled
+2026-01-23 13:10:36 - auth_middleware - INFO - ✅ Authentication middleware initialized
+2026-01-23 13:10:36 - auth_middleware - INFO -    Public endpoints: ['/api/login', '/api/register', '/api/health', '/api/forgot-password', '/api/reset-password', '/api/onboarding/complete', '/api/onboarding/provision', '/api/onboarding/upload', '/api/onboarding/process-data', '/api/onboarding/register-journey-api', '/api/onboarding/processing-status', '/api/onboarding/templates']
+2026-01-23 13:10:36 - auth_middleware - INFO -    All other /api/* endpoints require authentication
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+✅ OpenAI API key support validated successfully
+DEBUG: corporate_api.py module loaded/reloaded
+2026-01-23 13:10:37 - faiss.loader - INFO - Loading faiss.
+2026-01-23 13:10:38 - faiss.loader - INFO - Successfully loaded faiss.
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_used" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+⚠️  Warning: Wizard models not found. Database features disabled.
+⚠️  Warning: Wizard models not found. Database features disabled.
+13:10:48 - INFO - ======================================================================
+13:10:48 - INFO - Logging initialized
+13:10:48 - INFO - Log level: INFO
+13:10:48 - INFO - Log file: logs/signal_analyst.log
+13:10:48 - INFO - Error log: logs/signal_analyst_errors.log
+13:10:48 - INFO - Cost log: logs/api_costs.log
+13:10:48 - INFO - ======================================================================
+DC2_S Vertical v1.0.0 loaded successfully
+  - 38 KPIs across 5 pillars
+  - 6 playbooks configured
+  - 3 partner tiers defined
+✅ Registered product_analytics_api
+✅ Registered activity_log_api
+✅ Registered governance_rag_api
+✅ Registered Signal Analyst API: /api/signal-analyst/*
+✅ Registered DC2_S API: /api/dc2s/*
+✅ Registered DC2_S Config API: /api/dc2s/config/*
+✅ Registered dynamic journey API at /api/journey/<account_id> (works for ALL customers)
+✅ Registered enhanced_rag_historical_api
+✅ Registered enhanced_rag_temporal_api
+✅ Registered enhanced_rag_qdrant_api
+✅ Wizard A blueprint registered
+✅ Onboarding API registered
+✅ Registered Admin API: /api/admin/*
+======================================================================
+PHASE 1 MIGRATION VERIFICATION
+======================================================================
+
+Score Tables:
+  ✅ kpi_scores (9 columns)
+  ✅ pillar_scores (9 columns)
+  ✅ health_scores (10 columns)
+
+CustomerConfig DC2_S Fields:
+  ✅ vertical
+  ✅ dc2s_pillar_weights
+  ✅ dc2s_enabled_kpis
+  ✅ dc2s_kpi_overrides
+  ✅ dc2s_kpi_weights
+  ✅ dc2s_kpi_definitions
+  ✅ config_version
+  ✅ customized_by
+
+Customer 9 Configuration:
+  ✅ Vertical: dc2_s
+  ✅ Enabled KPIs: 33
+  ✅ Pillar Weights: {'AI': 0.25, 'CH': 0.2, 'DV': 0.15, 'EX': 0.2, 'OS': 0.2}
+  ✅ KPI Distribution: AI=6, CH=6, DV=6, EX=8, OS=7
+
+======================================================================
+✅ PHASE 1 MIGRATION VERIFIED!
+======================================================================
+/Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+======================================================================
+PHASE 1 CONFIG API TEST SUITE
+======================================================================
+❌ Login failed: 401
+   Response: {"message":"Invalid email or password","status":"error"}
+
+
+❌ Cannot proceed without authentication
+   Please check TEST_EMAIL and TEST_PASSWORD in script

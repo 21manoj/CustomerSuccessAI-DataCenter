@@ -15,16 +15,8 @@ from datetime import datetime
 
 unified_query_api = Blueprint('unified_query_api', __name__)
 
-
-def get_current_customer_id():
-    """Extract and validate customer ID"""
-    cid = get_current_customer_id()
-    if not cid:
-        abort(400, 'Authentication required (handled by middleware)')
-    try:
-        return int(cid)
-    except:
-        abort(400, 'Invalid authentication (handled by middleware)')
+# Note: get_current_customer_id() is imported from auth_middleware
+# No need to redefine it here - using the imported function directly
 
 
 @unified_query_api.route('/api/query', methods=['POST'])
@@ -52,45 +44,59 @@ def unified_query():
         "metadata": {...}
     }
     """
-    data = request.json
-    query = data.get('query', '').strip()
-    force_routing = data.get('force_routing')  # Optional override
-    customer_id = get_current_customer_id()
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+            
+        query = data.get('query', '').strip()
+        force_routing = data.get('force_routing')  # Optional override
+        customer_id = get_current_customer_id()
+        
+        if not query:
+            return jsonify({'error': 'Query is required'}), 400
+        
+        # Classify the query
+        router = QueryRouter()
+        classification = router.classify_query(query)
+        
+        # Allow forced routing for testing/debugging
+        if force_routing in ['deterministic', 'rag']:
+            classification['routing'] = force_routing
+            classification['forced'] = True
+        
+        # Route based on classification
+        if classification['routing'] == 'deterministic':
+            response = _execute_deterministic_query(query, classification, customer_id)
+        else:
+            response = _execute_rag_query(query, classification, customer_id)
+        
+        # Add routing metadata
+        response['routing_decision'] = {
+            'routed_to': classification['routing'],
+            'confidence': classification['confidence'],
+            'query_type': classification['query_type'],
+            'extracted_params': classification['extracted_params'],
+            'reason': _get_routing_reason(classification),
+            'scores': classification['scores'],
+            'forced': classification.get('forced', False)
+        }
+        
+        response['original_query'] = query
+        response['customer_id'] = customer_id
+        response['timestamp'] = datetime.utcnow().isoformat()
+        
+        return jsonify(response)
     
-    if not query:
-        return jsonify({'error': 'Query is required'}), 400
-    
-    # Classify the query
-    router = QueryRouter()
-    classification = router.classify_query(query)
-    
-    # Allow forced routing for testing/debugging
-    if force_routing in ['deterministic', 'rag']:
-        classification['routing'] = force_routing
-        classification['forced'] = True
-    
-    # Route based on classification
-    if classification['routing'] == 'deterministic':
-        response = _execute_deterministic_query(query, classification, customer_id)
-    else:
-        response = _execute_rag_query(query, classification, customer_id)
-    
-    # Add routing metadata
-    response['routing_decision'] = {
-        'routed_to': classification['routing'],
-        'confidence': classification['confidence'],
-        'query_type': classification['query_type'],
-        'extracted_params': classification['extracted_params'],
-        'reason': _get_routing_reason(classification),
-        'scores': classification['scores'],
-        'forced': classification.get('forced', False)
-    }
-    
-    response['original_query'] = query
-    response['customer_id'] = customer_id
-    response['timestamp'] = datetime.utcnow().isoformat()
-    
-    return jsonify(response)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in unified_query: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': 'Internal server error',
+            'message': str(e),
+            'status': 500
+        }), 500
 
 
 def _execute_deterministic_query(query: str, classification: Dict, customer_id: int) -> Dict:
@@ -164,6 +170,9 @@ def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Di
     Execute RAG query via Qdrant VDB + OpenAI embeddings
     Provides insights, reasoning, and recommendations
     Uses Qdrant vector database for semantic search with OpenAI text-embedding-3-large
+    
+    REQUIRES: QDRANT_URL and QDRANT_API_KEY environment variables
+    NO FALLBACK: If Qdrant credentials are provided, system MUST use Qdrant
     """
     try:
         # Import Qdrant RAG system (default and recommended)
@@ -174,6 +183,24 @@ def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Di
         # Execute RAG query (knowledge base will be built automatically if needed)
         rag_result = rag_system.query(query, classification['query_type'])
         
+        # Check if result contains an error (Qdrant not available)
+        if isinstance(rag_result, dict) and 'error' in rag_result:
+            # Qdrant is required but not available
+            error_msg = rag_result.get('error', 'Unknown error')
+            requires_qdrant = rag_result.get('requires_qdrant', False)
+            
+            return {
+                'answer': f"RAG query failed: {error_msg}",
+                'error': error_msg,
+                'result': {},
+                'metadata': {
+                    'source': 'qdrant_rag_system',
+                    'execution_failed': True,
+                    'requires_qdrant': requires_qdrant,
+                    'message': 'Qdrant Cloud is required for RAG queries. Please configure QDRANT_URL and QDRANT_API_KEY.'
+                }
+            }
+        
         return {
             'answer': rag_result.get('response', 'No response generated'),
             'result': {
@@ -183,7 +210,7 @@ def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Di
             },
             'metadata': {
                 'source': 'qdrant_rag_system',
-                'vector_db': 'Qdrant',
+                'vector_db': 'Qdrant Cloud',
                 'embedding_model': 'text-embedding-3-large',
                 'precision': 'ai_generated',
                 'execution_time_ms': '1000-5000',
@@ -193,13 +220,19 @@ def _execute_rag_query(query: str, classification: Dict, customer_id: int) -> Di
         }
     
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error executing RAG query: {str(e)}", exc_info=True)
+        
         return {
             'answer': f"Error executing RAG query: {str(e)}",
             'error': str(e),
             'result': {},
             'metadata': {
                 'source': 'qdrant_rag_system',
-                'execution_failed': True
+                'execution_failed': True,
+                'requires_qdrant': True,
+                'message': 'Qdrant Cloud is required for RAG queries. Please verify QDRANT_URL and QDRANT_API_KEY are set correctly.'
             }
         }
 

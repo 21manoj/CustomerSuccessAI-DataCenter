@@ -1,0 +1,139 @@
+week_number,date,phase,event_type,description,sentiment,sentiment_value,health_score_before,health_score_after,outcome,csm_action_type,csm_action_desc,csm_response_hours,csm_cost
+1,2024-01-01,healthy,expansion_discussion,Board approval for expansion - Budget allocated,very_positive,0.9,75,75,"Perfect metrics, expansion opportunities",,,,
+2,2024-01-08,healthy,meeting,Regular check-in - All systems performing well,positive,0.7,75,75.32,"Perfect metrics, expansion opportunities",,,,
+2,2024-01-08,healthy,qbr,Outstanding QBR - All metrics exceeding targets,very_positive,0.9,75,75.32,"Perfect metrics, expansion opportunities",standard_checkin,Standard quarterly check-in,168,500
+3,2024-01-15,healthy,qbr,Outstanding QBR - All metrics exceeding targets,very_positive,0.9,75.32,76.23,"Perfect metrics, expansion opportunities",,,,
+4,2024-01-22,healthy,meeting,Regular check-in - All systems performing well,positive,0.7,76.23,75.74,"Perfect metrics, expansion opportunities",,,,
+5,2024-01-29,healthy,expansion_discussion,Board approval for expansion - Budget allocated,very_positive,0.9,75.74,77.07,"Perfect metrics, expansion opportunities",,,,
+5,2024-01-29,healthy,meeting,Regular check-in - All systems performing well,positive,0.7,75.74,77.07,"Perfect metrics, expansion opportunities",,,,
+5,2024-01-29,healthy,meeting,Regular check-in - All systems performing well,positive,0.7,75.74,77.07,"Perfect metrics, expansion opportunities",,,,
+6,2024-02-05,healthy,qbr,Outstanding QBR - All metrics exceeding targets,very_positive,0.9,77.07,78.01,"Perfect metrics, expansion opportunities",,,,
+6,2024-02-05,healthy,meeting,Regular check-in - All systems performing well,positive,0.7,77.07,78.01,"Perfect metrics, expansion opportunities",standard_checkin,Standard quarterly check-in,168,500
+7,2024-02-12,healthy,qbr,Outstanding QBR - All metrics exceeding targets,very_positive,0.9,78.01,79.6,"Perfect metrics, expansion opportunities",,,,
+7,2024-02-12,healthy,champion_interaction,Champion promoted to CTO - Strong executive buy-in,very_positive,0.85,78.01,79.6,"Perfect metrics, expansion opportunities",,,,
+8,2024-02-19,healthy,meeting,Regular check-in - All systems performing well,positive,0.7,79.6,80.37,"Perfect metrics, expansion opportunities",,,,
+9,2024-02-26,healthy,champion_interaction,Champion promoted to CTO - Strong executive buy-in,very_positive,0.85,80.37,82.59,"Perfect metrics, expansion opportunities",,,,
+10,2024-03-04,healthy,qbr,Outstanding QBR - All metrics exceeding targets,very_positive,0.9,82.59,83.02,"Perfect metrics, expansion opportunities",,,,
+10,2024-03-04,healthy,qbr,Outstanding QBR - All metrics exceeding targets,very_positive,0.9,82.59,83.02,"Perfect metrics, expansion opportunities",,,,
+11,2024-03-11,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,83.02,85.08,"Growth accelerating, strategic partnership",strategic_planning,Strategic multi-year planning,120,5000
+11,2024-03-11,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,83.02,85.08,"Growth accelerating, strategic partnership",,,,
+11,2024-03-11,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,83.02,85.08,"Growth accelerating, strategic partnership",renewal_execution,Contract renewal execution,72,3000
+12,2024-03-18,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,85.08,87.04,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+12,2024-03-18,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,85.08,87.04,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+12,2024-03-18,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,85.08,87.04,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+13,2024-03-25,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,87.04,87.09,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+13,2024-03-25,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,87.04,87.09,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+13,2024-03-25,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,87.04,87.09,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+14,2024-04-01,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,87.09,88.59,"Sustained growth, advocacy unlocked",,,,
+14,2024-04-01,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,87.09,88.59,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+14,2024-04-01,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,87.09,88.59,"Sustained growth, advocacy unlocked",,,,
+14,2024-04-01,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,87.09,88.59,"Sustained growth, advocacy unlocked",,,,
+15,2024-04-08,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,88.59,88.26,"Sustained growth, advocacy unlocked",,,,
+15,2024-04-08,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,88.59,88.26,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+15,2024-04-08,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,88.59,88.26,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+16,2024-04-15,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,88.26,87.93,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+16,2024-04-15,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,88.26,87.93,"Sustained growth, advocacy unlocked",,,,
+16,2024-04-15,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,88.26,87.93,"Sustained growth, advocacy unlocked",,,,
+17,2024-04-22,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,87.93,89.09,"Sustained growth, advocacy unlocked",,,,
+17,2024-04-22,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,87.93,89.09,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+17,2024-04-22,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,87.93,89.09,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+18,2024-04-29,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,89.09,88.69,"Sustained growth, advocacy unlocked",,,,
+18,2024-04-29,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,89.09,88.69,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+18,2024-04-29,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,89.09,88.69,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+18,2024-04-29,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,89.09,88.69,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+19,2024-05-06,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,88.69,89.11,"Sustained growth, advocacy unlocked",,,,
+19,2024-05-06,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,88.69,89.11,"Sustained growth, advocacy unlocked",,,,
+19,2024-05-06,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,88.69,89.11,"Sustained growth, advocacy unlocked",,,,
+19,2024-05-06,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,88.69,89.11,"Sustained growth, advocacy unlocked",,,,
+20,2024-05-13,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,89.11,91.25,"Growth accelerating, strategic partnership",marketing_collaboration,Marketing collaboration and case study,200,2000
+20,2024-05-13,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,89.11,91.25,"Growth accelerating, strategic partnership",renewal_execution,Contract renewal execution,72,3000
+21,2024-05-20,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,91.25,93.45,"Growth accelerating, strategic partnership",,,,
+21,2024-05-20,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,91.25,93.45,"Growth accelerating, strategic partnership",strategic_planning,Strategic multi-year planning,120,5000
+22,2024-05-27,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,93.45,94.98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+22,2024-05-27,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,93.45,94.98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+22,2024-05-27,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,93.45,94.98,"Sustained growth, advocacy unlocked",,,,
+23,2024-06-03,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,94.98,96.12,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+23,2024-06-03,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,94.98,96.12,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+23,2024-06-03,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,94.98,96.12,"Sustained growth, advocacy unlocked",,,,
+24,2024-06-10,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,96.12,96.69,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+24,2024-06-10,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,96.12,96.69,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+25,2024-06-17,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,96.69,97.66,"Sustained growth, advocacy unlocked",,,,
+25,2024-06-17,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,96.69,97.66,"Sustained growth, advocacy unlocked",,,,
+25,2024-06-17,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,96.69,97.66,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+25,2024-06-17,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,96.69,97.66,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+26,2024-06-24,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.66,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+26,2024-06-24,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,97.66,98,"Sustained growth, advocacy unlocked",,,,
+26,2024-06-24,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,97.66,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+26,2024-06-24,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.66,98,"Sustained growth, advocacy unlocked",,,,
+27,2024-07-01,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,97.93,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+27,2024-07-01,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,97.93,"Sustained growth, advocacy unlocked",,,,
+27,2024-07-01,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,98,97.93,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+27,2024-07-01,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,97.93,"Sustained growth, advocacy unlocked",,,,
+28,2024-07-08,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,97.93,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+28,2024-07-08,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,97.93,98,"Sustained growth, advocacy unlocked",,,,
+28,2024-07-08,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,97.93,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+28,2024-07-08,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,97.93,98,"Sustained growth, advocacy unlocked",,,,
+29,2024-07-15,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+29,2024-07-15,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+29,2024-07-15,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",,,,
+30,2024-07-22,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,97.82,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+30,2024-07-22,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,97.82,"Sustained growth, advocacy unlocked",,,,
+31,2024-07-29,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.82,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+31,2024-07-29,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.82,98,"Sustained growth, advocacy unlocked",,,,
+31,2024-07-29,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,97.82,98,"Sustained growth, advocacy unlocked",,,,
+32,2024-08-05,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,98,97.68,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+32,2024-08-05,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,97.68,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+32,2024-08-05,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,97.68,"Sustained growth, advocacy unlocked",,,,
+32,2024-08-05,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,97.68,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+33,2024-08-12,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,97.68,97.21,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+33,2024-08-12,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,97.68,97.21,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+34,2024-08-19,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,97.21,98,"Sustained growth, advocacy unlocked",,,,
+34,2024-08-19,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.21,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+35,2024-08-26,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,98,97.59,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+35,2024-08-26,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,97.59,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+36,2024-09-02,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,97.59,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+36,2024-09-02,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,97.59,98,"Sustained growth, advocacy unlocked",,,,
+36,2024-09-02,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,97.59,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+37,2024-09-09,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+37,2024-09-09,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+38,2024-09-16,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+38,2024-09-16,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",,,,
+38,2024-09-16,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+39,2024-09-23,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+39,2024-09-23,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+39,2024-09-23,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+40,2024-09-30,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+40,2024-09-30,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+40,2024-09-30,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+41,2024-10-07,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+41,2024-10-07,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,98,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+41,2024-10-07,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,98,98,"Sustained growth, advocacy unlocked",,,,
+42,2024-10-14,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",,,,
+42,2024-10-14,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",,,,
+43,2024-10-21,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+43,2024-10-21,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+43,2024-10-21,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+43,2024-10-21,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",,,,
+44,2024-10-28,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",,,,
+44,2024-10-28,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+44,2024-10-28,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+45,2024-11-04,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,98,97.67,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+45,2024-11-04,growth,champion_interaction,Offered to be reference customer - Full advocacy,very_positive,0.9,98,97.67,"Sustained growth, advocacy unlocked",strategic_planning,Strategic multi-year planning,120,5000
+46,2024-11-11,growth,milestone,200-day uptime milestone - Exceptional performance,very_positive,0.95,97.67,97.54,"Sustained growth, advocacy unlocked",,,,
+46,2024-11-11,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.67,97.54,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+46,2024-11-11,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,97.67,97.54,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+47,2024-11-18,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,97.54,98,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+47,2024-11-18,growth,expansion_discussion,2025 budget approved ($800K) - Major expansion planned,very_positive,0.9,97.54,98,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+47,2024-11-18,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,97.54,98,"Sustained growth, advocacy unlocked",,,,
+47,2024-11-18,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,97.54,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+48,2024-11-25,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+48,2024-11-25,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,98,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+48,2024-11-25,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,98,98,"Sustained growth, advocacy unlocked",,,,
+49,2024-12-02,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",,,,
+49,2024-12-02,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,98,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+50,2024-12-09,growth,contract_discussion,Early renewal discussion - Multi-year interest expressed,very_positive,0.9,98,97.95,"Sustained growth, advocacy unlocked",expansion_enablement,Expansion enablement and POC support,96,8000
+50,2024-12-09,growth,expansion_discussion,Robotics expansion interest - New use cases identified,very_positive,0.85,98,97.95,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+51,2024-12-16,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,97.95,98,"Sustained growth, advocacy unlocked",renewal_execution,Contract renewal execution,72,3000
+51,2024-12-16,growth,contract_discussion,2-year renewal signed - $2.25M/yr commitment,very_positive,0.95,97.95,98,"Sustained growth, advocacy unlocked",marketing_collaboration,Marketing collaboration and case study,200,2000
+52,2024-12-23,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,97.6,"Sustained growth, advocacy unlocked",renewal_planning,Renewal planning and strategy,168,2000
+52,2024-12-23,growth,milestone,150-day uptime milestone - Complete trust restored,very_positive,0.95,98,97.6,"Sustained growth, advocacy unlocked",,,,

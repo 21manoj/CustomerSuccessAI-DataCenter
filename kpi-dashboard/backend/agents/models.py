@@ -61,6 +61,7 @@ class SignalAnalystInput(BaseModel):
     account_name: Optional[str] = None
     account_arr: Optional[float] = None
     account_segment: Optional[str] = None  # smb, mid_market, enterprise
+    health_score: Optional[float] = Field(None, ge=0, le=100, description="Overall account health score (0-100)")
     
     # Signals from Qdrant
     quantitative_signals: List[SignalData] = Field(default_factory=list)
@@ -155,6 +156,9 @@ class SignalAnalystOutput(BaseModel):
         default_factory=dict,
         description="Count of signals analyzed by type"
     )
+    
+    # Decision matrix (quantitative vs qualitative alignment)
+    data_alignment: Optional[Dict] = Field(None, description="Alignment between quantitative and qualitative data (agreement/disagreement)")
     
     # Metadata
     analysis_timestamp: datetime = Field(default_factory=datetime.now)

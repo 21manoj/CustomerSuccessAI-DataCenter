@@ -29,7 +29,7 @@ const HealthScore_dc: React.FC<HealthScoreProps> = ({ tenantId }) => {
     
     setLoading(true);
     try {
-      const url = `/api/dc/health-score/${tenantId}?month=${selectedMonth}`;
+      const url = `/api/dc2s/health-score/${tenantId}?month=${selectedMonth}`;
       const response = await fetch(url, {
         credentials: 'include',
         headers: {

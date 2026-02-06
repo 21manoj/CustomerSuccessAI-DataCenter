@@ -1,0 +1,506 @@
+{
+  "generator_version": "3.0",
+  "generation_date": "2026-01-09 10:16:16.990341",
+  "num_accounts": 10,
+  "num_kpi_records": 1019,
+  "kpis_per_week": 35,
+  "kpi_categories": {
+    "Performance & Utilization": 8,
+    "Cost Efficiency": 7,
+    "Scalability & Growth": 7,
+    "Support & Reliability": 6,
+    "Business Value": 7
+  },
+  "kpi_definitions": {
+    "P1": {
+      "name": "Workload Running",
+      "category": "Performance & Utilization",
+      "unit": "count",
+      "good_range": [
+        15,
+        25
+      ],
+      "bad_range": [
+        3,
+        8
+      ],
+      "inverse": false
+    },
+    "P2": {
+      "name": "GPU Utilization",
+      "category": "Performance & Utilization",
+      "unit": "%",
+      "good_range": [
+        75,
+        95
+      ],
+      "bad_range": [
+        30,
+        50
+      ],
+      "inverse": false
+    },
+    "P3": {
+      "name": "Active Users",
+      "category": "Performance & Utilization",
+      "unit": "count",
+      "good_range": [
+        25,
+        40
+      ],
+      "bad_range": [
+        5,
+        15
+      ],
+      "inverse": false
+    },
+    "P4": {
+      "name": "Training Jobs Completed",
+      "category": "Performance & Utilization",
+      "unit": "count",
+      "good_range": [
+        40,
+        60
+      ],
+      "bad_range": [
+        10,
+        25
+      ],
+      "inverse": false
+    },
+    "P5": {
+      "name": "Inference Requests",
+      "category": "Performance & Utilization",
+      "unit": "millions",
+      "good_range": [
+        5.0,
+        10.0
+      ],
+      "bad_range": [
+        0.5,
+        2.0
+      ],
+      "inverse": false
+    },
+    "P6": {
+      "name": "Model Accuracy",
+      "category": "Performance & Utilization",
+      "unit": "%",
+      "good_range": [
+        92,
+        98
+      ],
+      "bad_range": [
+        70,
+        85
+      ],
+      "inverse": false
+    },
+    "P7": {
+      "name": "Data Processing Throughput",
+      "category": "Performance & Utilization",
+      "unit": "TB/day",
+      "good_range": [
+        8,
+        15
+      ],
+      "bad_range": [
+        2,
+        5
+      ],
+      "inverse": false
+    },
+    "P8": {
+      "name": "API Response Time",
+      "category": "Performance & Utilization",
+      "unit": "ms",
+      "good_range": [
+        50,
+        150
+      ],
+      "bad_range": [
+        400,
+        800
+      ],
+      "inverse": true
+    },
+    "C1": {
+      "name": "Cost per Training Job",
+      "category": "Cost Efficiency",
+      "unit": "$",
+      "good_range": [
+        50,
+        150
+      ],
+      "bad_range": [
+        300,
+        600
+      ],
+      "inverse": true
+    },
+    "C2": {
+      "name": "Cost per 1M Inferences",
+      "category": "Cost Efficiency",
+      "unit": "$",
+      "good_range": [
+        10,
+        30
+      ],
+      "bad_range": [
+        80,
+        150
+      ],
+      "inverse": true
+    },
+    "C3": {
+      "name": "Idle GPU Time",
+      "category": "Cost Efficiency",
+      "unit": "%",
+      "good_range": [
+        2,
+        8
+      ],
+      "bad_range": [
+        25,
+        45
+      ],
+      "inverse": true
+    },
+    "C4": {
+      "name": "Storage Cost Efficiency",
+      "category": "Cost Efficiency",
+      "unit": "$/TB",
+      "good_range": [
+        30,
+        60
+      ],
+      "bad_range": [
+        120,
+        200
+      ],
+      "inverse": true
+    },
+    "C5": {
+      "name": "Compute ROI",
+      "category": "Cost Efficiency",
+      "unit": "ratio",
+      "good_range": [
+        4.0,
+        8.0
+      ],
+      "bad_range": [
+        1.2,
+        2.0
+      ],
+      "inverse": false
+    },
+    "C6": {
+      "name": "Budget Utilization",
+      "category": "Cost Efficiency",
+      "unit": "%",
+      "good_range": [
+        70,
+        90
+      ],
+      "bad_range": [
+        40,
+        55
+      ],
+      "inverse": false
+    },
+    "C7": {
+      "name": "Cost Predictability",
+      "category": "Cost Efficiency",
+      "unit": "score",
+      "good_range": [
+        85,
+        98
+      ],
+      "bad_range": [
+        50,
+        70
+      ],
+      "inverse": false
+    },
+    "S1": {
+      "name": "Capacity Utilization",
+      "category": "Scalability & Growth",
+      "unit": "%",
+      "good_range": [
+        75,
+        90
+      ],
+      "bad_range": [
+        35,
+        55
+      ],
+      "inverse": false
+    },
+    "S2": {
+      "name": "Workload Growth Rate",
+      "category": "Scalability & Growth",
+      "unit": "%",
+      "good_range": [
+        15,
+        35
+      ],
+      "bad_range": [
+        -5,
+        5
+      ],
+      "inverse": false
+    },
+    "S3": {
+      "name": "New Use Cases Deployed",
+      "category": "Scalability & Growth",
+      "unit": "count",
+      "good_range": [
+        2,
+        5
+      ],
+      "bad_range": [
+        0,
+        1
+      ],
+      "inverse": false
+    },
+    "S4": {
+      "name": "Time to Scale",
+      "category": "Scalability & Growth",
+      "unit": "hours",
+      "good_range": [
+        2,
+        8
+      ],
+      "bad_range": [
+        48,
+        96
+      ],
+      "inverse": true
+    },
+    "S5": {
+      "name": "Resource Elasticity",
+      "category": "Scalability & Growth",
+      "unit": "score",
+      "good_range": [
+        85,
+        98
+      ],
+      "bad_range": [
+        50,
+        70
+      ],
+      "inverse": false
+    },
+    "S6": {
+      "name": "Peak Load Handling",
+      "category": "Scalability & Growth",
+      "unit": "%",
+      "good_range": [
+        90,
+        99
+      ],
+      "bad_range": [
+        65,
+        80
+      ],
+      "inverse": false
+    },
+    "S7": {
+      "name": "Expansion Readiness",
+      "category": "Scalability & Growth",
+      "unit": "score",
+      "good_range": [
+        80,
+        95
+      ],
+      "bad_range": [
+        40,
+        60
+      ],
+      "inverse": false
+    },
+    "R1": {
+      "name": "System Uptime",
+      "category": "Support & Reliability",
+      "unit": "%",
+      "good_range": [
+        99.5,
+        99.99
+      ],
+      "bad_range": [
+        95.0,
+        98.0
+      ],
+      "inverse": false
+    },
+    "R2": {
+      "name": "Support Ticket Volume",
+      "category": "Support & Reliability",
+      "unit": "count",
+      "good_range": [
+        2,
+        8
+      ],
+      "bad_range": [
+        18,
+        35
+      ],
+      "inverse": true
+    },
+    "R3": {
+      "name": "Mean Time to Resolution",
+      "category": "Support & Reliability",
+      "unit": "hours",
+      "good_range": [
+        2,
+        8
+      ],
+      "bad_range": [
+        24,
+        72
+      ],
+      "inverse": true
+    },
+    "R4": {
+      "name": "Critical Incidents",
+      "category": "Support & Reliability",
+      "unit": "count",
+      "good_range": [
+        0,
+        1
+      ],
+      "bad_range": [
+        4,
+        8
+      ],
+      "inverse": true
+    },
+    "R5": {
+      "name": "Support Satisfaction",
+      "category": "Support & Reliability",
+      "unit": "score",
+      "good_range": [
+        4.5,
+        5.0
+      ],
+      "bad_range": [
+        2.5,
+        3.5
+      ],
+      "inverse": false
+    },
+    "R6": {
+      "name": "Documentation Usage",
+      "category": "Support & Reliability",
+      "unit": "score",
+      "good_range": [
+        75,
+        95
+      ],
+      "bad_range": [
+        30,
+        50
+      ],
+      "inverse": false
+    },
+    "B1": {
+      "name": "Business Value Score",
+      "category": "Business Value",
+      "unit": "score",
+      "good_range": [
+        85,
+        98
+      ],
+      "bad_range": [
+        50,
+        70
+      ],
+      "inverse": false
+    },
+    "B2": {
+      "name": "User Satisfaction (NPS)",
+      "category": "Business Value",
+      "unit": "score",
+      "good_range": [
+        50,
+        80
+      ],
+      "bad_range": [
+        0,
+        25
+      ],
+      "inverse": false
+    },
+    "B3": {
+      "name": "Feature Adoption",
+      "category": "Business Value",
+      "unit": "%",
+      "good_range": [
+        70,
+        90
+      ],
+      "bad_range": [
+        30,
+        50
+      ],
+      "inverse": false
+    },
+    "B4": {
+      "name": "Time to Value",
+      "category": "Business Value",
+      "unit": "days",
+      "good_range": [
+        7,
+        21
+      ],
+      "bad_range": [
+        60,
+        120
+      ],
+      "inverse": true
+    },
+    "B5": {
+      "name": "Strategic Alignment",
+      "category": "Business Value",
+      "unit": "score",
+      "good_range": [
+        80,
+        95
+      ],
+      "bad_range": [
+        45,
+        65
+      ],
+      "inverse": false
+    },
+    "B6": {
+      "name": "Executive Engagement",
+      "category": "Business Value",
+      "unit": "score",
+      "good_range": [
+        75,
+        95
+      ],
+      "bad_range": [
+        35,
+        55
+      ],
+      "inverse": false
+    },
+    "B7": {
+      "name": "Competitive Position",
+      "category": "Business Value",
+      "unit": "score",
+      "good_range": [
+        80,
+        95
+      ],
+      "bad_range": [
+        40,
+        60
+      ],
+      "inverse": false
+    }
+  }
+}

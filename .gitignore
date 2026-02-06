@@ -1,0 +1,12 @@
+# Root-level ignore (pre-commit cleanup)
+.DS_Store
+*.log
+frontend.log
+*.pid
+kpi_dashboard.db
+*.sqlite
+*.sqlite3
+*CREDENTIALS*.txt
+*_CREDENTIALS*.txt
+.env
+.env.*

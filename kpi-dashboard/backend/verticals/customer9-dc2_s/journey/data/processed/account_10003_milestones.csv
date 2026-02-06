@@ -1,0 +1,3 @@
+account_id,week_number,milestone_date,milestone_type,milestone_outcome,leading_indicators,arr_impact,confidence_at_time,primary_drivers,signal_breakdown
+10003,6,2024-02-05,churn_risk_elevated,critical_risk,"[""Health dropped to 59.5"", ""No CSM engagement"", ""Competitive threats emerging""]",0,0.75,[],{}
+10003,22,2024-05-27,churn_contract_terminated,churned,"[""Contract terminated"", ""Customer migrated to AWS"", ""Final health: 19.59""]",-3800000,1.0,[],{}

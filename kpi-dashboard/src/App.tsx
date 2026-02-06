@@ -1,13 +1,15 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { SessionProvider, useSession } from './contexts/SessionContext';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useSession } from './contexts/SessionContext';
 import LoginComponent from './components/LoginComponent';
 import CSPlatform from './components/CSPlatform';
 import Dashboard_dc from './components/Dashboard_dc';
 import ExecutiveDashboard from './components/ExecutiveDashboard';
-import OnboardingWizard from './components/onboarding/OnboardingWizard';
+import DCPlatform from './components/dc/platform/dc_Platform';
+import { OnboardingWizard } from './components/onboarding/OnboardingWizard.main';
 import RegistrationForm from './components/RegistrationForm';
-import { TrendingUp } from 'lucide-react';
+import JourneyVisualizer from './components/wizard/JourneyVisualizer';
+import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboardV3';
 
 // Component to redirect legacy /dashboard to appropriate vertical dashboard
 const DashboardRedirect: React.FC = () => {
@@ -29,9 +31,17 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; vertical?: string }> =
   if (vertical) {
     const sessionVertical = session.vertical || localStorage.getItem('vertical') || 'saas';
     
+    // Debug logging
+    console.log('PrivateRoute check:', { 
+      requiredVertical: vertical, 
+      sessionVertical, 
+      match: sessionVertical === vertical 
+    });
+    
     if (sessionVertical !== vertical) {
       // Redirect to correct dashboard based on session vertical
       const correctRoute = sessionVertical === 'datacenter' ? '/dc-dashboard' : '/saas-dashboard';
+      console.log('Redirecting to:', correctRoute);
       return <Navigate to={correctRoute} replace />;
     }
   }
@@ -87,6 +97,22 @@ const RegisterRoute: React.FC = () => {
   );
 };
 
+const OnboardingWizardRoute: React.FC = () => {
+  const navigate = useNavigate();
+  
+  return (
+    <OnboardingWizard 
+      onComplete={(data) => {
+        console.log('Onboarding complete:', data);
+        // Redirect handled in OnboardingWizard component
+      }}
+      onCancel={() => {
+        navigate('/');
+      }}
+    />
+  );
+};
+
 const RegisterFormComponent: React.FC = () => {
   const navigate = useNavigate();
 
@@ -102,14 +128,88 @@ const RegisterFormComponent: React.FC = () => {
 
 const AppRoutes: React.FC = () => {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/register" element={<RegisterRoute />} />
         
-        {/* Data Center Dashboard */}
+        {/* Data Center Dashboard Routes with sub-paths - MUST come BEFORE /dc-dashboard */}
+        {/* More specific routes first to prevent /dc-dashboard from matching sub-routes */}
+        <Route
+          path="/dc-dashboard/tenants/:accountId"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/tenants"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/signal-analyst"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/ai-insights"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/admin-insights"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/data-integration"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/settings"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        
+        {/* Data Center Dashboard - New 7-tab Platform (base route - must come AFTER sub-routes) */}
         <Route
           path="/dc-dashboard"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        
+        {/* Data Center Dashboard - Legacy (keep for backward compatibility) */}
+        <Route
+          path="/dc-dashboard-legacy"
           element={
             <PrivateRoute vertical="datacenter">
               <Dashboard_dc />
@@ -152,7 +252,27 @@ const AppRoutes: React.FC = () => {
           path="/onboarding"
           element={
             <PrivateRoute>
-              <OnboardingWizard />
+              <OnboardingWizardRoute />
+            </PrivateRoute>
+          }
+        />
+        
+        {/* Journey Visualizer - Wizard A/B Dashboard */}
+        <Route
+          path="/journey-visualizer"
+          element={
+            <PrivateRoute>
+              <JourneyVisualizer />
+            </PrivateRoute>
+          }
+        />
+        
+        {/* Journey V3 - Account-specific journey view */}
+        <Route
+          path="/journey-v3/:accountId"
+          element={
+            <PrivateRoute>
+              <JourneyDashboardV3 />
             </PrivateRoute>
           }
         />
@@ -164,11 +284,7 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  return (
-    <SessionProvider>
-      <AppRoutes />
-    </SessionProvider>
-  );
+  return <AppRoutes />;
 };
 
-export default App; 
+export default App;

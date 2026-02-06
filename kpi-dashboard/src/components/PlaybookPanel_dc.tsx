@@ -1,6 +1,11 @@
 /**
  * Data Center Playbook Panel Component
- * Displays recommended playbooks for DC tenants
+ * Displays recommended CS AI Agents for DC tenants
+ * 
+ * NOTE: DC uses a recommendations-only model (pillar-based AI agent recommendations)
+ * rather than executable playbooks like SaaS. This is intentional - DC tenants receive
+ * actionable recommendations based on KPI status within pillars, which is more appropriate
+ * for infrastructure monitoring than multi-step playbook execution.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -34,13 +39,16 @@ const PlaybookPanel_dc: React.FC<PlaybookPanelProps> = ({ tenantId }) => {
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/dc/recommendations/${tenantId}`, {
+      const response = await fetch(`/api/dc2s/recommendations/${tenantId}`, {
         credentials: 'include',
       });
 
       if (response.ok) {
         const data = await response.json();
         setPlaybooks(data.recommendations || []);
+      } else if (response.status === 404) {
+        // Endpoint not implemented yet - show no recommendations
+        setPlaybooks([]);
       }
     } catch (error) {
       console.error('Error loading playbooks:', error);

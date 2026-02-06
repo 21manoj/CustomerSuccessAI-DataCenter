@@ -19,7 +19,6 @@ services:
       # Mount database and uploads for persistence
       - ./backend/instance:/app/instance
       - ./backend/uploads:/app/uploads
-      - ./backend/qdrant_storage:/app/qdrant_storage
       # Mount .env file if it exists
       - ./backend/.env:/app/.env:ro
     networks:
@@ -59,6 +58,4 @@ networks:
 volumes:
   # Persistent volumes for data
   backend_data:
-    driver: local
-  qdrant_data:
     driver: local

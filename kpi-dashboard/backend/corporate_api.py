@@ -65,7 +65,10 @@ def upload_corporate_metadata():
                 account_name=row["Company Name"],
                 revenue=row["Revenue ($)"],
                 industry=row["Industry"],
-                region=row["Region"]
+                region=row["Region"],
+                account_status='active',  # Set default status
+                external_account_id=str(row.get("Company ID", "")),  # Use Company ID as external_account_id
+                vertical='DC2_S'  # Default vertical for data center customers
             )
             db.session.add(account)
             accounts_created.append({

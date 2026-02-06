@@ -11,37 +11,37 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def test_qdrant_connection():
-    """Test Qdrant connection"""
+    """Test Qdrant Cloud connection"""
     try:
         from qdrant_client import QdrantClient
         
-        # Try to connect to Qdrant
+        # Qdrant Cloud connection (required)
+        qdrant_url = os.getenv('QDRANT_URL')
+        qdrant_api_key = os.getenv('QDRANT_API_KEY')
+        
+        if not qdrant_url or not qdrant_api_key:
+            print("❌ QDRANT_URL and QDRANT_API_KEY are required for Qdrant Cloud connection")
+            print("   Please set these environment variables in your .env file")
+            return False
+        
+        # Connect to Qdrant Cloud
         client = QdrantClient(
-            host=os.getenv('QDRANT_HOST', 'localhost'),
-            port=int(os.getenv('QDRANT_PORT', 6333))
+            url=qdrant_url,
+            api_key=qdrant_api_key,
+            timeout=30
         )
         
         # Get collections info
         collections = client.get_collections()
-        print(f"✅ Qdrant connection successful")
+        print(f"✅ Qdrant Cloud connection successful")
         print(f"📊 Found {len(collections.collections)} collections")
         
         return True
         
     except Exception as e:
-        print(f"❌ Qdrant connection failed: {str(e)}")
-        print("💡 Trying local file-based storage...")
-        
-        try:
-            # Fallback to local storage
-            client = QdrantClient(path="./qdrant_storage")
-            collections = client.get_collections()
-            print(f"✅ Qdrant local storage connection successful")
-            print(f"📊 Found {len(collections.collections)} collections")
-            return True
-        except Exception as e2:
-            print(f"❌ Qdrant local storage also failed: {str(e2)}")
-            return False
+        print(f"❌ Qdrant Cloud connection failed: {str(e)}")
+        print("   Please verify QDRANT_URL and QDRANT_API_KEY are set correctly")
+        return False
 
 def test_rag_system():
     """Test Qdrant RAG system initialization"""

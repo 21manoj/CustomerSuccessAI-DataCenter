@@ -1,0 +1,473 @@
+signal_id,account_id,signal_date,signal_type,sentiment,content
+1,34001,2024-01-10,escalation,negative,Escalation from operations team regarding performance
+2,34001,2024-01-13,email,neutral,Monthly business review conducted
+3,34001,2024-01-12,meeting,neutral,Documentation review and updates
+4,34001,2024-01-20,email,neutral,Regular operational status update provided
+5,34001,2024-01-05,email,neutral,Scheduled maintenance window executed
+6,34001,2024-01-16,escalation,negative,Unexpected system downtime reported
+7,34001,2024-01-07,escalation,negative,Escalation from operations team regarding performance
+8,34001,2024-01-06,email,neutral,Monthly business review conducted
+9,34001,2024-02-20,meeting,negative,Unexpected system downtime reported
+10,34001,2024-02-11,email,neutral,Quarterly capacity planning review
+11,34001,2024-02-09,meeting,negative,Concerns about cooling efficiency raised
+12,34001,2024-02-13,email,negative,Integration challenges with existing systems
+13,34001,2024-02-24,email,neutral,Training session on new features delivered
+14,34001,2024-02-24,escalation,negative,Integration challenges with existing systems
+15,34001,2024-02-07,email,neutral,Routine technical sync meeting completed
+16,34001,2024-02-20,email,neutral,Quarterly capacity planning review
+17,34001,2024-03-04,email,positive,Team member completed advanced certification
+18,34001,2024-03-20,meeting,neutral,Documentation review and updates
+19,34001,2024-03-07,email,neutral,Scheduled maintenance window executed
+20,34001,2024-03-12,meeting,neutral,Scheduled maintenance window executed
+21,34001,2024-03-23,escalation,negative,Unexpected system downtime reported
+22,34001,2024-03-11,email,negative,Unexpected system downtime reported
+23,34001,2024-03-13,meeting,neutral,System health check completed
+24,34001,2024-03-11,email,negative,Support ticket unresolved >48 hours
+25,34001,2024-04-19,email,positive,Successfully deployed new workload ahead of schedule
+26,34001,2024-04-04,meeting,negative,Escalation from operations team regarding performance
+27,34001,2024-04-21,escalation,negative,Concerns about cooling efficiency raised
+28,34001,2024-04-10,escalation,negative,Budget concerns raised during planning meeting
+29,34001,2024-04-14,email,negative,Security compliance audit findings
+30,34001,2024-04-29,email,negative,Security compliance audit findings
+31,34001,2024-04-16,escalation,negative,Concerns about cooling efficiency raised
+32,34001,2024-04-23,meeting,neutral,Regular operational status update provided
+33,34001,2024-05-01,email,negative,Escalation from operations team regarding performance
+34,34001,2024-05-28,email,neutral,System health check completed
+35,34001,2024-05-14,email,negative,Integration challenges with existing systems
+36,34001,2024-05-19,email,neutral,Documentation review and updates
+37,34001,2024-05-22,meeting,negative,Security compliance audit findings
+38,34001,2024-05-16,email,neutral,Monthly business review conducted
+39,34001,2024-05-02,email,negative,Integration challenges with existing systems
+40,34001,2024-05-20,escalation,negative,Escalation from operations team regarding performance
+41,34001,2024-06-15,meeting,negative,Concerns about cooling efficiency raised
+42,34001,2024-06-10,email,neutral,Routine technical sync meeting completed
+43,34001,2024-06-03,email,negative,Escalation from operations team regarding performance
+44,34001,2024-06-01,email,negative,Support ticket unresolved >48 hours
+45,34001,2024-06-05,escalation,negative,Budget concerns raised during planning meeting
+46,34001,2024-06-09,meeting,neutral,System health check completed
+47,34001,2024-06-03,email,positive,Successfully deployed new workload ahead of schedule
+48,34001,2024-06-26,escalation,negative,Unexpected system downtime reported
+49,34001,2024-07-09,email,neutral,Training session on new features delivered
+50,34001,2024-07-01,meeting,neutral,Training session on new features delivered
+51,34001,2024-07-10,meeting,positive,Successfully deployed new workload ahead of schedule
+52,34001,2024-07-04,meeting,positive,Exceeded performance benchmarks this quarter
+53,34001,2024-07-13,email,neutral,Monthly business review conducted
+54,34001,2024-07-10,meeting,positive,Successful QBR with expansion discussion initiated
+55,34001,2024-08-05,email,negative,Project milestone delayed due to resource constraints
+56,34001,2024-08-01,email,neutral,Routine technical sync meeting completed
+57,34001,2024-08-11,email,neutral,Scheduled maintenance window executed
+58,34001,2024-08-23,email,positive,Executive sponsor praised team collaboration
+59,34001,2024-08-13,email,neutral,Quarterly capacity planning review
+60,34001,2024-08-29,meeting,neutral,Scheduled maintenance window executed
+61,34001,2024-09-17,email,neutral,Routine technical sync meeting completed
+62,34001,2024-09-21,email,neutral,Monthly business review conducted
+63,34001,2024-09-20,email,neutral,System health check completed
+64,34001,2024-09-21,email,negative,Security compliance audit findings
+65,34001,2024-09-21,meeting,negative,Support ticket unresolved >48 hours
+66,34001,2024-09-18,email,positive,Successful QBR with expansion discussion initiated
+67,34001,2024-10-09,email,neutral,Scheduled maintenance window executed
+68,34001,2024-10-20,meeting,negative,Project milestone delayed due to resource constraints
+69,34001,2024-10-12,meeting,neutral,Scheduled maintenance window executed
+70,34001,2024-10-25,meeting,positive,Exceeded performance benchmarks this quarter
+71,34001,2024-10-25,email,positive,Early adoption of new AI acceleration features
+72,34001,2024-10-19,email,neutral,Documentation review and updates
+73,34001,2024-11-28,meeting,neutral,Regular operational status update provided
+74,34001,2024-11-05,meeting,positive,Team member completed advanced certification
+75,34001,2024-11-26,email,neutral,Documentation review and updates
+76,34001,2024-11-12,email,neutral,Documentation review and updates
+77,34001,2024-11-23,meeting,neutral,Documentation review and updates
+78,34001,2024-11-03,email,positive,Positive feedback on recent infrastructure upgrade
+79,34001,2024-12-11,meeting,positive,Early adoption of new AI acceleration features
+80,34001,2024-12-23,meeting,negative,Budget concerns raised during planning meeting
+81,34001,2024-12-18,email,neutral,Regular operational status update provided
+82,34001,2024-12-25,email,neutral,Monthly business review conducted
+83,34001,2024-12-25,email,positive,Exceeded performance benchmarks this quarter
+84,34001,2024-12-22,email,positive,Team member completed advanced certification
+85,34001,2024-12-04,email,positive,Executive sponsor praised team collaboration
+86,34001,2024-12-18,email,positive,Successfully deployed new workload ahead of schedule
+87,34001,2024-12-04,meeting,positive,Early adoption of new AI acceleration features
+88,34001,2024-12-01,meeting,neutral,Documentation review and updates
+89,34002,2024-01-07,email,positive,Executive sponsor praised team collaboration
+90,34002,2024-01-09,email,positive,Successful QBR with expansion discussion initiated
+91,34002,2024-01-20,email,neutral,System health check completed
+92,34002,2024-01-21,meeting,positive,Successfully deployed new workload ahead of schedule
+93,34002,2024-01-11,meeting,positive,Successful QBR with expansion discussion initiated
+94,34002,2024-01-29,email,neutral,Scheduled maintenance window executed
+95,34002,2024-01-18,email,neutral,Scheduled maintenance window executed
+96,34002,2024-01-12,email,neutral,Regular operational status update provided
+97,34002,2024-01-21,email,positive,Successfully deployed new workload ahead of schedule
+98,34002,2024-01-28,meeting,positive,Early adoption of new AI acceleration features
+99,34002,2024-02-05,meeting,positive,Executive sponsor praised team collaboration
+100,34002,2024-02-21,email,positive,Executive sponsor praised team collaboration
+101,34002,2024-02-05,email,neutral,Scheduled maintenance window executed
+102,34002,2024-02-01,meeting,negative,Budget concerns raised during planning meeting
+103,34002,2024-02-05,meeting,neutral,Monthly business review conducted
+104,34002,2024-02-16,email,positive,Early adoption of new AI acceleration features
+105,34002,2024-02-16,email,neutral,System health check completed
+106,34002,2024-02-20,meeting,positive,Exceeded performance benchmarks this quarter
+107,34002,2024-02-17,email,positive,Successful QBR with expansion discussion initiated
+108,34002,2024-02-23,email,positive,Early adoption of new AI acceleration features
+109,34002,2024-03-07,email,positive,Successful QBR with expansion discussion initiated
+110,34002,2024-03-21,meeting,positive,Successful QBR with expansion discussion initiated
+111,34002,2024-03-21,email,positive,Successfully deployed new workload ahead of schedule
+112,34002,2024-03-06,meeting,positive,Team member completed advanced certification
+113,34002,2024-03-01,email,positive,Exceeded performance benchmarks this quarter
+114,34002,2024-03-08,email,neutral,Quarterly capacity planning review
+115,34002,2024-03-25,meeting,neutral,Regular operational status update provided
+116,34002,2024-03-07,meeting,neutral,Regular operational status update provided
+117,34002,2024-03-10,email,neutral,Training session on new features delivered
+118,34002,2024-03-15,email,positive,Early adoption of new AI acceleration features
+119,34002,2024-04-06,meeting,neutral,Documentation review and updates
+120,34002,2024-04-08,email,positive,Executive sponsor praised team collaboration
+121,34002,2024-04-02,meeting,neutral,Scheduled maintenance window executed
+122,34002,2024-04-10,email,neutral,Monthly business review conducted
+123,34002,2024-04-16,email,neutral,Routine technical sync meeting completed
+124,34002,2024-04-25,email,positive,Team member completed advanced certification
+125,34002,2024-05-26,email,positive,Successfully deployed new workload ahead of schedule
+126,34002,2024-05-25,escalation,negative,Concerns about cooling efficiency raised
+127,34002,2024-05-19,email,neutral,Documentation review and updates
+128,34002,2024-05-15,email,positive,Team member completed advanced certification
+129,34002,2024-05-21,email,negative,Concerns about cooling efficiency raised
+130,34002,2024-05-11,email,neutral,System health check completed
+131,34002,2024-06-25,meeting,neutral,Regular operational status update provided
+132,34002,2024-06-10,email,positive,Successful QBR with expansion discussion initiated
+133,34002,2024-06-03,email,positive,Successfully deployed new workload ahead of schedule
+134,34002,2024-06-15,email,neutral,Regular operational status update provided
+135,34002,2024-06-15,email,positive,Early adoption of new AI acceleration features
+136,34002,2024-06-21,meeting,negative,Escalation from operations team regarding performance
+137,34002,2024-07-04,email,neutral,Routine technical sync meeting completed
+138,34002,2024-07-05,meeting,negative,Integration challenges with existing systems
+139,34002,2024-07-15,email,neutral,Documentation review and updates
+140,34002,2024-07-10,meeting,positive,Successfully deployed new workload ahead of schedule
+141,34002,2024-07-01,email,neutral,Documentation review and updates
+142,34002,2024-07-08,email,positive,Positive feedback on recent infrastructure upgrade
+143,34002,2024-08-02,email,neutral,Routine technical sync meeting completed
+144,34002,2024-08-22,email,neutral,Routine technical sync meeting completed
+145,34002,2024-08-12,email,neutral,Documentation review and updates
+146,34002,2024-08-26,email,neutral,Regular operational status update provided
+147,34002,2024-08-19,email,positive,Team member completed advanced certification
+148,34002,2024-08-27,email,neutral,Training session on new features delivered
+149,34002,2024-09-11,email,positive,Exceeded performance benchmarks this quarter
+150,34002,2024-09-18,email,positive,Reference call completed successfully with prospect
+151,34002,2024-09-24,meeting,positive,Successfully deployed new workload ahead of schedule
+152,34002,2024-09-26,email,positive,Successful QBR with expansion discussion initiated
+153,34002,2024-09-05,meeting,neutral,Regular operational status update provided
+154,34002,2024-09-17,email,neutral,Training session on new features delivered
+155,34002,2024-10-17,escalation,negative,Security compliance audit findings
+156,34002,2024-10-06,email,negative,Security compliance audit findings
+157,34002,2024-10-11,email,neutral,Scheduled maintenance window executed
+158,34002,2024-10-26,escalation,negative,Integration challenges with existing systems
+159,34002,2024-10-14,email,negative,Support ticket unresolved >48 hours
+160,34002,2024-10-09,email,positive,Reference call completed successfully with prospect
+161,34002,2024-10-11,escalation,negative,Unexpected system downtime reported
+162,34002,2024-10-01,email,neutral,Documentation review and updates
+163,34002,2024-11-23,escalation,negative,Security compliance audit findings
+164,34002,2024-11-22,email,neutral,Regular operational status update provided
+165,34002,2024-11-10,meeting,negative,Escalation from operations team regarding performance
+166,34002,2024-11-21,meeting,negative,Budget concerns raised during planning meeting
+167,34002,2024-11-17,email,negative,Integration challenges with existing systems
+168,34002,2024-11-18,email,neutral,Routine technical sync meeting completed
+169,34002,2024-11-10,meeting,negative,Unexpected system downtime reported
+170,34002,2024-11-03,meeting,negative,Unexpected system downtime reported
+171,34002,2024-12-05,email,negative,Security compliance audit findings
+172,34002,2024-12-23,email,positive,Executive sponsor praised team collaboration
+173,34002,2024-12-09,email,negative,Support ticket unresolved >48 hours
+174,34002,2024-12-23,email,negative,Project milestone delayed due to resource constraints
+175,34002,2024-12-22,escalation,negative,Escalation from operations team regarding performance
+176,34002,2024-12-27,escalation,negative,Concerns about cooling efficiency raised
+177,34002,2024-12-02,meeting,neutral,Documentation review and updates
+178,34002,2024-12-27,email,negative,Concerns about cooling efficiency raised
+179,34003,2024-01-11,email,neutral,Scheduled maintenance window executed
+180,34003,2024-01-18,email,positive,Successful QBR with expansion discussion initiated
+181,34003,2024-01-27,email,positive,Successful QBR with expansion discussion initiated
+182,34003,2024-01-12,email,neutral,Monthly business review conducted
+183,34003,2024-01-14,email,negative,Unexpected system downtime reported
+184,34003,2024-01-05,escalation,negative,Security compliance audit findings
+185,34003,2024-01-21,email,positive,Early adoption of new AI acceleration features
+186,34003,2024-01-21,email,positive,Executive sponsor praised team collaboration
+187,34003,2024-01-07,email,positive,Successfully deployed new workload ahead of schedule
+188,34003,2024-01-16,meeting,positive,Team member completed advanced certification
+189,34003,2024-02-01,email,positive,Successful QBR with expansion discussion initiated
+190,34003,2024-02-01,email,positive,Exceeded performance benchmarks this quarter
+191,34003,2024-02-24,email,neutral,Scheduled maintenance window executed
+192,34003,2024-02-19,email,neutral,Monthly business review conducted
+193,34003,2024-02-03,email,neutral,Quarterly capacity planning review
+194,34003,2024-02-08,email,negative,Support ticket unresolved >48 hours
+195,34003,2024-02-02,email,neutral,Regular operational status update provided
+196,34003,2024-02-29,meeting,positive,Executive sponsor praised team collaboration
+197,34003,2024-02-07,meeting,neutral,Documentation review and updates
+198,34003,2024-02-15,email,positive,Successfully deployed new workload ahead of schedule
+199,34003,2024-03-28,meeting,negative,Support ticket unresolved >48 hours
+200,34003,2024-03-25,meeting,neutral,Training session on new features delivered
+201,34003,2024-03-10,meeting,negative,Integration challenges with existing systems
+202,34003,2024-03-03,meeting,positive,Positive feedback on recent infrastructure upgrade
+203,34003,2024-03-09,meeting,neutral,System health check completed
+204,34003,2024-03-03,email,negative,Concerns about cooling efficiency raised
+205,34003,2024-03-25,email,positive,Team member completed advanced certification
+206,34003,2024-03-15,email,positive,Successfully deployed new workload ahead of schedule
+207,34003,2024-03-01,email,positive,Successfully deployed new workload ahead of schedule
+208,34003,2024-03-27,meeting,positive,Reference call completed successfully with prospect
+209,34003,2024-04-10,email,neutral,Regular operational status update provided
+210,34003,2024-04-15,email,negative,Support ticket unresolved >48 hours
+211,34003,2024-04-14,email,neutral,Monthly business review conducted
+212,34003,2024-04-20,meeting,neutral,Regular operational status update provided
+213,34003,2024-04-25,email,neutral,Regular operational status update provided
+214,34003,2024-04-18,email,positive,Early adoption of new AI acceleration features
+215,34003,2024-04-27,email,positive,Team member completed advanced certification
+216,34003,2024-04-11,email,neutral,Quarterly capacity planning review
+217,34003,2024-04-01,email,positive,Exceeded performance benchmarks this quarter
+218,34003,2024-04-24,email,positive,Reference call completed successfully with prospect
+219,34003,2024-05-27,email,neutral,Training session on new features delivered
+220,34003,2024-05-02,email,positive,Successful QBR with expansion discussion initiated
+221,34003,2024-05-28,meeting,positive,Team member completed advanced certification
+222,34003,2024-05-01,email,positive,Positive feedback on recent infrastructure upgrade
+223,34003,2024-05-25,email,negative,Integration challenges with existing systems
+224,34003,2024-05-01,meeting,positive,Positive feedback on recent infrastructure upgrade
+225,34003,2024-05-19,meeting,positive,Exceeded performance benchmarks this quarter
+226,34003,2024-05-02,email,positive,Team member completed advanced certification
+227,34003,2024-05-26,meeting,neutral,Routine technical sync meeting completed
+228,34003,2024-05-15,email,positive,Reference call completed successfully with prospect
+229,34003,2024-06-12,email,neutral,Routine technical sync meeting completed
+230,34003,2024-06-13,meeting,positive,Positive feedback on recent infrastructure upgrade
+231,34003,2024-06-03,meeting,neutral,Training session on new features delivered
+232,34003,2024-06-28,email,positive,Successfully deployed new workload ahead of schedule
+233,34003,2024-06-29,email,neutral,Documentation review and updates
+234,34003,2024-06-03,meeting,neutral,Monthly business review conducted
+235,34003,2024-06-11,email,neutral,System health check completed
+236,34003,2024-06-13,meeting,positive,Successful QBR with expansion discussion initiated
+237,34003,2024-06-21,meeting,neutral,Quarterly capacity planning review
+238,34003,2024-06-07,email,positive,Executive sponsor praised team collaboration
+239,34003,2024-07-19,email,positive,Team member completed advanced certification
+240,34003,2024-07-07,email,neutral,System health check completed
+241,34003,2024-07-11,meeting,neutral,System health check completed
+242,34003,2024-07-10,meeting,positive,Reference call completed successfully with prospect
+243,34003,2024-07-29,escalation,negative,Escalation from operations team regarding performance
+244,34003,2024-07-21,email,positive,Early adoption of new AI acceleration features
+245,34003,2024-07-09,meeting,positive,Positive feedback on recent infrastructure upgrade
+246,34003,2024-07-20,email,positive,Team member completed advanced certification
+247,34003,2024-07-03,meeting,neutral,Quarterly capacity planning review
+248,34003,2024-07-18,email,positive,Team member completed advanced certification
+249,34003,2024-08-18,email,positive,Successful QBR with expansion discussion initiated
+250,34003,2024-08-22,email,positive,Early adoption of new AI acceleration features
+251,34003,2024-08-27,email,positive,Team member completed advanced certification
+252,34003,2024-08-04,meeting,neutral,Training session on new features delivered
+253,34003,2024-08-04,meeting,neutral,Monthly business review conducted
+254,34003,2024-08-24,meeting,positive,Successfully deployed new workload ahead of schedule
+255,34003,2024-08-12,email,positive,Successfully deployed new workload ahead of schedule
+256,34003,2024-08-20,meeting,positive,Exceeded performance benchmarks this quarter
+257,34003,2024-08-13,meeting,positive,Exceeded performance benchmarks this quarter
+258,34003,2024-08-05,email,positive,Exceeded performance benchmarks this quarter
+259,34003,2024-09-07,email,neutral,Quarterly capacity planning review
+260,34003,2024-09-03,meeting,positive,Team member completed advanced certification
+261,34003,2024-09-29,meeting,positive,Successfully deployed new workload ahead of schedule
+262,34003,2024-09-02,meeting,positive,Successfully deployed new workload ahead of schedule
+263,34003,2024-09-03,email,positive,Successful QBR with expansion discussion initiated
+264,34003,2024-09-13,email,positive,Executive sponsor praised team collaboration
+265,34003,2024-09-24,email,positive,Positive feedback on recent infrastructure upgrade
+266,34003,2024-09-28,meeting,positive,Executive sponsor praised team collaboration
+267,34003,2024-09-07,meeting,neutral,System health check completed
+268,34003,2024-09-29,meeting,positive,Team member completed advanced certification
+269,34003,2024-10-27,email,positive,Successfully deployed new workload ahead of schedule
+270,34003,2024-10-17,email,positive,Successfully deployed new workload ahead of schedule
+271,34003,2024-10-24,email,neutral,System health check completed
+272,34003,2024-10-06,meeting,neutral,Documentation review and updates
+273,34003,2024-10-25,email,positive,Positive feedback on recent infrastructure upgrade
+274,34003,2024-10-04,meeting,positive,Team member completed advanced certification
+275,34003,2024-10-27,email,positive,Executive sponsor praised team collaboration
+276,34003,2024-10-04,email,neutral,Quarterly capacity planning review
+277,34003,2024-10-25,meeting,neutral,Regular operational status update provided
+278,34003,2024-10-25,escalation,negative,Project milestone delayed due to resource constraints
+279,34003,2024-11-03,email,positive,Team member completed advanced certification
+280,34003,2024-11-19,meeting,neutral,Documentation review and updates
+281,34003,2024-11-26,email,positive,Successfully deployed new workload ahead of schedule
+282,34003,2024-11-19,meeting,neutral,System health check completed
+283,34003,2024-11-17,meeting,positive,Early adoption of new AI acceleration features
+284,34003,2024-11-04,email,negative,Concerns about cooling efficiency raised
+285,34003,2024-11-01,meeting,negative,Support ticket unresolved >48 hours
+286,34003,2024-11-20,email,positive,Executive sponsor praised team collaboration
+287,34003,2024-11-03,meeting,positive,Team member completed advanced certification
+288,34003,2024-11-29,email,positive,Successfully deployed new workload ahead of schedule
+289,34003,2024-12-03,meeting,positive,Reference call completed successfully with prospect
+290,34003,2024-12-02,escalation,negative,Unexpected system downtime reported
+291,34003,2024-12-09,email,positive,Successfully deployed new workload ahead of schedule
+292,34003,2024-12-05,email,positive,Early adoption of new AI acceleration features
+293,34003,2024-12-23,email,neutral,System health check completed
+294,34003,2024-12-20,meeting,positive,Successful QBR with expansion discussion initiated
+295,34003,2024-12-05,meeting,negative,Escalation from operations team regarding performance
+296,34003,2024-12-12,meeting,positive,Positive feedback on recent infrastructure upgrade
+297,34003,2024-12-29,meeting,positive,Early adoption of new AI acceleration features
+298,34003,2024-12-08,email,positive,Exceeded performance benchmarks this quarter
+299,34004,2024-01-10,meeting,positive,Successful QBR with expansion discussion initiated
+300,34004,2024-01-14,email,neutral,Scheduled maintenance window executed
+301,34004,2024-01-07,meeting,positive,Exceeded performance benchmarks this quarter
+302,34004,2024-01-22,email,positive,Team member completed advanced certification
+303,34004,2024-01-20,email,neutral,Routine technical sync meeting completed
+304,34004,2024-01-21,email,positive,Successful QBR with expansion discussion initiated
+305,34004,2024-02-19,meeting,neutral,Training session on new features delivered
+306,34004,2024-02-18,email,positive,Executive sponsor praised team collaboration
+307,34004,2024-02-15,email,positive,Early adoption of new AI acceleration features
+308,34004,2024-02-27,meeting,neutral,Quarterly capacity planning review
+309,34004,2024-02-11,meeting,positive,Exceeded performance benchmarks this quarter
+310,34004,2024-02-13,meeting,negative,Unexpected system downtime reported
+311,34004,2024-03-05,email,positive,Executive sponsor praised team collaboration
+312,34004,2024-03-15,meeting,negative,Unexpected system downtime reported
+313,34004,2024-03-27,email,neutral,Documentation review and updates
+314,34004,2024-03-06,email,positive,Early adoption of new AI acceleration features
+315,34004,2024-03-06,email,positive,Successfully deployed new workload ahead of schedule
+316,34004,2024-03-07,email,positive,Positive feedback on recent infrastructure upgrade
+317,34004,2024-04-08,email,neutral,Quarterly capacity planning review
+318,34004,2024-04-22,email,neutral,Routine technical sync meeting completed
+319,34004,2024-04-16,email,positive,Positive feedback on recent infrastructure upgrade
+320,34004,2024-04-19,email,positive,Successful QBR with expansion discussion initiated
+321,34004,2024-04-07,email,neutral,Scheduled maintenance window executed
+322,34004,2024-04-10,email,negative,Unexpected system downtime reported
+323,34004,2024-05-14,meeting,neutral,Monthly business review conducted
+324,34004,2024-05-29,email,positive,Successful QBR with expansion discussion initiated
+325,34004,2024-05-18,email,positive,Successful QBR with expansion discussion initiated
+326,34004,2024-05-23,meeting,neutral,Scheduled maintenance window executed
+327,34004,2024-05-23,email,positive,Reference call completed successfully with prospect
+328,34004,2024-05-02,meeting,positive,Positive feedback on recent infrastructure upgrade
+329,34004,2024-06-26,email,neutral,Monthly business review conducted
+330,34004,2024-06-23,email,positive,Successful QBR with expansion discussion initiated
+331,34004,2024-06-13,meeting,negative,Concerns about cooling efficiency raised
+332,34004,2024-06-24,email,neutral,Monthly business review conducted
+333,34004,2024-06-06,escalation,negative,Concerns about cooling efficiency raised
+334,34004,2024-06-14,meeting,neutral,Scheduled maintenance window executed
+335,34004,2024-06-09,escalation,negative,Unexpected system downtime reported
+336,34004,2024-06-23,escalation,negative,Escalation from operations team regarding performance
+337,34004,2024-07-15,email,positive,Team member completed advanced certification
+338,34004,2024-07-06,email,neutral,Quarterly capacity planning review
+339,34004,2024-07-20,email,positive,Successful QBR with expansion discussion initiated
+340,34004,2024-07-24,escalation,negative,Escalation from operations team regarding performance
+341,34004,2024-07-25,email,neutral,Regular operational status update provided
+342,34004,2024-07-28,email,negative,Unexpected system downtime reported
+343,34004,2024-07-17,email,positive,Early adoption of new AI acceleration features
+344,34004,2024-07-12,escalation,negative,Budget concerns raised during planning meeting
+345,34004,2024-08-12,meeting,negative,Concerns about cooling efficiency raised
+346,34004,2024-08-28,email,positive,Early adoption of new AI acceleration features
+347,34004,2024-08-20,meeting,neutral,Documentation review and updates
+348,34004,2024-08-18,meeting,negative,Concerns about cooling efficiency raised
+349,34004,2024-08-01,escalation,negative,Unexpected system downtime reported
+350,34004,2024-08-19,meeting,negative,Security compliance audit findings
+351,34004,2024-08-01,email,negative,Support ticket unresolved >48 hours
+352,34004,2024-08-26,email,neutral,Documentation review and updates
+353,34004,2024-09-25,email,neutral,Documentation review and updates
+354,34004,2024-09-04,email,positive,Successful QBR with expansion discussion initiated
+355,34004,2024-09-23,meeting,positive,Team member completed advanced certification
+356,34004,2024-09-07,meeting,positive,Positive feedback on recent infrastructure upgrade
+357,34004,2024-09-21,email,neutral,Quarterly capacity planning review
+358,34004,2024-09-28,email,positive,Early adoption of new AI acceleration features
+359,34004,2024-10-03,email,neutral,Training session on new features delivered
+360,34004,2024-10-06,email,neutral,Documentation review and updates
+361,34004,2024-10-15,meeting,positive,Exceeded performance benchmarks this quarter
+362,34004,2024-10-01,meeting,negative,Unexpected system downtime reported
+363,34004,2024-10-21,meeting,positive,Positive feedback on recent infrastructure upgrade
+364,34004,2024-10-08,meeting,positive,Executive sponsor praised team collaboration
+365,34004,2024-11-20,email,positive,Positive feedback on recent infrastructure upgrade
+366,34004,2024-11-16,email,neutral,Documentation review and updates
+367,34004,2024-11-01,email,positive,Successful QBR with expansion discussion initiated
+368,34004,2024-11-08,meeting,positive,Executive sponsor praised team collaboration
+369,34004,2024-11-24,meeting,neutral,Regular operational status update provided
+370,34004,2024-11-27,meeting,neutral,Scheduled maintenance window executed
+371,34004,2024-12-10,email,neutral,Quarterly capacity planning review
+372,34004,2024-12-27,meeting,negative,Support ticket unresolved >48 hours
+373,34004,2024-12-19,meeting,neutral,Monthly business review conducted
+374,34004,2024-12-03,meeting,positive,Early adoption of new AI acceleration features
+375,34004,2024-12-26,email,negative,Security compliance audit findings
+376,34004,2024-12-06,email,neutral,Regular operational status update provided
+377,34005,2024-01-13,email,neutral,Documentation review and updates
+378,34005,2024-01-17,email,negative,Escalation from operations team regarding performance
+379,34005,2024-01-13,meeting,negative,Project milestone delayed due to resource constraints
+380,34005,2024-01-21,meeting,neutral,Monthly business review conducted
+381,34005,2024-01-12,email,neutral,Quarterly capacity planning review
+382,34005,2024-01-27,email,neutral,System health check completed
+383,34005,2024-02-08,email,neutral,Quarterly capacity planning review
+384,34005,2024-02-18,meeting,positive,Exceeded performance benchmarks this quarter
+385,34005,2024-02-12,email,positive,Successful QBR with expansion discussion initiated
+386,34005,2024-02-09,email,positive,Early adoption of new AI acceleration features
+387,34005,2024-02-06,meeting,neutral,Training session on new features delivered
+388,34005,2024-02-16,meeting,neutral,Documentation review and updates
+389,34005,2024-02-07,email,neutral,Quarterly capacity planning review
+390,34005,2024-02-04,email,neutral,Documentation review and updates
+391,34005,2024-02-16,meeting,positive,Early adoption of new AI acceleration features
+392,34005,2024-02-23,email,positive,Executive sponsor praised team collaboration
+393,34005,2024-03-14,email,positive,Positive feedback on recent infrastructure upgrade
+394,34005,2024-03-07,email,positive,Successfully deployed new workload ahead of schedule
+395,34005,2024-03-07,meeting,neutral,Routine technical sync meeting completed
+396,34005,2024-03-27,email,positive,Executive sponsor praised team collaboration
+397,34005,2024-03-27,meeting,neutral,Monthly business review conducted
+398,34005,2024-03-04,meeting,positive,Early adoption of new AI acceleration features
+399,34005,2024-03-12,meeting,positive,Exceeded performance benchmarks this quarter
+400,34005,2024-03-08,email,positive,Positive feedback on recent infrastructure upgrade
+401,34005,2024-03-02,meeting,positive,Executive sponsor praised team collaboration
+402,34005,2024-03-02,meeting,positive,Team member completed advanced certification
+403,34005,2024-04-16,meeting,neutral,System health check completed
+404,34005,2024-04-07,email,neutral,Routine technical sync meeting completed
+405,34005,2024-04-25,email,neutral,Routine technical sync meeting completed
+406,34005,2024-04-15,email,positive,Reference call completed successfully with prospect
+407,34005,2024-04-15,email,neutral,Regular operational status update provided
+408,34005,2024-04-17,email,neutral,Documentation review and updates
+409,34005,2024-05-10,email,neutral,Documentation review and updates
+410,34005,2024-05-21,email,negative,Escalation from operations team regarding performance
+411,34005,2024-05-09,escalation,negative,Unexpected system downtime reported
+412,34005,2024-05-21,escalation,negative,Security compliance audit findings
+413,34005,2024-05-12,email,positive,Exceeded performance benchmarks this quarter
+414,34005,2024-05-16,meeting,negative,Integration challenges with existing systems
+415,34005,2024-05-25,email,negative,Integration challenges with existing systems
+416,34005,2024-05-12,meeting,neutral,Routine technical sync meeting completed
+417,34005,2024-06-20,meeting,neutral,Documentation review and updates
+418,34005,2024-06-05,email,negative,Integration challenges with existing systems
+419,34005,2024-06-28,meeting,negative,Budget concerns raised during planning meeting
+420,34005,2024-06-20,email,neutral,Routine technical sync meeting completed
+421,34005,2024-06-08,email,negative,Integration challenges with existing systems
+422,34005,2024-06-23,escalation,negative,Concerns about cooling efficiency raised
+423,34005,2024-06-20,email,neutral,Scheduled maintenance window executed
+424,34005,2024-06-24,email,negative,Project milestone delayed due to resource constraints
+425,34005,2024-07-03,email,neutral,System health check completed
+426,34005,2024-07-08,meeting,negative,Security compliance audit findings
+427,34005,2024-07-27,email,neutral,Documentation review and updates
+428,34005,2024-07-14,meeting,positive,Successfully deployed new workload ahead of schedule
+429,34005,2024-07-25,email,neutral,System health check completed
+430,34005,2024-07-17,email,neutral,Training session on new features delivered
+431,34005,2024-08-27,email,neutral,Monthly business review conducted
+432,34005,2024-08-05,meeting,positive,Successful QBR with expansion discussion initiated
+433,34005,2024-08-19,email,positive,Successful QBR with expansion discussion initiated
+434,34005,2024-08-22,email,positive,Exceeded performance benchmarks this quarter
+435,34005,2024-08-14,email,neutral,Documentation review and updates
+436,34005,2024-08-19,email,positive,Successful QBR with expansion discussion initiated
+437,34005,2024-08-21,meeting,positive,Early adoption of new AI acceleration features
+438,34005,2024-08-04,email,positive,Exceeded performance benchmarks this quarter
+439,34005,2024-08-14,meeting,neutral,System health check completed
+440,34005,2024-08-22,email,positive,Executive sponsor praised team collaboration
+441,34005,2024-09-02,meeting,positive,Reference call completed successfully with prospect
+442,34005,2024-09-06,email,positive,Exceeded performance benchmarks this quarter
+443,34005,2024-09-23,meeting,neutral,Routine technical sync meeting completed
+444,34005,2024-09-12,email,positive,Reference call completed successfully with prospect
+445,34005,2024-09-12,meeting,positive,Exceeded performance benchmarks this quarter
+446,34005,2024-09-06,meeting,positive,Reference call completed successfully with prospect
+447,34005,2024-09-15,email,positive,Positive feedback on recent infrastructure upgrade
+448,34005,2024-09-22,email,positive,Exceeded performance benchmarks this quarter
+449,34005,2024-09-02,escalation,negative,Support ticket unresolved >48 hours
+450,34005,2024-09-26,email,positive,Reference call completed successfully with prospect
+451,34005,2024-10-09,meeting,positive,Early adoption of new AI acceleration features
+452,34005,2024-10-28,email,neutral,Quarterly capacity planning review
+453,34005,2024-10-01,email,neutral,Training session on new features delivered
+454,34005,2024-10-06,email,neutral,Quarterly capacity planning review
+455,34005,2024-10-11,meeting,positive,Early adoption of new AI acceleration features
+456,34005,2024-10-29,meeting,neutral,Monthly business review conducted
+457,34005,2024-11-03,escalation,negative,Security compliance audit findings
+458,34005,2024-11-12,meeting,negative,Project milestone delayed due to resource constraints
+459,34005,2024-11-18,meeting,negative,Integration challenges with existing systems
+460,34005,2024-11-21,email,neutral,Documentation review and updates
+461,34005,2024-11-18,meeting,negative,Security compliance audit findings
+462,34005,2024-11-03,meeting,negative,Escalation from operations team regarding performance
+463,34005,2024-11-05,escalation,negative,Unexpected system downtime reported
+464,34005,2024-11-16,meeting,neutral,Training session on new features delivered
+465,34005,2024-12-18,meeting,neutral,Scheduled maintenance window executed
+466,34005,2024-12-15,escalation,negative,Support ticket unresolved >48 hours
+467,34005,2024-12-18,email,negative,Concerns about cooling efficiency raised
+468,34005,2024-12-16,meeting,negative,Support ticket unresolved >48 hours
+469,34005,2024-12-15,escalation,negative,Project milestone delayed due to resource constraints
+470,34005,2024-12-26,email,neutral,Documentation review and updates
+471,34005,2024-12-14,escalation,negative,Integration challenges with existing systems
+472,34005,2024-12-03,email,neutral,Monthly business review conducted
