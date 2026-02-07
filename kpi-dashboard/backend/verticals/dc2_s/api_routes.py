@@ -1067,5 +1067,332 @@ def get_dc2s_health_summary():
         return jsonify({'error': 'Failed to fetch health summary'}), 500
 
 
+# ============================================================
+# PORTFOLIO ENDPOINT (Executive Dashboard)
+# ============================================================
+
+@dc2s_api.route('/portfolio', methods=['GET'])
+def get_dc2s_portfolio():
+    """
+    Portfolio summary for the Executive Dashboard.
+    Returns all accounts with health scores, pillar scores, and aggregate stats.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        accounts = Account.query.filter(
+            Account.customer_id == int(customer_id),
+            Account.vertical == 'dc2_s'
+        ).all()
+
+        result_accounts = []
+        healthy_count = at_risk_count = critical_count = 0
+        total_arr = arr_at_risk = 0.0
+
+        for acct in accounts:
+            kpis_q = DC2SKPI.query.filter_by(account_id=acct.account_id).order_by(DC2SKPI.measured_at.desc()).all()
+            if kpis_q:
+                latest_time = kpis_q[0].measured_at
+                latest_kpis = {k.kpi_code: float(k.value) for k in kpis_q if k.measured_at == latest_time}
+                health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
+                meta = calculate_kpi_health._last_metadata
+            else:
+                health, pillar_scores = 0, {}
+                meta = {'attach_rate': 0, 'confidence_grade': 'low', 'kpis_present': 0}
+
+            rev = float(acct.revenue or 0)
+            total_arr += rev
+
+            if health >= 75:
+                status = 'healthy'
+                healthy_count += 1
+            elif health >= 40:
+                status = 'at_risk'
+                at_risk_count += 1
+                arr_at_risk += rev
+            else:
+                status = 'critical'
+                critical_count += 1
+                arr_at_risk += rev
+
+            profile = acct.profile_metadata or {}
+            result_accounts.append({
+                'account_id': acct.account_id,
+                'account_name': acct.account_name,
+                'health_score': round(health, 1),
+                'status': status,
+                'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
+                'confidence': meta.get('confidence_grade', 'medium'),
+                'attach_rate': round(meta.get('attach_rate', 0) * 100, 1),
+                'revenue': rev,
+                'industry': acct.industry or profile.get('industry', ''),
+                'region': acct.region or profile.get('region', ''),
+                'metadata': profile,
+            })
+
+        # Sort: critical first, then at_risk, then healthy
+        status_order = {'critical': 0, 'at_risk': 1, 'healthy': 2}
+        result_accounts.sort(key=lambda a: (status_order.get(a['status'], 9), -a['health_score']))
+
+        return jsonify({
+            'total_accounts': len(accounts),
+            'healthy_count': healthy_count,
+            'at_risk_count': at_risk_count,
+            'critical_count': critical_count,
+            'total_arr': total_arr,
+            'arr_at_risk': arr_at_risk,
+            'avg_health_score': round(sum(a['health_score'] for a in result_accounts) / max(len(result_accounts), 1), 1),
+            'accounts': result_accounts,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in portfolio: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch portfolio'}), 500
+
+
+# ============================================================
+# SIGNALS ENDPOINTS
+# ============================================================
+
+@dc2s_api.route('/signals/<int:account_id>', methods=['GET'])
+def get_dc2s_signals(account_id):
+    """Get qualitative signals for a specific account."""
+    try:
+        from models import QualitativeSignal
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        limit = request.args.get('limit', 50, type=int)
+        signals = QualitativeSignal.query.filter_by(account_id=account_id).order_by(
+            QualitativeSignal.signal_date.desc()
+        ).limit(limit).all()
+
+        return jsonify({'signals': [s.to_dict() for s in signals], 'total': len(signals)})
+    except Exception as e:
+        logger.error(f"Error fetching signals for account {account_id}: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch signals'}), 500
+
+
+@dc2s_api.route('/signals/all', methods=['GET'])
+def get_dc2s_all_signals():
+    """Get recent signals across all DC2S accounts for the current customer."""
+    try:
+        from models import QualitativeSignal
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        limit = request.args.get('limit', 50, type=int)
+        account_ids = [a.account_id for a in Account.query.filter_by(
+            customer_id=int(customer_id), vertical='dc2_s'
+        ).all()]
+
+        if not account_ids:
+            return jsonify({'signals': [], 'total': 0})
+
+        signals = QualitativeSignal.query.filter(
+            QualitativeSignal.account_id.in_(account_ids)
+        ).order_by(QualitativeSignal.signal_date.desc()).limit(limit).all()
+
+        return jsonify({'signals': [s.to_dict() for s in signals], 'total': len(signals)})
+    except Exception as e:
+        logger.error(f"Error fetching all signals: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch signals'}), 500
+
+
+# ============================================================
+# HEALTH TRENDS ENDPOINT
+# ============================================================
+
+@dc2s_api.route('/health-trends/<int:account_id>', methods=['GET'])
+def get_dc2s_health_trends(account_id):
+    """Get weekly health score trends for an account."""
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        all_kpis = DC2SKPI.query.filter_by(account_id=account_id).order_by(DC2SKPI.measured_at.asc()).all()
+        weeks = {}
+        for kpi in all_kpis:
+            week_key = kpi.measured_at.strftime('%Y-%m-%d')
+            if week_key not in weeks:
+                weeks[week_key] = {}
+            weeks[week_key][kpi.kpi_code] = float(kpi.value)
+
+        trends = []
+        for week_date, kpi_values in sorted(weeks.items()):
+            health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
+            trends.append({
+                'date': week_date,
+                'health_score': round(health, 1),
+                'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
+            })
+
+        return jsonify({'account_id': account_id, 'trends': trends, 'total_weeks': len(trends)})
+    except Exception as e:
+        logger.error(f"Error fetching health trends: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch health trends'}), 500
+
+
+# ============================================================
+# INFRASTRUCTURE KPIS ENDPOINT
+# ============================================================
+
+@dc2s_api.route('/accounts/<int:account_id>/infra', methods=['GET'])
+def get_dc2s_infra_kpis(account_id):
+    """Infrastructure KPIs: P1+P2 data with recent 6-week trend."""
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        infra_codes = [code for code, d in DC2S_KPIS.items() if d.get('pillar') in ('P1', 'P2')]
+
+        all_kpis = DC2SKPI.query.filter(
+            DC2SKPI.account_id == account_id,
+            DC2SKPI.kpi_code.in_(infra_codes),
+        ).order_by(DC2SKPI.measured_at.desc()).all()
+
+        from collections import defaultdict
+        by_code = defaultdict(list)
+        for k in all_kpis:
+            by_code[k.kpi_code].append((k.measured_at, float(k.value)))
+
+        result = []
+        for code in infra_codes:
+            kpi_def = DC2S_KPIS.get(code, {})
+            entries = sorted(by_code.get(code, []), key=lambda x: x[0])
+            recent_6 = entries[-6:] if len(entries) >= 6 else entries
+            trend_values = [v for _, v in recent_6]
+            current_value = trend_values[-1] if trend_values else 0
+
+            score, band = _range_based_score(current_value, kpi_def)
+            score = round(score, 0)
+
+            if score >= 75:
+                state = 'healthy'
+            elif score >= 40:
+                state = 'at_risk'
+            else:
+                state = 'critical'
+
+            result.append({
+                'kpi_code': code,
+                'kpi_name': kpi_def.get('name', code),
+                'current_value': round(current_value, 2),
+                'score': score,
+                'state': state,
+                'trend': [round(v, 2) for v in trend_values],
+                'unit': kpi_def.get('unit', ''),
+            })
+
+        return jsonify({'account_id': account_id, 'kpis': result})
+    except Exception as e:
+        logger.error(f"Error fetching infra KPIs: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch infrastructure KPIs'}), 500
+
+
+# ============================================================
+# JOURNEY ENDPOINT (weekly_data format for JourneyDashboardV3)
+# ============================================================
+
+@dc2s_api.route('/journey/<int:account_id>', methods=['GET'])
+def get_dc2s_journey(account_id):
+    """
+    Journey timeline returning weekly_data in the format expected by JourneyDashboardV3.
+    Each week includes health_score, pillar_scores, normalized KPIs (0-100), and raw KPIs.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        account = Account.query.filter_by(
+            account_id=account_id, customer_id=int(customer_id), vertical='dc2_s'
+        ).first()
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+
+        all_kpis = DC2SKPI.query.filter_by(account_id=account_id).order_by(DC2SKPI.measured_at.asc()).all()
+        weeks = {}
+        for kpi in all_kpis:
+            week_key = kpi.measured_at.strftime('%Y-%m-%d')
+            if week_key not in weeks:
+                weeks[week_key] = {}
+            weeks[week_key][kpi.kpi_code] = float(kpi.value)
+
+        weekly_data = []
+        prev_score = None
+        for week_date, kpi_values in sorted(weeks.items()):
+            health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
+            meta = calculate_kpi_health._last_metadata
+
+            phase = 'healthy' if health >= 75 else ('risk' if health >= 40 else 'critical')
+            change = round(health - prev_score, 1) if prev_score is not None else 0
+            prev_score = health
+
+            normalized_kpis = {}
+            raw_kpis = {}
+            for code, value in kpi_values.items():
+                kpi_def = DC2S_KPIS.get(code, {})
+                name = kpi_def.get('name', code)
+                unit = kpi_def.get('unit', '')
+                score, _band = _range_based_score(value, kpi_def)
+                normalized_kpis[name] = round(score, 1)
+                raw_kpis[name] = {'value': round(value, 2), 'unit': unit}
+
+            weekly_data.append({
+                'week_number': len(weekly_data) + 1,
+                'health_score': round(health, 1),
+                'phase': phase,
+                'change': change,
+                'date': week_date,
+                'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
+                'kpis': normalized_kpis,
+                'normalized_kpis': normalized_kpis,
+                'raw_kpis': raw_kpis,
+                'data_quality': round(meta['attach_rate'] * 100, 1),
+                'coverage_pct': round(meta['attach_rate'] * 100, 1),
+                'available_kpis': list(kpi_values.keys()),
+            })
+
+        # Signals
+        from models import QualitativeSignal
+        signals = QualitativeSignal.query.filter_by(account_id=account_id).order_by(
+            QualitativeSignal.signal_date.asc()
+        ).all()
+        signal_list = []
+        for sig in signals:
+            d = sig.to_dict()
+            sig_date = str(d.get('signal_date', d.get('date', '')))[:10]
+            d['week_number'] = next(
+                (w['week_number'] for w in weekly_data if w['date'] == sig_date), 1
+            )
+            d['date'] = sig_date
+            signal_list.append(d)
+
+        ending_health = weekly_data[-1]['health_score'] if weekly_data else 0
+
+        return jsonify({
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'weekly_data': weekly_data,
+            'health_timeline': weekly_data,
+            'signals': signal_list,
+            'total_weeks': len(weekly_data),
+            'total_signals': len(signal_list),
+            'ending_health': ending_health,
+            'pattern_type': (account.profile_metadata or {}).get('pattern_type', ''),
+        })
+
+    except Exception as e:
+        logger.error(f"Error in journey data: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch journey data'}), 500
+
+
 # Export blueprint
 __all__ = ['dc2s_api']

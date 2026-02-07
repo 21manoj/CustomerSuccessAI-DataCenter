@@ -187,7 +187,12 @@ from rehydration_api import rehydration_api
 from data_quality_api import data_quality_api
 from customer_profile_api import customer_profile_api
 from enhanced_upload_api import enhanced_upload_api
-from enhanced_rag_openai_api import enhanced_rag_openai_api
+try:
+    from enhanced_rag_openai_api import enhanced_rag_openai_api
+    HAS_ENHANCED_RAG_OPENAI = True
+except Exception as e:
+    print(f"⚠️  Warning: enhanced_rag_openai_api not available: {e}")
+    HAS_ENHANCED_RAG_OPENAI = False
 from secure_file_api import secure_file_api
 from master_file_api import master_file_api
 from account_snapshot_api import account_snapshot_api
@@ -340,7 +345,11 @@ except ImportError as e:
 app.register_blueprint(openai_key_api)
 app.register_blueprint(data_quality_api)
 app.register_blueprint(customer_profile_api)
-app.register_blueprint(enhanced_rag_openai_api)
+if HAS_ENHANCED_RAG_OPENAI:
+    app.register_blueprint(enhanced_rag_openai_api)
+    print("✅ Registered enhanced_rag_openai_api")
+else:
+    print("⚠️  Skipped enhanced_rag_openai_api (sentence_transformers not available)")
 app.register_blueprint(master_file_api)
 
 # Register Signal Analyst Agent API if available
@@ -378,6 +387,19 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Dynamic Journey API not available: {e}")
     print("   Journey endpoints will not be available")
+
+# Top-level /api/journey/<id> for DC users — delegates to DC2S blueprint journey
+# The dynamic journey API handles SaaS (file-based) journeys; DC uses DB-calculated journeys
+@app.route('/api/journey/<int:account_id>', methods=['GET'])
+def journey_dispatcher(account_id):
+    """Route journey requests: DC users → DC2S journey, SaaS → dynamic journey files."""
+    user_vertical = getattr(current_user, 'vertical', None) if current_user.is_authenticated else None
+    if user_vertical and user_vertical.lower().replace('-', '_') in ('dc2_s', 'dc2s', 'datacenter'):
+        if HAS_DC2S_API:
+            from verticals.dc2_s.api_routes import get_dc2s_journey
+            return get_dc2s_journey(account_id)
+    # Fall through to dynamic journey API for SaaS users
+    return jsonify({'error': 'Journey data not found', 'account_id': account_id}), 404
 
 # Register optional RAG APIs only if available
 if HAS_HISTORICAL_RAG:
@@ -947,5 +969,5 @@ def list_routes():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # Option 1: Production-ready - no auto-reload (code changes require manual restart)
-    app.run(host='0.0.0.0', port=5059, debug=False)
+    port = int(os.getenv('PORT', 5059))
+    app.run(host='0.0.0.0', port=port, debug=(port != 5059))
