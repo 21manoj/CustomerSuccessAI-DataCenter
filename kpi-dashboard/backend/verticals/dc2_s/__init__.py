@@ -37,6 +37,7 @@ from .pillar_weights import (
     get_bootstrap_weights,
     get_current_weights,
     get_weights_for_customer,
+    get_l1_weights_for_customer,
     calculate_weight_drift,
     validate_weights
 )

@@ -377,9 +377,65 @@ PILLAR_LONG_TO_SHORT = {
     "P4_channel_partner_health": "P4",
     "P5_expansion_readiness": "P5",
 }
+PILLAR_LONG_TO_DB = {
+    "P1_deployment_velocity": "DV",
+    "P2_operational_stability": "OS",
+    "P3_ai_workload_performance": "AI",
+    "P4_channel_partner_health": "CH",
+    "P5_expansion_readiness": "EX",
+}
 # DB config (CustomerConfig.dc2s_pillar_weights) uses AI, CH, DV, EX, OS
 PILLAR_SHORT_TO_DB = {"P1": "DV", "P2": "OS", "P3": "AI", "P4": "CH", "P5": "EX"}
 PILLAR_DB_TO_SHORT = {v: k for k, v in PILLAR_SHORT_TO_DB.items()}
+
+# ============================================================
+# BOOTSTRAP NAME → KPI CODE MAPPING
+# ============================================================
+# Maps human-readable names from bootstrap_weights_config.json
+# (stored in CustomerConfig.dc2s_kpi_weights) to P{N}-KPI{N} codes
+# used in kpi_definitions.py. This bridges the naming gap.
+
+BOOTSTRAP_NAME_TO_KPI_CODE = {
+    # P1: Deployment Velocity (DV)
+    "time_to_first_workload": "P1-KPI1",
+    "installation_completion_rate": "P1-KPI2",
+    "rack_integration_complexity": "P1-KPI3",      # → Configuration Accuracy
+    "configuration_drift": "P1-KPI4",               # → Deployment Cycle Time
+    "support_ticket_density": "P1-KPI5",            # → Hardware Commissioning Time
+    "firmware_update_lag": "P1-KPI6",               # → Network Readiness Score
+    # P2: Operational Stability (OS)
+    "rma_frequency_rate": "P2-KPI1",
+    "mtbf": "P2-KPI2",
+    "critical_incident_rate": "P2-KPI3",
+    "unplanned_downtime": "P2-KPI4",               # → System Uptime Percentage
+    "support_ticket_velocity": "P2-KPI5",           # → Thermal Management Score
+    "thermal_power_alerts": "P2-KPI6",              # → Power Efficiency (PUE)
+    "firmware_stability": "P2-KPI7",                # → Mean Time To Repair
+    # P3: AI Workload Performance (AI)
+    "gpu_utilization_rate": "P3-KPI1",
+    "training_job_completion": "P3-KPI2",
+    "inference_latency": "P3-KPI3",
+    "storage_io_efficiency": "P3-KPI4",             # → Model Training Time
+    "network_fabric_health": "P3-KPI5",             # → GPU Memory Efficiency
+    "workload_density_trend": "P3-KPI6",            # → Distributed Training Efficiency
+    # P4: Channel & Partner Health (CH)
+    "partner_engagement_score": "P4-KPI1",
+    "account_ownership_clarity": "P4-KPI2",         # → VAR Performance Rating
+    "joint_business_plan": "P4-KPI3",               # → Joint QBR Frequency
+    "partner_nps": "P4-KPI6",
+    "cosell_activity": "P4-KPI5",                   # → Co-selling Opportunities
+    "partner_escalation_rate": "P4-KPI4",           # → Channel Conflict Score
+    # P5: Expansion Readiness (EX)
+    "capacity_utilization_trajectory": "P5-KPI2",
+    "workload_growth_velocity": "P5-KPI3",
+    "next_gen_upgrade_signals": "P5-KPI5",          # → Budget Availability Signals
+    "competitive_displacement_risk": "P5-KPI1",     # → Capacity Utilization Rate
+    "expansion_probability_90d": "P5-KPI7",
+    "days_since_last_expansion": "P5-KPI6",         # → New Use Case Adoption
+    "strategic_account_value": "P5-KPI8",           # → Technical Champion Engagement
+}
+
+KPI_CODE_TO_BOOTSTRAP_NAME = {v: k for k, v in BOOTSTRAP_NAME_TO_KPI_CODE.items()}
 
 
 def get_current_weights() -> Dict[str, Any]:
@@ -437,6 +493,73 @@ def get_weights_for_customer(customer_id: Optional[int]) -> Dict[str, Any]:
             customer_id, e
         )
         return get_current_weights()
+
+def get_l1_weights_for_customer(customer_id: Optional[int]) -> Dict[str, float]:
+    """
+    Get L1 KPI weights for a customer from DB (CustomerConfig) when available.
+
+    Returns format: {kpi_code: weight} e.g. {"P1-KPI1": 0.20, "P3-KPI1": 0.22, ...}
+
+    Resolution order:
+        1. CustomerConfig.dc2s_kpi_weights (if exists in DB for this customer)
+           - Maps bootstrap names (e.g. "gpu_utilization_rate") to P{N}-KPI{N} codes
+        2. Hardcoded weight_l1 from DC2S_KPIS in kpi_definitions.py (default)
+
+    Args:
+        customer_id: Customer ID to look up weights for
+
+    Returns:
+        Dict of {kpi_code: weight_l1} for all known KPIs
+    """
+    import logging
+    log = logging.getLogger(__name__)
+
+    from .kpi_definitions import DC2S_KPIS
+
+    # Start with hardcoded defaults from kpi_definitions
+    defaults = {code: defn.get('weight_l1', 0.0) for code, defn in DC2S_KPIS.items()}
+
+    if not customer_id:
+        return defaults
+
+    try:
+        from models import CustomerConfig
+        config = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+        if not config or config.vertical != "dc2_s":
+            return defaults
+
+        db_kpi_weights = config.dc2s_kpi_weights or {}
+        if not db_kpi_weights:
+            return defaults
+
+        # db_kpi_weights format: {"DV": {"time_to_first_workload": 0.20, ...}, "AI": {...}, ...}
+        # Map to P{N}-KPI{N} codes using BOOTSTRAP_NAME_TO_KPI_CODE
+        overrides = {}
+        for db_pillar_code, kpi_dict in db_kpi_weights.items():
+            if not isinstance(kpi_dict, dict):
+                continue
+            for bootstrap_name, weight in kpi_dict.items():
+                kpi_code = BOOTSTRAP_NAME_TO_KPI_CODE.get(bootstrap_name)
+                if kpi_code and isinstance(weight, (int, float)):
+                    overrides[kpi_code] = float(weight)
+
+        if overrides:
+            result = defaults.copy()
+            result.update(overrides)
+            log.info(
+                "Config-aware: Using %d L1 weight overrides from CustomerConfig for customer_id=%s",
+                len(overrides), customer_id
+            )
+            return result
+        return defaults
+
+    except Exception as e:
+        log.warning(
+            "FALLBACK: Using default L1 weights after error loading CustomerConfig. customer_id=%s, error=%s",
+            customer_id, e
+        )
+        return defaults
+
 
 def calculate_weight_drift(
     old_weights: Dict[str, float],

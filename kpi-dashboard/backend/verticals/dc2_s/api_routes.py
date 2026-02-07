@@ -13,7 +13,7 @@ import logging
 
 # Import DC2_S vertical modules - matching YOUR file structure
 from .kpi_definitions import DC2S_KPIS, DC2S_PILLARS
-from .pillar_weights import get_current_weights, get_weights_for_customer
+from .pillar_weights import get_current_weights, get_weights_for_customer, get_l1_weights_for_customer
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,23 @@ def _normalize_kpi_code_for_health(kpi_code):
 
 def calculate_kpi_health(kpi_values, customer_id=None):
     """
-    Calculate health score from KPI values using config-aware weights when possible.
-    When customer_id is provided and CustomerConfig (dc2_s) exists, uses DB pillar weights;
-    otherwise falls back to code default weights (logged explicitly).
-    Normalizes AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes (GAP 1.3).
+    Calculate health score from KPI values using config-aware L1 + L2 weights.
+
+    L1 (KPI → Pillar): Uses weighted average within each pillar.
+        Source: CustomerConfig.dc2s_kpi_weights (DB) → kpi_definitions.py weight_l1 (fallback)
+    L2 (Pillar → Overall): Uses weighted sum across pillars.
+        Source: CustomerConfig.dc2s_pillar_weights (DB) → bootstrap defaults (fallback)
+
+    Normalizes AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes.
     """
-    # Config-aware: use CustomerConfig.dc2s_pillar_weights when customer_id provided
-    weights = get_weights_for_customer(customer_id) if customer_id is not None else get_current_weights()
-    
+    # Config-aware L2 weights: {P1: {weight: 0.15}, P2: {weight: 0.20}, ...}
+    l2_weights = get_weights_for_customer(customer_id) if customer_id is not None else get_current_weights()
+
+    # Config-aware L1 weights: {P1-KPI1: 0.20, P3-KPI1: 0.22, ...}
+    l1_weights = get_l1_weights_for_customer(customer_id) if customer_id is not None else {
+        code: defn.get('weight_l1', 0.0) for code, defn in DC2S_KPIS.items()
+    }
+
     # Normalize kpi codes (AI-KPI1 → P3-KPI1 etc.) so catalog lookup works
     kpi_values_for_calc = {}
     for kpi_code, value in kpi_values.items():
@@ -54,20 +63,20 @@ def calculate_kpi_health(kpi_values, customer_id=None):
         if lookup_code:
             kpi_values_for_calc[lookup_code] = value
     kpi_values = kpi_values_for_calc
-    
-    # Group KPIs by pillar
+
+    # Group KPIs by pillar with L1-weighted scoring
     pillar_scores = {}
-    
+
     for kpi_code, value in kpi_values.items():
         if kpi_code not in DC2S_KPIS:
             continue
-            
+
         kpi_def = DC2S_KPIS[kpi_code]
         pillar = kpi_def.get('pillar', kpi_def.get('l1_category'))
-        
+
         if pillar not in pillar_scores:
-            pillar_scores[pillar] = {'total': 0, 'count': 0}
-        
+            pillar_scores[pillar] = {'weighted_total': 0.0, 'total_weight': 0.0}
+
         # Extract target - handle dict or simple number
         target_raw = kpi_def.get('target', 100)
         if isinstance(target_raw, dict):
@@ -76,8 +85,8 @@ def calculate_kpi_health(kpi_values, customer_id=None):
         else:
             target = target_raw
             operator = '>'
-        
-        # Simple scoring: closer to target = higher score
+
+        # Score: normalize value against target (0-100 scale)
         if target and target > 0:
             if operator == '<':
                 # Lower is better
@@ -87,31 +96,36 @@ def calculate_kpi_health(kpi_values, customer_id=None):
                 score = min(100, (value / target) * 100)
         else:
             score = value
-        
-        pillar_scores[pillar]['total'] += score
-        pillar_scores[pillar]['count'] += 1
-    
-    # Calculate pillar averages
+
+        # Apply L1 weight (KPI importance within pillar)
+        weight_l1 = l1_weights.get(kpi_code, kpi_def.get('weight_l1', 0.0))
+        if weight_l1 <= 0:
+            # Fallback: equal weight if L1 weight is missing/zero
+            weight_l1 = 1.0 / max(1, len([k for k, d in DC2S_KPIS.items() if d.get('pillar') == pillar]))
+
+        pillar_scores[pillar]['weighted_total'] += score * weight_l1
+        pillar_scores[pillar]['total_weight'] += weight_l1
+
+    # Calculate L1 pillar averages (weighted by L1 KPI weights)
     pillar_averages = {}
     for pillar, data in pillar_scores.items():
-        if data['count'] > 0:
-            pillar_averages[pillar] = data['total'] / data['count']
+        if data['total_weight'] > 0:
+            pillar_averages[pillar] = data['weighted_total'] / data['total_weight']
         else:
             pillar_averages[pillar] = 0
-    
-    # Calculate overall weighted health
+
+    # Calculate L2 overall weighted health (pillar weights)
     overall_health = 0
     total_weight = 0
-    
+
     for pillar, score in pillar_averages.items():
-        # Get weight from your L2 weights structure
-        weight = weights.get(pillar, {}).get('weight', 0.2)  # Default 0.2 if not found
+        weight = l2_weights.get(pillar, {}).get('weight', 0.2)
         overall_health += score * weight
         total_weight += weight
-    
+
     if total_weight > 0:
         overall_health = overall_health / total_weight
-    
+
     return overall_health, pillar_averages
 
 
