@@ -61,66 +61,19 @@ const DCInfrastructureHealth: React.FC<InfrastructureHealthProps> = ({ tenantId 
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual API endpoint: GET /api/journey/:accountId/infra
-      // For now, use mock data
-      const mockKPIs: InfrastructureKPI[] = [
-        {
-          kpi_code: 'P2-KPI1',
-          kpi_name: 'RMA Frequency',
-          current_value: 3.2,
-          score: 38,
-          state: 'critical',
-          trend: [2.8, 3.0, 3.1, 3.2, 3.3, 3.2],
-          unit: '%',
-        },
-        {
-          kpi_code: 'P2-KPI2',
-          kpi_name: 'MTBF',
-          current_value: 720,
-          score: 52,
-          state: 'at_risk',
-          trend: [680, 700, 710, 720, 715, 720],
-          unit: 'hours',
-        },
-        {
-          kpi_code: 'P2-KPI3',
-          kpi_name: 'Critical Incidents',
-          current_value: 4,
-          score: 45,
-          state: 'at_risk',
-          trend: [2, 3, 3, 4, 4, 4],
-          unit: 'count',
-        },
-        {
-          kpi_code: 'P2-KPI4',
-          kpi_name: 'Alert Response Time',
-          current_value: 12,
-          score: 48,
-          state: 'at_risk',
-          trend: [10, 11, 11, 12, 12, 12],
-          unit: 'minutes',
-        },
-        {
-          kpi_code: 'P3-KPI1',
-          kpi_name: 'GPU Utilization',
-          current_value: 65,
-          score: 75,
-          state: 'healthy',
-          trend: [60, 62, 64, 65, 65, 65],
-          unit: '%',
-        },
-        {
-          kpi_code: 'P3-KPI2',
-          kpi_name: 'Network Latency',
-          current_value: 8,
-          score: 82,
-          state: 'healthy',
-          trend: [9, 8.5, 8.2, 8, 8, 8],
-          unit: 'ms',
-        },
-      ];
-
-      setKpis(mockKPIs);
+      const res = await fetch(`/api/dc2s/accounts/${tenantId}/infra`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const kpiList: InfrastructureKPI[] = (data.kpis || []).map((k: any) => ({
+        kpi_code: k.kpi_code,
+        kpi_name: k.kpi_name,
+        current_value: k.current_value,
+        score: k.score,
+        state: k.state as 'healthy' | 'at_risk' | 'critical',
+        trend: k.trend,
+        unit: k.unit,
+      }));
+      setKpis(kpiList);
     } catch (err: any) {
       console.error('Error fetching infrastructure data:', err);
       setError(err.message || 'Failed to load infrastructure data');

@@ -94,6 +94,40 @@ def check_auth():
         return jsonify({'error': 'Authentication required', 'login_url': '/api/login'}), 401
 
 # ============================================================
+# HELPERS
+# ============================================================
+
+def _simple_range_score(value, ranges, higher_is_better=True):
+    """Convert a raw KPI value to a 0-100 score using range definitions."""
+    if not ranges:
+        return 50.0  # no range info
+    healthy = ranges.get('healthy', {})
+    risk = ranges.get('risk', {})
+    critical = ranges.get('critical', {})
+    h_min, h_max = healthy.get('min', 0), healthy.get('max', 100)
+    r_min, r_max = risk.get('min', 0), risk.get('max', 100)
+    c_min, c_max = critical.get('min', 0), critical.get('max', 100)
+
+    if higher_is_better:
+        if value >= h_min and value <= h_max:
+            return 75 + 25 * min(1.0, (value - h_min) / max(h_max - h_min, 1))
+        elif value >= r_min and value <= r_max:
+            return 40 + 35 * (value - r_min) / max(r_max - r_min, 1)
+        else:
+            return max(0, 40 * value / max(c_max, 1))
+    else:
+        # Lower is better (e.g. days, latency)
+        if value <= h_max:
+            pct = 1.0 - (value - h_min) / max(h_max - h_min, 1) if h_max > h_min else 1.0
+            return 75 + 25 * max(0, min(1, pct))
+        elif value <= r_max:
+            pct = 1.0 - (value - r_min) / max(r_max - r_min, 1) if r_max > r_min else 0.5
+            return 40 + 35 * max(0, min(1, pct))
+        else:
+            pct = max(0, 1.0 - (value - c_min) / max(c_max - c_min, 1)) if c_max > c_min else 0
+            return max(0, 40 * pct)
+
+# ============================================================
 # ROUTES
 # ============================================================
 
@@ -585,6 +619,64 @@ def get_latest_scores(account_id):
         'confidence': meta['confidence'],
     })
 
+@app.route('/api/dc2s/accounts/<int:account_id>/infra', methods=['GET'])
+def get_infra_kpis(account_id):
+    """Infrastructure KPIs: P1+P2 data with recent trend (last 6 weeks)."""
+    customer_id = current_user.customer_id
+    from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+
+    account = Account.query.filter_by(
+        account_id=account_id, customer_id=customer_id, vertical='dc2_s'
+    ).first()
+    if not account:
+        return jsonify({'error': 'Account not found'}), 404
+
+    # Infrastructure pillars: P1 (Deployment) + P2 (Operational Stability)
+    infra_codes = [code for code, d in DC2S_KPIS.items() if d.get('pillar') in ('P1', 'P2')]
+
+    # Get last 6 weeks of KPIs
+    all_kpis = DC2SKPI.query.filter(
+        DC2SKPI.account_id == account_id,
+        DC2SKPI.kpi_code.in_(infra_codes),
+    ).order_by(DC2SKPI.measured_at.desc()).all()
+
+    # Group by kpi_code → list of (date, value) sorted recent-first
+    from collections import defaultdict
+    by_code = defaultdict(list)
+    for k in all_kpis:
+        by_code[k.kpi_code].append((k.measured_at, float(k.value)))
+
+    result = []
+    for code in infra_codes:
+        kpi_def = DC2S_KPIS.get(code, {})
+        entries = sorted(by_code.get(code, []), key=lambda x: x[0])
+        recent_6 = entries[-6:] if len(entries) >= 6 else entries
+        trend_values = [v for _, v in recent_6]
+        current_value = trend_values[-1] if trend_values else 0
+
+        ranges = kpi_def.get('ranges', {})
+        higher = kpi_def.get('higher_is_better', True)
+        score = round(_simple_range_score(current_value, ranges, higher), 0)
+
+        if score >= 75:
+            state = 'healthy'
+        elif score >= 40:
+            state = 'at_risk'
+        else:
+            state = 'critical'
+
+        result.append({
+            'kpi_code': code,
+            'kpi_name': kpi_def.get('name', code),
+            'current_value': round(current_value, 2),
+            'score': score,
+            'state': state,
+            'trend': [round(v, 2) for v in trend_values],
+            'unit': kpi_def.get('unit', ''),
+        })
+
+    return jsonify({'account_id': account_id, 'kpis': result})
+
 # ============================================================
 # SESSION / JOURNEY ENDPOINTS
 # ============================================================
@@ -605,9 +697,15 @@ def session_status():
 
 @app.route('/api/journey/<int:account_id>', methods=['GET'])
 def get_journey_data(account_id):
-    """Get journey timeline data for JourneyDashboardV3."""
+    """Get journey timeline data for JourneyDashboardV3.
+
+    Returns weekly_data in the format expected by the frontend WeekData interface:
+      week_number, health_score, phase, pillar_scores, kpis (normalized 0-100),
+      raw_kpis ({code: {value, unit}}), date, data_quality, coverage_pct
+    """
     customer_id = current_user.customer_id
     from verticals.dc2_s.api_routes import calculate_kpi_health
+    from verticals.dc2_s.kpi_definitions import DC2S_KPIS
 
     account = Account.query.filter_by(
         account_id=account_id, customer_id=customer_id, vertical='dc2_s'
@@ -624,46 +722,84 @@ def get_journey_data(account_id):
             weeks[week_key] = {}
         weeks[week_key][kpi.kpi_code] = float(kpi.value)
 
-    # Calculate health per week
-    health_timeline = []
+    # Build weekly_data in the shape expected by JourneyDashboardV3
+    weekly_data = []
     prev_score = None
     for week_date, kpi_values in sorted(weeks.items()):
         health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
         meta = calculate_kpi_health._last_metadata
 
         if health >= 75:
-            status = 'healthy'
+            phase = 'healthy'
         elif health >= 40:
-            status = 'risk'
+            phase = 'risk'
         else:
-            status = 'critical'
+            phase = 'critical'
 
         change = round(health - prev_score, 1) if prev_score is not None else 0
         prev_score = health
 
-        health_timeline.append({
-            'date': week_date,
-            'week': len(health_timeline) + 1,
+        # Build normalized KPIs dict (0-100 score) keyed by human-readable name
+        normalized_kpis = {}
+        raw_kpis = {}
+        for code, value in kpi_values.items():
+            kpi_def = DC2S_KPIS.get(code, {})
+            name = kpi_def.get('name', code)
+            unit = kpi_def.get('unit', '')
+            # Compute a simple 0-100 normalized score from ranges
+            ranges = kpi_def.get('ranges', {})
+            higher_is_better = kpi_def.get('higher_is_better', True)
+            score = _simple_range_score(value, ranges, higher_is_better)
+            normalized_kpis[name] = round(score, 1)
+            raw_kpis[name] = {'value': round(value, 2), 'unit': unit}
+
+        weekly_data.append({
+            'week_number': len(weekly_data) + 1,
             'health_score': round(health, 1),
-            'status': status,
+            'phase': phase,
             'change': change,
+            'date': week_date,
             'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
-            'kpi_count': meta['kpis_present'],
+            'kpis': normalized_kpis,
+            'normalized_kpis': normalized_kpis,
+            'raw_kpis': raw_kpis,
+            'data_quality': round(meta['attach_rate'] * 100, 1),
+            'coverage_pct': round(meta['attach_rate'] * 100, 1),
+            'available_kpis': list(kpi_values.keys()),
         })
 
     # Get signals for this account
     signals = QualitativeSignal.query.filter_by(account_id=account_id).order_by(
         QualitativeSignal.signal_date.asc()
     ).all()
-    signal_timeline = [s.to_dict() for s in signals]
+    signal_list = []
+    for sig in signals:
+        d = sig.to_dict()
+        # Add week_number by matching date to weekly_data
+        sig_date = d.get('signal_date', d.get('date', ''))
+        if isinstance(sig_date, str):
+            sig_date_short = sig_date[:10]
+        else:
+            sig_date_short = ''
+        d['week_number'] = next(
+            (w['week_number'] for w in weekly_data if w['date'] == sig_date_short),
+            1
+        )
+        d['date'] = sig_date_short
+        signal_list.append(d)
+
+    ending_health = weekly_data[-1]['health_score'] if weekly_data else 0
 
     return jsonify({
         'account_id': account_id,
         'account_name': account.account_name,
-        'health_timeline': health_timeline,
-        'signals': signal_timeline,
-        'total_weeks': len(health_timeline),
-        'total_signals': len(signal_timeline),
+        'weekly_data': weekly_data,
+        'health_timeline': weekly_data,  # alias for backward compat
+        'signals': signal_list,
+        'total_weeks': len(weekly_data),
+        'total_signals': len(signal_list),
+        'ending_health': ending_health,
+        'pattern_type': (account.profile_metadata or {}).get('pattern_type', ''),
     })
 
 @app.route('/api/signal-analyst/analyze', methods=['POST'])

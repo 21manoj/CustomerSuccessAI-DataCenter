@@ -69,20 +69,34 @@ const DCTenantPlacard: React.FC<TenantPlacardProps> = ({ tenant }) => {
   }, [tenant.tenant_id]);
 
   const fetchPillarScores = async () => {
+    const PILLAR_NAMES: Record<string, string> = {
+      P1: 'Deployment Velocity',
+      P2: 'Operational Stability',
+      P3: 'AI Workload Performance',
+      P4: 'Channel & Partner Health',
+      P5: 'Expansion Readiness',
+    };
+    const PILLAR_WEIGHTS: Record<string, number> = {
+      P1: 0.15, P2: 0.20, P3: 0.25, P4: 0.15, P5: 0.25,
+    };
     try {
       setLoading(true);
-      // TODO: Replace with actual API endpoint when available
-      // For now, use default pillar structure
-      const defaultPillars: PillarScore[] = [
-        { pillar: 'P1', name: 'Deployment Velocity', score: 85, weight: 0.15 },
-        { pillar: 'P2', name: 'Operational Stability', score: 45, weight: 0.20 },
-        { pillar: 'P3', name: 'AI Workload Performance', score: 78, weight: 0.25 },
-        { pillar: 'P4', name: 'Channel & Partner Health', score: 82, weight: 0.15 },
-        { pillar: 'P5', name: 'Expansion Readiness', score: 68, weight: 0.25 },
-      ];
-      
-      // TODO: Fetch from /api/journey/:accountId/pillars when available
-      setPillarScores(defaultPillars);
+      const res = await fetch(`/api/dc2s/health-score/${tenant.tenant_id}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        const catScores = data.category_scores || {};
+        const pillars: PillarScore[] = ['P1', 'P2', 'P3', 'P4', 'P5'].map(code => ({
+          pillar: code,
+          name: PILLAR_NAMES[code],
+          score: Math.round(catScores[code]?.score ?? 0),
+          weight: catScores[code]?.weight ?? PILLAR_WEIGHTS[code],
+        }));
+        setPillarScores(pillars);
+      } else {
+        setPillarScores(['P1', 'P2', 'P3', 'P4', 'P5'].map(code => ({
+          pillar: code, name: PILLAR_NAMES[code], score: 0, weight: PILLAR_WEIGHTS[code],
+        })));
+      }
     } catch (err) {
       console.error('Error fetching pillar scores:', err);
     } finally {
