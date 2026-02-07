@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
 """
-Provision New Data Center Customer from Template
-================================================
+Provision New Data Center Customer
+===================================
 
-Creates a new customer directory structure by copying from _template
-and replacing placeholders with customer-specific values.
+Creates a new customer directory structure from _template AND provisions
+database records (Customer, CustomerConfig with default weights, admin User).
 
 Usage:
     python3 provision_dc_customer.py --customer-id 18
     python3 provision_dc_customer.py --customer-id 18 --customer-name "Acme Corp"
     python3 provision_dc_customer.py --customer-id 18 --dry-run
-    python3 provision_dc_customer.py --customer-id 18 --force
+    python3 provision_dc_customer.py --customer-id 18 --skip-db   # filesystem only
+    python3 provision_dc_customer.py --customer-id 18 --admin-email user@acme.com
 
-This will create:
-    backend/verticals/customer18-dc2_s/
-    
-And replace placeholders:
-    - {CUSTOMER_ID} → 18
-    - {CUSTOMER_NAME} → Acme Corp (or Customer 18)
-    - {VERTICAL_SLUG} → dc2_s
-    - {ACCOUNT_ID_START} → 18000 (formula: 10000 + customer_id * 1000)
-    - customer9 → customer18
-    - 90001, 90002, etc. → 18001, 18002, etc. (account ID mapping)
+This will:
+  1. Create backend/verticals/customer18-dc2_s/ from _template
+  2. Replace placeholders ({CUSTOMER_ID}, customer9, 90001, etc.)
+  3. Create Customer row in PostgreSQL (vertical='dc2_s')
+  4. Create CustomerConfig with default L2 pillar weights from bootstrap config
+  5. Create admin User with login credentials
+
+Database provisioning requires DATABASE_URL to be set. Use --skip-db to skip.
 
 Template Location:
     backend/verticals/_template/
-    
-Version: 2.0
-Updated: January 2026
+
+Version: 3.0
+Updated: February 2026
 """
 
 import argparse
 import shutil
 import os
 import re
+import sys
 import json
 import logging
 from pathlib import Path
@@ -262,23 +262,179 @@ def validate_template() -> Tuple[bool, List[str]]:
     return len(issues) == 0, issues
 
 
+def provision_database(
+    customer_id: int,
+    customer_name: str,
+    admin_email: Optional[str] = None,
+    admin_password: Optional[str] = None,
+    dry_run: bool = False
+) -> bool:
+    """
+    Provision database records for a new DC customer.
+
+    Creates:
+        - Customer row (with vertical='dc2_s')
+        - CustomerConfig row (with default L2 pillar weights and L1 KPI weights)
+        - Admin User row (with vertical='dc2_s', role='admin')
+
+    Args:
+        customer_id: The customer ID (must match filesystem provisioning)
+        customer_name: Human-readable customer name
+        admin_email: Email for admin user (defaults to admin@customer{N}.cspulse.local)
+        admin_password: Password for admin user (defaults to 'changeme123')
+        dry_run: If True, show what would happen without writing to DB
+
+    Returns:
+        True if successful, False otherwise
+    """
+    # Add backend dir to path so we can import app/models
+    backend_dir = str(BASE_DIR.parent)
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+
+    try:
+        from app import app, db
+        from models import Customer, CustomerConfig, User
+        from werkzeug.security import generate_password_hash
+    except ImportError as e:
+        logger.error(f"Cannot import Flask app/models: {e}")
+        logger.error("DB provisioning requires DATABASE_URL to be set. Use --skip-db to skip.")
+        return False
+
+    admin_email = admin_email or f"admin@customer{customer_id}.cspulse.local"
+    admin_password = admin_password or "changeme123"
+
+    # Load default weights from bootstrap config
+    bootstrap_config_path = TEMPLATE_DIR / "journey" / "config" / "bootstrap_weights_config.json"
+    default_pillar_weights = {"AI": 0.25, "CH": 0.20, "DV": 0.15, "EX": 0.20, "OS": 0.20}
+    default_kpi_weights = {}
+
+    if bootstrap_config_path.exists():
+        try:
+            with open(bootstrap_config_path) as f:
+                bootstrap = json.load(f)
+
+            # Extract L2 pillar weights — map P1-P5 names to 2-letter codes
+            pillar_name_to_code = {
+                "P1_deployment_velocity": "DV",
+                "P2_operational_stability": "OS",
+                "P3_ai_workload_performance": "AI",
+                "P4_channel_partner_health": "CH",
+                "P5_expansion_readiness": "EX"
+            }
+            l2 = bootstrap.get("pillar_weights_L2", {})
+            for pillar_name, weight in l2.items():
+                code = pillar_name_to_code.get(pillar_name)
+                if code:
+                    default_pillar_weights[code] = weight
+
+            # Extract L1 KPI weights per pillar
+            l1 = bootstrap.get("kpi_weights_L1", {})
+            for pillar_name, kpi_weights in l1.items():
+                code = pillar_name_to_code.get(pillar_name)
+                if code:
+                    default_kpi_weights[code] = kpi_weights
+
+            logger.info(f"Loaded bootstrap weights: L2={default_pillar_weights}")
+        except Exception as e:
+            logger.warning(f"Could not load bootstrap config, using defaults: {e}")
+
+    if dry_run:
+        print(f"\n  [DRY-RUN] Would create database records:")
+        print(f"    - Customer: id={customer_id}, name='{customer_name}', vertical='dc2_s'")
+        print(f"    - CustomerConfig: vertical='dc2_s', pillar_weights={default_pillar_weights}")
+        print(f"    - User: email='{admin_email}', role='admin', vertical='dc2_s'")
+        return True
+
+    with app.app_context():
+        try:
+            # Check if customer already exists
+            existing = Customer.query.filter_by(customer_id=customer_id).first()
+            if existing:
+                logger.warning(f"Customer {customer_id} already exists in DB ('{existing.customer_name}'). Skipping DB provisioning.")
+                print(f"  DB: Customer {customer_id} already exists — skipping")
+                return True
+
+            # Check email uniqueness
+            existing_email = User.query.filter_by(email=admin_email).first()
+            if existing_email:
+                logger.warning(f"Email '{admin_email}' already in use. Skipping user creation.")
+                admin_email = None  # Skip user creation
+
+            # 1. Create Customer
+            customer = Customer(
+                customer_id=customer_id,
+                customer_name=customer_name,
+                email=f"info@customer{customer_id}.cspulse.local",
+                vertical='dc2_s'
+            )
+            db.session.add(customer)
+            db.session.flush()  # Get the customer_id assigned
+            print(f"  DB: Created Customer id={customer_id}, name='{customer_name}'")
+
+            # 2. Create CustomerConfig with default DC2_S weights
+            config = CustomerConfig(
+                customer_id=customer_id,
+                vertical='dc2_s',
+                kpi_upload_mode='corporate',
+                dc2s_pillar_weights=default_pillar_weights,
+                dc2s_kpi_weights=default_kpi_weights,
+                dc2s_enabled_kpis=None,  # None = all KPIs enabled (use catalog defaults)
+                dc2s_kpi_overrides=None,
+                dc2s_kpi_definitions=None,  # None = use catalog defaults
+                config_version='1.0'
+            )
+            db.session.add(config)
+            print(f"  DB: Created CustomerConfig with L2 weights: {default_pillar_weights}")
+
+            # 3. Create Admin User
+            if admin_email:
+                user = User(
+                    customer_id=customer_id,
+                    user_name=f"{customer_name} Admin",
+                    email=admin_email,
+                    password_hash=generate_password_hash(admin_password),
+                    vertical='dc2_s',
+                    role='admin',
+                    active=True
+                )
+                db.session.add(user)
+                print(f"  DB: Created admin user: {admin_email}")
+
+            db.session.commit()
+            print(f"  DB: All records committed successfully")
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"DB provisioning failed: {e}")
+            print(f"  DB: ERROR - {e}")
+            return False
+
+
 def provision_customer(
-    customer_id: int, 
+    customer_id: int,
     customer_name: Optional[str] = None,
     vertical_slug: str = 'dc2_s',
     dry_run: bool = False,
-    force: bool = False
+    force: bool = False,
+    skip_db: bool = False,
+    admin_email: Optional[str] = None,
+    admin_password: Optional[str] = None
 ) -> bool:
     """
-    Provision new customer directory from template.
-    
+    Provision new customer directory from template and optionally set up database.
+
     Args:
         customer_id: Unique customer identifier
         customer_name: Human-readable customer name (optional)
         vertical_slug: Vertical identifier (default: dc2_s)
         dry_run: If True, show what would happen without making changes
         force: If True, skip confirmation prompts
-    
+        skip_db: If True, skip database provisioning (filesystem only)
+        admin_email: Email for admin user (optional)
+        admin_password: Password for admin user (optional)
+
     Returns:
         True if successful, False otherwise
     """
@@ -396,37 +552,46 @@ def provision_customer(
         print(f"   ❌ {stats['errors']} errors")
     print()
     
+    # ============================================================
+    # DATABASE PROVISIONING
+    # ============================================================
+    db_success = True
+    if not skip_db:
+        print("📊 Database provisioning...")
+        db_success = provision_database(
+            customer_id=customer_id,
+            customer_name=customer_name,
+            admin_email=admin_email,
+            admin_password=admin_password,
+            dry_run=dry_run
+        )
+        if not db_success and not dry_run:
+            print("  WARNING: DB provisioning failed. Filesystem provisioning succeeded.")
+            print("  You can retry DB setup later or use --skip-db to skip it.")
+    else:
+        print("📊 Database provisioning: SKIPPED (--skip-db)")
+
     # Summary
+    print()
     print("=" * 80)
     status = "PREVIEW COMPLETE" if dry_run else "PROVISIONING COMPLETE!"
     print(f"✅ {status}")
     print("=" * 80)
     print()
-    
+
     if not dry_run:
         print(f"Created: {customer_dir_name}/")
+        if not skip_db and db_success:
+            print(f"  DB: Customer, CustomerConfig, and admin User created")
+            print(f"  Admin login: admin@customer{customer_id}.cspulse.local / changeme123")
         print()
         print("📋 Next Steps:")
-        print(f"  1. Upload 5 input CSV files to {customer_dir_name}/data/")
-        print(f"     - accounts.csv")
-        print(f"     - kpi_measurements.csv (or kpis.csv)")
-        print(f"     - qualitative_signals.csv (or signals.csv)")
-        print(f"     - products.csv")
-        print(f"     - profiles.csv (or account_profiles.csv)")
+        print(f"  1. Upload data (Excel or CSV) via the onboarding wizard")
+        print(f"     OR place files in {customer_dir_name}/data/")
         print()
-        print(f"  2. Load data:")
-        print(f"     cd {customer_dir_name}/scripts")
-        print(f"     python3 02_load_customer{customer_id}_data_SMART.py")
-        print()
-        print(f"  3. Create embeddings:")
-        print(f"     python3 03_embed_customer{customer_id}_OPENAI.py")
-        print()
-        print(f"  4. Generate journey data (Wizard A):")
-        print(f"     cd ../journey/wizard_a")
+        print(f"  2. For demo mode (Wizard A):")
+        print(f"     cd {customer_dir_name}/journey/wizard_a")
         print(f"     python3 wizard_a_journey_generator.py")
-        print()
-        print(f"  5. Create user in database:")
-        print(f"     python3 create_customer{customer_id}_user.py")
         print()
     else:
         print("To provision for real, run without --dry-run flag")
@@ -500,24 +665,44 @@ Account ID Formula:
         action='store_true',
         help='Skip confirmation prompts (for automation)'
     )
-    
+    parser.add_argument(
+        '--skip-db',
+        action='store_true',
+        help='Skip database provisioning (filesystem only)'
+    )
+    parser.add_argument(
+        '--admin-email',
+        type=str,
+        default=None,
+        help='Admin user email (defaults to admin@customerN.cspulse.local)'
+    )
+    parser.add_argument(
+        '--admin-password',
+        type=str,
+        default=None,
+        help='Admin user password (defaults to changeme123)'
+    )
+
     args = parser.parse_args()
-    
+
     # Validate customer ID
     if args.customer_id < 1:
         print("❌ Error: Customer ID must be positive")
         exit(1)
-    
+
     if args.customer_id > 9999:
         print("❌ Error: Customer ID must be less than 10000 (account ID overflow)")
         exit(1)
-    
+
     success = provision_customer(
         customer_id=args.customer_id,
         customer_name=args.customer_name,
         vertical_slug=args.vertical_slug,
         dry_run=args.dry_run,
-        force=args.force
+        force=args.force,
+        skip_db=args.skip_db,
+        admin_email=args.admin_email,
+        admin_password=args.admin_password
     )
     
     exit(0 if success else 1)
