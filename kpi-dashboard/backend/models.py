@@ -105,7 +105,7 @@ class User(db.Model):
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'))
     user_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(256))
     active = db.Column(db.Boolean, default=True)  # For account deactivation
     last_login = db.Column(db.DateTime)
     # UUID migration columns (added by phase1a_add_uuid_columns.py)

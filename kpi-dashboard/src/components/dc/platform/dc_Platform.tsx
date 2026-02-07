@@ -39,6 +39,76 @@ import DCDataIntegration from '../data-integration/dc_DataIntegration';
 import DCSettings from '../settings/dc_Settings';
 
 // ============================================================
+// SIGNAL OVERVIEW (no-account-selected view)
+// ============================================================
+
+const SignalOverview: React.FC = () => {
+  const [signals, setSignals] = React.useState<any[]>([]);
+  const [summary, setSummary] = React.useState<any>({});
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/dc2s/signals/all?limit=30', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setSignals(data.signals || []);
+          setSummary(data.sentiment_summary || {});
+        }
+      } catch (e) { console.error(e); }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return <div className="text-center py-12 text-gray-500">Loading signals...</div>;
+
+  const sentimentColor = (s: string) =>
+    s === 'positive' ? 'bg-green-100 text-green-800' :
+    s === 'negative' ? 'bg-red-100 text-red-800' :
+    'bg-gray-100 text-gray-700';
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">Signal Analyst - All Accounts</h2>
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-green-50 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-green-600">{summary.positive || 0}</div>
+          <div className="text-sm text-green-700">Positive</div>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-gray-600">{summary.neutral || 0}</div>
+          <div className="text-sm text-gray-700">Neutral</div>
+        </div>
+        <div className="bg-red-50 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-red-600">{summary.negative || 0}</div>
+          <div className="text-sm text-red-700">Negative</div>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {signals.map((sig: any, i: number) => (
+          <div key={sig.signal_id || i} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50">
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${sentimentColor(sig.sentiment)}`}>
+              {sig.sentiment}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-medium text-sm text-gray-900">{sig.account_name}</span>
+                <span className="text-xs text-gray-400">{sig.signal_date}</span>
+              </div>
+              <p className="text-sm text-gray-600">{sig.content}</p>
+            </div>
+            <span className="text-xs text-gray-400 whitespace-nowrap">{sig.signal_type}</span>
+          </div>
+        ))}
+        {signals.length === 0 && <p className="text-gray-500 text-center py-8">No signals found</p>}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // TYPES
 // ============================================================
 
@@ -173,10 +243,7 @@ const DCPlatform: React.FC = () => {
               {accountId ? (
                 <SignalAnalyst accountId={parseInt(accountId)} accountName={`Account ${accountId}`} />
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-600 mb-4">Please select an account to analyze</p>
-                  <p className="text-sm text-gray-500">Go to the Tenants tab and click on an account to view Signal Analyst</p>
-                </div>
+                <SignalOverview />
               )}
             </div>
           )}

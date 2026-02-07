@@ -1,10 +1,12 @@
 from flask import Flask
-from auth_middleware import get_current_customer_id, get_current_user_id
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_session import Session
+from flask_login import LoginManager, login_user, current_user
 from extensions import db
 from flask import request, jsonify
 import datetime
+import secrets
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -38,11 +40,57 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Secret key for sessions
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
+
+# Flask-Session configuration (database-backed)
+app.config['SESSION_TYPE'] = 'sqlalchemy'
+app.config['SESSION_PERMANENT'] = True
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_KEY_PREFIX'] = 'cs_session:'
+app.config['SESSION_COOKIE_NAME'] = 'cs_session'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = None  # Allow cross-port in dev
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=8)
+
 # CORS configuration - allow frontend on port 8005
-CORS(app, origins=['http://localhost:8005', 'http://localhost:3000'], supports_credentials=True)
+CORS(app, origins=['http://localhost:8005', 'http://localhost:3000', 'http://127.0.0.1:8005'], supports_credentials=True)
 
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Create tables before initializing session
+with app.app_context():
+    db.create_all()
+
+# Initialize Flask-Session (must be after db.init_app and create_all)
+app.config['SESSION_SQLALCHEMY'] = db
+try:
+    Session(app)
+except Exception as e:
+    print(f"⚠️  Flask-Session init warning: {e}")
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.session_protection = 'strong'
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login"""
+    from models import User
+    try:
+        user = db.session.get(User, int(user_id))
+        if user:
+            db.session.refresh(user)
+        return user
+    except Exception:
+        return None
+
+# Initialize global authentication middleware
+from auth_middleware import init_auth_middleware, get_current_customer_id, get_current_user_id
+init_auth_middleware(app)
 
 import models
 from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig
@@ -279,25 +327,28 @@ def login():
     email = data.get('email')
     password = data.get('password')
     vertical = data.get('vertical', 'saas')  # Default to 'saas' if not provided
-    
+
     # Validate vertical
     valid_verticals = ['saas', 'datacenter']
     if vertical not in valid_verticals:
         return jsonify({'message': f'Invalid vertical. Must be one of: {", ".join(valid_verticals)}'}), 400
-    
+
     user = User.query.filter_by(email=email).first()
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({'message': 'Invalid email or password'}), 401
-    
+
+    # Flask-Login: create authenticated session
+    login_user(user, remember=True)
+
     # Get customer to check/store vertical preference
     customer = Customer.query.filter_by(customer_id=user.customer_id).first()
-    
+
     # Map database vertical to frontend vertical
     # Database: 'dc2_s', 'saas'
     # Frontend: 'datacenter', 'saas'
     user_vertical = user.vertical or vertical
     frontend_vertical = 'datacenter' if user_vertical == 'dc2_s' else user_vertical
-    
+
     return jsonify({
         'customer_id': user.customer_id,
         'user_id': user.user_id,
