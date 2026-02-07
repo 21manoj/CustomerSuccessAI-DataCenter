@@ -87,7 +87,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "higher_is_better": False,
         "correlation": 0.45,  # Moderate correlation with Phase 2 success
         "data_source": "deployment_tracking",
-        "calculation": "DATE(first_workload_completion) - DATE(hardware_delivery)"
+        "calculation": "DATE(first_workload_completion) - DATE(hardware_delivery)",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P1-KPI2": {
@@ -107,7 +109,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "higher_is_better": True,
         "correlation": 0.35,
         "data_source": "installation_logs",
-        "calculation": "(successful_installs / total_planned_installs) * 100"
+        "calculation": "(successful_installs / total_planned_installs) * 100",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P1-KPI3": {
@@ -127,7 +131,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "higher_is_better": True,
         "correlation": 0.28,
         "data_source": "configuration_validation",
-        "calculation": "(correct_configs / total_configs) * 100"
+        "calculation": "(correct_configs / total_configs) * 100",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P1-KPI4": {
@@ -147,7 +153,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "higher_is_better": False,
         "correlation": 0.38,
         "data_source": "project_tracking",
-        "calculation": "AVG(deployment_end_date - deployment_start_date)"
+        "calculation": "AVG(deployment_end_date - deployment_start_date)",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P1-KPI5": {
@@ -166,7 +174,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": False,
         "correlation": 0.32,
-        "data_source": "commissioning_logs"
+        "data_source": "commissioning_logs",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P1-KPI6": {
@@ -184,9 +194,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 70, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.25
+        "correlation": 0.25,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P1-KPI7": {
         "name": "Deployment Team Velocity",
         "description": "Servers deployed per day per field engineer",
@@ -202,9 +214,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 3, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.20
+        "correlation": 0.20,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P1-KPI8": {
         "name": "Documentation Completeness",
         "description": "Percentage of deployment docs completed and validated",
@@ -220,9 +234,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 80, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.15
+        "correlation": 0.15,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     # ========================================
     # P2: OPERATIONAL STABILITY (8 KPIs, 20%)
     # ========================================
@@ -246,7 +262,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "critical_threshold": 2.6,
         "critical_impact": "Each 1% above 2.6% = $4.4M annual margin loss",
         "data_source": "rma_tracking",
-        "calculation": "(rma_units / total_deployed_units) * 100"
+        "calculation": "(rma_units / total_deployed_units) * 100",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P2-KPI2": {
@@ -265,7 +283,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": True,
         "correlation": 0.65,
-        "data_source": "failure_tracking"
+        "data_source": "failure_tracking",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P2-KPI3": {
@@ -284,7 +304,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": False,
         "correlation": -0.58,
-        "data_source": "incident_management"
+        "data_source": "incident_management",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P2-KPI4": {
@@ -302,9 +324,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 98.0, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.52
+        "correlation": 0.52,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P2-KPI5": {
         "name": "Thermal Management Score",
         "description": "Percentage of time temps within optimal range",
@@ -320,9 +344,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 85, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.42
+        "correlation": 0.42,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P2-KPI6": {
         "name": "Power Efficiency (PUE)",
         "description": "Power Usage Effectiveness ratio",
@@ -338,9 +364,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 1.4, "max": 3.0, "color": "red"}
         },
         "higher_is_better": False,
-        "correlation": -0.28
+        "correlation": -0.28,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P2-KPI7": {
         "name": "Mean Time To Repair (MTTR)",
         "description": "Average hours to resolve hardware failures",
@@ -356,9 +384,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 12, "max": 72, "color": "red"}
         },
         "higher_is_better": False,
-        "correlation": -0.35
+        "correlation": -0.35,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P2-KPI8": {
         "name": "Preventive Maintenance Compliance",
         "description": "Percentage of scheduled maintenance completed on time",
@@ -374,9 +404,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 80, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.38
+        "correlation": 0.38,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     # ========================================
     # P3: AI WORKLOAD PERFORMANCE (8 KPIs, 25%)
     # ========================================
@@ -399,7 +431,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "correlation": 0.88,  # VERY STRONG predictor of expansion
         "expansion_signal": ">75% utilization = high Phase 2 probability",
         "data_source": "gpu_monitoring",
-        "calculation": "AVG(gpu_active_time / total_time) * 100"
+        "calculation": "AVG(gpu_active_time / total_time) * 100",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P3-KPI2": {
@@ -417,9 +451,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 75, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.72
+        "correlation": 0.72,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P3-KPI3": {
         "name": "Inference Latency (P95)",
         "description": "95th percentile inference response time",
@@ -435,9 +471,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 100, "max": 1000, "color": "red"}
         },
         "higher_is_better": False,
-        "correlation": -0.55
+        "correlation": -0.55,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P3-KPI4": {
         "name": "Model Training Time",
         "description": "Average time to train standard benchmark model",
@@ -453,9 +491,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 48, "max": 168, "color": "red"}
         },
         "higher_is_better": False,
-        "correlation": -0.48
+        "correlation": -0.48,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P3-KPI5": {
         "name": "GPU Memory Efficiency",
         "description": "Percentage of GPU memory effectively utilized",
@@ -471,9 +511,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 60, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.62
+        "correlation": 0.62,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P3-KPI6": {
         "name": "Distributed Training Efficiency",
         "description": "Scaling efficiency across multiple GPUs",
@@ -489,9 +531,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 70, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.52
+        "correlation": 0.52,
+        "kpi_source_type": "leading",
+        "derivation_formula": "(single_gpu_time * gpu_count) / actual_multi_gpu_time * 100"
     },
-    
+
     "P3-KPI7": {
         "name": "Workload Diversity Score",
         "description": "Number of distinct AI workload types running",
@@ -507,9 +551,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 2, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.44
+        "correlation": 0.44,
+        "kpi_source_type": "leading",
+        "derivation_formula": "COUNT(DISTINCT workload_type WHERE active_last_30d)"
     },
-    
+
     "P3-KPI8": {
         "name": "Batch Processing Throughput",
         "description": "Samples processed per hour",
@@ -525,9 +571,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 5000, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.35
+        "correlation": 0.35,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     # ========================================
     # P4: CHANNEL & PARTNER HEALTH (6 KPIs, 15%)
     # ========================================
@@ -548,7 +596,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": True,
         "correlation": 0.68,
-        "data_source": "partner_crm"
+        "data_source": "partner_crm",
+        "kpi_source_type": "leading",
+        "derivation_formula": "0.3 * meeting_frequency_score + 0.25 * response_time_score + 0.25 * joint_pipeline_score + 0.2 * escalation_resolution_score"
     },
     
     "P4-KPI2": {
@@ -566,9 +616,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 60, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.55
+        "correlation": 0.55,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P4-KPI3": {
         "name": "Joint QBR Frequency",
         "description": "Quarterly business reviews with partners (annual)",
@@ -584,9 +636,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 2, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.62
+        "correlation": 0.62,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P4-KPI4": {
         "name": "Channel Conflict Score",
         "description": "Reverse score - lower is better (0-100)",
@@ -602,9 +656,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 50, "max": 100, "color": "red"}
         },
         "higher_is_better": False,
-        "correlation": -0.48
+        "correlation": -0.48,
+        "kpi_source_type": "leading",
+        "derivation_formula": "0.35 * deal_overlap_score + 0.30 * territory_dispute_score + 0.20 * pricing_conflict_score + 0.15 * support_escalation_conflict_score"
     },
-    
+
     "P4-KPI5": {
         "name": "Co-selling Opportunities",
         "description": "Active joint sales opportunities with partners",
@@ -620,9 +676,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 1, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.72
+        "correlation": 0.72,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P4-KPI6": {
         "name": "Partner NPS",
         "description": "Net Promoter Score from channel partners",
@@ -638,9 +696,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": -100, "max": 0, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.58
+        "correlation": 0.58,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     # ========================================
     # P5: EXPANSION READINESS (8 KPIs, 25%)
     # ========================================
@@ -661,7 +721,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": True,
         "correlation": 0.82,
-        "expansion_signal": ">80% = strong expansion signal"
+        "expansion_signal": ">80% = strong expansion signal",
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
     
     "P5-KPI2": {
@@ -680,7 +742,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": True,
         "correlation": 0.92,  # VERY STRONG expansion predictor
-        "expansion_signal": ">10% MoM growth = expansion likely"
+        "expansion_signal": ">10% MoM growth = expansion likely",
+        "kpi_source_type": "leading",
+        "derivation_formula": "(P5_KPI1_current_month - P5_KPI1_previous_month) / P5_KPI1_previous_month * 100"
     },
     
     "P5-KPI3": {
@@ -698,9 +762,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": -50, "max": 0, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.88
+        "correlation": 0.88,
+        "kpi_source_type": "leading",
+        "derivation_formula": "(active_workloads_current - active_workloads_prev_month) / active_workloads_prev_month * 100"
     },
-    
+
     "P5-KPI4": {
         "name": "Compute Hour Consumption Trend",
         "description": "Change in total compute hours consumed (30d)",
@@ -716,9 +782,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": -100, "max": 0, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.85
+        "correlation": 0.85,
+        "kpi_source_type": "leading",
+        "derivation_formula": "(compute_hours_last_30d - compute_hours_prev_30d) / compute_hours_prev_30d * 100"
     },
-    
+
     "P5-KPI5": {
         "name": "Budget Availability Signals",
         "description": "Indicators of expansion budget availability",
@@ -734,9 +802,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 40, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.65
+        "correlation": 0.65,
+        "kpi_source_type": "leading",
+        "derivation_formula": "0.4 * budget_mention_sentiment + 0.3 * fiscal_year_alignment_score + 0.3 * procurement_activity_score"
     },
-    
+
     "P5-KPI6": {
         "name": "New Use Case Adoption",
         "description": "New AI use cases adopted in last 90 days",
@@ -752,9 +822,11 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 1, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.58
+        "correlation": 0.58,
+        "kpi_source_type": "raw",
+        "derivation_formula": None
     },
-    
+
     "P5-KPI7": {
         "name": "Expansion Probability (90d)",
         "description": "ML-predicted probability of expansion in next 90 days",
@@ -771,7 +843,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         },
         "higher_is_better": True,
         "correlation": 0.95,  # EXTREMELY STRONG (ML-derived)
-        "expansion_signal": ">70% = high confidence expansion"
+        "expansion_signal": ">70% = high confidence expansion",
+        "kpi_source_type": "leading",
+        "derivation_formula": "ML_MODEL(gpu_util, capacity_trajectory, workload_growth, partner_engagement, budget_signals)"
     },
     
     "P5-KPI8": {
@@ -789,7 +863,9 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
             "critical": {"min": 0, "max": 50, "color": "red"}
         },
         "higher_is_better": True,
-        "correlation": 0.68
+        "correlation": 0.68,
+        "kpi_source_type": "leading",
+        "derivation_formula": "0.3 * meeting_attendance_score + 0.25 * feature_request_activity + 0.25 * poc_participation + 0.2 * internal_advocacy_signals"
     }
 }
 
@@ -923,3 +999,29 @@ DC2S_METADATA = {
         {"kpi": "P2-KPI1", "name": "RMA Frequency Rate", "threshold": 2.6, "impact": "$4.4M per 1% increase"}
     ]
 }
+
+
+def get_raw_kpis() -> Dict[str, Dict[str, Any]]:
+    """Get all raw (directly measured) KPIs"""
+    return {k: v for k, v in DC2S_KPIS.items() if v.get('kpi_source_type') == 'raw'}
+
+
+def get_leading_kpis() -> Dict[str, Dict[str, Any]]:
+    """Get all leading (derived/composite/predictive) KPIs"""
+    return {k: v for k, v in DC2S_KPIS.items() if v.get('kpi_source_type') == 'leading'}
+
+
+def get_kpi_source_summary() -> Dict[str, Any]:
+    """Summary of raw vs leading KPI classification"""
+    raw = get_raw_kpis()
+    leading = get_leading_kpis()
+    return {
+        'total': len(DC2S_KPIS),
+        'raw_count': len(raw),
+        'leading_count': len(leading),
+        'raw_kpis': list(raw.keys()),
+        'leading_kpis': list(leading.keys()),
+        'leading_with_formulas': {
+            k: v.get('derivation_formula') for k, v in leading.items()
+        }
+    }

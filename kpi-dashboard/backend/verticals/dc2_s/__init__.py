@@ -23,7 +23,10 @@ from .kpi_definitions import (
     get_pillar_info,
     get_health_status,
     calculate_pillar_score,
-    calculate_overall_health
+    calculate_overall_health,
+    get_raw_kpis,
+    get_leading_kpis,
+    get_kpi_source_summary
 )
 
 # Pillar Weights
@@ -97,7 +100,10 @@ __all__ = [
     'get_health_status',
     'calculate_pillar_score',
     'calculate_overall_health',
-    
+    'get_raw_kpis',
+    'get_leading_kpis',
+    'get_kpi_source_summary',
+
     # Pillar Weights
     'BOOTSTRAP_L2_WEIGHTS',
     'CURRENT_L2_WEIGHTS',

@@ -648,6 +648,9 @@ class DC2SKPI(db.Model):
     pillar = db.Column(db.String(10), index=True)
     weight = db.Column(db.Numeric(5, 4))
     status = db.Column(db.String(20))
+    # Raw vs Leading indicator classification
+    kpi_source_type = db.Column(db.String(20), default='raw', index=True)  # 'raw' or 'leading'
+    derivation_formula = db.Column(db.Text, nullable=True)  # Formula for leading indicators (NULL for raw)
     measured_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -666,6 +669,8 @@ class DC2SKPI(db.Model):
             'pillar': self.pillar,
             'weight': float(self.weight) if self.weight else None,
             'status': self.status,
+            'kpi_source_type': self.kpi_source_type,
+            'derivation_formula': self.derivation_formula,
             'measured_at': self.measured_at.isoformat() if self.measured_at else None
         }
 

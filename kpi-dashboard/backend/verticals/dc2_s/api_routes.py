@@ -23,6 +23,26 @@ dc2s_api = Blueprint('dc2s_api', __name__)
 # Catalog uses P1-P5; CustomerConfig/onboarding use AI, CH, DV, EX, OS. Pillar mapping: AI→P3, CH→P4, DV→P1, EX→P5, OS→P2
 DB_PILLAR_TO_CATALOG = {"AI": "P3", "CH": "P4", "DV": "P1", "EX": "P5", "OS": "P2"}
 
+# ============================================================
+# SCORE BAND MAPPING
+# ============================================================
+# Each KPI has domain-calibrated ranges (critical/risk/healthy) in native units.
+# These score bands define how native-unit ranges map to a 0-100 score.
+# Not hard thirds — the breakpoints reflect CSM mental model:
+#   critical = clearly needs intervention (0-40)
+#   risk = needs attention, not yet urgent (40-75)
+#   healthy = on track (75-100)
+# These defaults can be overridden per-customer via CustomerConfig.
+
+DEFAULT_SCORE_BANDS = {
+    'critical': {'min_score': 0, 'max_score': 40},
+    'risk':     {'min_score': 40, 'max_score': 75},
+    'healthy':  {'min_score': 75, 'max_score': 100},
+}
+
+# Total number of defined KPIs per pillar (for attach rate calculation)
+PILLAR_KPI_COUNTS = {p: info['kpi_count'] for p, info in DC2S_PILLARS.items()}
+
 
 def _normalize_kpi_code_for_health(kpi_code):
     """Map AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes so health calculation finds definitions."""
@@ -37,16 +57,94 @@ def _normalize_kpi_code_for_health(kpi_code):
     return None
 
 
+def _range_based_score(value, kpi_def, score_bands=None):
+    """
+    Score a KPI value using domain-calibrated range normalization.
+
+    Each KPI defines ranges in native units:
+        healthy:  {min: 90, max: 100}   (e.g. Training Job Completion %)
+        risk:     {min: 75, max: 90}
+        critical: {min: 0,  max: 75}
+
+    The value is placed in its band, then linearly interpolated within
+    the corresponding score sub-range (e.g. risk → 40-75).
+
+    Returns:
+        (score, band_name) where score is 0-100 and band_name is
+        'healthy', 'risk', 'critical', or 'unknown'.
+    """
+    if score_bands is None:
+        score_bands = DEFAULT_SCORE_BANDS
+
+    ranges = kpi_def.get('ranges', {})
+    higher_is_better = kpi_def.get('higher_is_better', True)
+
+    if not ranges:
+        # No ranges defined — fall back to simple 0-100 clamp
+        return max(0, min(100, value)), 'unknown'
+
+    # Try each band
+    for band_name in ['healthy', 'risk', 'critical']:
+        band = ranges.get(band_name)
+        if not band:
+            continue
+
+        band_min = band.get('min', 0)
+        band_max = band.get('max', 100)
+
+        if band_min <= value <= band_max:
+            band_width = band_max - band_min
+            position = (value - band_min) / band_width if band_width > 0 else 0.5
+
+            sb = score_bands[band_name]
+            score_range = sb['max_score'] - sb['min_score']
+
+            if higher_is_better:
+                # Higher value in band → higher score
+                score = sb['min_score'] + position * score_range
+            else:
+                # Lower value in band → higher score (inverted)
+                score = sb['max_score'] - position * score_range
+
+            return round(score, 1), band_name
+
+    # Value outside all defined ranges
+    healthy = ranges.get('healthy', {})
+    critical = ranges.get('critical', {})
+
+    if higher_is_better:
+        if value > healthy.get('max', 100):
+            return 100.0, 'healthy'     # Above healthy max → perfect
+        if value < critical.get('min', 0):
+            return 0.0, 'critical'      # Below critical min → worst
+    else:
+        if value < healthy.get('min', 0):
+            return 100.0, 'healthy'     # Below healthy min → perfect (lower is better)
+        if value > critical.get('max', 100):
+            return 0.0, 'critical'      # Above critical max → worst
+
+    return 50.0, 'unknown'
+
+
 def calculate_kpi_health(kpi_values, customer_id=None):
     """
-    Calculate health score from KPI values using config-aware L1 + L2 weights.
+    Calculate health score from KPI values using:
+    - Range-based scoring (domain-calibrated bands, not ratio-to-target)
+    - Explicit L1/L2 weight normalization (handles missing KPIs)
+    - Attach rate / confidence metadata
 
-    L1 (KPI → Pillar): Uses weighted average within each pillar.
+    L1 (KPI → Pillar): Weighted average within each pillar, weights normalized
+        to 1.0 among PRESENT KPIs.
         Source: CustomerConfig.dc2s_kpi_weights (DB) → kpi_definitions.py weight_l1 (fallback)
-    L2 (Pillar → Overall): Uses weighted sum across pillars.
+    L2 (Pillar → Overall): Weighted sum across pillars, weights normalized
+        to 1.0 among PRESENT pillars.
         Source: CustomerConfig.dc2s_pillar_weights (DB) → bootstrap defaults (fallback)
 
-    Normalizes AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes.
+    Returns:
+        (overall_health, pillar_averages) for backward compatibility.
+
+        Also sets _last_health_metadata on the function for callers that need
+        attach rate and confidence details.
     """
     # Config-aware L2 weights: {P1: {weight: 0.15}, P2: {weight: 0.20}, ...}
     l2_weights = get_weights_for_customer(customer_id) if customer_id is not None else get_current_weights()
@@ -64,8 +162,8 @@ def calculate_kpi_health(kpi_values, customer_id=None):
             kpi_values_for_calc[lookup_code] = value
     kpi_values = kpi_values_for_calc
 
-    # Group KPIs by pillar with L1-weighted scoring
-    pillar_scores = {}
+    # ── L1: Range-based scoring + weighted pillar scores ──
+    pillar_data = {}  # {pillar: {weighted_total, total_weight, kpi_count, kpi_details}}
 
     for kpi_code, value in kpi_values.items():
         if kpi_code not in DC2S_KPIS:
@@ -74,57 +172,102 @@ def calculate_kpi_health(kpi_values, customer_id=None):
         kpi_def = DC2S_KPIS[kpi_code]
         pillar = kpi_def.get('pillar', kpi_def.get('l1_category'))
 
-        if pillar not in pillar_scores:
-            pillar_scores[pillar] = {'weighted_total': 0.0, 'total_weight': 0.0}
+        if pillar not in pillar_data:
+            pillar_data[pillar] = {
+                'weighted_total': 0.0,
+                'total_weight': 0.0,
+                'kpi_count': 0,
+                'kpi_details': {},
+            }
 
-        # Extract target - handle dict or simple number
-        target_raw = kpi_def.get('target', 100)
-        if isinstance(target_raw, dict):
-            target = target_raw.get('value', 100)
-            operator = target_raw.get('operator', '>')
-        else:
-            target = target_raw
-            operator = '>'
+        # Range-based score (domain-calibrated bands → 0-100)
+        score, band = _range_based_score(value, kpi_def)
 
-        # Score: normalize value against target (0-100 scale)
-        if target and target > 0:
-            if operator == '<':
-                # Lower is better
-                score = min(100, (target / max(value, 0.01)) * 100)
-            else:
-                # Higher is better (default)
-                score = min(100, (value / target) * 100)
-        else:
-            score = value
-
-        # Apply L1 weight (KPI importance within pillar)
+        # L1 weight for this KPI
         weight_l1 = l1_weights.get(kpi_code, kpi_def.get('weight_l1', 0.0))
         if weight_l1 <= 0:
-            # Fallback: equal weight if L1 weight is missing/zero
-            weight_l1 = 1.0 / max(1, len([k for k, d in DC2S_KPIS.items() if d.get('pillar') == pillar]))
+            weight_l1 = 1.0 / max(1, PILLAR_KPI_COUNTS.get(pillar, 8))
 
-        pillar_scores[pillar]['weighted_total'] += score * weight_l1
-        pillar_scores[pillar]['total_weight'] += weight_l1
+        pillar_data[pillar]['weighted_total'] += score * weight_l1
+        pillar_data[pillar]['total_weight'] += weight_l1
+        pillar_data[pillar]['kpi_count'] += 1
+        pillar_data[pillar]['kpi_details'][kpi_code] = {
+            'value': value,
+            'score': score,
+            'band': band,
+            'weight_l1': weight_l1,
+        }
 
-    # Calculate L1 pillar averages (weighted by L1 KPI weights)
+    # ── L1: Normalize weights within each pillar ──
     pillar_averages = {}
-    for pillar, data in pillar_scores.items():
-        if data['total_weight'] > 0:
-            pillar_averages[pillar] = data['weighted_total'] / data['total_weight']
+    pillar_metadata = {}
+
+    for pillar, data in pillar_data.items():
+        total_defined = PILLAR_KPI_COUNTS.get(pillar, 8)
+        present = data['kpi_count']
+        raw_weight_sum = data['total_weight']
+
+        # Normalized weighted average (weights renormalize to 1.0 among present KPIs)
+        if raw_weight_sum > 0:
+            pillar_averages[pillar] = data['weighted_total'] / raw_weight_sum
         else:
             pillar_averages[pillar] = 0
 
-    # Calculate L2 overall weighted health (pillar weights)
+        # Attach rate: what fraction of this pillar's defined L1 weight is captured
+        # Sum of all defined L1 weights for this pillar
+        total_defined_weight = sum(
+            l1_weights.get(k, DC2S_KPIS[k].get('weight_l1', 0.0))
+            for k, d in DC2S_KPIS.items() if d.get('pillar') == pillar
+        )
+        pillar_attach_rate = raw_weight_sum / total_defined_weight if total_defined_weight > 0 else 0
+
+        pillar_metadata[pillar] = {
+            'score': round(pillar_averages[pillar], 1),
+            'kpi_present': present,
+            'kpi_total': total_defined,
+            'attach_rate': round(pillar_attach_rate, 3),
+            'kpi_details': data['kpi_details'],
+        }
+
+    # ── L2: Normalize pillar weights + compute overall health ──
     overall_health = 0
-    total_weight = 0
+    total_l2_weight = 0
+    total_defined_l2_weight = sum(
+        l2_weights.get(p, {}).get('weight', 0.2) for p in DC2S_PILLARS.keys()
+    )
 
     for pillar, score in pillar_averages.items():
         weight = l2_weights.get(pillar, {}).get('weight', 0.2)
         overall_health += score * weight
-        total_weight += weight
+        total_l2_weight += weight
 
-    if total_weight > 0:
-        overall_health = overall_health / total_weight
+    # Normalize across present pillars
+    if total_l2_weight > 0:
+        overall_health = overall_health / total_l2_weight
+
+    # Overall attach rate
+    overall_attach_rate = total_l2_weight / total_defined_l2_weight if total_defined_l2_weight > 0 else 0
+    total_kpis_present = sum(d['kpi_count'] for d in pillar_data.values())
+    total_kpis_defined = sum(PILLAR_KPI_COUNTS.get(p, 0) for p in DC2S_PILLARS.keys())
+
+    # Confidence grade
+    if overall_attach_rate >= 0.90:
+        confidence = 'high'
+    elif overall_attach_rate >= 0.60:
+        confidence = 'medium'
+    else:
+        confidence = 'low'
+
+    # Store metadata for callers that need it (avoids breaking return signature)
+    calculate_kpi_health._last_metadata = {
+        'attach_rate': round(overall_attach_rate, 3),
+        'confidence': confidence,
+        'kpis_present': total_kpis_present,
+        'kpis_defined': total_kpis_defined,
+        'pillars_present': len(pillar_data),
+        'pillars_defined': len(DC2S_PILLARS),
+        'pillar_details': pillar_metadata,
+    }
 
     return overall_health, pillar_averages
 
@@ -173,15 +316,16 @@ def get_dc2s_accounts():
             
             # Calculate health scores (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
             overall_health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
-            
-            # Determine status
-            if overall_health >= 80:
+            meta = calculate_kpi_health._last_metadata
+
+            # Status derived from range-based score
+            if overall_health >= 75:
                 status = 'healthy'
-            elif overall_health >= 60:
+            elif overall_health >= 40:
                 status = 'risk'
             else:
                 status = 'critical'
-            
+
             results.append({
                 'account_id': account.account_id,
                 'account_name': account.account_name,
@@ -189,9 +333,12 @@ def get_dc2s_accounts():
                 'region': account.region,
                 'overall_health': round(overall_health, 1),
                 'status': status,
+                'confidence': meta['confidence'],
+                'attach_rate': meta['attach_rate'],
                 'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
                 'metadata': account.profile_metadata or {},
                 'kpi_count': len(latest_kpis),
+                'kpi_total': meta['kpis_defined'],
                 'last_measured': latest_time.isoformat() if kpis else None
             })
         
@@ -244,32 +391,40 @@ def get_dc2s_account_detail(account_id):
         
         # Calculate health (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
         overall_health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
-        
-        # Group KPIs by pillar
+        meta = calculate_kpi_health._last_metadata
+
+        # Group KPIs by pillar — include range-based score and band from metadata
         kpis_by_pillar = {}
-        for kpi_code, value in latest_kpis.items():
-            if kpi_code in DC2S_KPIS:
-                kpi_def = DC2S_KPIS[kpi_code]
-                pillar = kpi_def.get('pillar', kpi_def.get('l1_category', 'Unknown'))
-                
-                if pillar not in kpis_by_pillar:
-                    kpis_by_pillar[pillar] = []
-                
-                # Extract target value
+        for pillar_code, pillar_meta in meta.get('pillar_details', {}).items():
+            kpis_by_pillar[pillar_code] = []
+            for kpi_code, kpi_detail in pillar_meta.get('kpi_details', {}).items():
+                kpi_def = DC2S_KPIS.get(kpi_code, {})
                 target_raw = kpi_def.get('target')
-                if isinstance(target_raw, dict):
-                    target_value = target_raw.get('value')
-                else:
-                    target_value = target_raw
-                
-                kpis_by_pillar[pillar].append({
+                target_value = target_raw.get('value') if isinstance(target_raw, dict) else target_raw
+
+                kpis_by_pillar[pillar_code].append({
                     'code': kpi_code,
-                    'name': kpi_def.get('name', kpi_def.get('kpi_name', kpi_code)),
-                    'value': value,
+                    'name': kpi_def.get('name', kpi_code),
+                    'value': kpi_detail['value'],
+                    'score': kpi_detail['score'],
+                    'band': kpi_detail['band'],
+                    'weight_l1': kpi_detail['weight_l1'],
                     'target': target_value,
                     'unit': kpi_def.get('unit', ''),
+                    'kpi_source_type': kpi_def.get('kpi_source_type', 'raw'),
                 })
-        
+
+        # Pillar-level attach rates
+        pillar_info = {}
+        for p, ps in pillar_scores.items():
+            pm = meta.get('pillar_details', {}).get(p, {})
+            pillar_info[p] = {
+                'score': round(ps, 1),
+                'attach_rate': pm.get('attach_rate', 0),
+                'kpi_present': pm.get('kpi_present', 0),
+                'kpi_total': pm.get('kpi_total', 0),
+            }
+
         return jsonify({
             'account_id': account.account_id,
             'account_name': account.account_name,
@@ -277,10 +432,13 @@ def get_dc2s_account_detail(account_id):
             'region': account.region,
             'vertical': account.vertical,
             'overall_health': round(overall_health, 1),
-            'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
+            'confidence': meta['confidence'],
+            'attach_rate': meta['attach_rate'],
+            'pillar_scores': pillar_info,
             'kpis_by_pillar': kpis_by_pillar,
             'metadata': account.profile_metadata or {},
-            'total_kpis': len(latest_kpis),
+            'total_kpis': meta['kpis_present'],
+            'total_kpis_defined': meta['kpis_defined'],
             'last_measured': kpis[0].measured_at.isoformat() if kpis else None
         })
         
@@ -362,25 +520,9 @@ def get_dc2s_account_kpis(account_id):
                 target_value = target_raw
                 operator = '>'
             
-            # Calculate status based on value vs target
-            status = None
-            if target_value is not None:
-                value_float = float(kpi.value)
-                target_float = float(target_value)
-                
-                if operator == '<':
-                    # Lower is better
-                    percentage = (target_float / max(value_float, 0.01)) * 100
-                else:
-                    # Higher is better (default)
-                    percentage = (value_float / target_float) * 100 if target_float > 0 else 0
-                
-                if percentage >= 90:
-                    status = 'healthy'
-                elif percentage >= 70:
-                    status = 'at_risk'
-                else:
-                    status = 'critical'
+            # Range-based status using domain-calibrated bands
+            value_float = float(kpi.value)
+            score, status = _range_based_score(value_float, kpi_def)
             
             result_kpis.append({
                 'kpi_id': kpi.kpi_id,
@@ -390,12 +532,15 @@ def get_dc2s_account_kpis(account_id):
                 'kpi_parameter': kpi_name,
                 'category': pillar,
                 'pillar': pillar,
-                'value': float(kpi.value),
+                'value': value_float,
+                'score': score,
+                'band': status,
                 'data': str(kpi.value),  # String format for compatibility
                 'target': float(target_value) if target_value else None,
                 'unit': kpi_def.get('unit', ''),
                 'weight': float(kpi.weight) if kpi.weight else None,
                 'status': status,
+                'kpi_source_type': kpi_def.get('kpi_source_type', 'raw'),
                 'measured_at': kpi.measured_at.isoformat() if kpi.measured_at else None,
                 'impact_level': kpi_def.get('impact_level', 'Medium'),
                 'measurement_frequency': kpi_def.get('frequency', 'Monthly'),
@@ -813,30 +958,38 @@ def get_dc2s_health_score(account_id):
         
         # Calculate overall health score and pillar scores (config-aware)
         overall_health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
-        
-        # Determine health status based on overall score
-        if overall_health >= 70:
+        meta = calculate_kpi_health._last_metadata
+
+        # Status from range-based scoring thresholds
+        if overall_health >= 75:
             health_status = 'healthy'
-        elif overall_health >= 50:
+        elif overall_health >= 40:
             health_status = 'at_risk'
         else:
             health_status = 'critical'
-        
-        # Format category scores for frontend
+
+        # Format category scores with attach rates for frontend
         category_scores = {}
         for pillar, score in pillar_scores.items():
+            pm = meta.get('pillar_details', {}).get(pillar, {})
             category_scores[pillar] = {
-                'score': score,
-                'weight': get_weights_for_customer(customer_id).get(pillar, {}).get('weight', 0.2)
+                'score': round(score, 1),
+                'weight': get_weights_for_customer(customer_id).get(pillar, {}).get('weight', 0.2),
+                'attach_rate': pm.get('attach_rate', 0),
+                'kpi_present': pm.get('kpi_present', 0),
+                'kpi_total': pm.get('kpi_total', 0),
             }
-        
+
         return jsonify({
             'account_id': account_id,
             'account_name': account.account_name,
             'overall_score': round(overall_health, 2),
             'health_status': health_status,
+            'confidence': meta['confidence'],
+            'attach_rate': meta['attach_rate'],
             'category_scores': category_scores,
-            'kpi_count': len(latest_kpis),
+            'kpi_count': meta['kpis_present'],
+            'kpi_total': meta['kpis_defined'],
             'month': month if not is_aggregate else None,
             'is_aggregate': is_aggregate,
             'timestamp': datetime.utcnow().isoformat()
