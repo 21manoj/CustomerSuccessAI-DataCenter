@@ -4,7 +4,8 @@ Provision New Data Center Customer
 ===================================
 
 Creates a new customer directory structure from _template AND provisions
-database records (Customer, CustomerConfig with default weights, admin User).
+database records (Customer, CustomerConfig with default weights, admin User,
+and optionally demo Accounts with UUID v7 identifiers).
 
 Usage:
     python3 provision_dc_customer.py --customer-id 18
@@ -12,20 +13,27 @@ Usage:
     python3 provision_dc_customer.py --customer-id 18 --dry-run
     python3 provision_dc_customer.py --customer-id 18 --skip-db   # filesystem only
     python3 provision_dc_customer.py --customer-id 18 --admin-email user@acme.com
+    python3 provision_dc_customer.py --customer-id 18 --demo-accounts 5
 
 This will:
   1. Create backend/verticals/customer18-dc2_s/ from _template
-  2. Replace placeholders ({CUSTOMER_ID}, customer9, 90001, etc.)
-  3. Create Customer row in PostgreSQL (vertical='dc2_s')
+  2. Replace placeholders ({CUSTOMER_ID}, customer9, etc.)
+  3. Create Customer row in PostgreSQL (vertical='dc2_s', uuid=UUID v7)
   4. Create CustomerConfig with default L2 pillar weights from bootstrap config
-  5. Create admin User with login credentials
+  5. Create admin User with login credentials (uuid=UUID v7)
+  6. Optionally create demo Account records with UUID v7 identifiers
+
+All entity IDs use UUID v7 format: {vertical}_{entity}_{uuid7}
+  - Customer: dc_cust_019471a3-b5c2-7def-...
+  - Account:  dc_acct_019471a3-b5c2-7def-...
+  - User:     dc_usr_019471a3-b5c2-7def-...
 
 Database provisioning requires DATABASE_URL to be set. Use --skip-db to skip.
 
 Template Location:
     backend/verticals/_template/
 
-Version: 3.0
+Version: 4.0
 Updated: February 2026
 """
 
@@ -51,7 +59,6 @@ VERTICALS_DIR = BASE_DIR
 
 # Template base customer ID (the customer ID used in _template files)
 TEMPLATE_CUSTOMER_ID = 9
-TEMPLATE_ACCOUNT_ID_START = 90000  # Template uses 90001, 90002, etc.
 
 # Text file extensions to process for placeholder replacement
 TEXT_EXTENSIONS = {
@@ -64,6 +71,40 @@ TEXT_EXTENSIONS = {
 SKIP_EXTENSIONS = {'.pyc', '.pyo', '.pyd', '.so', '.db', '.sqlite', '.lock', '.xlsx', '.xls', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.ico'}
 SKIP_DIRS = {'__pycache__', '.git', '.DS_Store', 'node_modules', '.venv', 'venv', '.idea', '.vscode'}
 
+# Demo account names for provisioning
+DEMO_ACCOUNT_NAMES = [
+    "ACME AI Labs",
+    "GPU Cluster Alpha",
+    "DeepMind Inference Center",
+    "NovaTech HPC Facility",
+    "Quantum Edge Computing",
+    "Atlas Data Forge",
+    "Pinnacle ML Operations",
+    "Horizon GPU Farm",
+    "Nexus Training Center",
+    "Titan AI Infrastructure",
+    "Stellar Compute Hub",
+    "Apex Neural Cluster",
+    "Vanguard AI Platform",
+    "Catalyst HPC Systems",
+    "Genesis Inference Lab",
+    "Meridian GPU Operations",
+    "Summit ML Pipeline",
+    "Eclipse Data Center",
+    "Polaris Compute Engine",
+    "Zenith AI Workbench",
+]
+
+# Demo account industries
+DEMO_INDUSTRIES = [
+    "ai_infrastructure", "hpc_research", "autonomous_vehicles",
+    "drug_discovery", "financial_modeling", "media_rendering",
+    "climate_simulation", "robotics", "nlp_services", "computer_vision"
+]
+
+# Demo account regions
+DEMO_REGIONS = ["US-West", "US-East", "EU-West", "EU-Central", "APAC"]
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -73,37 +114,27 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
+# UUID v7 ID GENERATION
+# ============================================================
+
+def _get_id_generator():
+    """Import and return id_generator module from backend."""
+    backend_dir = str(BASE_DIR.parent)
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+    from id_generator import generate_customer_id, generate_account_id, generate_user_id
+    return generate_customer_id, generate_account_id, generate_user_id
+
+
+# ============================================================
 # HELPER FUNCTIONS
 # ============================================================
 
-def calculate_account_id_start(customer_id: int) -> int:
-    """
-    Calculate starting account ID using formula: 10000 + customer_id * 1000
-    
-    Examples:
-        Customer 9  → 19000 (accounts 19001-19999)
-        Customer 17 → 27000 (accounts 27001-27999)
-        Customer 18 → 28000 (accounts 28001-28999)
-    """
-    return 10000 + customer_id * 1000
-
-
-def map_account_id(old_account_id: int, old_base: int, new_base: int) -> int:
-    """
-    Map an account ID from old customer to new customer.
-    
-    Example: 90001 (base 90000) → 18001 (base 18000)
-    """
-    offset = old_account_id - old_base
-    return new_base + offset
-
-
 def replace_placeholders(
-    content: str, 
-    customer_id: int, 
+    content: str,
+    customer_id: int,
     customer_name: str,
-    vertical_slug: str, 
-    account_id_start: int
+    vertical_slug: str,
 ) -> Tuple[str, int]:
     """
     Replace placeholders in file content.
@@ -111,23 +142,21 @@ def replace_placeholders(
     """
     replacement_count = 0
     result = content
-    
+
     # Standard placeholder replacements
     standard_replacements = {
         '{CUSTOMER_ID}': str(customer_id),
         '{CUSTOMER_NAME}': customer_name,
         '{VERTICAL_SLUG}': vertical_slug,
-        '{ACCOUNT_ID_START}': str(account_id_start),
-        '{ACCOUNT_ID_END}': str(account_id_start + 999),
         '{TIMESTAMP}': datetime.now().isoformat(),
     }
-    
+
     for placeholder, value in standard_replacements.items():
         if placeholder in result:
             replacement_count += result.count(placeholder)
             result = result.replace(placeholder, value)
-    
-    # Replace template customer references (customer9 → customerN)
+
+    # Replace template customer references (customer9 -> customerN)
     template_customer_patterns = [
         (f'customer{TEMPLATE_CUSTOMER_ID}', f'customer{customer_id}'),
         (f'Customer {TEMPLATE_CUSTOMER_ID}', f'Customer {customer_id}'),
@@ -135,51 +164,34 @@ def replace_placeholders(
         (f'CUSTOMER{TEMPLATE_CUSTOMER_ID}', f'CUSTOMER{customer_id}'),
         (f'customer_{TEMPLATE_CUSTOMER_ID}', f'customer_{customer_id}'),
     ]
-    
+
     for old, new in template_customer_patterns:
         if old in result:
             replacement_count += result.count(old)
             result = result.replace(old, new)
-    
-    # Replace account IDs (90001 → 18001, 90002 → 18002, etc.)
-    # Use regex to find all account IDs in the template range
-    account_id_pattern = re.compile(r'\b(9000[1-9]|900[1-9]\d|90[1-9]\d{2}|9[1-9]\d{3})\b')
-    
-    def replace_account_id(match):
-        old_id = int(match.group(1))
-        # Only replace if it's in the template account range (90001-90999)
-        if TEMPLATE_ACCOUNT_ID_START < old_id <= TEMPLATE_ACCOUNT_ID_START + 999:
-            new_id = map_account_id(old_id, TEMPLATE_ACCOUNT_ID_START, account_id_start)
-            return str(new_id)
-        return match.group(0)
-    
-    new_result, count = account_id_pattern.subn(replace_account_id, result)
-    if count > 0:
-        replacement_count += count
-        result = new_result
-    
+
     return result, replacement_count
 
 
 def should_process_file(file_path: Path) -> bool:
     """Check if file should be processed (skip binary files, etc.)"""
-    
+
     # Skip binary/compiled files
     if file_path.suffix.lower() in SKIP_EXTENSIONS:
         return False
-    
+
     # Skip specific directories
     if any(skip_dir in file_path.parts for skip_dir in SKIP_DIRS):
         return False
-    
+
     # Allow specific hidden files
     allowed_hidden = {'.gitignore', '.env', '.env.example', '.editorconfig'}
-    
+
     # Skip other hidden files/dirs
     for part in file_path.parts:
         if part.startswith('.') and part not in allowed_hidden:
             return False
-    
+
     return True
 
 
@@ -189,12 +201,11 @@ def is_text_file(file_path: Path) -> bool:
 
 
 def copy_and_replace_file(
-    src: Path, 
-    dst: Path, 
-    customer_id: int, 
+    src: Path,
+    dst: Path,
+    customer_id: int,
     customer_name: str,
-    vertical_slug: str, 
-    account_id_start: int,
+    vertical_slug: str,
     dry_run: bool = False
 ) -> Tuple[bool, int]:
     """
@@ -206,20 +217,20 @@ def copy_and_replace_file(
         if is_text_file(src):
             try:
                 content = src.read_text(encoding='utf-8', errors='ignore')
-                _, count = replace_placeholders(content, customer_id, customer_name, vertical_slug, account_id_start)
+                _, count = replace_placeholders(content, customer_id, customer_name, vertical_slug)
                 return True, count
             except:
                 return True, 0
         return True, 0
-    
+
     # Create destination directory if needed
     dst.parent.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         if is_text_file(src):
             # Text file - replace placeholders
             content = src.read_text(encoding='utf-8', errors='ignore')
-            content, count = replace_placeholders(content, customer_id, customer_name, vertical_slug, account_id_start)
+            content, count = replace_placeholders(content, customer_id, customer_name, vertical_slug)
             dst.write_text(content, encoding='utf-8')
             return True, count
         else:
@@ -243,45 +254,52 @@ def validate_template() -> Tuple[bool, List[str]]:
     Returns (is_valid, list_of_issues)
     """
     issues = []
-    
+
     if not TEMPLATE_DIR.exists():
         issues.append(f"Template directory not found: {TEMPLATE_DIR}")
         return False, issues
-    
+
     # Check for expected directories
     expected_dirs = ['data', 'scripts', 'services']
     for dir_name in expected_dirs:
         if not (TEMPLATE_DIR / dir_name).exists():
             issues.append(f"Missing expected directory: _template/{dir_name}/")
-    
+
     # Check for at least some files
     file_count = sum(1 for _ in TEMPLATE_DIR.rglob('*') if _.is_file())
     if file_count < 5:
         issues.append(f"Template has very few files ({file_count}). Is it complete?")
-    
+
     return len(issues) == 0, issues
 
+
+# ============================================================
+# DATABASE PROVISIONING
+# ============================================================
 
 def provision_database(
     customer_id: int,
     customer_name: str,
     admin_email: Optional[str] = None,
     admin_password: Optional[str] = None,
+    demo_accounts: int = 0,
     dry_run: bool = False
 ) -> bool:
     """
     Provision database records for a new DC customer.
 
     Creates:
-        - Customer row (with vertical='dc2_s')
+        - Customer row (with vertical='dc2_s', uuid=UUID v7)
         - CustomerConfig row (with default L2 pillar weights and L1 KPI weights)
-        - Admin User row (with vertical='dc2_s', role='admin')
+        - Admin User row (with vertical='dc2_s', role='admin', uuid=UUID v7)
+        - Optionally N demo Account rows (with UUID v7 identifiers)
 
     Args:
         customer_id: The customer ID (must match filesystem provisioning)
         customer_name: Human-readable customer name
         admin_email: Email for admin user (defaults to admin@customer{N}.cspulse.local)
         admin_password: Password for admin user (defaults to 'changeme123')
+        demo_accounts: Number of demo accounts to create (0 = none)
         dry_run: If True, show what would happen without writing to DB
 
     Returns:
@@ -294,8 +312,11 @@ def provision_database(
 
     try:
         from app import app, db
-        from models import Customer, CustomerConfig, User
+        from models import Customer, CustomerConfig, User, Account
         from werkzeug.security import generate_password_hash
+        from id_generator import generate_customer_id as gen_cust_id
+        from id_generator import generate_account_id as gen_acct_id
+        from id_generator import generate_user_id as gen_user_id
     except ImportError as e:
         logger.error(f"Cannot import Flask app/models: {e}")
         logger.error("DB provisioning requires DATABASE_URL to be set. Use --skip-db to skip.")
@@ -303,6 +324,9 @@ def provision_database(
 
     admin_email = admin_email or f"admin@customer{customer_id}.cspulse.local"
     admin_password = admin_password or "changeme123"
+
+    # Generate UUID v7 for customer
+    customer_uuid = gen_cust_id('dc')
 
     # Load default weights from bootstrap config
     bootstrap_config_path = TEMPLATE_DIR / "journey" / "config" / "bootstrap_weights_config.json"
@@ -314,7 +338,7 @@ def provision_database(
             with open(bootstrap_config_path) as f:
                 bootstrap = json.load(f)
 
-            # Extract L2 pillar weights — map P1-P5 names to 2-letter codes
+            # Extract L2 pillar weights -- map P1-P5 names to 2-letter codes
             pillar_name_to_code = {
                 "P1_deployment_velocity": "DV",
                 "P2_operational_stability": "OS",
@@ -341,9 +365,16 @@ def provision_database(
 
     if dry_run:
         print(f"\n  [DRY-RUN] Would create database records:")
-        print(f"    - Customer: id={customer_id}, name='{customer_name}', vertical='dc2_s'")
+        print(f"    - Customer: id={customer_id}, uuid={customer_uuid}, name='{customer_name}', vertical='dc2_s'")
         print(f"    - CustomerConfig: vertical='dc2_s', pillar_weights={default_pillar_weights}")
         print(f"    - User: email='{admin_email}', role='admin', vertical='dc2_s'")
+        if demo_accounts > 0:
+            print(f"    - {demo_accounts} demo Account(s) with UUID v7 identifiers:")
+            for i in range(min(demo_accounts, 5)):
+                name = DEMO_ACCOUNT_NAMES[i % len(DEMO_ACCOUNT_NAMES)]
+                print(f"      - Account: '{name}' (uuid=dc_acct_<uuid7>)")
+            if demo_accounts > 5:
+                print(f"      ... and {demo_accounts - 5} more")
         return True
 
     with app.app_context():
@@ -352,7 +383,7 @@ def provision_database(
             existing = Customer.query.filter_by(customer_id=customer_id).first()
             if existing:
                 logger.warning(f"Customer {customer_id} already exists in DB ('{existing.customer_name}'). Skipping DB provisioning.")
-                print(f"  DB: Customer {customer_id} already exists — skipping")
+                print(f"  DB: Customer {customer_id} already exists -- skipping")
                 return True
 
             # Check email uniqueness
@@ -361,16 +392,17 @@ def provision_database(
                 logger.warning(f"Email '{admin_email}' already in use. Skipping user creation.")
                 admin_email = None  # Skip user creation
 
-            # 1. Create Customer
+            # 1. Create Customer with UUID v7
             customer = Customer(
                 customer_id=customer_id,
                 customer_name=customer_name,
                 email=f"info@customer{customer_id}.cspulse.local",
-                vertical='dc2_s'
+                vertical='dc2_s',
+                uuid=customer_uuid
             )
             db.session.add(customer)
             db.session.flush()  # Get the customer_id assigned
-            print(f"  DB: Created Customer id={customer_id}, name='{customer_name}'")
+            print(f"  DB: Created Customer id={customer_id}, uuid={customer_uuid}")
 
             # 2. Create CustomerConfig with default DC2_S weights
             config = CustomerConfig(
@@ -387,8 +419,9 @@ def provision_database(
             db.session.add(config)
             print(f"  DB: Created CustomerConfig with L2 weights: {default_pillar_weights}")
 
-            # 3. Create Admin User
+            # 3. Create Admin User with UUID v7
             if admin_email:
+                user_uuid = gen_user_id('dc')
                 user = User(
                     customer_id=customer_id,
                     user_name=f"{customer_name} Admin",
@@ -396,10 +429,53 @@ def provision_database(
                     password_hash=generate_password_hash(admin_password),
                     vertical='dc2_s',
                     role='admin',
-                    active=True
+                    active=True,
+                    uuid=user_uuid,
+                    customer_uuid=customer_uuid
                 )
                 db.session.add(user)
-                print(f"  DB: Created admin user: {admin_email}")
+                print(f"  DB: Created admin user: {admin_email} (uuid={user_uuid})")
+
+            # 4. Create Demo Accounts with UUID v7
+            if demo_accounts > 0:
+                import random
+                print(f"  DB: Creating {demo_accounts} demo accounts...")
+                created_accounts = []
+                for i in range(demo_accounts):
+                    acct_uuid = gen_acct_id('dc')
+                    acct_name = DEMO_ACCOUNT_NAMES[i % len(DEMO_ACCOUNT_NAMES)]
+                    # Add suffix if we cycle through names
+                    if i >= len(DEMO_ACCOUNT_NAMES):
+                        acct_name = f"{acct_name} #{i // len(DEMO_ACCOUNT_NAMES) + 1}"
+                    industry = DEMO_INDUSTRIES[i % len(DEMO_INDUSTRIES)]
+                    region = DEMO_REGIONS[i % len(DEMO_REGIONS)]
+                    revenue = round(random.uniform(500000, 15000000), 2)
+
+                    account = Account(
+                        customer_id=customer_id,
+                        account_name=acct_name,
+                        uuid=acct_uuid,
+                        customer_uuid=customer_uuid,
+                        vertical='dc2_s',
+                        account_status='active',
+                        industry=industry,
+                        region=region,
+                        revenue=revenue,
+                        profile_metadata={
+                            "vertical": "dc2_s",
+                            "demo_account": True,
+                            "provisioned_at": datetime.now().isoformat(),
+                            "gpu_model": random.choice(["H100", "A100", "H200", "B200"]),
+                            "gpu_count": random.choice([8, 16, 32, 64, 128, 256]),
+                        }
+                    )
+                    db.session.add(account)
+                    created_accounts.append((acct_name, acct_uuid))
+
+                db.session.flush()
+                for name, uuid in created_accounts:
+                    print(f"    - {name}: {uuid}")
+                print(f"  DB: {demo_accounts} demo accounts created")
 
             db.session.commit()
             print(f"  DB: All records committed successfully")
@@ -412,6 +488,10 @@ def provision_database(
             return False
 
 
+# ============================================================
+# MAIN PROVISIONING FUNCTION
+# ============================================================
+
 def provision_customer(
     customer_id: int,
     customer_name: Optional[str] = None,
@@ -420,7 +500,8 @@ def provision_customer(
     force: bool = False,
     skip_db: bool = False,
     admin_email: Optional[str] = None,
-    admin_password: Optional[str] = None
+    admin_password: Optional[str] = None,
+    demo_accounts: int = 0
 ) -> bool:
     """
     Provision new customer directory from template and optionally set up database.
@@ -434,48 +515,48 @@ def provision_customer(
         skip_db: If True, skip database provisioning (filesystem only)
         admin_email: Email for admin user (optional)
         admin_password: Password for admin user (optional)
+        demo_accounts: Number of demo accounts to create (0 = none)
 
     Returns:
         True if successful, False otherwise
     """
-    
+
     # Validate template
     is_valid, issues = validate_template()
     if not is_valid:
         for issue in issues:
             logger.error(issue)
         return False
-    
+
     if issues:  # Warnings
         for issue in issues:
             logger.warning(issue)
-    
+
     # Calculate values
-    account_id_start = calculate_account_id_start(customer_id)
     customer_name = customer_name or f"Customer {customer_id}"
     customer_dir_name = f"customer{customer_id}-{vertical_slug}"
     customer_dir = VERTICALS_DIR / customer_dir_name
-    
+
     # Check for existing directory
     if customer_dir.exists():
         file_count = sum(1 for _ in customer_dir.rglob('*') if _.is_file())
-        
+
         if dry_run:
-            print(f"⚠️  [DRY-RUN] Directory exists: {customer_dir_name}/ ({file_count} files)")
+            print(f"  [DRY-RUN] Directory exists: {customer_dir_name}/ ({file_count} files)")
             print(f"   Would need to delete and recreate")
             return True
-        
-        print(f"⚠️  Customer directory already exists: {customer_dir_name}/ ({file_count} files)")
-        
+
+        print(f"  Customer directory already exists: {customer_dir_name}/ ({file_count} files)")
+
         if not force:
             response = input("Delete and recreate? (yes/no): ")
             if response.lower() != 'yes':
                 print("Aborted.")
                 return False
-        
+
         shutil.rmtree(customer_dir)
-        print(f"   ✅ Deleted existing directory")
-    
+        print(f"   Deleted existing directory")
+
     # Print header
     mode = "[DRY-RUN] " if dry_run else ""
     print()
@@ -488,12 +569,14 @@ def provision_customer(
     print(f"  Customer ID:      {customer_id}")
     print(f"  Customer Name:    {customer_name}")
     print(f"  Vertical:         {vertical_slug}")
-    print(f"  Account ID Range: {account_id_start + 1} - {account_id_start + 999}")
+    print(f"  ID Format:        UUID v7 (dc_acct_<uuid7>)")
+    if demo_accounts > 0:
+        print(f"  Demo Accounts:    {demo_accounts}")
     print()
-    
+
     # Copy directory structure
-    print(f"📁 {'Analyzing' if dry_run else 'Copying'} directory structure...")
-    
+    print(f"  {'Analyzing' if dry_run else 'Copying'} directory structure...")
+
     stats = {
         'files_total': 0,
         'files_copied': 0,
@@ -502,37 +585,37 @@ def provision_customer(
         'errors': 0,
         'skipped': 0
     }
-    
+
     for root, dirs, files in os.walk(TEMPLATE_DIR):
         # Filter out directories to skip
         dirs[:] = [d for d in dirs if should_process_file(Path(root) / d)]
-        
+
         for file in files:
             src_file = Path(root) / file
             stats['files_total'] += 1
-            
+
             if not should_process_file(src_file):
                 stats['skipped'] += 1
                 continue
-            
+
             # Calculate relative path
             rel_path = src_file.relative_to(TEMPLATE_DIR)
-            
+
             # Replace customer9 in filename/path with customer{N}
             rel_path_str = str(rel_path)
             if f'customer{TEMPLATE_CUSTOMER_ID}' in rel_path_str:
                 rel_path_str = rel_path_str.replace(f'customer{TEMPLATE_CUSTOMER_ID}', f'customer{customer_id}')
                 rel_path = Path(rel_path_str)
-            
+
             dst_file = customer_dir / rel_path
-            
+
             # Copy and replace
             success, replacement_count = copy_and_replace_file(
-                src_file, dst_file, 
-                customer_id, customer_name, vertical_slug, account_id_start,
+                src_file, dst_file,
+                customer_id, customer_name, vertical_slug,
                 dry_run=dry_run
             )
-            
+
             if success:
                 stats['files_copied'] += 1
                 if replacement_count > 0:
@@ -540,62 +623,67 @@ def provision_customer(
                     stats['total_replacements'] += replacement_count
             else:
                 stats['errors'] += 1
-    
+
     # Print stats
     action = "Would copy" if dry_run else "Copied"
-    print(f"   ✅ {action} {stats['files_copied']} files")
-    print(f"   ✅ {stats['files_with_replacements']} files with placeholder replacements")
-    print(f"   ✅ {stats['total_replacements']} total replacements made")
+    print(f"   {action} {stats['files_copied']} files")
+    print(f"   {stats['files_with_replacements']} files with placeholder replacements")
+    print(f"   {stats['total_replacements']} total replacements made")
     if stats['skipped'] > 0:
-        print(f"   ⏭️  Skipped {stats['skipped']} files (binary/cache)")
+        print(f"   Skipped {stats['skipped']} files (binary/cache)")
     if stats['errors'] > 0:
-        print(f"   ❌ {stats['errors']} errors")
+        print(f"   {stats['errors']} errors")
     print()
-    
+
     # ============================================================
     # DATABASE PROVISIONING
     # ============================================================
     db_success = True
     if not skip_db:
-        print("📊 Database provisioning...")
+        print("  Database provisioning...")
         db_success = provision_database(
             customer_id=customer_id,
             customer_name=customer_name,
             admin_email=admin_email,
             admin_password=admin_password,
+            demo_accounts=demo_accounts,
             dry_run=dry_run
         )
         if not db_success and not dry_run:
             print("  WARNING: DB provisioning failed. Filesystem provisioning succeeded.")
             print("  You can retry DB setup later or use --skip-db to skip it.")
     else:
-        print("📊 Database provisioning: SKIPPED (--skip-db)")
+        print("  Database provisioning: SKIPPED (--skip-db)")
 
     # Summary
     print()
     print("=" * 80)
     status = "PREVIEW COMPLETE" if dry_run else "PROVISIONING COMPLETE!"
-    print(f"✅ {status}")
+    print(f"  {status}")
     print("=" * 80)
     print()
 
     if not dry_run:
         print(f"Created: {customer_dir_name}/")
         if not skip_db and db_success:
-            print(f"  DB: Customer, CustomerConfig, and admin User created")
+            print(f"  DB: Customer, CustomerConfig, and admin User created (UUID v7)")
             print(f"  Admin login: admin@customer{customer_id}.cspulse.local / changeme123")
+            if demo_accounts > 0:
+                print(f"  DB: {demo_accounts} demo accounts created with UUID v7 identifiers")
         print()
-        print("📋 Next Steps:")
+        print("Next Steps:")
         print(f"  1. Upload data (Excel or CSV) via the onboarding wizard")
         print(f"     OR place files in {customer_dir_name}/data/")
         print()
         print(f"  2. For demo mode (Wizard A):")
         print(f"     cd {customer_dir_name}/journey/wizard_a")
-        print(f"     python3 wizard_a_journey_generator.py")
+        print(f"     python3 wizard_journey_generator.py --accounts {demo_accounts or 10} \\")
+        print(f"       --pattern-mix '{{\"crisis\":0.15,\"churn\":0.10,\"stable\":0.30,\"growth\":0.25,\"rescue\":0.20}}' \\")
+        print(f"       --output-dir outputs/wizard_runs/run_001")
         print()
     else:
         print("To provision for real, run without --dry-run flag")
-    
+
     # Log to file
     log_file = VERTICALS_DIR / "provisioning.log"
     with open(log_file, 'a') as f:
@@ -605,10 +693,15 @@ def provision_customer(
         f.write(f"customer_name={customer_name} | ")
         f.write(f"vertical={vertical_slug} | ")
         f.write(f"files={stats['files_copied']} | ")
-        f.write(f"replacements={stats['total_replacements']}\n")
-    
+        f.write(f"replacements={stats['total_replacements']} | ")
+        f.write(f"demo_accounts={demo_accounts}\n")
+
     return True
 
+
+# ============================================================
+# CLI ENTRY POINT
+# ============================================================
 
 def main():
     parser = argparse.ArgumentParser(
@@ -618,25 +711,25 @@ def main():
 Examples:
   # Preview what would happen (recommended first step)
   python3 provision_dc_customer.py --customer-id 18 --dry-run
-  
+
   # Provision with default settings
   python3 provision_dc_customer.py --customer-id 18
-  
-  # Provision with custom name
-  python3 provision_dc_customer.py --customer-id 18 --customer-name "Acme Corp"
-  
-  # Force overwrite existing (for CI/CD)
-  python3 provision_dc_customer.py --customer-id 18 --force
 
-Account ID Formula:
-  account_id_start = 10000 + customer_id * 1000
-  
-  Customer 17 → accounts 27001-27999
-  Customer 18 → accounts 28001-28999
-  Customer 19 → accounts 29001-29999
+  # Provision with custom name and 5 demo accounts
+  python3 provision_dc_customer.py --customer-id 18 --customer-name "Acme Corp" --demo-accounts 5
+
+  # Force overwrite existing (for CI/CD)
+  python3 provision_dc_customer.py --customer-id 18 --force --demo-accounts 10
+
+  # Filesystem only (no database)
+  python3 provision_dc_customer.py --customer-id 18 --skip-db
+
+IDs:
+  All entities use UUID v7 format: dc_{entity}_{uuid7}
+  Example: dc_acct_019471a3-b5c2-7def-8a12-4b6e8f3d9c01
         """
     )
-    
+
     parser.add_argument(
         '--customer-id',
         type=int,
@@ -682,16 +775,22 @@ Account ID Formula:
         default=None,
         help='Admin user password (defaults to changeme123)'
     )
+    parser.add_argument(
+        '--demo-accounts',
+        type=int,
+        default=0,
+        help='Number of demo accounts to create with UUID v7 (default: 0)'
+    )
 
     args = parser.parse_args()
 
     # Validate customer ID
     if args.customer_id < 1:
-        print("❌ Error: Customer ID must be positive")
+        print("Error: Customer ID must be positive")
         exit(1)
 
-    if args.customer_id > 9999:
-        print("❌ Error: Customer ID must be less than 10000 (account ID overflow)")
+    if args.demo_accounts < 0:
+        print("Error: --demo-accounts must be >= 0")
         exit(1)
 
     success = provision_customer(
@@ -702,9 +801,10 @@ Account ID Formula:
         force=args.force,
         skip_db=args.skip_db,
         admin_email=args.admin_email,
-        admin_password=args.admin_password
+        admin_password=args.admin_password,
+        demo_accounts=args.demo_accounts
     )
-    
+
     exit(0 if success else 1)
 
 

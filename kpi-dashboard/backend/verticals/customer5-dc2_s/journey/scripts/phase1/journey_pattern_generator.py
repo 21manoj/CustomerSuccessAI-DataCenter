@@ -1098,7 +1098,299 @@ class JourneyPatternGenerator:
         )
         
         return journey
-    def _generate_outcome(self, phase: JourneyPhase, health: float, 
+
+    def generate_stable_steady_journey(
+        self,
+        account_id: str,
+        account_name: str,
+        start_date: datetime,
+        total_weeks: int = 52
+    ) -> AccountJourney:
+        """
+        Generate stable-steady journey pattern
+
+        Pattern:
+        - Starts moderate-healthy (78)
+        - Stays in a narrow band (75-82) with minor fluctuations
+        - No major crises, no significant growth
+        - Represents a "steady state" customer that needs attention to unlock expansion
+        - Ends at roughly the same level (80)
+        """
+
+        pattern_config = {
+            'start_health': 78,
+            'band_center': 78,
+            'band_width': 4,
+            'end_health': 80,
+            'volatility': 0.06
+        }
+
+        # Simulate steady-state trajectory with mean reversion
+        trajectory = []
+        current_health = pattern_config['start_health']
+        band_center = pattern_config['band_center']
+        band_width = pattern_config['band_width']
+
+        for week_num in range(1, total_weeks + 1):
+            # Determine phase based on health
+            if current_health >= 82:
+                phase = JourneyPhase.HEALTHY
+            elif current_health >= 72:
+                phase = JourneyPhase.MODERATE
+            else:
+                phase = JourneyPhase.AT_RISK
+
+            trajectory.append((week_num, current_health, phase))
+
+            # Mean-reverting random walk within band
+            drift = (band_center - current_health) * 0.15  # Pull toward center
+            noise = random.uniform(-band_width, band_width) * 0.3
+            current_health += drift + noise
+            current_health = max(68, min(88, current_health))
+
+        # Generate events
+        events = []
+        previous_health = pattern_config['start_health']
+        total_csm_investment = 0.0
+
+        for week_num, health, phase in trajectory:
+            week_date = start_date + timedelta(weeks=week_num - 1)
+
+            # Low event frequency - stable accounts are quiet
+            if phase == JourneyPhase.HEALTHY:
+                num_events = 1 if random.random() < 0.25 else 0
+            elif phase == JourneyPhase.MODERATE:
+                num_events = 1 if random.random() < 0.3 else 0
+            else:
+                num_events = 1 if random.random() < 0.5 else 0
+
+            for _ in range(num_events):
+                event_template = self.event_library.get_random_event(phase)
+                if not event_template:
+                    continue
+
+                csm_action = self.action_generator.generate_action(
+                    phase, previous_health, health
+                )
+                if csm_action:
+                    total_csm_investment += csm_action.cost_estimate
+
+                outcome = self._generate_outcome(phase, health, previous_health)
+
+                event = JourneyEvent(
+                    week_number=week_num,
+                    date=week_date.strftime('%Y-%m-%d'),
+                    phase=phase,
+                    event_type=event_template.event_type,
+                    description=event_template.description,
+                    sentiment=event_template.sentiment,
+                    sentiment_value=event_template.sentiment_value,
+                    health_score_before=previous_health,
+                    health_score_after=health,
+                    csm_action=csm_action,
+                    outcome=outcome
+                )
+                events.append(event)
+
+            previous_health = health
+
+        health_scores = [h for _, h, _ in trajectory]
+        summary = {
+            'pattern_type': 'stable_steady',
+            'total_events': len(events),
+            'average_health': round(sum(health_scores) / len(health_scores), 2),
+            'health_std_dev': round(
+                (sum((h - sum(health_scores)/len(health_scores))**2 for h in health_scores) / len(health_scores)) ** 0.5, 2
+            ),
+            'total_csm_investment': round(total_csm_investment, 2),
+            'health_change': round(trajectory[-1][1] - trajectory[0][1], 2),
+            'financial_impact': 'Flat ARR - renewal at risk without expansion plan',
+            'key_observations': [
+                'Consistent performance within narrow band',
+                'No major crises but no growth either',
+                'Renewal likely but no expansion without CSM intervention',
+                'Needs proactive engagement to unlock growth',
+                'Risk of competitor displacement due to complacency'
+            ]
+        }
+
+        journey = AccountJourney(
+            account_id=account_id,
+            account_name=account_name,
+            pattern_type='stable_steady',
+            start_date=start_date.strftime('%Y-%m-%d'),
+            end_date=(start_date + timedelta(weeks=total_weeks)).strftime('%Y-%m-%d'),
+            starting_health=trajectory[0][1],
+            ending_health=trajectory[-1][1],
+            lowest_health=min(health_scores),
+            highest_health=max(health_scores),
+            total_weeks=total_weeks,
+            events=events,
+            summary=summary
+        )
+
+        return journey
+
+    def generate_near_churn_rescue_journey(
+        self,
+        account_id: str,
+        account_name: str,
+        start_date: datetime,
+        total_weeks: int = 52
+    ) -> AccountJourney:
+        """
+        Generate near-churn rescue journey pattern
+
+        Pattern:
+        - Starts moderate (72)
+        - Declines steadily (like ignored_churn) to near-churn level (~30) by week 26
+        - CSM intervention at week 26-28 triggers rescue
+        - Recovery phase weeks 28-40 back to moderate (65)
+        - Growth phase weeks 40-52 to healthy (85)
+        - Key demo scenario: "near churn to rescue to expansion"
+        """
+
+        # Custom trajectory: decline -> rescue -> growth
+        trajectory = []
+        current_health = 72.0
+
+        for week_num in range(1, total_weeks + 1):
+            if week_num <= 10:
+                # Early decline - warning signs
+                phase = JourneyPhase.MODERATE
+                weekly_change = -1.5 + random.uniform(-1, 0.5)
+            elif week_num <= 20:
+                # Accelerating decline - at risk
+                phase = JourneyPhase.AT_RISK
+                weekly_change = -2.0 + random.uniform(-1, 0.3)
+            elif week_num <= 26:
+                # Near churn - crisis
+                phase = JourneyPhase.CRISIS
+                weekly_change = -1.0 + random.uniform(-1.5, 0.2)
+            elif week_num <= 30:
+                # Rescue intervention! Recovery phase begins
+                phase = JourneyPhase.RECOVERY
+                weekly_change = 3.0 + random.uniform(0, 3)
+            elif week_num <= 40:
+                # Steady recovery
+                phase = JourneyPhase.MODERATE
+                weekly_change = 2.0 + random.uniform(-0.5, 2)
+            else:
+                # Growth phase
+                phase = JourneyPhase.GROWTH
+                weekly_change = 1.0 + random.uniform(-0.5, 1.5)
+
+            current_health += weekly_change
+            current_health = max(25, min(95, current_health))
+            trajectory.append((week_num, current_health, phase))
+
+        # Generate events
+        events = []
+        previous_health = 72.0
+        total_csm_investment = 0.0
+
+        for week_num, health, phase in trajectory:
+            week_date = start_date + timedelta(weeks=week_num - 1)
+
+            # Event frequency varies by phase
+            if phase == JourneyPhase.CRISIS:
+                num_events = random.randint(2, 4)
+            elif phase == JourneyPhase.RECOVERY:
+                num_events = random.randint(2, 3)
+            elif phase == JourneyPhase.AT_RISK:
+                # Minimal events during decline (CSM is neglecting)
+                num_events = random.randint(0, 1)
+            elif phase == JourneyPhase.MODERATE:
+                if week_num <= 10:
+                    num_events = random.randint(0, 1)  # Still neglected early
+                else:
+                    num_events = random.randint(1, 2)  # Active after rescue
+            elif phase == JourneyPhase.GROWTH:
+                num_events = random.randint(1, 3)
+            else:
+                num_events = 1 if random.random() < 0.3 else 0
+
+            for _ in range(num_events):
+                event_template = self.event_library.get_random_event(phase)
+                if not event_template:
+                    continue
+
+                # During decline (weeks 1-26), minimal CSM action
+                # During rescue (weeks 26+), active CSM
+                csm_action = None
+                if week_num <= 26:
+                    if phase == JourneyPhase.CRISIS and random.random() < 0.2:
+                        csm_action = self.action_generator.generate_action(
+                            phase, previous_health, health
+                        )
+                else:
+                    csm_action = self.action_generator.generate_action(
+                        phase, previous_health, health
+                    )
+
+                if csm_action:
+                    total_csm_investment += csm_action.cost_estimate
+
+                outcome = self._generate_outcome(phase, health, previous_health)
+
+                event = JourneyEvent(
+                    week_number=week_num,
+                    date=week_date.strftime('%Y-%m-%d'),
+                    phase=phase,
+                    event_type=event_template.event_type,
+                    description=event_template.description,
+                    sentiment=event_template.sentiment,
+                    sentiment_value=event_template.sentiment_value,
+                    health_score_before=previous_health,
+                    health_score_after=health,
+                    csm_action=csm_action,
+                    outcome=outcome
+                )
+                events.append(event)
+
+            previous_health = health
+
+        health_scores = [h for _, h, _ in trajectory]
+        rescue_week = 27  # The week rescue intervention begins
+        lowest_idx = health_scores.index(min(health_scores))
+        summary = {
+            'pattern_type': 'near_churn_rescue',
+            'total_events': len(events),
+            'decline_duration_weeks': rescue_week - 1,
+            'lowest_health_week': trajectory[lowest_idx][0],
+            'rescue_week': rescue_week,
+            'recovery_duration_weeks': total_weeks - rescue_week,
+            'total_csm_investment': round(total_csm_investment, 2),
+            'health_recovered': round(trajectory[-1][1] - min(health_scores), 2),
+            'financial_impact': '25% ARR expansion after rescue',
+            'key_success_factors': [
+                'Late but decisive CSM intervention at week 27',
+                'Executive escalation caught the decline',
+                'Dedicated rescue team assembled',
+                'Root cause analysis and remediation plan',
+                'Rebuilding trust through over-delivery',
+                'Turning rescued account into expansion opportunity'
+            ]
+        }
+
+        journey = AccountJourney(
+            account_id=account_id,
+            account_name=account_name,
+            pattern_type='near_churn_rescue',
+            start_date=start_date.strftime('%Y-%m-%d'),
+            end_date=(start_date + timedelta(weeks=total_weeks)).strftime('%Y-%m-%d'),
+            starting_health=trajectory[0][1],
+            ending_health=trajectory[-1][1],
+            lowest_health=min(health_scores),
+            highest_health=max(health_scores),
+            total_weeks=total_weeks,
+            events=events,
+            summary=summary
+        )
+
+        return journey
+
+    def _generate_outcome(self, phase: JourneyPhase, health: float,
                          previous_health: float) -> str:
         """Generate outcome description based on phase and health change"""
         
@@ -1256,7 +1548,7 @@ if __name__ == "__main__":
     start_date = datetime(2024, 1, 1)
     
     journey = generator.generate_crisis_recovery_journey(
-        account_id="15007",
+        account_id="10007",
         account_name="Legacy Manufacturing Corp",
         start_date=start_date,
         total_weeks=52
@@ -1275,9 +1567,9 @@ if __name__ == "__main__":
     print("Exporting journey data...")
     print("-" * 70)
     
-    export_journey_to_json(journey, "/home/claude/account_15007_journey.json")
-    export_journey_to_csv(journey, "/home/claude/account_15007_events.csv")
-    generate_journey_report(journey, "/home/claude/account_15007_report.md")
+    export_journey_to_json(journey, "/home/claude/account_10007_journey.json")
+    export_journey_to_csv(journey, "/home/claude/account_10007_events.csv")
+    generate_journey_report(journey, "/home/claude/account_10007_report.md")
     
     print("\n" + "="*70)
     print("PHASE 1 COMPLETE! ✅")
