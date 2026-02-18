@@ -6,6 +6,110 @@
 
 ---
 
+## 0. Onboarding Wizard & Journey System Evaluation
+
+### Overview
+
+The platform's core value proposition is: **capture customer journeys, identify incremental expansion opportunities (Training, Capacity Upgrade, Renewal Signal), and drive playbook-based actions.** This section evaluates how well the onboarding wizard, journey system, and expansion identification work — and whether the design can scale to other verticals (SaaS).
+
+### What's Well-Designed
+
+The **`verticals/dc2_s/vertical_config.py`** is the best-architected piece in the codebase:
+
+- **3-phase journey model**: Deployment (90d) → Performance (180d) → Excellence (365d+)
+- **Phase-specific focus**: Each phase maps to specific pillars, KPIs, success criteria, and playbooks
+- **6 playbooks** (PB-01 to PB-06) with KPI-driven triggers, automation levels, and estimated impact
+- **Partner tier system**: Internal / Partner / VAR with granular access control
+- **Alert thresholds**: Critical/High/Medium with notification routing and playbook linkage
+- **Phase determination logic**: `determine_customer_phase()` infers phase from deployment age + KPI state
+
+This maps directly to the three expansion goals:
+
+| Expansion Goal | Playbook | Trigger KPIs |
+|----------------|----------|-------------|
+| Training (new features) | PB-03 GPU Optimization | P3-KPI1 < 60% utilization, P3-KPI5 < 75% memory efficiency |
+| Capacity Upgrade | PB-04 Capacity Planning | P5-KPI1 > 80% utilization, P5-KPI2 > 10% MoM growth |
+| Renewal Signal | PB-06 Customer Engagement + PB-05 Health Monitoring | P4-KPI3 < 3 QBRs/year, health < 60 |
+
+**Verdict: The architecture is right. The phase → pillar → KPI → playbook design is the correct pattern for multi-vertical reuse.**
+
+### Critical Disconnects (Why It Doesn't Work End-to-End)
+
+#### 1. Two Separate Playbook Systems That Don't Talk
+
+- **`vertical_config.py`** has real KPI-driven playbook triggers (PB-01 to PB-06)
+- **`playbook_recommendations_api.py`** has generic playbooks that fake metrics from health scores:
+  ```python
+  nps_proxy = health_score / 10      # Not real NPS
+  csat_proxy = health_score / 20     # Not real CSAT
+  dau_mau_proxy = 0.15 if adoption_proxy < 60 else 0.35  # Hardcoded guess
+  ```
+- The DC-specific triggers (`should_trigger_playbook()`, `get_triggered_alerts()`) are **defined but never called** from any API endpoint
+
+#### 2. Onboarding Wizard Doesn't Start the Journey
+
+The onboarding flow creates: Customer → Config → Accounts → Synthetic Data → Scores
+
+It does **not**: assign journey phases, set up playbook triggers, create user accounts, track expansion opportunities, or call `determine_customer_phase()`
+
+#### 3. Journey Visualization Is Static, Not Live
+
+- `journey_viz_api.py` reads pre-generated JSON files from the filesystem
+- Does not read from `PHASE_CONFIG`, Account model, health score engine, or playbook triggers
+- Acts as a replay tool for synthetic data, not a live journey tracker
+
+#### 4. Missing Data Model Fields
+
+- **No `journey_phase`** on Account model — phase can't be stored or queried
+- **No `renewal_date`** on Account model — Renewal Safeguard can't calculate "90 days to renewal"
+- **No `ExpansionOpportunity`** model — expansion readiness lives in CSV files, not the database
+
+#### 5. Frontend Wizard Returns Simulated Data
+
+`onboardingApi.ts` defines full TypeScript interfaces but returns hardcoded/simulated values instead of calling real backend endpoints. Only "Data Center Infrastructure" is available as a vertical option.
+
+### Onboarding Completeness for Data Center
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Create Customer | DONE | Minimal — no email, domain, or user creation |
+| Initialize Config (weights + KPIs) | DONE | Pillar weights validated in v2 |
+| Create Accounts | DONE | 3 sample accounts, no phase assignment |
+| Generate Data | DONE | Calls external script for synthetic data |
+| Calculate Scores | DONE | L1/L2/L3 scoring via ScoreCalculator |
+| CSV Upload + Validation | DONE | Config-aware validation in v2 |
+| Assign Journey Phase | NOT DONE | `determine_customer_phase()` exists but isn't called |
+| Set Up Playbook Triggers | NOT DONE | `should_trigger_playbook()` exists but isn't called |
+| Track Expansion Opportunities | PARTIAL | CSV-based, not database-driven |
+| Create User Account | NOT DONE | Manual user creation required |
+| Wire Frontend to Backend | NOT DONE | Returns simulated data |
+| Wizard B (Pattern Learning) | STUB | Models defined, no implementation |
+| Wizard C (Weight Optimization) | NOT DONE | No endpoint or logic |
+
+**Overall: ~60% complete for Data Center**
+
+### Reusability for SaaS Vertical
+
+The `vertical_config.py` pattern is the correct template. A SaaS version would define:
+```
+SaaS Phases: Trial → Onboarding → Adoption → Growth → Renewal
+SaaS Pillars: Product Adoption, Support Health, Business Outcomes, Engagement, Expansion
+SaaS Playbooks: Onboarding Acceleration, Feature Training, Usage Optimization, Renewal Prep, Upsell
+```
+
+**Current reusability: ~40%.** The design is right but the DC implementation doesn't use its own config end-to-end. Cloning `vertical_config.py` for SaaS would produce another well-defined config file that nothing calls.
+
+### Recommended Priority Before Adding SaaS
+
+1. **Add `journey_phase` and `renewal_date` to Account model** — foundation for all journey tracking
+2. **Wire `determine_customer_phase()` into onboarding and score recalculation** — phases should auto-update
+3. **Replace proxy playbook recommendations with vertical-config-driven triggers** — use real KPIs, not `health_score / 10`
+4. **Move expansion readiness from CSV to computed database values** — query-able, per-account
+5. **Connect frontend wizard to real backend endpoints** — stop returning simulated data
+6. **Then clone `vertical_config.py` as `saas/vertical_config.py`** with SaaS nomenclature
+
+---
+
 ## 1. Project Overview
 
 A **multi-project monorepo** for Customer Success AI applications. The primary project is the **KPI Dashboard** — a SaaS platform for tracking customer health scores, KPI analytics, playbook-driven recommendations, and AI-powered insights (RAG).
