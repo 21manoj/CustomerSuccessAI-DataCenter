@@ -2,6 +2,7 @@
 
 **Date:** 2026-02-18
 **Scope:** Full repository evaluation — architecture, code quality, security, testing, CI/CD
+**Production entry point:** `kpi-dashboard/backend/app_v3_minimal.py` (not `app.py`)
 
 ---
 
@@ -58,12 +59,13 @@ CustomerSuccessAI-DataCenter/
 
 ### Weaknesses
 
-- **Monolithic Flask app** registering 38+ blueprints in a single `app.py` — no domain grouping
+- **Monolithic Flask app** registering 30+ blueprints in a single `app_v3_minimal.py` — no domain grouping
 - **60+ API modules** in a flat directory structure — difficult to navigate
-- **Inconsistent app entry points** — `app.py` and `app_v3_minimal.py` coexist with different middleware configurations
+- **Legacy `app.py` still present** alongside production `app_v3_minimal.py` — could cause confusion about the real entry point
 - **No API versioning** — all endpoints at `/api/*` with no version prefix
 - **No OpenAPI/Swagger documentation** — 40+ endpoints undiscoverable
 - **Dual vector DB setup** (ChromaDB + Qdrant) without clear migration path between them
+- **Debug mode hardcoded to `True`** in `app_v3_minimal.py:36` regardless of environment
 
 ---
 
@@ -74,8 +76,8 @@ CustomerSuccessAI-DataCenter/
 | Bug | Location | Impact |
 |-----|----------|--------|
 | **Infinite recursion** — `get_current_customer_id()` calls itself | `analytics_api.py:20` | Analytics API completely broken |
-| **Mock endpoints in production** — `/accounts-working`, `/kpis-working` | `app.py:168-205` | Exposes test data in production |
-| **`is_authenticated` called as method** — Flask-Login defines it as a property | `auth_middleware.py:75` | Auth checks may silently fail |
+| **Debug mode always enabled** — `app.config['DEBUG'] = True` unconditionally | `app_v3_minimal.py:36` | Werkzeug debugger exposed in production |
+| **Traceback in login error response** — full Python traceback returned to client | `app_v3_minimal.py:738` | Exposes code paths and internal state |
 
 ### 3.2 Bare Exception Handlers (30+ instances)
 
@@ -98,7 +100,7 @@ Silent `except:` blocks found across the codebase that swallow all errors:
 
 - `corporate_api.py:71` — `vertical='DC2_S'` hardcoded
 - `account_snapshot_api.py:99-122` — Time intervals (1hr, 30min, 24hr) hardcoded
-- `app.py:42` — CORS origins hardcoded to `localhost:8005` and `localhost:3000`
+- `app_v3_minimal.py:50-53` — CORS origins hardcoded to `localhost` (configurable via `CORS_ORIGINS` but no env var wiring)
 - Print statements with emoji throughout production backend code
 
 ### 3.5 Input Validation Gaps
@@ -124,19 +126,17 @@ Silent `except:` blocks found across the codebase that swallow all errors:
 
 ## 4. Security Assessment
 
-### 4.1 CRITICAL: Tenant Isolation Bypass
+### 4.1 HIGH: Tenant Isolation Concerns
 
-**Severity: CRITICAL (CVSS 9.8)**
+**Severity: HIGH**
 
-All 55+ backend API endpoints rely on `X-Customer-ID` HTTP header for tenant identification. This header can be **arbitrarily spoofed** by any client. No server-side validation ties the authenticated user to the claimed customer ID.
+The production entry point (`app_v3_minimal.py`) **does initialize auth middleware** via `init_auth_middleware(app)` at line 117, which provides session-based customer ID resolution. This significantly mitigates the header-spoofing risk documented in `CRITICAL_SECURITY_VULNERABILITIES.md`.
 
-**Affected pattern** (found in 55+ files):
-```python
-customer_id = get_current_customer_id()  # From X-Customer-ID header
-# No validation that authenticated user belongs to this customer
-```
-
-**Note:** The project itself documents this in `CRITICAL_SECURITY_VULNERABILITIES.md`, and a fix exists in `auth_middleware.py:182-212`, but the middleware is **not initialized in the main `app.py`** — only in `app_v3_minimal.py`.
+**Remaining concerns:**
+- The `get_current_customer_id()` helper in auth middleware should be audited to confirm it always resolves from session (not header) for authenticated users
+- 55+ API files call `get_current_customer_id()` — verify all paths go through the middleware-protected version
+- The legacy `app.py` does NOT initialize this middleware — if accidentally used as entry point, the vulnerability is fully exposed
+- RBAC (`@admin_required`) is defined but never applied to any endpoint — any authenticated user can access all features
 
 ### 4.2 Authentication & Authorization
 
@@ -153,7 +153,8 @@ customer_id = get_current_customer_id()  # From X-Customer-ID header
 
 - **No file type validation on upload** — `upload_api.py` only checks via pandas parsing, not file signature
 - **API key storage** — `openai_api_key_encrypted` field in CustomerConfig claims encryption but no encryption implementation found
-- **CORS hardcoded to localhost** — won't function in production without manual change
+- **CORS hardcoded to localhost** — configurable via `CORS_ORIGINS` config key but no env var wiring by default
+- **Debug mode always on** — `app_v3_minimal.py:36` sets `DEBUG = True` unconditionally, exposing Werkzeug debugger in production
 - **No security headers** — Missing CSP, X-Frame-Options, X-Content-Type-Options
 - **Secret management is sound** — no hardcoded secrets in source code, `.env` properly gitignored
 
@@ -189,7 +190,7 @@ Frontend has 1 test file: `src/utils/kpiFiltering.test.ts`.
 - **No file upload attack tests** — malicious Excel files, oversized files not tested
 - **No frontend component tests** — only 1 utility test file
 - **E2E tests require running server** — `test_onboarding_e2e.py` hits `localhost:5059`
-- **Tests use wrong app entry point** — `test_kpi_filtering.py` imports `app_v3_minimal` instead of main `app`
+- **Tests correctly import `app_v3_minimal`** — the production entry point (confirmed by project owner)
 
 ---
 
@@ -245,13 +246,13 @@ Frontend has 1 test file: `src/utils/kpiFiltering.test.ts`.
 |----------|-------|-------|
 | **Architecture** | 6/10 | Good multi-tenant design, but monolithic and flat structure |
 | **Code Quality** | 4/10 | Critical bugs, 30+ bare excepts, heavy duplication, long functions |
-| **Security** | 3/10 | Critical tenant isolation bypass, no RBAC enforcement, no rate limiting |
+| **Security** | 5/10 | Auth middleware active, but debug mode on, no RBAC enforcement, no rate limiting |
 | **Testing** | 4/10 | Moderate coverage of business logic, zero security/auth testing |
 | **CI/CD** | 2/10 | Only 1 workflow testing 1 of 14 test files |
 | **Documentation** | 5/10 | README exists, security vulns documented, but no API docs |
 | **Dependencies** | 5/10 | Functional but several significantly outdated packages |
 | **Frontend** | 5/10 | TypeScript used throughout, but no error handling or component tests |
-| **Overall** | 4/10 | Feature-rich but needs significant hardening before production |
+| **Overall** | 5/10 | Feature-rich with solid auth foundation, but needs hardening before production |
 
 ---
 
@@ -259,32 +260,34 @@ Frontend has 1 test file: `src/utils/kpiFiltering.test.ts`.
 
 ### Immediate (Block Deployment)
 
-1. **Fix tenant isolation** — Initialize auth middleware in main `app.py`, validate `X-Customer-ID` against authenticated session in all 55+ APIs
+1. **Disable debug mode in production** — `app_v3_minimal.py:36` sets `DEBUG = True` unconditionally; this exposes the Werkzeug interactive debugger (RCE risk). Change to `app.config['DEBUG'] = (env != 'production')`
 2. **Fix infinite recursion** in `analytics_api.py:20` — call the correct function
-3. **Remove mock endpoints** from production `app.py`
+3. **Remove or archive legacy `app.py`** — it lacks auth middleware and could be accidentally used as entry point
 4. **Implement rate limiting** on login and registration endpoints
+5. **Remove traceback from login error response** — `app_v3_minimal.py:738` exposes internal code paths
 
 ### High Priority
 
-5. **Replace all bare `except:` blocks** with specific exception types and logging (30+ instances)
-6. **Expand CI/CD** — run all 14 test files, add linting, type checking, and security scanning
-7. **Add authentication and tenant isolation tests**
-8. **Strengthen password policy** — require complexity rules
-9. **Implement CSRF protection**
+6. **Replace all bare `except:` blocks** with specific exception types and logging (30+ instances)
+7. **Expand CI/CD** — run all 14 test files, add linting, type checking, and security scanning
+8. **Add authentication and tenant isolation tests** — verify `get_current_customer_id()` always resolves from session
+9. **Strengthen password policy** — require complexity rules
+10. **Implement CSRF protection**
+11. **Enforce RBAC** — apply `@admin_required` decorator to admin-only endpoints
 
 ### Medium Priority
 
-10. **Refactor long functions** — break down 360+ line functions into testable units
-11. **Remove debug print statements** from production code
-12. **Add API versioning** (`/api/v1/...`)
-13. **Add OpenAPI/Swagger documentation**
-14. **Update outdated dependencies** (openai, react-router-dom, TypeScript)
-15. **Add frontend error boundaries and component tests**
-16. **Consolidate duplicate route definitions** in frontend `App.tsx`
-17. **Validate input bounds** on all query parameters (limit, offset, etc.)
+12. **Refactor long functions** — break down 360+ line functions into testable units
+13. **Remove debug print statements** from production code
+14. **Add API versioning** (`/api/v1/...`)
+15. **Add OpenAPI/Swagger documentation**
+16. **Update outdated dependencies** (openai, react-router-dom, TypeScript)
+17. **Add frontend error boundaries and component tests**
+18. **Consolidate duplicate route definitions** in frontend `App.tsx`
+19. **Validate input bounds** on all query parameters (limit, offset, etc.)
 
 ### Long-Term
 
-18. **Decompose monolith** — split 38 blueprints into domain-grouped packages
-19. **Eliminate dual vector DB** — pick one (ChromaDB or Qdrant) and migrate
-20. **Implement comprehensive observability** — structured logging, request tracing, metrics
+20. **Decompose monolith** — split 30+ blueprints into domain-grouped packages
+21. **Eliminate dual vector DB** — pick one (ChromaDB or Qdrant) and migrate
+22. **Implement comprehensive observability** — structured logging, request tracing, metrics
