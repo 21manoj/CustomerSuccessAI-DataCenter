@@ -241,6 +241,14 @@ except ImportError as e:
     UPLOAD_API_V3_AVAILABLE = False
     upload_api_v3_improved = None
 
+# Revenue Intelligence API (Power of 1)
+try:
+    from revenue_intelligence_api import revenue_intelligence_api
+    HAS_REVENUE_INTELLIGENCE_API = True
+except ImportError as e:
+    print(f"⚠️  Warning: Revenue Intelligence API not available: {e}")
+    HAS_REVENUE_INTELLIGENCE_API = False
+
 # Signal Analyst Agent API
 try:
     from agents.signal_analyst_api import signal_analyst_api
@@ -354,6 +362,11 @@ app.register_blueprint(data_quality_api)
 app.register_blueprint(customer_profile_api)
 app.register_blueprint(enhanced_rag_openai_api)
 app.register_blueprint(master_file_api)
+
+# Register Revenue Intelligence API if available
+if HAS_REVENUE_INTELLIGENCE_API:
+    app.register_blueprint(revenue_intelligence_api)
+    print("✅ Registered Revenue Intelligence API: /api/revenue-intelligence/*")
 
 # Register Signal Analyst Agent API if available
 if HAS_SIGNAL_ANALYST_API:
