@@ -168,3 +168,39 @@ class SignalAnalystOutput(BaseModel):
     class Config:
         use_enum_values = True
 
+
+# ============================================================
+# Trigger Validation Models (Phase 2 — LLM Validation Gate)
+# ============================================================
+
+class TriggerValidationDecision(str, Enum):
+    AUTO_APPROVED = "auto_approved"
+    AUTO_REJECTED = "auto_rejected"
+    PENDING_MANUAL_APPROVAL = "pending_manual_approval"
+
+
+class TriggerValidationResult(BaseModel):
+    """
+    Result of the LLM validation gate that sits between
+    KPI threshold detection and playbook execution.
+    """
+    approved: bool = Field(..., description="Whether the playbook execution was approved")
+    confidence: float = Field(..., ge=0, le=1, description="Validation confidence (0-1)")
+    reasoning: str = Field(..., description="Human-readable explanation of the validation decision")
+    decision: TriggerValidationDecision = Field(
+        ..., description="auto_approved | auto_rejected | pending_manual_approval"
+    )
+    signal_analyst_output: Optional[Dict] = Field(
+        None, description="Full SignalAnalystOutput dict for audit trail"
+    )
+    modified_priority: Optional[str] = Field(
+        None, description="LLM may suggest a different priority than the threshold rule"
+    )
+    recommended_playbook: Optional[str] = Field(
+        None, description="LLM may suggest a different playbook than the one that triggered"
+    )
+    validated_at: datetime = Field(default_factory=datetime.now)
+
+    class Config:
+        use_enum_values = True
+

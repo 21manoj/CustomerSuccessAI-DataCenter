@@ -143,6 +143,7 @@ except Exception as e:
     print("   Continuing startup, but OpenAI features may not work correctly")
 
 import models
+import models_action_interface  # Phase 1 — Action Interface tables
 from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig
 
 # Register only essential APIs

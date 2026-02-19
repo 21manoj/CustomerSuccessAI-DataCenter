@@ -14,6 +14,8 @@ import logging
 # Import DC2_S vertical modules - matching YOUR file structure
 from .kpi_definitions import DC2S_KPIS, DC2S_PILLARS
 from .pillar_weights import get_current_weights, get_weights_for_customer
+from .vertical_config import determine_customer_phase, PLAYBOOK_CONFIG, should_trigger_playbook
+from .metadata_schema import calculate_days_since_deployment
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,31 @@ def _normalize_kpi_code_for_health(kpi_code):
             if catalog_code in DC2S_KPIS:
                 return catalog_code
     return None
+
+
+def _sync_journey_phase(account):
+    """
+    Persist the current journey phase on the Account row.
+    Called after every health-score recalculation so playbook triggers
+    that depend on lifecycle phase always have fresh data.
+    """
+    try:
+        metadata = account.profile_metadata or {}
+        deployment_date = metadata.get("deployment_date", "")
+        days = calculate_days_since_deployment(deployment_date) if deployment_date else 0
+        account_data = {**metadata, "days_since_deployment": days}
+        new_phase = determine_customer_phase(account_data)
+        if account.journey_phase != new_phase:
+            logger.info(
+                "Account %s journey_phase %s -> %s",
+                account.account_id, account.journey_phase, new_phase,
+            )
+            account.journey_phase = new_phase
+            db.session.add(account)
+            db.session.commit()
+    except Exception as exc:
+        logger.warning("Failed to sync journey_phase for account %s: %s", account.account_id, exc)
+        db.session.rollback()
 
 
 def calculate_kpi_health(kpi_values, customer_id=None):
@@ -159,7 +186,10 @@ def get_dc2s_accounts():
             
             # Calculate health scores (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
             overall_health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
-            
+
+            # Phase 0.2: persist journey_phase on every health recalculation
+            _sync_journey_phase(account)
+
             # Determine status
             if overall_health >= 80:
                 status = 'healthy'
@@ -230,7 +260,10 @@ def get_dc2s_account_detail(account_id):
         
         # Calculate health (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
         overall_health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
-        
+
+        # Phase 0.2: persist journey_phase on every health recalculation
+        _sync_journey_phase(account)
+
         # Group KPIs by pillar
         kpis_by_pillar = {}
         for kpi_code, value in latest_kpis.items():
@@ -602,159 +635,112 @@ def get_dc2s_alerts(account_id):
 @dc2s_api.route('/recommendations/<int:account_id>', methods=['GET'])
 def get_dc2s_recommendations(account_id):
     """
-    Get playbook recommendations for a specific DC2_S account based on KPI status
+    Get playbook recommendations for a specific DC2_S account.
+    Phase 0.3: Uses real trigger conditions from PLAYBOOK_CONFIG + journey phase
+    instead of the old proxy pillar-to-playbook mapping.
     GET /api/dc2s/recommendations/123
     """
     try:
         customer_id = get_current_customer_id()
-        
+
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400
-        
+
         # Verify account belongs to customer
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
             vertical='dc2_s'
         ).first()
-        
+
         if not account:
             return jsonify({'error': 'Account not found'}), 404
-        
+
         # Get latest KPIs for this account
         all_kpis = DC2SKPI.query.filter_by(
             account_id=account_id
         ).order_by(DC2SKPI.measured_at.desc()).all()
-        
+
         # Group by kpi_code, keeping latest
-        latest_kpis = {}
+        latest_kpis_raw = {}
         for kpi in all_kpis:
-            if kpi.kpi_code not in latest_kpis:
-                latest_kpis[kpi.kpi_code] = kpi
-        
-        # Analyze KPIs and generate recommendations
-        critical_kpis = []
-        at_risk_kpis = []
-        
-        for kpi_code, kpi in latest_kpis.items():
-            kpi_def = DC2S_KPIS.get(kpi_code, {})
-            kpi_name = kpi_def.get('name', kpi_def.get('kpi_name', kpi_code))
-            pillar = kpi_def.get('pillar', kpi_def.get('l1_category', 'Uncategorized'))
-            
-            # Extract target value
-            target_raw = kpi_def.get('target')
-            if isinstance(target_raw, dict):
-                target_value = target_raw.get('value')
-                operator = target_raw.get('operator', '>')
-            else:
-                target_value = target_raw
-                operator = '>'
-            
-            # Calculate status
-            if target_value is not None:
-                value_float = float(kpi.value)
-                target_float = float(target_value)
-                
-                if operator == '<':
-                    percentage = (target_float / max(value_float, 0.01)) * 100
-                else:
-                    percentage = (value_float / target_float) * 100 if target_float > 0 else 0
-                
-                if percentage < 70:
-                    critical_kpis.append({
-                        'kpi_code': kpi_code,
-                        'kpi_name': kpi_name,
-                        'pillar': pillar,
-                        'value': value_float,
-                        'target': target_float,
-                        'percentage': percentage
-                    })
-                elif percentage < 90:
-                    at_risk_kpis.append({
-                        'kpi_code': kpi_code,
-                        'kpi_name': kpi_name,
-                        'pillar': pillar,
-                        'value': value_float,
-                        'target': target_float,
-                        'percentage': percentage
-                    })
-        
-        # Generate recommendations based on critical and at-risk KPIs
+            if kpi.kpi_code not in latest_kpis_raw:
+                latest_kpis_raw[kpi.kpi_code] = kpi
+
+        # Build a kpi_code->value dict using *catalog* codes (P1-KPI1 etc.)
+        kpi_values = {}
+        for kpi_code, kpi in latest_kpis_raw.items():
+            catalog_code = _normalize_kpi_code_for_health(kpi_code) or kpi_code
+            kpi_values[catalog_code] = float(kpi.value)
+
+        # Also compute overall health so we can pass it as "OVERALL_HEALTH"
+        overall_health, _ = calculate_kpi_health(
+            {k: float(v.value) for k, v in latest_kpis_raw.items()},
+            customer_id=customer_id,
+        )
+        kpi_values["OVERALL_HEALTH"] = overall_health
+
+        # Determine current journey phase
+        _sync_journey_phase(account)
+        current_phase = account.journey_phase or "deployment"
+
+        # ---- Real trigger evaluation against PLAYBOOK_CONFIG ----
         recommendations = []
-        
-        # Map pillars to recommended playbook types
-        pillar_to_playbook = {
-            'Performance': {
-                'playbook_id': 'performance-optimization',
-                'playbook_name': 'Performance Optimization Agent',
-                'description': 'AI agent focused on improving system performance metrics and reducing latency',
-                'priority': 'critical' if critical_kpis else 'high'
-            },
-            'Reliability': {
-                'playbook_id': 'reliability-enhancement',
-                'playbook_name': 'Reliability Enhancement Agent',
-                'description': 'AI agent designed to improve system uptime and reduce failures',
-                'priority': 'critical' if critical_kpis else 'high'
-            },
-            'Efficiency': {
-                'playbook_id': 'efficiency-boost',
-                'playbook_name': 'Efficiency Boost Agent',
-                'description': 'AI agent targeting resource utilization and cost optimization',
-                'priority': 'high' if critical_kpis else 'medium'
-            },
-            'Security': {
-                'playbook_id': 'security-hardening',
-                'playbook_name': 'Security Hardening Agent',
-                'description': 'AI agent focused on improving security posture and compliance',
-                'priority': 'critical'
-            },
-            'Compliance': {
-                'playbook_id': 'compliance-assurance',
-                'playbook_name': 'Compliance Assurance Agent',
-                'description': 'AI agent ensuring regulatory compliance and audit readiness',
-                'priority': 'critical'
-            }
-        }
-        
-        # Generate recommendations for affected pillars
-        affected_pillars = set()
-        for kpi in critical_kpis + at_risk_kpis:
-            affected_pillars.add(kpi['pillar'])
-        
-        for pillar in affected_pillars:
-            if pillar in pillar_to_playbook:
-                playbook_info = pillar_to_playbook[pillar]
-                has_critical = any(kpi['pillar'] == pillar and kpi['percentage'] < 70 for kpi in critical_kpis)
-                
-                # Build action items from KPIs in this pillar
-                pillar_kpis = [kpi for kpi in critical_kpis + at_risk_kpis if kpi['pillar'] == pillar]
+        for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+            # Only recommend playbooks valid for the current phase
+            if current_phase not in pb_cfg.get("phases", []):
+                continue
+
+            if should_trigger_playbook(pb_id, kpi_values):
+                # Build human-readable action items from breached conditions
                 action_items = []
-                for kpi in pillar_kpis[:3]:  # Limit to 3 action items
-                    action_items.append(f"Improve {kpi['kpi_name']} (currently {kpi['percentage']:.1f}% of target)")
-                
+                for trigger_kpi, condition in pb_cfg.get("trigger_conditions", {}).items():
+                    if trigger_kpi in kpi_values:
+                        action_items.append(
+                            f"{trigger_kpi}: current {kpi_values[trigger_kpi]:.1f} "
+                            f"(threshold {condition['operator']} {condition['value']})"
+                        )
+
+                # Assign priority: critical if overall health < 50 or
+                # if the playbook has human_approval_required (high-value)
+                if overall_health < 50:
+                    priority = "critical"
+                elif pb_cfg.get("human_approval_required"):
+                    priority = "high"
+                elif overall_health < 70:
+                    priority = "high"
+                else:
+                    priority = "medium"
+
                 recommendations.append({
-                    'recommendation_id': f'{account_id}-{playbook_info["playbook_id"]}',
-                    'playbook_id': playbook_info['playbook_id'],
-                    'playbook_name': playbook_info['playbook_name'],
-                    'description': playbook_info['description'],
-                    'priority': 'critical' if has_critical else playbook_info['priority'],
-                    'action_items': action_items if action_items else [f'Address issues in {pillar} pillar']
+                    "recommendation_id": f"{account_id}-{pb_id}",
+                    "playbook_id": pb_id,
+                    "playbook_name": pb_cfg["name"],
+                    "description": pb_cfg["description"],
+                    "priority": priority,
+                    "estimated_impact": pb_cfg.get("estimated_impact", ""),
+                    "automation_level": pb_cfg.get("automation_level", "medium"),
+                    "requires_approval": pb_cfg.get("human_approval_required", False),
+                    "action_items": action_items or [f"Review {pb_cfg['name']} triggers"],
+                    "phase": current_phase,
                 })
-        
+
         # Sort by priority (critical > high > medium > low)
-        priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-        recommendations.sort(key=lambda x: priority_order.get(x['priority'], 4))
-        
+        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        recommendations.sort(key=lambda x: priority_order.get(x["priority"], 4))
+
         return jsonify({
-            'account_id': account_id,
-            'account_name': account.account_name,
-            'recommendations': recommendations,
-            'total': len(recommendations)
+            "account_id": account_id,
+            "account_name": account.account_name,
+            "journey_phase": current_phase,
+            "overall_health": round(overall_health, 1),
+            "recommendations": recommendations,
+            "total": len(recommendations),
         })
-        
+
     except Exception as e:
         logger.error(f"Error fetching DC2_S recommendations: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch recommendations'}), 500
+        return jsonify({"error": "Failed to fetch recommendations"}), 500
 
 
 @dc2s_api.route('/health-score/<int:account_id>', methods=['GET'])
@@ -799,7 +785,10 @@ def get_dc2s_health_score(account_id):
         
         # Calculate overall health score and pillar scores (config-aware)
         overall_health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
-        
+
+        # Phase 0.2: persist journey_phase on every health recalculation
+        _sync_journey_phase(account)
+
         # Determine health status based on overall score
         if overall_health >= 70:
             health_status = 'healthy'

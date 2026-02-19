@@ -69,6 +69,15 @@ class Account(db.Model):
     region = db.Column(db.String, index=True)
     external_account_id = db.Column(db.String, index=True)  # External account ID from customer profile
     profile_metadata = db.Column(db.JSON)  # JSON field for customer profile data
+
+    # Lifecycle fields (Phase 0 — Action Interface foundation)
+    journey_phase = db.Column(db.String(50), default='onboarding', index=True)
+      # Values: 'onboarding', 'adoption', 'expanding', 'renewing', 'mature'
+      # DC2_S maps to: 'deployment', 'performance', 'excellence'
+    renewal_date = db.Column(db.DateTime, nullable=True)
+    contract_start_date = db.Column(db.DateTime, nullable=True)
+    contract_value = db.Column(db.Numeric(15, 2), nullable=True)
+
     # UUID migration columns (added by phase1a_add_uuid_columns.py)
     uuid = db.Column(db.String(60), nullable=True, unique=True)  # e.g. saas_acct_019c3409-...
     customer_uuid = db.Column(db.String(60), nullable=True)  # FK to customers.uuid
@@ -284,7 +293,13 @@ class PlaybookTrigger(db.Model):
     trigger_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
-    
+
+    # Phase 1 extensions — Action Interface
+    playbook_id = db.Column(db.String(50), nullable=True)            # 'PB-01', 'PB-DC-01', 'SaaS-PB-01', …
+    trigger_conditions = db.Column(db.JSON, nullable=True)           # Structured rules: [{kpi, operator, threshold}, …]
+    execution_mode = db.Column(db.String(20), nullable=True)         # 'mcp_direct', 'workflow'
+    requires_llm_validation = db.Column(db.Boolean, default=True)
+
     # Ensure unique combination of customer and playbook type
     __table_args__ = (db.UniqueConstraint('customer_id', 'playbook_type', name='unique_customer_playbook'),)
 
@@ -308,10 +323,17 @@ class PlaybookExecution(db.Model):
     completed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
-    
+
+    # Phase 1 extensions — Action Interface
+    execution_mode = db.Column(db.String(20), nullable=True)     # 'mcp_direct', 'workflow'
+    trigger_context = db.Column(db.JSON, nullable=True)          # KPIs that triggered it
+    outcome = db.Column(db.String(50), nullable=True)            # 'resolved', 'escalated', 'timeout', 'manual_close'
+    outcome_notes = db.Column(db.Text, nullable=True)
+    llm_validation_result = db.Column(db.JSON, nullable=True)    # Signal Analyst output that approved this execution
+
     # Relationship to reports (cascade delete)
     reports = db.relationship('PlaybookReport', backref='execution', cascade='all, delete-orphan', passive_deletes=True)
-    
+
     # Indexes for common queries
     __table_args__ = (
         db.Index('idx_customer_playbook_exec', 'customer_id', 'playbook_id'),
