@@ -368,6 +368,14 @@ if HAS_REVENUE_INTELLIGENCE_API:
     app.register_blueprint(revenue_intelligence_api)
     print("✅ Registered Revenue Intelligence API: /api/revenue-intelligence/*")
 
+# Register Portfolio API (multi-company integration layer)
+try:
+    from portfolio_api import portfolio_api
+    app.register_blueprint(portfolio_api)
+    print("✅ Registered Portfolio API: /api/portfolio/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Portfolio API not available: {e}")
+
 # Register Signal Analyst Agent API if available
 if HAS_SIGNAL_ANALYST_API:
     app.register_blueprint(signal_analyst_api)
