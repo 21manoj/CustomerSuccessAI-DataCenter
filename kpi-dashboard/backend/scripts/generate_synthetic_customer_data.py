@@ -8,6 +8,7 @@ CORRECTED VERSION - Matches actual database schema from models.py
 
 import sys
 import os
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,7 +43,8 @@ def generate_accounts_csv(customer_id, num_accounts=10, company_name=None):
     customer_id and num_accounts; no hardcoded account IDs.
     """
     company_name = company_name or f"Customer {customer_id}"
-    base_account_id = customer_id * 1000
+    # Account IDs are auto-incremented by DB; use index-based placeholders for CSV
+    base_account_id = customer_id * 1000  # Kept for CSV column ordering; DB auto-assigns real IDs
     now = datetime.now()
     last_updated = now.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -88,6 +90,7 @@ def generate_accounts_csv(customer_id, num_accounts=10, company_name=None):
         rows.append({
             'account_id': account_id,
             'customer_id': customer_id,
+            'uuid': f"dc2s_acct_{uuid.uuid4()}",
             'account_name': account_name,
             'industry': random.choice(industries),
             'vertical': 'dc2_s',

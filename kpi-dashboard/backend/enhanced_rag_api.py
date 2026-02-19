@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
 """
-Enhanced RAG API endpoints using FAISS and Claude
-Provides advanced KPI and account analysis capabilities
+DEPRECATED: This module is superseded by enhanced_rag_openai_api.py which provides:
+  - Multi-tenant RAG system (per-customer instances)
+  - OpenAI GPT-4 integration with MCP fallback
+  - Conversation history support
+  - Knowledge base status endpoint
+
+All endpoints under /api/enhanced-rag/* are now served by enhanced_rag_openai_api.py
+under /api/rag-openai/*. This file is kept only for reference and will be removed
+in a future cleanup.
 """
 
+import warnings
+warnings.warn(
+    "enhanced_rag_api is deprecated. Use enhanced_rag_openai_api instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 from flask import Blueprint, request, jsonify, abort
-from auth_middleware import get_current_customer_id, get_current_user_id
+from auth_middleware import get_current_customer_id as _get_current_customer_id
 from extensions import db
 from models import KPI, KPIUpload, Account, CustomerConfig
 from enhanced_rag_system import enhanced_rag_system
@@ -15,7 +29,7 @@ enhanced_rag_api = Blueprint('enhanced_rag_api', __name__)
 
 def get_current_customer_id():
     """Extract and validate the X-Customer-ID header from the request."""
-    cid = get_current_customer_id()
+    cid = _get_current_customer_id()
     if not cid:
         abort(400, 'Authentication required (handled by middleware)')
     try:

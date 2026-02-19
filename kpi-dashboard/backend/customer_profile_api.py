@@ -357,7 +357,7 @@ def upload_customer_profile():
     except Exception as e:
         current_app.logger.exception('Error processing customer profile upload')
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': 'Failed to process customer profile upload. Please try again or contact support.'}), 500
 
 
 def _safe_date(val):

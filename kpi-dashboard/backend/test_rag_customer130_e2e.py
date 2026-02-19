@@ -50,7 +50,7 @@ def test_rag_queries():
     
     with app.app_context():
         # Verify customer exists
-        customer = Customer.query.get(CUSTOMER_ID)
+        customer = db.session.get(Customer, CUSTOMER_ID)
         if not customer:
             log(f"❌ Customer {CUSTOMER_ID} not found!")
             return 1

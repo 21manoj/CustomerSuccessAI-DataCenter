@@ -10,6 +10,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 import re
 import json
 from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 rag_api = Blueprint('rag_api', __name__)
 
@@ -497,32 +500,67 @@ class KPIRAGSystem:
         else:
             return "general_search"
 
-def calculate_health_score(kpis, component_name):
-    """Calculate health score for a specific component"""
-    component_kpis = [kpi for kpi in kpis 
-                     if component_name.lower() in kpi.health_score_component.lower()]
-    
+def _calculate_health_score_via_engine(kpis, component_name):
+    """Calculate health score for a component using the canonical HealthScoreEngine."""
+    from health_score_engine import HealthScoreEngine
+
+    component_kpis = [kpi for kpi in kpis
+                      if component_name.lower() in (kpi.health_score_component or '').lower()]
+
     if not component_kpis:
         return 0
-    
+
+    kpi_dicts = [{
+        'kpi_parameter': kpi.kpi_parameter,
+        'data': kpi.data,
+        'impact_level': kpi.impact_level,
+        'weight': kpi.weight,
+        'category': kpi.category,
+        'health_score_component': kpi.health_score_component,
+    } for kpi in component_kpis]
+
+    result = HealthScoreEngine.calculate_category_health_score(kpi_dicts, component_name)
+    return result['normalized_score']
+
+
+def _calculate_health_score_simple(kpis, component_name):
+    """Fallback: simplified health score calculation for a specific component."""
+    component_kpis = [kpi for kpi in kpis
+                      if component_name.lower() in (kpi.health_score_component or '').lower()]
+
+    if not component_kpis:
+        return 0
+
     total_score = 0
     total_weight = 0
-    
+
     for kpi in component_kpis:
         try:
             # Parse data value
             data_str = str(kpi.data).replace('%', '').replace('$', '').replace('K', '000').replace('M', '000000')
             value = float(data_str) if data_str.strip() else 0
-            
+
             # Use weight if available
             weight = float(kpi.weight) if kpi.weight else 1
-            
+
             total_score += value * weight
             total_weight += weight
         except (ValueError, TypeError):
             continue
-    
+
     return total_score / total_weight if total_weight > 0 else 0
+
+
+def calculate_health_score(kpis, component_name):
+    """Calculate health score for a specific component.
+
+    Uses HealthScoreEngine when available, falls back to simple calculation.
+    """
+    try:
+        return _calculate_health_score_via_engine(kpis, component_name)
+    except Exception:
+        return _calculate_health_score_simple(kpis, component_name)
+
 
 def calculate_overall_health_score(category_scores):
     """Calculate overall health score from category scores"""
@@ -532,21 +570,21 @@ def calculate_overall_health_score(category_scores):
 def analyze_health_scores(customer_id):
     """Analyze health scores across all accounts"""
     accounts = Account.query.filter_by(customer_id=customer_id).all()
-    
+
     health_analysis = []
     total_revenue = 0
-    
+
     for account in accounts:
         account_kpis = KPI.query.filter_by(account_id=account.account_id).all()
-        
+
         if account_kpis:
-            # Calculate health scores
+            # Calculate health scores (uses HealthScoreEngine with simple fallback)
             product_usage = calculate_health_score(account_kpis, 'Product Usage')
             support = calculate_health_score(account_kpis, 'Support')
             customer_sentiment = calculate_health_score(account_kpis, 'Customer Sentiment')
             business_outcomes = calculate_health_score(account_kpis, 'Business Outcomes')
             relationship_strength = calculate_health_score(account_kpis, 'Relationship Strength')
-            
+
             overall = calculate_overall_health_score({
                 'product_usage': product_usage,
                 'support': support,
@@ -554,7 +592,7 @@ def analyze_health_scores(customer_id):
                 'business_outcomes': business_outcomes,
                 'relationship_strength': relationship_strength
             })
-            
+
             health_analysis.append({
                 'account_name': account.account_name,
                 'account_id': account.account_id,
@@ -570,9 +608,9 @@ def analyze_health_scores(customer_id):
                     'overall': overall
                 }
             })
-            
+
             total_revenue += float(account.revenue)
-    
+
     # Calculate corporate averages
     if health_analysis:
         corporate_scores = {
@@ -588,7 +626,7 @@ def analyze_health_scores(customer_id):
             'product_usage': 0, 'support': 0, 'customer_sentiment': 0,
             'business_outcomes': 0, 'relationship_strength': 0, 'overall': 0
         }
-    
+
     return {
         'accounts': health_analysis,
         'corporate_scores': corporate_scores,
@@ -614,8 +652,8 @@ def analyze_account_growth():
         analysis = account_rag_system.analyze_account_growth(customer_id)
         return jsonify(analysis)
     except Exception as e:
-        print(f"Error in account growth analysis: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error in account growth analysis: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Account growth analysis failed. Please try again or contact support.'}), 500
 
 @rag_api.route('/api/rag/account/query', methods=['POST'])
 def query_account_analytics():
@@ -667,8 +705,8 @@ def query_account_analytics():
             })
             
     except Exception as e:
-        print(f"Error in account analytics query: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error in account analytics query: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Account analytics query failed. Please try again or contact support.'}), 500
 
 def _generate_growth_insights(analysis):
     """Generate insights from growth analysis"""
@@ -816,7 +854,8 @@ def debug_kpi_data():
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting KPI stats: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to get KPI stats. Please try again or contact support.'}), 500
 
 @rag_api.route('/api/rag/query', methods=['POST'])
 def query_kpis():
@@ -870,8 +909,8 @@ def query_kpis():
         })
         
     except Exception as e:
-        print(f"Error in RAG query: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error in RAG query: {str(e)}", exc_info=True)
+        return jsonify({'error': 'RAG query failed. Please try again or contact support.'}), 500
 
 @rag_api.route('/api/rag/analyze', methods=['POST'])
 def analyze_kpis():
@@ -889,7 +928,8 @@ def analyze_kpis():
         return jsonify(analysis)
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error analyzing KPIs: {str(e)}", exc_info=True)
+        return jsonify({'error': 'KPI analysis failed. Please try again or contact support.'}), 500
 
 def generate_insights(query_type, search_results, kpi_data):
     """Generate insights based on query type and results"""
@@ -1003,4 +1043,5 @@ def get_health_scores():
         analysis = analyze_health_scores(customer_id)
         return jsonify(analysis)
     except Exception as e:
-        return jsonify({'error': f'Failed to analyze health scores: {str(e)}'}), 500 
+        logger.error(f"Failed to analyze health scores: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to analyze health scores. Please try again or contact support.'}), 500

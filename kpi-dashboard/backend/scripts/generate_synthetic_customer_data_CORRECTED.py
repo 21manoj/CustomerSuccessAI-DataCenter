@@ -8,6 +8,7 @@ CORRECTED VERSION - Matches actual database schema from models.py
 
 import sys
 import os
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,20 +24,22 @@ def generate_accounts_csv(customer_id, num_accounts=10):
     """Generate accounts.csv with proper account IDs"""
     
     accounts = []
+    # Account IDs are auto-incremented by DB; use sequential placeholders for CSV
     base_account_id = customer_id * 1000
-    
+
     account_names = [
         'Production', 'Staging', 'Development', 'QA', 'UAT',
         'DR', 'Sandbox', 'Integration', 'Performance', 'Lab'
     ]
-    
+
     for i in range(num_accounts):
-        account_id = base_account_id + i + 1  # 19001, 19002, etc.
+        account_id = base_account_id + i + 1  # Placeholder; DB auto-assigns real IDs
         account_name = f"Customer {customer_id} - {account_names[i] if i < len(account_names) else f'Account-{i+1}'}"
-        
+
         accounts.append({
             'account_id': account_id,
-            'customer_id': customer_id,  # ✅ KEEP - Account model has customer_id FK
+            'customer_id': customer_id,
+            'uuid': f"dc2s_acct_{uuid.uuid4()}",
             'account_name': account_name,
             'industry': 'Data Center Infrastructure',
             'vertical': 'dc2_s',

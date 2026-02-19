@@ -24,7 +24,7 @@ def recalculate_health_scores(customer_id=1):
     print(f"🔄 Recalculating health scores for customer_id={customer_id}...")
     
     with app.app_context():
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             print(f"❌ Customer {customer_id} not found")
             return

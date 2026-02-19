@@ -93,7 +93,7 @@ def analyze_multi_product_accounts():
         all_products = Product.query.order_by(Product.product_name, Product.product_id).all()
         product_names = {}
         for product in all_products:
-            account = Account.query.get(product.account_id)
+            account = db.session.get(Account, product.account_id)
             account_name = account.account_name if account else 'N/A'
             
             if product.product_name not in product_names:

@@ -440,7 +440,7 @@ def verify_database(customer_id: int, expect_user: bool = False):
     
     with app.app_context():
         # Check customer
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         checks = [
             (customer is not None, f"Customer {customer_id} exists"),
         ]

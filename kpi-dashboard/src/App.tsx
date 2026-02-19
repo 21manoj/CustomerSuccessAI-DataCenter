@@ -267,6 +267,16 @@ const AppRoutes: React.FC = () => {
           }
         />
         
+        {/* Journey - Account-specific journey view (alias for journey-v3) */}
+        <Route
+          path="/journey/:accountId"
+          element={
+            <PrivateRoute>
+              <JourneyDashboardV3 />
+            </PrivateRoute>
+          }
+        />
+
         {/* Journey V3 - Account-specific journey view */}
         <Route
           path="/journey-v3/:accountId"

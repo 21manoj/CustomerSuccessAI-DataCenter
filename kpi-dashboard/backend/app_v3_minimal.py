@@ -9,6 +9,12 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_session import Session
 from flask_login import LoginManager, current_user
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    HAS_LIMITER = True
+except ImportError:
+    HAS_LIMITER = False
 from extensions import db
 from utils.logging_config import initialize_logging
 
@@ -55,6 +61,19 @@ CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', defa
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Initialize rate limiter (optional - degrades gracefully if flask-limiter not installed)
+if HAS_LIMITER:
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per minute"],
+        storage_uri=app.config.get('RATELIMIT_STORAGE_URL', 'memory://'),
+        enabled=app.config.get('RATELIMIT_ENABLED', True)
+    )
+else:
+    limiter = None
+    print("⚠️  flask-limiter not installed, rate limiting disabled")
 
 # Ensure sessions table exists before initializing Flask-Session
 with app.app_context():
@@ -202,8 +221,7 @@ except ImportError as e:
     ONBOARDING_API_V2_AVAILABLE = False
     onboarding_api_v2 = None
 
-# Keep old onboarding_api for backward compatibility
-from onboarding_api import onboarding_api
+# Legacy onboarding_api removed — use onboarding_api_v2_config_aware instead
 
 # Config-aware upload API (V2)
 try:
@@ -239,13 +257,6 @@ except ImportError as e:
     print(f"⚠️  Warning: DC2_S API not available: {e}")
     HAS_DC2S_API = False
 
-# Signal Analyst Agent API - optional (requires qdrant dependencies)
-try:
-    from agents.signal_analyst_api import signal_analyst_api
-    HAS_SIGNAL_ANALYST = True
-except ImportError as e:
-    print(f"⚠️  Warning: signal_analyst_api not available: {e}")
-    HAS_SIGNAL_ANALYST = False
 
 # Optional RAG APIs - only register if dependencies are available
 try:
@@ -399,16 +410,21 @@ if HAS_QDRANT_RAG:
 else:
     print("⚠️  Skipped enhanced_rag_qdrant_api (qdrant_client not available)")
 
-if HAS_SIGNAL_ANALYST:
-    # Guard against double-registration (may already be registered by DC2_S or other modules)
-    existing_names = {bp.name for bp in app.blueprints.values()} if hasattr(app, 'blueprints') else set()
-    if 'signal_analyst_api' not in existing_names:
-        app.register_blueprint(signal_analyst_api)
-        print("✅ Registered signal_analyst_api")
-    else:
-        print("ℹ️  signal_analyst_api already registered, skipping")
-else:
-    print("⚠️  Skipped signal_analyst_api (dependencies not available)")
+
+# Rate limiting for expensive POST endpoints
+# These limits apply per-IP to prevent abuse of compute-heavy operations
+if limiter:
+    # Apply rate limits to specific endpoints
+    with app.app_context():
+        # Expensive compute operations
+        limiter.limit("5 per minute")(app.view_functions.get('product_analytics_api.recalculate_product_health', lambda: None))
+        limiter.limit("5 per minute")(app.view_functions.get('enhanced_rag_openai_api.enhanced_query', lambda: None))
+        limiter.limit("5 per minute")(app.view_functions.get('enhanced_rag_openai_api.build_enhanced_knowledge_base', lambda: None))
+        # Upload operations
+        limiter.limit("10 per minute")(app.view_functions.get('upload_api.upload_csv', lambda: None))
+        limiter.limit("10 per minute")(app.view_functions.get('enhanced_upload_api.upload_enhanced', lambda: None))
+        limiter.limit("10 per minute")(app.view_functions.get('secure_file_api.upload_file', lambda: None))
+        limiter.limit("10 per minute")(app.view_functions.get('corporate_api.upload_corporate_data', lambda: None))
 
 # Load persisted data on startup
 @app.before_request
@@ -442,132 +458,6 @@ def health_check():
         'message': 'KPI Dashboard V5 Backend is running'
     })
 
-# Note: /api/accounts is handled by kpi_api blueprint - removed duplicate endpoint
-# The endpoint in kpi_api.py uses get_current_customer_id() which should work correctly
-# @app.route('/api/accounts', methods=['GET'])
-def get_accounts_deprecated():
-    """
-    Get accounts for the customer.
-    
-    SECURITY: Requires authentication. Uses customer_id from session.
-    """
-    print("=" * 80)
-    print("[DEBUG /api/accounts] ENDPOINT CALLED")
-    print("=" * 80)
-    
-    # DEBUG: Log authentication status
-    # User model defines is_authenticated as a METHOD, not a property, so we need to call it
-    is_auth = current_user.is_authenticated() if callable(current_user.is_authenticated) else (current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False)
-    print(f"[DEBUG /api/accounts] current_user.is_authenticated: {is_auth}")
-    logger.info(f"[DEBUG /api/accounts] current_user.is_authenticated: {is_auth}")
-    logger.info(f"[DEBUG /api/accounts] current_user type: {type(current_user)}")
-    if hasattr(current_user, 'email'):
-        logger.info(f"[DEBUG /api/accounts] current_user.email: {current_user.email}")
-    if hasattr(current_user, 'customer_id'):
-        logger.info(f"[DEBUG /api/accounts] current_user.customer_id: {current_user.customer_id}")
-    
-    # SECURITY FIX: Require authentication
-    if not is_auth:
-        logger.warning(f"[DEBUG /api/accounts] User not authenticated, returning 401")
-        return jsonify({
-            'error': 'Authentication required',
-            'message': 'Please log in to access this resource'
-        }), 401
-    
-    try:
-        # SECURITY FIX: Get customer_id from authenticated user session (not headers!)
-        customer_id = current_user.customer_id
-        print(f"[DEBUG /api/accounts] customer_id: {customer_id}")
-        logger.info(f"[DEBUG /api/accounts] customer_id: {customer_id}")
-        
-        # Get user's vertical for additional filtering (prevents cross-vertical data leakage)
-        # Use getattr to safely get vertical without triggering a database refresh
-        user_vertical = getattr(current_user, 'vertical', None)
-        print(f"[DEBUG /api/accounts] user_vertical: {user_vertical}")
-        logger.info(f"[DEBUG /api/accounts] user_vertical: {user_vertical}")
-        
-        # Get accounts from database - filter by customer_id AND vertical for isolation
-        query = Account.query.filter_by(customer_id=customer_id)
-        initial_count = query.count()
-        print(f"[DEBUG /api/accounts] Initial query count: {initial_count}")
-        logger.info(f"[DEBUG /api/accounts] Initial query count: {initial_count}")
-        
-        # Additional security: Filter by vertical to prevent cross-vertical data leakage
-        # DC users (vertical='dc2_s') should see ALL accounts for their customer (DC accounts may have various vertical values)
-        # SaaS users (vertical='saas' or None) should only see SaaS accounts
-        if user_vertical == 'dc2_s':
-            # DC users: Show ALL accounts for Customer 9 (DC accounts may have vertical='dc2_s' or other journey states)
-            # Don't filter by vertical - Customer 9 accounts have various vertical values (Success Story, Churned, etc.)
-            # All accounts belong to Customer 9, so they should all be visible
-            pass  # No additional filtering needed - already filtered by customer_id
-        elif user_vertical == 'saas' or user_vertical is None:
-            # SaaS users see accounts with vertical='saas' or vertical=None (legacy)
-            query = query.filter((Account.vertical == 'saas') | (Account.vertical.is_(None)))
-        
-        accounts = query.all()
-        print(f"[DEBUG /api/accounts] Found {len(accounts)} accounts after filtering")
-        logger.info(f"[DEBUG /api/accounts] Found {len(accounts)} accounts after filtering")
-        
-        # Import models needed for health score calculation
-        # Note: Don't import Product here as it may have schema mismatches from restore
-        from models import KPI, HealthTrend
-        
-        result = []
-        for account in accounts:
-            # First try to get health score from health_trends table
-            latest_trend = HealthTrend.query.filter_by(
-                account_id=account.account_id,
-                customer_id=customer_id
-            ).order_by(
-                HealthTrend.year.desc(),
-                HealthTrend.month.desc()
-            ).first()
-            
-            health_score = None
-            if latest_trend and latest_trend.overall_health_score:
-                health_score = float(latest_trend.overall_health_score)
-            else:
-                # Calculate health score on-the-fly from KPIs
-                try:
-                    from playbook_recommendations_api import calculate_health_score_proxy
-                    health_score = calculate_health_score_proxy(account.account_id)
-                except Exception as health_error:
-                    # If health score calculation fails, default to None (will show as N/A in UI)
-                    # Don't log the error to avoid transaction issues
-                    health_score = None
-                    db.session.rollback()  # Clear any failed transaction
-            
-            result.append({
-                'account_id': account.account_id,
-                'customer_id': account.customer_id,
-                'account_name': account.account_name,
-                'revenue': account.revenue,
-                'status': account.account_status,
-                'industry': account.industry,
-                'region': account.region,
-                'health_score': health_score,
-                'account_status': account.account_status,
-                'created_at': account.created_at.isoformat() if account.created_at else None
-            })
-        
-        return jsonify({
-            'status': 'success',
-            'accounts': result,
-            'total': len(result)
-        })
-        
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"ERROR in /api/accounts: {str(e)}")
-        print(error_trace)
-        logger.error(f"ERROR in /api/accounts: {str(e)}")
-        logger.error(error_trace)
-        return jsonify({
-            'status': 'error',
-            'message': f'Failed to fetch accounts: {str(e)}',
-            'error_detail': str(e)
-        }), 500
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -917,13 +807,12 @@ def log_response_info(response):
 app.register_blueprint(wizard_bp)
 print("✅ Wizard A blueprint registered")
 
-# Register Onboarding API (V2 config-aware takes precedence)
+# Register Onboarding API (V2 config-aware only — legacy onboarding_api removed)
 if ONBOARDING_API_V2_AVAILABLE:
     app.register_blueprint(onboarding_api_v2, url_prefix='/api/onboarding')
     print("✅ Registered Config-Aware Onboarding API V2: /api/onboarding/*")
 else:
-    app.register_blueprint(onboarding_api)
-    print("✅ Registered Onboarding API (legacy)")
+    print("⚠️  Onboarding API V2 not available and legacy onboarding_api has been removed")
 
 # Admin API (Wizard B & C endpoints)
 try:

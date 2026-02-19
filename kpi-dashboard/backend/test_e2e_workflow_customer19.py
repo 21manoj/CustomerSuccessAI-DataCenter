@@ -153,8 +153,9 @@ def step1_complete_onboarding(client=None):
             
             # ✅ Verify with direct database access (separate from test client)
             with app.app_context():
+                from extensions import db
                 from models import Customer, Account
-                customer = Customer.query.get(19)
+                customer = db.session.get(Customer, 19)
                 accounts = Account.query.filter_by(customer_id=19).all()
                 print(f"\n✅ Direct DB verification: Customer exists={customer is not None}, Accounts={len(accounts)}")
                 if customer:
@@ -235,7 +236,7 @@ def step3_verify_database():
             checks = []
             
             # Check customer
-            customer = Customer.query.get(19)
+            customer = db.session.get(Customer, 19)
             checks.append((customer is not None, "Customer 19 exists"))
             if customer:
                 checks.append((customer.customer_name == "DC2_S Demo Enterprise", "Customer name matches"))

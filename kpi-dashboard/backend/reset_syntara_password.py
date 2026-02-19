@@ -32,7 +32,7 @@ db.init_app(app)
 
 with app.app_context():
     # Find Syntara customer (ID: 1)
-    customer = Customer.query.get(1)
+    customer = db.session.get(Customer, 1)
     if not customer:
         print("❌ Syntara customer (ID: 1) not found!")
         sys.exit(1)

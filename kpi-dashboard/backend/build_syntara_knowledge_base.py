@@ -36,7 +36,7 @@ with app.app_context():
     customer_id = 1  # Syntara
     
     # Verify customer exists
-    customer = Customer.query.get(customer_id)
+    customer = db.session.get(Customer, customer_id)
     if not customer:
         print(f"❌ Customer ID {customer_id} not found!")
         sys.exit(1)

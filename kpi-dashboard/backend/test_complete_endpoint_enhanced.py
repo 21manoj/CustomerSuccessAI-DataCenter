@@ -392,11 +392,12 @@ def verify_database(customer_id: int):
     
     try:
         from app_v3_minimal import app
+        from extensions import db
         from models import Customer, User, Account, CustomerConfig
         
         with app.app_context():
             # Check customer
-            customer = Customer.query.get(customer_id)
+            customer = db.session.get(Customer, customer_id)
             checks = [
                 (customer is not None, f"Customer {customer_id} exists"),
             ]

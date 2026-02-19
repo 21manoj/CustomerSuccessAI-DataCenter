@@ -16,6 +16,9 @@ import io
 from datetime import datetime
 from health_score_engine import HealthScoreEngine
 from health_score_storage import HealthScoreStorageService
+import logging
+
+logger = logging.getLogger(__name__)
 
 corporate_api = Blueprint('corporate_api', __name__)
 
@@ -68,7 +71,7 @@ def upload_corporate_metadata():
                 region=row["Region"],
                 account_status='active',  # Set default status
                 external_account_id=str(row.get("Company ID", "")),  # Use Company ID as external_account_id
-                vertical='DC2_S'  # Default vertical for data center customers
+                vertical='dc2_s'  # Default vertical for data center customers
             )
             db.session.add(account)
             accounts_created.append({
@@ -99,7 +102,8 @@ def upload_corporate_metadata():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to process corporate metadata: {str(e)}'}), 500
+        logger.error(f"Failed to process corporate metadata: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to process corporate metadata. Please try again or contact support.'}), 500
 
 @corporate_api.route('/api/corporate/companies', methods=['GET'])
 def get_corporate_companies():
@@ -387,10 +391,10 @@ def get_corporate_rollup():
         }
         
     except Exception as e:
-        print(f"❌ Error storing health scores and KPI data: {e}")
+        logger.error(f"Error storing health scores and KPI data: {str(e)}", exc_info=True)
         # Don't fail the API call if storage fails
         response_data['storage_info'] = {
-            'error': f"Failed to store data: {str(e)}",
+            'error': 'Failed to store data. Please try again or contact support.',
             'storage_timestamp': datetime.now().isoformat()
         }
     

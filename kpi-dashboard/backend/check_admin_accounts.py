@@ -16,7 +16,7 @@ with app.app_context():
         print(f'Customer ID: {admin.customer_id}')
         
         # Check customer
-        customer = Customer.query.get(admin.customer_id) if admin.customer_id else None
+        customer = db.session.get(Customer, admin.customer_id) if admin.customer_id else None
         if customer:
             print(f'Customer: {customer.customer_name} (ID: {customer.customer_id})')
         

@@ -50,7 +50,7 @@ def create_dc2s_super_user():
         email='dc_super1@supermicro.com',
         password_hash=generate_password_hash('dc_super321'),
         role='supermicro_internal',  # Full access role
-        vertical='dc2_S',  # DC2_S vertical
+        vertical='dc2_s',  # DC2_S vertical
         is_active=True,
         created_at=datetime.utcnow()
     )
@@ -141,7 +141,7 @@ def verify_user_access(user_id):
     print("=" * 60)
     print()
     
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     print(f"User: {user.username} (ID: {user.id})")
     print(f"Role: {user.role}")
     print(f"Vertical: {user.vertical}")

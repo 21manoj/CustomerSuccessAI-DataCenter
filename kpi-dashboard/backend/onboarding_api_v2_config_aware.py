@@ -22,6 +22,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from typing import Tuple, List, Dict, Optional
 from werkzeug.utils import secure_filename
 
@@ -133,17 +134,28 @@ def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
     return (True, None)
 
 
+def generate_account_uuid() -> str:
+    """
+    Generate a UUID for a new account.
+
+    Returns:
+        UUID string like 'dc2s_acct_<uuid4>'
+    """
+    return f"dc2s_acct_{uuid.uuid4()}"
+
+
 def calculate_account_id_range(customer_id: int) -> Tuple[int, int]:
     """
-    Calculate expected account ID range for a customer
-    
-    Formula: account_id_start = customer_id * 1000
-    Range: account_id_start + 1 to account_id_start + 999
-    
+    DEPRECATED: Account IDs are now auto-incremented by the database.
+    Use generate_account_uuid() for new account identification.
+
+    Kept for backward compatibility with CSV validation that may still
+    reference integer account IDs in legacy data files.
+
     Returns:
         (start_id, end_id) tuple
     """
-    start_id = customer_id * 1000 + 1  # Start at +1
+    start_id = customer_id * 1000 + 1
     end_id = customer_id * 1000 + 999
     return (start_id, end_id)
 
@@ -621,7 +633,7 @@ def complete_onboarding():
         
         # Step 1: Create customer (GAP 1.4: idempotency - return existing if idempotent=True)
         if customer_id_explicit:
-            existing = Customer.query.get(customer_id_explicit)
+            existing = db.session.get(Customer, customer_id_explicit)
             if existing:
                 if idempotent:
                     # Return existing customer (idempotent success)
@@ -748,7 +760,7 @@ def complete_onboarding():
                     current_app.logger.error(f"❌ Failed to create user: {e}", exc_info=True)
                     # Don't fail entire onboarding if user creation fails
                     user_created = {
-                        "error": f"User creation failed: {str(e)}",
+                        "error": "User creation failed. Please try again or contact support.",
                         "created": False
                     }
             else:
@@ -824,7 +836,7 @@ def complete_onboarding():
             # Check if account already exists (idempotency)
             if account_id in existing_account_ids:
                 # Account exists, update it
-                account = Account.query.get(account_id)
+                account = db.session.get(Account, account_id)
                 account.account_name = account_name
                 account.industry = industry
                 account.vertical = vertical
@@ -896,7 +908,7 @@ def complete_onboarding():
             current_app.logger.error(f"❌ Commit failed: {e}")
             import traceback
             current_app.logger.error(traceback.format_exc())
-            return jsonify({"error": f"Transaction commit failed: {str(e)}"}), 500
+            return jsonify({"error": "Transaction commit failed. Please try again or contact support."}), 500
         
         # Calculate account ID range
         if accounts_created:
@@ -1010,10 +1022,9 @@ def complete_onboarding():
         
     except Exception as e:
         db.session.rollback()
-        import traceback
+        current_app.logger.error(f"Onboarding complete failed: {str(e)}", exc_info=True)
         return jsonify({
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": "Onboarding failed. Please try again or contact support."
         }), 500
 
 @onboarding_api.route('/process-data', methods=['POST'])
@@ -1073,7 +1084,7 @@ def process_data():
         # P0: Check customer exists in database
         # Refresh session to ensure we see committed data (important for test environments)
         db.session.expire_all()
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             return jsonify({
                 "status": "error",
@@ -1353,14 +1364,12 @@ def process_data():
             if customer_id in _onboarding_progress:
                 _onboarding_progress[customer_id]['in_progress'] = False
             script_duration = time.time() - script_start_time
-            error_msg = str(e)
-            current_app.logger.error(f"❌ Data loading failed: {error_msg}", exc_info=True)
-            execution_state['errors'].append(f"Data loading failed: {error_msg}")
+            current_app.logger.error(f"Data loading failed: {str(e)}", exc_info=True)
+            execution_state['errors'].append("Data loading failed")
             execution_state['rollback_needed'] = True
             return jsonify({
                 "status": "error",
-                "message": "Data loading failed",
-                "error": error_msg,
+                "message": "Data loading failed. Please try again or contact support.",
                 **execution_state
             }), 500
         
@@ -1389,7 +1398,7 @@ def process_data():
                         execution_state['errors'].append("Qdrant not available - embedding step skipped")
                         current_app.logger.warning("⚠️  Qdrant not available, skipping embedding step")
             except Exception as e:
-                execution_state['errors'].append(f"Embedding via API failed: {str(e)}")
+                execution_state['errors'].append("Embedding via API failed")
                 current_app.logger.warning(f"⚠️  Embedding failed: {e}")
         else:
             script_start_time = time.time()
@@ -1496,7 +1505,7 @@ def process_data():
                 current_app.logger.info(f"Account IDs: {[acc.account_id for acc in accounts[:5]]}")
             else:
                 # Debug: Check if customer exists and verify account query
-                customer = Customer.query.get(customer_id)
+                customer = db.session.get(Customer, customer_id)
                 if customer:
                     current_app.logger.warning(f"Customer {customer_id} exists but query found 0 accounts")
                     # Try querying all accounts to see if any exist
@@ -1665,7 +1674,7 @@ def process_data():
                         except Exception as e:
                             # P0: Rollback on failure
                             db.session.rollback()
-                            execution_state['errors'].append(f"Failed to update CustomerConfig: {str(e)}")
+                            execution_state['errors'].append("Failed to update CustomerConfig")
                             current_app.logger.error(f"❌ Failed to update CustomerConfig: {e}", exc_info=True)
                     else:
                         current_app.logger.warning(f"⚠️  No calibrated weights found in Wizard C output")
@@ -1750,12 +1759,10 @@ def process_data():
                 _onboarding_progress.pop(cid, None)
         except Exception:
             pass
-        import traceback
         current_app.logger.error(f"Error in process-data endpoint: {e}", exc_info=True)
         return jsonify({
             "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": "Data processing failed. Please try again or contact support."
         }), 500
 
 
@@ -1954,7 +1961,7 @@ def upload_onboarding_csv():
             current_app.logger.error(f"Error saving file: {e}", exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': f'Failed to save file: {str(e)}'
+                'message': 'Failed to save file. Please try again or contact support.'
             }), 500
         
         resp = {
@@ -1975,7 +1982,7 @@ def upload_onboarding_csv():
         current_app.logger.error(f"Error in onboarding upload: {e}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'message': f'Unexpected error: {str(e)}'
+            'message': 'An unexpected error occurred. Please try again or contact support.'
         }), 500
 
 @onboarding_api.route('/validate-csv', methods=['POST'])
@@ -2038,10 +2045,9 @@ def validate_csv_endpoint():
         return jsonify(result)
         
     except Exception as e:
-        import traceback
+        current_app.logger.error(f"Error validating CSV: {str(e)}", exc_info=True)
         return jsonify({
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": "CSV validation failed. Please try again or contact support."
         }), 500
 
 # ============================================================================

@@ -51,7 +51,6 @@ from kpi_api import kpi_api
 from download_api import download_api
 from rag_api import rag_api
 from export_api import export_api
-from enhanced_rag_api import enhanced_rag_api
 from enhanced_rag_openai_api import enhanced_rag_openai_api
 from enhanced_rag_qdrant_api import enhanced_rag_qdrant_api
 from enhanced_rag_historical_api import enhanced_rag_historical_api
@@ -111,7 +110,6 @@ app.register_blueprint(kpi_api)
 app.register_blueprint(download_api)
 app.register_blueprint(rag_api)
 app.register_blueprint(export_api)
-app.register_blueprint(enhanced_rag_api)
 app.register_blueprint(enhanced_rag_openai_api)
 app.register_blueprint(enhanced_rag_qdrant_api)
 app.register_blueprint(enhanced_rag_historical_api)

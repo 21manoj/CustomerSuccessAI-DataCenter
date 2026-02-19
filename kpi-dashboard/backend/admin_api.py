@@ -170,7 +170,7 @@ def get_admin_summary():
         
     except Exception as e:
         current_app.logger.error(f"Error loading admin summary: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 # ============================================================
@@ -228,7 +228,7 @@ def get_wizard_b_patterns():
         
     except Exception as e:
         current_app.logger.error(f"Error loading patterns: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 @admin_bp.route('/wizard-b/early-warnings', methods=['GET'])
@@ -288,7 +288,7 @@ def get_wizard_b_early_warnings():
         
     except Exception as e:
         current_app.logger.error(f"Error loading early warnings: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 @admin_bp.route('/wizard-b/report', methods=['GET'])
@@ -322,7 +322,7 @@ def get_wizard_b_report():
         
     except Exception as e:
         current_app.logger.error(f"Error loading report: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 # ============================================================
@@ -393,7 +393,7 @@ def get_wizard_c_current_weights():
         
     except Exception as e:
         current_app.logger.error(f"Error loading weights: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 @admin_bp.route('/wizard-c/weights/history', methods=['GET'])
@@ -432,7 +432,7 @@ def get_wizard_c_weights_history():
         
     except Exception as e:
         current_app.logger.error(f"Error loading weight history: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 @admin_bp.route('/wizard-c/accuracy', methods=['GET'])
@@ -469,7 +469,7 @@ def get_wizard_c_accuracy():
         
     except Exception as e:
         current_app.logger.error(f"Error loading accuracy: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 @admin_bp.route('/wizard-c/recalibrate', methods=['POST'])
@@ -497,7 +497,7 @@ def trigger_wizard_c_recalibration():
         
     except Exception as e:
         current_app.logger.error(f"Error triggering recalibration: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 
 # ============================================================
@@ -531,4 +531,4 @@ def get_ensemble_weights():
         
     except Exception as e:
         current_app.logger.error(f"Error loading ensemble: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500

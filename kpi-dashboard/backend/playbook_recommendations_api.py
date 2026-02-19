@@ -10,6 +10,9 @@ from models import db, Account, KPI, KPITimeSeries
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 playbook_recommendations_api = Blueprint('playbook_recommendations_api', __name__)
 
@@ -18,23 +21,65 @@ playbook_recommendations_api = Blueprint('playbook_recommendations_api', __name_
 
 
 def calculate_health_score_proxy(account_id):
-    """Calculate a health score proxy from KPIs using a simplified approach"""
+    """Calculate health score - uses HealthScoreEngine when available, falls back to simple proxy."""
+    try:
+        return _calculate_health_score_via_engine(account_id)
+    except Exception:
+        return _calculate_health_score_simple(account_id)
+
+
+def _calculate_health_score_via_engine(account_id):
+    """Calculate using the canonical HealthScoreEngine (reference range based)."""
+    from health_score_engine import HealthScoreEngine
+
+    kpis = KPI.query.filter_by(account_id=account_id).all()
+    if not kpis:
+        return 50.0
+
+    # Group KPIs by category
+    categories = {}
+    for kpi in kpis:
+        cat = kpi.category or 'Uncategorized'
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append({
+            'kpi_parameter': kpi.kpi_parameter,
+            'data': kpi.data,
+            'impact_level': kpi.impact_level,
+            'weight': kpi.weight,
+            'category': kpi.category,
+            'health_score_component': kpi.health_score_component,
+        })
+
+    # Calculate per-category health scores
+    category_scores = []
+    for cat, kpi_dicts in categories.items():
+        cat_result = HealthScoreEngine.calculate_category_health_score(kpi_dicts, cat)
+        category_scores.append(cat_result)
+
+    # Calculate overall health score
+    overall_result = HealthScoreEngine.calculate_overall_health_score(category_scores)
+    return max(0.0, min(100.0, overall_result['overall_score']))
+
+
+def _calculate_health_score_simple(account_id):
+    """Fallback: simplified health score calculation."""
     # Get recent KPIs for the account
     kpis = KPI.query.filter_by(account_id=account_id).all()
-    
+
     if not kpis:
         return 50.0  # Default middle score
-    
+
     # Simple health calculation based on KPI data and impact levels
     total_score = 0
     valid_kpis = 0
-    
+
     for kpi in kpis:
         try:
             # Parse the KPI data value
             data_str = str(kpi.data).replace('%', '').replace('$', '').replace('K', '000').replace('M', '000000')
             value = float(data_str) if data_str.strip() else 0
-            
+
             # Normalize to 0-100 scale based on KPI type
             if 'score' in kpi.kpi_parameter.lower() or 'rate' in kpi.kpi_parameter.lower():
                 # Already in percentage or score format
@@ -54,7 +99,7 @@ def calculate_health_score_proxy(account_id):
             else:
                 # Default normalization
                 normalized_score = min(100, max(0, value))
-            
+
             # Weight by impact level
             impact_weight = 1.0
             if kpi.impact_level == 'Critical':
@@ -63,14 +108,14 @@ def calculate_health_score_proxy(account_id):
                 impact_weight = 2.0
             elif kpi.impact_level == 'Medium':
                 impact_weight = 1.5
-            
+
             total_score += normalized_score * impact_weight
             valid_kpis += impact_weight
-            
+
         except (ValueError, TypeError):
             # Skip invalid KPI data
             continue
-    
+
     if valid_kpis > 0:
         average_score = total_score / valid_kpis
         return max(0, min(100, average_score))
@@ -355,9 +400,10 @@ def test_health_score(account_id):
             'status': 'success'
         })
     except Exception as e:
+        logger.error(f"Error in test_health_score for account {account_id}: {str(e)}", exc_info=True)
         return jsonify({
             'account_id': account_id,
-            'error': str(e),
+            'error': 'Health score calculation failed. Please try again or contact support.',
             'status': 'error'
         }), 500
 
@@ -456,8 +502,9 @@ def get_playbook_recommendations(playbook_id):
         })
     
     except Exception as e:
+        logger.error(f"Error getting playbook recommendations for {playbook_id}: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'Failed to get playbook recommendations. Please try again or contact support.'
         }), 500
 

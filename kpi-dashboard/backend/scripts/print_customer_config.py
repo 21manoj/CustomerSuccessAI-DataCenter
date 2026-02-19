@@ -17,10 +17,11 @@ def main():
     customer_id = int(sys.argv[1]) if len(sys.argv) > 1 else 19
 
     from app_v3_minimal import app
+    from extensions import db
     from models import Customer, CustomerConfig
 
     with app.app_context():
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             print(f"Customer {customer_id} not found.")
             return 1

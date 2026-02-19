@@ -175,6 +175,10 @@ def load_table(engine, filename, table_name, description):
         print("✅")
         
         # Verify
+        ALLOWED_TABLES = set(info['table'] for info in FILES.values())
+        if table_name not in ALLOWED_TABLES:
+            raise ValueError(f"Unexpected table name: {table_name}")
+
         with engine.connect() as conn:
             if table_name == 'accounts':
                 result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name} WHERE customer_id = :cid"), {"cid": CUSTOMER_ID})

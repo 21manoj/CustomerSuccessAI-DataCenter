@@ -58,7 +58,7 @@ def get_product_health():
         
         results = []
         for trend in trends:
-            product = ProductCatalog.query.get(trend.product_id)
+            product = db.session.get(ProductCatalog, trend.product_id)
             results.append({
                 'product_id': trend.product_id,
                 'product_name': product.product_name if product else 'Unknown',
@@ -96,8 +96,8 @@ def get_product_health():
         
         results = []
         for trend in trends:
-            product = ProductCatalog.query.get(trend.product_id)
-            account = Account.query.get(trend.account_id)
+            product = db.session.get(ProductCatalog, trend.product_id)
+            account = db.session.get(Account, trend.account_id)
             results.append({
                 'product_id': trend.product_id,
                 'product_name': product.product_name if product else 'Unknown',

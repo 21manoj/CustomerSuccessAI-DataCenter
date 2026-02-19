@@ -69,7 +69,7 @@ with app.app_context():
     
     # Check customer
     if admin.customer_id:
-        customer = Customer.query.get(admin.customer_id)
+        customer = db.session.get(Customer, admin.customer_id)
         if customer:
             print(f"\n👤 Customer:")
             print(f"   Name: {customer.customer_name}")

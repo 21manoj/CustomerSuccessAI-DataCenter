@@ -53,7 +53,7 @@ def check_kpi_data():
             sample_kpis = KPI.query.filter_by(customer_id=customer_id).limit(10).all()
             print(f"\n📝 Sample KPIs (first 10):")
             for kpi in sample_kpis:
-                acc_name = Account.query.get(kpi.account_id).account_name if kpi.account_id else "N/A"
+                acc_name = db.session.get(Account, kpi.account_id).account_name if kpi.account_id else "N/A"
                 print(f"   {acc_name} | {kpi.kpi_parameter}: {kpi.data}")
 
 

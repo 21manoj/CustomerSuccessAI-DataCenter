@@ -197,7 +197,7 @@ def embed_and_upload_signals(
     
     with app.app_context():
         # Verify customer exists
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             raise ValueError(f"Customer ID {customer_id} not found!")
         

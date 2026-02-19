@@ -79,7 +79,7 @@ def create_account_seed_data(customer_id=None, account_name=None, with_products=
         # Step 1: Get or create customer
         print("\n[1/6] Setting up customer...")
         if customer_id:
-            customer = Customer.query.get(customer_id)
+            customer = db.session.get(Customer, customer_id)
             if not customer:
                 print(f"   ❌ Customer {customer_id} not found")
                 return False

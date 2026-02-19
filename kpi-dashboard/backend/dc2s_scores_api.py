@@ -10,6 +10,9 @@ from auth_middleware import get_current_customer_id
 from utils.score_calculator import ScoreCalculator, calculate_customer_scores, calculate_account_scores
 from datetime import date, datetime
 from sqlalchemy import func
+import logging
+
+logger = logging.getLogger(__name__)
 
 dc2s_scores_api = Blueprint('dc2s_scores_api', __name__, url_prefix='/api/dc2s/scores')
 
@@ -192,9 +195,10 @@ def calculate_scores():
             })
     
     except Exception as e:
+        logger.error(f"Error calculating scores: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Score calculation failed. Please try again or contact support.'
         }), 500
 
 

@@ -333,7 +333,7 @@ def validate_database(customer_id: int):
     
     with app.app_context():
         # Check customer
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         log(f"✅ Customer: {customer.customer_name if customer else 'NOT FOUND'}")
         
         # Check accounts

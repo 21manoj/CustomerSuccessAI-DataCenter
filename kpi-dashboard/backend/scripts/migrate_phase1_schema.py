@@ -39,7 +39,12 @@ def migrate_phase1():
                 'customized_by': "VARCHAR(255)"
             }
             
+            # Validate column names against whitelist to prevent SQL injection
+            ALLOWED_COLUMN_NAMES = set(new_columns.keys())
+
             for col_name, col_def in new_columns.items():
+                if col_name not in ALLOWED_COLUMN_NAMES:
+                    raise ValueError(f"Unexpected column name: {col_name}")
                 if col_name not in existing_columns:
                     try:
                         # PostgreSQL syntax

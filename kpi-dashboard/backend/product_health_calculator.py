@@ -18,14 +18,14 @@ def calculate_product_health_score(product_id: int, account_id: int, customer_id
     Returns:
         dict with health scores and KPI statistics
     """
-    product = ProductCatalog.query.get(product_id)
+    product = db.session.get(ProductCatalog, product_id)
     if not product:
         return None
     
-    account = Account.query.get(account_id)
+    account = db.session.get(Account, account_id)
     if not account:
         return None
-    
+
     # Get product-level KPIs (KPIs with product_id matching)
     product_level_kpis = KPI.query.filter_by(
         account_id=account_id,
@@ -175,10 +175,10 @@ def calculate_and_store_product_health(account_id: int, customer_id: int = None)
     Calculate and store product health scores for an account
     Called on KPI upload or data change
     """
-    account = Account.query.get(account_id)
+    account = db.session.get(Account, account_id)
     if not account:
         return
-    
+
     if customer_id is None:
         customer_id = account.customer_id
     

@@ -69,7 +69,7 @@ def clean_session(app_ctx):
 def _seed_dc2s_account(db_inst, customer_id=1, account_id=100, deployment_days_ago=200):
     from models import Customer, Account
 
-    cust = Customer.query.get(customer_id)
+    cust = _db.session.get(Customer, customer_id)
     if not cust:
         cust = Customer(customer_id=customer_id, customer_name=f'TestCo-{customer_id}',
                         email=f'test{customer_id}@test.com')
@@ -123,7 +123,7 @@ class TestPhase0_1_AccountColumns:
         """After INSERT, journey_phase should default to 'onboarding'."""
         _, db_inst = app_ctx
         from models import Customer, Account
-        cust = Customer.query.get(1)
+        cust = _db.session.get(Customer, 1)
         if not cust:
             cust = Customer(customer_id=1, customer_name='Default Test', email='default@test.com')
             db_inst.session.add(cust)
@@ -161,7 +161,7 @@ class TestPhase0_2_JourneyPhaseSync:
 
         from verticals.dc2_s.api_routes import _sync_journey_phase
         from models import Account
-        acct = Account.query.get(201)
+        acct = _db.session.get(Account, 201)
         _sync_journey_phase(acct)
         assert acct.journey_phase == 'deployment'
 
@@ -172,7 +172,7 @@ class TestPhase0_2_JourneyPhaseSync:
 
         from verticals.dc2_s.api_routes import _sync_journey_phase
         from models import Account
-        acct = Account.query.get(202)
+        acct = _db.session.get(Account, 202)
         _sync_journey_phase(acct)
         assert acct.journey_phase == 'performance'
 
@@ -183,14 +183,14 @@ class TestPhase0_2_JourneyPhaseSync:
 
         from verticals.dc2_s.api_routes import _sync_journey_phase
         from models import Account
-        acct = Account.query.get(203)
+        acct = _db.session.get(Account, 203)
         _sync_journey_phase(acct)
         assert acct.journey_phase == 'excellence'
 
     def test_phase_no_metadata(self, app_ctx):
         _, db_inst = app_ctx
         from models import Customer, Account
-        cust = Customer.query.get(5)
+        cust = _db.session.get(Customer, 5)
         if not cust:
             cust = Customer(customer_id=5, customer_name='No Meta', email='nometa@test.com')
             db_inst.session.add(cust)
@@ -260,7 +260,7 @@ class TestPhase1_NewTables:
         from models_action_interface import CustomerActionBinding
         from models import Customer
 
-        cust = Customer.query.get(10)
+        cust = _db.session.get(Customer, 10)
         if not cust:
             cust = Customer(customer_id=10, customer_name='Binding Test', email='binding@test.com')
             db_inst.session.add(cust)
@@ -292,7 +292,7 @@ class TestPhase1_NewTables:
         from models_action_interface import PlaybookStepLog
         from models import PlaybookExecution, Customer
 
-        cust = Customer.query.get(11)
+        cust = _db.session.get(Customer, 11)
         if not cust:
             cust = Customer(customer_id=11, customer_name='StepLog Test', email='steplog@test.com')
             db_inst.session.add(cust)
@@ -345,7 +345,7 @@ class TestPhase1_ModelExtensions:
         _, db_inst = app_ctx
         from models import PlaybookTrigger, Customer
 
-        cust = Customer.query.get(12)
+        cust = _db.session.get(Customer, 12)
         if not cust:
             cust = Customer(customer_id=12, customer_name='Trigger Ext', email='trigext@test.com')
             db_inst.session.add(cust)
@@ -366,7 +366,7 @@ class TestPhase1_ModelExtensions:
         _, db_inst = app_ctx
         from models import PlaybookExecution, Customer
 
-        cust = Customer.query.get(13)
+        cust = _db.session.get(Customer, 13)
         if not cust:
             cust = Customer(customer_id=13, customer_name='Exec Ext', email='execext@test.com')
             db_inst.session.add(cust)

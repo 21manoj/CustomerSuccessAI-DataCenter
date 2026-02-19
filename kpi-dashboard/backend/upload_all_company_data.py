@@ -193,7 +193,7 @@ def assign_kpis_to_accounts():
     
     for kpi in unassigned_kpis:
         # Try to find the account based on the upload filename
-        upload = KPIUpload.query.get(kpi.upload_id)
+        upload = db.session.get(KPIUpload, kpi.upload_id)
         if upload:
             filename = upload.original_filename.lower()
             

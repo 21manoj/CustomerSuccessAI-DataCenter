@@ -13,6 +13,9 @@ from models import KPIUpload, KPI, CustomerConfig, Account
 from resolve_identifier import resolve_customer_id
 import io
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 import os
 import sys
 
@@ -180,8 +183,9 @@ def upload_excel_enhanced():
         if 'temp_path' in locals() and os.path.exists(temp_path):
             os.remove(temp_path)
         
+        logger.error(f"Upload failed: {str(e)}", exc_info=True)
         return jsonify({
-            'error': f'Upload failed: {str(e)}',
+            'error': 'Upload failed. Please try again or contact support.',
             'status': 'error'
         }), 500
 
@@ -362,8 +366,9 @@ def validate_file_format():
         if 'temp_path' in locals() and os.path.exists(temp_path):
             os.remove(temp_path)
         
+        logger.error(f"Validation failed: {str(e)}", exc_info=True)
         return jsonify({
-            'error': f'Validation failed: {str(e)}',
+            'error': 'Validation failed. Please try again or contact support.',
             'is_valid': False
         }), 500
 

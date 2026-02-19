@@ -84,7 +84,7 @@ def load_customers(csv_file):
     df = pd.read_csv(csv_file)
     
     for _, row in df.iterrows():
-        customer = Customer.query.get(row['customer_id'])
+        customer = db.session.get(Customer, row['customer_id'])
         
         if not customer:
             customer = Customer(
@@ -114,7 +114,7 @@ def load_accounts(csv_file):
             log(f"   Removed column: {col}")
     
     for _, row in df.iterrows():
-        account = Account.query.get(row['account_id'])
+        account = db.session.get(Account, row['account_id'])
         
         if not account:
             account = Account(

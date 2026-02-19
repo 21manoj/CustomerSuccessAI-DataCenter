@@ -149,7 +149,7 @@ def main():
         # Step 2: Get customer IDs to rebuild
         if args.customer_id:
             customer_ids = [args.customer_id]
-            customer = Customer.query.get(args.customer_id)
+            customer = db.session.get(Customer, args.customer_id)
             if not customer:
                 print(f"\n❌ Customer {args.customer_id} not found!")
                 return 1
@@ -166,7 +166,7 @@ def main():
         failed_count = 0
         
         for customer_id in customer_ids:
-            customer = Customer.query.get(customer_id)
+            customer = db.session.get(Customer, customer_id)
             customer_name = customer.customer_name if customer else f"ID {customer_id}"
             
             print(f"\n{'─'*70}")

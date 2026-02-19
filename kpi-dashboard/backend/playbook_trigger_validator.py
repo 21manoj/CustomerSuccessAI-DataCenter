@@ -352,7 +352,7 @@ def evaluate_triggers(account_id: int, customer_id: int, current_kpis: dict, ope
     from extensions import db
     import uuid
 
-    account = Account.query.get(account_id)
+    account = db.session.get(Account, account_id)
     if not account:
         logger.warning("evaluate_triggers: account %s not found", account_id)
         return []

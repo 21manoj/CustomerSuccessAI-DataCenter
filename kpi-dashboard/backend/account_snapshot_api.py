@@ -13,6 +13,9 @@ from models import (
 )
 from datetime import datetime, timedelta
 from playbook_recommendations_api import calculate_health_score_proxy
+import logging
+
+logger = logging.getLogger(__name__)
 import json
 
 account_snapshot_api = Blueprint('account_snapshot_api', __name__)
@@ -516,9 +519,10 @@ def create_snapshot():
         
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Failed to create snapshot: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'error': f'Failed to create snapshot: {str(e)}'
+            'error': 'Failed to create snapshot. Please try again or contact support.'
         }), 500
 
 
@@ -575,9 +579,10 @@ def get_snapshots():
         })
         
     except Exception as e:
+        logger.error(f"Failed to fetch snapshots: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'error': f'Failed to fetch snapshots: {str(e)}'
+            'error': 'Failed to fetch snapshots. Please try again or contact support.'
         }), 500
 
 
@@ -632,9 +637,10 @@ def get_latest_snapshot():
         })
         
     except Exception as e:
+        logger.error(f"Failed to fetch latest snapshot: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'error': f'Failed to fetch latest snapshot: {str(e)}'
+            'error': 'Failed to fetch latest snapshot. Please try again or contact support.'
         }), 500
 
 
@@ -680,8 +686,9 @@ def get_snapshot_history():
         })
         
     except Exception as e:
+        logger.error(f"Failed to fetch snapshot history: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'error': f'Failed to fetch snapshot history: {str(e)}'
+            'error': 'Failed to fetch snapshot history. Please try again or contact support.'
         }), 500
 

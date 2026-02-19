@@ -50,7 +50,7 @@ def test_database_state():
             print(f"   User ID: {admin.user_id}")
             print(f"   Email: {admin.email}")
             print(f"   Customer ID: {admin.customer_id}")
-            customer = Customer.query.get(admin.customer_id)
+            customer = db.session.get(Customer, admin.customer_id)
             if customer:
                 print(f"   Customer Name: {customer.customer_name}")
                 account_count = Account.query.filter_by(customer_id=admin.customer_id).count()
@@ -103,7 +103,7 @@ def test_user_customer_relationship():
         users = User.query.all()
         
         for user in users:
-            customer = Customer.query.get(user.customer_id) if user.customer_id else None
+            customer = db.session.get(Customer, user.customer_id) if user.customer_id else None
             account_count = Account.query.filter_by(customer_id=user.customer_id).count() if user.customer_id else 0
             
             print(f"\n👤 User {user.user_id} ({user.email}):")

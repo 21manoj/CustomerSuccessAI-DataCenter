@@ -41,7 +41,7 @@ def debug_product_names():
         kpi_product_names = set()
         for kpi in product_kpis:
             # Get product name from the KPI's product
-            product = Product.query.get(kpi.product_id)
+            product = db.session.get(Product, kpi.product_id)
             if product:
                 kpi_product_names.add(product.product_name)
                 print(f"  KPI ID {kpi.kpi_id}: Product '{product.product_name}' (Product ID: {kpi.product_id})")

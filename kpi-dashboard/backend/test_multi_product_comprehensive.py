@@ -127,7 +127,7 @@ def test_health_score_calculations():
         # Test 1: HealthScoreStorageService
         print("\n1. Testing HealthScoreStorageService...")
         try:
-            account = Account.query.get(TEST_ACCOUNT_ID)
+            account = db.session.get(Account, TEST_ACCOUNT_ID)
             if not account:
                 print_warn(f"Account {TEST_ACCOUNT_ID} not found, skipping test")
                 return True

@@ -129,7 +129,7 @@ class EnhancedRAGHistoricalSystem:
             # Get upload dates for sorting
             kpi_with_dates = []
             for kpi, account in kpi_list:
-                upload = KPIUpload.query.get(kpi.upload_id)
+                upload = db.session.get(KPIUpload, kpi.upload_id)
                 if upload:
                     kpi_with_dates.append((kpi, account, upload.uploaded_at))
             

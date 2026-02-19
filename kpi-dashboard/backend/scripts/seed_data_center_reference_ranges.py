@@ -156,7 +156,7 @@ def seed_data_center_reference_ranges(customer_id=None, customer_name=None):
     with app.app_context():
         # Find customer
         if customer_id:
-            customer = Customer.query.get(customer_id)
+            customer = db.session.get(Customer, customer_id)
         elif customer_name:
             customer = Customer.query.filter(
                 Customer.customer_name.ilike(f'%{customer_name}%')

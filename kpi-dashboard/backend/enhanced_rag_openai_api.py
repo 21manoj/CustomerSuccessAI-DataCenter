@@ -10,6 +10,9 @@ from extensions import db
 from models import KPI, KPIUpload, Account, CustomerConfig
 from enhanced_rag_openai import get_rag_system
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 enhanced_rag_openai_api = Blueprint('enhanced_rag_openai_api', __name__)
 
@@ -31,7 +34,8 @@ def build_enhanced_knowledge_base():
             'account_count': len(rag_system.account_data)
         })
     except Exception as e:
-        return jsonify({'error': f'Failed to build knowledge base: {str(e)}'}), 500
+        logger.error(f"Failed to build knowledge base: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to build knowledge base. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/query', methods=['POST'])
 def enhanced_query():
@@ -91,7 +95,7 @@ def enhanced_query():
                 result = rag_system.query(query_text, query_type, conversation_history)
                 result['mcp_enhanced'] = False
                 result['mcp_fallback'] = True
-                result['mcp_error'] = str(e)
+                result['mcp_error'] = 'MCP enhancement failed, using standard RAG'
         else:
             # Use standard RAG (existing functionality)
             rag_system = get_rag_system(customer_id)
@@ -106,7 +110,8 @@ def enhanced_query():
         
         return jsonify(result)
     except Exception as e:
-        return jsonify({'error': f'Query failed: {str(e)}'}), 500
+        logger.error(f"Query failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Query failed. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/revenue-analysis', methods=['GET'])
 def analyze_revenue_drivers():
@@ -123,7 +128,8 @@ def analyze_revenue_drivers():
         analysis = rag_system.analyze_revenue_drivers(customer_id)
         return jsonify(analysis)
     except Exception as e:
-        return jsonify({'error': f'Revenue analysis failed: {str(e)}'}), 500
+        logger.error(f"Revenue analysis failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Revenue analysis failed. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/risk-analysis', methods=['GET'])
 def analyze_at_risk_accounts():
@@ -140,7 +146,8 @@ def analyze_at_risk_accounts():
         analysis = rag_system.find_at_risk_accounts(customer_id)
         return jsonify(analysis)
     except Exception as e:
-        return jsonify({'error': f'Risk analysis failed: {str(e)}'}), 500
+        logger.error(f"Risk analysis failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Risk analysis failed. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/account/<int:account_id>', methods=['GET'])
 def analyze_specific_account(account_id):
@@ -178,7 +185,8 @@ def analyze_specific_account(account_id):
             'analysis': result
         })
     except Exception as e:
-        return jsonify({'error': f'Account analysis failed: {str(e)}'}), 500
+        logger.error(f"Account analysis failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Account analysis failed. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/industry/<industry>', methods=['GET'])
 def analyze_industry_performance(industry):
@@ -214,7 +222,8 @@ def analyze_industry_performance(industry):
             'analysis': result
         })
     except Exception as e:
-        return jsonify({'error': f'Industry analysis failed: {str(e)}'}), 500
+        logger.error(f"Industry analysis failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Industry analysis failed. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/top-accounts', methods=['GET'])
 def get_top_accounts():
@@ -237,7 +246,8 @@ def get_top_accounts():
             'total_revenue': sum(acc['revenue'] for acc in top_accounts)
         })
     except Exception as e:
-        return jsonify({'error': f'Failed to get top accounts: {str(e)}'}), 500
+        logger.error(f"Failed to get top accounts: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to get top accounts. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/kpi-performance', methods=['GET'])
 def analyze_kpi_performance():
@@ -271,7 +281,8 @@ def analyze_kpi_performance():
             'analysis': result
         })
     except Exception as e:
-        return jsonify({'error': f'KPI analysis failed: {str(e)}'}), 500
+        logger.error(f"KPI analysis failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'KPI analysis failed. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/accounts/revenue', methods=['GET'])
 def get_accounts_by_revenue():
@@ -307,7 +318,8 @@ def get_accounts_by_revenue():
         
         return jsonify(result)
     except Exception as e:
-        return jsonify({'error': f'Failed to get accounts: {str(e)}'}), 500
+        logger.error(f"Failed to get accounts: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to get accounts. Please try again or contact support.'}), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/status', methods=['GET'])
 def get_knowledge_base_status():
@@ -328,11 +340,12 @@ def get_knowledge_base_status():
             'account_count': len(rag_system.account_data) if is_built else 0
         })
     except Exception as e:
+        logger.error(f"Error checking knowledge base status: {str(e)}", exc_info=True)
         return jsonify({
             'customer_id': customer_id,
             'is_built': False,
             'status': 'error',
-            'error': str(e)
+            'error': 'Failed to check knowledge base status. Please try again or contact support.'
         }), 500
 
 @enhanced_rag_openai_api.route('/api/rag-openai/query-simple', methods=['POST'])
@@ -429,7 +442,8 @@ def simple_query():
             }), 400
             
     except Exception as e:
-        return jsonify({'error': f'Query failed: {str(e)}'}), 500
+        logger.error(f"Simple query failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Query failed. Please try again or contact support.'}), 500
 
 def _detect_query_type(query_text: str) -> str:
     """Auto-detect query type based on keywords"""

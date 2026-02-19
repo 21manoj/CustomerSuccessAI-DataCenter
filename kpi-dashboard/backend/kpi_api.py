@@ -487,13 +487,9 @@ def get_all_kpis():
         return jsonify(result)
         
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
         logger.error(f"Error getting all KPIs: {e}", exc_info=True)
-        print(f"ERROR in /api/kpis/customer/all: {str(e)}")
-        print(error_trace)
         db.session.rollback()  # Ensure transaction is cleared
-        return jsonify({'error': f'Failed to get KPIs: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to get KPIs. Please try again or contact support.'}), 500
 
 @kpi_api.route('/api/test-kpis', methods=['GET'])
 def test_kpis():

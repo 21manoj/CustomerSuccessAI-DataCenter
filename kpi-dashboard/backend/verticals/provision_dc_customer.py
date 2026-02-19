@@ -19,7 +19,7 @@ And replace placeholders:
     - {CUSTOMER_ID} → 18
     - {CUSTOMER_NAME} → Acme Corp (or Customer 18)
     - {VERTICAL_SLUG} → dc2_s
-    - {ACCOUNT_ID_START} → 18000 (formula: 10000 + customer_id * 1000)
+    - {ACCOUNT_ID_START} → 18000 (legacy; account IDs are now auto-incremented, use UUIDs)
     - customer9 → customer18
     - 90001, 90002, etc. → 18001, 18002, etc. (account ID mapping)
 
@@ -36,6 +36,7 @@ import os
 import re
 import json
 import logging
+import uuid
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
@@ -76,14 +77,25 @@ logger = logging.getLogger(__name__)
 # HELPER FUNCTIONS
 # ============================================================
 
+def generate_account_uuid(customer_id: int, index: int = 0) -> str:
+    """
+    Generate a UUID for an account.
+
+    Uses uuid4 for globally unique identifiers. The customer_id and index
+    are only used for the human-readable prefix, not for deterministic generation.
+
+    Returns:
+        UUID string like 'dc2s_acct_<uuid4>'
+    """
+    return f"dc2s_acct_{uuid.uuid4()}"
+
+
 def calculate_account_id_start(customer_id: int) -> int:
     """
-    Calculate starting account ID using formula: 10000 + customer_id * 1000
-    
-    Examples:
-        Customer 9  → 19000 (accounts 19001-19999)
-        Customer 17 → 27000 (accounts 27001-27999)
-        Customer 18 → 28000 (accounts 28001-28999)
+    DEPRECATED: Account IDs are now auto-incremented by the database.
+    Use generate_account_uuid() for account identification.
+
+    Kept for backward compatibility with template placeholder replacement.
     """
     return 10000 + customer_id * 1000
 
@@ -463,12 +475,10 @@ Examples:
   # Force overwrite existing (for CI/CD)
   python3 provision_dc_customer.py --customer-id 18 --force
 
-Account ID Formula:
-  account_id_start = 10000 + customer_id * 1000
-  
-  Customer 17 → accounts 27001-27999
-  Customer 18 → accounts 28001-28999
-  Customer 19 → accounts 29001-29999
+Account Identification:
+  Account IDs are auto-incremented by the database.
+  Each account also receives a UUID (e.g., dc2s_acct_<uuid4>).
+  Legacy formula-based ranges are deprecated.
         """
     )
     

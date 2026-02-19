@@ -162,7 +162,7 @@ def get_customer_data_summary(customer_id):
 
 def delete_customer_data(customer_id, dry_run=False):
     """Delete all data associated with a customer"""
-    customer = Customer.query.get(customer_id)
+    customer = db.session.get(Customer, customer_id)
     if not customer:
         return {'error': f'Customer {customer_id} not found'}
     

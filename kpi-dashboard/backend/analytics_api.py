@@ -11,6 +11,9 @@ from models import Account, KPI, KPIUpload
 from sqlalchemy import func, and_, or_, cast, Float
 from typing import Dict, List, Any
 from datetime import datetime
+import logging
+
+_logger = logging.getLogger(__name__)
 
 analytics_api = Blueprint('analytics_api', __name__)
 
@@ -602,7 +605,8 @@ def aggregate_data():
             })
     
     except Exception as e:
-        return jsonify({'error': f'Aggregation failed: {str(e)}'}), 500
+        _logger.error(f"Aggregation failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Aggregation failed. Please try again or contact support.'}), 500
 
 
 # ==================== STATISTICS ====================

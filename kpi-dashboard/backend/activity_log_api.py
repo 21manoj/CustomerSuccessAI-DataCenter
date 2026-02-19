@@ -10,6 +10,9 @@ from extensions import db
 from models import ActivityLog, User
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_, desc
+import logging
+
+logger = logging.getLogger(__name__)
 
 activity_log_api = Blueprint('activity_log_api', __name__)
 
@@ -105,11 +108,10 @@ def get_activity_logs():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error fetching activity logs: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Failed to fetch activity logs. Please try again or contact support.'
         }), 500
 
 @activity_log_api.route('/api/activity-logs/summary', methods=['GET'])
@@ -202,11 +204,10 @@ def get_activity_summary():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error fetching activity summary: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Failed to fetch activity summary. Please try again or contact support.'
         }), 500
 
 @activity_log_api.route('/api/activity-logs/export', methods=['GET'])
@@ -298,10 +299,9 @@ def export_activity_logs():
         )
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error exporting activity logs: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Failed to export activity logs. Please try again or contact support.'
         }), 500
 

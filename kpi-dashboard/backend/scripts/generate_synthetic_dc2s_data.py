@@ -2,6 +2,7 @@
 """Placeholder synthetic data generator - Generates ALL KPIs"""
 import sys
 import argparse
+import uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -49,16 +50,17 @@ with app.app_context():
                 'account_status': 'active'
             })
     else:
-        # Default: create 3 accounts
+        # Default: create 3 accounts with UUID-based identification
         for i in range(3):
             accounts.append({
-                'account_id': 10000 + i + (customer_id * 1000),
+                'account_id': i + 1,  # Auto-increment placeholder; DB assigns actual ID
                 'customer_id': customer_id,
                 'account_name': f'Account-{i+1}',
                 'industry': 'Technology',
                 'vertical': 'dc2_s',
                 'region': 'us-west-2',
-                'account_status': 'active'
+                'account_status': 'active',
+                'uuid': f"dc2s_acct_{uuid.uuid4()}"
             })
     
     # Map P1-P5 codes to AI/CH/DV/EX/OS format for config compatibility

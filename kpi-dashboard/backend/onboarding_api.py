@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-Onboarding API - Corrected to match actual database schema
+DEPRECATED: This module is the legacy Onboarding API.
+Use onboarding_api_v2_config_aware.py instead, which handles 13 fields
+and is the active, config-aware onboarding endpoint.
+
+This legacy version only reads 2 fields (customer_name, industry) in its
+/complete route and is no longer registered in the application.
+It is retained for reference only.
+
+See: onboarding_api_v2_config_aware.py
 """
 
 from flask import Blueprint, request, jsonify
@@ -9,6 +17,9 @@ from auth_middleware import get_current_user_id, get_current_customer_id
 import subprocess
 import os
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 onboarding_api = Blueprint('onboarding_api', __name__, url_prefix='/api/onboarding')
 
@@ -43,7 +54,8 @@ def create_customer():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error creating customer: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to create customer. Please try again or contact support.'}), 500
 
 # ============================================================================
 # STEP 2: INITIALIZE CONFIGURATION
@@ -111,7 +123,8 @@ def initialize_config():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error initializing config: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to initialize configuration. Please try again or contact support.'}), 500
 
 # ============================================================================
 # STEP 3: CREATE SAMPLE ACCOUNTS
@@ -130,10 +143,10 @@ def create_sample_accounts():
         return jsonify({'error': 'Customer ID required'}), 400
     
     try:
-        customer = Customer.query.get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
-        
+
         accounts = []
         environments = ['Production', 'Staging', 'Development']
         
@@ -169,7 +182,8 @@ def create_sample_accounts():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error creating sample accounts: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to create sample accounts. Please try again or contact support.'}), 500
 
 # ============================================================================
 # STEP 4: GENERATE INITIAL DATA
@@ -187,7 +201,7 @@ def generate_initial_data():
         return jsonify({'error': 'Customer ID required'}), 400
     
     # Verify prerequisites
-    customer = Customer.query.get(customer_id)
+    customer = db.session.get(Customer, customer_id)
     if not customer:
         return jsonify({'error': 'Customer not found'}), 404
     
@@ -254,9 +268,10 @@ def generate_initial_data():
         }), 500
     
     except Exception as e:
+        logger.error(f"Error generating initial data: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Data generation failed. Please try again or contact support.'
         }), 500
 
 # ============================================================================
@@ -308,9 +323,10 @@ def calculate_initial_scores():
         })
         
     except Exception as e:
+        logger.error(f"Error calculating initial scores: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Score calculation failed. Please try again or contact support.'
         }), 500
 
 # ============================================================================
@@ -444,12 +460,9 @@ def complete_onboarding():
         
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Onboarding failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
+        logger.error(f"Onboarding failed: {str(e)}", exc_info=True)
+
         return jsonify({
             'success': False,
-            'error': 'Onboarding failed',
-            'details': str(e)
+            'error': 'Onboarding failed. Please try again or contact support.'
         }), 500

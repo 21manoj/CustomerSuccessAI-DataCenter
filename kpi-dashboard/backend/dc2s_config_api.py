@@ -9,6 +9,9 @@ from models import db, CustomerConfig, Customer
 from auth_middleware import get_current_customer_id
 from utils.config_validator import ConfigValidator
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 dc2s_config_api = Blueprint('dc2s_config_api', __name__, url_prefix='/api/dc2s/config')
 
@@ -162,10 +165,10 @@ def get_dc2s_kpi_ranges():
     try:
         from verticals.dc2_s.kpi_definitions import DC2S_KPIS
     except ImportError as e:
+        logger.error(f"DC2_S KPI definitions not available: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'message': 'DC2_S KPI definitions not available',
-            'detail': str(e)
+            'message': 'DC2_S KPI definitions not available. Please try again or contact support.'
         }), 500
 
     ranges = []

@@ -32,7 +32,7 @@ def fix_admin_user():
     
     with app.app_context():
         # Get customer_id=1 (Test Company - has 25 accounts)
-        customer = Customer.query.get(1)
+        customer = db.session.get(Customer, 1)
         if not customer:
             print("\n❌ Customer ID 1 not found!")
             return False
