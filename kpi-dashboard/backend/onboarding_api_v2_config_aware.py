@@ -575,6 +575,8 @@ def complete_onboarding():
     num_accounts = data.get('num_accounts', 3)  # Default: 3 accounts
     custom_weights = data.get('weights')  # Optional custom pillar weights
     idempotent = data.get('idempotent', False)  # If True, return existing customer on duplicate
+    onboarding_mode = data.get('onboarding_mode', 'demo')  # 'demo' (synthetic data) or 'custom' (user uploads CSVs)
+    showcase_pattern_mix = data.get('showcase_pattern_mix')  # Optional: custom journey pattern distribution for demo mode
     
     if not customer_name:
         return jsonify({"error": "customer_name required"}), 400
@@ -918,18 +920,25 @@ def complete_onboarding():
         else:
             account_id_range = "N/A"
         
-        # Step 5: Generate config-aware CSV files
+        # Step 5: Generate config-aware CSV files (Demo mode only)
+        # In 'custom' mode, user uploads their own CSVs via /upload endpoint
         csv_files_generated = False
         backend_dir = Path(__file__).parent
-        
+
+        if onboarding_mode == 'custom':
+            current_app.logger.info(f"Custom mode: skipping CSV generation. User will upload CSVs via /api/onboarding/upload.")
+            # Ensure data directory exists for later uploads
+            data_dir = get_customer_directory(customer_id) / 'data'
+            data_dir.mkdir(parents=True, exist_ok=True)
+
         # Try generate_synthetic_customer_data.py first (preferred)
         generator_script = backend_dir / 'scripts' / 'generate_synthetic_customer_data.py'
-        
+
         # Fallback to generate_synthetic_dc2s_data.py if preferred doesn't exist
         if not generator_script.exists():
             generator_script = backend_dir / 'scripts' / 'generate_synthetic_dc2s_data.py'
-        
-        if generator_script.exists():
+
+        if onboarding_mode != 'custom' and generator_script.exists():
             # Build command for new config-aware generator
             data_dir = Path(f'verticals/customer{customer_id}-dc2_s/data')
             cmd = [
@@ -986,10 +995,18 @@ def complete_onboarding():
             current_app.logger.warning(f"⚠️  Data generator script not found: {generator_script}")
         
         # Build enhanced response (GAP 1.5: partial success when csv_files_generated is False)
+        if onboarding_mode == 'custom':
+            message = "Customer, user, config, and accounts created. Upload your CSV files via /api/onboarding/upload, then call /api/onboarding/process-data."
+        elif csv_files_generated:
+            message = "Onboarding complete! Customer, user, config, accounts, and demo CSV files created."
+        else:
+            message = "Customer, user, config, and accounts created. CSV generation failed; upload CSVs via /api/onboarding/upload."
+
         response_data = {
             "success": True,
             "customer_id": customer_id,
             "customer_name": customer_name,
+            "onboarding_mode": onboarding_mode,
             "accounts": len(accounts_created),
             "account_details": accounts_created,
             "account_id_range": account_id_range,
@@ -1001,14 +1018,14 @@ def complete_onboarding():
             },
             "directory_provisioned": directory_provisioned,
             "csv_files_generated": csv_files_generated,
-            "message": (
-                "Onboarding complete! Customer, user, config, accounts, and CSV files created."
-                if csv_files_generated
-                else "Customer, user, config, and accounts created. CSV generation failed or skipped; you can upload CSVs via /api/onboarding/upload."
-            )
+            "message": message
         }
-        if not csv_files_generated:
+        if onboarding_mode == 'custom':
+            response_data["next_step"] = "Upload CSVs via POST /api/onboarding/upload, then POST /api/onboarding/process-data"
+        elif not csv_files_generated:
             response_data["warnings"] = ["CSV files were not generated; upload CSVs via /api/onboarding/upload and run process-data."]
+        if showcase_pattern_mix:
+            response_data["showcase_pattern_mix"] = showcase_pattern_mix
         
         # Add domain if provided
         if domain:
@@ -1080,6 +1097,15 @@ def process_data():
         upload_mode = data.get('upload_mode', 'incremental')
         strict_mode = data.get('strict_mode', False)  # P2: Strict CSV validation mode
         pattern_mix = data.get('pattern_mix')  # P1: Configurable pattern mix
+        onboarding_mode = data.get('onboarding_mode', 'demo')  # 'demo' or 'custom'
+
+        # Demo Showcase: use a pattern mix that demonstrates the core value prop
+        # - crisis→recovery→expansion (proactive CSM saves the account)
+        # - crisis→churn (what happens without intervention)
+        # - stable accounts for baseline comparison
+        DEMO_SHOWCASE_PATTERN_MIX = '{"crisis":0.30,"churn":0.20,"stable":0.25,"expansion":0.25}'
+        if onboarding_mode == 'demo' and not pattern_mix:
+            pattern_mix = data.get('showcase_pattern_mix', DEMO_SHOWCASE_PATTERN_MIX)
         
         # P0: Check customer exists in database
         # Refresh session to ensure we see committed data (important for test environments)
@@ -2158,34 +2184,31 @@ def list_templates():
 # gets an informative response instead of a 404.
 
 @onboarding_api.route('/provision', methods=['POST'])
-def provision_deprecated():
-    """DEPRECATED: Filesystem provisioning replaced by DB-based /complete endpoint."""
+def provision_noop():
+    """NO-OP: Provisioning is now handled inside /complete.
+    Returns 200 so the frontend completion flow doesn't break."""
     return jsonify({
-        'status': 'deprecated',
-        'message': 'POST /api/onboarding/provision is deprecated. '
-                   'Use POST /api/onboarding/complete which creates the customer, '
-                   'user, config, and accounts in the database.',
-        'replacement': '/api/onboarding/complete'
-    }), 410
+        'status': 'success',
+        'message': 'Provisioning is handled by /api/onboarding/complete. No additional action needed.',
+        'noop': True
+    }), 200
 
 @onboarding_api.route('/register-journey-api', methods=['POST'])
-def register_journey_api_deprecated():
-    """DEPRECATED: Dynamic filesystem journey blueprint loading is obsolete.
-    Journey data is now served from the database via /admin/wizard endpoints."""
+def register_journey_api_noop():
+    """NO-OP: Journey data is now DB-based via /admin/wizard endpoints.
+    Returns 200 so the frontend completion flow doesn't break."""
     return jsonify({
-        'status': 'deprecated',
-        'message': 'POST /api/onboarding/register-journey-api is deprecated. '
-                   'Journey data is now DB-based and served via /admin/wizard endpoints.',
-        'replacement': '/admin/wizard/runs'
-    }), 410
+        'status': 'success',
+        'message': 'Journey API is now DB-based. No registration needed.',
+        'noop': True
+    }), 200
 
 @onboarding_api.route('/generate-sample-files', methods=['POST'])
-def generate_sample_files_deprecated():
-    """DEPRECATED: Filesystem-based sample file generation is obsolete.
-    Sample data should be seeded directly into the database."""
+def generate_sample_files_noop():
+    """NO-OP: Sample data is generated inside /complete for demo mode.
+    Returns 200 so the frontend doesn't break."""
     return jsonify({
-        'status': 'deprecated',
-        'message': 'POST /api/onboarding/generate-sample-files is deprecated. '
-                   'Sample data is now managed in the database.',
-        'replacement': None
-    }), 410
+        'status': 'success',
+        'message': 'Sample data generation is handled by /api/onboarding/complete in demo mode.',
+        'noop': True
+    }), 200

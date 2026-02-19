@@ -162,24 +162,43 @@ export const Step6Review: React.FC<Step6ReviewProps> = ({ data }) => {
           </dl>
         </div>
 
-        {/* Data Sources */}
+        {/* Data Sources & Onboarding Mode */}
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-3 flex items-center gap-2">
             <Database className="w-4 h-4" />
             Data Sources
           </h4>
           <div className="space-y-2 text-sm">
-            {data.sources.filter((s) => s.status !== 'pending' && s.status !== 'skipped').map((source) => (
-              <div key={source.id} className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>{source.name}</span>
-                {source.rows && <span className="text-gray-500">({source.rows} rows)</span>}
-              </div>
-            ))}
-            {data.sources.filter((s) => s.status === 'pending' || s.status === 'skipped').length > 0 && (
-              <p className="text-gray-500 text-xs">
-                {data.sources.filter((s) => s.status === 'skipped').length} source(s) skipped
-              </p>
+            {/* Onboarding Mode */}
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+              data.onboarding_mode === 'demo'
+                ? 'bg-purple-50 border border-purple-200'
+                : 'bg-blue-50 border border-blue-200'
+            }`}>
+              <span className="font-medium">
+                {data.onboarding_mode === 'demo' ? 'Demo / Showcase Mode' : 'Custom CSV Upload Mode'}
+              </span>
+              {data.onboarding_mode === 'demo' && (
+                <span className="text-xs text-purple-600">(10 accounts, 12 months, 4 journey patterns)</span>
+              )}
+            </div>
+
+            {/* Uploaded files (custom mode) */}
+            {data.onboarding_mode === 'custom' && (
+              <>
+                {data.sources.filter((s) => s.status !== 'pending' && s.status !== 'skipped').map((source) => (
+                  <div key={source.id} className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>{source.name}</span>
+                    {source.rows && <span className="text-gray-500">({source.rows} rows)</span>}
+                  </div>
+                ))}
+                {data.sources.filter((s) => s.status === 'pending' || s.status === 'skipped').length > 0 && (
+                  <p className="text-gray-500 text-xs">
+                    {data.sources.filter((s) => s.status === 'skipped').length} source(s) skipped
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>

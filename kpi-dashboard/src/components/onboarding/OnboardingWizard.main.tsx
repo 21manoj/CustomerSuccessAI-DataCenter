@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 // Types
-import { OnboardingData } from './OnboardingWizard.types';
+import { OnboardingData, OnboardingMode } from './OnboardingWizard.types';
 
 // Configuration
 import {
@@ -54,6 +54,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
   const [sources, setSources] = useState(getDefaultSources(null));
   const [team, setTeam] = useState<any[]>([]);
   const [skipTraining, setSkipTraining] = useState(false);
+  const [onboardingMode, setOnboardingMode] = useState<OnboardingMode>('demo');
 
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -101,7 +102,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
           business.segments.length > 0
         );
       case 5:
-        return sources.find((s) => s.id === 'accounts')?.status === 'uploaded';
+        // Demo mode: no file uploads required (synthetic data generated automatically)
+        // Custom mode: accounts.csv and kpis.csv must be uploaded
+        if (onboardingMode === 'demo') return true;
+        return (
+          sources.find((s) => s.id === 'accounts')?.status === 'uploaded' &&
+          sources.find((s) => s.id === 'kpis')?.status === 'uploaded'
+        );
       default:
         return true;
     }
@@ -218,185 +225,205 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
     setIsProcessing(true);
     setProcessingError(null);
     setProcessingProgress(0);
-    
+
+    const isDemo = onboardingMode === 'demo';
+
     try {
       // ============================================================
       // STEP 1: Complete Onboarding (Create Customer/User/Config)
+      // In demo mode: also generates synthetic CSV files
+      // In custom mode: creates DB records only, user uploads CSVs
       // ============================================================
-      setProcessingStep('Creating your account...');
+      setProcessingStep(isDemo
+        ? 'Creating account & generating demo data...'
+        : 'Creating your account...');
       setProcessingProgress(10);
-      
+
       const weights = convertPillarsToWeights(pillars);
       const backendVertical = getBackendVertical(business.vertical);
-      
-      const completePayload = {
+
+      const completePayload: Record<string, any> = {
         company_name: business.company_name,
         company_email: account.email,
-        admin_name: account.email.split('@')[0], // Extract name from email
+        admin_name: account.email.split('@')[0],
         admin_email: account.email,
         admin_password: account.password,
         vertical: backendVertical,
         weights: weights,
+        onboarding_mode: onboardingMode,
+        num_accounts: isDemo ? 10 : 3,
         team: team.map(t => ({
           name: t.name,
           email: t.email,
           role: t.role
         }))
       };
-      
-      console.log('Step 1: Calling /api/onboarding/complete', completePayload);
-      
+
+      // Demo mode: include showcase pattern mix for journey generation
+      if (isDemo) {
+        completePayload.showcase_pattern_mix = JSON.stringify({
+          crisis: 0.30,
+          churn: 0.20,
+          stable: 0.25,
+          expansion: 0.25
+        });
+      }
+
+      console.log(`Step 1: Calling /api/onboarding/complete (mode: ${onboardingMode})`, completePayload);
+
       const completeResponse = await retryFetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(completePayload)
       });
-      
+
       if (!completeResponse.ok) {
         const errorData = await completeResponse.json();
-        throw new Error(errorData.message || 'Failed to create account');
+        throw new Error(errorData.message || errorData.error || 'Failed to create account');
       }
-      
+
       const completeResult = await completeResponse.json();
       const newCustomerId = completeResult.customer_id;
       const newUserId = completeResult.user_id;
-      
+
       setCustomerId(newCustomerId);
       setUserId(newUserId);
-      
-      console.log('✅ Step 1 complete:', { customer_id: newCustomerId, user_id: newUserId });
-      setProcessingProgress(20);
-      
-      // ============================================================
-      // STEP 2: Provision Customer Directory
-      // ============================================================
-      setProcessingStep('Setting up your workspace...');
-      
-      const provisionPayload = {
+
+      console.log('Step 1 complete:', {
         customer_id: newCustomerId,
-        vertical: backendVertical
-      };
-      
-      console.log('Step 2: Calling /api/onboarding/provision', provisionPayload);
-      
-      const provisionResponse = await fetch('/api/onboarding/provision', {
+        user_id: newUserId,
+        mode: onboardingMode,
+        csv_generated: completeResult.csv_files_generated
+      });
+      setProcessingProgress(isDemo ? 30 : 20);
+
+      // ============================================================
+      // STEP 2: Provision workspace (no-op, handled by /complete)
+      // ============================================================
+      setProcessingStep('Setting up workspace...');
+
+      await fetch('/api/onboarding/provision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(provisionPayload)
+        body: JSON.stringify({ customer_id: newCustomerId, vertical: backendVertical })
       });
-      
-      if (!provisionResponse.ok) {
-        const errorData = await provisionResponse.json();
-        throw new Error(errorData.message || 'Failed to provision workspace');
-      }
-      
-      const provisionResult = await provisionResponse.json();
-      console.log('✅ Step 2 complete:', provisionResult);
-      setProcessingProgress(30);
-      
+      // No-op endpoint, always succeeds - ignore result
+      console.log('Step 2 complete: workspace ready (handled by /complete)');
+      setProcessingProgress(isDemo ? 35 : 30);
+
       // ============================================================
-      // STEP 3: Upload CSV Files
+      // STEP 3: Upload CSV Files (Custom mode only)
+      // Demo mode: CSVs already generated by /complete
       // ============================================================
-      const uploadedFiles = sources.filter(s => s.status === 'uploaded' && s.file);
-      
-      if (uploadedFiles.length === 0) {
-        throw new Error('No files uploaded. Please upload at least accounts.csv');
-      }
-      
-      for (let i = 0; i < uploadedFiles.length; i++) {
-        const source = uploadedFiles[i];
-        const progress = 30 + ((i / uploadedFiles.length) * 20); // 30-50%
-        setProcessingStep(`Uploading ${source.name}... (${i + 1}/${uploadedFiles.length})`);
-        setProcessingProgress(progress);
-        
-        const formData = new FormData();
-        formData.append('file', source.file!);
-        formData.append('file_type', source.id);
-        formData.append('customer_id', newCustomerId.toString());
-        
-        console.log(`Step 3.${i + 1}: Uploading ${source.id}`, source.name);
-        
-        const uploadResponse = await retryFetch('/api/onboarding/upload', {
-          method: 'POST',
-          credentials: 'include',
-          body: formData
-        }, 2); // Fewer retries for file uploads
-        
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(`Failed to upload ${source.name}: ${errorData.message || 'Unknown error'}`);
+      if (!isDemo) {
+        const uploadedFiles = sources.filter(s => s.status === 'uploaded' && s.file);
+
+        if (uploadedFiles.length === 0) {
+          throw new Error('No files uploaded. Please upload at least accounts.csv and kpi_measurements.csv');
         }
-        
-        const uploadResult = await uploadResponse.json();
-        console.log(`✅ Step 3.${i + 1} complete:`, uploadResult);
+
+        for (let i = 0; i < uploadedFiles.length; i++) {
+          const source = uploadedFiles[i];
+          const progress = 30 + ((i / uploadedFiles.length) * 20); // 30-50%
+          setProcessingStep(`Uploading ${source.name}... (${i + 1}/${uploadedFiles.length})`);
+          setProcessingProgress(progress);
+
+          const formData = new FormData();
+          formData.append('file', source.file!);
+          formData.append('file_type', source.id);
+          formData.append('customer_id', newCustomerId.toString());
+
+          console.log(`Step 3.${i + 1}: Uploading ${source.id}`, source.name);
+
+          const uploadResponse = await retryFetch('/api/onboarding/upload', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+          }, 2);
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(`Failed to upload ${source.name}: ${errorData.message || 'Unknown error'}`);
+          }
+
+          const uploadResult = await uploadResponse.json();
+          console.log(`Step 3.${i + 1} complete:`, uploadResult);
+        }
+      } else {
+        console.log('Step 3 skipped: demo mode uses synthetic CSVs from /complete');
       }
-      
-      setProcessingProgress(50);
-      
+
+      setProcessingProgress(isDemo ? 40 : 50);
+
       // ============================================================
-      // STEP 4: Process Data (Run Scripts - This takes 1-3 minutes!)
+      // STEP 4: Process Data + Generate Journeys
+      // Demo mode: uses showcase pattern mix (30% crisis, 20% churn,
+      //   25% stable, 25% expansion) to create compelling narratives
+      // Custom mode: uses default balanced pattern mix
       // ============================================================
-      setProcessingStep('Processing your data (this may take 2-3 minutes)...');
-      
-      const processPayload = {
+      setProcessingStep(isDemo
+        ? 'Generating showcase journeys (this may take 2-3 minutes)...'
+        : 'Processing your data (this may take 2-3 minutes)...');
+
+      const processPayload: Record<string, any> = {
         customer_id: newCustomerId,
+        onboarding_mode: onboardingMode,
         skip_validation: false,
-        skip_wizard_b: false,  // Run Wizard B!
-        skip_wizard_c: false   // Run Wizard C!
+        skip_wizard_b: false,
+        skip_wizard_c: false
       };
-      
+
+      // Demo: use showcase pattern mix emphasizing crisis/churn for value prop demo
+      if (isDemo) {
+        processPayload.pattern_mix = JSON.stringify({
+          crisis: 0.30,
+          churn: 0.20,
+          stable: 0.25,
+          expansion: 0.25
+        });
+      }
+
       console.log('Step 4: Calling /api/onboarding/process-data', processPayload);
-      console.log('⏳ This step may take 1-3 minutes...');
-      
+
       const processResponse = await fetch('/api/onboarding/process-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(processPayload)
       });
-      
+
       if (!processResponse.ok) {
         const errorData = await processResponse.json();
         throw new Error(errorData.message || 'Failed to process data');
       }
-      
+
       const processResult = await processResponse.json();
-      console.log('✅ Step 4 complete:', processResult);
+      console.log('Step 4 complete:', processResult);
       console.log('   Steps completed:', processResult.steps_completed);
-      
+
       setProcessingProgress(90);
-      
+
       // ============================================================
-      // STEP 5: Register Journey API
+      // STEP 5: Finalize (journey API registration - no-op)
       // ============================================================
       setProcessingStep('Finalizing setup...');
-      
-      const registerPayload = {
-        customer_id: newCustomerId
-      };
-      
-      console.log('Step 5: Calling /api/onboarding/register-journey-api', registerPayload);
-      
-      const registerResponse = await retryFetch('/api/onboarding/register-journey-api', {
+
+      await fetch('/api/onboarding/register-journey-api', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(registerPayload)
-      }, 2); // Fewer retries for non-critical step
-      
-      if (!registerResponse.ok) {
-        // Non-critical - just log warning
-        console.warn('⚠️  Journey API registration failed (non-critical)');
-      } else {
-        const registerResult = await registerResponse.json();
-        console.log('✅ Step 5 complete:', registerResult);
-      }
-      
+        body: JSON.stringify({ customer_id: newCustomerId })
+      });
+      // No-op endpoint, always succeeds - ignore result
+      console.log('Step 5 complete: journeys are DB-based');
+
       setProcessingProgress(100);
-      setProcessingStep('Setup complete! Redirecting...');
-      
+      setProcessingStep(isDemo
+        ? 'Demo ready! Redirecting to dashboard...'
+        : 'Setup complete! Redirecting to dashboard...');
+
       // ============================================================
       // STEP 6: Success! Prepare Data and Redirect
       // ============================================================
@@ -408,22 +435,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
         criteria,
         sources,
         team,
-        skip_training: skipTraining
+        skip_training: skipTraining,
+        onboarding_mode: onboardingMode
       };
-      
-      // Wait 1 second to show success message
+
       await sleep(1000);
-      
-      // Call parent completion handler
+
       onComplete(onboardingData);
-      
-      // Redirect to appropriate dashboard based on vertical
+
       const dashboardRoute = getDashboardRoute(business.vertical);
-      console.log('🎉 Onboarding complete! Redirecting to dashboard...');
+      console.log(`Onboarding complete (${onboardingMode} mode)! Redirecting to ${dashboardRoute}`);
       window.location.href = dashboardRoute;
-      
+
     } catch (error: any) {
-      console.error('❌ Onboarding error:', error);
+      console.error('Onboarding error:', error);
       setProcessingError(error.message || 'An unexpected error occurred');
       setIsProcessing(false);
     }
@@ -472,27 +497,49 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
               
               {/* Status Message */}
               <h3 className="text-xl font-bold mb-2 text-gray-900">
-                Setting Up Your Account
+                {onboardingMode === 'demo' ? 'Setting Up Demo Environment' : 'Setting Up Your Account'}
               </h3>
               <p className="text-gray-600 mb-6">{processingStep}</p>
               
-              {/* Progress Stages */}
+              {/* Progress Stages - adapt to onboarding mode */}
               <div className="text-left space-y-2 mb-6">
-                <div className={`flex items-center gap-2 text-sm ${processingProgress >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {processingProgress >= 20 ? '✓' : '○'} Create account
-                </div>
-                <div className={`flex items-center gap-2 text-sm ${processingProgress >= 30 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {processingProgress >= 30 ? '✓' : '○'} Setup workspace
-                </div>
-                <div className={`flex items-center gap-2 text-sm ${processingProgress >= 50 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {processingProgress >= 50 ? '✓' : '○'} Upload files
-                </div>
-                <div className={`flex items-center gap-2 text-sm ${processingProgress >= 90 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {processingProgress >= 90 ? '✓' : '○'} Process data
-                </div>
-                <div className={`flex items-center gap-2 text-sm ${processingProgress >= 100 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {processingProgress >= 100 ? '✓' : '○'} Finalize setup
-                </div>
+                {onboardingMode === 'demo' ? (
+                  <>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 30 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 30 ? '✓' : '○'} Create account & generate demo data
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 35 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 35 ? '✓' : '○'} Setup workspace
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 40 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 40 ? '✓' : '○'} Load data into database
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 90 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 90 ? '✓' : '○'} Generate showcase journeys
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 100 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 100 ? '✓' : '○'} Demo ready
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 20 ? '✓' : '○'} Create account
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 30 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 30 ? '✓' : '○'} Setup workspace
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 50 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 50 ? '✓' : '○'} Upload CSV files
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 90 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 90 ? '✓' : '○'} Process data & generate journeys
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm ${processingProgress >= 100 ? 'text-green-600' : 'text-gray-400'}`}>
+                      {processingProgress >= 100 ? '✓' : '○'} Finalize setup
+                    </div>
+                  </>
+                )}
               </div>
               
               {/* Error Display */}
@@ -585,8 +632,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
           {step === 2 && <Step2Pillars data={pillars} onChange={setPillars} />}
           {step === 3 && <Step3Events data={events} onChange={setEvents} />}
           {step === 4 && <Step4Criteria data={criteria} onChange={setCriteria} />}
-          {step === 5 && <Step5Sources data={sources} onChange={setSources} businessContext={business} />}
-          {step === 6 && <Step6Review data={{ account, business, pillars, events, criteria, sources, team, skip_training: skipTraining }} />}
+          {step === 5 && <Step5Sources data={sources} onChange={setSources} onboardingMode={onboardingMode} onModeChange={setOnboardingMode} businessContext={business} />}
+          {step === 6 && <Step6Review data={{ account, business, pillars, events, criteria, sources, team, skip_training: skipTraining, onboarding_mode: onboardingMode }} />}
           {step === 7 && <Step7Team data={team} onChange={setTeam} />}
           {step === 8 && <Step8Training skipTraining={skipTraining} onSkipChange={setSkipTraining} />}
         </div>

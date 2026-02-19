@@ -3,6 +3,7 @@
  */
 
 export type VerticalType = 'saas' | 'datacenter' | null;
+export type OnboardingMode = 'demo' | 'custom';
 
 export interface AccountInfo {
   email: string;
@@ -88,4 +89,5 @@ export interface OnboardingData {
   sources: DataSource[];
   team: TeamMember[];
   skip_training: boolean;
+  onboarding_mode: OnboardingMode;
 }
