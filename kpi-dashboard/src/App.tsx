@@ -10,6 +10,7 @@ import { OnboardingWizard } from './components/onboarding/OnboardingWizard.main'
 import RegistrationForm from './components/RegistrationForm';
 import JourneyVisualizer from './components/wizard/JourneyVisualizer';
 import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboardV3';
+import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 
 // Component to redirect legacy /dashboard to appropriate vertical dashboard
 const DashboardRedirect: React.FC = () => {
@@ -247,6 +248,16 @@ const AppRoutes: React.FC = () => {
           }
         />
         
+        {/* PortCo CEO Dashboard - PE portfolio synergy view */}
+        <Route
+          path="/portco-dashboard"
+          element={
+            <PrivateRoute>
+              <PortcoCEODashboard />
+            </PrivateRoute>
+          }
+        />
+
         {/* Onboarding - accessible from both verticals */}
         <Route
           path="/onboarding"

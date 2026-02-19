@@ -859,6 +859,13 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Observability API not available: {e}")
 
+try:
+    from agent_memory_api import agent_memory_api
+    app.register_blueprint(agent_memory_api)
+    print("✅ Registered Agent Memory API: /api/memory/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Agent Memory API not available: {e}")
+
 @app.route('/debug/routes')
 def list_routes():
     """Debug endpoint to see all registered routes"""

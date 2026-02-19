@@ -346,20 +346,40 @@ def analyze_account():
             analysis_type=analysis_type,
             time_horizon_days=time_horizon_days
         )
-        
-        # Initialize agent
-        agent = SignalAnalystAgent(
-            openai_api_key=openai_api_key,
-            model="gpt-4o",
-            temperature=0.3
-        )
-        
+
+        # Initialize agent — supports OpenAI (default) or Claude via provider param
+        llm_provider = data.get('provider', 'openai').lower()
+        llm_model = "gpt-4o"
+
+        if llm_provider in ('anthropic', 'claude'):
+            try:
+                from .claude_signal_analyst_agent import ClaudeSignalAnalystAgent
+                anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+                if not anthropic_key:
+                    return jsonify({'error': 'ANTHROPIC_API_KEY not configured'}), 500
+                llm_model = data.get('model', 'claude-sonnet-4-5-20250929')
+                agent = ClaudeSignalAnalystAgent(
+                    anthropic_api_key=anthropic_key,
+                    model=llm_model,
+                    temperature=0.3,
+                    customer_id=customer_id,
+                    account_id=str(account_id),
+                )
+            except ImportError:
+                return jsonify({'error': 'Claude agent module not available'}), 500
+        else:
+            agent = SignalAnalystAgent(
+                openai_api_key=openai_api_key,
+                model="gpt-4o",
+                temperature=0.3
+            )
+
         # Run analysis
         analysis_result = agent.analyze(agent_input)
-        
+
         # Convert to JSON-serializable format
         result_dict = analysis_result.model_dump()
-        
+
         # Override with computed health score so report is never 0 when we have DC2_S/KPI data
         if overall_health_score is not None:
             agent_health = result_dict.get('health_score')
@@ -377,7 +397,8 @@ def analyze_account():
         import time
         result_dict['_metadata'] = {
             'endpoint': '/api/signal-analyst/analyze',
-            'model': 'gpt-4o',
+            'provider': llm_provider,
+            'model': llm_model,
             'cost_tracked': True,
             'timestamp': time.time()
         }
