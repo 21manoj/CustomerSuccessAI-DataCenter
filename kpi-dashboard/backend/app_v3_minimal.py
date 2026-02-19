@@ -835,6 +835,30 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Admin API not available: {e}")
 
+# Action Interface API (Phases 4, 5, 7 — bindings, credentials, callbacks)
+try:
+    from action_interface_api import action_interface_api
+    app.register_blueprint(action_interface_api)
+    print("✅ Registered Action Interface API: /api/action-bindings/*, /api/credentials/*, /api/webhooks/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Action Interface API not available: {e}")
+
+# Roadmap Scenario & Ingest API (Step 6)
+try:
+    from roadmap_scenario_ingest import roadmap_scenario_api
+    app.register_blueprint(roadmap_scenario_api)
+    print("✅ Registered Roadmap Scenario API: /api/roadmap/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Roadmap Scenario API not available: {e}")
+
+# Observability API (Phase 8)
+try:
+    from observability import observability_api
+    app.register_blueprint(observability_api)
+    print("✅ Registered Observability API: /api/observability/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Observability API not available: {e}")
+
 @app.route('/debug/routes')
 def list_routes():
     """Debug endpoint to see all registered routes"""
