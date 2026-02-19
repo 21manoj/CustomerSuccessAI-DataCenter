@@ -57,6 +57,9 @@ class RoleCapacity:
 # Total: 5,840 hours / 2.81 FTE / $247K
 # These are DEFAULTS — configurable per customer in Settings UI.
 
+# Convenience alias: role → hourly rate
+ROLE_RATES: Dict[str, float] = {}  # populated after DEFAULT_RESOURCE_POOL
+
 DEFAULT_RESOURCE_POOL: Dict[CSRole, RoleCapacity] = {
     CSRole.CSM: RoleCapacity(
         role=CSRole.CSM,
@@ -99,6 +102,9 @@ DEFAULT_RESOURCE_POOL: Dict[CSRole, RoleCapacity] = {
         description="Strategy, governance, executive alignment",
     ),
 }
+
+# Populate ROLE_RATES convenience dict
+ROLE_RATES = {role.value: cap.hourly_rate for role, cap in DEFAULT_RESOURCE_POOL.items()}
 
 
 # ============================================================

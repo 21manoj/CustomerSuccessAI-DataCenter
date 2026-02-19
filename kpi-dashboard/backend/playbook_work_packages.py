@@ -140,15 +140,19 @@ def decompose_playbook(
             continue
 
         for wp in metric.work_packages:
-            # Build role hours dict
+            # Build role hours dict from RoleAllocation attributes
+            role_attrs = ['csm', 'cs_ops', 'product', 'platform', 'leadership']
             role_hours = {}
             cost_input = {}
-            for role in CSRole:
-                hours = getattr(wp.roles, role.value, 0) or 0
+            for attr in role_attrs:
+                hours = getattr(wp.roles, attr, 0) or 0
                 if hours > 0:
-                    role_hours[role.value] = hours
-                    cost_input[role] = hours
-                    role_summary[role.value] = role_summary.get(role.value, 0) + hours
+                    role_hours[attr] = hours
+                    try:
+                        cost_input[CSRole(attr)] = hours
+                    except ValueError:
+                        pass
+                    role_summary[attr] = role_summary.get(attr, 0) + hours
 
             # Calculate cost
             cost = calculate_action_cost(cost_input) if cost_input else {'total_cost': 0}
@@ -203,10 +207,12 @@ def record_wp_completion(
     # Recompute actual cost using the same role ratio as estimate
     if wp.estimated_hours > 0 and actual_hours > 0:
         ratio = actual_hours / wp.estimated_hours
-        actual_roles = {
-            CSRole(role): hours * ratio
-            for role, hours in wp.role_hours.items()
-        }
+        actual_roles = {}
+        for role, hours in wp.role_hours.items():
+            try:
+                actual_roles[CSRole(role)] = hours * ratio
+            except ValueError:
+                pass
         cost = calculate_action_cost(actual_roles)
         wp.actual_cost = cost['total_cost']
     else:
