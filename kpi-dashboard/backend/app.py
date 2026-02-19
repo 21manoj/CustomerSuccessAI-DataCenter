@@ -83,6 +83,7 @@ from kpi_reference_ranges_api import kpi_reference_ranges_api
 from customer_performance_summary_api import customer_perf_summary_api
 # REMOVED BY CLEANUP: from api_routes_dc import api_routes_dc
 from agents.signal_analyst_api import signal_analyst_api
+from revenue_intelligence_api import revenue_intelligence_api
 
 # Initialize Chroma client and collection for KPI VDB (lazy loading)
 global_chroma_client = None
@@ -143,6 +144,7 @@ app.register_blueprint(kpi_reference_ranges_api)
 app.register_blueprint(customer_perf_summary_api)
 # app.register_blueprint(api_routes_dc)
 app.register_blueprint(signal_analyst_api)
+app.register_blueprint(revenue_intelligence_api)
 # DC2_S Vertical
 app.register_blueprint(dc2s_api, url_prefix='/api/dc2s')
 print("✅ Registered DC2_S API: /api/dc2s/*")

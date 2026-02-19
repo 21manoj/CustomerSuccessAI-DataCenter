@@ -18,6 +18,7 @@ class FeatureToggle(Enum):
     ENHANCED_UPLOAD = "enhanced_upload"
     TEMPORAL_ANALYSIS = "temporal_analysis"
     MULTI_FORMAT_SUPPORT = "multi_format_support"
+    REVENUE_INTELLIGENCE = "revenue_intelligence"
 
 @dataclass
 class FeatureConfig:
@@ -80,6 +81,13 @@ class FeatureToggleManager:
                 description="Support for multiple file formats",
                 version="1.0.0",
                 dependencies=[FeatureToggle.FORMAT_DETECTION],
+                environment_required="production"
+            ),
+            FeatureToggle.REVENUE_INTELLIGENCE: FeatureConfig(
+                enabled=False,
+                description="Power of 1 revenue intelligence: action economics, ROI tracking, capacity planning",
+                version="1.0.0",
+                dependencies=[],
                 environment_required="production"
             )
         }

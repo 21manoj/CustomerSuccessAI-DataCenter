@@ -847,3 +847,246 @@ class HealthScore(db.Model):
             'pillar_weights': self.pillar_weights,
             'measurement_month': self.measurement_month.isoformat() if self.measurement_month else None
         }
+
+
+# ============================================================
+# REVENUE INTELLIGENCE — POWER OF 1 MODELS
+# ============================================================
+# Feature flag: 'revenue_intelligence' in FeatureToggle table
+# Designed for MCP agent access — each model has to_dict() for serialization.
+# Agentic architecture: These models are the data layer that MCP tools
+# (Signal Analyst, Playbook Orchestrator agents) read/write via tool calls.
+
+class ActionEconomics(db.Model):
+    """
+    Tracks the cost and dollar value of every action (playbook execution,
+    work package, CSM intervention) taken on an account.
+
+    Cost side: Hours by role x hourly rate (from resource_capacity_model).
+    Value side: KPI deltas converted to dollars via Power of 1 table.
+
+    MCP tool: 'record_action_economics' / 'query_action_economics'
+    """
+    __tablename__ = 'action_economics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    execution_id = db.Column(db.String(36), db.ForeignKey('playbook_executions.execution_id'), nullable=True, index=True)
+
+    # What action was taken
+    action_type = db.Column(db.String(50), nullable=False, index=True)
+    action_id = db.Column(db.String(100), nullable=False)
+    action_name = db.Column(db.String(255))
+
+    # Cost side — hours by role
+    csm_hours = db.Column(db.Numeric(8, 2), default=0)
+    cs_ops_hours = db.Column(db.Numeric(8, 2), default=0)
+    product_hours = db.Column(db.Numeric(8, 2), default=0)
+    platform_hours = db.Column(db.Numeric(8, 2), default=0)
+    leadership_hours = db.Column(db.Numeric(8, 2), default=0)
+
+    # Cost side — dollar amounts
+    cs_initiative_cost = db.Column(db.Numeric(12, 2), default=0)
+    platform_cost = db.Column(db.Numeric(12, 2), default=0)
+    total_action_cost = db.Column(db.Numeric(12, 2), default=0)
+
+    # Value side — KPI changes
+    kpi_before = db.Column(db.JSON)
+    kpi_after = db.Column(db.JSON)
+    kpi_deltas = db.Column(db.JSON)
+
+    # Value side — dollar impact (converted via Power of 1)
+    power_of_1_metric = db.Column(db.String(50))
+    dollar_impact_annual = db.Column(db.Numeric(15, 2))
+    dollar_impact_monthly = db.Column(db.Numeric(15, 2))
+    revenue_increase = db.Column(db.Numeric(15, 2), default=0)
+    cost_savings = db.Column(db.Numeric(15, 2), default=0)
+
+    # Derived economics
+    roi = db.Column(db.Numeric(10, 4))
+    payback_days = db.Column(db.Integer)
+    category = db.Column(db.String(50))
+
+    # Lifecycle context
+    journey_phase = db.Column(db.String(50))
+    improvement_pct = db.Column(db.Numeric(5, 2))
+
+    # Timestamps
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    measured_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    __table_args__ = (
+        db.Index('idx_action_econ_customer_account', 'customer_id', 'account_id'),
+        db.Index('idx_action_econ_type', 'action_type', 'action_id'),
+        db.Index('idx_action_econ_measured', 'measured_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'customer_id': self.customer_id,
+            'account_id': self.account_id,
+            'execution_id': self.execution_id,
+            'action_type': self.action_type,
+            'action_id': self.action_id,
+            'action_name': self.action_name,
+            'cost': {
+                'csm_hours': float(self.csm_hours or 0),
+                'cs_ops_hours': float(self.cs_ops_hours or 0),
+                'product_hours': float(self.product_hours or 0),
+                'platform_hours': float(self.platform_hours or 0),
+                'leadership_hours': float(self.leadership_hours or 0),
+                'cs_initiative_cost': float(self.cs_initiative_cost or 0),
+                'platform_cost': float(self.platform_cost or 0),
+                'total_action_cost': float(self.total_action_cost or 0),
+            },
+            'value': {
+                'kpi_before': self.kpi_before,
+                'kpi_after': self.kpi_after,
+                'kpi_deltas': self.kpi_deltas,
+                'power_of_1_metric': self.power_of_1_metric,
+                'dollar_impact_annual': float(self.dollar_impact_annual or 0),
+                'dollar_impact_monthly': float(self.dollar_impact_monthly or 0),
+                'revenue_increase': float(self.revenue_increase or 0),
+                'cost_savings': float(self.cost_savings or 0),
+            },
+            'economics': {
+                'roi': float(self.roi) if self.roi else None,
+                'payback_days': self.payback_days,
+                'category': self.category,
+                'improvement_pct': float(self.improvement_pct) if self.improvement_pct else None,
+            },
+            'journey_phase': self.journey_phase,
+            'measured_at': self.measured_at.isoformat() if self.measured_at else None,
+        }
+
+
+class Portfolio(db.Model):
+    """
+    PE fund or holding company that owns multiple businesses (customers).
+    Top-level entity for multi-vertical PE portfolio management.
+
+    MCP tool: 'query_portfolio' / 'find_synergies'
+    """
+    __tablename__ = 'portfolios'
+
+    portfolio_id = db.Column(db.Integer, primary_key=True)
+    portfolio_name = db.Column(db.String(255), nullable=False)
+    portfolio_type = db.Column(db.String(50), default='pe_fund')
+    description = db.Column(db.Text)
+
+    total_aum = db.Column(db.Numeric(15, 2))
+    investment_thesis = db.Column(db.Text)
+
+    config = db.Column(db.JSON)
+    enabled = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    def to_dict(self):
+        return {
+            'portfolio_id': self.portfolio_id,
+            'portfolio_name': self.portfolio_name,
+            'portfolio_type': self.portfolio_type,
+            'description': self.description,
+            'total_aum': float(self.total_aum) if self.total_aum else None,
+            'enabled': self.enabled,
+        }
+
+
+class PortfolioMembership(db.Model):
+    """Links customers (portfolio companies) to a portfolio."""
+    __tablename__ = 'portfolio_memberships'
+
+    id = db.Column(db.Integer, primary_key=True)
+    portfolio_id = db.Column(db.Integer, db.ForeignKey('portfolios.portfolio_id'), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+
+    acquisition_date = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default='owned')
+    vertical = db.Column(db.String(50))
+    role = db.Column(db.String(20), default='platform')
+
+    synergies_identified = db.Column(db.Integer, default=0)
+    synergies_realized = db.Column(db.Integer, default=0)
+    synergy_value = db.Column(db.Numeric(15, 2), default=0)
+
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    __table_args__ = (
+        db.UniqueConstraint('portfolio_id', 'customer_id', name='unique_portfolio_customer'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'portfolio_id': self.portfolio_id,
+            'customer_id': self.customer_id,
+            'acquisition_date': self.acquisition_date.isoformat() if self.acquisition_date else None,
+            'status': self.status,
+            'vertical': self.vertical,
+            'role': self.role,
+            'synergies_identified': self.synergies_identified,
+            'synergies_realized': self.synergies_realized,
+            'synergy_value': float(self.synergy_value or 0),
+        }
+
+
+class WeightCalibrationHistory(db.Model):
+    """
+    Versioned weight calibration records. Never overwrites — always appends.
+    Guardrails: No single weight shifts more than +/- 15% per cycle.
+    Minimum sample size: 10 playbook outcomes before recalibration triggers.
+
+    MCP tool: 'get_calibration_history' / 'trigger_recalibration'
+    """
+    __tablename__ = 'weight_calibration_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+
+    calibration_type = db.Column(db.String(50), nullable=False)
+    vertical = db.Column(db.String(50))
+
+    previous_weights = db.Column(db.JSON, nullable=False)
+    new_weights = db.Column(db.JSON, nullable=False)
+    weight_deltas = db.Column(db.JSON)
+
+    sample_size = db.Column(db.Integer)
+    prediction_error_before = db.Column(db.Numeric(8, 4))
+    prediction_error_after = db.Column(db.Numeric(8, 4))
+    error_reduction_pct = db.Column(db.Numeric(5, 2))
+
+    triggered_by = db.Column(db.String(50))
+    approved = db.Column(db.Boolean, default=True)
+    notes = db.Column(db.Text)
+
+    calibrated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    __table_args__ = (
+        db.Index('idx_calibration_customer_type', 'customer_id', 'calibration_type'),
+        db.Index('idx_calibration_date', 'calibrated_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'customer_id': self.customer_id,
+            'calibration_type': self.calibration_type,
+            'vertical': self.vertical,
+            'previous_weights': self.previous_weights,
+            'new_weights': self.new_weights,
+            'weight_deltas': self.weight_deltas,
+            'sample_size': self.sample_size,
+            'error_reduction_pct': float(self.error_reduction_pct) if self.error_reduction_pct else None,
+            'triggered_by': self.triggered_by,
+            'approved': self.approved,
+            'calibrated_at': self.calibrated_at.isoformat() if self.calibrated_at else None,
+        }

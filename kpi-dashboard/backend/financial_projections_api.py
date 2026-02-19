@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 Financial Projections API
-Handles financial projections tied to KPI changes and trends
+Handles financial projections tied to KPI changes and trends.
+
+When the 'revenue_intelligence' feature toggle is enabled for a customer,
+the corporate endpoint delegates to the Power of 1 model for richer
+ROI / scaling / compounding data alongside the legacy projections.
 """
 
 from flask import Blueprint, request, jsonify
@@ -11,10 +15,37 @@ from decimal import Decimal
 import json
 
 from extensions import db
-from models import Account, KPI, KPITimeSeries, HealthTrend
+from models import Account, KPI, KPITimeSeries, HealthTrend, FeatureToggle as FeatureToggleModel
 from resolve_identifier import resolve_customer_id
 
 financial_projections_api = Blueprint('financial_projections_api', __name__)
+
+
+def _is_revenue_intelligence_enabled(customer_id):
+    """Check if the revenue_intelligence feature toggle is on for this customer."""
+    toggle = FeatureToggleModel.query.filter_by(
+        customer_id=customer_id,
+        feature_name='revenue_intelligence'
+    ).first()
+    return toggle and toggle.enabled
+
+
+def _get_power_of_1_overlay(customer_id, total_arr):
+    """Build a Power of 1 overlay dict when the feature is enabled."""
+    try:
+        from power_of_1_model import calculate_portfolio_impact, SCALING_SCENARIOS
+        improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
+        result = calculate_portfolio_impact(improvement_pct, total_arr)
+        return {
+            'power_of_1': {
+                'enabled': True,
+                'improvement_pct': improvement_pct,
+                'totals': result['totals'],
+                'scaling_scenarios': SCALING_SCENARIOS,
+            }
+        }
+    except Exception:
+        return {'power_of_1': {'enabled': False, 'error': 'Could not compute Power of 1 overlay'}}
 
 # Financial impact coefficients for different KPI categories
 FINANCIAL_IMPACT_COEFFICIENTS = {
@@ -282,13 +313,19 @@ def get_corporate_financial_projections():
                 'confidence_level': 'medium' if months_ahead <= 6 else 'low'
             })
         
-        return jsonify({
+        response = {
             'customer_id': customer_id,
             'total_revenue': float(total_revenue),
             'total_accounts': len(accounts),
             'corporate_projections': corporate_projections,
             'last_updated': datetime.now().isoformat()
-        })
+        }
+
+        # Enrich with Power of 1 data when revenue_intelligence is enabled
+        if _is_revenue_intelligence_enabled(customer_id):
+            response.update(_get_power_of_1_overlay(customer_id, total_revenue))
+
+        return jsonify(response)
         
     except Exception as e:
         print(f"Error generating corporate financial projections: {e}")
