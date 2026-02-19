@@ -13,7 +13,7 @@ Add to app_v3_minimal.py:
     app.register_blueprint(onboarding_api)
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from pathlib import Path
 import subprocess
 import pandas as pd
@@ -2062,3 +2062,130 @@ def health_check():
         "version": "2.0",
         "features": ["config-aware", "validation", "filtering"]
     })
+
+# ============================================================================
+# Next Customer ID (DB query)
+# ============================================================================
+
+@onboarding_api.route('/next-customer-id', methods=['GET'])
+def get_next_customer_id():
+    """Get next available customer ID from database"""
+    try:
+        from sqlalchemy import func
+        max_id = db.session.query(func.max(Customer.customer_id)).scalar() or 0
+        next_id = max_id + 1
+        account_id_start = next_id * 1000
+        return jsonify({
+            'next_customer_id': next_id,
+            'account_id_range': {
+                'start': account_id_start + 1,
+                'end': account_id_start + 10
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting next customer ID: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================================
+# CSV Template Downloads
+# ============================================================================
+
+TEMPLATE_MAP = {
+    'accounts': 'accounts.csv',
+    'kpis': 'kpi_measurements.csv',
+    'signals': 'qualitative_signals.csv',
+    'products': 'products.csv',
+    'profiles': 'account_profiles.csv',
+    'customers': 'customers.csv'
+}
+
+@onboarding_api.route('/templates/<file_type>', methods=['GET'])
+def download_template(file_type):
+    """Download CSV template file for onboarding"""
+    if file_type not in TEMPLATE_MAP:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid file type: {file_type}. Supported: {", ".join(TEMPLATE_MAP.keys())}'
+        }), 400
+
+    template_filename = TEMPLATE_MAP[file_type]
+    template_path = Path(__file__).parent / "verticals" / "_template" / "templates" / template_filename
+
+    if not template_path.exists():
+        current_app.logger.error(f"Template file not found: {template_path}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Template file not found: {template_filename}'
+        }), 404
+
+    return send_file(
+        str(template_path),
+        as_attachment=True,
+        download_name=template_filename,
+        mimetype='text/csv'
+    )
+
+@onboarding_api.route('/templates', methods=['GET'])
+def list_templates():
+    """List all available template files with descriptions"""
+    templates = [
+        {'file_type': 'accounts', 'filename': 'accounts.csv',
+         'description': 'Account master data with profile metadata', 'required': True},
+        {'file_type': 'kpis', 'filename': 'kpi_measurements.csv',
+         'description': 'KPI time-series measurements', 'required': True},
+        {'file_type': 'signals', 'filename': 'qualitative_signals.csv',
+         'description': 'Qualitative signals (emails, meetings, escalations)', 'required': False},
+        {'file_type': 'products', 'filename': 'products.csv',
+         'description': 'Product catalog', 'required': False},
+        {'file_type': 'profiles', 'filename': 'account_profiles.csv',
+         'description': 'Extended account profile attributes', 'required': False},
+        {'file_type': 'customers', 'filename': 'customers.csv',
+         'description': 'Customer/tenant-level data', 'required': False}
+    ]
+    return jsonify({
+        'status': 'success',
+        'templates': templates,
+        'download_url': '/api/onboarding/templates/{file_type}'
+    })
+
+# ============================================================================
+# DEPRECATED Filesystem Endpoints
+# ============================================================================
+# These endpoints relied on filesystem-based provisioning (customer directory
+# structures, dynamic Python file loading, CSV file generation on disk).
+# Journeys are now DB-based. Use /api/onboarding/complete which handles
+# customer creation in the database. These stubs exist so the frontend
+# gets an informative response instead of a 404.
+
+@onboarding_api.route('/provision', methods=['POST'])
+def provision_deprecated():
+    """DEPRECATED: Filesystem provisioning replaced by DB-based /complete endpoint."""
+    return jsonify({
+        'status': 'deprecated',
+        'message': 'POST /api/onboarding/provision is deprecated. '
+                   'Use POST /api/onboarding/complete which creates the customer, '
+                   'user, config, and accounts in the database.',
+        'replacement': '/api/onboarding/complete'
+    }), 410
+
+@onboarding_api.route('/register-journey-api', methods=['POST'])
+def register_journey_api_deprecated():
+    """DEPRECATED: Dynamic filesystem journey blueprint loading is obsolete.
+    Journey data is now served from the database via /admin/wizard endpoints."""
+    return jsonify({
+        'status': 'deprecated',
+        'message': 'POST /api/onboarding/register-journey-api is deprecated. '
+                   'Journey data is now DB-based and served via /admin/wizard endpoints.',
+        'replacement': '/admin/wizard/runs'
+    }), 410
+
+@onboarding_api.route('/generate-sample-files', methods=['POST'])
+def generate_sample_files_deprecated():
+    """DEPRECATED: Filesystem-based sample file generation is obsolete.
+    Sample data should be seeded directly into the database."""
+    return jsonify({
+        'status': 'deprecated',
+        'message': 'POST /api/onboarding/generate-sample-files is deprecated. '
+                   'Sample data is now managed in the database.',
+        'replacement': None
+    }), 410

@@ -140,7 +140,7 @@ const JourneyVisualizer: React.FC = () => {
 
   const loadWizardRuns = async () => {
     try {
-      const response = await fetch('/api/wizard/runs');
+      const response = await fetch('/admin/wizard/runs');
       const data = await response.json();
       setRuns(data.runs || []);
       if (data.runs && data.runs.length > 0) {
@@ -154,20 +154,15 @@ const JourneyVisualizer: React.FC = () => {
   const loadRunData = async (runId: string) => {
     setLoading(true);
     try {
-      // Load journey data
-      const journeyResponse = await fetch(`/api/wizard/journey/${runId}`);
-      const journeyData = await journeyResponse.json();
-      setJourneys(journeyData.journeys || []);
-
-      // Load KPI data
-      const kpiResponse = await fetch(`/api/wizard/kpis/${runId}`);
-      const kpiData = await kpiResponse.json();
-      setKpis(kpiData.kpis || []);
-
-      // Load milestone data
-      const milestoneResponse = await fetch(`/api/wizard/milestones/${runId}`);
-      const milestoneData = await milestoneResponse.json();
-      setMilestones(milestoneData.milestones || []);
+      // Load run results from DB-backed wizard endpoint
+      // The wizard_blueprint stores all run data (journeys, KPIs, milestones)
+      // in the wizard_runs.results JSON column
+      const resultsResponse = await fetch(`/admin/wizard/results/${runId}`);
+      const resultsData = await resultsResponse.json();
+      const results = resultsData.results || {};
+      setJourneys(results.journeys || []);
+      setKpis(results.kpis || []);
+      setMilestones(results.milestones || []);
 
       setLoading(false);
     } catch (error) {

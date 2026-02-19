@@ -85,7 +85,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
         ...(filters.status && { status: filters.status }),
       });
 
-      const response = await fetch(`/api/governance/activity-logs?${queryParams}`, {
+      const response = await fetch(`/api/activity-logs?${queryParams}`, {
         credentials: 'include',
         headers: {
           'X-Customer-ID': session?.customer_id?.toString() || ''
@@ -108,7 +108,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`/api/governance/activity-summary?days=${filters.days}`, {
+      const response = await fetch(`/api/activity-logs/summary?days=${filters.days}`, {
         credentials: 'include',
         headers: {
           'X-Customer-ID': session?.customer_id?.toString() || ''
@@ -128,7 +128,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
     setDqLoading(true);
     setDqError(null);
     try {
-      const response = await fetch('/api/governance/data-quality', {
+      const response = await fetch('/api/data-quality/report', {
         credentials: 'include',
         headers: {
           'X-Customer-ID': session?.customer_id?.toString() || ''
@@ -157,7 +157,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
     setRagResponse(null);
 
     try {
-      const response = await fetch('/api/governance/rag-query', {
+      const response = await fetch('/api/governance-rag/query', {
         method: 'POST',
         credentials: 'include',
         headers: {
