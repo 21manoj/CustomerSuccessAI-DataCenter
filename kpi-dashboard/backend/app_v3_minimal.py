@@ -467,6 +467,10 @@ def initialize_data_once():
             app._data_initialized = True
         except Exception as e:
             print(f"Warning: Could not initialize persisted data: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             app._data_initialized = True  # Prevent repeated attempts
 
 @app.route('/')
@@ -497,6 +501,11 @@ def login():
     No more X-Customer-ID headers - session handles authentication.
     """
     try:
+        # Ensure clean transaction (e.g. if a prior before_request left it aborted)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         data = request.json or {}
         email = data.get('email') or (data.get('username') if isinstance(data.get('username'), str) else None)
         password = data.get('password') or data.get('passwd')  # accept 'password' or 'passwd'
