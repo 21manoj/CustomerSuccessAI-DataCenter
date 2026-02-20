@@ -376,6 +376,14 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Portfolio API not available: {e}")
 
+# Register Outcome ROI API (Historical + Forward outcome-focused ROI)
+try:
+    from outcome_roi_api import outcome_roi_api
+    app.register_blueprint(outcome_roi_api)
+    print("✅ Registered Outcome ROI API: /api/outcome-roi/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Outcome ROI API not available: {e}")
+
 # Register Signal Analyst Agent API if available
 if HAS_SIGNAL_ANALYST_API:
     app.register_blueprint(signal_analyst_api)

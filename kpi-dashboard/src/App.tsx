@@ -11,6 +11,7 @@ import RegistrationForm from './components/RegistrationForm';
 import JourneyVisualizer from './components/wizard/JourneyVisualizer';
 import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboardV3';
 import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
+import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
 
 // Component to redirect legacy /dashboard to appropriate vertical dashboard
 const DashboardRedirect: React.FC = () => {
@@ -254,6 +255,16 @@ const AppRoutes: React.FC = () => {
           element={
             <PrivateRoute>
               <PortcoCEODashboard />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Outcome ROI Dashboard - Historical proof + Forward projection */}
+        <Route
+          path="/outcome-roi"
+          element={
+            <PrivateRoute>
+              <OutcomeROIDashboard />
             </PrivateRoute>
           }
         />
