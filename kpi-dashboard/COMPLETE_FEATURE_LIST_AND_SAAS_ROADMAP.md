@@ -123,6 +123,7 @@
 - **Load Balancing**: Auto-scaling infrastructure
 - **Monitoring**: Application performance monitoring (APM)
 - **Alerting**: System health and error notifications
+- **[TBD] Backend Hot-Reload Evaluation**: Evaluate `app_v3_minimal` hot-reload capability for JSON config changes (`config/power_of_1_economics.json`, `config/resource_rates.json`, `config/investment_summary.json`). Fix low-hanging items — e.g. wire `reload_config()` into a Settings API endpoint, add file-watcher in dev mode. Keep scope small; skip expensive rewrites.
 
 ### **Phase 3: Intelligence & Automation (Months 7-9)**
 **Goal**: Advanced AI capabilities and automation
