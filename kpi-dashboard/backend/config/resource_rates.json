@@ -1,0 +1,81 @@
+{
+  "_description": "CS role hourly rates and capacity — configurable via Settings UI",
+  "_note": "These rates feed into calculate_action_cost() for real per-action cost computation",
+
+  "roles": {
+    "csm": {
+      "display_name": "Customer Success Managers",
+      "annual_hours": 1920,
+      "fte": 0.92,
+      "hourly_rate": 95.00,
+      "description": "Direct customer engagement, QBRs, relationship management"
+    },
+    "cs_ops": {
+      "display_name": "CS Operations",
+      "annual_hours": 1760,
+      "fte": 0.85,
+      "hourly_rate": 85.00,
+      "description": "Process design, automation, analytics, reporting"
+    },
+    "product": {
+      "display_name": "Product Team",
+      "annual_hours": 760,
+      "fte": 0.37,
+      "hourly_rate": 110.00,
+      "description": "Feature development, in-app experiences, integrations"
+    },
+    "platform": {
+      "display_name": "Platform Team (Us)",
+      "annual_hours": 920,
+      "fte": 0.44,
+      "hourly_rate": 120.00,
+      "description": "GrowthPulse platform configuration, APIs, dashboards"
+    },
+    "leadership": {
+      "display_name": "CS Leadership",
+      "annual_hours": 480,
+      "fte": 0.23,
+      "hourly_rate": 150.00,
+      "description": "Strategy, governance, executive alignment"
+    }
+  },
+
+  "metric_resource_allocation": {
+    "TTFV": {
+      "total_hours": 1280,
+      "quarters": ["Q1", "Q2"],
+      "primary_pillar": "usage_onboarding",
+      "roles": {"csm": 360, "cs_ops": 540, "product": 160, "platform": 220, "leadership": 0}
+    },
+    "NRR": {
+      "total_hours": 1000,
+      "quarters": ["Q2", "Q3"],
+      "primary_pillar": "business_outcomes",
+      "roles": {"csm": 400, "cs_ops": 360, "product": 20, "platform": 140, "leadership": 80}
+    },
+    "GRR": {
+      "total_hours": 1280,
+      "quarters": ["Q1", "Q2", "Q3", "Q4"],
+      "primary_pillar": "business_outcomes",
+      "roles": {"csm": 480, "cs_ops": 480, "product": 20, "platform": 200, "leadership": 100}
+    },
+    "ticket_resolution_time": {
+      "total_hours": 840,
+      "quarters": ["Q2", "Q3"],
+      "primary_pillar": "support_engagement",
+      "roles": {"csm": 120, "cs_ops": 400, "product": 160, "platform": 120, "leadership": 40}
+    },
+    "product_adoption": {
+      "total_hours": 800,
+      "quarters": ["Q3", "Q4"],
+      "primary_pillar": "usage_onboarding",
+      "roles": {"csm": 240, "cs_ops": 280, "product": 160, "platform": 120, "leadership": 0}
+    },
+    "expansion_rate": {
+      "total_hours": 640,
+      "quarters": ["Q3", "Q4"],
+      "primary_pillar": "business_outcomes",
+      "roles": {"csm": 200, "cs_ops": 240, "product": 40, "platform": 80, "leadership": 80}
+    }
+  }
+}

@@ -58,12 +58,14 @@ MAX_ENRICH_ITERATIONS = 2
 
 @dataclass
 class EnrichedAction:
-    """A recommended action enriched with $ impact."""
+    """A recommended action enriched with $ impact and cost."""
     action: str
     priority: str
     owner: str
     expected_impact: str
     dollar_impact: Optional[float] = None
+    action_cost: Optional[float] = None       # Cost to execute this action (from resource rates)
+    action_roi: Optional[float] = None        # Per-action ROI: (impact - cost) / cost
     power_of_1_metric: Optional[str] = None
     playbook_id: Optional[str] = None
     confidence: float = 0.0
@@ -93,6 +95,7 @@ class LoopState:
     # Quantified actions (from Step 4)
     enriched_actions: List[Dict] = field(default_factory=list)
     total_dollar_impact: float = 0.0
+    total_action_cost: float = 0.0            # Sum of per-action costs
 
     # Decision (from Step 5)
     decision: str = "pending"  # auto_execute, needs_review, rejected
@@ -310,22 +313,27 @@ class AgenticLoop:
     # ─── Step 4: QUANTIFY ────────────────────────────────────
 
     def _step_quantify(self, state: LoopState, account_arr: Optional[float]) -> LoopState:
-        """Put $ impact on every recommended action via Power of 1."""
+        """Put $ impact AND $ cost on every recommended action via Power of 1."""
         state.current_step = LoopStep.QUANTIFY
 
         if not self.tool_registry:
             # Pass through raw actions without $ enrichment
             raw_actions = (state.initial_analysis or {}).get("recommended_actions", [])
             state.enriched_actions = [
-                {**a, "dollar_impact": None, "power_of_1_metric": None}
+                {**a, "dollar_impact": None, "action_cost": None,
+                 "action_roi": None, "power_of_1_metric": None}
                 for a in raw_actions
             ]
             return state
+
+        # Load cost calculator
+        from resource_capacity_model import calculate_metric_action_cost
 
         # Map recommended actions to Power of 1 metrics
         raw_actions = (state.initial_analysis or {}).get("recommended_actions", [])
         enriched = []
         total_dollar = 0.0
+        total_cost = 0.0
 
         # Keyword → metric mapping for action text
         ACTION_METRIC_MAP = {
@@ -360,6 +368,9 @@ class AgenticLoop:
                     break
 
             dollar_impact = None
+            action_cost = None
+            action_roi = None
+
             if matched_metric:
                 # Calculate $ impact for a 1% improvement in this metric
                 po1_result = self.tool_registry.invoke(
@@ -373,16 +384,29 @@ class AgenticLoop:
                     total_dollar += dollar_impact
                     state.tools_called.append("power_of_1_calc")
 
+                # Calculate $ cost for this action (from resource rates JSON)
+                cost_result = calculate_metric_action_cost(matched_metric)
+                if "total_cost" in cost_result and cost_result["total_cost"] > 0:
+                    action_cost = cost_result["total_cost"]
+                    total_cost += action_cost
+
+                    # Per-action ROI: (impact - cost) / cost
+                    if dollar_impact and action_cost > 0:
+                        action_roi = round((dollar_impact - action_cost) / action_cost, 4)
+
             enriched_action = dict(action) if isinstance(action, dict) else {"action": str(action)}
             enriched_action["dollar_impact"] = dollar_impact
+            enriched_action["action_cost"] = action_cost
+            enriched_action["action_roi"] = action_roi
             enriched_action["power_of_1_metric"] = matched_metric
             enriched.append(enriched_action)
 
         state.enriched_actions = enriched
         state.total_dollar_impact = round(total_dollar, 2)
+        state.total_action_cost = round(total_cost, 2)
         logger.info(
             f"[QUANTIFY] {len(enriched)} actions enriched, "
-            f"total impact: ${total_dollar:,.0f}"
+            f"total impact: ${total_dollar:,.0f}, total cost: ${total_cost:,.0f}"
         )
         return state
 
@@ -433,6 +457,8 @@ class AgenticLoop:
                     "action": action.get("action", "unknown"),
                     "status": "queued_for_auto_execute",
                     "dollar_impact": action.get("dollar_impact"),
+                    "action_cost": action.get("action_cost"),
+                    "action_roi": action.get("action_roi"),
                     "playbook_id": action.get("playbook_id"),
                 })
 
@@ -459,6 +485,8 @@ class AgenticLoop:
                     "action": action.get("action", "unknown"),
                     "status": "queued_for_review",
                     "dollar_impact": action.get("dollar_impact"),
+                    "action_cost": action.get("action_cost"),
+                    "action_roi": action.get("action_roi"),
                 })
 
             # Publish approval request event
@@ -494,6 +522,7 @@ class AgenticLoop:
                 "confidence": state.confidence,
                 "decision": state.decision,
                 "total_dollar_impact": state.total_dollar_impact,
+                "total_action_cost": state.total_action_cost,
                 "actions_count": len(state.enriched_actions),
                 "top_action": state.enriched_actions[0].get("action") if state.enriched_actions else None,
                 "timestamp": datetime.utcnow().isoformat(),
@@ -533,6 +562,7 @@ def loop_state_to_dict(state: LoopState) -> Dict:
         "tools_called": state.tools_called,
         "enriched_actions": state.enriched_actions,
         "total_dollar_impact": state.total_dollar_impact,
+        "total_action_cost": state.total_action_cost,
         "decision": state.decision,
         "decision_reason": state.decision_reason,
         "actions_taken": state.actions_taken,

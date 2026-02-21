@@ -163,12 +163,14 @@ def _build_roi_section(registry, account_arr) -> Dict:
         section["data"] = {
             "historical": {
                 "total_impact": story["historical"]["summary"]["total_impact"],
+                "investment": story["historical"]["summary"]["total_investment"],
                 "roi_pct": story["historical"]["summary"]["roi_pct"],
                 "revenue_protected": story["historical"]["summary"]["revenue_protected"],
                 "revenue_expanded": story["historical"]["summary"]["revenue_expanded"],
             },
             "forward": {
                 "total_impact": story["forward"]["summary"]["total_impact"],
+                "investment": story["forward"]["summary"]["total_investment"],
                 "roi_pct": story["forward"]["summary"]["roi_pct"],
                 "revenue_protected": story["forward"]["summary"]["revenue_protected"],
                 "revenue_expanded": story["forward"]["summary"]["revenue_expanded"],

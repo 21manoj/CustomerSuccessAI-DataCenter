@@ -1,0 +1,442 @@
+{
+  "_description": "Power of 1 economic model — configurable via Settings UI. All dollar values in USD.",
+  "_arr_base": 10000000,
+  "_note": "annual_impact_per_pct, total_investment, cs_initiative_cost, platform_cost are per-1%-improvement at the ARR base above",
+
+  "metrics": {
+    "TTFV": {
+      "display_name": "Time to First Value",
+      "baseline": 30,
+      "unit": "days",
+      "direction": "lower_is_better",
+      "one_pct_move": 0.3,
+      "annual_impact_per_pct": 61250,
+      "total_investment": 75500,
+      "cs_initiative_cost": 59500,
+      "platform_cost": 16000,
+      "roi_at_1pct": -0.19,
+      "payback_months": 14.8,
+      "category": "foundation_investment",
+      "primary_pillar": "usage_onboarding",
+      "secondary_pillars": ["customer_sentiment", "relationship_strength"],
+      "linked_playbooks": ["activation-blitz"],
+      "linked_kpi_codes": ["P1-KPI1"],
+      "total_hours": 1280,
+      "quarters": ["Q1", "Q2"],
+      "impact_breakdown": {
+        "revenue_increase": 30000,
+        "cost_savings": 31250
+      },
+      "work_packages": [
+        {
+          "name": "standardized_onboarding_journey",
+          "description": "Map customer journey touchpoints, create milestone tracking, build success criteria by segment",
+          "hours": 360,
+          "roles": {"csm": 120, "cs_ops": 160, "product": 60, "platform": 20},
+          "deliverables": ["Journey map", "Milestone tracker", "Segment success criteria"]
+        },
+        {
+          "name": "automated_milestone_tracking",
+          "description": "Configure platform milestone APIs, build automated trigger system, create progress dashboards",
+          "hours": 320,
+          "roles": {"cs_ops": 120, "platform": 160, "leadership": 40},
+          "deliverables": ["Milestone APIs", "Auto-trigger system", "Progress dashboards"]
+        },
+        {
+          "name": "personalized_learning_paths",
+          "description": "Develop role-based content, create in-app tutorials, build adoption playbooks",
+          "hours": 400,
+          "roles": {"csm": 160, "cs_ops": 120, "product": 80, "leadership": 40},
+          "deliverables": ["Role-based content", "In-app tutorials", "Adoption playbooks"]
+        },
+        {
+          "name": "success_criteria_definition",
+          "description": "Define value metrics by segment, create measurement framework, build reporting templates",
+          "hours": 200,
+          "roles": {"csm": 40, "cs_ops": 80, "product": 20, "platform": 40, "leadership": 20},
+          "deliverables": ["Value metrics", "Measurement framework", "Report templates"]
+        }
+      ]
+    },
+
+    "NRR": {
+      "display_name": "Net Revenue Retention",
+      "baseline": 105,
+      "unit": "percent",
+      "direction": "higher_is_better",
+      "one_pct_move": 1.05,
+      "annual_impact_per_pct": 105000,
+      "total_investment": 50000,
+      "cs_initiative_cost": 38000,
+      "platform_cost": 12000,
+      "roi_at_1pct": 2.10,
+      "payback_months": 5.7,
+      "category": "growth_accelerator",
+      "primary_pillar": "business_outcomes",
+      "secondary_pillars": ["usage_onboarding", "relationship_strength"],
+      "linked_playbooks": ["expansion-accelerator", "voc-sprint"],
+      "linked_kpi_codes": ["EX-KPI1", "EX-KPI2", "CH-KPI3"],
+      "total_hours": 1000,
+      "quarters": ["Q2", "Q3"],
+      "impact_breakdown": {
+        "revenue_increase": 105000,
+        "cost_savings": 0
+      },
+      "work_packages": [
+        {
+          "name": "expansion_opportunity_identification",
+          "description": "Build scoring model for expansion readiness, map account whitespace, segment opportunities",
+          "hours": 280,
+          "roles": {"csm": 80, "cs_ops": 120, "platform": 60, "leadership": 20},
+          "deliverables": ["Expansion scoring model", "Whitespace map", "Opportunity segments"]
+        },
+        {
+          "name": "upsell_trigger_automation",
+          "description": "Configure usage-based triggers, build expansion alert system, create CSM notification workflows",
+          "hours": 240,
+          "roles": {"cs_ops": 120, "platform": 80, "leadership": 40},
+          "deliverables": ["Usage triggers", "Expansion alerts", "CSM notifications"]
+        },
+        {
+          "name": "cross_sell_campaigns",
+          "description": "Design cross-sell playbooks, build campaign templates, train CSMs on consultative selling",
+          "hours": 280,
+          "roles": {"csm": 160, "cs_ops": 80, "product": 20, "leadership": 20},
+          "deliverables": ["Cross-sell playbooks", "Campaign templates", "CSM training"]
+        },
+        {
+          "name": "value_realization_reviews",
+          "description": "Create QBR value framework, build ROI calculators, develop executive presentation templates",
+          "hours": 200,
+          "roles": {"csm": 160, "cs_ops": 40},
+          "deliverables": ["QBR value framework", "ROI calculators", "Exec presentations"]
+        }
+      ]
+    },
+
+    "GRR": {
+      "display_name": "Gross Revenue Retention",
+      "baseline": 85,
+      "unit": "percent",
+      "direction": "higher_is_better",
+      "one_pct_move": 0.85,
+      "annual_impact_per_pct": 100000,
+      "total_investment": 60000,
+      "cs_initiative_cost": 48000,
+      "platform_cost": 12000,
+      "roi_at_1pct": 1.67,
+      "payback_months": 7.2,
+      "category": "retention_foundation",
+      "primary_pillar": "business_outcomes",
+      "secondary_pillars": ["support_engagement", "customer_sentiment"],
+      "linked_playbooks": ["renewal-safeguard", "sla-stabilizer"],
+      "linked_kpi_codes": ["CH-KPI1", "CH-KPI2", "OS-KPI3"],
+      "total_hours": 1280,
+      "quarters": ["Q1", "Q2", "Q3", "Q4"],
+      "impact_breakdown": {
+        "revenue_increase": 100000,
+        "cost_savings": 0
+      },
+      "work_packages": [
+        {
+          "name": "at_risk_detection_system",
+          "description": "Build multi-signal risk scoring, configure early warning triggers, create risk dashboards",
+          "hours": 360,
+          "roles": {"csm": 40, "cs_ops": 160, "platform": 120, "leadership": 40},
+          "deliverables": ["Risk scoring model", "Early warning triggers", "Risk dashboards"]
+        },
+        {
+          "name": "proactive_health_monitoring",
+          "description": "Deploy continuous health checks, build anomaly detection, create automated CSM alerts",
+          "hours": 320,
+          "roles": {"csm": 120, "cs_ops": 120, "platform": 80},
+          "deliverables": ["Health check automation", "Anomaly detection", "CSM alert system"]
+        },
+        {
+          "name": "renewal_playbooks_by_segment",
+          "description": "Design segment-specific renewal strategies, build playbook templates, create renewal timeline automation",
+          "hours": 400,
+          "roles": {"csm": 240, "cs_ops": 120, "leadership": 40},
+          "deliverables": ["Segment renewal strategies", "Playbook templates", "Timeline automation"]
+        },
+        {
+          "name": "executive_business_reviews",
+          "description": "Create EBR frameworks, build automated deck generation, develop success story templates",
+          "hours": 200,
+          "roles": {"csm": 80, "cs_ops": 80, "product": 20, "leadership": 20},
+          "deliverables": ["EBR framework", "Auto deck generation", "Success story templates"]
+        }
+      ]
+    },
+
+    "ticket_resolution_time": {
+      "display_name": "Ticket Resolution Time",
+      "baseline": 48,
+      "unit": "hours",
+      "direction": "lower_is_better",
+      "one_pct_move": 0.48,
+      "annual_impact_per_pct": 38000,
+      "total_investment": 26000,
+      "cs_initiative_cost": 20000,
+      "platform_cost": 6000,
+      "roi_at_1pct": 1.46,
+      "payback_months": 8.2,
+      "category": "efficiency_booster",
+      "primary_pillar": "support_engagement",
+      "secondary_pillars": ["customer_sentiment"],
+      "linked_playbooks": ["sla-stabilizer"],
+      "linked_kpi_codes": ["OS-KPI1", "OS-KPI2"],
+      "total_hours": 840,
+      "quarters": ["Q2", "Q3"],
+      "impact_breakdown": {
+        "revenue_increase": 0,
+        "cost_savings": 38000
+      },
+      "work_packages": [
+        {
+          "name": "ticket_routing_optimization",
+          "description": "Analyze routing patterns, build skill-based routing, optimize escalation paths",
+          "hours": 240,
+          "roles": {"cs_ops": 160, "platform": 60, "leadership": 20},
+          "deliverables": ["Routing analysis", "Skill-based routing", "Escalation optimization"]
+        },
+        {
+          "name": "knowledge_base_enhancement",
+          "description": "Audit existing KB, create missing articles, build self-service workflows",
+          "hours": 240,
+          "roles": {"csm": 80, "cs_ops": 80, "product": 80},
+          "deliverables": ["KB audit report", "New KB articles", "Self-service workflows"]
+        },
+        {
+          "name": "tier_1_automation",
+          "description": "Build AI-powered tier-1 triage, create auto-response templates, deploy chatbot deflection",
+          "hours": 240,
+          "roles": {"cs_ops": 80, "product": 80, "platform": 60, "leadership": 20},
+          "deliverables": ["AI triage system", "Auto-response templates", "Chatbot deflection"]
+        },
+        {
+          "name": "csm_training_common_issues",
+          "description": "Identify top 20 recurring issues, create resolution playbooks, train CSM team",
+          "hours": 120,
+          "roles": {"csm": 40, "cs_ops": 80},
+          "deliverables": ["Top 20 issue library", "Resolution playbooks", "Training materials"]
+        }
+      ]
+    },
+
+    "product_adoption": {
+      "display_name": "Product Adoption Rate",
+      "baseline": 65,
+      "unit": "percent",
+      "direction": "higher_is_better",
+      "one_pct_move": 0.65,
+      "annual_impact_per_pct": 25000,
+      "total_investment": 21000,
+      "cs_initiative_cost": 15000,
+      "platform_cost": 6000,
+      "roi_at_1pct": 1.19,
+      "payback_months": 10.1,
+      "category": "value_amplifier",
+      "primary_pillar": "usage_onboarding",
+      "secondary_pillars": ["customer_sentiment"],
+      "linked_playbooks": ["activation-blitz"],
+      "linked_kpi_codes": ["AI-KPI2", "AI-KPI3", "DV-KPI1"],
+      "total_hours": 800,
+      "quarters": ["Q3", "Q4"],
+      "impact_breakdown": {
+        "revenue_increase": 25000,
+        "cost_savings": 0
+      },
+      "work_packages": [
+        {
+          "name": "in_app_training_tutorials",
+          "description": "Design interactive walkthroughs, build feature discovery prompts, create onboarding tours",
+          "hours": 240,
+          "roles": {"product": 120, "cs_ops": 80, "platform": 40},
+          "deliverables": ["Interactive walkthroughs", "Feature discovery prompts", "Onboarding tours"]
+        },
+        {
+          "name": "feature_adoption_campaigns",
+          "description": "Build adoption email sequences, create in-app nudges, design feature spotlight programs",
+          "hours": 240,
+          "roles": {"csm": 120, "cs_ops": 80, "product": 40},
+          "deliverables": ["Adoption email sequences", "In-app nudges", "Feature spotlights"]
+        },
+        {
+          "name": "usage_pattern_analysis",
+          "description": "Deploy usage analytics, identify adoption gaps, build cohort analysis dashboards",
+          "hours": 200,
+          "roles": {"csm": 40, "cs_ops": 80, "platform": 80},
+          "deliverables": ["Usage analytics", "Adoption gap report", "Cohort dashboards"]
+        },
+        {
+          "name": "quarterly_feature_showcases",
+          "description": "Create feature demo library, build webinar program, design customer advisory board",
+          "hours": 120,
+          "roles": {"csm": 80, "cs_ops": 40},
+          "deliverables": ["Feature demo library", "Webinar program", "Advisory board framework"]
+        }
+      ]
+    },
+
+    "expansion_rate": {
+      "display_name": "Expansion Rate",
+      "baseline": 20,
+      "unit": "percent",
+      "direction": "higher_is_better",
+      "one_pct_move": 0.20,
+      "annual_impact_per_pct": 20000,
+      "total_investment": 14500,
+      "cs_initiative_cost": 12000,
+      "platform_cost": 2500,
+      "roi_at_1pct": 1.38,
+      "payback_months": 8.7,
+      "category": "revenue_driver",
+      "primary_pillar": "business_outcomes",
+      "secondary_pillars": ["usage_onboarding", "relationship_strength"],
+      "linked_playbooks": ["expansion-accelerator"],
+      "linked_kpi_codes": ["EX-KPI1", "EX-KPI3"],
+      "total_hours": 640,
+      "quarters": ["Q3", "Q4"],
+      "impact_breakdown": {
+        "revenue_increase": 20000,
+        "cost_savings": 0
+      },
+      "work_packages": [
+        {
+          "name": "upsell_trigger_automations",
+          "description": "Build usage threshold triggers, create expansion signal detection, deploy alert workflows",
+          "hours": 200,
+          "roles": {"cs_ops": 80, "platform": 80, "leadership": 40},
+          "deliverables": ["Usage threshold triggers", "Expansion signals", "Alert workflows"]
+        },
+        {
+          "name": "expansion_pipeline_management",
+          "description": "Build expansion opportunity tracker, create pipeline dashboards, design handoff workflows",
+          "hours": 200,
+          "roles": {"csm": 120, "cs_ops": 80},
+          "deliverables": ["Opportunity tracker", "Pipeline dashboards", "Handoff workflows"]
+        },
+        {
+          "name": "sales_cs_handoff_process",
+          "description": "Define handoff criteria, build shared qualification framework, create SLA between teams",
+          "hours": 160,
+          "roles": {"csm": 80, "cs_ops": 40, "leadership": 40},
+          "deliverables": ["Handoff criteria", "Qualification framework", "Team SLA"]
+        },
+        {
+          "name": "usage_based_pricing_signals",
+          "description": "Identify pricing trigger patterns, build consumption dashboards, create pricing recommendations",
+          "hours": 80,
+          "roles": {"cs_ops": 40, "product": 40},
+          "deliverables": ["Pricing trigger patterns", "Consumption dashboards", "Pricing recommendations"]
+        }
+      ]
+    }
+  },
+
+  "metric_cascades": {
+    "TTFV": {
+      "amplifies": [
+        {"target_metric": "product_adoption", "multiplier": 0.35, "mechanism": "Faster onboarding compresses time-to-adoption", "lag_weeks": 4},
+        {"target_metric": "expansion_rate", "multiplier": 0.40, "mechanism": "Early value realization opens expansion conversations sooner", "lag_weeks": 8}
+      ]
+    },
+    "GRR": {
+      "amplifies": [
+        {"target_metric": "NRR", "multiplier": 0.25, "mechanism": "Retained customer base is the expandable base", "lag_weeks": 4}
+      ]
+    },
+    "ticket_resolution_time": {
+      "amplifies": [
+        {"target_metric": "product_adoption", "multiplier": 0.15, "mechanism": "Freed CSM capacity enables proactive adoption work", "lag_weeks": 6},
+        {"target_metric": "GRR", "multiplier": 0.10, "mechanism": "Better support experience reduces churn triggers", "lag_weeks": 4}
+      ]
+    },
+    "product_adoption": {
+      "amplifies": [
+        {"target_metric": "NRR", "multiplier": 0.20, "mechanism": "Higher adoption creates natural expansion demand", "lag_weeks": 8},
+        {"target_metric": "GRR", "multiplier": 0.15, "mechanism": "Deeply adopted products are stickier", "lag_weeks": 4}
+      ]
+    },
+    "NRR": {
+      "amplifies": []
+    },
+    "expansion_rate": {
+      "amplifies": [
+        {"target_metric": "NRR", "multiplier": 0.30, "mechanism": "Higher expansion rate directly drives net revenue retention", "lag_weeks": 4}
+      ]
+    }
+  },
+
+  "compounding_multiplier": 0.15,
+
+  "scaling_scenarios": {
+    "1_pct": {
+      "improvement_pct": 1,
+      "label": "Budget (Conservative)",
+      "direct_impact": 349250,
+      "compounding_impact": 52388,
+      "total_impact": 401638,
+      "investment": 247000,
+      "year_1_roi": 0.63,
+      "payback_months": 7.4,
+      "three_year_net": null
+    },
+    "4_pct": {
+      "improvement_pct": 4,
+      "label": "Target (Industry Leading)",
+      "direct_impact": 1397000,
+      "compounding_impact": 209550,
+      "total_impact": 1607000,
+      "investment": 247000,
+      "year_1_roi": 5.50,
+      "payback_months": 1.8,
+      "three_year_net": 4500000
+    },
+    "6_pct": {
+      "improvement_pct": 6,
+      "label": "Celebrate (World Class)",
+      "direct_impact": 2095650,
+      "compounding_impact": 314348,
+      "total_impact": 2410000,
+      "investment": 247000,
+      "year_1_roi": 8.76,
+      "payback_months": 1.2,
+      "three_year_net": 7000000
+    }
+  },
+
+  "time_economics": {
+    "year_1": {
+      "label": "Building the Infrastructure",
+      "hours_invested": 5840,
+      "breakdown": {
+        "platform_auto_setup": {"hours": 1840, "pct": 0.31, "note": "AI does the work"},
+        "one_time_playbooks": {"hours": 2400, "pct": 0.41, "note": "Build once, run forever"},
+        "reduced_execution": {"hours": 1600, "pct": 0.28, "note": "80% less vs manual"}
+      },
+      "hours_saved": 2920,
+      "net_savings": -2920
+    },
+    "year_2": {
+      "label": "Maintenance Only",
+      "hours_invested": 800,
+      "hours_saved": 8760,
+      "net_savings": 7960
+    },
+    "year_3": {
+      "label": "Optimization",
+      "hours_invested": 600,
+      "hours_saved": 10950,
+      "net_savings": 10350
+    },
+    "three_year_totals": {
+      "hours_invested": 7240,
+      "hours_saved": 22630,
+      "net_savings": 15390,
+      "time_roi_multiplier": 3.1,
+      "fte_equivalent_freed": 7.4
+    }
+  }
+}

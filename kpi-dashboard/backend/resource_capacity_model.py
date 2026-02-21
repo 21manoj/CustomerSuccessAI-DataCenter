@@ -7,12 +7,30 @@ for CS GrowthPulse initiatives. Used by the simulation engine to ensure
 playbooks don't over-allocate resources, and by the revenue intelligence
 dashboard to show utilization and efficiency.
 
+DATA SOURCE: All rates loaded from config/resource_rates.json — editable via Settings UI.
+
 Feature flag: 'revenue_intelligence' (per-customer toggle in Settings UI)
 """
 
+import json
+import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from enum import Enum
+
+
+# ============================================================
+# CONFIG LOADER
+# ============================================================
+
+_CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")
+
+
+def _load_resource_config() -> dict:
+    """Load resource rates from config/resource_rates.json."""
+    path = os.path.join(_CONFIG_DIR, "resource_rates.json")
+    with open(path, "r") as f:
+        return json.load(f)
 
 
 # ============================================================
@@ -33,9 +51,9 @@ class RoleCapacity:
     """Capacity and cost model for a single CS role"""
     role: CSRole
     display_name: str
-    annual_hours: float          # Total hours allocated to GrowthPulse
-    fte: float                   # FTE equivalent (annual_hours / 2080)
-    hourly_rate: float           # Fully loaded cost per hour (USD)
+    annual_hours: float
+    fte: float
+    hourly_rate: float
     description: str
 
     @property
@@ -52,158 +70,106 @@ class RoleCapacity:
 
 
 # ============================================================
-# DEFAULT RESOURCE POOL (from Slide 18)
+# BUILD RESOURCE POOL FROM JSON
 # ============================================================
-# Total: 5,840 hours / 2.81 FTE / $247K
-# These are DEFAULTS — configurable per customer in Settings UI.
+
+def _build_resource_pool(config: dict) -> Dict[CSRole, RoleCapacity]:
+    """Parse JSON config into CSRole → RoleCapacity mapping."""
+    pool = {}
+    for role_key, data in config.get("roles", {}).items():
+        role = CSRole(role_key)
+        pool[role] = RoleCapacity(
+            role=role,
+            display_name=data["display_name"],
+            annual_hours=data["annual_hours"],
+            fte=data["fte"],
+            hourly_rate=data["hourly_rate"],
+            description=data["description"],
+        )
+    return pool
+
+
+def _build_metric_allocation(config: dict) -> dict:
+    """Parse JSON metric_resource_allocation into the expected format."""
+    result = {}
+    for metric_id, alloc in config.get("metric_resource_allocation", {}).items():
+        roles = {}
+        for role_key, hours in alloc.get("roles", {}).items():
+            roles[CSRole(role_key)] = hours
+        result[metric_id] = {
+            "total_hours": alloc["total_hours"],
+            "cost": sum(
+                hours * DEFAULT_RESOURCE_POOL[CSRole(rk)].hourly_rate
+                for rk, hours in alloc.get("roles", {}).items()
+                if CSRole(rk) in DEFAULT_RESOURCE_POOL
+            ) if hasattr(DEFAULT_RESOURCE_POOL, '__iter__') else 0,
+            "quarters": alloc.get("quarters", []),
+            "primary_pillar": alloc.get("primary_pillar", ""),
+            "roles": roles,
+        }
+    return result
+
+
+# ============================================================
+# MODULE-LEVEL CONSTANTS — loaded from JSON
+# ============================================================
+
+_cfg = _load_resource_config()
+
+DEFAULT_RESOURCE_POOL: Dict[CSRole, RoleCapacity] = _build_resource_pool(_cfg)
 
 # Convenience alias: role → hourly rate
-ROLE_RATES: Dict[str, float] = {}  # populated after DEFAULT_RESOURCE_POOL
-
-DEFAULT_RESOURCE_POOL: Dict[CSRole, RoleCapacity] = {
-    CSRole.CSM: RoleCapacity(
-        role=CSRole.CSM,
-        display_name="Customer Success Managers",
-        annual_hours=1920,
-        fte=0.92,
-        hourly_rate=95.00,
-        description="Direct customer engagement, QBRs, relationship management",
-    ),
-    CSRole.CS_OPS: RoleCapacity(
-        role=CSRole.CS_OPS,
-        display_name="CS Operations",
-        annual_hours=1760,
-        fte=0.85,
-        hourly_rate=85.00,
-        description="Process design, automation, analytics, reporting",
-    ),
-    CSRole.PRODUCT: RoleCapacity(
-        role=CSRole.PRODUCT,
-        display_name="Product Team",
-        annual_hours=760,
-        fte=0.37,
-        hourly_rate=110.00,
-        description="Feature development, in-app experiences, integrations",
-    ),
-    CSRole.PLATFORM: RoleCapacity(
-        role=CSRole.PLATFORM,
-        display_name="Platform Team (Us)",
-        annual_hours=920,
-        fte=0.44,
-        hourly_rate=120.00,
-        description="GrowthPulse platform configuration, APIs, dashboards",
-    ),
-    CSRole.LEADERSHIP: RoleCapacity(
-        role=CSRole.LEADERSHIP,
-        display_name="CS Leadership",
-        annual_hours=480,
-        fte=0.23,
-        hourly_rate=150.00,
-        description="Strategy, governance, executive alignment",
-    ),
+ROLE_RATES: Dict[str, float] = {
+    role.value: cap.hourly_rate for role, cap in DEFAULT_RESOURCE_POOL.items()
 }
 
-# Populate ROLE_RATES convenience dict
-ROLE_RATES = {role.value: cap.hourly_rate for role, cap in DEFAULT_RESOURCE_POOL.items()}
+
+def _build_metric_allocation_real(config: dict) -> dict:
+    """Build metric allocation with real costs from the loaded pool."""
+    result = {}
+    for metric_id, alloc in config.get("metric_resource_allocation", {}).items():
+        roles = {}
+        total_cost = 0
+        for role_key, hours in alloc.get("roles", {}).items():
+            cs_role = CSRole(role_key)
+            roles[cs_role] = hours
+            if cs_role in DEFAULT_RESOURCE_POOL:
+                total_cost += hours * DEFAULT_RESOURCE_POOL[cs_role].hourly_rate
+        result[metric_id] = {
+            "total_hours": alloc["total_hours"],
+            "cost": round(total_cost, 2),
+            "quarters": alloc.get("quarters", []),
+            "primary_pillar": alloc.get("primary_pillar", ""),
+            "roles": roles,
+        }
+    return result
 
 
-# ============================================================
-# PER-METRIC RESOURCE ALLOCATION (from Slide 18)
-# ============================================================
-# Maps each Power of 1 metric to its resource requirements.
+METRIC_RESOURCE_ALLOCATION = _build_metric_allocation_real(_cfg)
 
-METRIC_RESOURCE_ALLOCATION = {
-    "TTFV": {
-        "total_hours": 1280,
-        "cost": 75500,
-        "quarters": ["Q1", "Q2"],
-        "primary_pillar": "usage_onboarding",
-        "roles": {
-            CSRole.CSM: 360,       # Across all 4 work packages
-            CSRole.CS_OPS: 540,
-            CSRole.PRODUCT: 160,
-            CSRole.PLATFORM: 220,  # Heaviest platform involvement — setup
-            CSRole.LEADERSHIP: 0,  # Not counted in slide but adding for completeness
-        },
-    },
-    "NRR": {
-        "total_hours": 1000,
-        "cost": 50000,
-        "quarters": ["Q2", "Q3"],
-        "primary_pillar": "business_outcomes",
-        "roles": {
-            CSRole.CSM: 400,
-            CSRole.CS_OPS: 360,
-            CSRole.PRODUCT: 20,
-            CSRole.PLATFORM: 140,
-            CSRole.LEADERSHIP: 80,
-        },
-    },
-    "GRR": {
-        "total_hours": 1280,
-        "cost": 60000,
-        "quarters": ["Q1", "Q2", "Q3", "Q4"],
-        "primary_pillar": "business_outcomes",
-        "roles": {
-            CSRole.CSM: 480,
-            CSRole.CS_OPS: 480,
-            CSRole.PRODUCT: 20,
-            CSRole.PLATFORM: 200,
-            CSRole.LEADERSHIP: 100,
-        },
-    },
-    "ticket_resolution_time": {
-        "total_hours": 840,
-        "cost": 26000,
-        "quarters": ["Q2", "Q3"],
-        "primary_pillar": "support_engagement",
-        "roles": {
-            CSRole.CSM: 120,
-            CSRole.CS_OPS: 400,
-            CSRole.PRODUCT: 160,
-            CSRole.PLATFORM: 120,
-            CSRole.LEADERSHIP: 40,
-        },
-    },
-    "product_adoption": {
-        "total_hours": 800,
-        "cost": 21000,
-        "quarters": ["Q3", "Q4"],
-        "primary_pillar": "usage_onboarding",
-        "roles": {
-            CSRole.CSM: 240,
-            CSRole.CS_OPS: 280,
-            CSRole.PRODUCT: 160,
-            CSRole.PLATFORM: 120,
-            CSRole.LEADERSHIP: 0,
-        },
-    },
-    "expansion_rate": {
-        "total_hours": 640,
-        "cost": 14500,
-        "quarters": ["Q3", "Q4"],
-        "primary_pillar": "business_outcomes",
-        "roles": {
-            CSRole.CSM: 200,
-            CSRole.CS_OPS: 240,
-            CSRole.PRODUCT: 40,
-            CSRole.PLATFORM: 80,
-            CSRole.LEADERSHIP: 80,
-        },
-    },
-}
+
+def reload_config():
+    """
+    Reload resource rates from JSON.
+    Call this after the Settings UI saves new values.
+    """
+    global DEFAULT_RESOURCE_POOL, ROLE_RATES, METRIC_RESOURCE_ALLOCATION
+
+    cfg = _load_resource_config()
+    DEFAULT_RESOURCE_POOL = _build_resource_pool(cfg)
+    ROLE_RATES = {role.value: cap.hourly_rate for role, cap in DEFAULT_RESOURCE_POOL.items()}
+    METRIC_RESOURCE_ALLOCATION = _build_metric_allocation_real(cfg)
 
 
 # ============================================================
 # CAPACITY CONSTRAINTS
 # ============================================================
-# Used by simulation engine to prevent over-allocation.
 
 @dataclass
 class CapacityConstraint:
     """Represents a resource capacity check result"""
     is_feasible: bool
-    utilization_by_role: Dict[str, float]   # 0-1 per role
+    utilization_by_role: Dict[str, float]
     bottleneck_role: Optional[str]
     overflow_hours: float
     recommendation: str
@@ -226,7 +192,7 @@ def check_capacity(
         CapacityConstraint with feasibility assessment
     """
     pool = resource_pool or DEFAULT_RESOURCE_POOL
-    divisor = 4 if quarter else 1  # Quarter = 1/4 of annual capacity
+    divisor = 4 if quarter else 1
 
     utilization = {}
     bottleneck = None
@@ -310,6 +276,21 @@ def calculate_action_cost(
         "total_cost": round(cs_cost + platform_cost, 2),
         "breakdown": breakdown,
     }
+
+
+def calculate_metric_action_cost(metric_id: str) -> Dict:
+    """
+    Calculate the cost of executing a 1% improvement action for a specific metric.
+    Uses the metric_resource_allocation from config/resource_rates.json.
+
+    Returns:
+        Dict with total_cost, cs_initiative_cost, platform_cost, hours breakdown
+    """
+    alloc = METRIC_RESOURCE_ALLOCATION.get(metric_id)
+    if not alloc:
+        return {"error": f"No resource allocation for metric: {metric_id}", "total_cost": 0}
+
+    return calculate_action_cost(alloc["roles"])
 
 
 def get_resource_pool_summary(

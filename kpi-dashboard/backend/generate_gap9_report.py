@@ -154,6 +154,7 @@ def seed_agentic_loop():
             "confidence": state.confidence,
             "decision": state.decision,
             "total_dollar_impact": state.total_dollar_impact,
+            "total_action_cost": state.total_action_cost,
             "actions_count": len(state.enriched_actions),
             "tools_called": state.tools_called,
             "enriched_actions": state.enriched_actions,
@@ -216,6 +217,8 @@ def render_markdown(loop_results, report, total_arr):
     rejected = [r for r in loop_results if r["decision"] == "rejected"]
 
     total_impact = sum(r["total_dollar_impact"] for r in loop_results)
+    total_cost = sum(r["total_action_cost"] for r in loop_results)
+    portfolio_roi = ((total_impact - total_cost) / total_cost * 100) if total_cost > 0 else 0
 
     lines += [
         "| Metric | Value |",
@@ -224,6 +227,8 @@ def render_markdown(loop_results, report, total_arr):
         f"| At-Risk Accounts | {len(at_risk)} ({sum(r['arr'] for r in at_risk):,.0f} ARR) |",
         f"| Critical Accounts | {len(critical)} ({sum(r['arr'] for r in critical):,.0f} ARR) |",
         f"| Total $ Impact (all actions) | ${total_impact:,.0f} |",
+        f"| Total $ Cost (all actions) | ${total_cost:,.0f} |",
+        f"| Portfolio Action ROI | {portfolio_roi:,.1f}% |",
         f"| Auto-Executed Actions | {len(auto_executed)} accounts |",
         f"| Queued for Review | {len(needs_review)} accounts |",
         f"| Rejected (low confidence) | {len(rejected)} accounts |",
@@ -232,15 +237,17 @@ def render_markdown(loop_results, report, total_arr):
         "",
         "## 2. Per-Account Agentic Loop Results",
         "",
-        "| Account | Health | ARR | Predicted | Confidence | Decision | $ Impact | Actions |",
-        "|---------|--------|-----|-----------|------------|----------|----------|---------|",
+        "| Account | Health | ARR | Predicted | Confidence | Decision | $ Impact | $ Cost | ROI | Actions |",
+        "|---------|--------|-----|-----------|------------|----------|----------|--------|-----|---------|",
     ]
 
     for r in sorted(loop_results, key=lambda x: x["health"], reverse=True):
+        acct_roi = ((r['total_dollar_impact'] - r['total_action_cost']) / r['total_action_cost'] * 100) if r['total_action_cost'] > 0 else 0
         lines.append(
             f"| {r['account_name']} | {r['health']} | ${r['arr']:,.0f} | "
             f"{r['predicted_outcome']} | {r['confidence']:.0%} | "
-            f"{r['decision']} | ${r['total_dollar_impact']:,.0f} | {r['actions_count']} |"
+            f"{r['decision']} | ${r['total_dollar_impact']:,.0f} | "
+            f"${r['total_action_cost']:,.0f} | {acct_roi:.0f}% | {r['actions_count']} |"
         )
 
     lines += [
@@ -256,16 +263,18 @@ def render_markdown(loop_results, report, total_arr):
             continue
         lines.append(f"### {r['account_name']} ({r['tier'].upper()} — {r['decision']})")
         lines.append("")
-        lines.append("| Action | Priority | Po1 Metric | $ Impact |")
-        lines.append("|--------|----------|------------|----------|")
+        lines.append("| Action | Priority | Po1 Metric | $ Impact | $ Cost | ROI |")
+        lines.append("|--------|----------|------------|----------|--------|-----|")
         for a in r["enriched_actions"]:
             action_text = a.get("action", "N/A")
             if len(action_text) > 80:
                 action_text = action_text[:77] + "..."
             metric = a.get("power_of_1_metric") or "—"
             dollar = f"${a['dollar_impact']:,.0f}" if a.get("dollar_impact") else "—"
+            cost = f"${a['action_cost']:,.0f}" if a.get("action_cost") else "—"
+            roi = f"{a['action_roi']:.0%}" if a.get("action_roi") is not None else "—"
             priority = a.get("priority", "—")
-            lines.append(f"| {action_text} | {priority} | {metric} | {dollar} |")
+            lines.append(f"| {action_text} | {priority} | {metric} | {dollar} | {cost} | {roi} |")
         lines.append("")
 
     # ── Section 4: Outcome ROI ────────────────────────────────
@@ -277,18 +286,20 @@ def render_markdown(loop_results, report, total_arr):
             "",
             "## 4. Outcome ROI — Historical + Forward Projection",
             "",
-            "| Period | Total Impact | ROI % | Revenue Protected | Revenue Expanded |",
-            "|--------|-------------|-------|-------------------|------------------|",
+            "| Period | Total Impact | Investment (from resource rates) | ROI % | Revenue Protected | Revenue Expanded |",
+            "|--------|-------------|----------------------------------|-------|-------------------|------------------|",
         ]
         hist = d.get("historical", {})
         fwd = d.get("forward", {})
         lines.append(
             f"| Historical (6 months) | ${hist.get('total_impact', 0):,.0f} | "
+            f"${hist.get('investment', 0):,.0f} | "
             f"{hist.get('roi_pct', 0):.0f}% | ${hist.get('revenue_protected', 0):,.0f} | "
             f"${hist.get('revenue_expanded', 0):,.0f} |"
         )
         lines.append(
             f"| Forward (6 months) | ${fwd.get('total_impact', 0):,.0f} | "
+            f"${fwd.get('investment', 0):,.0f} | "
             f"{fwd.get('roi_pct', 0):.0f}% | ${fwd.get('revenue_protected', 0):,.0f} | "
             f"${fwd.get('revenue_expanded', 0):,.0f} |"
         )
@@ -371,14 +382,16 @@ def render_markdown(loop_results, report, total_arr):
         "",
         "## 7. Agentic Decision Distribution",
         "",
-        "| Decision | Count | Accounts | Total $ Impact |",
-        "|----------|-------|----------|----------------|",
+        "| Decision | Count | Accounts | Total $ Impact | Total $ Cost | Net ROI |",
+        "|----------|-------|----------|----------------|--------------|---------|",
     ]
 
     for decision, group in [("auto_execute", auto_executed), ("needs_review", needs_review), ("rejected", rejected)]:
         names = ", ".join(r["account_name"] for r in group) if group else "—"
         impact = sum(r["total_dollar_impact"] for r in group)
-        lines.append(f"| {decision} | {len(group)} | {names} | ${impact:,.0f} |")
+        cost = sum(r["total_action_cost"] for r in group)
+        roi = ((impact - cost) / cost * 100) if cost > 0 else 0
+        lines.append(f"| {decision} | {len(group)} | {names} | ${impact:,.0f} | ${cost:,.0f} | {roi:.0f}% |")
 
     lines += [
         "",
@@ -433,7 +446,8 @@ def main():
     print(f"  Done: {len(loop_results)} accounts processed in {loop_time:.1f}s")
     for r in loop_results:
         print(f"    {r['account_name']:30s} | health={r['health']:5.1f} | "
-              f"decision={r['decision']:15s} | ${r['total_dollar_impact']:>10,.0f}")
+              f"decision={r['decision']:15s} | impact=${r['total_dollar_impact']:>10,.0f} | "
+              f"cost=${r['total_action_cost']:>10,.0f}")
     print()
 
     # Step 2: Generate report

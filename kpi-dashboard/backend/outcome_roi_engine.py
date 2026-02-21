@@ -122,14 +122,17 @@ def calculate_historical_roi(
     if account_arr is not None:
         arr_scale = account_arr / 10_000_000
 
-    investment = investment_override or INVESTMENT_SUMMARY["total_investment"]
     now = datetime.now()
+
+    # Compute real per-metric investment costs from resource rates (JSON config)
+    from resource_capacity_model import calculate_metric_action_cost
 
     metric_outcomes = []
     total_revenue_protected = 0
     total_revenue_expanded = 0
     total_cost_savings = 0
     total_direct_impact = 0
+    total_real_investment = 0  # Summed from per-metric resource costs
     improvement_pcts = []
 
     for metric_id, metric in POWER_OF_1_METRICS.items():
@@ -149,6 +152,11 @@ def calculate_historical_roi(
 
         # Dollar impact via Power of 1
         direct_impact = metric.annual_impact_per_pct * improvement_pct * arr_scale
+
+        # Real cost for this metric (from resource rates JSON)
+        if improvement_pct > 0:
+            metric_cost = calculate_metric_action_cost(metric_id)
+            total_real_investment += metric_cost.get("total_cost", 0)
 
         # Split into revenue vs savings
         rev_ratio = metric.impact_breakdown.get(
@@ -183,6 +191,9 @@ def calculate_historical_roi(
             linked_playbooks=metric.linked_playbooks,
         ))
 
+    # Use real summed investment, fall back to override or config default
+    investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
+
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
     total_impact = total_direct_impact + compounding
@@ -205,8 +216,35 @@ def calculate_historical_roi(
         for m in sorted_outcomes[:3]
     ]
 
+    # Compute real CS vs platform split from resource data
+    cs_pct = 0
+    plat_pct = 0
+    if total_real_investment > 0:
+        # Use actual split from metric costs
+        total_cs = 0
+        total_plat = 0
+        for metric_id in POWER_OF_1_METRICS:
+            actuals = metric_actuals.get(metric_id, {})
+            baseline = actuals.get("baseline", POWER_OF_1_METRICS[metric_id].baseline)
+            current = actuals.get("current", POWER_OF_1_METRICS[metric_id].baseline)
+            m = POWER_OF_1_METRICS[metric_id]
+            if m.direction == "lower_is_better":
+                imp = baseline - current
+            else:
+                imp = current - baseline
+            imp_pct = (imp / m.one_pct_move) if m.one_pct_move else 0
+            if imp_pct > 0:
+                mc = calculate_metric_action_cost(metric_id)
+                total_cs += mc.get("cs_initiative_cost", 0)
+                total_plat += mc.get("platform_cost", 0)
+        cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
+        plat_pct = 1 - cs_pct
+    else:
+        cs_pct = 0.80
+        plat_pct = 0.20
+
     summary = ROISummary(
-        total_investment=investment,
+        total_investment=round(investment, 2),
         total_impact=round(total_impact, 2),
         revenue_protected=round(total_revenue_protected, 2),
         revenue_expanded=round(total_revenue_expanded, 2),
@@ -225,9 +263,9 @@ def calculate_historical_roi(
         summary=summary,
         metric_outcomes=metric_outcomes,
         investment_breakdown={
-            "total": investment,
-            "cs_initiatives": round(investment * 0.80, 2),
-            "platform": round(investment * 0.20, 2),
+            "total": round(investment, 2),
+            "cs_initiatives": round(investment * cs_pct, 2),
+            "platform": round(investment * plat_pct, 2),
         },
         top_outcomes=top_outcomes,
     )
@@ -263,21 +301,25 @@ def calculate_forward_roi(
     if account_arr is not None:
         arr_scale = account_arr / 10_000_000
 
-    investment = investment_override or INVESTMENT_SUMMARY["total_investment"]
     now = datetime.now()
+
+    # Compute real per-metric investment costs from resource rates (JSON config)
+    from resource_capacity_model import calculate_metric_action_cost
 
     metric_outcomes = []
     total_revenue_protected = 0
     total_revenue_expanded = 0
     total_cost_savings = 0
     total_direct_impact = 0
+    total_real_investment = 0
+    total_cs = 0
+    total_plat = 0
     improvement_pcts = []
 
     for metric_id, metric in POWER_OF_1_METRICS.items():
         current = current_values.get(metric_id, metric.baseline)
 
         # Project ADDITIONAL improvement from current value
-        # target_improvement_pct is the additional % to gain from here
         additional_move = metric.one_pct_move * target_improvement_pct
         if metric.direction == "lower_is_better":
             projected_value = current - additional_move
@@ -285,13 +327,18 @@ def calculate_forward_roi(
             projected_value = current + additional_move
         projected_value = round(projected_value, 2)
 
-        # The improvement is exactly the target (from current, not baseline)
         improvement_pct = target_improvement_pct
         improvement_pcts.append(improvement_pct)
 
         # Dollar impact — annualized, then scaled to projection period
         annual_impact = metric.annual_impact_per_pct * improvement_pct * arr_scale
         period_impact = annual_impact * (projection_months / 12.0)
+
+        # Real cost for this metric (from resource rates JSON)
+        metric_cost = calculate_metric_action_cost(metric_id)
+        total_real_investment += metric_cost.get("total_cost", 0)
+        total_cs += metric_cost.get("cs_initiative_cost", 0)
+        total_plat += metric_cost.get("platform_cost", 0)
 
         # Split
         rev_ratio = metric.impact_breakdown.get(
@@ -325,6 +372,9 @@ def calculate_forward_roi(
             linked_playbooks=metric.linked_playbooks,
         ))
 
+    # Use real summed investment, fall back to override or config default
+    investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
+
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
     total_impact = total_direct_impact + compounding
@@ -347,9 +397,13 @@ def calculate_forward_roi(
         for m in sorted_outcomes[:3]
     ]
 
+    # Real CS vs platform split
+    cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
+    plat_pct = 1 - cs_pct
+
     label = period_label or f"Next {projection_months} Months"
     summary = ROISummary(
-        total_investment=investment,
+        total_investment=round(investment, 2),
         total_impact=round(total_impact, 2),
         revenue_protected=round(total_revenue_protected, 2),
         revenue_expanded=round(total_revenue_expanded, 2),
@@ -368,9 +422,9 @@ def calculate_forward_roi(
         summary=summary,
         metric_outcomes=metric_outcomes,
         investment_breakdown={
-            "total": investment,
-            "cs_initiatives": round(investment * 0.80, 2),
-            "platform": round(investment * 0.20, 2),
+            "total": round(investment, 2),
+            "cs_initiatives": round(investment * cs_pct, 2),
+            "platform": round(investment * plat_pct, 2),
         },
         top_outcomes=top_outcomes,
     )

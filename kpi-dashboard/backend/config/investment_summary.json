@@ -1,0 +1,178 @@
+{
+  "_description": "Portfolio-level investment summary — derived from per-metric costs in power_of_1_economics.json. Configurable via Settings UI.",
+  "_note": "These are DEFAULTS. When real per-action costs are computed, they override these totals in the ROI engine.",
+
+  "total_investment": 247000,
+  "cs_initiatives": 197000,
+  "platform_cost": 50000,
+  "total_hours": 5840,
+  "total_fte": 2.81,
+  "revenue_increase_pct": 0.802,
+  "cost_savings_pct": 0.198,
+  "revenue_increase_total": 280000,
+  "cost_savings_total": 69250,
+  "direct_impact_total": 349250,
+  "compounding_effect": 52388,
+  "total_year_1_impact": 401638,
+
+  "implementation_phases": {
+    "foundational": {
+      "label": "Foundational",
+      "weeks": [1, 2],
+      "quarter": "Q1",
+      "activity_level": "high",
+      "streams": {
+        "platform_setup": "Setup Complete",
+        "data_integration": "CRM, Support connected",
+        "ttfv_playbooks": "Build",
+        "health_scoring": "Model Build",
+        "nrr_grr_programs": "Design",
+        "support_automation": "Plan",
+        "adoption_campaigns": null,
+        "expansion_pipeline": null
+      }
+    },
+    "intelligence": {
+      "label": "Intelligence",
+      "weeks": [3, 6],
+      "quarter": "Q1",
+      "activity_level": "medium",
+      "streams": {
+        "platform_setup": "Config",
+        "data_integration": "Product data",
+        "ttfv_playbooks": "Deploy & Test",
+        "health_scoring": "Calibrate",
+        "nrr_grr_programs": "Launch",
+        "support_automation": "Build KB",
+        "adoption_campaigns": "Design",
+        "expansion_pipeline": "Design"
+      }
+    },
+    "excellence": {
+      "label": "Excellence",
+      "weeks": [7, 12],
+      "quarter": "Q1-Q2",
+      "activity_level": "low",
+      "streams": {
+        "platform_setup": "Monitor",
+        "data_integration": "Monitor",
+        "ttfv_playbooks": "Optimize",
+        "health_scoring": "Refine v2",
+        "nrr_grr_programs": "Scale",
+        "support_automation": "Tier-1 Auto",
+        "adoption_campaigns": "Launch",
+        "expansion_pipeline": "Build"
+      }
+    },
+    "optimization": {
+      "label": "Optimization",
+      "weeks": [13, 52],
+      "quarter": "Q2-Q4",
+      "activity_level": "minimal",
+      "streams": {
+        "platform_setup": "Monitor",
+        "data_integration": "Monitor",
+        "ttfv_playbooks": "Sustain",
+        "health_scoring": "Monitor",
+        "nrr_grr_programs": "Optimize",
+        "support_automation": "Refine",
+        "adoption_campaigns": "Iterate",
+        "expansion_pipeline": "Scale"
+      }
+    }
+  },
+
+  "automation_timeline": {
+    "week_1_2": {
+      "label": "Instant Insights",
+      "capabilities": [
+        "Real-time dashboard (all 6 metrics)",
+        "AI health scores (100 customers)",
+        "Predictive churn alerts",
+        "Automated milestone tracking",
+        "Integration with CRM/Support/Product"
+      ]
+    },
+    "week_3_6": {
+      "label": "Auto-Execution",
+      "capabilities": [
+        "At-risk customer alerts",
+        "Expansion opportunity flags",
+        "Automated email workflows",
+        "QBR deck generation (AI)",
+        "Support ticket routing (AI)"
+      ]
+    },
+    "week_7_12": {
+      "label": "Full Automation",
+      "capabilities": [
+        "24 playbooks running auto",
+        "Daily health monitoring",
+        "Weekly AI reports",
+        "Auto-triggered interventions",
+        "Continuous optimization"
+      ]
+    },
+    "automation_impact": {
+      "manual_monitoring_reduction_pct": 92,
+      "hours_saved_per_qbr": 3.5,
+      "annual_hours_saved": 4380
+    }
+  },
+
+  "quarterly_checkpoints": {
+    "Q1": {
+      "label": "Foundation & Launch",
+      "month_range": "Jan-Mar",
+      "targets": {
+        "TTFV": {"value": 30.0, "milestone": "baseline"},
+        "platform": {"milestone": "go_live"},
+        "health_model": {"milestone": "built"}
+      },
+      "review": "Baseline established"
+    },
+    "Q2": {
+      "label": "Intelligence & Early Wins",
+      "month_range": "Apr-Jun",
+      "targets": {
+        "TTFV": {"value": 29.5, "milestone": "optimizing"},
+        "NRR": {"value": 105.5, "milestone": "launched"},
+        "ticket_resolution_time": {"value": 47.5, "milestone": "improved"},
+        "platform": {"milestone": "dashboards_validated"}
+      },
+      "review": "First Review"
+    },
+    "Q3": {
+      "label": "Scale & Expand",
+      "month_range": "Jul-Sep",
+      "targets": {
+        "TTFV": {"value": 29.0, "milestone": "refined"},
+        "GRR": {"value": 85.5, "milestone": "deployed"},
+        "expansion_rate": {"value": 20.1, "milestone": "pipeline_built"},
+        "platform": {"milestone": "health_v2_live"}
+      },
+      "review": "Mid-Year Review"
+    },
+    "Q4": {
+      "label": "Optimize & Validate ROI",
+      "month_range": "Oct-Dec",
+      "targets": {
+        "TTFV": {"value": 29.0, "milestone": "complete"},
+        "NRR": {"value": "targets_hit", "milestone": "optimized"},
+        "GRR": {"value": "targets_hit", "milestone": "optimized"},
+        "product_adoption": {"value": 65.65, "milestone": "campaigns_complete"},
+        "expansion_rate": {"value": 20.2, "milestone": "full_auto"},
+        "overall_roi": {"value": 0.63, "milestone": "63% ROI validated"}
+      },
+      "review": "Year-End Review"
+    }
+  },
+
+  "cs_pillar_weights": {
+    "usage_onboarding": 0.30,
+    "support_engagement": 0.20,
+    "customer_sentiment": 0.20,
+    "business_outcomes": 0.15,
+    "relationship_strength": 0.15
+  }
+}
