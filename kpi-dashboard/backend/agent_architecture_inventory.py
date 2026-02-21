@@ -485,20 +485,76 @@ GAPS = {
 # ============================================================
 
 ARCHITECTURE_SUMMARY = {
-    "total_agents": 6,
+    "total_agents": 7,  # +1 Report Generation Agent
     "llm_powered_agents": 2,  # Signal Analyst + RAG Query
-    "rule_based_components": 4,  # Orchestrator, ROI Engine, Event System, Action Interface
+    "rule_based_components": 5,  # Orchestrator, ROI Engine, Event System, Action Interface, Report Gen
     "memory_systems": 4,  # Agent Memory, Qdrant Signals, FAISS, Feedback Loop
     "memory_types": 5,  # Short-term, Episodic, Entity, Semantic, Scratchpad
-    "tools_available": 20,
-    "tools_wired_to_agents": 14,
-    "tools_unwired": 6,  # Exist but no agent uses them
+    "memory_scopes": 5,  # Account, Customer, Global, Agent, Shared (cross-agent)
+    "tools_available": 12,  # 9 local (tool registry) + 3 MCP-bridged
+    "tools_wired_to_agents": 12,  # All tools now in registry and callable by any agent
+    "tools_unwired": 0,
     "mcp_servers": 3,
-    "mcp_servers_real": 0,  # All mocks
+    "mcp_servers_real": 0,  # All mocks — real connections need API credentials
+    "mcp_bridged_with_fallback": 3,  # CRM, Incident, Survey — graceful local fallback
     "action_providers": 5,  # Email, Slack, Salesforce, Jira, Internal
     "llm_providers": 2,  # OpenAI, Anthropic
-    "gaps_critical": 3,
-    "gaps_high": 4,
-    "gaps_medium": 4,
+    "gaps_fixed": 10,  # GAP-1 through GAP-10
+    "gaps_remaining": 1,  # GAP-11: Calendar/Scheduling
     "gaps_total": 11,
+}
+
+
+# ============================================================
+# PRODUCT ROADMAP — Future TBD
+# ============================================================
+
+ROADMAP_FUTURE_TBD = {
+    "onboarding_agent": {
+        "title": "Customer Onboarding Agent (#7)",
+        "status": "TBD",
+        "priority": "HIGH",
+        "description": (
+            "Dedicated agent for new customer lifecycle (first 30-90 days). "
+            "Owns TTFV (Time to First Value) metric. Auto-triggers activation-blitz "
+            "playbook post-onboarding. Graduates customer to Signal Analyst for "
+            "steady-state monitoring."
+        ),
+        "lifecycle": "Customer Created → Provision → Activation-Blitz → Track TTFV → Graduate",
+        "depends_on": ["agent_tool_registry", "agent_loop", "approval_queue"],
+        "existing_pieces": [
+            "onboarding_api_v2_config_aware.py — V2 API with 13-field wizard",
+            "OnboardingWizard.main.tsx — 8-step frontend (NOT wired to backend)",
+            "activation-blitz playbook — exists in playbook_knowledge.py",
+            "OnboardingOptimizer.js — ejouurnal TTFV optimizer (reference)",
+        ],
+    },
+    "web_search_tool": {
+        "title": "Web Search + Industry Benchmark Tool",
+        "status": "TBD",
+        "priority": "MEDIUM",
+        "description": (
+            "Tool registered in AgentToolRegistry that enables any agent or customer "
+            "to search for fresh industry benchmark data. Connects benchmark gaps to "
+            "Power of 1 dollar impact."
+        ),
+        "layers": {
+            "layer_1_internal": "Benchmark Compare — uses existing IndustryBenchmarks table (27 records)",
+            "layer_2_external": "Web Search — Brave/SerpAPI for fresh data enrichment",
+        },
+        "depends_on": ["agent_tool_registry", "IndustryBenchmarks table"],
+        "existing_pieces": [
+            "IndustryBenchmarks DB model — percentile-based comparison",
+            "import_benchmarks.py — CSV/JSON/Excel import tool",
+            "sample_industry_benchmarks.csv — 27 KPI-industry records",
+            "power_of_1_model.py — dollar impact calculation for benchmark gaps",
+        ],
+    },
+    "calendar_scheduling_agent": {
+        "title": "Calendar/Scheduling Agent (GAP-11)",
+        "status": "TBD",
+        "priority": "LOW",
+        "description": "Calendar MCP server + scheduling tool for automated EBR/QBR scheduling.",
+        "depends_on": ["mcp_tool_bridge", "external calendar API credentials"],
+    },
 }

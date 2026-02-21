@@ -43,6 +43,19 @@ class Event:
     data: Dict[str, Any]
     timestamp: datetime
     priority: int = 1  # 1=high, 2=medium, 3=low
+    _seq: int = 0  # Sequence number for stable PriorityQueue ordering
+
+    # PriorityQueue uses tuple comparison: (priority, event).
+    # When priorities are equal, Python compares Event objects.
+    # __lt__ breaks the tie using insertion order (_seq).
+    _counter = 0  # class-level counter
+
+    def __post_init__(self):
+        Event._counter += 1
+        object.__setattr__(self, '_seq', Event._counter)
+
+    def __lt__(self, other):
+        return self._seq < other._seq
 
 class EventPublisher:
     """Publishes events to subscribers"""
