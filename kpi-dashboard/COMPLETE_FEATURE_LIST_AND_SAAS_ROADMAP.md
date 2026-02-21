@@ -125,6 +125,51 @@
 - **Alerting**: System health and error notifications
 - **[TBD] Backend Hot-Reload Evaluation**: Evaluate `app_v3_minimal` hot-reload capability for JSON config changes (`config/power_of_1_economics.json`, `config/resource_rates.json`, `config/investment_summary.json`). Fix low-hanging items — e.g. wire `reload_config()` into a Settings API endpoint, add file-watcher in dev mode. Keep scope small; skip expensive rewrites.
 
+#### **🔒 [TBD] SOC 2 Compliance — Security Hardening & Audit Readiness**
+
+**Week 1 — Critical Fixes (Blockers)**
+- **[TBD] Remove hardcoded `DEBUG = True`** in `app_v3_minimal.py:42`. Change to `app.config['DEBUG'] = os.getenv('FLASK_ENV') == 'development'`. Currently exposes Werkzeug debugger with RCE risk in production.
+- **[TBD] Remove spoofable `X-Customer-ID` header fallback** in `auth_middleware.py:200-209`. Falls back to client-controlled header when session unavailable — privilege escalation risk. Remove header fallback entirely; always resolve from session.
+- **[TBD] Remove hardcoded credentials from source** — `create_dc2s_user.py:51` (`dc_super321`), `create_acme_customer.py:64` (`acme123`), `docker.env:30,34` (hardcoded `SECRET_KEY` and `ENCRYPTION_KEY`). Move all to environment variables or secrets vault.
+- **[TBD] Enforce HTTPS in production** — Add HSTS header, redirect HTTP→HTTPS. `SESSION_COOKIE_SECURE = True` is set but no transport enforcement exists.
+- **[TBD] Add CSRF protection** — No CSRF tokens on state-changing endpoints. SameSite=Lax is insufficient. Add Flask-WTF or custom CSRF middleware.
+- **[TBD] Strengthen password policy** — `registration_api.py:26-30` only requires 6 chars. SOC 2 / NIST SP 800-63B requires 12+ chars minimum with complexity rules.
+
+**Week 2 — Auth Hardening**
+- **[TBD] Add rate limiting on `/api/login`** — No rate limiting on authentication endpoints (`app_v3_minimal.py:491`). Add Flask-Limiter with 5 attempts/minute.
+- **[TBD] Add account lockout after failed logins** — No lockout mechanism exists (`app_v3_minimal.py:514-530`). Lock accounts after 10 failed attempts with progressive cooldown.
+- **[TBD] Add security headers middleware** — Missing HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy. Add via `@app.after_request` or Talisman.
+- **[TBD] Fix CORS wildcard with credentials** — `export_api.py` allows `*` origin with credentials. Restrict to explicit allowed origins.
+- **[TBD] Validate encryption key at startup** — `security_utils.py:26-31` doesn't validate key format/length. Fail-fast if `ENCRYPTION_KEY` is missing or malformed.
+
+**Week 3 — Audit Trail & Monitoring**
+- **[TBD] Persist event audit trail to database** — `event_system.py:68-105` uses in-memory bounded list (500 entries), lost on restart. Create `EventLog` DB model and persist all events.
+- **[TBD] Replace bare `except:` blocks** — 30+ instances across codebase (activity_log_api.py, activity_logging.py, enhanced_rag_qdrant.py, learning_api.py, etc.). Replace with specific exception types + logging.
+- **[TBD] Remove `traceback.print_exc()` calls** — `event_system.py:396` prints stack traces to stdout. Route through `logger.error()` only.
+- **[TBD] Add `/api/metrics` endpoint** — No system monitoring endpoint exists. Add Prometheus-compatible metrics: request latency, error rates, DB pool status, memory/disk usage.
+- **[TBD] Integrate centralized logging** — `logging_config.py` writes local files with rotation only. Integrate with ELK/Datadog/Splunk for SOC 2 log aggregation requirement.
+
+**Week 4 — Backup & Disaster Recovery**
+- **[TBD] Automate encrypted backups** — Only manual SQL dumps exist. Implement automated daily encrypted backups to S3/Azure/GCS with versioning.
+- **[TBD] Document RTO/RPO targets** — No recovery time/point objectives defined. `restore_db_from_backup.py` exists but backup path is local-only (`instance/kpi_dashboard.db.v4backup`).
+- **[TBD] Add database replication** — No failover configuration. Add read replicas and automatic failover for production PostgreSQL.
+- **[TBD] Test restore procedures** — Backup exists but no automated restore verification. Add monthly restore-test script with validation.
+
+**Weeks 5-6 — Access Control & Privacy**
+- **[TBD] Implement RBAC enforcement** — `role` field exists on User model, `@admin_required` decorator defined but never applied to any endpoint. Apply to admin-only endpoints (user management, config, data deletion).
+- **[TBD] Add MFA/2FA support** — Single-factor password auth only. Add TOTP (Google Authenticator) support for SOC 2 CC6.1 requirement.
+- **[TBD] Implement data retention policies** — Activity logs grow indefinitely. Add configurable 90/180/365-day retention with automated purge jobs.
+- **[TBD] Add GDPR data deletion endpoint** — Comprehensive deletion scripts exist (`delete_customers_109_112.py`) but are manual. Create `/api/gdpr/delete-request` with approval workflow and audit trail.
+- **[TBD] Add field-level PII encryption** — Email, phone, IP addresses stored in plaintext. Add column-level encryption for PII fields using Fernet (already used for API keys).
+- **[TBD] Add data export endpoint** — Activity log CSV export exists but no comprehensive customer data export. Create `/api/data-export` for customer data portability (GDPR Article 20).
+
+**Weeks 7-8 — CI/CD & Documentation**
+- **[TBD] Add SAST to CI/CD pipeline** — Only 1 GitHub Actions workflow (`kpi-filtering-tests.yml`) testing 1 of 14+ test files. Add Bandit (Python SAST), `pip audit` (dependency scanning), and branch protection rules.
+- **[TBD] Add CODEOWNERS file** — No code review requirements enforced. Add CODEOWNERS with required reviewers for security-sensitive files (auth, models, config).
+- **[TBD] Integrate secrets manager** — Secrets in `.env` files only. Integrate AWS Secrets Manager or HashiCorp Vault for production credential management.
+- **[TBD] Implement credential rotation** — Only n8n has rotation logic. Add rotation for OpenAI, Qdrant, Slack, and all external API keys.
+- **[TBD] Write SOC 2 control documentation** — Document all security controls, policies, and procedures for auditor review. Map each control to Trust Service Criteria (CC1-CC9, A1, PI1, C1, P1-P8).
+
 ### **Phase 3: Intelligence & Automation (Months 7-9)**
 **Goal**: Advanced AI capabilities and automation
 
