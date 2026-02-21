@@ -455,6 +455,56 @@ def get_current_weights(customer_id: int) -> Dict[str, float]:
 
 
 # ============================================================
+# FEEDBACK HISTORY — For agent learning
+# ============================================================
+
+def get_feedback_history(
+    customer_id: int,
+    playbook_type: Optional[str] = None,
+    limit: int = 10,
+) -> List[Dict]:
+    """
+    Retrieve past playbook execution outcomes for agent learning.
+
+    Returns recent feedback records so the agent can say:
+    "Last time we ran renewal-safeguard on similar accounts, 70% resolved."
+    """
+    query = WeightCalibrationHistory.query.filter_by(
+        customer_id=customer_id,
+        calibration_type='execution_feedback',
+    )
+    if playbook_type:
+        query = query.filter(
+            WeightCalibrationHistory.notes.contains(playbook_type)
+        )
+
+    records = query.order_by(
+        WeightCalibrationHistory.calibrated_at.desc()
+    ).limit(limit).all()
+
+    results = []
+    for r in records:
+        notes_data = {}
+        try:
+            notes_data = json.loads(r.notes) if r.notes else {}
+        except (json.JSONDecodeError, TypeError):
+            notes_data = {"raw": r.notes}
+
+        results.append({
+            'id': r.id,
+            'playbook_type': notes_data.get('playbook_type', 'unknown'),
+            'outcome': notes_data.get('outcome', 'unknown'),
+            'predicted_churn_prob': notes_data.get('predicted_churn_prob'),
+            'actual_churn': notes_data.get('actual_churn'),
+            'dollar_impact_realized': notes_data.get('dollar_impact_realized'),
+            'kpi_improvements': notes_data.get('kpi_improvements', {}),
+            'calibrated_at': r.calibrated_at.isoformat() if r.calibrated_at else None,
+        })
+
+    return results
+
+
+# ============================================================
 # SERIALIZATION
 # ============================================================
 

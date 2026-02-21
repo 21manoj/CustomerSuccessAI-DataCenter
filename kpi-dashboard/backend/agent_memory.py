@@ -54,6 +54,7 @@ class MemoryScope(str, Enum):
     CUSTOMER = "customer"           # Per-customer (tenant) memory
     GLOBAL = "global"               # Shared across all tenants (rare)
     AGENT = "agent"                 # Agent-specific state
+    SHARED = "shared"               # Cross-agent shared intelligence (readable by all agents)
 
 
 # ============================================================

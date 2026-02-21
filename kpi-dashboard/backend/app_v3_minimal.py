@@ -882,6 +882,39 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Agent Memory API not available: {e}")
 
+# Register Approval Queue API (human-in-the-loop for agent actions)
+try:
+    from approval_queue import approval_api
+    app.register_blueprint(approval_api)
+    print("✅ Registered Approval Queue API: /api/approvals/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Approval Queue API not available: {e}")
+
+# Initialize Agent Tool Registry at startup
+try:
+    from agent_tool_registry import register_all_tools
+    registry = register_all_tools()
+    print("✅ Initialized Agent Tool Registry")
+
+    # Bridge MCP tools into the registry
+    try:
+        from mcp_tool_bridge import MCPToolBridge
+        mcp_bridge = MCPToolBridge(registry)
+        mcp_bridge.register_mcp_tools()
+        print("✅ MCP Tool Bridge initialized (with fallback)")
+    except ImportError as e:
+        print(f"⚠️  Warning: MCP Tool Bridge not available: {e}")
+except ImportError as e:
+    print(f"⚠️  Warning: Agent Tool Registry not available: {e}")
+
+# Register Report Generation API
+try:
+    from report_generation_agent import report_generation_api
+    app.register_blueprint(report_generation_api)
+    print("✅ Registered Report Generation API: /api/reports/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Report Generation API not available: {e}")
+
 @app.route('/debug/routes')
 def list_routes():
     """Debug endpoint to see all registered routes"""

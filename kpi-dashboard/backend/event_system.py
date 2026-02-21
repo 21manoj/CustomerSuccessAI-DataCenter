@@ -28,6 +28,12 @@ class EventType(Enum):
     TEMPORAL_DATA_ADDED = "temporal_data_added"
     CUSTOMER_DATA_CHANGED = "customer_data_changed"
     RAG_REBUILD_REQUESTED = "rag_rebuild_requested"
+    # Agent-to-agent events
+    AGENT_ANALYSIS_COMPLETE = "agent_analysis_complete"
+    AGENT_TOOL_INVOKED = "agent_tool_invoked"
+    PLAYBOOK_AUTO_TRIGGERED = "playbook_auto_triggered"
+    APPROVAL_REQUESTED = "approval_requested"
+    APPROVAL_DECIDED = "approval_decided"
 
 @dataclass
 class Event:
@@ -46,6 +52,7 @@ class EventPublisher:
         self.event_queue = queue.PriorityQueue()
         self.is_running = False
         self.worker_thread = None
+        self._audit_log: List[Dict[str, Any]] = []  # Bounded audit trail
         
     def start(self):
         """Start the event processing worker"""
@@ -63,7 +70,7 @@ class EventPublisher:
         logger.info("Event publisher stopped")
     
     def publish(self, event_type: EventType, customer_id: int, data: Dict[str, Any], priority: int = 1):
-        """Publish an event"""
+        """Publish an event and write to audit log."""
         event = Event(
             event_type=event_type,
             customer_id=customer_id,
@@ -71,7 +78,19 @@ class EventPublisher:
             timestamp=datetime.now(),
             priority=priority
         )
-        
+
+        # Audit trail — append to in-memory log (bounded)
+        self._audit_log.append({
+            "event_type": event_type.value,
+            "customer_id": customer_id,
+            "priority": priority,
+            "timestamp": event.timestamp.isoformat(),
+            "data_keys": list(data.keys()) if data else [],
+        })
+        # Keep last 500 entries
+        if len(self._audit_log) > 500:
+            self._audit_log = self._audit_log[-500:]
+
         # Add to queue with priority
         self.event_queue.put((priority, event))
         logger.info(f"Published event: {event_type.value} for customer {customer_id}")
@@ -90,7 +109,16 @@ class EventPublisher:
             if subscriber in self.subscribers[event_type]:
                 self.subscribers[event_type].remove(subscriber)
                 logger.info(f"Unsubscribed from event: {event_type.value}")
-    
+
+    def get_audit_log(self, limit: int = 50, event_type: str = None, customer_id: int = None) -> List[Dict]:
+        """Retrieve audit log entries with optional filters."""
+        entries = self._audit_log
+        if event_type:
+            entries = [e for e in entries if e["event_type"] == event_type]
+        if customer_id:
+            entries = [e for e in entries if e["customer_id"] == customer_id]
+        return entries[-limit:]
+
     def _process_events(self):
         """Process events from the queue"""
         while self.is_running:

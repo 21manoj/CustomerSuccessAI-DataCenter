@@ -432,6 +432,157 @@ def analyze_account():
         return jsonify({'error': 'Internal server error. Please try again later.'}), 500
 
 
+@signal_analyst_api.route('/api/signal-analyst/analyze-with-loop', methods=['POST'])
+def analyze_with_agentic_loop():
+    """
+    Run the full agentic loop: Analyze → Evaluate → Enrich → Quantify → Decide → Act.
+
+    Same input as /analyze but returns enriched output with:
+    - $ impact on every recommendation (via Power of 1)
+    - Confidence-gated decision (auto_execute / needs_review / rejected)
+    - Shared memory storage for cross-agent intelligence
+    - Event publishing for coordination
+
+    Request body: same as /api/signal-analyst/analyze
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.json or {}
+        account_id_raw = data.get('account_id')
+        if not account_id_raw:
+            return jsonify({'error': 'account_id is required'}), 400
+
+        try:
+            account_id_int = int(account_id_raw)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid account_id'}), 400
+
+        account_id = str(account_id_int)
+
+        account = Account.query.filter_by(
+            account_id=account_id_int, customer_id=customer_id
+        ).first()
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+
+        # Get ARR
+        account_arr = float(account.revenue) if account.revenue else None
+
+        # Build the same SignalAnalystInput as /analyze
+        # (reuse the existing signal gathering logic)
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+        from agent_tool_registry import get_tool_registry, register_all_tools
+        from agent_loop import AgenticLoop, loop_state_to_dict
+
+        # Initialize tool registry
+        registry = register_all_tools()
+
+        # Get the analyze function — create agent instance
+        openai_key = get_openai_api_key(customer_id)
+        if not openai_key:
+            return jsonify({'error': 'OpenAI API key not configured'}), 500
+
+        agent = SignalAnalystAgent(
+            openai_api_key=openai_key,
+            customer_id=customer_id,
+            account_id=account_id,
+        )
+
+        # Build input data (simplified — uses Qdrant signals)
+        vertical = 'saas'
+        try:
+            from models import CustomerConfig
+            config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+            if config and config.vertical:
+                vertical = config.vertical
+        except Exception:
+            pass
+
+        agent_vertical_type = map_vertical_to_agent_type(vertical)
+
+        # Gather signals from Qdrant
+        quantitative_signals = []
+        qualitative_signals = []
+        historical_patterns = []
+
+        try:
+            rag_system = get_qdrant_rag_system(customer_id)
+            if rag_system:
+                quant_raw = get_quantitative_signals_from_qdrant(rag_system, account_id)
+                quantitative_signals = convert_qdrant_results_to_signal_data(quant_raw)
+                qual_raw = get_qualitative_signals_from_qdrant(rag_system, account_id)
+                qualitative_signals = convert_qdrant_results_to_signal_data(qual_raw)
+                hist_raw = get_historical_patterns_from_qdrant(rag_system, account_id)
+                historical_patterns = convert_qdrant_results_to_signal_data(hist_raw)
+        except Exception as e:
+            logger.warning(f"Qdrant signal retrieval failed: {e}")
+
+        # Fallback to DB if no Qdrant signals
+        if not quantitative_signals and not qualitative_signals:
+            try:
+                db_signals = convert_database_models_to_signals(account, customer_id)
+                quantitative_signals = db_signals.get('quantitative', [])
+                qualitative_signals = db_signals.get('qualitative', [])
+            except Exception as e:
+                logger.warning(f"DB signal conversion failed: {e}")
+
+        input_data = SignalAnalystInput(
+            account_id=account_id,
+            customer_id=customer_id,
+            vertical_type=agent_vertical_type,
+            account_name=account.company_name if hasattr(account, 'company_name') else account.name,
+            account_arr=account_arr,
+            health_score=None,
+            quantitative_signals=quantitative_signals,
+            qualitative_signals=qualitative_signals,
+            historical_patterns=historical_patterns,
+            analysis_type=data.get('analysis_type', 'comprehensive'),
+            time_horizon_days=data.get('time_horizon_days', 60),
+        )
+
+        # Get event publisher if available
+        event_publisher = None
+        try:
+            from app_v3_minimal import event_publisher as ep
+            event_publisher = ep
+        except ImportError:
+            pass
+
+        # Run the agentic loop
+        loop = AgenticLoop(
+            analyze_fn=agent.analyze,
+            tool_registry=registry,
+            event_publisher=event_publisher,
+        )
+
+        state = loop.run(
+            customer_id=customer_id,
+            account_id=account_id,
+            input_data=input_data,
+            account_arr=account_arr,
+        )
+
+        return jsonify({
+            'agentic_loop': loop_state_to_dict(state),
+            'initial_analysis': state.initial_analysis,
+            '_metadata': {
+                'endpoint': '/api/signal-analyst/analyze-with-loop',
+                'agentic': True,
+                'tools_called': state.tools_called,
+                'duration_ms': state.duration_ms,
+            },
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Agentic loop error: {e}", exc_info=True)
+        return jsonify({'error': 'Agentic analysis failed. Please try again later.'}), 500
+
+
 @signal_analyst_api.route('/api/signal-analyst/test', methods=['POST'])
 def test_analysis_with_mock_data():
     """
