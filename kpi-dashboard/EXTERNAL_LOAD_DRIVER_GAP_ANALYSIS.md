@@ -738,21 +738,370 @@ class TenantIsolationTests:
 
 ## Complete Load Driver Script Inventory
 
-| # | Script Name | Scenario | What It Does |
-|---|-------------|----------|--------------|
-| 1 | `driver.py` | All | **Main orchestrator** — runs all scenarios in order, manages timing, writes summary |
-| 2 | `client.py` | All | **HTTP client wrapper** — auth session, retry logic, health gate, header management |
-| 3 | `scenario_onboarding.py` | 1 | Creates customer + 50 accounts, generates CSVs, uploads, processes data |
-| 4 | `scenario_kpi_simulation.py` | 2a | Mutates KPIs over 6-12 months, uploads each month, triggers score recalc |
-| 5 | `scenario_rag_queries.py` | 2b | Picks 5 random accounts, runs 3-5 queries each, tracks cost, validates responses |
-| 6 | `scenario_signal_detection.py` | 2c | Runs signal analyst on degraded + healthy accounts, triggers playbooks |
-| 7 | `scenario_raci_report.py` | 2d | Fetches RACI reports from executed playbooks, saves as markdown |
-| 8 | `scenario_churn_lifecycle.py` | 2e | Archives churned accounts, deletes, verifies cascade |
-| 9 | `scenario_tenant_isolation.py` | 3 | 12 cross-tenant tests: data visibility, header spoofing, query scoping |
-| 10 | `csv_generator.py` | 1 | Generates 50-account synthetic DC2_S CSV data (38 KPIs × 12 months) |
-| 11 | `kpi_mutator.py` | 2a | Applies realistic drift profiles per tier (healthy/risk/critical) |
-| 12 | `query_templates.py` | 2b | 20 RAG query templates with account name placeholders |
-| 13 | `results_aggregator.py` | All | Combines all scenario outputs → `LOAD_TEST_RESULTS.md` |
+> **STATUS: NONE of these scripts are coded yet.** All 13 scripts below are **planned only** — they exist as specifications in this gap analysis document. The `load-driver/` directory does not yet exist.
+
+| # | Script Name | Scenario | Status | What It Does |
+|---|-------------|----------|--------|--------------|
+| 1 | `driver.py` | All | PLANNED | **Main orchestrator** — runs all scenarios in order, manages timing, writes summary |
+| 2 | `client.py` | All | PLANNED | **HTTP client wrapper** — auth session, retry logic, health gate, header management |
+| 3 | `scenario_onboarding.py` | 1 | PLANNED | Creates customer + 50 accounts, generates CSVs, uploads, processes data |
+| 4 | `scenario_kpi_simulation.py` | 2a | PLANNED | Mutates KPIs over 6-12 months, uploads each month, triggers score recalc |
+| 5 | `scenario_rag_queries.py` | 2b | PLANNED | Picks 5 random accounts, runs 3-5 queries each, tracks cost, validates responses |
+| 6 | `scenario_signal_detection.py` | 2c | PLANNED | Runs signal analyst on degraded + healthy accounts, triggers playbooks |
+| 7 | `scenario_raci_report.py` | 2d | PLANNED | Fetches RACI reports from executed playbooks, saves as markdown |
+| 8 | `scenario_churn_lifecycle.py` | 2e | PLANNED | Archives churned accounts, deletes, verifies cascade |
+| 9 | `scenario_tenant_isolation.py` | 3 | PLANNED | 12 cross-tenant tests: data visibility, header spoofing, query scoping |
+| 10 | `scenario_cleanup.py` | 4 | PLANNED | **Post-test cleanup** — deletes all test data in correct order (NEW) |
+| 11 | `csv_generator.py` | 1 | PLANNED | Generates 50-account synthetic DC2_S CSV data (38 KPIs × 12 months) |
+| 12 | `kpi_mutator.py` | 2a | PLANNED | Applies realistic drift profiles per tier (healthy/risk/critical) |
+| 13 | `query_templates.py` | 2b | PLANNED | 20 RAG query templates with account name placeholders |
+| 14 | `scenario_roi_power_of_1.py` | 5 | PLANNED | **ROI validation** — historical, forward, cascades, ActionEconomics (NEW) |
+| 15 | `results_aggregator.py` | All | PLANNED | Combines all scenario outputs → `LOAD_TEST_RESULTS.md` |
+
+---
+
+## Post-Load-Test Cleanup (Scenario 4 — NEW)
+
+### What Exists Today in the Platform
+
+The platform already has **partial** cleanup capabilities, but they are scattered and incomplete:
+
+| What Exists | Where | Limitation |
+|-------------|-------|------------|
+| `POST /api/data/clear` | `data_management_api.py` | Clears KPIs, uploads, accounts for a customer — but NOT playbooks, signals, scores, notes, snapshots |
+| `POST /api/data/clear-uploads` | `data_management_api.py` | Clears specific uploads only |
+| `POST /api/cleanup/bulk-upload` | `cleanup_api.py` | Wipes and re-uploads, not a pure delete |
+| `delete_customers_*.py` (4 scripts) | Backend root | One-off scripts for specific customer ID ranges (41-93, 94-108, 109-112, 200+). **Not reusable.** |
+| `cleanup_qdrant_collections.py` | Backend root | Deletes Qdrant vector collections — **not integrated with API** |
+| `CASCADE DELETE` on 3 FKs | `models.py` | Only KPIReferenceRange, ActivityLog, CustomerWorkflowConfig cascade. **17+ tables do NOT cascade.** |
+
+### What's Missing — No Foolproof Cleanup
+
+There is **no single "clean up everything for customer X" button**. A post-load-test cleanup today would require:
+
+```
+Manual deletion in this exact order (20 tables):
+ 1. QueryAudit        ← RAG query history
+ 2. AccountNote       ← CSM notes
+ 3. AccountSnapshot   ← point-in-time snapshots
+ 4. ActivityLog       ← CASCADE handles this ✓
+ 5. PlaybookReport    ← CASCADE from execution ✓
+ 6. PlaybookExecution ← must delete before triggers
+ 7. PlaybookTrigger   ← must delete before accounts
+ 8. CustomerWorkflowConfig ← CASCADE handles this ✓
+ 9. FeatureToggle     ← per-customer flags
+10. KPIReferenceRange ← CASCADE handles this ✓
+11. ActionEconomics   ← ROI calculations
+12. HealthScore       ← account-level scores (no cascade)
+13. PillarScore       ← account-level scores (no cascade)
+14. KPIScore          ← account-level scores (no cascade)
+15. QualitativeSignal ← account-level signals (no cascade)
+16. DC2SKPI           ← raw KPI data (no cascade)
+17. HealthTrend       ← time-series health (no cascade)
+18. KPI               ← onboarding KPI records
+19. KPIUpload         ← upload history
+20. Product           ← account products
+21. Account           ← customer accounts
+22. User              ← customer users
+23. CustomerConfig    ← customer configuration
+24. Customer          ← the customer record itself
+  + Qdrant collections (vector DB, separate system)
+```
+
+### Cleanup Script Design: `scenario_cleanup.py`
+
+```python
+# scenario_cleanup.py — Post-Load-Test Cleanup
+
+class LoadTestCleanup:
+    """
+    Foolproof cleanup: deletes all test data for specified customer_ids.
+    Runs as Scenario 4 (final step after all tests complete).
+
+    Options:
+      --customers 1,2,3      Which customers to clean up
+      --dry-run               Show what would be deleted without deleting
+      --skip-qdrant           Skip Qdrant collection cleanup
+      --preserve-customer     Delete data but keep the customer + user records
+    """
+
+    # Required deletion order (FK dependency chain)
+    CLEANUP_ORDER = [
+        ('query_audits',              'customer_id'),
+        ('account_notes',             'customer_id'),
+        ('account_snapshots',         'customer_id'),
+        ('action_economics',          'customer_id'),
+        ('playbook_reports',          'execution_id → customer_id'),  # via execution FK
+        ('playbook_executions',       'customer_id'),
+        ('playbook_triggers',         'customer_id'),
+        ('customer_workflow_configs', 'customer_id'),
+        ('feature_toggles',           'customer_id'),
+        ('kpi_reference_ranges',      'customer_id'),
+        ('health_scores',             'account_id → customer_id'),  # no direct FK
+        ('pillar_scores',             'account_id → customer_id'),  # no direct FK
+        ('kpi_scores',                'account_id → customer_id'),  # no direct FK
+        ('qualitative_signals',       'account_id → customer_id'),  # no direct FK
+        ('dc2s_kpis',                 'account_id → customer_id'),  # no direct FK
+        ('health_trends',             'customer_id'),
+        ('kpis',                      'account_id → customer_id'),
+        ('kpi_uploads',               'customer_id'),
+        ('products',                  'customer_id'),
+        ('accounts',                  'customer_id'),
+        ('activity_logs',             'customer_id'),  # CASCADE but explicit
+        ('users',                     'customer_id'),
+        ('customer_configs',          'customer_id'),
+        ('customers',                 'customer_id'),
+    ]
+
+    def cleanup_customer(self, customer_id, dry_run=False):
+        """Delete all data for a single customer in FK-safe order."""
+        # Step 1: Find all account_ids for this customer
+        account_ids = self.get_account_ids(customer_id)
+
+        # Step 2: Delete from each table in order
+        for table, fk_column in self.CLEANUP_ORDER:
+            if 'account_id →' in fk_column:
+                # Tables without customer_id FK — must delete by account_ids
+                count = self.delete_by_account_ids(table, account_ids, dry_run)
+            else:
+                # Tables with customer_id FK — direct delete
+                count = self.delete_by_customer_id(table, customer_id, dry_run)
+            self.log(f"{'[DRY RUN] ' if dry_run else ''}Deleted {count} rows from {table}")
+
+        # Step 3: Cleanup Qdrant collections
+        if not self.skip_qdrant:
+            self.cleanup_qdrant(customer_id, account_ids, dry_run)
+
+        # Step 4: Verify — count remaining rows
+        remaining = self.verify_cleanup(customer_id, account_ids)
+        if remaining > 0:
+            self.log(f"WARNING: {remaining} orphan rows remain for customer {customer_id}")
+        else:
+            self.log(f"CLEAN: All data for customer {customer_id} removed successfully")
+
+    def cleanup_qdrant(self, customer_id, account_ids, dry_run=False):
+        """Delete Qdrant vector collections for this customer's accounts."""
+        # Collection naming convention: account_{account_id}_collection
+        for account_id in account_ids:
+            collection_name = f"account_{account_id}_collection"
+            if dry_run:
+                self.log(f"[DRY RUN] Would delete Qdrant collection: {collection_name}")
+            else:
+                self.qdrant_client.delete_collection(collection_name)
+
+    def verify_cleanup(self, customer_id, account_ids):
+        """Post-cleanup verification: count any orphan rows."""
+        total_remaining = 0
+        for table, fk_column in self.CLEANUP_ORDER:
+            if 'account_id →' in fk_column:
+                count = self.count_by_account_ids(table, account_ids)
+            else:
+                count = self.count_by_customer_id(table, customer_id)
+            if count > 0:
+                self.log(f"ORPHAN: {count} rows in {table}")
+                total_remaining += count
+        return total_remaining
+```
+
+### Cleanup Options (driver.py integration)
+
+```bash
+# Full test + cleanup (default)
+python driver.py --scenarios 1,2a,2b,2c,2d,2e,3,4
+
+# Run tests only, skip cleanup (for debugging)
+python driver.py --scenarios 1,2a,2b,2c,2d,2e,3 --no-cleanup
+
+# Cleanup only (re-run after investigating failures)
+python driver.py --scenarios 4 --customers 1,2,3
+
+# Dry run cleanup (see what would be deleted)
+python driver.py --scenarios 4 --customers 1,2,3 --dry-run
+
+# Cleanup but keep customer/user records (for re-running tests)
+python driver.py --scenarios 4 --customers 1,2,3 --preserve-customer
+```
+
+### Cleanup Gaps
+
+| Gap | Description | Effort |
+|-----|-------------|--------|
+| **GAP-LD-29** | **Cleanup scenario script** — `scenario_cleanup.py` with 24-table FK-safe deletion, dry-run, Qdrant cleanup, and post-delete verification. | MEDIUM |
+| **GAP-LD-30** | **Platform: `/api/admin/cleanup/customer/<id>` endpoint** — Currently only one-off scripts exist. Need a reusable API endpoint for full customer data wipe. | MEDIUM (platform) |
+| **GAP-LD-31** | **Platform: Add CASCADE DELETE to remaining 17 FKs** — Only 3 of 20+ FKs cascade. Adding cascades makes cleanup atomic and foolproof at the DB level. | HIGH (platform, requires migration) |
+| **GAP-LD-32** | **Qdrant cleanup integration** — Qdrant collection deletion is standalone script, not wired into customer deletion flow. | LOW (platform) |
+
+---
+
+## Power of 1 ROI Testing (Scenario 5 — NEW)
+
+### What "Power of 1" Means
+
+The platform has a full economic engine that converts **a 1% improvement in each key metric into dollar impact**. Six metrics drive the model:
+
+| Metric | Baseline | 1% Annual Impact | Investment | ROI @ 1% |
+|--------|----------|-------------------|------------|----------|
+| **TTFV** (Time to First Value) | 30 days | $61,250 | $75,500 | -0.19 |
+| **NRR** (Net Revenue Retention) | 105% | $105,000 | $50,000 | 2.10 |
+| **GRR** (Gross Revenue Retention) | 85% | $100,000 | $60,000 | 1.67 |
+| **Ticket Resolution Time** | 48 hrs | $38,000 | $26,000 | 1.46 |
+| **Product Adoption** | 65% | $25,000 | $21,000 | 1.19 |
+| **Expansion Rate** | 20% | $20,000 | $14,500 | 1.38 |
+
+**Total portfolio investment:** $247,000 across all 6 metrics.
+
+**Non-linear scaling** — the core claim:
+```
+1% improvement → $401K impact → 63% ROI
+4% improvement → $1.6M impact → 550% ROI     (4x effort, 8.7x ROI)
+6% improvement → $2.4M impact → 876% ROI     (6x effort, 13.9x ROI)
+```
+
+### Key Files (Already Coded)
+
+| File | Purpose |
+|------|---------|
+| `power_of_1_model.py` | Core model: 6 metrics, cascade calculations, portfolio impact |
+| `outcome_roi_engine.py` | Historical ROI (actuals) + Forward ROI (projections) |
+| `outcome_roi_api.py` | REST endpoints: `/api/outcome-roi/*` |
+| `resource_capacity_model.py` | Role hourly rates ($95-$150/hr), FTE capacity |
+| `models.py:860-966` | `ActionEconomics` DB model (cost/value per action) |
+| `config/power_of_1_economics.json` | All metric definitions, cascades, scaling scenarios |
+| `config/investment_summary.json` | Portfolio totals, quarterly checkpoints |
+
+### What the Load Driver Should Test
+
+```python
+# scenario_roi_power_of_1.py — ROI Validation via Load Test
+
+class PowerOf1ROITests:
+    """
+    After KPI simulation (Scenario 2a) has generated 12 months of data,
+    test the ROI engine with known metric movements.
+
+    Requires: feature_toggle 'revenue_intelligence' enabled for the customer.
+    """
+
+    # ── Test Group 1: Historical ROI (Backward-Looking) ──
+
+    def test_historical_roi_calculation(self):
+        """POST /api/outcome-roi/historical with actual metric values"""
+        # After 12 months of KPI simulation, accounts have moved:
+        #   TTFV: 30 → 27.5 days (8.3% improvement)
+        #   NRR: 105% → 108% (2.9% improvement)
+        # Submit actual before/after values
+        # Assert: historical ROI matches expected formula
+        # Assert: dollar_impact > 0
+        # Assert: revenue_increase + cost_savings == total_impact
+
+    def test_historical_roi_scales_with_arr(self):
+        """Same improvement, different ARR → different dollar impact"""
+        # Test with $10M ARR → expect baseline impact
+        # Test with $20M ARR → expect 2x dollar impact
+        # Assert: linear ARR scaling works
+
+    # ── Test Group 2: Forward ROI (Projections) ──
+
+    def test_forward_roi_at_1_pct(self):
+        """POST /api/outcome-roi/forward with 1% target"""
+        # Assert: total portfolio impact ≈ $401K
+        # Assert: ROI ≈ 63%
+        # Assert: payback_months < 12
+
+    def test_forward_roi_at_4_pct(self):
+        """POST /api/outcome-roi/forward with 4% target"""
+        # Assert: total portfolio impact ≈ $1.6M
+        # Assert: ROI ≈ 550%
+        # Assert: demonstrates non-linear scaling (4x input, 8.7x output)
+
+    def test_forward_roi_at_6_pct(self):
+        """POST /api/outcome-roi/forward with 6% target"""
+        # Assert: total portfolio impact ≈ $2.4M
+        # Assert: ROI ≈ 876%
+
+    # ── Test Group 3: Metric Cascades (Compounding Flywheel) ──
+
+    def test_ttfv_cascades_to_product_adoption(self):
+        """Improving TTFV should amplify product adoption by 0.35x"""
+        # Improve TTFV by 4%
+        # Assert: compounded product_adoption impact ≈ direct * 0.35 * 0.15
+        # Assert: compounding capped at 15% of direct impact
+
+    def test_grr_cascades_to_nrr(self):
+        """Improving GRR should amplify NRR by 0.25x"""
+        # Improve GRR by 4%
+        # Assert: NRR shows cascade amplification
+
+    def test_portfolio_compounding_exceeds_sum_of_parts(self):
+        """All 6 metrics improving simultaneously should compound"""
+        # Improve all 6 by 4%
+        # Assert: total portfolio > sum(individual metric impacts)
+        # Assert: compounding delta ≈ 15% of direct total
+
+    # ── Test Group 4: ActionEconomics Integration ──
+
+    def test_action_economics_recorded(self):
+        """After playbook execution, ActionEconomics row should exist"""
+        # Execute a playbook on an account (from Scenario 2c)
+        # Assert: ActionEconomics record created
+        # Assert: csm_hours, cs_initiative_cost populated
+        # Assert: kpi_before, kpi_after captured
+        # Assert: power_of_1_metric mapped
+        # Assert: roi calculated
+
+    def test_action_economics_cost_matches_resource_model(self):
+        """Verify hourly rates match resource_capacity_model"""
+        # CSM hours × $95 should match cs_initiative_cost portion
+        # Platform hours × $120 should match platform_cost portion
+        # Assert: total_action_cost = sum of all role costs
+
+    # ── Test Group 5: Revenue vs Cost Savings Split ──
+
+    def test_revenue_vs_savings_breakdown(self):
+        """NRR improvement should be mostly revenue; TTFV mostly savings"""
+        # Get ROI for NRR improvement
+        # Assert: revenue_increase > cost_savings (NRR is revenue-driven)
+        # Get ROI for TTFV improvement
+        # Assert: cost_savings > revenue_increase (TTFV is efficiency-driven)
+
+    # ── Test Group 6: Feature Toggle Gate ──
+
+    def test_roi_endpoints_require_feature_toggle(self):
+        """ROI endpoints should return 403 if revenue_intelligence disabled"""
+        # Disable feature toggle for customer
+        # Hit /api/outcome-roi/historical
+        # Assert: 403 or empty response
+        # Re-enable toggle
+
+    # ── Test Group 7: Multi-Customer ROI Isolation ──
+
+    def test_customer_1_roi_independent_of_customer_2(self):
+        """Customer 1's ROI should not include Customer 2's metric movements"""
+        # Login as customer 1
+        # Get historical ROI
+        # Assert: only customer 1 account data in calculation
+        # Assert: customer 2 accounts not referenced
+```
+
+### ROI Test Cost Impact
+
+| Test Type | API Calls | LLM Calls | Est. Cost |
+|-----------|-----------|-----------|-----------|
+| Historical ROI calculations | ~10 | 0 | $0.00 |
+| Forward ROI projections | ~10 | 0 | $0.00 |
+| Cascade/compounding validation | ~10 | 0 | $0.00 |
+| ActionEconomics integration | ~5 | 0 | $0.00 |
+| Feature toggle checks | ~5 | 0 | $0.00 |
+| **Total Scenario 5** | **~40** | **0** | **$0.00** |
+
+> ROI tests are pure computation — no LLM calls, zero incremental cost.
+
+### ROI Gaps
+
+| Gap | Description | Effort |
+|-----|-------------|--------|
+| **GAP-LD-33** | **ROI scenario script** — `scenario_roi_power_of_1.py` with 12 tests: historical, forward, cascade, ActionEconomics, feature gates, multi-customer. | MEDIUM |
+| **GAP-LD-34** | **KPI mutation profiles aligned to Power-of-1 metrics** — `kpi_mutator.py` must simulate TTFV, NRR, GRR, ticket_resolution, product_adoption, expansion_rate movements at known improvement percentages (1%, 4%, 6%) so ROI can be verified against expected values. | LOW |
 
 ---
 
@@ -788,6 +1137,12 @@ class TenantIsolationTests:
 | **LD-26** | **Tenant isolation test script (12 tests)** | **3** | **MEDIUM** | **P1** |
 | **LD-27** | **Add customer_id FK to 5 leaf tables** | **3** | **HIGH** | **P1 (platform)** |
 | **LD-28** | **Add DB CHECK constraint on account_id range** | **3** | **LOW** | **P2 (platform)** |
+| **LD-29** | **Post-test cleanup script (24 tables, dry-run, verify)** | **4** | **MEDIUM** | **P0** |
+| **LD-30** | **Platform: `/api/admin/cleanup/customer/<id>` endpoint** | **4** | **MEDIUM** | **P1 (platform)** |
+| **LD-31** | **Platform: Add CASCADE DELETE to remaining 17 FKs** | **4** | **HIGH** | **P2 (platform)** |
+| **LD-32** | **Qdrant cleanup integration into customer deletion** | **4** | **LOW** | **P2 (platform)** |
+| **LD-33** | **ROI Power-of-1 scenario script (12 tests)** | **5** | **MEDIUM** | **P1** |
+| **LD-34** | **KPI mutator aligned to Power-of-1 metrics (1/4/6%)** | **5** | **LOW** | **P1** |
 
 ---
 
@@ -795,20 +1150,21 @@ class TenantIsolationTests:
 
 | Category | Gaps | Effort |
 |----------|------|--------|
-| **P0 — Infrastructure + Foundation** | LD-1,2,3,4,22,23,25 | ~1 day |
-| **P1 — Core Scenario Scripts** | LD-5,6,8,9,10,11,12,13,14,18,19,20,26 | ~3 days |
-| **P1 — Platform Changes** | LD-27 (add customer_id to 5 tables) | ~0.5 day |
-| **P2 — Polish + Reporting** | LD-7,15,17,21,24,28 | ~0.5 day |
-| **Total** | 28 gaps | ~5 days |
+| **P0 — Infrastructure + Foundation** | LD-1,2,3,4,22,23,25,29 | ~1.5 days |
+| **P1 — Core Scenario Scripts** | LD-5,6,8,9,10,11,12,13,14,18,19,20,26,33,34 | ~4 days |
+| **P1 — Platform Changes** | LD-27,30 (customer_id FKs + cleanup API) | ~1 day |
+| **P2 — Polish + Reporting** | LD-7,15,17,21,24,28,31,32 | ~1 day |
+| **Total** | 34 gaps | ~7.5 days |
 
 ---
 
 ## Next Steps
 
 1. **Brainstorm** — Review this gap analysis, decide which gaps to close first
-2. **Build P0** — Dockerfile, client wrapper, onboarding scenario, multi-customer compose
-3. **Build P1** — Core scenario scripts (KPI sim, RAG, signals, archival APIs, tenant isolation)
-4. **Build P1 Platform** — Add `customer_id` FK to DC2SKPI, HealthScore, KPIScore, PillarScore, QualitativeSignal
-5. **Build P2** — Results aggregator, RACI markdown export, account_id CHECK constraint
+2. **Build P0** — Dockerfile, client wrapper, onboarding scenario, multi-customer compose, cleanup script
+3. **Build P1** — Core scenario scripts (KPI sim, RAG, signals, archival, tenant isolation, ROI/Power-of-1)
+4. **Build P1 Platform** — Add `customer_id` FK to 5 leaf tables + `/api/admin/cleanup/customer/<id>` endpoint
+5. **Build P2** — Results aggregator, RACI export, CASCADE DELETE migration, Qdrant cleanup integration
 6. **Deploy** — Push to separate EC2, configure security groups
-7. **Run** — Execute full test suite across 2-3 customers, review `LOAD_TEST_RESULTS.md`
+7. **Run** — Execute full test suite across 2-3 customers, verify tenant isolation, validate ROI at 1/4/6%
+8. **Cleanup** — Run `scenario_cleanup.py --dry-run` first, then full cleanup, verify zero orphan rows
