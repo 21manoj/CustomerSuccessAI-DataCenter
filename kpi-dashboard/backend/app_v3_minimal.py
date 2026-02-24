@@ -462,8 +462,10 @@ def initialize_data_once():
     if not hasattr(app, '_data_initialized'):
         try:
             from playbook_execution_api import load_executions_from_db
+            from playbook_reports_api import load_reports_from_db
             load_executions_from_db()
-            print("✓ Initialized persisted data on startup")
+            load_reports_from_db()
+            print("✓ Initialized persisted data from DB (executions + reports)")
             app._data_initialized = True
         except Exception as e:
             print(f"Warning: Could not initialize persisted data: {e}")

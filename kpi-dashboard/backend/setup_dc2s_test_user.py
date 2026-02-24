@@ -14,7 +14,8 @@ print("=" * 70)
 
 engine = create_engine(os.getenv("DATABASE_URL"))
 
-# Configuration
+# Configuration - use same hashing as login (app_v3_minimal / seed_all_data)
+HASH_METHOD = "pbkdf2:sha256"
 TEST_USERNAME = "dc2s_super"
 TEST_EMAIL = "dc2s_super@test.com"
 TEST_PASSWORD = "DC2_Super_2024!"  # Change this to something secure
@@ -45,16 +46,17 @@ with engine.connect() as conn:
         print(f"   Email: {existing.email}")
         print(f"   Customer ID: {existing.customer_id}")
         
-        # Auto-update existing user (non-interactive)
-        print("\n   Auto-updating existing user...")
+        # Auto-update existing user (non-interactive) - same hash method as login
+        print("\n   Auto-updating existing user (password reset, active=1)...")
         conn.execute(text("""
             UPDATE users
             SET customer_id = :customer_id,
-                password_hash = :password
+                password_hash = :password,
+                active = 1
             WHERE user_id = :user_id
         """), {
             "customer_id": TEST_CUSTOMER_ID,
-            "password": generate_password_hash(TEST_PASSWORD),
+            "password": generate_password_hash(TEST_PASSWORD, method=HASH_METHOD),
             "user_id": existing.user_id
         })
         conn.commit()
@@ -65,14 +67,14 @@ with engine.connect() as conn:
         print("\n✅ No existing user found. Creating new user...")
         
         result = conn.execute(text("""
-            INSERT INTO users (user_name, email, customer_id, password_hash)
-            VALUES (:username, :email, :customer_id, :password)
+            INSERT INTO users (user_name, email, customer_id, password_hash, active)
+            VALUES (:username, :email, :customer_id, :password, 1)
             RETURNING user_id
         """), {
             "username": TEST_USERNAME,
             "email": TEST_EMAIL,
             "customer_id": TEST_CUSTOMER_ID,
-            "password": generate_password_hash(TEST_PASSWORD)
+            "password": generate_password_hash(TEST_PASSWORD, method=HASH_METHOD)
         })
         
         user_id = result.fetchone()[0]

@@ -13,10 +13,18 @@ import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboard
 import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
 
+// Normalize vertical: dc2_s, dc2-s, etc. -> datacenter for routing
+const normalizeVertical = (v: string | undefined): 'datacenter' | 'saas' => {
+  if (!v) return 'saas';
+  const lower = v.toLowerCase().replace(/-/g, '_');
+  if (lower === 'dc2_s' || lower === 'dc2s' || lower === 'datacenter') return 'datacenter';
+  return 'saas';
+};
+
 // Component to redirect legacy /dashboard to appropriate vertical dashboard
 const DashboardRedirect: React.FC = () => {
   const { session } = useSession();
-  const vertical = session?.vertical || localStorage.getItem('vertical') || 'saas';
+  const vertical = normalizeVertical(session?.vertical || localStorage.getItem('vertical') || undefined);
   const dashboardRoute = vertical === 'datacenter' ? '/dc-dashboard' : '/saas-dashboard';
   return <Navigate to={dashboardRoute} replace />;
 };
@@ -31,19 +39,9 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; vertical?: string }> =
 
   // If vertical is specified, check if it matches the session vertical
   if (vertical) {
-    const sessionVertical = session.vertical || localStorage.getItem('vertical') || 'saas';
-    
-    // Debug logging
-    console.log('PrivateRoute check:', { 
-      requiredVertical: vertical, 
-      sessionVertical, 
-      match: sessionVertical === vertical 
-    });
-    
+    const sessionVertical = normalizeVertical(session.vertical || localStorage.getItem('vertical') || undefined);
     if (sessionVertical !== vertical) {
-      // Redirect to correct dashboard based on session vertical
       const correctRoute = sessionVertical === 'datacenter' ? '/dc-dashboard' : '/saas-dashboard';
-      console.log('Redirecting to:', correctRoute);
       return <Navigate to={correctRoute} replace />;
     }
   }
@@ -57,7 +55,7 @@ const LoginRoute: React.FC = () => {
 
   // If user is already logged in, redirect to appropriate dashboard based on vertical
   if (session && session.customer_id && session.user_id) {
-    const vertical = session.vertical || localStorage.getItem('vertical') || 'saas';
+    const vertical = normalizeVertical(session.vertical || localStorage.getItem('vertical') || undefined);
     const dashboardRoute = vertical === 'datacenter' ? '/dc-dashboard' : '/saas-dashboard';
     return <Navigate to={dashboardRoute} replace />;
   }
@@ -66,8 +64,7 @@ const LoginRoute: React.FC = () => {
     <LoginComponent
       onLogin={(newSession) => {
         login(newSession);
-        // Route to appropriate dashboard based on vertical
-        const vertical = newSession.vertical || 'saas';
+        const vertical = normalizeVertical(newSession.vertical || undefined);
         const dashboardRoute = vertical === 'datacenter' ? '/dc-dashboard' : '/saas-dashboard';
         navigate(dashboardRoute);
       }}
@@ -80,7 +77,7 @@ const RegisterRoute: React.FC = () => {
 
   // If already logged in, redirect to appropriate dashboard based on vertical
   if (session && session.customer_id && session.user_id) {
-    const vertical = session.vertical || localStorage.getItem('vertical') || 'saas';
+    const vertical = normalizeVertical(session.vertical || localStorage.getItem('vertical') || undefined);
     const dashboardRoute = vertical === 'datacenter' ? '/dc-dashboard' : '/saas-dashboard';
     return <Navigate to={dashboardRoute} replace />;
   }

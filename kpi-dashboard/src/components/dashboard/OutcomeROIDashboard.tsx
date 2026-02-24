@@ -382,7 +382,7 @@ const OutcomeROIDashboard: React.FC = () => {
   const [showEvidence, setShowEvidence] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
 
-  const fetchStory = useCallback(async (pct: number, isDemo: boolean) => {
+  const fetchStory = useCallback(async (pct: number, isDemo: boolean): Promise<void> => {
     setLoading(true);
     setError(null);
     try {

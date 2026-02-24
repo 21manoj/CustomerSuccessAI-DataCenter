@@ -147,8 +147,9 @@ export const getPortfolioOverview = async (): Promise<PortfolioOverview> => {
     throw new Error('Failed to fetch portfolio overview');
   }
   
-  const accounts = await response.json();
-  
+  const data = await response.json();
+  const accounts = Array.isArray(data) ? data : (data?.accounts || []);
+
   // Categorize accounts
   const healthy = accounts.filter((a: any) => (a.health_score || 0) >= 80);
   const atRisk = accounts.filter((a: any) => (a.health_score || 0) >= 60 && (a.health_score || 0) < 80);

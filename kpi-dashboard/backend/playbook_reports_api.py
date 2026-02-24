@@ -924,13 +924,19 @@ def get_execution_report(execution_id):
         
         customer_id = get_current_customer_id()
         
-        # Check if report already exists in cache
+        # Check if report already exists in cache and belongs to this customer (DB is source of truth)
         if execution_id in _execution_reports:
-            return jsonify({
-                'status': 'success',
-                'report': _execution_reports[execution_id],
-                'cached': True
-            })
+            db_report = PlaybookReport.query.filter_by(
+                execution_id=execution_id, customer_id=customer_id
+            ).first()
+            if db_report:
+                return jsonify({
+                    'status': 'success',
+                    'report': _execution_reports[execution_id],
+                    'cached': True
+                })
+            # Cache hit but wrong customer - remove from cache and fall through
+            del _execution_reports[execution_id]
         
         # Get execution data from playbook_execution_api
         from playbook_execution_api import _executions
@@ -1082,16 +1088,24 @@ def get_all_reports():
 
 @playbook_reports_api.route('/api/playbooks/reports/export/<execution_id>', methods=['GET'])
 def export_report(execution_id):
-    """Export playbook report as downloadable format"""
+    """Export playbook report as downloadable format (from cache or DB)"""
     try:
-        # Get the report
-        if execution_id not in _execution_reports:
+        load_reports_from_db()
+        customer_id = get_current_customer_id()
+        report = _execution_reports.get(execution_id)
+        if not report:
+            # Fall back to DB so export works after restart or when cache missed
+            db_report = PlaybookReport.query.filter_by(
+                execution_id=execution_id, customer_id=customer_id
+            ).first()
+            if db_report and db_report.report_data:
+                report = db_report.report_data
+                _execution_reports[execution_id] = report
+        if not report:
             return jsonify({
                 'status': 'error',
                 'message': 'Report not found. Generate report first.'
             }), 404
-        
-        report = _execution_reports[execution_id]
         
         # Format as markdown for download
         markdown = f"""# {report['playbook_name']} - Execution Report

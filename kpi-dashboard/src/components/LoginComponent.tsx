@@ -70,7 +70,7 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         user_id: data.user?.user_id?.toString() || data.user_id?.toString() || '1',
         user_name: data.user?.customer_name || data.user_name || 'User',
         email: data.user?.email || data.email || '',
-        vertical: data.user?.vertical || sessionVertical,
+        vertical: sessionVertical, // Use frontend-mapped value (datacenter/saas), not raw db (dc2_s)
         // UUID migration: store UUIDs from login response
         customer_uuid: data.user?.customer_uuid || undefined,
         user_uuid: data.user?.user_uuid || undefined,
@@ -92,15 +92,15 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 relative">
+      <div className="max-w-md w-full space-y-8 relative z-10 pointer-events-auto">
         <div className="text-center flex flex-col items-center">
           <h2 className="text-2xl font-bold text-gray-900 text-center">Customer Success Value Management System</h2>
           <p className="mt-2 text-sm text-gray-600 text-center">CS Pulse Growth</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="bg-white rounded-xl shadow-lg p-8 relative z-10 pointer-events-auto">
+          <form className="space-y-6" onSubmit={handleSubmit} style={{ pointerEvents: 'auto' }}>
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-600">{error}</p>

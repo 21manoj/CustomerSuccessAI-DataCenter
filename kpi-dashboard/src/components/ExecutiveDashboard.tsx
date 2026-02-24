@@ -63,7 +63,8 @@ const ExecutiveDashboard: React.FC = () => {
       });
       
       if (accountsResponse.ok) {
-        const accounts = await accountsResponse.json();
+        const data = await accountsResponse.json();
+        const accounts = Array.isArray(data) ? data : (data?.accounts || []);
         if (accounts.length > 0) {
           const firstAccount = accounts[0];
           const healthData = await getAccountHealthScore(firstAccount.account_id);
