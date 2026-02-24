@@ -507,11 +507,308 @@ tabulate>=0.9.0
 
 ---
 
+## Multi-Customer Simulation (2-3 Customers in Parallel)
+
+### How It Works
+
+The load driver can spin up **2-3 customer simulations concurrently**, each with its own session, its own 50 accounts, and its own lifecycle. This is the real-world pattern — multiple tenants running simultaneously.
+
+```
+docker-compose.loaddriver.yml
+┌──────────────────────────────────────────────┐
+│  load-driver-customer-1  (CUSTOMER_ID=1)     │──► 50 accounts (1001-1050)
+│  load-driver-customer-2  (CUSTOMER_ID=2)     │──► 50 accounts (2001-2050)
+│  load-driver-customer-3  (CUSTOMER_ID=3)     │──► 50 accounts (3001-3050)
+└──────────────────────────────────────────────┘
+         │  All hit same CS Pulse backend (port 5059)
+         ▼
+┌──────────────────────────────────────────────┐
+│  EC2 #1 — CS Pulse Platform                  │
+│  ├─ backend (5059)                           │
+│  └─ postgres (5432)                          │
+└──────────────────────────────────────────────┘
+```
+
+### docker-compose.loaddriver.yml (Multi-Customer)
+
+```yaml
+version: '3.8'
+services:
+  load-driver-cust-1:
+    build: { context: ./load-driver, dockerfile: Dockerfile.loaddriver }
+    environment:
+      - CS_PULSE_BASE_URL=http://<cs-pulse-ec2>:5059
+      - CUSTOMER_ID=1
+      - CUSTOMER_NAME=Alpha Enterprise
+      - LOGIN_EMAIL=admin-alpha@cspulse.ai
+      - LOGIN_PASSWORD=Alpha2026!
+      - NUM_ACCOUNTS=50
+      - RAG_BUDGET_USD=5.00
+      - SIGNAL_BUDGET_USD=10.00
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes: [ ./results/customer-1:/app/results ]
+
+  load-driver-cust-2:
+    build: { context: ./load-driver, dockerfile: Dockerfile.loaddriver }
+    environment:
+      - CS_PULSE_BASE_URL=http://<cs-pulse-ec2>:5059
+      - CUSTOMER_ID=2
+      - CUSTOMER_NAME=Beta Industries
+      - LOGIN_EMAIL=admin-beta@cspulse.ai
+      - LOGIN_PASSWORD=Beta2026!
+      - NUM_ACCOUNTS=50
+      - RAG_BUDGET_USD=5.00
+      - SIGNAL_BUDGET_USD=10.00
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes: [ ./results/customer-2:/app/results ]
+
+  load-driver-cust-3:
+    build: { context: ./load-driver, dockerfile: Dockerfile.loaddriver }
+    environment:
+      - CS_PULSE_BASE_URL=http://<cs-pulse-ec2>:5059
+      - CUSTOMER_ID=3
+      - CUSTOMER_NAME=Gamma Corp
+      - LOGIN_EMAIL=admin-gamma@cspulse.ai
+      - LOGIN_PASSWORD=Gamma2026!
+      - NUM_ACCOUNTS=50
+      - RAG_BUDGET_USD=5.00
+      - SIGNAL_BUDGET_USD=10.00
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes: [ ./results/customer-3:/app/results ]
+```
+
+### Account ID Convention
+
+The platform uses `account_id = customer_id × 1000 + N`:
+
+| Customer | customer_id | Account Range | Example |
+|----------|-------------|---------------|---------|
+| Alpha Enterprise | 1 | 1001 – 1050 | 1001, 1002, ... 1050 |
+| Beta Industries | 2 | 2001 – 2050 | 2001, 2002, ... 2050 |
+| Gamma Corp | 3 | 3001 – 3050 | 3001, 3002, ... 3050 |
+
+**Important:** This is a **convention, not a DB constraint**. The load driver should always pass `customer_id` in all API calls to enforce proper grouping.
+
+---
+
+## Tenant Isolation Testing (Scenario 3 — NEW)
+
+### Why This Matters
+
+SOC 2 CC6.1 requires logical access controls. Multi-tenant platforms must prove:
+1. Customer A cannot see Customer B's data
+2. Customer A cannot modify Customer B's accounts
+3. Queries are always scoped by `customer_id`
+
+### Current Isolation Model
+
+```
+Customer (customer_id=1, uuid=saas_cust_...)
+  ├── User (email=admin@alpha.com, customer_id=1) ── SESSION ── all queries scoped
+  ├── Account 1001 (customer_id=1)
+  │     ├── DC2SKPI (account_id=1001)     ⚠️ NO customer_id FK
+  │     ├── HealthScore (account_id=1001)  ⚠️ NO customer_id FK
+  │     ├── KPIScore (account_id=1001)     ⚠️ NO customer_id FK
+  │     └── QualitativeSignal              ⚠️ NO customer_id FK
+  ├── Account 1002 (customer_id=1)
+  │     └── ...
+  ├── Product (customer_id=1, account_id=1001) ✅ Dual FK
+  ├── KPIUpload (customer_id=1) ✅
+  ├── HealthTrend (customer_id=1, account_id=1001) ✅ Dual FK
+  ├── PlaybookExecution (customer_id=1) ✅
+  ├── ActivityLog (customer_id=1) ✅
+  └── CustomerConfig (customer_id=1) ✅
+```
+
+### Known Isolation Gaps
+
+| Gap | Table | Risk | Current Mitigation |
+|-----|-------|------|-------------------|
+| **No `customer_id` FK on DC2SKPI** | `dc2s_kpis` | Direct account_id query could leak | Endpoint verifies account ownership first |
+| **No `customer_id` FK on HealthScore** | `health_scores` | Same as above | Endpoint verifies account ownership first |
+| **No `customer_id` FK on KPIScore** | `kpi_scores` | Same as above | Endpoint verifies account ownership first |
+| **No `customer_id` FK on PillarScore** | `pillar_scores` | Same as above | Endpoint verifies account ownership first |
+| **No `customer_id` FK on QualitativeSignal** | `qualitative_signals` | Same as above | Endpoint verifies account ownership first |
+| **X-Customer-ID header fallback** | `auth_middleware.py:200-209` | Header spoofing if session fails | Global auth middleware blocks unauthenticated |
+| **Account ID formula not DB-constrained** | `accounts` | No CHECK constraint on ID range | Convention only |
+
+### Tenant Isolation Test Script: `scenario_tenant_isolation.py`
+
+This script runs **after** 2+ customers are onboarded (Scenario 1). It uses one customer's session to try accessing another customer's data.
+
+```python
+# scenario_tenant_isolation.py — Test Plan
+
+class TenantIsolationTests:
+    """
+    Login as Customer 1, try to access Customer 2's data.
+    Every test should return 404 or empty results.
+    """
+
+    # ── Test Group 1: Account Visibility ──
+    def test_cannot_list_other_customer_accounts(self):
+        """GET /api/accounts should only return customer_id=1 accounts"""
+        # Login as customer 1
+        # GET /api/accounts
+        # Assert: all returned account_ids are in range 1001-1050
+        # Assert: no account_ids in range 2001-2050
+
+    def test_cannot_access_other_customer_account_by_id(self):
+        """GET /api/accounts?account_id=2001 should return 404 or empty"""
+        # Login as customer 1
+        # Try to fetch account_id=2001 (belongs to customer 2)
+        # Assert: 404 or empty result
+
+    # ── Test Group 2: KPI Data Isolation ──
+    def test_cannot_read_other_customer_kpis(self):
+        """GET /api/dc2s/scores/account/2001/latest should fail"""
+        # Login as customer 1
+        # Try to fetch scores for account 2001
+        # Assert: 404 or 403
+
+    def test_cannot_upload_csv_to_other_customer(self):
+        """POST /api/onboarding/upload with customer_id=2 should fail"""
+        # Login as customer 1
+        # Try to upload CSV with customer_id=2
+        # Assert: rejected (403 or customer_id mismatch)
+
+    # ── Test Group 3: RAG Query Isolation ──
+    def test_rag_query_only_returns_own_data(self):
+        """POST /api/direct-rag/query should only reference customer 1 accounts"""
+        # Login as customer 1
+        # Query: "List all accounts and their health scores"
+        # Assert: response contains ONLY customer 1 account names
+        # Assert: response does NOT contain customer 2 account names
+
+    # ── Test Group 4: Playbook Isolation ──
+    def test_cannot_see_other_customer_executions(self):
+        """GET /api/playbooks/executions should only return customer 1"""
+        # Login as customer 1
+        # GET /api/playbooks/executions
+        # Assert: all execution.customer_id == 1
+
+    def test_cannot_trigger_playbook_on_other_customer_account(self):
+        """POST /api/playbooks/executions with account_id=2001 should fail"""
+        # Login as customer 1
+        # Try to create execution for account 2001
+        # Assert: rejected
+
+    # ── Test Group 5: Report Isolation ──
+    def test_cannot_access_other_customer_reports(self):
+        """GET /api/reports/executive-summary should only show customer 1"""
+        # Login as customer 1
+        # Assert: report only contains customer 1 data
+
+    # ── Test Group 6: Activity Log Isolation ──
+    def test_activity_log_scoped_to_customer(self):
+        """GET /api/activity-log should only show customer 1 entries"""
+        # Login as customer 1
+        # Assert: all entries have customer_id=1
+
+    # ── Test Group 7: Header Spoofing ──
+    def test_header_spoofing_rejected(self):
+        """Sending X-Customer-ID: 2 while logged in as customer 1 should be ignored"""
+        # Login as customer 1
+        # Send request with header X-Customer-ID: 2
+        # Assert: response still scoped to customer 1 (header ignored)
+
+    def test_unauthenticated_header_rejected(self):
+        """Sending X-Customer-ID without auth should return 401"""
+        # No login
+        # Send request with header X-Customer-ID: 1
+        # Assert: 401 Unauthorized
+
+    # ── Test Group 8: Cross-Customer Signal Analysis ──
+    def test_signal_analyst_scoped_to_customer(self):
+        """POST /api/signal-analyst/analyze with account_id=2001 should fail for customer 1"""
+        # Login as customer 1
+        # Analyze account 2001
+        # Assert: rejected or empty signals
+```
+
+### Tenant Isolation Gaps (NEW)
+
+| Gap | Description | Effort |
+|-----|-------------|--------|
+| **GAP-LD-26** | **Tenant isolation test script** — `scenario_tenant_isolation.py` with 12 cross-tenant tests. Runs after 2+ customers onboarded. | MEDIUM |
+| **GAP-LD-27** | **Add `customer_id` FK to leaf tables** — DC2SKPI, QualitativeSignal, KPIScore, PillarScore, HealthScore all lack `customer_id` column. DB migration needed. Without this, isolation relies entirely on endpoint-layer checks. | HIGH (platform change) |
+| **GAP-LD-28** | **Add DB CHECK constraint on account_id range** — `account_id BETWEEN (customer_id * 1000) AND ((customer_id + 1) * 1000 - 1)`. Currently convention only. | LOW (platform change) |
+
+---
+
+## Complete Load Driver Script Inventory
+
+| # | Script Name | Scenario | What It Does |
+|---|-------------|----------|--------------|
+| 1 | `driver.py` | All | **Main orchestrator** — runs all scenarios in order, manages timing, writes summary |
+| 2 | `client.py` | All | **HTTP client wrapper** — auth session, retry logic, health gate, header management |
+| 3 | `scenario_onboarding.py` | 1 | Creates customer + 50 accounts, generates CSVs, uploads, processes data |
+| 4 | `scenario_kpi_simulation.py` | 2a | Mutates KPIs over 6-12 months, uploads each month, triggers score recalc |
+| 5 | `scenario_rag_queries.py` | 2b | Picks 5 random accounts, runs 3-5 queries each, tracks cost, validates responses |
+| 6 | `scenario_signal_detection.py` | 2c | Runs signal analyst on degraded + healthy accounts, triggers playbooks |
+| 7 | `scenario_raci_report.py` | 2d | Fetches RACI reports from executed playbooks, saves as markdown |
+| 8 | `scenario_churn_lifecycle.py` | 2e | Archives churned accounts, deletes, verifies cascade |
+| 9 | `scenario_tenant_isolation.py` | 3 | 12 cross-tenant tests: data visibility, header spoofing, query scoping |
+| 10 | `csv_generator.py` | 1 | Generates 50-account synthetic DC2_S CSV data (38 KPIs × 12 months) |
+| 11 | `kpi_mutator.py` | 2a | Applies realistic drift profiles per tier (healthy/risk/critical) |
+| 12 | `query_templates.py` | 2b | 20 RAG query templates with account name placeholders |
+| 13 | `results_aggregator.py` | All | Combines all scenario outputs → `LOAD_TEST_RESULTS.md` |
+
+---
+
+## Updated Gap Summary Matrix
+
+| ID | Gap | Scenario | Effort | Priority |
+|----|-----|----------|--------|----------|
+| LD-1 | 50-account CSV generator | 1 | LOW | P0 |
+| LD-2 | Onboarding scenario script | 1 | MEDIUM | P0 |
+| LD-3 | Auth session client wrapper | All | LOW | P0 |
+| LD-4 | Health check readiness gate | All | LOW | P0 |
+| LD-5 | KPI mutation simulator | 2a | MEDIUM | P1 |
+| LD-6 | Bulk score recalculation | 2a | LOW | P1 |
+| LD-7 | Event verification | 2a | LOW | P2 |
+| LD-8 | Multi-month simulation loop | 2a | MEDIUM | P1 |
+| LD-9 | RAG query scenario script | 2b | MEDIUM | P1 |
+| LD-10 | Query template library | 2b | LOW | P1 |
+| LD-11 | Cost budget enforcement | 2b | LOW | P1 |
+| LD-12 | Signal detection scenario | 2c | MEDIUM | P1 |
+| LD-13 | Playbook trigger orchestration | 2c | MEDIUM | P1 |
+| LD-14 | Signal analysis cost cap | 2c | LOW | P1 |
+| LD-15 | RACI report scenario script | 2d | LOW | P2 |
+| LD-16 | Report depends on execution | 2d | N/A | — |
+| LD-17 | Markdown export for RACI | 2d | LOW | P2 |
+| LD-18 | Account archival API | 2e | MEDIUM | P1 |
+| LD-19 | Account deletion API | 2e | MEDIUM | P1 |
+| LD-20 | Churn lifecycle script | 2e | MEDIUM | P1 |
+| LD-21 | Deletion verification queries | 2e | LOW | P2 |
+| LD-22 | Load driver Dockerfile | Infra | LOW | P0 |
+| LD-23 | Load driver docker-compose (multi-customer) | Infra | LOW | P0 |
+| LD-24 | Results aggregator | Infra | LOW | P2 |
+| LD-25 | Network / security groups | Infra | INFRA | P0 |
+| **LD-26** | **Tenant isolation test script (12 tests)** | **3** | **MEDIUM** | **P1** |
+| **LD-27** | **Add customer_id FK to 5 leaf tables** | **3** | **HIGH** | **P1 (platform)** |
+| **LD-28** | **Add DB CHECK constraint on account_id range** | **3** | **LOW** | **P2 (platform)** |
+
+---
+
+## Updated Effort Estimates
+
+| Category | Gaps | Effort |
+|----------|------|--------|
+| **P0 — Infrastructure + Foundation** | LD-1,2,3,4,22,23,25 | ~1 day |
+| **P1 — Core Scenario Scripts** | LD-5,6,8,9,10,11,12,13,14,18,19,20,26 | ~3 days |
+| **P1 — Platform Changes** | LD-27 (add customer_id to 5 tables) | ~0.5 day |
+| **P2 — Polish + Reporting** | LD-7,15,17,21,24,28 | ~0.5 day |
+| **Total** | 28 gaps | ~5 days |
+
+---
+
 ## Next Steps
 
 1. **Brainstorm** — Review this gap analysis, decide which gaps to close first
-2. **Build P0** — Dockerfile, client wrapper, onboarding scenario
-3. **Build P1** — Core scenario scripts (KPI sim, RAG, signals, archival APIs)
-4. **Build P2** — Results aggregator, RACI markdown export
-5. **Deploy** — Push to separate EC2, configure security groups
-6. **Run** — Execute full test suite, review `LOAD_TEST_RESULTS.md`
+2. **Build P0** — Dockerfile, client wrapper, onboarding scenario, multi-customer compose
+3. **Build P1** — Core scenario scripts (KPI sim, RAG, signals, archival APIs, tenant isolation)
+4. **Build P1 Platform** — Add `customer_id` FK to DC2SKPI, HealthScore, KPIScore, PillarScore, QualitativeSignal
+5. **Build P2** — Results aggregator, RACI markdown export, account_id CHECK constraint
+6. **Deploy** — Push to separate EC2, configure security groups
+7. **Run** — Execute full test suite across 2-3 customers, review `LOAD_TEST_RESULTS.md`
