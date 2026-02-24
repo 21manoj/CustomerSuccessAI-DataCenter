@@ -756,7 +756,8 @@ class TenantIsolationTests:
 | 12 | `kpi_mutator.py` | 2a | PLANNED | Applies realistic drift profiles per tier (healthy/risk/critical) |
 | 13 | `query_templates.py` | 2b | PLANNED | 20 RAG query templates with account name placeholders |
 | 14 | `scenario_roi_power_of_1.py` | 5 | PLANNED | **ROI validation** — historical, forward, cascades, ActionEconomics (NEW) |
-| 15 | `results_aggregator.py` | All | PLANNED | Combines all scenario outputs → `LOAD_TEST_RESULTS.md` |
+| 15 | `scenario_n8n_workflow.py` | 6 | PLANNED | **N8N workflow test** — triggers playbooks, verifies Google Sheets output (NEW) |
+| 16 | `results_aggregator.py` | All | PLANNED | Combines all scenario outputs → `LOAD_TEST_RESULTS.md` |
 
 ---
 
@@ -1105,6 +1106,463 @@ class PowerOf1ROITests:
 
 ---
 
+## N8N Workflow Simulation via Google Sheets (Scenario 6 — NEW)
+
+### The Problem
+
+When a playbook triggers, it hands off to n8n which orchestrates external actions — create a JIRA ticket, update a Salesforce case, send a Slack message, etc. But in a load test environment:
+
+- **No real Salesforce** — no org to create cases in
+- **No real JIRA** — no project to create tickets in
+- **No real Slack workspace** — no channels to post to
+- **No real n8n instance** — or if there is, it has no connected integrations
+
+We need **Google Sheets as a simulation layer** that captures both input payloads and intermediate outputs as if real systems were processing them.
+
+### What Already Exists in the Codebase
+
+| Component | Status | File | What It Does |
+|-----------|--------|------|--------------|
+| **Google Sheets generator** | CODED | `google_sheets_generator.py` | Creates master sheet with 10 accounts, 51 tabs (KPI, Health, Comms, Actions, Profile per account) |
+| **Bidirectional sync pipeline** | CODED | `sync_pipeline.py` | Sheets ↔ Postgres, 15-min sync, conflict resolution |
+| **Mock Salesforce MCP server** | CODED | `mcp_servers/mock_salesforce_server.py` | Accounts, Opportunities, Usage Metrics, Contracts schemas |
+| **Mock ServiceNow MCP server** | CODED | `mcp_servers/mock_servicenow_server.py` | Tickets, SLA Breaches, Escalations |
+| **Mock Survey MCP server** | CODED | `mcp_servers/mock_survey_server.py` | NPS, CSAT, Interview Notes, CSM Assessments |
+| **Salesforce provider adapter** | CODED | `providers/salesforce_provider.py` | create_task, create_case, update_record, add_note, create_opportunity |
+| **JIRA provider adapter** | CODED | `providers/jira_provider.py` | create_issue, add_comment, update_issue, transition_issue |
+| **Slack provider adapter** | CODED | `providers/slack_provider.py` | send_message, send_thread_reply, create_reminder |
+| **Email provider adapter** | CODED | `providers/email_provider.py` | send_email, send_digest |
+| **Internal provider adapter** | CODED | `providers/internal_provider.py` | log_event, create_status_update, record_action |
+| **Playbook orchestrator** | CODED | `playbook_orchestrator.py` | n8n webhook handoff + direct provider dispatch + callback processing |
+| **Webhook security** | CODED | `security_utils.py` | Signature generation, secret rotation, encrypted credential vault |
+| **N8N config model** | CODED | `models.py:490-527` | CustomerWorkflowConfig (webhook URL, API key, enabled playbooks) |
+| **N8N future mapping model** | PLANNED | `models_future_n8n.py` | N8NPlaybookMapping (per-playbook → per-workflow URL mapping) |
+| **n8n workflow JSON templates** | NOT CODED | — | The actual n8n workflow JSON that handles wait/branch/loop/condition |
+| **n8n workflow generator** | NOT CODED | — | Code that generates n8n workflow JSON from playbook YAML definitions |
+| **Google Sheets as n8n mock** | NOT CODED | — | Using Sheets to capture what n8n would produce |
+
+### 14 Playbook Definitions (YAML files planned)
+
+```
+playbooks/
+  PB-DC-01_deployment_acceleration.yaml
+  PB-DC-02_rma_prevention.yaml
+  PB-DC-03_gpu_optimization.yaml
+  PB-DC-04_capacity_planning.yaml
+  PB-DC-05_health_monitoring.yaml
+  PB-DC-06_customer_engagement.yaml
+  SaaS-PB-01_churn_prevention.yaml
+  SaaS-PB-02_renewal_tracking.yaml
+  SaaS-PB-03_expansion.yaml
+  SaaS-PB-04_low_engagement.yaml
+  SaaS-PB-05_onboarding.yaml
+  SaaS-PB-06_qbr.yaml
+  SaaS-PB-07_executive_escalation.yaml
+  SaaS-PB-08_advocacy.yaml
+```
+
+### Context Variables Passed at Playbook Trigger
+
+When a playbook is triggered, the orchestrator builds this payload and POSTs it to n8n:
+
+```json
+{
+  "execution_id": "exec-uuid-123",
+  "playbookId": "SaaS-PB-01_churn_prevention",
+  "customerId": 1,
+  "accountId": 1005,
+  "status": "in-progress",
+  "startedAt": "2026-02-24T10:30:00Z",
+  "context": {
+    "accountName": "Acme Corp",
+    "healthScore": 42,
+    "triggeredKPIs": {
+      "NRR": {"value": 88, "threshold": 95, "breach": "below"},
+      "GRR": {"value": 78, "threshold": 85, "breach": "below"},
+      "product_adoption": {"value": 35, "threshold": 50, "breach": "below"}
+    },
+    "accountTier": "Enterprise",
+    "ARR": 450000,
+    "contractRenewalDate": "2026-06-15",
+    "daysToRenewal": 111,
+    "csm": {"name": "Jane Smith", "email": "jane@company.com"},
+    "champion": {"name": "Bob Lee", "email": "bob@acme.com"},
+    "executiveSponsor": {"name": "Alice Chen", "email": "alice@acme.com"}
+  },
+  "metadata": {
+    "userId": 7,
+    "userName": "Signal Analyst",
+    "priority": "high",
+    "triggerSource": "automated_signal_detection"
+  }
+}
+```
+
+### Google Sheets Simulation Architecture
+
+```
+                                     ┌─────────────────────────────┐
+                                     │  Google Sheets (Mock Layer)  │
+                                     ├─────────────────────────────┤
+ Playbook triggers ──► Orchestrator  │                             │
+      │                    │         │  Tab: "Salesforce_Cases"     │
+      │         ┌──────────┤         │  ┌─────────────────────────┐│
+      │         ▼          ▼         │  │ CaseNumber | Subject    ││
+      │    [n8n webhook]  [direct]   │  │ 00001234   | NRR Churn  ││
+      │         │          │         │  │ AccountId  | Priority   ││
+      │         ▼          ▼         │  │ SF_1005    | High       ││
+      │    Mock n8n    Provider      │  └─────────────────────────┘│
+      │    (Sheets)    Adapters      │                             │
+      │         │          │         │  Tab: "JIRA_Issues"         │
+      │         ▼          ▼         │  ┌─────────────────────────┐│
+      │    ┌────────────────────┐    │  │ Key    | Summary       ││
+      │    │ Google Sheets API  │───►│  │ CS-101 | Churn risk:   ││
+      │    │ (gspread)          │    │  │        | Acme Corp     ││
+      │    └────────────────────┘    │  │ Status | Priority      ││
+      │                              │  │ To Do  | High          ││
+      │    Callback ◄────────────    │  └─────────────────────────┘│
+      │    (simulated)               │                             │
+      ▼                              │  Tab: "Slack_Messages"      │
+ PlaybookExecution                   │  Tab: "Email_Sent"          │
+ status=COMPLETED                    │  Tab: "Workflow_Audit"      │
+                                     └─────────────────────────────┘
+```
+
+### Google Sheets Tab Schema (Simulating Real Systems)
+
+#### Tab 1: `Salesforce_Cases` — Matches Salesforce Case Object
+
+| Column | SF Field | Type | Example |
+|--------|----------|------|---------|
+| Row_ID | — | Auto | 1 |
+| CaseNumber | CaseNumber | String | `00001234` |
+| AccountId | AccountId | String | `SF_1005` |
+| AccountName | Account.Name | String | Acme Corp |
+| Subject | Subject | String | `[CHURN RISK] NRR below threshold` |
+| Description | Description | Text | `Health score: 42. NRR: 88% (threshold: 95%). GRR: 78%. Contract renews 2026-06-15.` |
+| Status | Status | Picklist | `New` → `Working` → `Escalated` → `Closed` |
+| Priority | Priority | Picklist | `High` |
+| Type | Type | Picklist | `Customer Success` |
+| Origin | Origin | Picklist | `CS Pulse Automation` |
+| OwnerId | OwnerId | String | `jane@company.com` (CSM) |
+| ContactId | ContactId | String | `bob@acme.com` (Champion) |
+| CreatedDate | CreatedDate | ISO 8601 | `2026-02-24T10:30:00Z` |
+| PlaybookId | Custom Field | String | `SaaS-PB-01_churn_prevention` |
+| ExecutionId | Custom Field | String | `exec-uuid-123` |
+| HealthScore__c | Custom Field | Number | 42 |
+| ARR__c | Custom Field | Currency | 450000 |
+| DaysToRenewal__c | Custom Field | Number | 111 |
+
+#### Tab 2: `JIRA_Issues` — Matches JIRA Issue Object
+
+| Column | JIRA Field | Type | Example |
+|--------|------------|------|---------|
+| Key | key | String | `CS-101` |
+| Summary | summary | String | `[PLAYBOOK] Churn prevention: Acme Corp` |
+| Description | description | ADF/Text | `Automated by CS Pulse. Account health: 42/100...` |
+| IssueType | issuetype.name | String | `Task` |
+| Status | status.name | String | `To Do` → `In Progress` → `Done` |
+| Priority | priority.name | String | `High` |
+| Assignee | assignee.emailAddress | String | `jane@company.com` |
+| Reporter | reporter.emailAddress | String | `signal-analyst@cspulse.ai` |
+| Labels | labels[] | Array | `["churn-risk", "playbook-auto", "NRR-breach"]` |
+| ProjectKey | project.key | String | `CS` |
+| Created | created | ISO 8601 | `2026-02-24T10:30:05Z` |
+| DueDate | duedate | Date | `2026-03-10` |
+| CustomField_AccountId | customfield_10001 | String | `1005` |
+| CustomField_PlaybookId | customfield_10002 | String | `SaaS-PB-01` |
+| CustomField_ExecutionId | customfield_10003 | String | `exec-uuid-123` |
+
+#### Tab 3: `Slack_Messages` — Matches Slack API Payload
+
+| Column | Slack Field | Type | Example |
+|--------|-------------|------|---------|
+| Timestamp | ts | String | `1708776600.123456` |
+| Channel | channel | String | `#cs-alerts` |
+| Text | text | String | `:rotating_light: Churn Risk Alert: Acme Corp (Health: 42)` |
+| Blocks | blocks (JSON) | JSON | `[{"type":"section","text":{"type":"mrkdwn",...}}]` |
+| ThreadTS | thread_ts | String | (empty or parent ts) |
+| SentBy | bot_name | String | `CS Pulse Bot` |
+| AccountId | — | String | `1005` |
+| PlaybookId | — | String | `SaaS-PB-01` |
+| ExecutionId | — | String | `exec-uuid-123` |
+
+#### Tab 4: `Email_Sent` — Matches SMTP/Email Record
+
+| Column | Field | Type | Example |
+|--------|-------|------|---------|
+| MessageId | Message-ID | String | `<exec-uuid-123-step2@cspulse.ai>` |
+| To | To | String | `bob@acme.com` |
+| CC | CC | String | `jane@company.com, alice@acme.com` |
+| Subject | Subject | String | `Action Required: Your CS Pulse Health Score Update` |
+| Body | Body (HTML) | Text | `Dear Bob, We've identified potential risks...` |
+| SentAt | Date | ISO 8601 | `2026-02-24T10:30:10Z` |
+| PlaybookId | — | String | `SaaS-PB-01` |
+| ExecutionId | — | String | `exec-uuid-123` |
+| StepIndex | — | Number | 2 |
+
+#### Tab 5: `Workflow_Audit` — Master Execution Trail
+
+| Column | Field | Type | Example |
+|--------|-------|------|---------|
+| ExecutionId | — | String | `exec-uuid-123` |
+| PlaybookId | — | String | `SaaS-PB-01_churn_prevention` |
+| CustomerId | — | Number | 1 |
+| AccountId | — | Number | 1005 |
+| AccountName | — | String | Acme Corp |
+| StepIndex | — | Number | 0, 1, 2, 3... |
+| ActionName | — | String | `create_case`, `create_issue`, `send_message`, `send_email` |
+| Provider | — | String | `salesforce`, `jira`, `slack`, `email` |
+| Status | — | String | `success` / `failed` / `skipped` |
+| ExternalId | — | String | `00001234` (case), `CS-101` (issue) |
+| DurationMs | — | Number | 150 |
+| Timestamp | — | ISO 8601 | `2026-02-24T10:30:00Z` |
+| ErrorMessage | — | String | (empty or error text) |
+
+#### Tab 6: `ServiceNow_Incidents` — Matches ServiceNow Incident Object
+
+| Column | SN Field | Type | Example |
+|--------|----------|------|---------|
+| Number | number | String | `INC0010234` |
+| ShortDescription | short_description | String | `[CS PULSE] SLA breach risk: Acme Corp` |
+| Description | description | Text | `Automated escalation. Ticket resolution time: 72hrs (threshold: 48hrs)` |
+| Priority | priority | Number | 2 (High) |
+| State | state | Number | 1 (New) |
+| AssignedTo | assigned_to | String | `jane@company.com` |
+| CallerID | caller_id | String | `bob@acme.com` |
+| Category | category | String | `Customer Success` |
+| AccountId | u_account_id | String | `1005` |
+| PlaybookId | u_playbook_id | String | `PB-DC-02` |
+
+### N8N Workflow JSON Generator (NEW — Needs Coding)
+
+The platform needs a **code generator** that reads a playbook YAML definition and outputs a valid n8n workflow JSON. This bridges the gap between playbook definitions and n8n execution.
+
+```python
+# n8n_workflow_generator.py — PLANNED
+
+class N8NWorkflowGenerator:
+    """
+    Reads a playbook YAML definition and generates a valid n8n workflow JSON.
+
+    Playbook YAML step types → n8n node types:
+      action          → HTTP Request node (calls POST /api/actions/execute)
+      wait            → Wait node (delay in hours/days)
+      check_condition → IF node (calls POST /api/actions/check-condition)
+      branch          → IF node (evaluates condition locally)
+      repeat_until    → Loop node (n8n SplitInBatches + IF)
+      notify          → HTTP Request node (calls provider dispatch)
+    """
+
+    def generate(self, playbook_yaml_path: str) -> dict:
+        """
+        Generate n8n workflow JSON from playbook YAML.
+
+        Returns:
+            dict: Valid n8n workflow JSON structure with:
+                - Webhook trigger node (receives CS Pulse payload)
+                - Sequential step nodes
+                - Error handling nodes
+                - Callback node (POSTs to /api/playbooks/callback)
+        """
+
+    def _create_webhook_trigger(self, playbook_id: str) -> dict:
+        """Create the n8n Webhook node that receives the execution payload."""
+        return {
+            "name": f"Webhook: {playbook_id}",
+            "type": "n8n-nodes-base.webhook",
+            "parameters": {
+                "httpMethod": "POST",
+                "path": f"playbook/{playbook_id}",
+                "authentication": "headerAuth",
+                "responseMode": "onReceived"
+            }
+        }
+
+    def _create_action_step(self, step: dict, index: int) -> dict:
+        """Create HTTP Request node that calls CS Pulse action router."""
+        return {
+            "name": f"Step {index}: {step['action_name']}",
+            "type": "n8n-nodes-base.httpRequest",
+            "parameters": {
+                "method": "POST",
+                "url": "={{$env.CS_PULSE_BASE_URL}}/api/actions/execute",
+                "sendBody": True,
+                "bodyParameters": {
+                    "execution_id": "={{$json.execution_id}}",
+                    "step_index": index,
+                    "action_name": step["action_name"],
+                    "params": step.get("params", {}),
+                }
+            }
+        }
+
+    def _create_wait_step(self, step: dict, index: int) -> dict:
+        """Create n8n Wait/Delay node."""
+        return {
+            "name": f"Step {index}: Wait {step['duration']}",
+            "type": "n8n-nodes-base.wait",
+            "parameters": {
+                "amount": step["duration_value"],
+                "unit": step["duration_unit"]  # hours, days
+            }
+        }
+
+    def _create_condition_step(self, step: dict, index: int) -> dict:
+        """Create n8n IF node that calls condition-check endpoint."""
+        return {
+            "name": f"Step {index}: Check {step['condition']}",
+            "type": "n8n-nodes-base.if",
+            "parameters": {
+                "conditions": {
+                    "string": [{
+                        "value1": "={{$node['Check Condition'].json.result}}",
+                        "operation": "equals",
+                        "value2": "true"
+                    }]
+                }
+            }
+        }
+
+    def _create_callback_node(self, playbook_id: str) -> dict:
+        """Create the final callback node that reports completion to CS Pulse."""
+        return {
+            "name": "Callback: Report Completion",
+            "type": "n8n-nodes-base.httpRequest",
+            "parameters": {
+                "method": "POST",
+                "url": "={{$env.CS_PULSE_BASE_URL}}/api/webhooks/playbook-callback",
+                "sendBody": True,
+                "bodyParameters": {
+                    "execution_id": "={{$json.execution_id}}",
+                    "status": "COMPLETED",
+                    "outcome": "resolved"
+                }
+            }
+        }
+```
+
+### Google Sheets Mock Provider (NEW — Needs Coding)
+
+Instead of calling real Salesforce/JIRA, the load driver routes all provider actions to Google Sheets:
+
+```python
+# providers/google_sheets_mock_provider.py — PLANNED
+
+class GoogleSheetsMockProvider(ProviderBase):
+    """
+    Routes ALL playbook actions to Google Sheets tabs instead of real systems.
+    Each action type writes to a specific tab with the real system's schema.
+
+    Usage:
+      1. Set CustomerActionBinding.provider = 'google_sheets_mock' for all actions
+      2. Configure credentials with Google service account JSON
+      3. All playbook steps write to Sheets with realistic external system schemas
+
+    Tab routing:
+      create_case, add_note     → 'Salesforce_Cases' tab
+      create_issue, add_comment → 'JIRA_Issues' tab
+      send_message              → 'Slack_Messages' tab
+      send_email                → 'Email_Sent' tab
+      create_incident           → 'ServiceNow_Incidents' tab
+      (all actions)             → 'Workflow_Audit' tab (always)
+    """
+
+    PROVIDER_NAME = 'google_sheets_mock'
+
+    ACTION_TO_TAB = {
+        'create_task':       'Salesforce_Cases',
+        'create_case':       'Salesforce_Cases',
+        'update_record':     'Salesforce_Cases',
+        'add_note':          'Salesforce_Cases',
+        'create_issue':      'JIRA_Issues',
+        'add_comment':       'JIRA_Issues',
+        'update_issue':      'JIRA_Issues',
+        'transition_issue':  'JIRA_Issues',
+        'send_message':      'Slack_Messages',
+        'send_thread_reply': 'Slack_Messages',
+        'send_email':        'Email_Sent',
+        'send_digest':       'Email_Sent',
+        'create_incident':   'ServiceNow_Incidents',
+        'update_ticket':     'ServiceNow_Incidents',
+    }
+
+    def execute(self, action_name, params, credentials=None, config=None):
+        """Write action to appropriate Google Sheet tab."""
+        tab_name = self.ACTION_TO_TAB.get(action_name, 'Workflow_Audit')
+
+        # Generate realistic external IDs
+        external_id = self._generate_external_id(action_name)
+        row_data = self._format_row(action_name, params, external_id)
+
+        # Write to specific tab
+        self._append_to_sheet(tab_name, row_data, credentials)
+
+        # Always write to audit tab
+        self._append_to_sheet('Workflow_Audit', self._audit_row(action_name, params, external_id), credentials)
+
+        return ProviderResult(
+            success=True,
+            provider=self.PROVIDER_NAME,
+            action_name=action_name,
+            external_id=external_id,
+            external_url=f"https://docs.google.com/spreadsheets/d/{config.get('sheet_id')}"
+        )
+
+    def _generate_external_id(self, action_name):
+        """Generate realistic IDs that match real system formats."""
+        import uuid
+        if action_name in ('create_case', 'create_task', 'add_note'):
+            return f"500{random.randint(10000, 99999)}"       # Salesforce Case ID format
+        elif action_name in ('create_issue',):
+            return f"CS-{random.randint(100, 999)}"           # JIRA issue key
+        elif action_name in ('create_incident',):
+            return f"INC{random.randint(1000000, 9999999)}"   # ServiceNow incident
+        elif action_name in ('send_message',):
+            return f"{int(time.time())}.{random.randint(100000,999999)}"  # Slack ts
+        else:
+            return str(uuid.uuid4())[:8]
+```
+
+### How It All Connects (End-to-End Flow)
+
+```
+1. Load driver triggers playbook via POST /api/playbooks/executions
+   └─ payload includes all context variables (account, KPIs, contacts, metadata)
+
+2. Playbook Orchestrator checks execution_mode:
+   ├─ 'workflow' → POSTs to n8n webhook URL (with signed payload)
+   │   └─ n8n workflow iterates steps, calls back to /api/actions/execute
+   │       └─ Action router resolves CustomerActionBinding → google_sheets_mock provider
+   │           └─ Google Sheets Mock Provider writes to appropriate tab
+   │
+   └─ 'mcp_direct' → Orchestrator.execute_playbook_steps() runs steps locally
+       └─ Each step resolves binding → google_sheets_mock provider
+           └─ Google Sheets Mock Provider writes to appropriate tab
+
+3. Each action writes to:
+   ├─ Specific tab (Salesforce_Cases, JIRA_Issues, etc.) with real schema
+   └─ Workflow_Audit tab (every action, always)
+
+4. On completion:
+   └─ Callback POSTs to /api/webhooks/playbook-callback
+       └─ PlaybookExecution.status = 'COMPLETED'
+       └─ Qdrant feedback loop triggered
+```
+
+### N8N + Google Sheets Gaps
+
+| Gap | Description | Effort |
+|-----|-------------|--------|
+| **GAP-LD-35** | **Google Sheets mock provider** — `providers/google_sheets_mock_provider.py`. Routes all playbook actions to Sheets tabs with real system schemas (SF Cases, JIRA Issues, Slack, Email, ServiceNow). | MEDIUM |
+| **GAP-LD-36** | **N8N workflow JSON generator** — `n8n_workflow_generator.py`. Reads playbook YAML, outputs valid n8n workflow JSON with Webhook trigger → action steps → wait/branch/condition → callback. | HIGH |
+| **GAP-LD-37** | **14 playbook YAML definitions** — `playbooks/*.yaml`. Step sequences, action names, params with variable interpolation, wait durations, branch conditions. | MEDIUM |
+| **GAP-LD-38** | **Google Sheets template generator** — Extend `google_sheets_generator.py` to create the 6 simulation tabs (Salesforce_Cases, JIRA_Issues, Slack_Messages, Email_Sent, ServiceNow_Incidents, Workflow_Audit) with proper headers/schema. | LOW |
+| **GAP-LD-39** | **Load driver scenario script** — `scenario_n8n_workflow.py`. Triggers playbooks for 5 accounts, verifies rows appear in correct Sheets tabs, validates schema compliance, checks workflow audit completeness. | MEDIUM |
+| **GAP-LD-40** | **Register `google_sheets_mock` in provider registry** — Add to `providers/registry.py` so orchestrator can discover it. | LOW |
+
+---
+
 ## Updated Gap Summary Matrix
 
 | ID | Gap | Scenario | Effort | Priority |
@@ -1143,6 +1601,12 @@ class PowerOf1ROITests:
 | **LD-32** | **Qdrant cleanup integration into customer deletion** | **4** | **LOW** | **P2 (platform)** |
 | **LD-33** | **ROI Power-of-1 scenario script (12 tests)** | **5** | **MEDIUM** | **P1** |
 | **LD-34** | **KPI mutator aligned to Power-of-1 metrics (1/4/6%)** | **5** | **LOW** | **P1** |
+| **LD-35** | **Google Sheets mock provider (routes actions to Sheets)** | **6** | **MEDIUM** | **P1** |
+| **LD-36** | **N8N workflow JSON generator (YAML → n8n JSON)** | **6** | **HIGH** | **P1** |
+| **LD-37** | **14 playbook YAML definitions (step sequences)** | **6** | **MEDIUM** | **P1** |
+| **LD-38** | **Google Sheets template (6 simulation tabs with headers)** | **6** | **LOW** | **P1** |
+| **LD-39** | **N8N workflow scenario script (trigger + verify Sheets)** | **6** | **MEDIUM** | **P1** |
+| **LD-40** | **Register google_sheets_mock in provider registry** | **6** | **LOW** | **P1** |
 
 ---
 
@@ -1152,9 +1616,10 @@ class PowerOf1ROITests:
 |----------|------|--------|
 | **P0 — Infrastructure + Foundation** | LD-1,2,3,4,22,23,25,29 | ~1.5 days |
 | **P1 — Core Scenario Scripts** | LD-5,6,8,9,10,11,12,13,14,18,19,20,26,33,34 | ~4 days |
+| **P1 — N8N + Google Sheets Simulation** | LD-35,36,37,38,39,40 | ~3 days |
 | **P1 — Platform Changes** | LD-27,30 (customer_id FKs + cleanup API) | ~1 day |
 | **P2 — Polish + Reporting** | LD-7,15,17,21,24,28,31,32 | ~1 day |
-| **Total** | 34 gaps | ~7.5 days |
+| **Total** | 40 gaps | ~10.5 days |
 
 ---
 
@@ -1162,9 +1627,10 @@ class PowerOf1ROITests:
 
 1. **Brainstorm** — Review this gap analysis, decide which gaps to close first
 2. **Build P0** — Dockerfile, client wrapper, onboarding scenario, multi-customer compose, cleanup script
-3. **Build P1** — Core scenario scripts (KPI sim, RAG, signals, archival, tenant isolation, ROI/Power-of-1)
-4. **Build P1 Platform** — Add `customer_id` FK to 5 leaf tables + `/api/admin/cleanup/customer/<id>` endpoint
-5. **Build P2** — Results aggregator, RACI export, CASCADE DELETE migration, Qdrant cleanup integration
-6. **Deploy** — Push to separate EC2, configure security groups
-7. **Run** — Execute full test suite across 2-3 customers, verify tenant isolation, validate ROI at 1/4/6%
-8. **Cleanup** — Run `scenario_cleanup.py --dry-run` first, then full cleanup, verify zero orphan rows
+3. **Build P1 Core** — Scenario scripts (KPI sim, RAG, signals, archival, tenant isolation, ROI/Power-of-1)
+4. **Build P1 N8N** — 14 playbook YAMLs, n8n workflow generator, Google Sheets mock provider, scenario script
+5. **Build P1 Platform** — Add `customer_id` FK to 5 leaf tables + `/api/admin/cleanup/customer/<id>` endpoint
+6. **Build P2** — Results aggregator, RACI export, CASCADE DELETE migration, Qdrant cleanup integration
+7. **Deploy** — Push to separate EC2, configure security groups, set up Google Sheets service account
+8. **Run** — Execute full test suite across 2-3 customers, verify tenant isolation, validate ROI, check Sheets
+9. **Cleanup** — Run `scenario_cleanup.py --dry-run` first, then full cleanup, verify zero orphan rows
