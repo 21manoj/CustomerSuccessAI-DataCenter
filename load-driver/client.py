@@ -396,9 +396,12 @@ class CSPulseClient:
 
     def cleanup_customer(self, customer_id: int, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         """Post-test cleanup: delete all customer data"""
+        payload = {'dry_run': dry_run}
+        if not dry_run:
+            payload['confirm'] = True
         response = self.post(
             f'/api/admin/cleanup/customer/{customer_id}',
-            {'dry_run': dry_run}
+            payload
         )
         return response
 

@@ -69,12 +69,19 @@ class ScenarioOnboarding(BaseScenario):
             # Increase timeout — this endpoint runs data generation subprocess (up to 300s)
             original_timeout = self.client.timeout
             self.client.timeout = 180
+            # Build onboarding payload
+            onboarding_payload = {
+                'customer_name': company_name,
+                'industry': 'Technology'
+            }
+            # Allow --num-accounts to control account count (default: 3)
+            if self.args and hasattr(self.args, 'num_accounts') and self.args.num_accounts:
+                onboarding_payload['num_accounts'] = self.args.num_accounts
+                logger.info(f"    Requesting {self.args.num_accounts} accounts")
+
             complete_response = self.client.post(
                 '/api/onboarding/complete',
-                {
-                    'customer_name': company_name,
-                    'industry': 'Technology'
-                },
+                onboarding_payload,
                 skip_auth_check=True
             )
             self.client.timeout = original_timeout
