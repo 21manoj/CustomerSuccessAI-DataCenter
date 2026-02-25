@@ -322,7 +322,8 @@ class CSPulseClient:
         customer_id: int,
         vertical: str = "dc2_s",
         skip_wizard_b: bool = True,
-        skip_wizard_c: bool = False
+        skip_wizard_c: bool = False,
+        strict_kpi_ranges: bool = False
     ) -> Optional[Dict[str, Any]]:
         """Process uploaded data (load CSVs, embeddings, journey, weights)"""
         response = self.post(
@@ -331,8 +332,10 @@ class CSPulseClient:
                 'customer_id': customer_id,
                 'vertical': vertical,
                 'skip_wizard_b': skip_wizard_b,
-                'skip_wizard_c': skip_wizard_c
-            }
+                'skip_wizard_c': skip_wizard_c,
+                'strict_kpi_ranges': strict_kpi_ranges
+            },
+            skip_auth_check=True
         )
         return response
 

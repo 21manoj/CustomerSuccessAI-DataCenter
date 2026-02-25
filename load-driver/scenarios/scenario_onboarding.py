@@ -23,20 +23,20 @@ fake = Faker()
 
 class ScenarioOnboarding(BaseScenario):
     """
-    Scenario 1: Customer Onboarding
+    Scenario 1: Customer Onboarding (Full Pipeline)
 
     Steps:
-    1. /api/onboarding/complete (all-in-one: customer + accounts + data + scores)
-    2. Verify customer was created
-    3. Register a user for this customer via /api/register
-    4. Login with new user and verify dashboard
-    5. Verify accounts and scores exist
+    1. /api/onboarding/complete — create customer + accounts + generate CSVs
+    2. /api/onboarding/process-data — load CSVs into DB (KPIs, signals, products)
+    3. /api/dc2s/scores/calculate — run KPI -> Pillar -> Health score pipeline
+    4. /api/register — create a user for this customer
+    5. Login with new user and verify dashboard
+    6. Verify scores exist in DB
 
     Measures:
     - Complete endpoint response time
-    - Customer + account creation
-    - Data generation pipeline
-    - Score calculation
+    - CSV-to-DB data loading
+    - Score calculation pipeline
     - Dashboard accessibility
     """
 
@@ -120,9 +120,57 @@ class ScenarioOnboarding(BaseScenario):
                 )
 
             # ================================================================
-            # Step 2: Register a user for this customer
+            # Step 2: Process Data (load CSVs into DB + journey gen + scores)
             # ================================================================
-            logger.info("  Step 2: Register user via /api/register")
+            logger.info("  Step 2: /api/onboarding/process-data (CSV load + journey + scores)")
+
+            start_step2 = time.time()
+            self.client.timeout = 300  # process-data runs wizards, can be slow
+            process_response = self.client.process_data(
+                customer_id=customer_id,
+                skip_wizard_b=True,   # skip pattern analysis (heavy)
+                skip_wizard_c=True    # skip weight calibration (heavy)
+            )
+            self.client.timeout = original_timeout
+            step2_duration = time.time() - start_step2
+            api_calls += 1
+
+            if process_response and process_response.get('status') == 'success':
+                steps_done = process_response.get('steps_completed', [])
+                logger.info(f"    OK: Data processed in {step2_duration:.1f}s — steps: {steps_done}")
+                results['step2_process_data'] = 'success'
+                results['step2_duration_s'] = round(step2_duration, 2)
+                results['steps_completed'] = steps_done
+            else:
+                err_msg = str(process_response)[:150] if process_response else "No response"
+                logger.warning(f"    WARN: process-data returned: {err_msg}")
+                results['step2_process_data'] = f"failed: {err_msg}"
+                errors.append(f"process-data did not fully succeed: {err_msg[:80]}")
+
+            # ================================================================
+            # Step 3: Calculate Scores (KPI -> Pillar -> Health)
+            # ================================================================
+            logger.info("  Step 3: /api/dc2s/scores/calculate (score pipeline)")
+
+            start_step3 = time.time()
+            scores_calc = self.client.calculate_scores(customer_id=customer_id)
+            step3_duration = time.time() - start_step3
+            api_calls += 1
+
+            if scores_calc and (scores_calc.get('status') == 'success' or scores_calc.get('scores')):
+                logger.info(f"    OK: Scores calculated in {step3_duration:.1f}s")
+                results['step3_scores_calc'] = 'success'
+                results['step3_duration_s'] = round(step3_duration, 2)
+            else:
+                err_msg = str(scores_calc)[:150] if scores_calc else "No response"
+                logger.warning(f"    WARN: Score calculation: {err_msg}")
+                results['step3_scores_calc'] = f"partial: {err_msg}"
+                errors.append("Score calculation did not fully succeed (non-critical)")
+
+            # ================================================================
+            # Step 4: Register a user for this customer
+            # ================================================================
+            logger.info("  Step 4: Register user via /api/register")
 
             register_response = self.client.register_customer(
                 company_name=f"{company_name}-User",  # Different name to avoid duplicate
@@ -138,18 +186,18 @@ class ScenarioOnboarding(BaseScenario):
                 user_customer_id = register_response.get('customer_id')
                 user_id = register_response.get('user_id')
                 logger.info(f"    OK: User registered (user_id: {user_id}, customer: {user_customer_id})")
-                results['step2_register'] = 'success'
+                results['step4_register'] = 'success'
                 results['user_id'] = user_id
                 results['user_customer_id'] = user_customer_id
             else:
                 logger.warning(f"    WARN: User registration failed: {str(register_response)[:80]}")
-                results['step2_register'] = f"failed: {str(register_response)[:80]}"
+                results['step4_register'] = f"failed: {str(register_response)[:80]}"
                 errors.append("User registration failed (non-critical — customer exists)")
 
             # ================================================================
-            # Step 3: Login and verify dashboard
+            # Step 5: Login and verify dashboard
             # ================================================================
-            logger.info("  Step 3: Login and verify dashboard")
+            logger.info("  Step 5: Login and verify dashboard")
 
             if user_customer_id:
                 from client import CSPulseClient
@@ -164,7 +212,7 @@ class ScenarioOnboarding(BaseScenario):
 
                 if login_ok:
                     logger.info("    OK: Login successful")
-                    results['step3_login'] = 'success'
+                    results['step5_login'] = 'success'
 
                     # Get accounts
                     accounts = new_client.get_accounts()
@@ -173,23 +221,23 @@ class ScenarioOnboarding(BaseScenario):
                     if accounts is not None:
                         account_count = len(accounts) if isinstance(accounts, list) else 0
                         logger.info(f"    OK: Dashboard shows {account_count} accounts")
-                        results['step3_dashboard'] = 'accessible'
+                        results['step5_dashboard'] = 'accessible'
                         results['accounts_visible'] = account_count
                     else:
                         logger.warning("    WARN: No accounts returned from dashboard")
-                        results['step3_dashboard'] = 'no_accounts'
+                        results['step5_dashboard'] = 'no_accounts'
                 else:
                     logger.warning("    WARN: Login failed")
-                    results['step3_login'] = 'failed'
+                    results['step5_login'] = 'failed'
                     errors.append("Login with registered user failed")
             else:
                 logger.info("    SKIP: No user registered, skipping login test")
-                results['step3_login'] = 'skipped'
+                results['step5_login'] = 'skipped'
 
             # ================================================================
-            # Step 4: Verify scores exist (use original customer_id from complete)
+            # Step 6: Verify scores exist (use original customer_id from complete)
             # ================================================================
-            logger.info("  Step 4: Verify scores exist")
+            logger.info("  Step 6: Verify scores exist")
 
             # Try to get scores for the customer created by /complete
             scores_response = self.client.get(
@@ -207,13 +255,13 @@ class ScenarioOnboarding(BaseScenario):
                 )
                 if has_scores:
                     logger.info("    OK: Scores exist for customer")
-                    results['step4_scores'] = 'verified'
+                    results['step6_scores'] = 'verified'
                 else:
                     logger.info(f"    INFO: Score response keys: {list(scores_response.keys())[:5]}")
-                    results['step4_scores'] = f"response_ok_keys={list(scores_response.keys())[:5]}"
+                    results['step6_scores'] = f"response_ok_keys={list(scores_response.keys())[:5]}"
             else:
                 logger.warning("    WARN: Could not fetch scores")
-                results['step4_scores'] = 'not_available'
+                results['step6_scores'] = 'not_available'
 
             # ================================================================
             # Summary
