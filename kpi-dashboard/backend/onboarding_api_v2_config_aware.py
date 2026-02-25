@@ -33,6 +33,8 @@ from models import Customer, CustomerConfig, Account, User
 from utils.config_loader import ConfigLoader
 from auth_middleware import get_current_user_id
 from werkzeug.security import generate_password_hash
+from id_generator import generate_id
+from uuid_utils import ensure_uuid, ensure_customer_uuid_on_account
 
 # File types supported for upload
 FILE_TYPES = {
@@ -674,11 +676,19 @@ def complete_onboarding():
                 customer.customer_id = customer_id_explicit
             except Exception as e:
                 current_app.logger.warning(f"Could not set explicit customer_id: {e}")
-        
+
+        # UUID generation — resolve vertical to valid prefix (dc2_s → dc)
+        uuid_vertical = 'dc' if vertical.startswith('dc') else vertical
+        if uuid_vertical not in ('dc', 'saas', 'msp'):
+            uuid_vertical = 'dc'  # Default to dc for data center verticals
+        ensure_uuid(customer, uuid_vertical)
+
         db.session.add(customer)
         db.session.flush()  # Get customer_id
-        
+
         customer_id = customer.customer_id
+        customer_uuid_value = customer.uuid  # Save before session detach
+        current_app.logger.info(f"✅ Customer created: id={customer_id}, uuid={customer_uuid_value}")
         
         # Provision directory if not already done
         if not directory_provisioned:
@@ -746,6 +756,9 @@ def complete_onboarding():
                         role='admin',
                         vertical=vertical
                     )
+                    ensure_uuid(user, uuid_vertical)
+                    if hasattr(user, 'customer_uuid') and customer.uuid:
+                        user.customer_uuid = customer.uuid
                     # Note: first_name and last_name not in User model, stored in profile_metadata if needed
                     db.session.add(user)
                     db.session.flush()
@@ -844,7 +857,7 @@ def complete_onboarding():
                 account.vertical = vertical
                 current_app.logger.info(f"ℹ️  Updated existing account {account_id}")
             else:
-                # Create new account
+                # Create new account with UUID
                 account = Account(
                     account_id=account_id,
                     customer_id=customer_id,
@@ -854,8 +867,10 @@ def complete_onboarding():
                     region='us-west-2',
                     account_status='active'
                 )
+                ensure_uuid(account, uuid_vertical)
+                ensure_customer_uuid_on_account(account, customer)
                 db.session.add(account)
-                current_app.logger.info(f"✅ Created new account {account_id}")
+                current_app.logger.info(f"✅ Created new account {account_id} (uuid={account.uuid})")
             
             db.session.flush()
             accounts_created.append({
@@ -1002,13 +1017,23 @@ def complete_onboarding():
         else:
             message = "Customer, user, config, and accounts created. CSV generation failed; upload CSVs via /api/onboarding/upload."
 
+        # Enrich account_details with UUIDs (re-query since session was removed)
+        enriched_accounts = []
+        for acct_info in accounts_created:
+            acct_obj = db.session.get(Account, acct_info['account_id'])
+            entry = dict(acct_info)
+            if acct_obj and getattr(acct_obj, 'uuid', None):
+                entry['uuid'] = acct_obj.uuid
+            enriched_accounts.append(entry)
+
         response_data = {
             "success": True,
             "customer_id": customer_id,
+            "customer_uuid": customer_uuid_value,
             "customer_name": customer_name,
             "onboarding_mode": onboarding_mode,
             "accounts": len(accounts_created),
-            "account_details": accounts_created,
+            "account_details": enriched_accounts,
             "account_id_range": account_id_range,
             "config": {
                 "enabled_kpis": len(default_enabled_kpis),

@@ -194,7 +194,9 @@ def get_accounts():
             
             result.append({
                 'account_id': a.account_id,
+                'uuid': getattr(a, 'uuid', None),
                 'customer_id': a.customer_id,
+                'customer_uuid': getattr(a, 'customer_uuid', None),
                 'account_name': a.account_name,
                 'revenue': float(a.revenue) if a.revenue else 0,
                 'status': a.account_status,

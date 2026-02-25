@@ -52,6 +52,8 @@ def get_latest_scores(account_id):
     
     return jsonify({
         'account_id': account_id,
+        'account_uuid': getattr(account, 'uuid', None),
+        'customer_uuid': getattr(account, 'customer_uuid', None),
         'measurement_month': health.measurement_month.isoformat(),
         'health_score': health.to_dict(),
         'pillar_scores': [p.to_dict() for p in pillars],
@@ -102,9 +104,11 @@ def get_customer_summary():
             .first()
         
         if health:
+            acct = next((a for a in accounts if a.account_id == account_id), None)
             latest_scores.append({
                 'account_id': account_id,
-                'account_name': next((a.account_name for a in accounts if a.account_id == account_id), None),
+                'account_uuid': getattr(acct, 'uuid', None),
+                'account_name': acct.account_name if acct else None,
                 'health_score': float(health.health_score),
                 'health_status': health.health_status,
                 'trend': health.trend,
@@ -122,8 +126,13 @@ def get_customer_summary():
         avg_health = 0
         status_counts = {}
     
+    # Look up customer UUID
+    from models import Customer
+    cust = db.session.get(Customer, customer_id)
+
     return jsonify({
         'customer_id': customer_id,
+        'customer_uuid': getattr(cust, 'uuid', None) if cust else None,
         'total_accounts': len(accounts),
         'accounts_with_scores': len(latest_scores),
         'average_health_score': round(avg_health, 2),
