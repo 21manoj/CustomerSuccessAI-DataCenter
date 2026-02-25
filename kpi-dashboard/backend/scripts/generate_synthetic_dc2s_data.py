@@ -2,12 +2,12 @@
 """Placeholder synthetic data generator - Generates ALL KPIs"""
 import sys
 import argparse
-import uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app_v3_minimal import app
 from verticals.dc2_s.vertical_loader import DC2SVertical
+from id_generator import generate_customer_id, generate_account_id
 import pandas as pd
 from datetime import datetime, timedelta
 import random
@@ -50,7 +50,7 @@ with app.app_context():
                 'account_status': 'active'
             })
     else:
-        # Default: create 3 accounts with UUID-based identification
+        # Default: create 3 accounts with prefixed UUID v7
         for i in range(3):
             accounts.append({
                 'account_id': i + 1,  # Auto-increment placeholder; DB assigns actual ID
@@ -60,7 +60,7 @@ with app.app_context():
                 'vertical': 'dc2_s',
                 'region': 'us-west-2',
                 'account_status': 'active',
-                'uuid': f"dc2s_acct_{uuid.uuid4()}"
+                'uuid': generate_account_id('dc')  # Prefixed UUID v7 (e.g. dc_acct_019...)
             })
     
     # Map P1-P5 codes to AI/CH/DV/EX/OS format for config compatibility
@@ -106,7 +106,8 @@ with app.app_context():
     
     pd.DataFrame(accounts).to_csv(data_dir / 'accounts.csv', index=False)
     pd.DataFrame(kpis).to_csv(data_dir / 'kpi_measurements.csv', index=False)
-    pd.DataFrame([{'customer_id': customer_id, 'customer_name': f'Customer {customer_id}',
+    pd.DataFrame([{'customer_id': customer_id, 'uuid': generate_customer_id('dc'),
+                   'customer_name': f'Customer {customer_id}',
                    'vertical': 'dc2_s', 'created_at': datetime.now().strftime('%Y-%m-%d')}]
                 ).to_csv(data_dir / 'customers.csv', index=False)
     

@@ -8,6 +8,7 @@ from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Customer, CustomerConfig, Account, KPIUpload
 from enhanced_rag_qdrant import get_qdrant_rag_system
+from uuid_utils import ensure_uuid, enrich_with_uuid
 import json
 from datetime import datetime
 
@@ -31,14 +32,17 @@ def create_customer():
             return jsonify({'error': 'Customer with this email already exists'}), 400
         
         # Create customer
+        vertical = data.get('vertical', 'dc')
         customer = Customer(
             customer_name=customer_name,
             email=email,
             phone=phone
         )
+        # Auto-generate prefixed UUID v7 (e.g. dc_cust_019...)
+        ensure_uuid(customer, vertical)
         db.session.add(customer)
         db.session.flush()  # Get the customer_id
-        
+
         # Create default customer config
         config = CustomerConfig(
             customer_id=customer.customer_id,
@@ -60,10 +64,12 @@ def create_customer():
             'message': 'Customer created successfully',
             'customer': {
                 'customer_id': customer.customer_id,
+                'uuid': customer.uuid,
                 'customer_name': customer.customer_name,
                 'email': customer.email,
                 'phone': customer.phone,
-                'created_at': customer.customer_id  # Using customer_id as placeholder
+                'vertical': customer.vertical,
+                'created_at': customer.created_at.isoformat() if customer.created_at else None
             }
         }), 201
         
@@ -88,9 +94,11 @@ def list_customers():
             
             customer_list.append({
                 'customer_id': customer.customer_id,
+                'uuid': customer.uuid,
                 'customer_name': customer.customer_name,
                 'email': customer.email,
                 'phone': customer.phone,
+                'vertical': customer.vertical,
                 'account_count': account_count,
                 'kpi_count': kpi_count,
                 'has_data': has_data,
@@ -106,14 +114,15 @@ def list_customers():
     except Exception as e:
         return jsonify({'error': f'Failed to list customers: {str(e)}'}), 500
 
-@customer_management_api.route('/api/customers/<int:customer_id>/knowledge-base/status', methods=['GET'])
+@customer_management_api.route('/api/customers/<customer_id>/knowledge-base/status', methods=['GET'])
 def get_customer_kb_status(customer_id):
-    """Get knowledge base status for a specific customer"""
+    """Get knowledge base status for a specific customer (accepts integer ID or UUID)"""
     try:
-        # Check if customer exists
-        customer = db.session.get(Customer, customer_id)
+        from uuid_utils import resolve_customer
+        customer = resolve_customer(customer_id, allow_none=True)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
+        customer_id = customer.customer_id
         
         # Get RAG system and check status
         try:
@@ -145,14 +154,15 @@ def get_customer_kb_status(customer_id):
     except Exception as e:
         return jsonify({'error': f'Failed to get knowledge base status: {str(e)}'}), 500
 
-@customer_management_api.route('/api/customers/<int:customer_id>/knowledge-base/build', methods=['POST'])
+@customer_management_api.route('/api/customers/<customer_id>/knowledge-base/build', methods=['POST'])
 def build_customer_knowledge_base(customer_id):
-    """Build knowledge base for a specific customer"""
+    """Build knowledge base for a specific customer (accepts integer ID or UUID)"""
     try:
-        # Check if customer exists
-        customer = db.session.get(Customer, customer_id)
+        from uuid_utils import resolve_customer
+        customer = resolve_customer(customer_id, allow_none=True)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
+        customer_id = customer.customer_id
         
         # Check if customer has data
         account_count = Account.query.filter_by(customer_id=customer_id).count()
@@ -181,14 +191,15 @@ def build_customer_knowledge_base(customer_id):
     except Exception as e:
         return jsonify({'error': f'Failed to build knowledge base: {str(e)}'}), 500
 
-@customer_management_api.route('/api/customers/<int:customer_id>/data-summary', methods=['GET'])
+@customer_management_api.route('/api/customers/<customer_id>/data-summary', methods=['GET'])
 def get_customer_data_summary(customer_id):
-    """Get data summary for a specific customer"""
+    """Get data summary for a specific customer (accepts integer ID or UUID)"""
     try:
-        # Check if customer exists
-        customer = db.session.get(Customer, customer_id)
+        from uuid_utils import resolve_customer
+        customer = resolve_customer(customer_id, allow_none=True)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
+        customer_id = customer.customer_id
         
         # Get data counts
         accounts = Account.query.filter_by(customer_id=customer_id).all()

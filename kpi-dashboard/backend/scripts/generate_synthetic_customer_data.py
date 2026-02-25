@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app_v3_minimal import app
 from utils.config_loader import ConfigLoader
+from id_generator import generate_customer_id, generate_account_id
 import pandas as pd
 from datetime import datetime, timedelta
 import random
@@ -90,7 +91,7 @@ def generate_accounts_csv(customer_id, num_accounts=10, company_name=None):
         rows.append({
             'account_id': account_id,
             'customer_id': customer_id,
-            'uuid': f"dc2s_acct_{uuid.uuid4()}",
+            'uuid': generate_account_id('dc'),
             'account_name': account_name,
             'industry': random.choice(industries),
             'vertical': 'dc2_s',
@@ -209,10 +210,11 @@ def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
 
 
 def generate_customers_csv(customer_id, company_name):
-    """Generate customers.csv"""
-    
+    """Generate customers.csv with prefixed UUID v7"""
+
     return pd.DataFrame([{
-        'customer_id': customer_id,  # ✅ KEEP - Primary key in Customer model
+        'customer_id': customer_id,  # Integer PK (legacy, kept for FK compatibility)
+        'uuid': generate_customer_id('dc'),  # Prefixed UUID v7 (e.g. dc_cust_019...)
         'customer_name': company_name,
         'vertical': 'dc2_s',
         'created_at': datetime.now().strftime('%Y-%m-%d')
