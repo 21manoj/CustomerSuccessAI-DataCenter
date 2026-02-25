@@ -1,0 +1,25 @@
+# CS Pulse Load Driver Dependencies
+
+# HTTP client
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Data generation
+faker>=22.0.0
+
+# Data processing
+pandas>=2.1.0
+numpy>=1.24.0
+
+# Utilities
+python-dotenv>=1.0.0
+tabulate>=0.9.0
+
+# CLI
+click>=8.1.0
+
+# Observability
+pydantic>=2.0.0
+
+# Optional: parallel execution
+tqdm>=4.66.0

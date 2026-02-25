@@ -211,6 +211,7 @@ from enhanced_rag_openai_api import enhanced_rag_openai_api
 from secure_file_api import secure_file_api
 from master_file_api import master_file_api
 from account_snapshot_api import account_snapshot_api
+from admin_cleanup_api import admin_cleanup_api
 from wizard_blueprint import wizard_bp
 # Config-aware onboarding API (V2)
 try:
@@ -334,6 +335,7 @@ app.register_blueprint(workflow_config_api)
 app.register_blueprint(export_api)
 app.register_blueprint(rehydration_api)
 app.register_blueprint(account_snapshot_api)
+app.register_blueprint(admin_cleanup_api)
 
 # Product Analytics API
 if PRODUCT_ANALYTICS_AVAILABLE:
