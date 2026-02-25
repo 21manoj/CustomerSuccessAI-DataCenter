@@ -137,6 +137,7 @@ def main():
     parser.add_argument('--email', default='admin@test.com', help='Admin email for auth')
     parser.add_argument('--password', default='password', help='Admin password for auth')
     parser.add_argument('--output-dir', default='.', help='Output directory for results')
+    parser.add_argument('--dry-run', action='store_true', help='Preview-only mode (scenario 4: show what would be deleted)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Debug logging')
 
     args = parser.parse_args()

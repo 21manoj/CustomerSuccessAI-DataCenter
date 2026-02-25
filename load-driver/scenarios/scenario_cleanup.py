@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """
 Scenario 4: Post-Test Cleanup
-Delete all test data in FK-safe order, verify no orphans remain
+Delete all test data in FK-safe order, remove filesystem artifacts, verify no orphans remain
 """
 
 import logging
+import shutil
+from pathlib import Path
 from typing import Dict, Any
 
 from .base import BaseScenario
 
 logger = logging.getLogger(__name__)
+
+# Verticals base directory (relative to kpi-dashboard/backend/)
+VERTICALS_BASE = Path(__file__).resolve().parent.parent.parent / 'kpi-dashboard' / 'backend' / 'verticals'
 
 
 class ScenarioCleanup(BaseScenario):
@@ -18,7 +23,7 @@ class ScenarioCleanup(BaseScenario):
 
     Deletes all test data for customer in FK-safe order:
     1. Leaf tables (no dependents)
-    2. Playbook chain (reports → executions → triggers)
+    2. Playbook chain (reports -> executions -> triggers)
     3. Config and features
     4. Score tables (no FK to customer)
     5. Health/KPI records
@@ -26,21 +31,72 @@ class ScenarioCleanup(BaseScenario):
     7. Activity logs
     8. User and config
     9. Customer record (last)
+    10. Filesystem: verticals/customer{id}-{vertical}/ directory
 
     Measures:
     - Deletion success rate
     - Cascading delete verification
     - Orphan row detection
+    - Filesystem cleanup confirmation
     """
+
+    # Default vertical slug used by onboarding
+    DEFAULT_VERTICAL = 'dc2_s'
+
+    def _find_customer_dirs(self, customer_id: int) -> list:
+        """Find all verticals directories for a customer (any vertical slug)."""
+        if not VERTICALS_BASE.is_dir():
+            return []
+        prefix = f"customer{customer_id}-"
+        return sorted([
+            d for d in VERTICALS_BASE.iterdir()
+            if d.is_dir() and d.name.startswith(prefix)
+        ])
+
+    def _cleanup_filesystem(self, customer_id: int, dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Remove the verticals directory for this customer.
+
+        Returns dict with:
+          - directories_found: list of paths found
+          - directories_removed: list of paths removed (empty if dry_run)
+          - files_removed: total file count removed
+          - bytes_freed: total bytes freed
+        """
+        dirs = self._find_customer_dirs(customer_id)
+        result = {
+            'directories_found': [str(d) for d in dirs],
+            'directories_removed': [],
+            'files_removed': 0,
+            'bytes_freed': 0,
+        }
+
+        for d in dirs:
+            # Count files and size before removal
+            file_count = sum(1 for _ in d.rglob('*') if _.is_file())
+            dir_size = sum(f.stat().st_size for f in d.rglob('*') if f.is_file())
+
+            if dry_run:
+                logger.info(f"    [dry-run] Would remove {d.name} ({file_count} files, {dir_size / 1024:.1f} KB)")
+            else:
+                logger.info(f"    Removing {d.name} ({file_count} files, {dir_size / 1024:.1f} KB)")
+                shutil.rmtree(d)
+                result['directories_removed'].append(str(d))
+
+            result['files_removed'] += file_count
+            result['bytes_freed'] += dir_size
+
+        return result
 
     def run(self) -> Dict[str, Any]:
         """Execute cleanup scenario"""
         self.start_timer()
-        logger.info("🧹 Scenario: Post-Test Cleanup")
+        logger.info("Scenario: Post-Test Cleanup")
 
         api_calls = 0
         errors = []
         results = {}
+        is_dry_run = self.args and hasattr(self.args, 'dry_run') and self.args.dry_run
 
         try:
             customer_id = self.client.customer_id
@@ -51,7 +107,7 @@ class ScenarioCleanup(BaseScenario):
                 )
 
             # ================================================================
-            # Dry Run (Preview)
+            # Dry Run (Preview) — API
             # ================================================================
             logger.info(f"  Dry-run: Preview cleanup for customer {customer_id}")
 
@@ -64,26 +120,40 @@ class ScenarioCleanup(BaseScenario):
             if not dry_run_response or dry_run_response.get('status') != 'success':
                 errors.append(f"Dry-run failed: {dry_run_response}")
             else:
-                logger.info("    ✅ Dry-run successful")
+                logger.info("    Dry-run successful")
                 results['dry_run'] = {
                     'tables_to_delete': dry_run_response.get('tables', []),
                     'rows_to_delete': dry_run_response.get('total_rows', 0)
                 }
-
                 logger.info(f"    Would delete {dry_run_response.get('total_rows', 0)} rows from {len(dry_run_response.get('tables', []))} tables")
 
             # ================================================================
-            # Actual Cleanup (only if not --dry-run flag)
+            # Dry Run (Preview) — Filesystem
             # ================================================================
-            if self.args and hasattr(self.args, 'dry_run') and self.args.dry_run:
-                logger.info("  🚫 Dry-run mode: skipping actual cleanup")
+            logger.info(f"  Filesystem: Scanning verticals for customer {customer_id}")
+            fs_preview = self._cleanup_filesystem(customer_id, dry_run=True)
+            results['filesystem_preview'] = fs_preview
+
+            if fs_preview['directories_found']:
+                logger.info(f"    Found {len(fs_preview['directories_found'])} director(ies), {fs_preview['files_removed']} files, {fs_preview['bytes_freed'] / 1024:.1f} KB")
+            else:
+                logger.info("    No verticals directory found for this customer")
+
+            # ================================================================
+            # Exit early if --dry-run
+            # ================================================================
+            if is_dry_run:
+                logger.info("  Dry-run mode: skipping actual cleanup")
                 return self.success(
                     f"Dry-run complete: customer {customer_id} cleanup preview",
                     details=results,
                     api_calls=api_calls
                 )
 
-            logger.info(f"  Executing cleanup for customer {customer_id}")
+            # ================================================================
+            # Actual Cleanup — API (database records)
+            # ================================================================
+            logger.info(f"  Executing DB cleanup for customer {customer_id}")
 
             cleanup_response = self.client.cleanup_customer(
                 customer_id=customer_id,
@@ -98,12 +168,24 @@ class ScenarioCleanup(BaseScenario):
                     api_calls=api_calls
                 )
 
-            logger.info("    ✅ Cleanup completed")
+            logger.info("    DB cleanup completed")
             results['cleanup'] = {
                 'tables_deleted': cleanup_response.get('tables_deleted', 0),
                 'rows_deleted': cleanup_response.get('rows_deleted', 0),
                 'duration_seconds': cleanup_response.get('duration_seconds', 0)
             }
+
+            # ================================================================
+            # Actual Cleanup — Filesystem
+            # ================================================================
+            logger.info(f"  Executing filesystem cleanup for customer {customer_id}")
+            fs_result = self._cleanup_filesystem(customer_id, dry_run=False)
+            results['filesystem'] = fs_result
+
+            if fs_result['directories_removed']:
+                logger.info(f"    Removed {len(fs_result['directories_removed'])} director(ies), {fs_result['files_removed']} files, {fs_result['bytes_freed'] / 1024:.1f} KB freed")
+            else:
+                logger.info("    No directories to remove")
 
             # ================================================================
             # Verification (Check for Orphans)
@@ -114,13 +196,13 @@ class ScenarioCleanup(BaseScenario):
             orphan_count = verify_response.get('orphan_rows', 0)
 
             if orphan_count == 0:
-                logger.info("    ✅ Verification: No orphans found")
+                logger.info("    Verification: No orphans found")
                 results['verification'] = {
                     'status': 'clean',
                     'orphan_rows': 0
                 }
             else:
-                logger.warning(f"    ⚠️  Verification: {orphan_count} orphan rows found")
+                logger.warning(f"    Verification: {orphan_count} orphan rows found")
                 results['verification'] = {
                     'status': 'orphans_found',
                     'orphan_rows': orphan_count,
@@ -128,15 +210,23 @@ class ScenarioCleanup(BaseScenario):
                 }
                 errors.append(f"Orphan rows detected: {orphan_count}")
 
+            # Verify filesystem is actually gone
+            remaining_dirs = self._find_customer_dirs(customer_id)
+            if remaining_dirs:
+                logger.warning(f"    Filesystem: {len(remaining_dirs)} director(ies) still exist after cleanup")
+                errors.append(f"Directories not removed: {[d.name for d in remaining_dirs]}")
+            else:
+                logger.info("    Filesystem: Verified clean")
+
             # ================================================================
             # Summary
             # ================================================================
+            rows_deleted = results.get('cleanup', {}).get('rows_deleted', 0)
+            files_removed = fs_result.get('files_removed', 0)
+            summary = f"Cleanup complete: customer {customer_id}, {rows_deleted} rows deleted, {files_removed} files removed"
+
             if not errors:
-                return self.success(
-                    f"Cleanup complete: customer {customer_id}, {results['cleanup']['rows_deleted']} rows deleted",
-                    details=results,
-                    api_calls=api_calls
-                )
+                return self.success(summary, details=results, api_calls=api_calls)
             else:
                 return self.success(
                     f"Cleanup complete with warnings: customer {customer_id}",
@@ -147,7 +237,7 @@ class ScenarioCleanup(BaseScenario):
                 )
 
         except Exception as e:
-            logger.error(f"❌ Cleanup failed: {e}")
+            logger.error(f"Cleanup failed: {e}")
             return self.failure(
                 "Cleanup scenario failed",
                 error=str(e),
