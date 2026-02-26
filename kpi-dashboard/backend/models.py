@@ -1090,3 +1090,63 @@ class WeightCalibrationHistory(db.Model):
             'approved': self.approved,
             'calibrated_at': self.calibrated_at.isoformat() if self.calibrated_at else None,
         }
+
+
+# ============================================================
+# AUTO-UUID GENERATION — SQLAlchemy before_flush event
+# ============================================================
+# Ensures every Customer, Account, and User gets a UUID on insert,
+# regardless of which code path creates the record. This eliminates
+# the need to call ensure_uuid() manually in every creation point.
+
+from sqlalchemy import event as sa_event
+
+
+def _auto_generate_uuids(session, flush_context, instances):
+    """
+    SQLAlchemy before_flush listener that auto-generates UUIDs
+    for Customer, Account, and User models if not already set.
+    """
+    try:
+        from id_generator import generate_id
+    except ImportError:
+        return  # id_generator not available in test environments
+
+    for obj in session.new:
+        # Skip objects that don't have a uuid column
+        if not hasattr(obj, 'uuid'):
+            continue
+
+        # Only process our core models
+        class_name = obj.__class__.__name__
+        if class_name not in ('Customer', 'Account', 'User'):
+            continue
+
+        # Skip if UUID already assigned
+        if obj.uuid:
+            continue
+
+        # Determine vertical prefix
+        vertical = getattr(obj, 'vertical', None) or 'dc'
+
+        # Map class to entity type
+        entity_map = {
+            'Customer': 'customer',
+            'Account': 'account',
+            'User': 'user',
+        }
+        entity_type = entity_map.get(class_name, class_name.lower())
+
+        # Generate and assign UUID
+        obj.uuid = generate_id(vertical, entity_type)
+
+        # For Account/User: propagate parent customer's UUID
+        if class_name in ('Account', 'User') and hasattr(obj, 'customer_uuid'):
+            if not obj.customer_uuid and obj.customer_id:
+                # Look up parent customer's UUID
+                parent = session.get(Customer, obj.customer_id)
+                if parent and parent.uuid:
+                    obj.customer_uuid = parent.uuid
+
+
+sa_event.listen(db.session, 'before_flush', _auto_generate_uuids)
