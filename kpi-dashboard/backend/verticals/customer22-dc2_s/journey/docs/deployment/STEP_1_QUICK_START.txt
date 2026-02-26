@@ -1,0 +1,78 @@
+STEP 1: DEPLOY JOURNEY DATA - QUICK START
+==========================================
+
+TIME: 30-45 minutes
+GOAL: Load your 3 accounts (187 events, 3,220 KPIs) to PostgreSQL
+
+PRE-FLIGHT CHECK:
+-----------------
+[ ] PostgreSQL database accessible
+[ ] Phase 2/3 files in one directory
+[ ] Phase 4 scripts downloaded
+[ ] Python 3.8+ with packages: sqlalchemy, psycopg2-binary, pandas
+
+COMMANDS TO RUN:
+----------------
+
+# 1. Navigate to your Phase 2/3 files directory
+cd /path/to/your/phase2-3/files
+
+# 2. Generate milestones (5 min)
+python generate_milestones_phase4.py
+
+# 3. Create database tables (5 min)
+# Option A: Using Alembic
+alembic upgrade head
+
+# Option B: Direct Python
+python migration_journey_phase4.py
+
+# 4. Load all data (10-15 min)
+python load_journey_data_phase4.py \
+    --db-url "postgresql://user:pass@host:port/database" \
+    --data-dir .
+
+# 5. Verify everything (5 min)
+python verify_production_safety.py \
+    --db-url "postgresql://user:pass@host:port/database" \
+    --output step1_verification.json
+
+# 6. Quick SQL verification
+psql "postgresql://user:pass@host:port/database" -c "
+SELECT 'Accounts' as table_name, COUNT(*) FROM journey_accounts
+UNION ALL SELECT 'Events', COUNT(*) FROM journey_events
+UNION ALL SELECT 'KPIs', COUNT(*) FROM journey_kpis
+UNION ALL SELECT 'Health', COUNT(*) FROM journey_health
+UNION ALL SELECT 'Milestones', COUNT(*) FROM journey_milestones
+UNION ALL SELECT 'Predictions', COUNT(*) FROM signal_predictions;"
+
+EXPECTED OUTPUT:
+---------------
+Accounts    |   3
+Events      | 187
+KPIs        | 3220
+Health      |  92
+Milestones  |   6
+Predictions |   3
+
+STEP 1 COMPLETE WHEN:
+---------------------
+[X] 8 journey_* tables created in PostgreSQL
+[X] 3,512 total rows loaded
+[X] Production tables verified untouched
+[X] step1_verification.json shows "PASS"
+
+NEXT: Proceed to Step 2 (Bootstrap Weights)
+
+TROUBLESHOOTING:
+---------------
+Issue: "psycopg2 not found"
+Fix: pip install psycopg2-binary --break-system-packages
+
+Issue: "Table already exists"
+Fix: DROP TABLE IF EXISTS journey_accounts CASCADE;
+
+Issue: "Cannot find CSV files"
+Fix: Verify you're in correct directory with Phase 2/3 files
+
+DETAILED GUIDE: See STEP_1_DEPLOY_JOURNEY_DATA.md

@@ -2,35 +2,29 @@
 
 ## Overview
 - **Customer ID:** 19
-- **Company:** DC2_S Demo Enterprise
-- **Accounts:** 10
+- **Company:** E2E Test Company Weights 572341
+- **Accounts:** 3
 - **Time Period:** 12 months
-- **Generated:** 2026-01-27 17:37:59
+- **Generated:** 2026-02-26 00:26:35
 
 ## Data Files
-- accounts.csv (1004 bytes)
-- kpi_measurements.csv (91445 bytes)
-- customers.csv (88 bytes)
-- qualitative_signals.csv (31921 bytes)
-- products.csv (150 bytes)
+- accounts.csv (1642 bytes)
+- kpi_measurements.csv (27499 bytes)
+- customers.csv (148 bytes)
+- qualitative_signals.csv (11393 bytes)
+- products.csv (160 bytes)
+- profiles.csv (1116 bytes)
 
 ## Journey Patterns
 This customer uses **DEMO_MANIFEST** journey patterns.
 
 ## Accounts
-- **19001**: Customer 19 - Production
-- **19002**: Customer 19 - Staging
-- **19003**: Customer 19 - Development
-- **19004**: Customer 19 - QA
-- **19005**: Customer 19 - UAT
-- **19006**: Customer 19 - DR
-- **19007**: Customer 19 - Sandbox
-- **19008**: Customer 19 - Integration
-- **19009**: Customer 19 - Performance
-- **19010**: Customer 19 - Lab
+- **19001**: E2E Test Company Weights 572341 - Production
+- **19002**: E2E Test Company Weights 572341 - Staging
+- **19003**: E2E Test Company Weights 572341 - Development
 
 ## KPIs (Config-Aware)
-- Total measurements: 1800
+- Total measurements: 540
 - Enabled KPIs: 15
 - Months of data: 12
 
