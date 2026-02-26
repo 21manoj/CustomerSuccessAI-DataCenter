@@ -1,0 +1,2298 @@
+{
+  "account_id": "22008",
+  "account_name": "Account 22008",
+  "pattern_type": "proactive_growth",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-30",
+  "starting_health": 75,
+  "ending_health": 98,
+  "lowest_health": 75,
+  "highest_health": 98,
+  "total_weeks": 52,
+  "events": [
+    {
+      "week_number": 1,
+      "date": "2024-01-01",
+      "phase": "healthy",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to CTO - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 75,
+      "health_score_after": 75,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 2,
+      "date": "2024-01-08",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 75,
+      "health_score_after": 76.86,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 3,
+      "date": "2024-01-15",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 76.86,
+      "health_score_after": 78.65,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 3,
+      "date": "2024-01-15",
+      "phase": "healthy",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to CTO - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 76.86,
+      "health_score_after": 78.65,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 3,
+      "date": "2024-01-15",
+      "phase": "healthy",
+      "event_type": "meeting",
+      "description": "Regular check-in - All systems performing well",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 76.86,
+      "health_score_after": 78.65,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 4,
+      "date": "2024-01-22",
+      "phase": "healthy",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to CTO - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 78.65,
+      "health_score_after": 79.89,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 4,
+      "date": "2024-01-22",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 78.65,
+      "health_score_after": 79.89,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 5,
+      "date": "2024-01-29",
+      "phase": "healthy",
+      "event_type": "expansion_discussion",
+      "description": "Board approval for expansion - Budget allocated",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 79.89,
+      "health_score_after": 79.81,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 5,
+      "date": "2024-01-29",
+      "phase": "healthy",
+      "event_type": "milestone",
+      "description": "Reference customer agreement - Willing to advocate",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 79.89,
+      "health_score_after": 79.81,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 79.81,
+      "health_score_after": 81.31,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "healthy",
+      "event_type": "milestone",
+      "description": "Reference customer agreement - Willing to advocate",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 79.81,
+      "health_score_after": 81.31,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "healthy",
+      "event_type": "meeting",
+      "description": "Regular check-in - All systems performing well",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 79.81,
+      "health_score_after": 81.31,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "healthy",
+      "event_type": "champion_interaction",
+      "description": "Champion promoted to CTO - Strong executive buy-in",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 81.31,
+      "health_score_after": 82.86,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "healthy",
+      "event_type": "meeting",
+      "description": "Regular check-in - All systems performing well",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 81.31,
+      "health_score_after": 82.86,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "healthy",
+      "event_type": "expansion_discussion",
+      "description": "Board approval for expansion - Budget allocated",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 81.31,
+      "health_score_after": 82.86,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "healthy",
+      "event_type": "meeting",
+      "description": "Regular check-in - All systems performing well",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 82.86,
+      "health_score_after": 82.83,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 9,
+      "date": "2024-02-26",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 82.83,
+      "health_score_after": 83.53,
+      "outcome": "Perfect metrics, expansion opportunities",
+      "csm_action": {
+        "action_type": "standard_checkin",
+        "description": "Standard quarterly check-in",
+        "response_time_hours": 168,
+        "cost_estimate": 500
+      }
+    },
+    {
+      "week_number": 9,
+      "date": "2024-02-26",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 82.83,
+      "health_score_after": 83.53,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 10,
+      "date": "2024-03-04",
+      "phase": "healthy",
+      "event_type": "expansion_discussion",
+      "description": "Board approval for expansion - Budget allocated",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 83.53,
+      "health_score_after": 84.06,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 11,
+      "date": "2024-03-11",
+      "phase": "healthy",
+      "event_type": "qbr",
+      "description": "Outstanding QBR - All metrics exceeding targets",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 84.06,
+      "health_score_after": 83.69,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 11,
+      "date": "2024-03-11",
+      "phase": "healthy",
+      "event_type": "meeting",
+      "description": "Regular check-in - All systems performing well",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 84.06,
+      "health_score_after": 83.69,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 11,
+      "date": "2024-03-11",
+      "phase": "healthy",
+      "event_type": "expansion_discussion",
+      "description": "Board approval for expansion - Budget allocated",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 84.06,
+      "health_score_after": 83.69,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 12,
+      "date": "2024-03-18",
+      "phase": "healthy",
+      "event_type": "meeting",
+      "description": "Regular check-in - All systems performing well",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 83.69,
+      "health_score_after": 84.8,
+      "outcome": "Perfect metrics, expansion opportunities"
+    },
+    {
+      "week_number": 13,
+      "date": "2024-03-25",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 84.8,
+      "health_score_after": 87.0,
+      "outcome": "Growth accelerating, strategic partnership",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 13,
+      "date": "2024-03-25",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 84.8,
+      "health_score_after": 87.0,
+      "outcome": "Growth accelerating, strategic partnership"
+    },
+    {
+      "week_number": 13,
+      "date": "2024-03-25",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 84.8,
+      "health_score_after": 87.0,
+      "outcome": "Growth accelerating, strategic partnership",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 14,
+      "date": "2024-04-01",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 87.0,
+      "health_score_after": 86.99,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 14,
+      "date": "2024-04-01",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 87.0,
+      "health_score_after": 86.99,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 14,
+      "date": "2024-04-01",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 87.0,
+      "health_score_after": 86.99,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 14,
+      "date": "2024-04-01",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 87.0,
+      "health_score_after": 86.99,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 86.99,
+      "health_score_after": 86.73,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 86.99,
+      "health_score_after": 86.73,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 86.73,
+      "health_score_after": 88.12,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 86.73,
+      "health_score_after": 88.12,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 86.73,
+      "health_score_after": 88.12,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 17,
+      "date": "2024-04-22",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 88.12,
+      "health_score_after": 89.97,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 17,
+      "date": "2024-04-22",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 88.12,
+      "health_score_after": 89.97,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 89.97,
+      "health_score_after": 91.5,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 89.97,
+      "health_score_after": 91.5,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 89.97,
+      "health_score_after": 91.5,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 89.97,
+      "health_score_after": 91.5,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.5,
+      "health_score_after": 91.58,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.5,
+      "health_score_after": 91.58,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 91.5,
+      "health_score_after": 91.58,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.5,
+      "health_score_after": 91.58,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 91.58,
+      "health_score_after": 91.3,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.58,
+      "health_score_after": 91.3,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 91.58,
+      "health_score_after": 91.3,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 21,
+      "date": "2024-05-20",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 91.3,
+      "health_score_after": 90.97,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 21,
+      "date": "2024-05-20",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.3,
+      "health_score_after": 90.97,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 21,
+      "date": "2024-05-20",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.3,
+      "health_score_after": 90.97,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 21,
+      "date": "2024-05-20",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 91.3,
+      "health_score_after": 90.97,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 22,
+      "date": "2024-05-27",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 90.97,
+      "health_score_after": 92.8,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 22,
+      "date": "2024-05-27",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 90.97,
+      "health_score_after": 92.8,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 23,
+      "date": "2024-06-03",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.8,
+      "health_score_after": 95.07,
+      "outcome": "Growth accelerating, strategic partnership",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 23,
+      "date": "2024-06-03",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.8,
+      "health_score_after": 95.07,
+      "outcome": "Growth accelerating, strategic partnership"
+    },
+    {
+      "week_number": 23,
+      "date": "2024-06-03",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.8,
+      "health_score_after": 95.07,
+      "outcome": "Growth accelerating, strategic partnership"
+    },
+    {
+      "week_number": 23,
+      "date": "2024-06-03",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.8,
+      "health_score_after": 95.07,
+      "outcome": "Growth accelerating, strategic partnership"
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.07,
+      "health_score_after": 94.7,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.07,
+      "health_score_after": 94.7,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.07,
+      "health_score_after": 94.7,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.7,
+      "health_score_after": 95.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 94.7,
+      "health_score_after": 95.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.7,
+      "health_score_after": 95.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.7,
+      "health_score_after": 95.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 26,
+      "date": "2024-06-24",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.68,
+      "health_score_after": 95.88,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 26,
+      "date": "2024-06-24",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.68,
+      "health_score_after": 95.88,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 26,
+      "date": "2024-06-24",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.68,
+      "health_score_after": 95.88,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 27,
+      "date": "2024-07-01",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 95.88,
+      "health_score_after": 97.46,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 27,
+      "date": "2024-07-01",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 95.88,
+      "health_score_after": 97.46,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 28,
+      "date": "2024-07-08",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.46,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 28,
+      "date": "2024-07-08",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.46,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 29,
+      "date": "2024-07-15",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 29,
+      "date": "2024-07-15",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 31,
+      "date": "2024-07-29",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 31,
+      "date": "2024-07-29",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 31,
+      "date": "2024-07-29",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 31,
+      "date": "2024-07-29",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 32,
+      "date": "2024-08-05",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.95,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 32,
+      "date": "2024-08-05",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.95,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 32,
+      "date": "2024-08-05",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 97.95,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 33,
+      "date": "2024-08-12",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.95,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 33,
+      "date": "2024-08-12",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.95,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 33,
+      "date": "2024-08-12",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.95,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 35,
+      "date": "2024-08-26",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 35,
+      "date": "2024-08-26",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 35,
+      "date": "2024-08-26",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 35,
+      "date": "2024-08-26",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 36,
+      "date": "2024-09-02",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 36,
+      "date": "2024-09-02",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 36,
+      "date": "2024-09-02",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 36,
+      "date": "2024-09-02",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 37,
+      "date": "2024-09-09",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 97.58,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 37,
+      "date": "2024-09-09",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 97.58,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 38,
+      "date": "2024-09-16",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.58,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 38,
+      "date": "2024-09-16",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 97.58,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 39,
+      "date": "2024-09-23",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 39,
+      "date": "2024-09-23",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.44,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 97.44,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.44,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.44,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 41,
+      "date": "2024-10-07",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.44,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 41,
+      "date": "2024-10-07",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.44,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 41,
+      "date": "2024-10-07",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 97.44,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 42,
+      "date": "2024-10-14",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 42,
+      "date": "2024-10-14",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 42,
+      "date": "2024-10-14",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 43,
+      "date": "2024-10-21",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.84,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 43,
+      "date": "2024-10-21",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 97.84,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.84,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.84,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 97.84,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 97.84,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 45,
+      "date": "2024-11-04",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 97.38,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 45,
+      "date": "2024-11-04",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 97.38,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 46,
+      "date": "2024-11-11",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.38,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 46,
+      "date": "2024-11-11",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.38,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 46,
+      "date": "2024-11-11",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 97.38,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 47,
+      "date": "2024-11-18",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 47,
+      "date": "2024-11-18",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 47,
+      "date": "2024-11-18",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 47,
+      "date": "2024-11-18",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 48,
+      "date": "2024-11-25",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 48,
+      "date": "2024-11-25",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 48,
+      "date": "2024-11-25",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 49,
+      "date": "2024-12-02",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 49,
+      "date": "2024-12-02",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 51,
+      "date": "2024-12-16",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 51,
+      "date": "2024-12-16",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 52,
+      "date": "2024-12-23",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 52,
+      "date": "2024-12-23",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 98,
+      "health_score_after": 98,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    }
+  ],
+  "summary": {
+    "pattern_type": "proactive_growth",
+    "total_events": 140,
+    "highest_health_week": 28,
+    "total_csm_investment": 360500.0,
+    "health_growth": 23,
+    "financial_impact": "40% ARR expansion",
+    "key_success_factors": [
+      "Proactive regular engagement",
+      "Quarterly business reviews",
+      "Executive alignment",
+      "Strategic planning sessions",
+      "Early expansion discussions",
+      "Strong partnership foundation"
+    ]
+  }
+}
