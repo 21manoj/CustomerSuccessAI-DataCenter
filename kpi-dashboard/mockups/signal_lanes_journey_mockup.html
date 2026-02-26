@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Pulse - Signal Lanes Journey Mockup</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242733;
+    --border: #2e3142;
+    --text: #e4e6f0;
+    --text-muted: #8b8fa3;
+    --green: #34d399;
+    --green-bg: rgba(52,211,153,0.12);
+    --orange: #fb923c;
+    --orange-bg: rgba(251,146,60,0.12);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,0.12);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.12);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,0.12);
+    --cyan: #22d3ee;
+    --yellow: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ---- HEADER ---- */
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header h1 span { color: var(--blue); }
+  .header .badge { font-size: 11px; background: var(--purple-bg); color: var(--purple); padding: 3px 10px; border-radius: 12px; margin-left: 10px; }
+
+  /* ---- LENS TABS ---- */
+  .lens-bar { display: flex; gap: 8px; padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .lens-tab {
+    padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); transition: all 0.2s;
+  }
+  .lens-tab:hover { border-color: var(--text-muted); color: var(--text); }
+  .lens-tab.active { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); font-weight: 600; }
+  .lens-tab .icon { margin-right: 6px; }
+
+  /* ---- PORTFOLIO BAR ---- */
+  .portfolio-bar { display: flex; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; min-width: 140px; }
+  .metric-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .metric-card .value.green { color: var(--green); }
+  .metric-card .value.orange { color: var(--orange); }
+  .metric-card .value.red { color: var(--red); }
+  .metric-card .value.blue { color: var(--blue); }
+  .metric-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .metric-card .delta { font-size: 12px; margin-top: 4px; }
+  .metric-card .delta.up { color: var(--green); }
+  .metric-card .delta.down { color: var(--red); }
+
+  /* ---- STACKED BAR ---- */
+  .stacked-bar-wrap { flex: 1; }
+  .stacked-bar-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stacked-bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; }
+  .stacked-bar .seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; transition: width 0.8s ease; }
+  .stacked-bar .seg.g { background: var(--green); }
+  .stacked-bar .seg.o { background: var(--orange); }
+  .stacked-bar .seg.r { background: var(--red); }
+  .bar-legend { display: flex; gap: 16px; margin-top: 6px; }
+  .bar-legend span { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+  .bar-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ---- JOURNEY TIMELINE ---- */
+  .journey-container { padding: 24px; }
+  .journey-container h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+  /* Phase header */
+  .phases-row { display: flex; position: relative; margin-bottom: 0; }
+  .phase-col { flex: 1; text-align: center; padding: 10px 0; position: relative; }
+  .phase-col .phase-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .phase-col .phase-desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .phase-col.active .phase-label { color: var(--blue); }
+  .phase-col::after { content: ''; position: absolute; top: 50%; right: 0; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 6px solid var(--border); }
+  .phase-col:last-child::after { display: none; }
+
+  /* Phase progress bar */
+  .phase-progress { display: flex; height: 4px; margin-bottom: 20px; }
+  .phase-progress .seg { flex: 1; }
+  .phase-progress .seg.done { background: var(--blue); }
+  .phase-progress .seg.current { background: linear-gradient(90deg, var(--blue), var(--border)); }
+  .phase-progress .seg.future { background: var(--border); }
+
+  /* Signal Lanes */
+  .lanes-wrapper { position: relative; }
+  .lane { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); min-height: 56px; }
+  .lane:last-child { border-bottom: none; }
+  .lane-label { width: 120px; display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); border-right: 1px solid var(--border); flex-shrink: 0; }
+  .lane-label .lane-icon { font-size: 16px; }
+  .lane-track { flex: 1; display: flex; position: relative; }
+  .lane-phase { flex: 1; position: relative; border-right: 1px dashed var(--border); padding: 8px 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .lane-phase:last-child { border-right: none; }
+
+  /* Signal dots */
+  .signal-dot {
+    width: 14px; height: 14px; border-radius: 50%; cursor: pointer; position: relative;
+    transition: transform 0.15s; flex-shrink: 0;
+  }
+  .signal-dot:hover { transform: scale(1.6); z-index: 10; }
+  .signal-dot.positive { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,0.4); }
+  .signal-dot.neutral { background: var(--blue); box-shadow: 0 0 6px rgba(96,165,250,0.3); }
+  .signal-dot.negative { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,0.4); }
+  .signal-dot.opportunity { background: var(--yellow); box-shadow: 0 0 8px rgba(251,191,36,0.5); }
+  .signal-dot.opportunity::after {
+    content: ''; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px;
+    background: var(--yellow); border-radius: 50%; animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.8); } }
+
+  /* Star for micro-opportunities */
+  .signal-star {
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer; position: relative; flex-shrink: 0;
+    filter: drop-shadow(0 0 4px rgba(251,191,36,0.6));
+    transition: transform 0.15s;
+  }
+  .signal-star:hover { transform: scale(1.4); }
+
+  /* Tooltip */
+  .signal-dot[data-tooltip]:hover::before,
+  .signal-star[data-tooltip]:hover::before {
+    content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px;
+    border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 100; pointer-events: none;
+  }
+
+  /* ---- MICRO-OPP CARDS ---- */
+  .opportunities { padding: 0 24px 24px; }
+  .opportunities h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .opp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .opp-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    border-left: 3px solid var(--yellow); transition: border-color 0.2s;
+  }
+  .opp-card:hover { border-left-color: var(--green); }
+  .opp-card .opp-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .opp-card .opp-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .opp-card .opp-meta { display: flex; gap: 10px; margin-top: 8px; }
+  .opp-card .opp-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+  .opp-card .opp-tag.expansion { background: var(--green-bg); color: var(--green); }
+  .opp-card .opp-tag.retention { background: var(--orange-bg); color: var(--orange); }
+  .opp-card .opp-tag.engagement { background: var(--blue-bg); color: var(--blue); }
+  .opp-card .opp-tag.phase { background: var(--purple-bg); color: var(--purple); }
+  .opp-card .opp-confidence { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+  /* ---- ACCOUNT TABLE ---- */
+  .account-section { padding: 0 24px 24px; }
+  .account-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .account-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .account-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+  .account-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .account-table tr:hover { background: var(--surface2); }
+  .health-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .health-pill.excellent { background: var(--green-bg); color: var(--green); }
+  .health-pill.warning { background: var(--orange-bg); color: var(--orange); }
+  .health-pill.critical { background: var(--red-bg); color: var(--red); }
+  .trend-arrow { font-size: 13px; }
+  .trend-arrow.up { color: var(--green); }
+  .trend-arrow.down { color: var(--red); }
+  .trend-arrow.flat { color: var(--text-muted); }
+  .phase-badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; background: var(--surface2); color: var(--text-muted); }
+
+  /* ---- TRANSITION VISUALIZATION ---- */
+  .transition-section { padding: 0 24px 24px; }
+  .transition-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .transition-grid { display: flex; gap: 24px; align-items: center; justify-content: center; }
+  .transition-col { text-align: center; min-width: 160px; }
+  .transition-col .col-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .transition-block { width: 100%; border-radius: 8px; padding: 16px; font-size: 24px; font-weight: 700; }
+  .transition-block.green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+  .transition-block.orange { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+  .transition-block.red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .transition-block .block-pct { font-size: 12px; font-weight: 400; opacity: 0.7; }
+  .transition-arrow { font-size: 28px; color: var(--text-muted); }
+  .transition-flow { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .flow-label { font-size: 10px; color: var(--text-muted); }
+  .flow-count { font-size: 13px; font-weight: 600; }
+  .flow-count.up { color: var(--green); }
+  .flow-count.down { color: var(--red); }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 900px) {
+    .portfolio-bar { flex-wrap: wrap; }
+    .opp-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Hidden lens content */
+  .lens-content { display: none; }
+  .lens-content.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- HEADER                                       -->
+<!-- ============================================ -->
+<div class="header">
+  <h1><span>CS Pulse</span> Signal Lanes Journey <span class="badge">MOCKUP</span></h1>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span style="font-size:12px;color:var(--text-muted);">Customer:</span>
+    <span style="font-size:13px;font-weight:600;">Lifecycle Test Corp</span>
+    <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">20 Accounts</span>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- DEPARTMENT LENS TABS                         -->
+<!-- ============================================ -->
+<div class="lens-bar">
+  <div class="lens-tab active" onclick="switchLens(this, 'all')"><span class="icon">&#9673;</span>All Signals</div>
+  <div class="lens-tab" onclick="switchLens(this, 'csm')"><span class="icon">&#128101;</span>CSM</div>
+  <div class="lens-tab" onclick="switchLens(this, 'product')"><span class="icon">&#128187;</span>Product</div>
+  <div class="lens-tab" onclick="switchLens(this, 'finance')"><span class="icon">&#128176;</span>Finance</div>
+  <div class="lens-tab" onclick="switchLens(this, 'support')"><span class="icon">&#127959;</span>Support</div>
+  <div class="lens-tab" onclick="switchLens(this, 'executive')"><span class="icon">&#127775;</span>Executive</div>
+</div>
+
+<!-- ============================================ -->
+<!-- PORTFOLIO METRICS BAR                        -->
+<!-- ============================================ -->
+<div class="portfolio-bar">
+  <div class="metric-card">
+    <div class="label">Avg Health Score</div>
+    <div class="value blue" id="avg-score">62.4</div>
+    <div class="delta up" id="avg-delta">+8.2 from last month</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Healthy</div>
+    <div class="value green" id="healthy-count">7</div>
+    <div class="delta up">+3 from M1</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">At-Risk</div>
+    <div class="value orange" id="atrisk-count">9</div>
+    <div class="delta up">+1 from M1</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Critical</div>
+    <div class="value red" id="critical-count">4</div>
+    <div class="delta up">-4 from M1</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Micro-Opportunities</div>
+    <div class="value" style="color:var(--yellow)" id="opp-count">5</div>
+    <div class="sub">Detected this cycle</div>
+  </div>
+
+  <div class="stacked-bar-wrap" style="margin-left:auto;min-width:280px;">
+    <div class="stacked-bar-label">Health Distribution (M1 vs M2)</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">Month 1</div>
+    <div class="stacked-bar" id="bar-m1">
+      <div class="seg g" style="width:20%">4</div>
+      <div class="seg o" style="width:40%">8</div>
+      <div class="seg r" style="width:40%">8</div>
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:6px;margin-bottom:3px;">Month 2 (After Correction)</div>
+    <div class="stacked-bar" id="bar-m2">
+      <div class="seg g" style="width:35%">7</div>
+      <div class="seg o" style="width:45%">9</div>
+      <div class="seg r" style="width:20%">4</div>
+    </div>
+    <div class="bar-legend">
+      <span><span class="dot" style="background:var(--green)"></span> Healthy</span>
+      <span><span class="dot" style="background:var(--orange)"></span> At-Risk</span>
+      <span><span class="dot" style="background:var(--red)"></span> Critical</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- LIFECYCLE PHASE HEADER                       -->
+<!-- ============================================ -->
+<div class="journey-container">
+  <h2>Signal Lanes &mdash; Lifecycle Timeline</h2>
+
+  <div class="phases-row">
+    <div class="phase-col"><div class="phase-label">Provision</div><div class="phase-desc">Infra setup</div></div>
+    <div class="phase-col"><div class="phase-label">Onboarding</div><div class="phase-desc">Config + data load</div></div>
+    <div class="phase-col active"><div class="phase-label">Baseline</div><div class="phase-desc">Initial scoring</div></div>
+    <div class="phase-col"><div class="phase-label">Stabilize</div><div class="phase-desc">Corrections</div></div>
+    <div class="phase-col"><div class="phase-label">Expand / Renew</div><div class="phase-desc">Growth cycle</div></div>
+  </div>
+  <div class="phase-progress">
+    <div class="seg done"></div>
+    <div class="seg done"></div>
+    <div class="seg current"></div>
+    <div class="seg future"></div>
+    <div class="seg future"></div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- SIGNAL LANES (Swimlanes)                     -->
+  <!-- ============================================ -->
+  <div class="lanes-wrapper">
+
+    <!-- Adoption Lane -->
+    <div class="lane" data-lane="adoption">
+      <div class="lane-label"><span class="lane-icon">&#128200;</span> Adoption</div>
+      <div class="lane-track">
+        <div class="lane-phase">
+          <span class="signal-dot neutral" data-tooltip="Env provisioned"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="DAU/MAU 82%"></span>
+          <span class="signal-dot positive" data-tooltip="Feature activation 91%"></span>
+          <span class="signal-dot neutral" data-tooltip="API calls ramping"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="Adoption index: 78"></span>
+          <span class="signal-dot neutral" data-tooltip="Activation plateau"></span>
+          <span class="signal-dot negative" data-tooltip="2 accounts low usage"></span>
+          <span class="signal-star" data-tooltip="Micro-opp: Upsell GPU tier">&#11088;</span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="Usage recovery +15%"></span>
+          <span class="signal-dot positive" data-tooltip="4 accounts uplifted"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-star" data-tooltip="Expansion: ML Training cluster">&#11088;</span>
+          <span class="signal-dot positive" data-tooltip="New module adopted"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Support Lane -->
+    <div class="lane" data-lane="support">
+      <div class="lane-label"><span class="lane-icon">&#127959;</span> Support</div>
+      <div class="lane-track">
+        <div class="lane-phase">
+          <span class="signal-dot neutral" data-tooltip="Setup tickets (expected)"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot negative" data-tooltip="SLA breach: 2 P1 tickets"></span>
+          <span class="signal-dot neutral" data-tooltip="Config assistance"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot negative" data-tooltip="Escalation: DR failover"></span>
+          <span class="signal-dot negative" data-tooltip="3 critical tickets open"></span>
+          <span class="signal-dot neutral" data-tooltip="Support score: 45"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="SLA stabilized"></span>
+          <span class="signal-dot positive" data-tooltip="Ticket volume -40%"></span>
+          <span class="signal-star" data-tooltip="Micro-opp: Premium Support tier">&#11088;</span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="Zero P1 tickets (30d)"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sentiment Lane -->
+    <div class="lane" data-lane="sentiment">
+      <div class="lane-label"><span class="lane-icon">&#128172;</span> Sentiment</div>
+      <div class="lane-track">
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="Exec sponsor: excited"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="NPS: 72"></span>
+          <span class="signal-dot neutral" data-tooltip="QBR feedback: neutral"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot negative" data-tooltip="NPS dropped to 35"></span>
+          <span class="signal-dot negative" data-tooltip="Champion frustrated"></span>
+          <span class="signal-dot neutral" data-tooltip="Exec still engaged"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="NPS recovered: 65"></span>
+          <span class="signal-dot positive" data-tooltip="Champion re-engaged"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="NPS: 82 (new high)"></span>
+          <span class="signal-star" data-tooltip="Micro-opp: Case study candidate">&#11088;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Lane -->
+    <div class="lane" data-lane="financial">
+      <div class="lane-label"><span class="lane-icon">&#128176;</span> Financial</div>
+      <div class="lane-track">
+        <div class="lane-phase">
+          <span class="signal-dot neutral" data-tooltip="Contract signed: $2.4M ARR"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot neutral" data-tooltip="MRR baseline: $200K"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot negative" data-tooltip="Churn risk: $480K ARR at risk"></span>
+          <span class="signal-dot neutral" data-tooltip="Power-of-1: 3.2x ROI"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="Churn risk mitigated: -$320K saved"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-star" data-tooltip="Expansion pipeline: +$600K ARR">&#11088;</span>
+          <span class="signal-dot positive" data-tooltip="Renewal: 2yr at +15%"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expansion Lane -->
+    <div class="lane" data-lane="expansion">
+      <div class="lane-label"><span class="lane-icon">&#128640;</span> Expansion</div>
+      <div class="lane-track">
+        <div class="lane-phase"></div>
+        <div class="lane-phase"></div>
+        <div class="lane-phase">
+          <span class="signal-dot neutral" data-tooltip="No expansion signals yet"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-dot positive" data-tooltip="Usage exceeding tier"></span>
+          <span class="signal-dot positive" data-tooltip="New dept requesting access"></span>
+        </div>
+        <div class="lane-phase">
+          <span class="signal-star" data-tooltip="Cross-sell: Monitoring Suite">&#11088;</span>
+          <span class="signal-star" data-tooltip="Upsell: Enterprise tier">&#11088;</span>
+          <span class="signal-dot positive" data-tooltip="Multi-region rollout planned"></span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /lanes-wrapper -->
+
+  <!-- Lane legend -->
+  <div style="display:flex;gap:16px;margin-top:12px;padding:8px 0;font-size:11px;color:var(--text-muted);">
+    <span><span class="signal-dot positive" style="display:inline-block;width:10px;height:10px;vertical-align:middle;"></span> Positive</span>
+    <span><span class="signal-dot neutral" style="display:inline-block;width:10px;height:10px;vertical-align:middle;"></span> Neutral</span>
+    <span><span class="signal-dot negative" style="display:inline-block;width:10px;height:10px;vertical-align:middle;"></span> Negative</span>
+    <span style="color:var(--yellow);">&#11088; Micro-Opportunity</span>
+    <span style="margin-left:auto;font-style:italic;">Hover signals for details</span>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- MICRO-OPPORTUNITY CARDS                      -->
+<!-- ============================================ -->
+<div class="opportunities">
+  <h3>&#11088; Detected Micro-Opportunities <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(auto-generated from signal derivatives)</span></h3>
+  <div class="opp-grid">
+    <div class="opp-card">
+      <div class="opp-title">Upsell: GPU Compute Tier</div>
+      <div class="opp-desc">GPU-Cluster account usage exceeded 85% capacity for 3 consecutive weeks. Adoption index accelerating +12pts/month.</div>
+      <div class="opp-meta">
+        <span class="opp-tag expansion">Expansion</span>
+        <span class="opp-tag phase">Baseline</span>
+        <span class="opp-confidence">Confidence: 87%</span>
+      </div>
+    </div>
+    <div class="opp-card">
+      <div class="opp-title">Premium Support Tier</div>
+      <div class="opp-desc">Support score recovered from 45 to 78 after SLA stabilization. Post-crisis window for premium support positioning.</div>
+      <div class="opp-meta">
+        <span class="opp-tag expansion">Expansion</span>
+        <span class="opp-tag retention">Retention</span>
+        <span class="opp-confidence">Confidence: 79%</span>
+      </div>
+    </div>
+    <div class="opp-card">
+      <div class="opp-title">Cross-sell: Monitoring Suite</div>
+      <div class="opp-desc">4 accounts uplifted to healthy. New department (ML-Training) requesting access. Natural cross-sell window.</div>
+      <div class="opp-meta">
+        <span class="opp-tag expansion">Expansion</span>
+        <span class="opp-tag engagement">Engagement</span>
+        <span class="opp-confidence">Confidence: 82%</span>
+      </div>
+    </div>
+    <div class="opp-card">
+      <div class="opp-title">Executive QBR: Case Study</div>
+      <div class="opp-desc">NPS reached 82 (new high) + 3 consecutive positive exec signals. Strong candidate for case study and reference.</div>
+      <div class="opp-meta">
+        <span class="opp-tag engagement">Engagement</span>
+        <span class="opp-tag phase">Expand</span>
+        <span class="opp-confidence">Confidence: 91%</span>
+      </div>
+    </div>
+    <div class="opp-card">
+      <div class="opp-title">Multi-Year Renewal at Premium</div>
+      <div class="opp-desc">90-day renewal window + health score 85+ + expansion signals active. Position 2-year deal at +15% uplift.</div>
+      <div class="opp-meta">
+        <span class="opp-tag expansion">Expansion</span>
+        <span class="opp-tag retention">Retention</span>
+        <span class="opp-confidence">Confidence: 88%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- HEALTH TRANSITION FLOW                       -->
+<!-- ============================================ -->
+<div class="transition-section">
+  <h3>Health Transition Flow (Month 1 &rarr; Month 2)</h3>
+  <div class="transition-grid">
+    <!-- M1 -->
+    <div class="transition-col">
+      <div class="col-label">Month 1</div>
+      <div class="transition-block green">4 <span class="block-pct">(20%)</span></div>
+      <div style="height:8px"></div>
+      <div class="transition-block orange">8 <span class="block-pct">(40%)</span></div>
+      <div style="height:8px"></div>
+      <div class="transition-block red">8 <span class="block-pct">(40%)</span></div>
+    </div>
+
+    <!-- Arrows -->
+    <div class="transition-col" style="min-width:100px;">
+      <div class="col-label">Flows</div>
+      <div class="transition-flow">
+        <div class="flow-label">1 fell</div>
+        <div class="flow-count down">&darr;</div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="transition-flow">
+        <div class="flow-count up">&uarr; 4</div>
+        <div class="flow-label">uplifted</div>
+      </div>
+      <div style="height:4px"></div>
+      <div class="transition-flow">
+        <div class="flow-label">+4 from critical</div>
+        <div class="flow-count down">&darr; +1 from healthy</div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="transition-flow">
+        <div class="flow-count up">&uarr; 4</div>
+        <div class="flow-label">uplifted</div>
+      </div>
+    </div>
+
+    <!-- M2 -->
+    <div class="transition-col">
+      <div class="col-label">Month 2</div>
+      <div class="transition-block green">7 <span class="block-pct">(35%)</span></div>
+      <div style="height:8px"></div>
+      <div class="transition-block orange">9 <span class="block-pct">(45%)</span></div>
+      <div style="height:8px"></div>
+      <div class="transition-block red">4 <span class="block-pct">(20%)</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- ACCOUNT TABLE                                -->
+<!-- ============================================ -->
+<div class="account-section">
+  <h3>Account Health Details (20 accounts)</h3>
+  <table class="account-table" id="account-table">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th>Phase</th>
+        <th>M1 Score</th>
+        <th>M2 Score</th>
+        <th>Status</th>
+        <th>Trend</th>
+        <th>Signals</th>
+        <th>Opportunities</th>
+      </tr>
+    </thead>
+    <tbody id="account-tbody">
+    </tbody>
+  </table>
+</div>
+
+<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:11px;border-top:1px solid var(--border);">
+  CS Pulse Signal Lanes Journey &mdash; Architecture Mockup &mdash; Not connected to live data
+</div>
+
+<script>
+// Account data
+const accounts = [
+  // 4 initially healthy
+  { name: 'Production',   m1: 92, m2: 92, m1s: 'excellent', m2s: 'excellent', trend: 'stable',    phase: 'Stabilize', signals: 8, opps: 1 },
+  { name: 'Staging',      m1: 88, m2: 90, m1s: 'excellent', m2s: 'excellent', trend: 'stable',    phase: 'Stabilize', signals: 5, opps: 0 },
+  { name: 'Development',  m1: 91, m2: 89, m1s: 'excellent', m2s: 'excellent', trend: 'stable',    phase: 'Stabilize', signals: 4, opps: 0 },
+  { name: 'QA',           m1: 87, m2: 58, m1s: 'excellent', m2s: 'warning',   trend: 'declining', phase: 'Baseline',  signals: 6, opps: 0 },  // fell
+
+  // 8 initially at-risk  (first 4 uplift to healthy)
+  { name: 'UAT',          m1: 56, m2: 88, m1s: 'warning', m2s: 'excellent', trend: 'improving', phase: 'Stabilize', signals: 7, opps: 1 },
+  { name: 'DR-Primary',   m1: 52, m2: 85, m1s: 'warning', m2s: 'excellent', trend: 'improving', phase: 'Stabilize', signals: 6, opps: 1 },
+  { name: 'DR-Secondary', m1: 60, m2: 90, m1s: 'warning', m2s: 'excellent', trend: 'improving', phase: 'Expand',    signals: 9, opps: 2 },
+  { name: 'Sandbox',      m1: 58, m2: 87, m1s: 'warning', m2s: 'excellent', trend: 'improving', phase: 'Stabilize', signals: 5, opps: 0 },
+  // (stay at-risk)
+  { name: 'Integration',  m1: 55, m2: 57, m1s: 'warning', m2s: 'warning', trend: 'stable',    phase: 'Baseline',  signals: 4, opps: 0 },
+  { name: 'Performance',  m1: 62, m2: 60, m1s: 'warning', m2s: 'warning', trend: 'stable',    phase: 'Baseline',  signals: 3, opps: 0 },
+  { name: 'Lab-1',        m1: 50, m2: 53, m1s: 'warning', m2s: 'warning', trend: 'stable',    phase: 'Baseline',  signals: 2, opps: 0 },
+  { name: 'Lab-2',        m1: 54, m2: 56, m1s: 'warning', m2s: 'warning', trend: 'stable',    phase: 'Baseline',  signals: 3, opps: 0 },
+
+  // 8 initially critical (first 4 uplift to at-risk)
+  { name: 'Edge-West',    m1: 28, m2: 55, m1s: 'critical', m2s: 'warning',  trend: 'improving', phase: 'Baseline',  signals: 5, opps: 0 },
+  { name: 'Edge-East',    m1: 32, m2: 58, m1s: 'critical', m2s: 'warning',  trend: 'improving', phase: 'Baseline',  signals: 5, opps: 0 },
+  { name: 'GPU-Cluster',  m1: 25, m2: 52, m1s: 'critical', m2s: 'warning',  trend: 'improving', phase: 'Baseline',  signals: 7, opps: 1 },
+  { name: 'HPC-Node-A',   m1: 30, m2: 56, m1s: 'critical', m2s: 'warning',  trend: 'improving', phase: 'Baseline',  signals: 4, opps: 0 },
+  // (stay critical)
+  { name: 'HPC-Node-B',   m1: 22, m2: 25, m1s: 'critical', m2s: 'critical', trend: 'stable',    phase: 'Baseline',  signals: 3, opps: 0 },
+  { name: 'Archive',      m1: 18, m2: 20, m1s: 'critical', m2s: 'critical', trend: 'stable',    phase: 'Baseline',  signals: 2, opps: 0 },
+  { name: 'Analytics',    m1: 35, m2: 33, m1s: 'critical', m2s: 'critical', trend: 'stable',    phase: 'Baseline',  signals: 4, opps: 0 },
+  { name: 'ML-Training',  m1: 28, m2: 30, m1s: 'critical', m2s: 'critical', trend: 'stable',    phase: 'Baseline',  signals: 3, opps: 0 },
+];
+
+// Render table
+const tbody = document.getElementById('account-tbody');
+accounts.forEach((a, i) => {
+  const statusClass = a.m2s === 'excellent' ? 'excellent' : a.m2s === 'warning' ? 'warning' : 'critical';
+  const trendIcon = a.trend === 'improving' ? '<span class="trend-arrow up">&uarr;</span>' :
+                    a.trend === 'declining' ? '<span class="trend-arrow down">&darr;</span>' :
+                    '<span class="trend-arrow flat">&minus;</span>';
+  const delta = a.m2 - a.m1;
+  const deltaStr = delta >= 0 ? `+${delta}` : `${delta}`;
+  const deltaColor = delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--text-muted)';
+
+  tbody.innerHTML += `<tr>
+    <td style="font-weight:600;">${a.name}</td>
+    <td><span class="phase-badge">${a.phase}</span></td>
+    <td>${a.m1}</td>
+    <td>${a.m2} <span style="font-size:10px;color:${deltaColor}">(${deltaStr})</span></td>
+    <td><span class="health-pill ${statusClass}">${a.m2s}</span></td>
+    <td>${trendIcon} ${a.trend}</td>
+    <td>${a.signals}</td>
+    <td>${a.opps > 0 ? '<span style="color:var(--yellow);">' + '&#11088;'.repeat(a.opps) + '</span>' : '<span style="color:var(--text-muted);">&mdash;</span>'}</td>
+  </tr>`;
+});
+
+// Lens switcher
+function switchLens(el, lens) {
+  document.querySelectorAll('.lens-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+
+  // Show/hide lanes based on lens
+  const laneVisibility = {
+    'all':       ['adoption', 'support', 'sentiment', 'financial', 'expansion'],
+    'csm':       ['adoption', 'sentiment', 'expansion'],
+    'product':   ['adoption'],
+    'finance':   ['financial', 'expansion'],
+    'support':   ['support'],
+    'executive': ['adoption', 'financial', 'expansion'],
+  };
+
+  const visibleLanes = laneVisibility[lens] || laneVisibility['all'];
+
+  document.querySelectorAll('.lane').forEach(lane => {
+    const laneType = lane.getAttribute('data-lane');
+    lane.style.display = visibleLanes.includes(laneType) ? 'flex' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>
