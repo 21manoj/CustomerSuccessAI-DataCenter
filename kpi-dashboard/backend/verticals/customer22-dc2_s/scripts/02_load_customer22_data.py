@@ -9,11 +9,18 @@ import os
 from sqlalchemy import create_engine, text
 from datetime import datetime
 import sys
+from werkzeug.security import generate_password_hash
 
 # Configuration
 DATABASE_URL = os.getenv('DATABASE_URL')
 DATA_DIR = './data'
 CUSTOMER_ID = 22
+
+# Admin user credentials for Customer 22 (LoadTest-Merritt-Wong)
+ADMIN_EMAIL = "admin@merritt-wong.com"
+ADMIN_PASSWORD = "MerrittWong2026x"
+ADMIN_USERNAME = "Admin"
+HASH_METHOD = "pbkdf2:sha256"
 
 # File mapping
 FILES = {
@@ -107,6 +114,8 @@ def delete_customer22_data(engine):
         ("kpi_definitions", "DELETE FROM kpi_definitions"),  # Assuming Customer 22 specific
         ("products", "DELETE FROM products WHERE product_id IN ('PRD-001', 'PRD-002', 'PRD-003', 'PRD-004', 'PRD-005', 'PRD-006', 'PRD-007')"),
         ("partner_definitions", "DELETE FROM partner_definitions WHERE partner_id IN ('P001', 'P002', 'P003', 'P004')"),
+        # Delete users for this customer before deleting the customer record (FK: customer_id)
+        ("users", "DELETE FROM users WHERE customer_id = :cid"),
         ("customers", "DELETE FROM customers WHERE customer_id = :cid"),
     ]
     
@@ -278,22 +287,77 @@ def verify_integrity(engine):
         print(f"❌ Verification error: {e}")
         return False
 
+def create_admin_user(engine):
+    """Create or update admin user for Customer 22 (LoadTest-Merritt-Wong)"""
+    print()
+    print("=" * 80)
+    print("CREATING ADMIN USER FOR CUSTOMER 22")
+    print("=" * 80)
+    print()
+
+    try:
+        with engine.connect() as conn:
+            existing = conn.execute(
+                text("SELECT user_id, email, active FROM users WHERE email = :email"),
+                {"email": ADMIN_EMAIL}
+            ).fetchone()
+
+            pw_hash = generate_password_hash(ADMIN_PASSWORD, method=HASH_METHOD)
+
+            if existing:
+                conn.execute(
+                    text("""
+                        UPDATE users
+                        SET password_hash = :pw, active = TRUE, customer_id = :cid
+                        WHERE email = :email
+                    """),
+                    {"pw": pw_hash, "cid": CUSTOMER_ID, "email": ADMIN_EMAIL}
+                )
+                conn.commit()
+                print(f"   ✅ Updated existing user (user_id={existing.user_id})")
+            else:
+                conn.execute(
+                    text("""
+                        INSERT INTO users (user_name, email, customer_id, password_hash, active, vertical)
+                        VALUES (:uname, :email, :cid, :pw, TRUE, 'dc2_s')
+                    """),
+                    {
+                        "uname": ADMIN_USERNAME,
+                        "email": ADMIN_EMAIL,
+                        "cid": CUSTOMER_ID,
+                        "pw": pw_hash,
+                    }
+                )
+                conn.commit()
+                print(f"   ✅ Created new admin user")
+
+            print(f"   Email:       {ADMIN_EMAIL}")
+            print(f"   Password:    {ADMIN_PASSWORD}")
+            print(f"   Customer ID: {CUSTOMER_ID}")
+            print(f"   Vertical:    dc2_s")
+            return True
+
+    except Exception as e:
+        print(f"   ❌ Failed to create admin user: {e}")
+        return False
+
+
 def main():
     print_header()
-    
+
     # Check database
     engine = check_database()
     print()
-    
+
     # Check for existing data
     has_existing = check_existing_data(engine)
-    
+
     # Delete existing data if found
     if has_existing:
         if not delete_customer22_data(engine):
             print("❌ Failed to delete existing data. Aborting.")
             sys.exit(1)
-    
+
     # Start data load
     print()
     print("=" * 80)
@@ -331,10 +395,13 @@ def main():
         print("⚠️  WARNING: Some tables failed to load")
         print("Review errors above")
     
+    # Create admin user for Customer 22
+    create_admin_user(engine)
+
     # Verify integrity
     print()
     integrity_ok = verify_integrity(engine)
-    
+
     # Final status
     print()
     print("=" * 80)
@@ -346,11 +413,15 @@ def main():
         print("❌ FAILURE: Some tables failed to load")
     print("=" * 80)
     print()
-    
+
     if success_count == len(FILES) and integrity_ok:
         print("Next steps:")
         print("  1. Generate embeddings: python3 scripts/03_embed_signals_qdrant.py")
         print("  2. Validate: python3 scripts/04_validate_data_integrity.py")
+        print()
+        print("Login credentials:")
+        print(f"  Email:    {ADMIN_EMAIL}")
+        print(f"  Password: {ADMIN_PASSWORD}")
         print()
 
 if __name__ == "__main__":
