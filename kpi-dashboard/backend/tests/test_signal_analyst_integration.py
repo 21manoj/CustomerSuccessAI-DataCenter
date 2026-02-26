@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from extensions import db
-from app import app
+from app_v3_minimal import app
 from models import Account, KPI, AccountNote, Customer, CustomerConfig
 from agents import SignalAnalystAgent, SignalAnalystInput, SignalData
 from agents.vertical_mapper import map_vertical_to_agent_type

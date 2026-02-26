@@ -1,5 +1,6 @@
 from extensions import db
 from datetime import datetime
+from sqlalchemy.orm import validates
 
 # Import product analytics models
 try:
@@ -188,6 +189,9 @@ class KPI(db.Model):
     last_edited_by = db.Column(db.Integer, db.ForeignKey('users.user_id'))
     last_edited_at = db.Column(db.DateTime, index=True)
     
+    # Valid aggregation types
+    VALID_AGGREGATION_TYPES = {'weighted_avg', 'max', 'min', 'avg', 'sum', None}
+
     # Composite indexes for common query patterns
     __table_args__ = (
         db.Index('idx_kpi_account_category', 'account_id', 'category'),
@@ -195,6 +199,29 @@ class KPI(db.Model):
         db.Index('idx_kpi_account_aggregation', 'account_id', 'aggregation_type'),
         db.Index('idx_kpi_upload_account', 'upload_id', 'account_id'),
     )
+
+    @validates('aggregation_type')
+    def validate_aggregation_type(self, key, value):
+        if value is not None and value not in self.VALID_AGGREGATION_TYPES:
+            raise ValueError(
+                f"Invalid aggregation_type '{value}'. "
+                f"Valid types: {sorted(t for t in self.VALID_AGGREGATION_TYPES if t)}"
+            )
+        if value is not None and self.product_id is not None:
+            raise ValueError(
+                "product_id and aggregation_type cannot both be set. "
+                "Product-level KPIs must have aggregation_type=NULL."
+            )
+        return value
+
+    @validates('product_id')
+    def validate_product_id(self, key, value):
+        if value is not None and self.aggregation_type is not None:
+            raise ValueError(
+                "product_id and aggregation_type cannot both be set. "
+                "Product-level KPIs must have aggregation_type=NULL."
+            )
+        return value
 
 class HealthTrend(db.Model):
     __tablename__ = 'health_trends'

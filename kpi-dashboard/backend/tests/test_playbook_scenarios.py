@@ -6,7 +6,8 @@ Tests all 5 playbooks with 2 scenarios each using realistic seed data
 
 import pytest
 import json
-from app import app, db
+from app_v3_minimal import app
+from extensions import db
 from seed_data import seed_all_scenarios
 
 @pytest.fixture

@@ -7,7 +7,8 @@ Tests all playbook trigger endpoints and evaluation logic
 import pytest
 import json
 from datetime import datetime, timedelta
-from app import app, db
+from app_v3_minimal import app
+from extensions import db
 from models import PlaybookTrigger, Account, Customer, KPI, User
 
 @pytest.fixture

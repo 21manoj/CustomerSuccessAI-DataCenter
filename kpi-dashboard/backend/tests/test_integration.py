@@ -7,7 +7,8 @@ Tests end-to-end workflows and integration between components
 import pytest
 import json
 from datetime import datetime
-from app import app, db
+from app_v3_minimal import app
+from extensions import db
 from models import PlaybookTrigger, Account, Customer, KPI
 
 @pytest.fixture

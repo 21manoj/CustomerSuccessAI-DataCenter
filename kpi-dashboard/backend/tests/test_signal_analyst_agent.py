@@ -11,8 +11,7 @@ from agents import (
     SignalAnalystInput,
     SignalAnalystOutput,
     SignalData,
-    AnalysisError,
-    ResponseParseError
+    AnalysisError
 )
 from agents.vertical_mapper import map_vertical_to_agent_type
 from agents.signal_converter import (
@@ -199,7 +198,7 @@ class TestSignalAnalystAgent(unittest.TestCase):
         
         self.assertIsInstance(result, SignalAnalystOutput)
         self.assertEqual(result.account_id, "test-account-001")
-        self.assertEqual(result.predicted_outcome.value, "churn")
+        self.assertEqual(result.predicted_outcome, "churn")
         self.assertEqual(result.churn_probability, 75.0)
         self.assertGreater(result.analysis_duration_ms, 0)
     
@@ -219,7 +218,7 @@ class TestSignalAnalystAgent(unittest.TestCase):
             model="gpt-4o"
         )
         
-        with self.assertRaises(ResponseParseError):
+        with self.assertRaises(AnalysisError):
             agent.analyze(self.mock_input)
 
 

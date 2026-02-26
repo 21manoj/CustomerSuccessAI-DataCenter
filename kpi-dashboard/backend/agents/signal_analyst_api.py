@@ -24,6 +24,7 @@ from .signal_converter import convert_database_models_to_signals
 from .signal_deduplicator import deduplicate_signals
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 

@@ -27,30 +27,31 @@ def test_client():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     
     with app.test_client() as client:
-            with app.app_context():
-                # Create all tables
-                db.create_all()
-                
-                # Create test customer
-                import uuid
-                unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
-                customer = Customer(
-                    customer_name="Test Customer",
-                    email=unique_email
-                )
-                db.session.add(customer)
-                db.session.commit()
-            
+        with app.app_context():
+            # Create all tables
+            db.create_all()
+
+            # Create test customer
+            import uuid
+            unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+            customer = Customer(
+                customer_name="Test Customer",
+                email=unique_email
+            )
+            db.session.add(customer)
+            db.session.commit()
+
             # Create test user
+            unique_user_email = f"testuser_{uuid.uuid4().hex[:8]}@example.com"
             user = User(
                 customer_id=customer.customer_id,
-                user_name="testuser",
-                email="testuser@example.com",
+                user_name=f"testuser_{uuid.uuid4().hex[:6]}",
+                email=unique_user_email,
                 password_hash="dummy_hash"
             )
             db.session.add(user)
             db.session.commit()
-            
+
             # Create test account
             account = Account(
                 customer_id=customer.customer_id,
@@ -77,7 +78,7 @@ def test_client():
             )
             db.session.add(account)
             db.session.commit()
-            
+
             # Create test product
             product = Product(
                 account_id=account.account_id,
@@ -88,7 +89,7 @@ def test_client():
             )
             db.session.add(product)
             db.session.commit()
-            
+
             # Create KPI upload
             kpi_upload = KPIUpload(
                 customer_id=customer.customer_id,
@@ -98,7 +99,7 @@ def test_client():
             )
             db.session.add(kpi_upload)
             db.session.commit()
-            
+
             # Create test KPIs
             kpi1 = KPI(
                 upload_id=kpi_upload.upload_id,
@@ -128,7 +129,7 @@ def test_client():
             )
             db.session.add_all([kpi1, kpi2])
             db.session.commit()
-            
+
             # Create health trend
             health_trend = HealthTrend(
                 customer_id=customer.customer_id,
@@ -144,9 +145,9 @@ def test_client():
             )
             db.session.add(health_trend)
             db.session.commit()
-            
+
             yield client, customer, account, user
-            
+
             # Cleanup
             db.drop_all()
 

@@ -36,6 +36,7 @@ VERTICAL_PREFIXES = {
     'datacenter': 'dc',
     'data_center': 'dc',
     'dc': 'dc',
+    'dc2_s': 'dc',
     'msp': 'msp',
 }
 

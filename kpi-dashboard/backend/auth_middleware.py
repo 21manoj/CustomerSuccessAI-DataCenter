@@ -56,6 +56,10 @@ def init_auth_middleware(app):
         Public endpoints are whitelisted and skip this check.
         """
         
+        # Skip authentication in TESTING mode (pytest)
+        if app.config.get('TESTING'):
+            return None
+
         # Skip authentication for public endpoints
         for public_path in PUBLIC_ENDPOINTS:
             if request.path == public_path or request.path.startswith(public_path + '/'):

@@ -264,8 +264,8 @@ class TestMultiProductKPIs:
             aggregation_type="weighted_avg"
         )
         
-        db_session.add_all([kpi_p1_ttfv, kpi_p2_ttfv, kpi_account_ttfv])
-        db_session.commit()
+        db.session.add_all([kpi_p1_ttfv, kpi_p2_ttfv, kpi_account_ttfv])
+        db.session.commit()
         
         # Calculate health score
         service = HealthScoreStorageService()
@@ -299,8 +299,8 @@ class TestMultiProductKPIs:
             product_name="Test Product",
             revenue=50000
         )
-        db_session.add_all([account, product])
-        db_session.commit()
+        db.session.add_all([account, product])
+        db.session.commit()
         
         # Test 1: product_id NOT NULL + aggregation_type NOT NULL → Should FAIL
         with pytest.raises(ValueError) as exc_info:
