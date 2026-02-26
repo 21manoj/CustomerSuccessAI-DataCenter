@@ -1,0 +1,842 @@
+{
+  "patterns": [
+    {
+      "account_id": "22001",
+      "account_name": "Account 22001",
+      "archetype": "churn_risk",
+      "archetype_name": "Churn Risk",
+      "trajectory": {
+        "trajectory_type": "declining",
+        "health_change": -37.510000000000005,
+        "volatility": 2.077690835876734,
+        "turning_points": 0,
+        "avg_health": 45.24375,
+        "min_health": 30.27,
+        "max_health": 67.78
+      },
+      "event_patterns": {
+        "total_events": 23,
+        "event_types": {
+          "contract_discussion": 3,
+          "outage": 5,
+          "escalation": 6,
+          "support_ticket": 3,
+          "executive_engagement": 5,
+          "budget_review": 1
+        },
+        "sentiment_distribution": {
+          "negative": 3,
+          "very_negative": 20
+        },
+        "avg_impact": 1.5765217391304351
+      },
+      "risk_indicators": [
+        "critically_low_health",
+        "significant_health_decline"
+      ],
+      "risk_level": "high",
+      "starting_health": 70,
+      "ending_health": 15
+    },
+    {
+      "account_id": "22002",
+      "account_name": "Account 22002",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 1.9500000000000028,
+        "volatility": 5.507842235426019,
+        "turning_points": 4,
+        "avg_health": 81.88844036697247,
+        "min_health": 34.9,
+        "max_health": 94.2
+      },
+      "event_patterns": {
+        "total_events": 108,
+        "event_types": {
+          "meeting": 10,
+          "support_ticket": 4,
+          "budget_review": 5,
+          "escalation": 5,
+          "outage": 4,
+          "executive_engagement": 2,
+          "contract_discussion": 29,
+          "milestone": 25,
+          "technical_issue": 3,
+          "champion_interaction": 5,
+          "expansion_discussion": 16
+        },
+        "sentiment_distribution": {
+          "positive": 12,
+          "very_negative": 17,
+          "negative": 7,
+          "neutral": 6,
+          "very_positive": 66
+        },
+        "avg_impact": 2.935370370370371
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 89.91,
+      "ending_health": 91.91
+    },
+    {
+      "account_id": "22003",
+      "account_name": "Account 22003",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 2.049999999999997,
+        "volatility": 5.752511652424184,
+        "turning_points": 4,
+        "avg_health": 80.1202,
+        "min_health": 34.85,
+        "max_health": 93.66
+      },
+      "event_patterns": {
+        "total_events": 99,
+        "event_types": {
+          "qbr": 1,
+          "expansion_discussion": 13,
+          "escalation": 3,
+          "outage": 4,
+          "support_ticket": 8,
+          "executive_engagement": 4,
+          "budget_review": 5,
+          "contract_discussion": 20,
+          "milestone": 28,
+          "technical_issue": 4,
+          "champion_interaction": 6,
+          "meeting": 3
+        },
+        "sentiment_distribution": {
+          "very_positive": 57,
+          "very_negative": 19,
+          "negative": 6,
+          "positive": 14,
+          "neutral": 3
+        },
+        "avg_impact": 4.2754545454545445
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 89.99,
+      "ending_health": 92.05
+    },
+    {
+      "account_id": "22004",
+      "account_name": "Account 22004",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 5.810000000000002,
+        "volatility": 5.7282327020547,
+        "turning_points": 6,
+        "avg_health": 82.56247524752476,
+        "min_health": 34.94,
+        "max_health": 95.81
+      },
+      "event_patterns": {
+        "total_events": 100,
+        "event_types": {
+          "expansion_discussion": 18,
+          "escalation": 5,
+          "budget_review": 4,
+          "support_ticket": 5,
+          "executive_engagement": 2,
+          "outage": 1,
+          "contract_discussion": 23,
+          "milestone": 27,
+          "technical_issue": 3,
+          "meeting": 6,
+          "champion_interaction": 6
+        },
+        "sentiment_distribution": {
+          "very_positive": 60,
+          "very_negative": 17,
+          "negative": 6,
+          "neutral": 4,
+          "positive": 13
+        },
+        "avg_impact": 3.6014000000000004
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 90.13,
+      "ending_health": 95.81
+    },
+    {
+      "account_id": "22005",
+      "account_name": "Account 22005",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.5227659087988608,
+        "turning_points": 0,
+        "avg_health": 92.05958904109589,
+        "min_health": 74.33,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 145,
+        "event_types": {
+          "meeting": 8,
+          "milestone": 43,
+          "expansion_discussion": 37,
+          "qbr": 9,
+          "champion_interaction": 13,
+          "contract_discussion": 35
+        },
+        "sentiment_distribution": {
+          "positive": 8,
+          "very_positive": 137
+        },
+        "avg_impact": 0.5751034482758626
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22006",
+      "account_name": "Account 22006",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.48508691880529164,
+        "turning_points": 0,
+        "avg_health": 93.29263513513514,
+        "min_health": 75,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 147,
+        "event_types": {
+          "meeting": 5,
+          "milestone": 46,
+          "champion_interaction": 19,
+          "expansion_discussion": 35,
+          "qbr": 4,
+          "contract_discussion": 38
+        },
+        "sentiment_distribution": {
+          "positive": 5,
+          "very_positive": 142
+        },
+        "avg_impact": 0.546598639455782
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22007",
+      "account_name": "Account 22007",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.48710467317777584,
+        "turning_points": 0,
+        "avg_health": 93.2877027027027,
+        "min_health": 74.96,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 147,
+        "event_types": {
+          "expansion_discussion": 39,
+          "meeting": 7,
+          "qbr": 9,
+          "milestone": 29,
+          "champion_interaction": 19,
+          "contract_discussion": 44
+        },
+        "sentiment_distribution": {
+          "very_positive": 140,
+          "positive": 7
+        },
+        "avg_impact": 0.5109523809523809
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22008",
+      "account_name": "Account 22008",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.524585678042586,
+        "turning_points": 2,
+        "avg_health": 92.73241134751773,
+        "min_health": 75,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 140,
+        "event_types": {
+          "champion_interaction": 18,
+          "qbr": 7,
+          "meeting": 6,
+          "expansion_discussion": 31,
+          "milestone": 37,
+          "contract_discussion": 41
+        },
+        "sentiment_distribution": {
+          "very_positive": 134,
+          "positive": 6
+        },
+        "avg_impact": 0.5671428571428568
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22009",
+      "account_name": "Account 22009",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 2.4099999999999966,
+        "volatility": 5.7352893236751905,
+        "turning_points": 9,
+        "avg_health": 81.75415841584159,
+        "min_health": 34.66,
+        "max_health": 93.73
+      },
+      "event_patterns": {
+        "total_events": 100,
+        "event_types": {
+          "qbr": 1,
+          "budget_review": 6,
+          "outage": 2,
+          "escalation": 2,
+          "executive_engagement": 4,
+          "support_ticket": 3,
+          "contract_discussion": 19,
+          "milestone": 32,
+          "meeting": 6,
+          "technical_issue": 3,
+          "expansion_discussion": 16,
+          "champion_interaction": 6
+        },
+        "sentiment_distribution": {
+          "very_positive": 59,
+          "very_negative": 16,
+          "positive": 15,
+          "neutral": 8,
+          "negative": 2
+        },
+        "avg_impact": 4.186100000000001
+      },
+      "risk_indicators": [
+        "unstable_trajectory"
+      ],
+      "risk_level": "high",
+      "starting_health": 89.92,
+      "ending_health": 92.33
+    },
+    {
+      "account_id": "22010",
+      "account_name": "Account 22010",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 4.710000000000008,
+        "volatility": 5.808628278563049,
+        "turning_points": 4,
+        "avg_health": 82.16591836734693,
+        "min_health": 35.35,
+        "max_health": 96.01
+      },
+      "event_patterns": {
+        "total_events": 97,
+        "event_types": {
+          "outage": 7,
+          "executive_engagement": 1,
+          "support_ticket": 5,
+          "budget_review": 5,
+          "escalation": 2,
+          "contract_discussion": 23,
+          "milestone": 25,
+          "champion_interaction": 9,
+          "meeting": 6,
+          "technical_issue": 6,
+          "expansion_discussion": 8
+        },
+        "sentiment_distribution": {
+          "very_negative": 18,
+          "negative": 4,
+          "positive": 16,
+          "neutral": 5,
+          "very_positive": 54
+        },
+        "avg_impact": 4.24701030927835
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 90.12,
+      "ending_health": 95.06
+    },
+    {
+      "account_id": "22011",
+      "account_name": "Account 22011",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 4.0,
+        "volatility": 5.8421194183485845,
+        "turning_points": 5,
+        "avg_health": 82.46103092783505,
+        "min_health": 35.21,
+        "max_health": 95.21
+      },
+      "event_patterns": {
+        "total_events": 96,
+        "event_types": {
+          "qbr": 1,
+          "support_ticket": 5,
+          "escalation": 6,
+          "executive_engagement": 2,
+          "budget_review": 4,
+          "milestone": 23,
+          "contract_discussion": 22,
+          "meeting": 7,
+          "technical_issue": 6,
+          "champion_interaction": 7,
+          "expansion_discussion": 13
+        },
+        "sentiment_distribution": {
+          "very_positive": 55,
+          "very_negative": 14,
+          "neutral": 6,
+          "negative": 3,
+          "positive": 18
+        },
+        "avg_impact": 3.217812499999999
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 90.14,
+      "ending_health": 94.21
+    },
+    {
+      "account_id": "22012",
+      "account_name": "Account 22012",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 5.299999999999997,
+        "volatility": 5.832215427969514,
+        "turning_points": 5,
+        "avg_health": 83.58567010309278,
+        "min_health": 35.05,
+        "max_health": 95.37
+      },
+      "event_patterns": {
+        "total_events": 96,
+        "event_types": {
+          "qbr": 1,
+          "support_ticket": 3,
+          "budget_review": 3,
+          "outage": 4,
+          "escalation": 6,
+          "executive_engagement": 1,
+          "contract_discussion": 23,
+          "milestone": 19,
+          "technical_issue": 7,
+          "meeting": 3,
+          "champion_interaction": 10,
+          "expansion_discussion": 16
+        },
+        "sentiment_distribution": {
+          "very_positive": 60,
+          "very_negative": 15,
+          "negative": 3,
+          "positive": 16,
+          "neutral": 2
+        },
+        "avg_impact": 4.0801041666666675
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 89.91,
+      "ending_health": 95.21
+    },
+    {
+      "account_id": "22013",
+      "account_name": "Account 22013",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.5239826203557918,
+        "turning_points": 3,
+        "avg_health": 92.59685314685315,
+        "min_health": 75,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 142,
+        "event_types": {
+          "qbr": 8,
+          "milestone": 43,
+          "meeting": 6,
+          "expansion_discussion": 34,
+          "champion_interaction": 11,
+          "contract_discussion": 40
+        },
+        "sentiment_distribution": {
+          "very_positive": 136,
+          "positive": 6
+        },
+        "avg_impact": 0.5207042253521128
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22014",
+      "account_name": "Account 22014",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 2.1899999999999977,
+        "volatility": 5.696385357278232,
+        "turning_points": 6,
+        "avg_health": 80.6828431372549,
+        "min_health": 35.07,
+        "max_health": 94.34
+      },
+      "event_patterns": {
+        "total_events": 101,
+        "event_types": {
+          "meeting": 5,
+          "qbr": 1,
+          "support_ticket": 4,
+          "executive_engagement": 3,
+          "budget_review": 8,
+          "outage": 4,
+          "escalation": 2,
+          "contract_discussion": 27,
+          "milestone": 22,
+          "champion_interaction": 9,
+          "technical_issue": 2,
+          "expansion_discussion": 14
+        },
+        "sentiment_distribution": {
+          "positive": 17,
+          "very_positive": 58,
+          "very_negative": 19,
+          "negative": 5,
+          "neutral": 2
+        },
+        "avg_impact": 4.202079207920791
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 90.07,
+      "ending_health": 92.19
+    },
+    {
+      "account_id": "22015",
+      "account_name": "Account 22015",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.49963167261380387,
+        "turning_points": 0,
+        "avg_health": 92.58343065693431,
+        "min_health": 75,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 136,
+        "event_types": {
+          "qbr": 2,
+          "expansion_discussion": 31,
+          "champion_interaction": 19,
+          "meeting": 4,
+          "milestone": 43,
+          "contract_discussion": 37
+        },
+        "sentiment_distribution": {
+          "very_positive": 132,
+          "positive": 4
+        },
+        "avg_impact": 0.5475000000000003
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22016",
+      "account_name": "Account 22016",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.5067892494175464,
+        "turning_points": 2,
+        "avg_health": 93.7883660130719,
+        "min_health": 75,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 152,
+        "event_types": {
+          "meeting": 7,
+          "qbr": 8,
+          "expansion_discussion": 33,
+          "milestone": 49,
+          "contract_discussion": 41,
+          "champion_interaction": 14
+        },
+        "sentiment_distribution": {
+          "positive": 7,
+          "very_positive": 145
+        },
+        "avg_impact": 0.5338815789473681
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22017",
+      "account_name": "Account 22017",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 23,
+        "volatility": 0.5266704710586537,
+        "turning_points": 5,
+        "avg_health": 92.42265151515151,
+        "min_health": 75,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 131,
+        "event_types": {
+          "champion_interaction": 23,
+          "qbr": 5,
+          "meeting": 6,
+          "expansion_discussion": 29,
+          "contract_discussion": 32,
+          "milestone": 36
+        },
+        "sentiment_distribution": {
+          "very_positive": 125,
+          "positive": 6
+        },
+        "avg_impact": 0.5418320610687016
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 98
+    },
+    {
+      "account_id": "22018",
+      "account_name": "Account 22018",
+      "archetype": "expansion_ready",
+      "archetype_name": "Expansion Ready",
+      "trajectory": {
+        "trajectory_type": "improving",
+        "health_change": 22.709999999999994,
+        "volatility": 0.5457535425591136,
+        "turning_points": 2,
+        "avg_health": 91.42872180451128,
+        "min_health": 74.4,
+        "max_health": 98
+      },
+      "event_patterns": {
+        "total_events": 132,
+        "event_types": {
+          "meeting": 10,
+          "expansion_discussion": 34,
+          "qbr": 8,
+          "milestone": 35,
+          "champion_interaction": 12,
+          "contract_discussion": 33
+        },
+        "sentiment_distribution": {
+          "positive": 10,
+          "very_positive": 122
+        },
+        "avg_impact": 0.5819696969696967
+      },
+      "risk_indicators": [],
+      "risk_level": "very_low",
+      "starting_health": 75,
+      "ending_health": 97.71
+    },
+    {
+      "account_id": "22019",
+      "account_name": "Account 22019",
+      "archetype": "volatile_uncertain",
+      "archetype_name": "Volatile/Uncertain",
+      "trajectory": {
+        "trajectory_type": "volatile",
+        "health_change": 4.1200000000000045,
+        "volatility": 5.911950919082534,
+        "turning_points": 6,
+        "avg_health": 79.76126315789473,
+        "min_health": 34.94,
+        "max_health": 95.04
+      },
+      "event_patterns": {
+        "total_events": 94,
+        "event_types": {
+          "escalation": 5,
+          "budget_review": 8,
+          "executive_engagement": 3,
+          "outage": 3,
+          "support_ticket": 3,
+          "contract_discussion": 24,
+          "milestone": 24,
+          "meeting": 6,
+          "technical_issue": 3,
+          "champion_interaction": 6,
+          "expansion_discussion": 9
+        },
+        "sentiment_distribution": {
+          "very_negative": 19,
+          "negative": 5,
+          "positive": 15,
+          "neutral": 3,
+          "very_positive": 52
+        },
+        "avg_impact": 3.930212765957447
+      },
+      "risk_indicators": [],
+      "risk_level": "high",
+      "starting_health": 89.96,
+      "ending_health": 94.06
+    },
+    {
+      "account_id": "22020",
+      "account_name": "Account 22020",
+      "archetype": "churn_risk",
+      "archetype_name": "Churn Risk",
+      "trajectory": {
+        "trajectory_type": "declining",
+        "health_change": -39.53,
+        "volatility": 1.5166089696419507,
+        "turning_points": 0,
+        "avg_health": 46.83416666666667,
+        "min_health": 30.47,
+        "max_health": 70
+      },
+      "event_patterns": {
+        "total_events": 23,
+        "event_types": {
+          "budget_review": 8,
+          "milestone": 1,
+          "contract_discussion": 1,
+          "outage": 4,
+          "support_ticket": 4,
+          "escalation": 4,
+          "executive_engagement": 1
+        },
+        "sentiment_distribution": {
+          "negative": 5,
+          "neutral": 1,
+          "positive": 1,
+          "very_negative": 16
+        },
+        "avg_impact": 1.359565217391305
+      },
+      "risk_indicators": [
+        "critically_low_health",
+        "significant_health_decline"
+      ],
+      "risk_level": "high",
+      "starting_health": 70,
+      "ending_health": 15
+    }
+  ],
+  "insights": {
+    "total_journeys": 20,
+    "pattern_distribution": {
+      "churn_risk": 2,
+      "volatile_uncertain": 9,
+      "expansion_ready": 9
+    },
+    "risk_distribution": {
+      "high": 11,
+      "very_low": 9
+    },
+    "trajectory_distribution": {
+      "declining": 2,
+      "volatile": 9,
+      "improving": 9
+    },
+    "health_statistics": {
+      "starting": {
+        "mean": 81.2575,
+        "median": 75.0,
+        "min": 70,
+        "max": 90.14
+      },
+      "ending": {
+        "mean": 87.727,
+        "median": 95.50999999999999,
+        "min": 15,
+        "max": 98
+      },
+      "change": {
+        "mean": 6.4695,
+        "median": 5.490000000000002,
+        "positive_changes": 18,
+        "negative_changes": 2
+      }
+    },
+    "common_risk_indicators": [
+      {
+        "risk": "critically_low_health",
+        "count": 2
+      },
+      {
+        "risk": "significant_health_decline",
+        "count": 2
+      },
+      {
+        "risk": "unstable_trajectory",
+        "count": 1
+      }
+    ]
+  }
+}

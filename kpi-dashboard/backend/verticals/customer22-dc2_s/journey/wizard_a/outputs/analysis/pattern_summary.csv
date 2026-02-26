@@ -1,0 +1,21 @@
+account_id,account_name,archetype,archetype_name,starting_health,ending_health,health_change,trajectory_type,volatility,risk_level,total_events,risk_indicators
+22001,Account 22001,churn_risk,Churn Risk,70,15,-55,declining,2.08,high,23,critically_low_health; significant_health_decline
+22002,Account 22002,volatile_uncertain,Volatile/Uncertain,89.91,91.91,2.0,volatile,5.51,high,108,
+22003,Account 22003,volatile_uncertain,Volatile/Uncertain,89.99,92.05,2.0600000000000023,volatile,5.75,high,99,
+22004,Account 22004,volatile_uncertain,Volatile/Uncertain,90.13,95.81,5.680000000000007,volatile,5.73,high,100,
+22005,Account 22005,expansion_ready,Expansion Ready,75,98,23,improving,0.52,very_low,145,
+22006,Account 22006,expansion_ready,Expansion Ready,75,98,23,improving,0.49,very_low,147,
+22007,Account 22007,expansion_ready,Expansion Ready,75,98,23,improving,0.49,very_low,147,
+22008,Account 22008,expansion_ready,Expansion Ready,75,98,23,improving,0.52,very_low,140,
+22009,Account 22009,volatile_uncertain,Volatile/Uncertain,89.92,92.33,2.4099999999999966,volatile,5.74,high,100,unstable_trajectory
+22010,Account 22010,volatile_uncertain,Volatile/Uncertain,90.12,95.06,4.939999999999998,volatile,5.81,high,97,
+22011,Account 22011,volatile_uncertain,Volatile/Uncertain,90.14,94.21,4.069999999999993,volatile,5.84,high,96,
+22012,Account 22012,volatile_uncertain,Volatile/Uncertain,89.91,95.21,5.299999999999997,volatile,5.83,high,96,
+22013,Account 22013,expansion_ready,Expansion Ready,75,98,23,improving,0.52,very_low,142,
+22014,Account 22014,volatile_uncertain,Volatile/Uncertain,90.07,92.19,2.1200000000000045,volatile,5.70,high,101,
+22015,Account 22015,expansion_ready,Expansion Ready,75,98,23,improving,0.50,very_low,136,
+22016,Account 22016,expansion_ready,Expansion Ready,75,98,23,improving,0.51,very_low,152,
+22017,Account 22017,expansion_ready,Expansion Ready,75,98,23,improving,0.53,very_low,131,
+22018,Account 22018,expansion_ready,Expansion Ready,75,97.71,22.709999999999994,improving,0.55,very_low,132,
+22019,Account 22019,volatile_uncertain,Volatile/Uncertain,89.96,94.06,4.1000000000000085,volatile,5.91,high,94,
+22020,Account 22020,churn_risk,Churn Risk,70,15,-55,declining,1.52,high,23,critically_low_health; significant_health_decline
