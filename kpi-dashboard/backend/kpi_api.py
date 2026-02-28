@@ -216,6 +216,10 @@ def get_accounts():
         })
         
     except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         logger.error(f"Error getting accounts: {e}", exc_info=True)
         return jsonify({'error': 'Failed to get accounts'}), 500
 

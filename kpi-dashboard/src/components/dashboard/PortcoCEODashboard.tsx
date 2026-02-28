@@ -6,14 +6,13 @@ import {
   SlidersHorizontal, ChevronDown, ChevronUp
 } from 'lucide-react';
 import {
-  listPortfolios, getPortfolio, getPortfolioImpact, getSliderData,
+  listPortfolios, getPortfolio, getPortfolioImpact, getPowerOf1Impact,
   getPortfolioConfig, updatePortfolioConfig, createPortfolio,
-  addPortfolioCompany, removePortfolioCompany,
+  addPortfolioCompany, removePortfolioCompany, getAvailableCustomersForPortfolio,
   type PortfolioResult, type PortfolioSummary, type PortfolioCompanyInfo,
-  type SliderData, type SliderPoint, type PortfolioConfig,
-  type CompanyResult, type CostInputs, type SynergyOverride,
+  type PortfolioConfig, type CompanyResult, type CostInputs, type SynergyOverride,
+  type PowerOf1ImpactResult,
 } from '../../utils/portfolioApi';
-import { apiCall } from '../../utils/api';
 
 // ────────────────────────────────────────────────────────
 // Helpers
@@ -27,6 +26,15 @@ const fmtDollar = (n: number) => {
 };
 
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
+
+/** Format metric value in native unit (days, hrs, % — not $) for Per-Lever display */
+const fmtMetricValue = (value: number, unit: string): string => {
+  const u = (unit || '').toLowerCase();
+  if (u === 'percent') return `${value.toFixed(1)}%`;
+  if (u === 'days') return `${value.toFixed(0)} days`;
+  if (u === 'hours') return `${value.toFixed(0)} hrs`;
+  return `${value} ${unit}`.trim();
+};
 
 const SYNERGY_COLORS: Record<string, string> = {
   shared_playbooks: '#6366f1',
@@ -192,162 +200,144 @@ const SynergyRealizationTracker: React.FC<{ companies: CompanyResult[] }> = ({ c
 };
 
 // ────────────────────────────────────────────────────────
-// Power of 1 Slider Component
+// Power of 1 — 6 independent levers
 // ────────────────────────────────────────────────────────
 
+const LEVER_IDS = ['TTFV', 'NRR', 'GRR', 'ticket_resolution_time', 'product_adoption', 'expansion_rate'];
+
+const defaultLeverPcts: Record<string, number> = Object.fromEntries(LEVER_IDS.map(id => [id, 1.0]));
+
 const PowerOf1Slider: React.FC<{ portfolioId: number }> = ({ portfolioId }) => {
-  const [sliderData, setSliderData] = useState<SliderData | null>(null);
-  const [selectedPct, setSelectedPct] = useState(1.0);
+  const [leverPcts, setLeverPcts] = useState<Record<string, number>>(defaultLeverPcts);
+  const [impact, setImpact] = useState<PowerOf1ImpactResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchImpact = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getPowerOf1Impact(portfolioId, leverPcts);
+      setImpact(data);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load impact');
+      setImpact(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [portfolioId, leverPcts]);
 
   useEffect(() => {
-    setLoading(true);
-    getSliderData(portfolioId)
-      .then(setSliderData)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [portfolioId]);
+    const t = setTimeout(fetchImpact, 300);
+    return () => clearTimeout(t);
+  }, [fetchImpact]);
 
-  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>;
-  if (!sliderData || sliderData.slider_points.length === 0) {
-    return <div className="text-center py-12 text-gray-500">No data available. Add companies to the portfolio first.</div>;
+  const setLever = (metricId: string, value: number) => {
+    setLeverPcts(prev => ({ ...prev, [metricId]: value }));
+  };
+
+  if (error && !impact) {
+    return (
+      <div className="text-center py-12 text-amber-600">
+        <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+        <p>{error}</p>
+        <button onClick={fetchImpact} className="mt-2 text-indigo-600 text-sm">Retry</button>
+      </div>
+    );
   }
-
-  const currentPoint = sliderData.slider_points.reduce((prev, curr) =>
-    Math.abs(curr.improvement_pct - selectedPct) < Math.abs(prev.improvement_pct - selectedPct) ? curr : prev
-  );
-
-  const maxImpact = Math.max(...sliderData.slider_points.map(p => p.portfolio_total_impact));
 
   return (
     <div className="space-y-6">
-      {/* Slider Control */}
+      {/* 6 lever sliders */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
           <SlidersHorizontal className="h-5 w-5 text-indigo-500" />
-          Power of 1 What-If Analysis
+          Power of 1 — 6 Levers
         </h3>
         <p className="text-sm text-gray-500 mb-6">
-          Slide to see how a uniform improvement across all 6 levers impacts your entire portfolio with synergies.
+          Set improvement % per lever; not all levers move in lockstep. ROI and investment recalculate from your choices.
         </p>
 
-        <div className="flex items-center gap-6">
-          <div className="flex-1">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>0.5%</span>
-              <span className="font-bold text-indigo-600 text-lg">{selectedPct.toFixed(1)}% improvement</span>
-              <span>6.0%</span>
-            </div>
-            <input
-              type="range" min="0.5" max="6.0" step="0.5"
-              value={selectedPct}
-              onChange={e => setSelectedPct(parseFloat(e.target.value))}
-              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>Conservative</span>
-              <span>Target</span>
-              <span>World Class</span>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI Summary at current slider position */}
-        <div className="grid grid-cols-5 gap-4 mt-6">
-          <KPICard icon={<Target className="h-4 w-4" />} label="Portfolio Impact"
-            value={fmtDollar(currentPoint.portfolio_total_impact)} color="text-indigo-600"
-            sub={`${currentPoint.company_count} companies`} />
-          <KPICard icon={<TrendingUp className="h-4 w-4" />} label="Portfolio ROI"
-            value={`${currentPoint.portfolio_roi.toFixed(1)}x`} color="text-green-600"
-            sub={`vs ${currentPoint.standalone_roi.toFixed(1)}x standalone`} />
-          <KPICard icon={<Zap className="h-4 w-4" />} label="Synergy Uplift"
-            value={`+${fmtPct(currentPoint.synergy_uplift_pct)}`} color="text-green-600"
-            sub={fmtDollar(currentPoint.synergy_impact)} />
-          <KPICard icon={<DollarSign className="h-4 w-4" />} label="Investment"
-            value={fmtDollar(currentPoint.investment)}
-            sub="Synergy-adjusted" />
-          <KPICard icon={<TrendingUp className="h-4 w-4" />} label="Payback"
-            value={`${currentPoint.payback_months.toFixed(1)} mo`}
-            sub="Time to break even" />
-        </div>
-      </div>
-
-      {/* Scaling Curve Visualization */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Non-Linear Scaling Curve</h3>
-        <p className="text-xs text-gray-500 mb-4">
-          Same investment, exponentially higher returns. The bars show total portfolio impact at each improvement level.
-        </p>
-        <div className="flex items-end gap-2 h-48">
-          {sliderData.slider_points.map(point => {
-            const height = maxImpact > 0 ? (point.portfolio_total_impact / maxImpact) * 100 : 0;
-            const isSelected = Math.abs(point.improvement_pct - selectedPct) < 0.01;
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {LEVER_IDS.map(metricId => {
+            const meta = METRIC_DISPLAY[metricId] || { name: metricId, unit: '', color: '#6366f1' };
+            const value = leverPcts[metricId] ?? 1.0;
             return (
-              <div key={point.improvement_pct} className="flex-1 flex flex-col items-center cursor-pointer"
-                onClick={() => setSelectedPct(point.improvement_pct)}>
-                <div className="text-xs font-medium text-gray-600 mb-1">
-                  {point.improvement_pct >= 1 ? fmtDollar(point.portfolio_total_impact) : ''}
+              <div key={metricId} className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: meta.color }} />
+                    <span className="text-sm font-medium text-gray-900">{meta.name}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-600">{value.toFixed(1)}%</span>
                 </div>
-                <div className="w-full flex flex-col justify-end" style={{ height: '160px' }}>
-                  {/* Synergy portion */}
-                  <div className="w-full rounded-t-sm transition-all duration-300"
-                    style={{
-                      height: `${maxImpact > 0 ? (point.synergy_impact / maxImpact) * 160 : 0}px`,
-                      backgroundColor: isSelected ? '#22c55e' : '#86efac',
-                    }} />
-                  {/* Standalone portion */}
-                  <div className="w-full transition-all duration-300"
-                    style={{
-                      height: `${maxImpact > 0 ? (point.standalone_impact / maxImpact) * 160 : 0}px`,
-                      backgroundColor: isSelected ? '#6366f1' : '#a5b4fc',
-                    }} />
-                </div>
-                <div className={`text-xs mt-1 ${isSelected ? 'font-bold text-indigo-600' : 'text-gray-500'}`}>
-                  {point.improvement_pct}%
-                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="6"
+                  step="0.5"
+                  value={value}
+                  onChange={e => setLever(metricId, parseFloat(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
               </div>
             );
           })}
         </div>
-        <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-indigo-400" /> Standalone Impact</div>
-          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-green-400" /> Synergy Impact</div>
-        </div>
+
+        {/* KPI Summary */}
+        {loading && !impact && (
+          <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>
+        )}
+        {impact && (
+          <div className="grid grid-cols-5 gap-4 mt-6">
+            <KPICard icon={<Target className="h-4 w-4" />} label="Portfolio Impact"
+              value={fmtDollar(impact.portfolio_total_impact)} color="text-indigo-600"
+              sub={`${impact.company_count} companies`} />
+            <KPICard icon={<TrendingUp className="h-4 w-4" />} label="Portfolio ROI"
+              value={`${impact.portfolio_roi.toFixed(1)}x`} color="text-green-600"
+              sub={`vs ${impact.standalone_roi.toFixed(1)}x standalone`} />
+            <KPICard icon={<Zap className="h-4 w-4" />} label="Synergy Uplift"
+              value={`+${fmtPct(impact.synergy_uplift_pct)}`} color="text-green-600"
+              sub={fmtDollar(impact.synergy_total_impact)} />
+            <KPICard icon={<DollarSign className="h-4 w-4" />} label="Investment"
+              value={fmtDollar(impact.synergy_adjusted_investment)}
+              sub="Synergy-adjusted" />
+            <KPICard icon={<TrendingUp className="h-4 w-4" />} label="Payback"
+              value={`${impact.payback_months.toFixed(1)} mo`}
+              sub="Time to break even" />
+          </div>
+        )}
       </div>
 
-      {/* Per-Metric Curves */}
-      {sliderData.per_metric_curves && Object.keys(sliderData.per_metric_curves).length > 0 && (
+      {/* Per-lever impact breakdown */}
+      {impact?.per_metric_impacts && Object.keys(impact.per_metric_impacts).length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Per-Metric Impact at Selected Level ({selectedPct}%)</h3>
-          <div className="grid grid-cols-3 gap-4">
-            {Object.entries(sliderData.per_metric_curves).map(([metricId, points]) => {
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Per-Lever Impact at Current Settings</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {LEVER_IDS.map(metricId => {
               const meta = METRIC_DISPLAY[metricId] || { name: metricId, unit: '', color: '#6366f1' };
-              const selectedPoint = points.reduce((prev, curr) =>
-                Math.abs(curr.improvement_pct - selectedPct) < Math.abs(prev.improvement_pct - selectedPct) ? curr : prev,
-                points[0]
-              );
-              const maxMetricImpact = Math.max(...points.map(p => p.total_impact), 1);
+              const m = impact.per_metric_impacts[metricId];
+              if (!m) return null;
+              const unit = m.unit ?? meta.unit ?? '';
+              const hasNative = typeof m.baseline === 'number' && typeof m.new_value === 'number' && unit;
               return (
                 <div key={metricId} className="rounded-lg border border-gray-100 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: meta.color }} />
                     <span className="text-sm font-medium text-gray-900">{meta.name}</span>
                   </div>
-                  <div className="text-xl font-bold" style={{ color: meta.color }}>
-                    {fmtDollar(selectedPoint?.total_impact || 0)}
+                  <div className="text-xs text-gray-500 mb-1">{m.improvement_pct.toFixed(1)}% improvement</div>
+                  {hasNative && (
+                    <div className="text-sm font-semibold text-gray-800 mb-1" style={{ color: meta.color }}>
+                      {fmtMetricValue(m.baseline!, unit)} → {fmtMetricValue(m.new_value!, unit)}
+                    </div>
+                  )}
+                  <div className="text-sm font-bold" style={{ color: meta.color }}>
+                    Impact: {fmtDollar(m.total_impact)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {selectedPoint?.roi !== undefined ? `${(selectedPoint.roi * 100).toFixed(0)}% ROI` : ''}
-                  </div>
-                  <div className="flex items-end gap-1 h-10 mt-2">
-                    {points.map(p => (
-                      <div key={p.improvement_pct} className="flex-1 rounded-t-sm transition-all"
-                        style={{
-                          height: `${(p.total_impact / maxMetricImpact) * 40}px`,
-                          backgroundColor: meta.color,
-                          opacity: Math.abs(p.improvement_pct - selectedPct) < 0.5 ? 1 : 0.3,
-                        }} />
-                    ))}
+                    {typeof m.roi === 'number' ? `${(m.roi * 100).toFixed(0)}% ROI` : ''}
                   </div>
                 </div>
               );
@@ -381,7 +371,7 @@ const PortfolioSettings: React.FC<{
   useEffect(() => {
     Promise.all([
       getPortfolioConfig(portfolioId),
-      apiCall('/api/data-management/customers').then(r => r.ok ? r.json() : { customers: [] }).catch(() => ({ customers: [] })),
+      getAvailableCustomersForPortfolio().catch(() => ({ customers: [] })),
     ]).then(([cfg, custData]) => {
       setConfig(cfg);
       setCostInputs(cfg.cost_inputs);
@@ -458,6 +448,7 @@ const PortfolioSettings: React.FC<{
             </div>
           ))}
         </div>
+        <p className="text-xs text-gray-500 mb-2">Companies listed have Power of 1 enabled in CS Pulse and at least one account (for ARR).</p>
         <div className="flex gap-2">
           <select value={newCustomerId} onChange={e => setNewCustomerId(e.target.value)}
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">

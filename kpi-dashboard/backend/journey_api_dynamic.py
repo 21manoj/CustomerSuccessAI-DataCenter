@@ -329,14 +329,32 @@ journey_dynamic_api = Blueprint('journey_dynamic_api', __name__, url_prefix='/ap
 def get_journey_dynamic(account_id):
     """
     Dynamic journey endpoint - works for ANY customer!
-    No hardcoding required. Automatically discovers journey files.
+    Uses account's actual customer_id from DB when available (fixes accounts like 10003
+    where account_id // 1000 would be wrong). Falls back to derived customer_id otherwise.
     """
     try:
-        # Extract customer ID from account ID
-        customer_id = get_customer_from_account(account_id)
+        # Prefer customer_id from the account record so we look in the right vertical folder
+        customer_id = None
+        try:
+            from auth_middleware import get_current_customer_id
+            from models import Account
+            current_customer_id = get_current_customer_id()
+            if current_customer_id:
+                account = Account.query.filter_by(
+                    account_id=int(account_id),
+                    customer_id=current_customer_id
+                ).first()
+                if account:
+                    customer_id = account.customer_id
+        except Exception:
+            pass
+        if customer_id is None:
+            customer_id = get_customer_from_account(account_id)
         
-        # Find journey file
+        # Find journey file (try resolved customer_id first, then derived)
         journey_file = find_journey_file(customer_id, account_id)
+        if not journey_file and customer_id != get_customer_from_account(account_id):
+            journey_file = find_journey_file(get_customer_from_account(account_id), account_id)
         
         if not journey_file:
             return jsonify({

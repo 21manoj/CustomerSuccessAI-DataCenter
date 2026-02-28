@@ -224,6 +224,11 @@
 - **Community Platform**: User forums and knowledge sharing
 - **Open Source**: Core components open-sourced
 
+### **PortCo CEO / PE Portfolio (TBD — see PORTCO_CEO_DASHBOARD_BUSINESS_REVIEW.md)**
+- **[TBD] Product revenues dimension** — Add product/SKU (or line-of-business) revenue per company and portfolio. Support product-level views in the PortCo CEO dashboard and in ROI context so operators can see which products drive retention vs. expansion.
+- **[TBD] Upsell and cross-sell correlation** — Flag and, where possible, quantify correlation between CS actions (playbooks, health) and upsell/cross-sell revenue. Support evidence-based synergy and ROI storytelling (e.g. link playbook execution to product adoption or expansion).
+- **[TBD] Customer overlap across portfolios** — View showing which customers/accounts appear in more than one portfolio (e.g. co-invest, multi-fund). Include product/revenue view per company so PortCo CEOs can see overlap and avoid double-counting or conflicting strategies.
+
 ---
 
 ## 💰 **Pricing Strategy**

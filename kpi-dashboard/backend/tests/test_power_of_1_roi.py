@@ -74,11 +74,14 @@ class TestIndividualMetricImpacts:
         assert abs(r4["direct_impact"] - r1["direct_impact"] * 4) < 1.0
 
     @pytest.mark.parametrize("metric_id", list(POWER_OF_1_METRICS.keys()))
-    def test_investment_is_fixed(self, metric_id):
-        """Investment is the same regardless of improvement % (non-linear scaling thesis)."""
+    def test_investment_scales_with_improvement(self, metric_id):
+        """Investment scales: +50% of initial cost per each 1% improvement (1%→1x, 2%→1.5x, 6%→3.5x)."""
         r1 = calculate_power_of_1_impact(metric_id, 1.0)
+        r2 = calculate_power_of_1_impact(metric_id, 2.0)
         r6 = calculate_power_of_1_impact(metric_id, 6.0)
-        assert r1["investment"] == r6["investment"]
+        base = r1["investment"]
+        assert r2["investment"] == pytest.approx(base * 1.5, rel=0.01), "2% should be 1.5x base"
+        assert r6["investment"] == pytest.approx(base * 3.5, rel=0.01), "6% should be 3.5x base"
 
 
 # ============================================================
@@ -492,12 +495,13 @@ class TestPowerOf1FeedbackIntegration:
 
     def test_full_portfolio_roi_at_4_pct(self):
         """
-        The headline number: 4% improvement across all metrics
-        with $247K investment → 5.5x ROI.
+        At 4% improvement, investment scales to 2.5x base (1 + 0.5*3).
+        Portfolio still has strong positive ROI.
         """
         result = calculate_portfolio_impact(4.0)
-        # ROI should be in the 5.5x range
-        assert result["totals"]["roi"] > 5.0
+        base_inv = INVESTMENT_SUMMARY["total_investment"]
+        assert result["totals"]["investment"] == pytest.approx(base_inv * 2.5, rel=0.01)
+        assert result["totals"]["roi"] > 1.0, "4% improvement should yield strong positive ROI"
 
 
 # ============================================================

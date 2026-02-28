@@ -24,7 +24,8 @@ from enum import Enum
 import math
 
 from power_of_1_model import (
-    POWER_OF_1_METRICS, calculate_portfolio_impact, INVESTMENT_SUMMARY,
+    POWER_OF_1_METRICS, calculate_portfolio_impact, calculate_portfolio_impact_multi_lever,
+    INVESTMENT_SUMMARY,
 )
 from resource_capacity_model import (
     ROLE_RATES, CSRole, check_capacity, get_resource_pool_summary,
@@ -265,6 +266,99 @@ def analyze_portfolio(
         ) if adj_investment > 0 else 0
 
         # Accumulate
+        standalone_total_impact += standalone_impact
+        synergy_total_impact += impact_lift
+        standalone_total_investment += standalone_investment
+        synergy_adjusted_total_investment += adj_investment
+
+        for sf in synergies:
+            key = sf.synergy_type.value
+            synergy_breakdown[key] = synergy_breakdown.get(key, 0) + sf.dollar_impact
+
+        company_results.append(CompanyResult(
+            company_id=company.company_id,
+            company_name=company.company_name,
+            arr=company.arr,
+            standalone_impact=round(standalone_impact, 2),
+            synergy_impact=round(impact_lift, 2),
+            total_impact=round(total_impact, 2),
+            standalone_investment=round(standalone_investment, 2),
+            synergy_adjusted_investment=round(adj_investment, 2),
+            standalone_roi=standalone_roi,
+            synergy_roi=synergy_roi,
+            synergies_applied=synergies,
+        ))
+
+    portfolio_total_impact = standalone_total_impact + synergy_total_impact
+
+    standalone_roi = round(
+        (standalone_total_impact - standalone_total_investment) / standalone_total_investment, 2
+    ) if standalone_total_investment > 0 else 0
+
+    portfolio_roi = round(
+        (portfolio_total_impact - synergy_adjusted_total_investment)
+        / synergy_adjusted_total_investment, 2
+    ) if synergy_adjusted_total_investment > 0 else 0
+
+    synergy_uplift_pct = round(
+        (synergy_total_impact / standalone_total_impact) * 100, 1
+    ) if standalone_total_impact > 0 else 0
+
+    payback_months = round(
+        synergy_adjusted_total_investment / (portfolio_total_impact / 12), 1
+    ) if portfolio_total_impact > 0 else 0
+
+    total_arr = sum(c.arr for c in companies)
+
+    return PortfolioResult(
+        portfolio_name=portfolio_name,
+        company_count=len(companies),
+        total_arr=round(total_arr, 2),
+        companies=company_results,
+        standalone_total_impact=round(standalone_total_impact, 2),
+        synergy_total_impact=round(synergy_total_impact, 2),
+        portfolio_total_impact=round(portfolio_total_impact, 2),
+        standalone_total_investment=round(standalone_total_investment, 2),
+        synergy_adjusted_investment=round(synergy_adjusted_total_investment, 2),
+        standalone_roi=standalone_roi,
+        portfolio_roi=portfolio_roi,
+        synergy_uplift_pct=synergy_uplift_pct,
+        synergy_breakdown={k: round(v, 2) for k, v in synergy_breakdown.items()},
+        payback_months=payback_months,
+    )
+
+
+def analyze_portfolio_multi_lever(
+    portfolio_name: str,
+    companies: List[PortfolioCompany],
+    improvement_by_metric: Dict[str, float],
+) -> PortfolioResult:
+    """
+    Run portfolio analysis when each of the 6 Power of 1 levers has its own improvement %.
+    Same synergy logic as analyze_portfolio; per-company impact uses multi-lever calc.
+    """
+    company_results = []
+    standalone_total_impact = 0
+    synergy_total_impact = 0
+    standalone_total_investment = 0
+    synergy_adjusted_total_investment = 0
+    synergy_breakdown: Dict[str, float] = {}
+
+    for idx, company in enumerate(companies):
+        po1 = calculate_portfolio_impact_multi_lever(improvement_by_metric, company.arr)
+        standalone_impact = po1["totals"]["total_impact"]
+        standalone_investment = po1["totals"]["investment"]
+        standalone_roi = po1["totals"]["roi"]
+
+        synergies, impact_lift, adj_investment = calculate_company_synergies(
+            idx, standalone_impact, standalone_investment
+        )
+
+        total_impact = standalone_impact + impact_lift
+        synergy_roi = round(
+            (total_impact - adj_investment) / adj_investment, 2
+        ) if adj_investment > 0 else 0
+
         standalone_total_impact += standalone_impact
         synergy_total_impact += impact_lift
         standalone_total_investment += standalone_investment

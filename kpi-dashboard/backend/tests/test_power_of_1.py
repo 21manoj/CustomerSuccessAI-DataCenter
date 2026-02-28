@@ -124,13 +124,15 @@ class TestImpactCalculation:
         assert POWER_OF_1_METRICS['TTFV'].direction == 'lower_is_better'
         assert POWER_OF_1_METRICS['ticket_resolution_time'].direction == 'lower_is_better'
 
-    def test_investment_is_constant(self):
-        """Investment should be the same regardless of improvement %."""
+    def test_investment_scales_with_improvement(self):
+        """Investment scales: +50% of initial cost per 1% improvement (2%→1.5x, 5%→3x base)."""
         from power_of_1_model import calculate_power_of_1_impact
         r1 = calculate_power_of_1_impact('GRR', 1.0)
         r5 = calculate_power_of_1_impact('GRR', 5.0)
-        assert r1['investment'] == r5['investment'], \
-            "Investment should be constant (same $247K)"
+        assert r5['investment'] > r1['investment'], \
+            "Higher improvement % should require higher investment"
+        assert r5['investment'] == pytest.approx(r1['investment'] * 3.0, rel=0.01), \
+            "5% should be 3x the 1% base investment"
 
 
 # ============================================================

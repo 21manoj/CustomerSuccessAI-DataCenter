@@ -7,14 +7,19 @@ Handles dict targets from YOUR Week 1 KPI definitions
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
-from models import Account, DC2SKPI, User
+from models import Account, DC2SKPI, User, PlaybookExecution, PlaybookReport
 from datetime import datetime
 import logging
+import uuid
 
 # Import DC2_S vertical modules - matching YOUR file structure
 from .kpi_definitions import DC2S_KPIS, DC2S_PILLARS
 from .pillar_weights import get_current_weights, get_weights_for_customer
-from .vertical_config import determine_customer_phase, PLAYBOOK_CONFIG, should_trigger_playbook
+from .vertical_config import (
+    determine_customer_phase, PLAYBOOK_CONFIG, should_trigger_playbook,
+    get_playbook_config, get_playbooks_for_phase, get_playbook_duration_and_sub_components,
+    PHASE_CONFIG,
+)
 from .metadata_schema import calculate_days_since_deployment
 
 logger = logging.getLogger(__name__)
@@ -41,22 +46,23 @@ def _normalize_kpi_code_for_health(kpi_code):
 
 def _sync_journey_phase(account):
     """
-    Persist the current journey phase on the Account row.
-    Called after every health-score recalculation so playbook triggers
-    that depend on lifecycle phase always have fresh data.
+    Persist the current journey phase in Account.profile_metadata (DC vertical).
+    Shared Account model has no journey_phase column; DC stores it in profile_metadata.
     """
     try:
-        metadata = account.profile_metadata or {}
+        metadata = dict(account.profile_metadata or {})
         deployment_date = metadata.get("deployment_date", "")
         days = calculate_days_since_deployment(deployment_date) if deployment_date else 0
         account_data = {**metadata, "days_since_deployment": days}
         new_phase = determine_customer_phase(account_data)
-        if account.journey_phase != new_phase:
+        current = metadata.get("journey_phase")
+        if current != new_phase:
             logger.info(
                 "Account %s journey_phase %s -> %s",
-                account.account_id, account.journey_phase, new_phase,
+                account.account_id, current, new_phase,
             )
-            account.journey_phase = new_phase
+            metadata["journey_phase"] = new_phase
+            account.profile_metadata = metadata
             db.session.add(account)
             db.session.commit()
     except Exception as exc:
@@ -680,9 +686,9 @@ def get_dc2s_recommendations(account_id):
         )
         kpi_values["OVERALL_HEALTH"] = overall_health
 
-        # Determine current journey phase
+        # Determine current journey phase (stored in profile_metadata for DC)
         _sync_journey_phase(account)
-        current_phase = account.journey_phase or "deployment"
+        current_phase = (account.profile_metadata or {}).get("journey_phase") or "deployment"
 
         # ---- Real trigger evaluation against PLAYBOOK_CONFIG ----
         recommendations = []
@@ -887,6 +893,888 @@ def get_dc2s_health_summary():
     except Exception as e:
         logger.error(f"Error fetching DC2_S health summary: {e}", exc_info=True)
         return jsonify({'error': 'Failed to fetch health summary'}), 500
+
+
+# ============================================================
+# DC PLAYBOOK ENDPOINTS
+# ============================================================
+
+# In-memory store for DC playbook executions (mirrors pattern from playbook_execution_api.py)
+_dc_executions = {}  # execution_id -> execution_data
+
+
+@dc2s_api.route('/playbooks', methods=['GET'])
+def get_dc2s_playbooks():
+    """
+    Get all 6 DC playbook definitions with sub-components and estimated hours.
+    GET /api/dc2s/playbooks
+    """
+    try:
+        playbooks = []
+        for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+            total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+            playbooks.append({
+                'id': pb_id,
+                'name': pb_cfg['name'],
+                'description': pb_cfg['description'],
+                'trigger_kpis': pb_cfg.get('trigger_kpis', []),
+                'trigger_conditions': pb_cfg.get('trigger_conditions', {}),
+                'automation_level': pb_cfg.get('automation_level', 'medium'),
+                'human_approval_required': pb_cfg.get('human_approval_required', False),
+                'estimated_impact': pb_cfg.get('estimated_impact', ''),
+                'phases': pb_cfg.get('phases', []),
+                'estimated_duration_days': pb_cfg.get('estimated_duration_days'),
+                'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                'sub_components': pb_cfg.get('sub_components', []),
+                'total_estimated_hours': total_hours,
+            })
+        return jsonify({'playbooks': playbooks, 'total': len(playbooks)})
+    except Exception as e:
+        logger.error(f"Error fetching DC playbooks: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch playbooks'}), 500
+
+
+@dc2s_api.route('/playbooks/<playbook_id>', methods=['GET'])
+def get_dc2s_playbook_detail(playbook_id):
+    """
+    Get a single DC playbook definition.
+    GET /api/dc2s/playbooks/PB-01
+    """
+    try:
+        pb_cfg = get_playbook_config(playbook_id)
+        if not pb_cfg:
+            return jsonify({'error': 'Playbook not found'}), 404
+        total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+        return jsonify({
+            'id': pb_cfg['id'],
+            'name': pb_cfg['name'],
+            'description': pb_cfg['description'],
+            'trigger_kpis': pb_cfg.get('trigger_kpis', []),
+            'trigger_conditions': pb_cfg.get('trigger_conditions', {}),
+            'automation_level': pb_cfg.get('automation_level', 'medium'),
+            'human_approval_required': pb_cfg.get('human_approval_required', False),
+            'estimated_impact': pb_cfg.get('estimated_impact', ''),
+            'phases': pb_cfg.get('phases', []),
+            'estimated_duration_days': pb_cfg.get('estimated_duration_days'),
+            'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+            'sub_components': pb_cfg.get('sub_components', []),
+            'total_estimated_hours': total_hours,
+        })
+    except Exception as e:
+        logger.error(f"Error fetching DC playbook detail: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch playbook'}), 500
+
+
+@dc2s_api.route('/playbooks/executions', methods=['POST'])
+def create_dc2s_playbook_execution():
+    """
+    Start a new DC playbook execution.
+    POST /api/dc2s/playbooks/executions
+    Body: { playbook_id, account_id }
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        data = request.get_json() or {}
+        playbook_id = data.get('playbook_id')
+        account_id = data.get('account_id')
+
+        if not playbook_id or not account_id:
+            return jsonify({'error': 'playbook_id and account_id are required'}), 400
+
+        pb_cfg = get_playbook_config(playbook_id)
+        if not pb_cfg:
+            return jsonify({'error': 'Playbook not found'}), 404
+
+        # Verify account
+        account = Account.query.filter_by(
+            account_id=account_id, customer_id=int(customer_id), vertical='dc2_s'
+        ).first()
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+
+        # Snapshot current KPI values for before/after comparison
+        all_kpis = DC2SKPI.query.filter_by(account_id=account_id).order_by(DC2SKPI.measured_at.desc()).all()
+        kpi_snapshot = {}
+        for kpi in all_kpis:
+            if kpi.kpi_code not in kpi_snapshot:
+                kpi_snapshot[kpi.kpi_code] = float(kpi.value)
+
+        execution_id = f"dc-exec-{uuid.uuid4().hex[:12]}"
+        now = datetime.utcnow()
+
+        # Build step tracking from sub_components
+        steps = []
+        for sc in pb_cfg.get('sub_components', []):
+            steps.append({
+                'step_id': sc['id'],
+                'name': sc['name'],
+                'description': sc.get('description', ''),
+                'estimated_hours': sc.get('estimated_hours', 0),
+                'actual_hours': None,
+                'status': 'pending',
+                'notes': '',
+                'started_at': None,
+                'completed_at': None,
+            })
+
+        total_estimated = sum(s['estimated_hours'] for s in steps)
+
+        execution = {
+            'execution_id': execution_id,
+            'playbook_id': playbook_id,
+            'playbook_name': pb_cfg['name'],
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'customer_id': int(customer_id),
+            'status': 'in-progress',
+            'current_step': steps[0]['step_id'] if steps else None,
+            'started_at': now.isoformat(),
+            'completed_at': None,
+            'steps': steps,
+            'total_estimated_hours': total_estimated,
+            'total_actual_hours': 0,
+            'kpi_snapshot_before': kpi_snapshot,
+            'phase': (account.profile_metadata or {}).get('journey_phase', 'deployment'),
+        }
+
+        _dc_executions[execution_id] = execution
+
+        # Persist to DB
+        try:
+            db_exec = PlaybookExecution(
+                execution_id=execution_id,
+                customer_id=int(customer_id),
+                account_id=account_id,
+                playbook_id=playbook_id,
+                status='in-progress',
+                current_step=execution['current_step'],
+                execution_data=execution,
+                started_at=now,
+                execution_mode='dc_playbook',
+            )
+            db.session.add(db_exec)
+            db.session.commit()
+        except Exception as db_err:
+            logger.warning(f"DB persist failed for DC execution {execution_id}: {db_err}")
+            db.session.rollback()
+
+        return jsonify({'status': 'success', 'execution': execution}), 201
+
+    except Exception as e:
+        logger.error(f"Error creating DC playbook execution: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to create execution'}), 500
+
+
+@dc2s_api.route('/playbooks/executions', methods=['GET'])
+def list_dc2s_playbook_executions():
+    """
+    List DC playbook executions. Filters: status, account_id, playbook_id
+    GET /api/dc2s/playbooks/executions?status=in-progress&account_id=101
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        status_filter = request.args.get('status')
+        account_filter = request.args.get('account_id')
+        playbook_filter = request.args.get('playbook_id')
+
+        # Merge in-memory with DB (in-memory is authoritative for active executions)
+        # Load from DB if memory is empty
+        if not _dc_executions:
+            try:
+                db_execs = PlaybookExecution.query.filter(
+                    PlaybookExecution.customer_id == int(customer_id),
+                    PlaybookExecution.execution_mode == 'dc_playbook',
+                ).order_by(PlaybookExecution.started_at.desc()).all()
+                for dbe in db_execs:
+                    if dbe.execution_id not in _dc_executions and dbe.execution_data:
+                        _dc_executions[dbe.execution_id] = dbe.execution_data
+            except Exception:
+                pass
+
+        results = []
+        for exec_id, ex in _dc_executions.items():
+            if ex.get('customer_id') != int(customer_id):
+                continue
+            if status_filter and ex.get('status') != status_filter:
+                continue
+            if account_filter and str(ex.get('account_id')) != str(account_filter):
+                continue
+            if playbook_filter and ex.get('playbook_id') != playbook_filter:
+                continue
+
+            completed_steps = sum(1 for s in ex.get('steps', []) if s['status'] == 'completed')
+            total_steps = len(ex.get('steps', []))
+            results.append({
+                'execution_id': exec_id,
+                'playbook_id': ex.get('playbook_id'),
+                'playbook_name': ex.get('playbook_name'),
+                'account_id': ex.get('account_id'),
+                'account_name': ex.get('account_name'),
+                'status': ex.get('status'),
+                'started_at': ex.get('started_at'),
+                'completed_at': ex.get('completed_at'),
+                'steps_completed': completed_steps,
+                'total_steps': total_steps,
+                'total_estimated_hours': ex.get('total_estimated_hours', 0),
+                'total_actual_hours': ex.get('total_actual_hours', 0),
+                'progress': round(completed_steps / total_steps * 100) if total_steps else 0,
+            })
+
+        results.sort(key=lambda x: x.get('started_at', ''), reverse=True)
+        return jsonify({'executions': results, 'total': len(results)})
+
+    except Exception as e:
+        logger.error(f"Error listing DC playbook executions: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to list executions'}), 500
+
+
+@dc2s_api.route('/playbooks/executions/<execution_id>', methods=['GET'])
+def get_dc2s_playbook_execution(execution_id):
+    """
+    Get DC playbook execution detail with all steps and hours.
+    GET /api/dc2s/playbooks/executions/<execution_id>
+    """
+    try:
+        execution = _dc_executions.get(execution_id)
+
+        # Fallback to DB
+        if not execution:
+            db_exec = PlaybookExecution.query.filter_by(execution_id=execution_id).first()
+            if db_exec and db_exec.execution_data:
+                execution = db_exec.execution_data
+                _dc_executions[execution_id] = execution
+
+        if not execution:
+            return jsonify({'error': 'Execution not found'}), 404
+
+        return jsonify({'execution': execution})
+
+    except Exception as e:
+        logger.error(f"Error fetching DC execution: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch execution'}), 500
+
+
+@dc2s_api.route('/playbooks/executions/<execution_id>/steps/<step_id>', methods=['PUT'])
+def update_dc2s_playbook_step(execution_id, step_id):
+    """
+    Update a step's status, actual hours, and notes.
+    PUT /api/dc2s/playbooks/executions/<execution_id>/steps/<step_id>
+    Body: { status, actual_hours, notes }
+    """
+    try:
+        execution = _dc_executions.get(execution_id)
+        if not execution:
+            db_exec = PlaybookExecution.query.filter_by(execution_id=execution_id).first()
+            if db_exec and db_exec.execution_data:
+                execution = db_exec.execution_data
+                _dc_executions[execution_id] = execution
+        if not execution:
+            return jsonify({'error': 'Execution not found'}), 404
+
+        data = request.get_json() or {}
+        now = datetime.utcnow().isoformat()
+
+        step_found = False
+        for step in execution.get('steps', []):
+            if step['step_id'] == step_id:
+                step_found = True
+                if 'status' in data:
+                    old_status = step['status']
+                    step['status'] = data['status']
+                    if data['status'] == 'in-progress' and not step.get('started_at'):
+                        step['started_at'] = now
+                    if data['status'] == 'completed':
+                        step['completed_at'] = now
+                if 'actual_hours' in data:
+                    step['actual_hours'] = data['actual_hours']
+                if 'notes' in data:
+                    step['notes'] = data['notes']
+                break
+
+        if not step_found:
+            return jsonify({'error': 'Step not found'}), 404
+
+        # Recalculate totals
+        execution['total_actual_hours'] = sum(
+            s.get('actual_hours') or 0 for s in execution.get('steps', [])
+        )
+
+        # Update current_step to next pending step
+        for step in execution.get('steps', []):
+            if step['status'] in ('pending', 'in-progress'):
+                execution['current_step'] = step['step_id']
+                break
+
+        # Persist to DB
+        try:
+            db_exec = PlaybookExecution.query.filter_by(execution_id=execution_id).first()
+            if db_exec:
+                db_exec.execution_data = execution
+                db_exec.current_step = execution.get('current_step')
+                db.session.commit()
+        except Exception as db_err:
+            logger.warning(f"DB update failed for step {step_id}: {db_err}")
+            db.session.rollback()
+
+        return jsonify({'status': 'success', 'execution': execution})
+
+    except Exception as e:
+        logger.error(f"Error updating DC playbook step: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to update step'}), 500
+
+
+@dc2s_api.route('/playbooks/executions/<execution_id>/complete', methods=['PUT'])
+def complete_dc2s_playbook_execution(execution_id):
+    """
+    Complete a DC playbook execution, generate report, and save to PlaybookReport table.
+    PUT /api/dc2s/playbooks/executions/<execution_id>/complete
+    """
+    try:
+        customer_id = get_current_customer_id()
+        execution = _dc_executions.get(execution_id)
+        if not execution:
+            db_exec = PlaybookExecution.query.filter_by(execution_id=execution_id).first()
+            if db_exec and db_exec.execution_data:
+                execution = db_exec.execution_data
+                _dc_executions[execution_id] = execution
+        if not execution:
+            return jsonify({'error': 'Execution not found'}), 404
+
+        now = datetime.utcnow()
+        execution['status'] = 'completed'
+        execution['completed_at'] = now.isoformat()
+
+        # Get current KPI values for after-snapshot
+        account_id = execution.get('account_id')
+        kpi_snapshot_after = {}
+        if account_id:
+            all_kpis = DC2SKPI.query.filter_by(account_id=account_id).order_by(DC2SKPI.measured_at.desc()).all()
+            for kpi in all_kpis:
+                if kpi.kpi_code not in kpi_snapshot_after:
+                    kpi_snapshot_after[kpi.kpi_code] = float(kpi.value)
+
+        # Build hours tracking
+        steps_tracking = []
+        for step in execution.get('steps', []):
+            est = step.get('estimated_hours', 0)
+            act = step.get('actual_hours') or 0
+            steps_tracking.append({
+                'step_id': step['step_id'],
+                'name': step['name'],
+                'estimated_hours': est,
+                'actual_hours': act,
+                'variance': round(act - est, 1),
+                'status': step['status'],
+                'notes': step.get('notes', ''),
+            })
+
+        total_est = execution.get('total_estimated_hours', 0)
+        total_act = execution.get('total_actual_hours', 0)
+        variance_hrs = round(total_act - total_est, 1)
+        variance_pct = round((variance_hrs / total_est) * 100, 1) if total_est else 0
+
+        if variance_pct <= -10:
+            efficiency = 'Under Budget'
+        elif variance_pct <= 10:
+            efficiency = 'On Budget'
+        else:
+            efficiency = 'Over Budget'
+
+        # Build KPI impact from before/after snapshots
+        pb_cfg = get_playbook_config(execution.get('playbook_id', ''))
+        trigger_kpis_impact = []
+        before_snap = execution.get('kpi_snapshot_before', {})
+        for trigger_kpi in (pb_cfg or {}).get('trigger_kpis', []):
+            # Normalize code
+            catalog_code = trigger_kpi
+            before_val = before_snap.get(trigger_kpi)
+            after_val = kpi_snapshot_after.get(trigger_kpi)
+
+            # Also try DB-style codes
+            if before_val is None:
+                for db_code, raw_val in before_snap.items():
+                    norm = _normalize_kpi_code_for_health(db_code)
+                    if norm == trigger_kpi:
+                        before_val = raw_val
+                        break
+            if after_val is None:
+                for db_code, raw_val in kpi_snapshot_after.items():
+                    norm = _normalize_kpi_code_for_health(db_code)
+                    if norm == trigger_kpi:
+                        after_val = raw_val
+                        break
+
+            kpi_def = DC2S_KPIS.get(catalog_code, {})
+            target_raw = kpi_def.get('target')
+            target_val = target_raw.get('value') if isinstance(target_raw, dict) else target_raw
+
+            if before_val is not None and after_val is not None and before_val != 0:
+                change_pct = round(((after_val - before_val) / abs(before_val)) * 100, 1)
+                improvement = f"{'+' if change_pct >= 0 else ''}{change_pct}%"
+            else:
+                improvement = 'N/A'
+
+            # Determine if target was met
+            kpi_status = 'Pending'
+            if target_val is not None and after_val is not None:
+                cond = (pb_cfg or {}).get('trigger_conditions', {}).get(trigger_kpi, {})
+                op = cond.get('operator', '>')
+                if op == '<':
+                    kpi_status = 'Achieved' if after_val < target_val else 'In Progress'
+                else:
+                    kpi_status = 'Achieved' if after_val > target_val else 'In Progress'
+
+            trigger_kpis_impact.append({
+                'kpi_code': catalog_code,
+                'kpi_name': kpi_def.get('name', kpi_def.get('kpi_name', catalog_code)),
+                'before': before_val,
+                'after': after_val,
+                'target': target_val,
+                'unit': kpi_def.get('unit', ''),
+                'improvement': improvement,
+                'status': kpi_status,
+            })
+
+        # Health score before/after
+        health_before, _ = calculate_kpi_health(before_snap, customer_id=customer_id)
+        health_after, _ = calculate_kpi_health(kpi_snapshot_after, customer_id=customer_id)
+
+        # Build RACI (generic for DC playbooks based on step types)
+        raci = {}
+        for step in execution.get('steps', []):
+            raci[step['name']] = {
+                'CSM': 'Responsible',
+                'Field Engineer': 'Consulted',
+                'Platform': 'Informed',
+                'Exec Sponsor': 'Informed',
+            }
+
+        # Exit criteria from playbook trigger conditions
+        exit_criteria = []
+        for trigger_kpi, cond in (pb_cfg or {}).get('trigger_conditions', {}).items():
+            kpi_def = DC2S_KPIS.get(trigger_kpi, {})
+            after_val = kpi_snapshot_after.get(trigger_kpi)
+            if after_val is None:
+                for db_code, raw_val in kpi_snapshot_after.items():
+                    norm = _normalize_kpi_code_for_health(db_code)
+                    if norm == trigger_kpi:
+                        after_val = raw_val
+                        break
+            met = False
+            if after_val is not None:
+                if cond['operator'] == '<':
+                    met = after_val < cond['value']
+                elif cond['operator'] == '>':
+                    met = after_val > cond['value']
+            exit_criteria.append({
+                'criteria': f"{kpi_def.get('name', trigger_kpi)} {cond['operator']} {cond['value']}",
+                'status': 'Met' if met else 'Not Met',
+                'evidence': f"Current value: {after_val}" if after_val is not None else 'No data',
+            })
+
+        # Duration
+        started = datetime.fromisoformat(execution['started_at']) if execution.get('started_at') else now
+        duration_days = (now - started).days
+
+        playbook_name = execution.get('playbook_name', '')
+        account_name = execution.get('account_name', '')
+
+        # Executive summary
+        kpi_summaries = []
+        for ki in trigger_kpis_impact:
+            if ki['before'] is not None and ki['after'] is not None:
+                kpi_summaries.append(f"{ki['kpi_name']}: {ki['before']} -> {ki['after']} ({ki['improvement']})")
+        exec_summary = (
+            f"{playbook_name} completed for {account_name} in {duration_days} days. "
+            f"Total hours: {total_act}h (estimated {total_est}h, {efficiency}). "
+            + "; ".join(kpi_summaries[:3])
+        )
+
+        # Build full report
+        report_data = {
+            'execution_id': execution_id,
+            'playbook_id': execution.get('playbook_id'),
+            'playbook_name': playbook_name,
+            'account_id': account_id,
+            'account_name': account_name,
+            'phase': execution.get('phase', ''),
+            'status': 'Completed',
+            'started_at': execution.get('started_at'),
+            'completed_at': now.isoformat(),
+            'duration_days': duration_days,
+            'executive_summary': exec_summary,
+            'hours_tracking': {
+                'total_estimated_hours': total_est,
+                'total_actual_hours': total_act,
+                'variance_hours': variance_hrs,
+                'variance_percent': variance_pct,
+                'efficiency_rating': efficiency,
+                'steps': steps_tracking,
+            },
+            'kpi_impact': {
+                'trigger_kpis': trigger_kpis_impact,
+                'health_score_before': round(health_before, 1),
+                'health_score_after': round(health_after, 1),
+                'health_improvement': f"{'+' if health_after >= health_before else ''}{round(health_after - health_before, 1)} points",
+                'financial_impact': (pb_cfg or {}).get('estimated_impact', ''),
+            },
+            'raci_matrix': raci,
+            'exit_criteria': exit_criteria,
+            'next_steps': [
+                f"Schedule {duration_days + 30}-day follow-up health check",
+                f"Monitor trigger KPIs for sustained improvement",
+            ],
+            'learnings': [
+                f"Playbook completed {'under' if variance_pct < 0 else 'over'} estimated hours by {abs(variance_pct)}%",
+            ],
+        }
+
+        # Save to PlaybookReport table (makes it queryable by AI Insights)
+        try:
+            completed_count = sum(1 for s in steps_tracking if s['status'] == 'completed')
+            db_report = PlaybookReport(
+                execution_id=execution_id,
+                customer_id=int(customer_id) if customer_id else execution.get('customer_id'),
+                account_id=account_id,
+                playbook_id=execution.get('playbook_id'),
+                playbook_name=playbook_name,
+                account_name=account_name,
+                status='completed',
+                report_data=report_data,
+                duration=f"{duration_days} days",
+                steps_completed=completed_count,
+                total_steps=len(steps_tracking),
+                started_at=started,
+                completed_at=now,
+                report_generated_at=now,
+            )
+            db.session.add(db_report)
+
+            # Update execution status in DB
+            db_exec = PlaybookExecution.query.filter_by(execution_id=execution_id).first()
+            if db_exec:
+                db_exec.status = 'completed'
+                db_exec.completed_at = now
+                db_exec.execution_data = execution
+                db_exec.outcome = 'resolved'
+
+            db.session.commit()
+            logger.info(f"DC playbook report saved for {execution_id}")
+        except Exception as db_err:
+            logger.warning(f"DB persist failed for DC report {execution_id}: {db_err}")
+            db.session.rollback()
+
+        return jsonify({'status': 'success', 'report': report_data})
+
+    except Exception as e:
+        logger.error(f"Error completing DC playbook execution: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to complete execution'}), 500
+
+
+@dc2s_api.route('/playbooks/executions/<execution_id>/report', methods=['GET'])
+def get_dc2s_playbook_report(execution_id):
+    """
+    Get the generated report for a completed DC playbook execution.
+    GET /api/dc2s/playbooks/executions/<execution_id>/report
+    """
+    try:
+        # Check DB first
+        db_report = PlaybookReport.query.filter_by(execution_id=execution_id).first()
+        if db_report:
+            return jsonify({'status': 'success', 'report': db_report.report_data})
+
+        return jsonify({'error': 'Report not found'}), 404
+
+    except Exception as e:
+        logger.error(f"Error fetching DC playbook report: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch report'}), 500
+
+
+# ============================================================
+# CSM DAILY ACTIONS – "Low Cost, High Impact" scoring
+# ============================================================
+
+def _compute_impact_score(health_score, churn_prob, expansion_prob, pillar_averages):
+    """Impact Score (0-100): how much value this action can protect/generate."""
+    # Churn contribution (40%)
+    churn_component = min(churn_prob, 100) * 0.4
+
+    # Health trend proxy (30%): lower health = more impact
+    if health_score < 50:
+        trend_component = 30
+    elif health_score < 70:
+        trend_component = 20
+    else:
+        trend_component = 5
+
+    # Expansion opportunity (20%)
+    expansion_component = min(expansion_prob, 100) * 0.2
+
+    # Weakest pillar severity (10%)
+    weakest = min(pillar_averages.values()) if pillar_averages else 50
+    if weakest < 50:
+        pillar_component = 10
+    elif weakest < 70:
+        pillar_component = 5
+    else:
+        pillar_component = 0
+
+    return round(churn_component + trend_component + expansion_component + pillar_component, 1)
+
+
+def _compute_effort_score(playbook_cfg):
+    """Effort Score (0-100): lower effort = better priority. Based on playbook complexity."""
+    if not playbook_cfg:
+        return 30  # Default for non-playbook actions
+
+    subs = playbook_cfg.get('sub_components', [])
+    total_hours = sum(s.get('estimated_hours', 0) for s in subs)
+    duration_days = playbook_cfg.get('estimated_duration_days', 14)
+
+    # Duration weight (40%): scale 0-100 where 60+ days = 100
+    duration_score = min(100, (duration_days / 60) * 100) * 0.4
+
+    # Prerequisites complexity (35%): more sub-components = more complex
+    prereq_score = min(100, len(subs) * 20) * 0.35
+
+    # Total hours (25%): scale 0-100 where 144+ hours = 100
+    hours_score = min(100, (total_hours / 144) * 100) * 0.25
+
+    return round(duration_score + prereq_score + hours_score, 1)
+
+
+def _determine_urgency(health_score, churn_prob, expansion_prob):
+    """Classify urgency: critical / high / opportunity / medium."""
+    if churn_prob > 70 or health_score < 40:
+        return 'critical'
+    if health_score < 70:
+        return 'high'
+    if expansion_prob > 75 and health_score > 80:
+        return 'opportunity'
+    return 'medium'
+
+
+@dc2s_api.route('/daily-actions', methods=['GET'])
+def get_csm_daily_actions():
+    """
+    CSM Daily Action List — returns top-10 prioritised actions.
+    GET /api/dc2s/daily-actions
+    Scoring: Priority Index = (impact * 0.6 * arr_weight) - (effort * 0.4)
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        # 1. Fetch all DC accounts
+        accounts = Account.query.filter(
+            Account.customer_id == int(customer_id),
+            Account.vertical == 'dc2_s'
+        ).all()
+
+        if not accounts:
+            return jsonify({
+                'date': datetime.utcnow().strftime('%Y-%m-%d'),
+                'actions': [],
+                'summary': {
+                    'total_actions': 0,
+                    'critical_count': 0,
+                    'high_count': 0,
+                    'opportunity_count': 0,
+                    'total_estimated_hours': 0
+                }
+            })
+
+        all_actions = []
+
+        for account in accounts:
+            # 2. Get latest KPIs
+            kpis = DC2SKPI.query.filter_by(
+                account_id=account.account_id
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+
+            latest_kpis = {}
+            if kpis:
+                latest_time = kpis[0].measured_at
+                latest_kpis = {
+                    kpi.kpi_code: float(kpi.value)
+                    for kpi in kpis
+                    if kpi.measured_at == latest_time
+                }
+
+            # Calculate health
+            overall_health, pillar_averages = calculate_kpi_health(latest_kpis, customer_id=customer_id)
+
+            # Normalize KPI codes for playbook trigger evaluation
+            normalized_kpis = {}
+            for code, val in latest_kpis.items():
+                norm = _normalize_kpi_code_for_health(code)
+                if norm:
+                    normalized_kpis[norm] = val
+            # Also add OVERALL_HEALTH for PB-05 trigger
+            normalized_kpis['OVERALL_HEALTH'] = overall_health
+
+            # ARR weight (0.5-1.5): boost high-value accounts
+            arr = (account.profile_metadata or {}).get('arr', 0) or (account.profile_metadata or {}).get('revenue', 0) or 0
+            if arr > 10_000_000:
+                arr_weight = 1.5
+            elif arr > 5_000_000:
+                arr_weight = 1.3
+            elif arr > 2_000_000:
+                arr_weight = 1.1
+            elif arr > 0:
+                arr_weight = 1.0
+            else:
+                arr_weight = 0.8  # Unknown ARR — slight penalty
+
+            # Churn / expansion estimates from health
+            churn_prob = 80 if overall_health < 50 else (40 if overall_health < 70 else 15)
+            expansion_prob_val = 75 if overall_health > 80 else (30 if overall_health > 60 else 5)
+
+            # Check expansion KPI if available
+            exp_kpi = normalized_kpis.get('P5-KPI7')
+            if exp_kpi is not None:
+                expansion_prob_val = max(expansion_prob_val, exp_kpi)
+
+            # 3. Evaluate all 6 playbook triggers
+            for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+                if should_trigger_playbook(pb_id, normalized_kpis):
+                    impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                    effort = _compute_effort_score(pb_cfg)
+                    priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+
+                    total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+
+                    # Build description from trigger KPI values
+                    trigger_details = []
+                    for tk in pb_cfg.get('trigger_kpis', []):
+                        if tk in normalized_kpis:
+                            cond = pb_cfg.get('trigger_conditions', {}).get(tk, {})
+                            threshold = cond.get('value', '?')
+                            kpi_name = DC2S_KPIS.get(tk, {}).get('name', tk)
+                            trigger_details.append(f"{kpi_name}: {normalized_kpis[tk]:.1f} (threshold {threshold})")
+
+                    description = '; '.join(trigger_details) if trigger_details else pb_cfg.get('estimated_impact', '')
+
+                    all_actions.append({
+                        'account_id': account.account_id,
+                        'account_name': account.account_name,
+                        'action_title': f"Start {pb_cfg['name']} Playbook",
+                        'action_description': description,
+                        'action_type': 'playbook',
+                        'related_playbook_id': pb_id,
+                        'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                        'impact_score': impact,
+                        'effort_score': effort,
+                        'priority_index': priority_index,
+                        'account_health': round(overall_health, 1),
+                        'estimated_hours': total_hours,
+                        'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                    })
+
+            # 4. Non-playbook actions
+
+            # Health check follow-up (accounts with health < 60)
+            if overall_health < 60:
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 20  # Low effort: just a review call
+                priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': 'Health Check Follow-up',
+                    'action_description': f'Health score at {overall_health:.0f}. Schedule intervention call.',
+                    'action_type': 'follow_up',
+                    'related_playbook_id': None,
+                    'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                    'impact_score': impact,
+                    'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 2,
+                    'estimated_duration_display': '1 day',
+                })
+
+            # QBR scheduling (P4-KPI3 < target 3)
+            qbr_val = normalized_kpis.get('P4-KPI3')
+            if qbr_val is not None and qbr_val < 3:
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 25
+                priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': 'Schedule QBR',
+                    'action_description': f'QBR frequency at {qbr_val:.0f}/yr (target 3+). Schedule next review.',
+                    'action_type': 'qbr',
+                    'related_playbook_id': None,
+                    'urgency': 'high',
+                    'impact_score': impact,
+                    'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 4,
+                    'estimated_duration_display': '1-2 days',
+                })
+
+            # Expansion call (P5-KPI7 > 70%)
+            if exp_kpi is not None and exp_kpi > 70:
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 30
+                priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': 'Expansion Opportunity Call',
+                    'action_description': f'Expansion probability at {exp_kpi:.0f}%. Schedule capacity planning discussion.',
+                    'action_type': 'expansion',
+                    'related_playbook_id': None,
+                    'urgency': 'opportunity',
+                    'impact_score': impact,
+                    'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 3,
+                    'estimated_duration_display': '1 day',
+                })
+
+        # 5. Sort by priority_index DESC, take top 10
+        all_actions.sort(key=lambda a: a['priority_index'], reverse=True)
+        top_actions = all_actions[:10]
+
+        # Assign rank and id
+        for i, action in enumerate(top_actions, 1):
+            action['rank'] = i
+            action['id'] = f"act-{i:03d}"
+
+        # Summary
+        urgency_counts = {'critical': 0, 'high': 0, 'opportunity': 0, 'medium': 0}
+        total_hours = 0
+        for a in top_actions:
+            urgency_counts[a.get('urgency', 'medium')] = urgency_counts.get(a.get('urgency', 'medium'), 0) + 1
+            total_hours += a.get('estimated_hours', 0)
+
+        return jsonify({
+            'date': datetime.utcnow().strftime('%Y-%m-%d'),
+            'actions': top_actions,
+            'summary': {
+                'total_actions': len(top_actions),
+                'critical_count': urgency_counts.get('critical', 0),
+                'high_count': urgency_counts.get('high', 0),
+                'opportunity_count': urgency_counts.get('opportunity', 0),
+                'total_estimated_hours': total_hours
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error computing daily actions: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to compute daily actions'}), 500
 
 
 # Export blueprint

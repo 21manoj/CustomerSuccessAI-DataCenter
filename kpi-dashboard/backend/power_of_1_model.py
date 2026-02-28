@@ -288,8 +288,12 @@ def calculate_power_of_1_impact(
 
     total_impact = direct_impact + compounding_impact
 
-    # Per-metric investment cost (from JSON config)
-    investment = metric.total_investment
+    # Per-metric investment scales with improvement: base cost at 1%, +50% of initial cost per each additional 1%
+    # e.g. 1% -> 1x, 2% -> 1.5x, 3% -> 2x, 4% -> 2.5x
+    cost_scale = max(1.0, 1.0 + 0.5 * (improvement_pct - 1.0))
+    investment = metric.total_investment * cost_scale
+    cs_scaled = metric.cs_initiative_cost * cost_scale
+    platform_scaled = metric.platform_cost * cost_scale
 
     roi = (total_impact - investment) / investment if investment > 0 else 0
     payback_months = (investment / (total_impact / 12)) if total_impact > 0 else float('inf')
@@ -300,12 +304,13 @@ def calculate_power_of_1_impact(
         "improvement_pct": improvement_pct,
         "baseline": metric.baseline,
         "new_value": _calculate_new_value(metric, improvement_pct),
+        "unit": metric.unit,
         "direct_impact": round(direct_impact, 2),
         "compounding_impact": round(compounding_impact, 2),
         "total_impact": round(total_impact, 2),
         "investment": investment,
-        "cs_initiative_cost": metric.cs_initiative_cost,
-        "platform_cost": metric.platform_cost,
+        "cs_initiative_cost": round(cs_scaled, 2),
+        "platform_cost": round(platform_scaled, 2),
         "roi": round(roi, 4),
         "payback_months": round(payback_months, 1),
         "category": metric.category.value,
@@ -348,7 +353,15 @@ def calculate_portfolio_impact(
     compounding = total_direct * COMPOUNDING_MULTIPLIER
     total_impact = total_direct + compounding
 
-    investment = INVESTMENT_SUMMARY["total_investment"]
+    # Portfolio investment scales with improvement: same rule as per-metric (+50% of initial per 1% improvement)
+    cost_scale = max(1.0, 1.0 + 0.5 * (improvement_pct - 1.0))
+    base_investment = INVESTMENT_SUMMARY["total_investment"]
+    base_cs = INVESTMENT_SUMMARY["cs_initiatives"]
+    base_platform = INVESTMENT_SUMMARY["platform_cost"]
+    investment = base_investment * cost_scale
+    cs_scaled = base_cs * cost_scale
+    platform_scaled = base_platform * cost_scale
+
     roi = (total_impact - investment) / investment if investment > 0 else 0
 
     return {
@@ -360,9 +373,9 @@ def calculate_portfolio_impact(
             "total_impact": round(total_impact, 2),
             "revenue_increase": round(total_revenue, 2),
             "cost_savings": round(total_savings, 2),
-            "investment": investment,
-            "cs_initiatives_cost": INVESTMENT_SUMMARY["cs_initiatives"],
-            "platform_cost": INVESTMENT_SUMMARY["platform_cost"],
+            "investment": round(investment, 2),
+            "cs_initiatives_cost": round(cs_scaled, 2),
+            "platform_cost": round(platform_scaled, 2),
             "roi": round(roi, 4),
             "payback_months": round(
                 (investment / (total_impact / 12)) if total_impact > 0 else float('inf'), 1
@@ -370,6 +383,67 @@ def calculate_portfolio_impact(
         },
         "scaling_scenarios": SCALING_SCENARIOS,
         "time_economics": TIME_ECONOMICS,
+    }
+
+
+def calculate_portfolio_impact_multi_lever(
+    improvement_by_metric: Dict[str, float],
+    total_arr: Optional[float] = None,
+) -> Dict:
+    """
+    Calculate total Power of 1 impact when each of the 6 levers has its own improvement %.
+
+    Args:
+        improvement_by_metric: Dict of metric_id -> improvement_pct (e.g. {"TTFV": 2.0, "NRR": 1.5, ...})
+        total_arr: If provided, scales impact by ARR (default $10M base).
+
+    Returns:
+        Same shape as calculate_portfolio_impact: metrics, totals (total_impact, investment, roi, etc.)
+    """
+    arr_scale = 1.0
+    if total_arr is not None:
+        arr_scale = total_arr / 10_000_000
+
+    results = {}
+    total_direct = 0.0
+    total_revenue = 0.0
+    total_savings = 0.0
+    total_investment = 0.0
+    total_cs = 0.0
+    total_platform = 0.0
+
+    for metric_id, metric in POWER_OF_1_METRICS.items():
+        pct = improvement_by_metric.get(metric_id, 0.0)
+        impact = calculate_power_of_1_impact(metric_id, pct, total_arr)
+        results[metric_id] = impact
+        total_direct += impact["direct_impact"]
+        total_revenue += impact["impact_breakdown"]["revenue_increase"]
+        total_savings += impact["impact_breakdown"]["cost_savings"]
+        total_investment += impact["investment"]
+        total_cs += impact.get("cs_initiative_cost", 0)
+        total_platform += impact.get("platform_cost", 0)
+
+    compounding = total_direct * COMPOUNDING_MULTIPLIER
+    total_impact = total_direct + compounding
+
+    roi = (total_impact - total_investment) / total_investment if total_investment > 0 else 0
+    payback_months = (total_investment / (total_impact / 12)) if total_impact > 0 else float("inf")
+
+    return {
+        "improvement_by_metric": improvement_by_metric,
+        "metrics": results,
+        "totals": {
+            "direct_impact": round(total_direct, 2),
+            "compounding_effect": round(compounding, 2),
+            "total_impact": round(total_impact, 2),
+            "revenue_increase": round(total_revenue, 2),
+            "cost_savings": round(total_savings, 2),
+            "investment": round(total_investment, 2),
+            "cs_initiatives_cost": round(total_cs, 2),
+            "platform_cost": round(total_platform, 2),
+            "roi": round(roi, 4),
+            "payback_months": round(payback_months, 1),
+        },
     }
 
 

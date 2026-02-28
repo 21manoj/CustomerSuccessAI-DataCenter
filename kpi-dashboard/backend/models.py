@@ -70,14 +70,8 @@ class Account(db.Model):
     region = db.Column(db.String, index=True)
     external_account_id = db.Column(db.String, index=True)  # External account ID from customer profile
     profile_metadata = db.Column(db.JSON)  # JSON field for customer profile data
-
-    # Lifecycle fields (Phase 0 — Action Interface foundation)
-    journey_phase = db.Column(db.String(50), default='onboarding', index=True)
-      # Values: 'onboarding', 'adoption', 'expanding', 'renewing', 'mature'
-      # DC2_S maps to: 'deployment', 'performance', 'excellence'
-    renewal_date = db.Column(db.DateTime, nullable=True)
-    contract_start_date = db.Column(db.DateTime, nullable=True)
-    contract_value = db.Column(db.Numeric(15, 2), nullable=True)
+    # Note: Lifecycle fields (journey_phase, renewal_date, contract_*) are DC/datacenter-only.
+    # SaaS uses this schema as-is. DC vertical may store journey_phase in profile_metadata or use a DC-specific model.
 
     # UUID migration columns (added by phase1a_add_uuid_columns.py)
     uuid = db.Column(db.String(60), nullable=True, unique=True)  # e.g. saas_acct_019c3409-...

@@ -25,7 +25,9 @@ import {
   LogOut,
   Settings,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  DollarSign,
+  Layers
 } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
@@ -37,6 +39,8 @@ import GovernanceSettings from './GovernanceSettings';
 import Playbooks from './Playbooks';
 import PlaybookReports from './PlaybookReports';
 import AccountHealthHeatmap from './AccountHealthHeatmap';
+import OutcomeROIDashboard from './dashboard/OutcomeROIDashboard';
+import PortcoCEODashboard from './dashboard/PortcoCEODashboard';
 
 interface Product {
   product_id: number;
@@ -327,7 +331,9 @@ const CSPlatform = () => {
         console.log('Transformed accounts:', transformedAccounts); // Debug log
         setAccounts(transformedAccounts);
       } else {
-        setError('Failed to fetch accounts');
+        const errBody = await response.json().catch(() => ({}));
+        console.error('[fetchAccounts] Non-OK response:', response.status, response.statusText, errBody);
+        setError(errBody?.error || `Failed to fetch accounts (${response.status})`);
       }
     } catch (err) {
       setError('Error fetching accounts');
@@ -351,9 +357,11 @@ const CSPlatform = () => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('KPIs API response:', data.length, 'KPIs'); // Debug log
+        // Backend returns array; some endpoints may return { kpis: [] }
+        const kpisArray = Array.isArray(data) ? data : (data?.kpis || []);
+        console.log('KPIs API response:', kpisArray.length, 'KPIs');
         // Transform backend KPI data to match our interface
-        const transformedKPIs: KPI[] = data.map((kpi: any) => ({
+        const transformedKPIs: KPI[] = kpisArray.map((kpi: any) => ({
           kpi_id: kpi.kpi_id,
           category: kpi.category || 'Uncategorized',
           kpi_parameter: kpi.kpi_parameter,
@@ -407,10 +415,12 @@ const CSPlatform = () => {
         }
         setKpiData(transformedKPIs);
       } else {
-        setError('Failed to fetch KPIs');
+        const errBody = await response.json().catch(() => ({}));
+        console.error('[fetchKPIs] Non-OK response:', response.status, errBody);
+        setError((prev) => prev || (errBody?.error || `Failed to fetch KPIs (${response.status})`));
       }
     } catch (err) {
-      setError('Error fetching KPIs');
+      setError((prev) => prev || 'Error fetching KPIs');
       console.error('Error fetching KPIs:', err);
     }
   };
@@ -3704,6 +3714,8 @@ const CSPlatform = () => {
           { id: 'analytics', label: 'Customer Success Value Analytics', icon: Activity },
           { id: 'accounts', label: 'Account Health', icon: Users },
           { id: 'products', label: 'Product Health', icon: Target },
+          { id: 'outcome-roi', label: 'Outcome ROI', icon: DollarSign },
+          { id: 'portco', label: 'Power of 1 (Portfolio CEO)', icon: Layers },
           { id: 'rag-analysis', label: 'AI Insights', icon: MessageSquare },
           { id: 'insights', label: 'CS AI Agents', icon: MessageSquare },
           { id: 'settings', label: 'Settings', icon: Settings },
@@ -5218,6 +5230,8 @@ const CSPlatform = () => {
         )}
 
         {activeTab === 'reports' && <PlaybookReports customerId={session.customer_id} />}
+        {activeTab === 'outcome-roi' && <OutcomeROIDashboard />}
+        {activeTab === 'portco' && <PortcoCEODashboard />}
         </main>
       </div>
 

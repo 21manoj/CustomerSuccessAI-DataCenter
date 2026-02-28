@@ -183,6 +183,14 @@ export async function listPortfolios(): Promise<{ portfolios: PortfolioSummary[]
   return handleResponse(res);
 }
 
+/** List customers available to add to a portfolio (Power of 1 / revenue_intelligence enabled, with accounts) */
+export async function getAvailableCustomersForPortfolio(): Promise<{
+  customers: Array<{ customer_id: number; customer_name: string }>;
+}> {
+  const res = await apiCall('/api/portfolio/available-customers');
+  return handleResponse(res);
+}
+
 /** Create a new portfolio */
 export async function createPortfolio(data: {
   portfolio_name: string;
@@ -264,9 +272,43 @@ export async function getPortfolioImpact(portfolioId: number, improvementPct = 1
   return handleResponse(res);
 }
 
-/** What-if slider: get impact across 0.5%-6% improvement range */
+/** What-if slider: get impact across 0.5%-6% improvement range (single slider; legacy) */
 export async function getSliderData(portfolioId: number): Promise<SliderData> {
   const res = await apiCall(`/api/portfolio/${portfolioId}/power-of-1-slider`);
+  return handleResponse(res);
+}
+
+/** 6-lever impact: each of the 6 Power of 1 levers has its own improvement % */
+export interface PowerOf1LeverImpact {
+  improvement_pct: number;
+  baseline?: number;
+  new_value?: number;
+  unit?: string;
+  total_impact: number;
+  investment: number;
+  roi: number;
+  display_name: string;
+}
+
+export type PowerOf1ImpactResult = PortfolioResult & {
+  improvement_by_metric: Record<string, number>;
+  per_metric_impacts: Record<string, PowerOf1LeverImpact>;
+};
+
+const POWER_OF_1_LEVER_IDS = [
+  'TTFV', 'NRR', 'GRR', 'ticket_resolution_time', 'product_adoption', 'expansion_rate',
+];
+
+export async function getPowerOf1Impact(
+  portfolioId: number,
+  leverPcts: Record<string, number>
+): Promise<PowerOf1ImpactResult> {
+  const params = new URLSearchParams();
+  POWER_OF_1_LEVER_IDS.forEach(id => {
+    const v = leverPcts[id] ?? 1.0;
+    params.set(id, String(v));
+  });
+  const res = await apiCall(`/api/portfolio/${portfolioId}/power-of-1-impact?${params.toString()}`);
   return handleResponse(res);
 }
 

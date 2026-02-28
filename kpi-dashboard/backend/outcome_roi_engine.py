@@ -548,6 +548,20 @@ def _result_to_dict(result: OutcomeROIResult) -> Dict:
 # INTERNAL HELPERS
 # ============================================================
 
+def _format_metric_value_suffix(unit: str) -> str:
+    """Return display suffix for non-$ metric units: percent→%, days→' days', hours→' hrs'."""
+    if not unit:
+        return ""
+    u = unit.lower()
+    if u == "percent":
+        return "%"
+    if u == "days":
+        return " days"
+    if u == "hours":
+        return " hrs"
+    return f" {unit}"
+
+
 def _make_outcome_headline(metric: MetricOutcome, view_type: str) -> str:
     """Generate an outcome-focused headline for a metric."""
     if metric.dollar_impact <= 0:
@@ -555,11 +569,12 @@ def _make_outcome_headline(metric: MetricOutcome, view_type: str) -> str:
 
     verb = "Delivered" if view_type == "historical" else "Will deliver"
     dollar_str = _format_dollars(metric.dollar_impact)
+    suffix = _format_metric_value_suffix(metric.unit)
 
     if metric.direction == "lower_is_better":
-        direction_str = f"{metric.baseline_value:.0f} → {metric.current_value:.0f} {metric.unit}"
+        direction_str = f"{metric.baseline_value:.0f}{suffix} → {metric.current_value:.0f}{suffix}"
     else:
-        direction_str = f"{metric.baseline_value:.1f} → {metric.current_value:.1f}{metric.unit}"
+        direction_str = f"{metric.baseline_value:.1f}{suffix} → {metric.current_value:.1f}{suffix}"
 
     return f"{verb} {dollar_str} ({direction_str})"
 

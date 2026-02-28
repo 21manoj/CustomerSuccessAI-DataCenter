@@ -23,7 +23,8 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Minus,
   Users, DollarSign, Activity, Target, ChevronRight,
   Calendar, Clock, Shield, Zap, Server, CheckCircle,
-  XCircle, AlertCircle, Play, Eye, RefreshCw
+  XCircle, AlertCircle, Play, Eye, RefreshCw,
+  ListChecks, ArrowRight, BarChart2
 } from 'lucide-react';
 
 // ============================================================================
@@ -60,6 +61,32 @@ interface SmartAction {
   description: string;
   action_type: string;
   due_date?: string;
+}
+
+interface DailyAction {
+  id: string;
+  rank: number;
+  account_id: number;
+  account_name: string;
+  action_title: string;
+  action_description: string;
+  action_type: string;
+  related_playbook_id: string | null;
+  urgency: 'critical' | 'high' | 'opportunity' | 'medium';
+  impact_score: number;
+  effort_score: number;
+  priority_index: number;
+  account_health: number;
+  estimated_hours: number;
+  estimated_duration_display: string;
+}
+
+interface DailyActionsSummary {
+  total_actions: number;
+  critical_count: number;
+  high_count: number;
+  opportunity_count: number;
+  total_estimated_hours: number;
 }
 
 interface PortfolioSummary {
@@ -609,6 +636,184 @@ const HealthDistributionChart: React.FC<{ summary: PortfolioSummary }> = ({ summ
 };
 
 // ============================================================================
+// DAILY CSM ACTIONS PANEL
+// ============================================================================
+
+const URGENCY_CONFIG = {
+  critical: { bg: 'bg-red-50 border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-800', dot: 'bg-red-500' },
+  high: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
+  opportunity: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500' },
+  medium: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' },
+};
+
+const DailyActionsPanel: React.FC<{
+  actions: DailyAction[];
+  summary: DailyActionsSummary;
+  filter: 'all' | 'critical' | 'high' | 'opportunity';
+  onFilterChange: (f: 'all' | 'critical' | 'high' | 'opportunity') => void;
+  loading: boolean;
+  onStartPlaybook: (action: DailyAction) => void;
+  onViewAccount: (accountId: number) => void;
+}> = ({ actions, summary, filter, onFilterChange, loading, onStartPlaybook, onViewAccount }) => {
+  const filtered = filter === 'all' ? actions : actions.filter(a => a.urgency === filter);
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-6">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <ListChecks className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">CSM Daily Actions</h2>
+              <p className="text-xs text-gray-500">{today}</p>
+            </div>
+          </div>
+          {/* Filter chips */}
+          <div className="flex gap-1.5">
+            {(['all', 'critical', 'high', 'opportunity'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => onFilterChange(f)}
+                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
+                  filter === f
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                {f !== 'all' && (
+                  <span className="ml-1">
+                    ({f === 'critical' ? summary.critical_count : f === 'high' ? summary.high_count : summary.opportunity_count})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary bar */}
+      <div className="grid grid-cols-4 gap-3 px-5 py-3 bg-gray-50/50 border-b border-gray-100">
+        <div className="text-center">
+          <p className="text-xl font-bold text-gray-900">{summary.total_actions}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Actions</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xl font-bold text-red-600">{summary.critical_count}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Critical</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xl font-bold text-indigo-600">{summary.total_estimated_hours}h</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Est. Hours</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xl font-bold text-emerald-600">0%</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Complete</p>
+        </div>
+      </div>
+
+      {/* Action list */}
+      <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50">
+        {loading ? (
+          <div className="py-8 text-center text-gray-400 text-sm">Loading daily actions...</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-8 text-center text-gray-400 text-sm">
+            {filter === 'all' ? 'No actions needed today. Great job!' : `No ${filter} actions.`}
+          </div>
+        ) : (
+          filtered.map(action => {
+            const cfg = URGENCY_CONFIG[action.urgency] || URGENCY_CONFIG.medium;
+            return (
+              <div key={action.id} className={`flex items-center gap-3 px-5 py-3 hover:bg-gray-50/80 transition-colors ${cfg.bg} border-l-4`}>
+                {/* Rank */}
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold">
+                  {action.rank}
+                </div>
+
+                {/* Urgency dot + Account health */}
+                <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${cfg.badge}`}>
+                    {action.urgency}
+                  </span>
+                  <div className="relative w-8 h-8">
+                    <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                      <circle
+                        cx="18" cy="18" r="14" fill="none"
+                        stroke={action.account_health >= 70 ? '#22c55e' : action.account_health >= 50 ? '#eab308' : '#ef4444'}
+                        strokeWidth="3" strokeDasharray={`${(action.account_health / 100) * 88} 88`} strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{action.account_health}</span>
+                  </div>
+                </div>
+
+                {/* Main content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onViewAccount(action.account_id)}
+                      className="text-xs text-indigo-600 hover:underline font-medium truncate"
+                    >
+                      {action.account_name}
+                    </button>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 truncate">{action.action_title}</p>
+                  <p className="text-xs text-gray-500 truncate">{action.action_description}</p>
+                </div>
+
+                {/* Impact / Effort bars */}
+                <div className="flex-shrink-0 w-20 space-y-1">
+                  <div>
+                    <div className="flex items-center justify-between text-[9px] text-gray-500">
+                      <span>Impact</span><span>{action.impact_score}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full bg-green-500" style={{ width: `${Math.min(100, action.impact_score)}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-[9px] text-gray-500">
+                      <span>Effort</span><span>{action.effort_score}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full bg-blue-400" style={{ width: `${Math.min(100, action.effort_score)}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration + action button */}
+                <div className="flex-shrink-0 text-right space-y-1">
+                  <p className="text-[10px] text-gray-500">{action.estimated_hours}h &middot; {action.estimated_duration_display}</p>
+                  <button
+                    onClick={() => onStartPlaybook(action)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                  >
+                    {action.action_type === 'playbook' ? (
+                      <><Play className="w-3 h-3" /> Start</>
+                    ) : action.action_type === 'expansion' ? (
+                      <><ArrowRight className="w-3 h-3" /> Call</>
+                    ) : action.action_type === 'qbr' ? (
+                      <><Calendar className="w-3 h-3" /> Schedule</>
+                    ) : (
+                      <><Eye className="w-3 h-3" /> Review</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================================
 
@@ -637,6 +842,10 @@ const ExecutiveDashboard: React.FC = () => {
   const [reportByAccountId, setReportByAccountId] = useState<Record<string, AnalysisReport>>({});
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportModalContent, setReportModalContent] = useState<AnalysisReport | null>(null);
+  const [dailyActions, setDailyActions] = useState<DailyAction[]>([]);
+  const [dailySummary, setDailySummary] = useState<DailyActionsSummary>({ total_actions: 0, critical_count: 0, high_count: 0, opportunity_count: 0, total_estimated_hours: 0 });
+  const [dailyFilter, setDailyFilter] = useState<'all' | 'critical' | 'high' | 'opportunity'>('all');
+  const [dailyLoading, setDailyLoading] = useState(false);
 
   // Load real data from APIs
   useEffect(() => {
@@ -852,6 +1061,24 @@ const ExecutiveDashboard: React.FC = () => {
         }));
       }
       
+      // Load CSM Daily Actions (DC vertical)
+      try {
+        setDailyLoading(true);
+        const dailyRes = await fetch('/api/dc2s/daily-actions', {
+          credentials: 'include',
+          headers,
+        });
+        if (dailyRes.ok) {
+          const dailyData = await dailyRes.json();
+          setDailyActions(dailyData.actions || []);
+          setDailySummary(dailyData.summary || { total_actions: 0, critical_count: 0, high_count: 0, opportunity_count: 0, total_estimated_hours: 0 });
+        }
+      } catch (dailyErr) {
+        console.warn('Failed to load daily actions:', dailyErr);
+      } finally {
+        setDailyLoading(false);
+      }
+
       setLastRefresh(new Date());
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -942,6 +1169,20 @@ const ExecutiveDashboard: React.FC = () => {
     setShowReportModal(true);
   };
 
+  const handleDailyActionStart = (action: DailyAction) => {
+    if (action.action_type === 'playbook' && action.related_playbook_id) {
+      navigate('/dc-dashboard/playbooks');
+    } else if (action.action_type === 'expansion') {
+      navigate(`/journey-v3/${action.account_id}`);
+    } else {
+      navigate(`/dc-dashboard/tenants/${action.account_id}`);
+    }
+  };
+
+  const handleViewDailyAccount = (accountId: number) => {
+    navigate(`/dc-dashboard/tenants/${accountId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -977,6 +1218,17 @@ const ExecutiveDashboard: React.FC = () => {
             </p>
           </div>
         )}
+
+        {/* CSM Daily Actions — prioritised morning TODO */}
+        <DailyActionsPanel
+          actions={dailyActions}
+          summary={dailySummary}
+          filter={dailyFilter}
+          onFilterChange={setDailyFilter}
+          loading={dailyLoading}
+          onStartPlaybook={handleDailyActionStart}
+          onViewAccount={handleViewDailyAccount}
+        />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

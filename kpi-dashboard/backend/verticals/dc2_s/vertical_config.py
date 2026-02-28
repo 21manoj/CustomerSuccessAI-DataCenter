@@ -177,7 +177,15 @@ PLAYBOOK_CONFIG = {
         "automation_level": "partial",
         "human_approval_required": False,
         "estimated_impact": "+30% deployment velocity",
-        "phases": ["deployment"]
+        "phases": ["deployment"],
+        "estimated_duration_days": 21,
+        "estimated_duration_display": "14–21 days",
+        "sub_components": [
+            {"id": "PB-01-S1", "name": "Kickoff & assessment", "description": "Stakeholder alignment, bottleneck identification", "estimated_hours": 8},
+            {"id": "PB-01-S2", "name": "Milestone tracking setup", "description": "Track TTFV and cycle time; assign owners", "estimated_hours": 16},
+            {"id": "PB-01-S3", "name": "Unblock & escalation", "description": "Remove blockers (parts, access, approvals)", "estimated_hours": 40},
+            {"id": "PB-01-S4", "name": "Go-live validation", "description": "First workload verification and sign-off", "estimated_hours": 8},
+        ],
     },
     "PB-02": {
         "id": "PB-02",
@@ -191,7 +199,15 @@ PLAYBOOK_CONFIG = {
         "automation_level": "high",
         "human_approval_required": False,
         "estimated_impact": "-40% RMA rate, $4.4M saved per 1% reduction",
-        "phases": ["performance", "excellence"]
+        "phases": ["performance", "excellence"],
+        "estimated_duration_days": 14,
+        "estimated_duration_display": "7–14 days",
+        "sub_components": [
+            {"id": "PB-02-S1", "name": "Triage & root-cause analysis", "description": "RMA batch analysis, thermal and component review", "estimated_hours": 24},
+            {"id": "PB-02-S2", "name": "Remediation plan", "description": "Firmware, cooling, or batch replacement actions", "estimated_hours": 16},
+            {"id": "PB-02-S3", "name": "Execution & monitoring", "description": "Apply fixes; monitor RMA and MTBF", "estimated_hours": 40},
+            {"id": "PB-02-S4", "name": "Verification & close-out", "description": "Confirm RMA rate improvement; document learnings", "estimated_hours": 8},
+        ],
     },
     "PB-03": {
         "id": "PB-03",
@@ -205,7 +221,15 @@ PLAYBOOK_CONFIG = {
         "automation_level": "medium",
         "human_approval_required": False,
         "estimated_impact": "+25% GPU utilization",
-        "phases": ["performance", "excellence"]
+        "phases": ["performance", "excellence"],
+        "estimated_duration_days": 21,
+        "estimated_duration_display": "14–21 days",
+        "sub_components": [
+            {"id": "PB-03-S1", "name": "Utilization analysis", "description": "Baseline GPU and memory utilization; identify gaps", "estimated_hours": 16},
+            {"id": "PB-03-S2", "name": "Workload tuning", "description": "Job sizing, batching, and memory optimization", "estimated_hours": 32},
+            {"id": "PB-03-S3", "name": "Scheduling improvements", "description": "Queue and scheduler configuration", "estimated_hours": 24},
+            {"id": "PB-03-S4", "name": "Re-measure & report", "description": "Post-optimization metrics and recommendations", "estimated_hours": 8},
+        ],
     },
     "PB-04": {
         "id": "PB-04",
@@ -220,7 +244,16 @@ PLAYBOOK_CONFIG = {
         "automation_level": "low",
         "human_approval_required": True,  # High-value decision
         "estimated_impact": "$4.8M avg Phase 2 expansion ARR",
-        "phases": ["excellence"]
+        "phases": ["excellence"],
+        "estimated_duration_days": 60,
+        "estimated_duration_display": "30–60 days",
+        "sub_components": [
+            {"id": "PB-04-S1", "name": "Opportunity identification", "description": "Capacity and growth analysis; expansion scoring", "estimated_hours": 24},
+            {"id": "PB-04-S2", "name": "Value proposition development", "description": "ROI and business case for Phase 2", "estimated_hours": 40},
+            {"id": "PB-04-S3", "name": "Executive alignment", "description": "Stakeholder and sponsor alignment; approval path", "estimated_hours": 24},
+            {"id": "PB-04-S4", "name": "Proposal & negotiation", "description": "Pricing, terms, and contract discussion", "estimated_hours": 40},
+            {"id": "PB-04-S5", "name": "Implementation planning", "description": "Rollout timeline and success criteria", "estimated_hours": 16},
+        ],
     },
     "PB-05": {
         "id": "PB-05",
@@ -233,7 +266,15 @@ PLAYBOOK_CONFIG = {
         "automation_level": "high",
         "human_approval_required": False,
         "estimated_impact": "+15% early intervention success rate",
-        "phases": ["deployment", "performance", "excellence"]  # All phases
+        "phases": ["deployment", "performance", "excellence"],  # All phases
+        "estimated_duration_days": 14,
+        "estimated_duration_display": "7–14 days",
+        "sub_components": [
+            {"id": "PB-05-S1", "name": "Health review & triage", "description": "Review pillar scores and root causes", "estimated_hours": 8},
+            {"id": "PB-05-S2", "name": "Action plan", "description": "Prioritized actions and owners", "estimated_hours": 16},
+            {"id": "PB-05-S3", "name": "Intervention execution", "description": "Execute top actions (playbooks, outreach)", "estimated_hours": 32},
+            {"id": "PB-05-S4", "name": "Follow-up & re-score", "description": "Re-measure health and close or escalate", "estimated_hours": 8},
+        ],
     },
     "PB-06": {
         "id": "PB-06",
@@ -247,13 +288,35 @@ PLAYBOOK_CONFIG = {
         "automation_level": "medium",
         "human_approval_required": False,
         "estimated_impact": "+20% executive engagement score",
-        "phases": ["excellence"]
+        "phases": ["excellence"],
+        "estimated_duration_days": 45,
+        "estimated_duration_display": "30–90 days (ongoing)",
+        "sub_components": [
+            {"id": "PB-06-S1", "name": "Stakeholder mapping", "description": "Identify exec sponsor, champion, and key contacts", "estimated_hours": 8},
+            {"id": "PB-06-S2", "name": "QBR schedule & prep", "description": "Set quarterly cadence; prepare agenda and metrics", "estimated_hours": 24},
+            {"id": "PB-06-S3", "name": "Champion engagement", "description": "Regular touchpoints and success stories", "estimated_hours": 24},
+            {"id": "PB-06-S4", "name": "Executive alignment", "description": "Executive briefing and strategic alignment", "estimated_hours": 16},
+        ],
     }
 }
 
 def get_playbook_config(playbook_id: str) -> Dict[str, Any]:
     """Get configuration for a playbook"""
     return PLAYBOOK_CONFIG.get(playbook_id, {})
+
+
+def get_playbook_duration_and_sub_components(playbook_id: str) -> Dict[str, Any]:
+    """Get estimated duration and sub-components for a playbook (for APIs/docs)."""
+    cfg = get_playbook_config(playbook_id)
+    if not cfg:
+        return {}
+    return {
+        "playbook_id": cfg.get("id"),
+        "name": cfg.get("name"),
+        "estimated_duration_days": cfg.get("estimated_duration_days"),
+        "estimated_duration_display": cfg.get("estimated_duration_display"),
+        "sub_components": cfg.get("sub_components", []),
+    }
 
 def get_playbooks_for_phase(phase: str) -> List[str]:
     """Get all playbooks applicable for a customer phase"""

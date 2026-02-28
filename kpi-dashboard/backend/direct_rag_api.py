@@ -98,13 +98,35 @@ def get_playbook_context(customer_id, query_text):
                         context += f"  • {outcome_key}: {baseline} → {current} ({improvement}) - {status}\n"
                         count += 1
             
+            # DC Playbook: hours tracking
+            hours = data.get('hours_tracking', {})
+            if hours:
+                context += f"Hours: {hours.get('total_actual_hours', 'N/A')}h actual vs {hours.get('total_estimated_hours', 'N/A')}h estimated ({hours.get('efficiency_rating', 'N/A')})\n"
+
+            # DC Playbook: KPI impact with financial
+            kpi_impact = data.get('kpi_impact', {})
+            if kpi_impact:
+                fin = kpi_impact.get('financial_impact')
+                if fin:
+                    context += f"Financial Impact: {fin}\n"
+                for ti in kpi_impact.get('trigger_kpis', [])[:3]:
+                    if isinstance(ti, dict) and ti.get('before') is not None:
+                        context += f"  • {ti.get('kpi_name', '')}: {ti['before']} → {ti.get('after', 'N/A')} ({ti.get('improvement', '')})\n"
+
+            # DC Playbook: learnings
+            learnings = data.get('learnings', [])
+            if learnings:
+                context += "Learnings:\n"
+                for lr in learnings[:2]:
+                    context += f"  • {lr}\n"
+
             # Add top 2 next steps
             next_steps = data.get('next_steps', [])
             if next_steps:
                 context += "Priority Actions:\n"
                 for i, step in enumerate(next_steps[:2]):
                     context += f"  {i+1}. {step}\n"
-        
+
         context += "\n(Use these playbook insights to provide evidence-based, action-oriented recommendations)\n"
         return context
         

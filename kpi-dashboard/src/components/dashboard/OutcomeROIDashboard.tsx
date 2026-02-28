@@ -99,6 +99,15 @@ const fmtDollar = (n: number) => {
 
 const fmtPct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
 
+/** Format a metric value with correct unit (days, hrs, % — never $ for non-dollar metrics). */
+const fmtMetricValue = (value: number, unit: string): string => {
+  const u = (unit || '').toLowerCase();
+  if (u === 'percent') return `${value.toFixed(1)}%`;
+  if (u === 'days') return `${value.toFixed(0)} days`;
+  if (u === 'hours') return `${value.toFixed(0)} hrs`;
+  return `${value} ${unit}`.trim();
+};
+
 const METRIC_CONFIG: Record<string, { icon: string; color: string; bgColor: string }> = {
   TTFV: { icon: 'clock', color: 'text-orange-600', bgColor: 'bg-orange-50' },
   NRR: { icon: 'trending-up', color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
@@ -160,9 +169,9 @@ const MetricOutcomeRow: React.FC<{
           <div>
             <div className="font-semibold text-gray-900 text-sm">{metric.display_name}</div>
             <div className="text-xs text-gray-500 mt-0.5">
-              {metric.baseline_value}{metric.unit === 'percent' ? '%' : ` ${metric.unit}`}
+              {fmtMetricValue(metric.baseline_value, metric.unit)}
               {' '}<ArrowRight className="inline h-3 w-3" />{' '}
-              {metric.current_value}{metric.unit === 'percent' ? '%' : ` ${metric.unit}`}
+              {fmtMetricValue(metric.current_value, metric.unit)}
               {isPositive && (
                 <span className="ml-1.5 text-emerald-600 font-medium">
                   ({metric.improvement_pct > 0 ? '+' : ''}{metric.improvement_pct}%)

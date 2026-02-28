@@ -48,11 +48,12 @@ from datetime import datetime
 from sqlalchemy.orm.attributes import flag_modified
 
 from portfolio_synergy_engine import (
-    PortfolioCompany, analyze_portfolio, portfolio_result_to_dict,
-    SynergyType, SYNERGY_CURVE,
+    PortfolioCompany, analyze_portfolio, analyze_portfolio_multi_lever,
+    portfolio_result_to_dict, SynergyType, SYNERGY_CURVE,
 )
 from power_of_1_model import (
     POWER_OF_1_METRICS, calculate_portfolio_impact, calculate_power_of_1_impact,
+    calculate_portfolio_impact_multi_lever,
     INVESTMENT_SUMMARY, SCALING_SCENARIOS, COMPOUNDING_MULTIPLIER,
 )
 from resource_capacity_model import (
@@ -92,6 +93,59 @@ def _check_portfolio_access(portfolio_id, customer_id):
             return None, jsonify({'error': 'Access denied to this portfolio'}), 403
 
     return portfolio, None, None
+
+
+# ============================================================
+# AVAILABLE CUSTOMERS (for Add Company dropdown)
+# ============================================================
+
+@portfolio_api.route('/api/portfolio/available-customers', methods=['GET'])
+def list_available_customers():
+    """
+    List customers from the CS Pulse database where Power of 1 (revenue_intelligence)
+    is enabled. Used to populate the "Add company" dropdown in PortCo CEO Dashboard Settings.
+    Only includes customers that have at least one account (so ARR can be computed).
+    """
+    customer_id = _get_authenticated_customer_id()
+    if not customer_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    try:
+        # Customer IDs with Power of 1 (revenue_intelligence) enabled
+        enabled_ids = [
+            r[0] for r in
+            db.session.query(FeatureToggleModel.customer_id).filter(
+                FeatureToggleModel.feature_name == 'revenue_intelligence',
+                FeatureToggleModel.enabled == True,
+            ).distinct().all()
+        ]
+        if not enabled_ids:
+            return jsonify({'customers': []})
+
+        # Restrict to customers that have at least one account (so ARR can be computed)
+        with_account = set(
+            r[0] for r in
+            db.session.query(Account.customer_id).filter(Account.customer_id.in_(enabled_ids)).distinct().all()
+        )
+        eligible_ids = [cid for cid in enabled_ids if cid in with_account]
+        if not eligible_ids:
+            return jsonify({'customers': []})
+
+        customers = (
+            Customer.query.filter(Customer.customer_id.in_(eligible_ids))
+            .order_by(Customer.customer_name)
+            .all()
+        )
+        customer_list = [
+            {'customer_id': c.customer_id, 'customer_name': c.customer_name or f'Customer {c.customer_id}'}
+            for c in customers
+        ]
+        return jsonify({'customers': customer_list})
+
+    except Exception as e:
+        import traceback
+        print(f"Available customers error: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ============================================================
@@ -446,6 +500,74 @@ def get_portfolio_impact(portfolio_id):
     except Exception as e:
         import traceback
         print(f"Portfolio impact error: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Metric IDs for 6 levers (query param keys)
+POWER_OF_1_LEVER_IDS = list(POWER_OF_1_METRICS.keys())
+
+
+@portfolio_api.route('/api/portfolio/<int:portfolio_id>/power-of-1-impact', methods=['GET'])
+def power_of_1_impact(portfolio_id):
+    """
+    Combined impact when each of the 6 levers has its own improvement %.
+    Query params: TTFV, NRR, GRR, ticket_resolution_time, product_adoption, expansion_rate (default 1.0 each).
+    Returns portfolio result with synergies plus per_metric_impacts for the current lever settings.
+    """
+    customer_id = _get_authenticated_customer_id()
+    if not customer_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    try:
+        portfolio = db.session.get(Portfolio, portfolio_id)
+        if not portfolio:
+            return jsonify({'error': 'Portfolio not found'}), 404
+
+        improvement_by_metric = {}
+        for mid in POWER_OF_1_LEVER_IDS:
+            val = request.args.get(mid, 1.0, type=float)
+            improvement_by_metric[mid] = max(0.0, min(6.0, val))
+
+        companies = _build_portfolio_company_list(portfolio_id, 1.0)
+        if not companies:
+            return jsonify({
+                'error': 'No companies in portfolio',
+                'portfolio_id': portfolio_id,
+            }), 404
+
+        result = analyze_portfolio_multi_lever(
+            portfolio.portfolio_name, companies, improvement_by_metric
+        )
+        result_dict = portfolio_result_to_dict(result)
+
+        result_dict['portfolio_id'] = portfolio_id
+        result_dict['improvement_by_metric'] = improvement_by_metric
+        result_dict['investment_summary'] = _get_investment_summary(portfolio.config or {})
+
+        # Per-metric breakdown at current lever settings (for UI)
+        multi = calculate_portfolio_impact_multi_lever(
+            improvement_by_metric,
+            result.total_arr,
+        )
+        result_dict['per_metric_impacts'] = {
+            mid: {
+                'improvement_pct': improvement_by_metric.get(mid, 0),
+                'baseline': multi['metrics'][mid]['baseline'],
+                'new_value': multi['metrics'][mid]['new_value'],
+                'unit': multi['metrics'][mid].get('unit', ''),
+                'total_impact': multi['metrics'][mid]['total_impact'],
+                'investment': multi['metrics'][mid]['investment'],
+                'roi': multi['metrics'][mid]['roi'],
+                'display_name': multi['metrics'][mid]['display_name'],
+            }
+            for mid in POWER_OF_1_LEVER_IDS
+        }
+
+        return jsonify(result_dict)
+
+    except Exception as e:
+        import traceback
+        print(f"Power of 1 impact error: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 
