@@ -1,0 +1,22 @@
+week_number,date,phase,event_type,description,sentiment,sentiment_value,health_score_before,health_score_after,outcome,csm_action_type,csm_action_desc,csm_response_hours,csm_cost
+2,2024-01-08,at_risk,contract_discussion,Pricing compromise reached - 12% discount negotiated,positive,0.5,70,69.88,"Financial concerns remain, cautious",,,,
+9,2024-02-26,at_risk,contract_discussion,Pricing compromise reached - 12% discount negotiated,positive,0.5,60.49,59.42,"Financial concerns remain, cautious",,,,
+12,2024-03-18,at_risk,contract_discussion,Budget review: $2.1M contract questioned by finance,negative,-0.5,54.19,53.33,"Financial concerns remain, cautious",,,,
+13,2024-03-25,at_risk,contract_discussion,Budget review: $2.1M contract questioned by finance,negative,-0.5,53.33,51.52,"Financial concerns remain, cautious",,,,
+14,2024-04-01,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,51.52,48.78,"Crisis mitigation in progress, situation critical",,,,
+15,2024-04-08,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,48.78,47.17,"Crisis mitigation in progress, situation critical",,,,
+15,2024-04-08,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,48.78,47.17,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+16,2024-04-15,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,47.17,44.84,"Crisis mitigation in progress, situation critical",,,,
+17,2024-04-22,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,44.84,42.93,"Crisis mitigation in progress, situation critical",,,,
+18,2024-04-29,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,42.93,41.33,"Crisis mitigation in progress, situation critical",,,,
+19,2024-05-06,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,41.33,38.56,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+19,2024-05-06,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,41.33,38.56,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+20,2024-05-13,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,38.56,37.77,"Crisis mitigation in progress, situation critical",,,,
+20,2024-05-13,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,38.56,37.77,"Crisis mitigation in progress, situation critical",root_cause_analysis,Root cause analysis initiated,4,10000
+21,2024-05-20,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,37.77,35.52,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+22,2024-05-27,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,35.52,35.38,"Crisis mitigation in progress, situation critical",,,,
+22,2024-05-27,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,35.52,35.38,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+23,2024-06-03,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,35.38,33.38,"Crisis mitigation in progress, situation critical",root_cause_analysis,Root cause analysis initiated,4,10000
+23,2024-06-03,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,35.38,33.38,"Crisis mitigation in progress, situation critical",,,,
+24,2024-06-10,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,33.38,30.97,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+24,2024-06-10,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,33.38,30.97,"Crisis mitigation in progress, situation critical",,,,

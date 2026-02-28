@@ -1,0 +1,83 @@
+{
+  "proactive_growth": {
+    "pattern_type": "proactive_growth",
+    "n_accounts": 4,
+    "avg_starting_health": 75.0,
+    "avg_ending_health": 97.7,
+    "health_change": 22.7,
+    "avg_lowest_health": 74.7475,
+    "avg_highest_health": 98.0,
+    "avg_duration_weeks": 52.0,
+    "avg_total_events": 133.5,
+    "common_phases": [
+      "growth",
+      "healthy"
+    ],
+    "phase_distribution": {
+      "healthy": 20.037453183520597,
+      "growth": 79.9625468164794
+    },
+    "avg_csm_investment": 290250.0,
+    "financial_impact": "40% ARR expansion",
+    "early_warning_signals": [],
+    "success_factors": [
+      "Average CSM investment: $290,250",
+      "High engagement: 134 events/account",
+      "Early health improvement: 4/4 accounts"
+    ]
+  },
+  "ignored_churn": {
+    "pattern_type": "ignored_churn",
+    "n_accounts": 4,
+    "avg_starting_health": 70.0,
+    "avg_ending_health": 15.0,
+    "health_change": -55.0,
+    "avg_lowest_health": 15.0,
+    "avg_highest_health": 70.0,
+    "avg_duration_weeks": 52.0,
+    "avg_total_events": 24.75,
+    "common_phases": [
+      "crisis",
+      "at_risk",
+      "moderate"
+    ],
+    "phase_distribution": {
+      "at_risk": 25.252525252525253,
+      "crisis": 73.73737373737373,
+      "moderate": 1.0101010101010102
+    },
+    "avg_csm_investment": 77500.0,
+    "financial_impact": "100% ARR lost - churn",
+    "early_warning_signals": [],
+    "success_factors": []
+  },
+  "crisis_recovery": {
+    "pattern_type": "crisis_recovery",
+    "n_accounts": 2,
+    "avg_starting_health": 90.03999999999999,
+    "avg_ending_health": 94.075,
+    "health_change": 4.035000000000004,
+    "avg_lowest_health": 34.94,
+    "avg_highest_health": 95.635,
+    "avg_duration_weeks": 52.0,
+    "avg_total_events": 98.0,
+    "common_phases": [
+      "growth",
+      "moderate",
+      "crisis",
+      "at_risk",
+      "healthy"
+    ],
+    "phase_distribution": {
+      "healthy": 2.5510204081632653,
+      "crisis": 14.795918367346939,
+      "at_risk": 9.183673469387756,
+      "moderate": 15.306122448979592,
+      "growth": 58.16326530612245
+    },
+    "avg_csm_investment": 411250.0,
+    "financial_impact": "40% ARR expansion",
+    "early_warning_signals": [],
+    "success_factors": []
+  }
+}
