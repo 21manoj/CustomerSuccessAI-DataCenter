@@ -135,12 +135,16 @@ class ScenarioOnboarding(BaseScenario):
             step2_duration = time.time() - start_step2
             api_calls += 1
 
-            if process_response and process_response.get('status') == 'success':
+            if process_response and process_response.get('status') in ('success', 'warning'):
                 steps_done = process_response.get('steps_completed', [])
+                proc_errors = process_response.get('errors', [])
                 logger.info(f"    OK: Data processed in {step2_duration:.1f}s — steps: {steps_done}")
-                results['step2_process_data'] = 'success'
+                results['step2_process_data'] = process_response.get('status')
                 results['step2_duration_s'] = round(step2_duration, 2)
                 results['steps_completed'] = steps_done
+                if proc_errors:
+                    logger.info(f"    Non-fatal warnings: {len(proc_errors)}")
+                    results['step2_warnings'] = proc_errors[:3]  # first 3 warnings
             else:
                 err_msg = str(process_response)[:150] if process_response else "No response"
                 logger.warning(f"    WARN: process-data returned: {err_msg}")

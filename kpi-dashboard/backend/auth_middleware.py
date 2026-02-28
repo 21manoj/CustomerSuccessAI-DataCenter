@@ -27,6 +27,8 @@ PUBLIC_ENDPOINTS = [
     '/api/onboarding/processing-status',
     '/api/onboarding/templates',  # Template download endpoints
     '/api/onboarding/validate-csv',  # CSV validation endpoint
+    # Test runner - external load driver UI (needs to be public for scenario listing)
+    '/api/test-runner',
 ]
 
 # Public path prefixes (for static files)

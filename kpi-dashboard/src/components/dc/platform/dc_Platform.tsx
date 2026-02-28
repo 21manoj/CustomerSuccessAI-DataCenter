@@ -2,7 +2,7 @@
  * Data Center Platform - Main Landing Page
  * =========================================
  * 
- * 7-tab platform for Data Center vertical:
+ * 10-tab platform for Data Center vertical:
  * 1. Executive Dashboard
  * 2. Tenants (Hub with Placard)
  * 3. Signal Analyst
@@ -23,7 +23,10 @@ import {
   Settings,
   LogOut,
   Activity,
-  Zap
+  Zap,
+  DollarSign,
+  Layers,
+  FlaskConical
 } from 'lucide-react';
 import { useSession } from '../../../contexts/SessionContext';
 
@@ -37,12 +40,14 @@ import AdminDashboard from '../../admin/AdminDashboard';
 import DCTenantHub from '../tenants/dc_TenantHub';
 import DCDataIntegration from '../data-integration/dc_DataIntegration';
 import DCSettings from '../settings/dc_Settings';
+import DCPlaybooks from '../playbooks/DCPlaybooks';
+import DCTestRunner from '../test-runner/DCTestRunner';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-type TabId = 'executive' | 'tenants' | 'signals' | 'ai-insights' | 'admin-insights' | 'data-integration' | 'settings';
+type TabId = 'executive' | 'tenants' | 'signals' | 'ai-insights' | 'admin-insights' | 'playbooks' | 'test-runner' | 'data-integration' | 'settings' | 'outcome-roi' | 'portco';
 
 interface Tab {
   id: TabId;
@@ -61,6 +66,10 @@ const TABS: Tab[] = [
   { id: 'signals', label: 'Signal Analyst', icon: MessageSquare, route: '/dc-dashboard/signal-analyst' },
   { id: 'ai-insights', label: 'AI Insights', icon: Brain, route: '/dc-dashboard/ai-insights' },
   { id: 'admin-insights', label: 'Admin Insights', icon: Activity, route: '/dc-dashboard/admin-insights' },
+  { id: 'playbooks', label: 'Playbooks', icon: Zap, route: '/dc-dashboard/playbooks' },
+  { id: 'test-runner', label: 'Test Runner', icon: FlaskConical, route: '/dc-dashboard/test-runner' },
+  { id: 'outcome-roi', label: 'Outcome ROI', icon: DollarSign, route: '/outcome-roi' },
+  { id: 'portco', label: 'Power of 1 (Portfolio CEO)', icon: Layers, route: '/portco-dashboard' },
   { id: 'data-integration', label: 'Data Integration', icon: Upload, route: '/dc-dashboard/data-integration' },
   { id: 'settings', label: 'Settings', icon: Settings, route: '/dc-dashboard/settings' }
 ];
@@ -83,6 +92,10 @@ const DCPlatform: React.FC = () => {
     if (path.includes('/signal-analyst')) return 'signals';
     if (path.includes('/ai-insights')) return 'ai-insights';
     if (path.includes('/admin-insights')) return 'admin-insights';
+    if (path.includes('/playbooks')) return 'playbooks';
+    if (path.includes('/test-runner')) return 'test-runner';
+    if (path === '/outcome-roi') return 'outcome-roi';
+    if (path === '/portco-dashboard') return 'portco';
     if (path.includes('/data-integration')) return 'data-integration';
     if (path.includes('/settings')) return 'settings';
     return 'executive'; // Default
@@ -188,7 +201,11 @@ const DCPlatform: React.FC = () => {
           )}
           
           {activeTab === 'admin-insights' && <AdminDashboard />}
-          
+
+          {activeTab === 'playbooks' && <DCPlaybooks />}
+
+          {activeTab === 'test-runner' && <DCTestRunner />}
+
           {activeTab === 'data-integration' && <DCDataIntegration />}
           
           {activeTab === 'settings' && <DCSettings />}

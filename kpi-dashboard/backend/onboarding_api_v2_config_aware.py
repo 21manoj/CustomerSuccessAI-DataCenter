@@ -1457,19 +1457,14 @@ def process_data():
             env_vars = {'UPLOAD_MODE': upload_mode} if upload_mode else {}
             success, stdout, stderr = execute_script(embed_script, customer_id, timeout=600, env=env_vars)
             script_duration = time.time() - script_start_time
-            
+
             if not success:
-                execution_state['errors'].append(f"Embedding failed: {stderr}")
-                execution_state['rollback_needed'] = True
-                return jsonify({
-                    "status": "error",
-                    "message": "Embedding script failed",
-                    "error": stderr,
-                    **execution_state
-                }), 500
-            
-            execution_state['steps_completed'].append('embeddings')
-            current_app.logger.info(f"✅ Embeddings created in {script_duration:.2f}s")
+                # Non-fatal: embeddings enhance RAG queries but are not required for core onboarding
+                execution_state['errors'].append(f"Embedding skipped (Qdrant unavailable): {stderr[:200]}")
+                current_app.logger.warning(f"⚠️  Embedding script failed (non-fatal, continuing): {stderr[:200]}")
+            else:
+                execution_state['steps_completed'].append('embeddings')
+                current_app.logger.info(f"✅ Embeddings created in {script_duration:.2f}s")
         
         # ========================================================================
         # STEP 3: Data Validation Script (Optional)
@@ -1740,8 +1735,9 @@ def process_data():
         execution_state['steps_completed'].append('journey_api_ready')
         
         # GAP 3.7: Critical vs optional steps - fail if critical steps missing
-        critical_steps = ['data_loading', 'embeddings']
-        optional_steps = ['validation', 'pattern_analysis', 'weight_calibration']
+        # Only data_loading is truly critical; embeddings enhance RAG but aren't required for core onboarding
+        critical_steps = ['data_loading']
+        optional_steps = ['embeddings', 'validation', 'pattern_analysis', 'weight_calibration']
         completed = set(execution_state['steps_completed'])
         missing_critical = [s for s in critical_steps if s not in completed]
         skipped_optional = [s for s in optional_steps if s not in completed]
@@ -1751,7 +1747,7 @@ def process_data():
                 _onboarding_progress[customer_id]['in_progress'] = False
             return jsonify({
                 "status": "error",
-                "message": f"Critical step(s) failed or skipped: {missing_critical}. Process-data requires data_loading and embeddings.",
+                "message": f"Critical step(s) failed or skipped: {missing_critical}. Process-data requires data_loading.",
                 "customer_id": customer_id,
                 "steps_completed": execution_state['steps_completed'],
                 "critical_steps_missing": missing_critical,

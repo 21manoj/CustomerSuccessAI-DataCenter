@@ -337,6 +337,14 @@ app.register_blueprint(rehydration_api)
 app.register_blueprint(account_snapshot_api)
 app.register_blueprint(admin_cleanup_api)
 
+# Test Runner API (drives load-driver scenarios from UI)
+try:
+    from test_runner_api import test_runner_api
+    app.register_blueprint(test_runner_api)
+    print("✅ Registered test_runner_api: /api/test-runner/*")
+except ImportError as e:
+    print(f"⚠️  test_runner_api not available: {e}")
+
 # Product Analytics API
 if PRODUCT_ANALYTICS_AVAILABLE:
     app.register_blueprint(product_analytics_api)

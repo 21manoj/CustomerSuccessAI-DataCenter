@@ -1,0 +1,65 @@
+{
+  "status": "success",
+  "message": "Onboarding partial: customer 278 (3 warnings)",
+  "duration_seconds": 32.360713,
+  "details": {
+    "company_name": "LoadTest-Chang-Good",
+    "email": "martha13@example.net",
+    "step1_complete": "success",
+    "customer_id": 278,
+    "accounts_created": 3,
+    "step1_duration_s": 12.33,
+    "complete_response": {
+      "account_details": [
+        {
+          "account_id": 278001,
+          "account_name": "LoadTest-Chang-Good-Production",
+          "uuid": "dc_acct_019ca211-cf0c-7bf9-a226-5864cca3c641"
+        },
+        {
+          "account_id": 278002,
+          "account_name": "LoadTest-Chang-Good-Staging",
+          "uuid": "dc_acct_019ca211-cf29-79b4-930d-73b2cd756a7f"
+        },
+        {
+          "account_id": 278003,
+          "account_name": "LoadTest-Chang-Good-Development",
+          "uuid": "dc_acct_019ca211-cf2d-74ea-875c-9125b5ab5dbf"
+        }
+      ],
+      "account_id_range": "278001 - 278003",
+      "accounts": 3,
+      "config": {
+        "enabled_kpis": 15,
+        "pillars": 5,
+        "vertical": "dc2_s",
+        "weights": {
+          "AI": 0.25,
+          "CH": 0.2,
+          "DV": 0.15,
+          "EX": 0.2,
+          "OS": 0.2
+        }
+      },
+      "csv_files_generated": true,
+      "customer_id": 278,
+      "customer_name": "LoadTest-Chang-Good",
+      "customer_uuid": "dc_cust_019ca211-ccdd-7fde-ba46-4cf5d45e835f",
+      "directory_provisioned": true,
+      "message": "Onboarding complete! Customer, user, config, accounts, and demo CSV files created.",
+      "onboarding_mode": "demo",
+      "success": true
+    },
+    "step2_process_data": "failed: No response",
+    "step3_register": "failed: None",
+    "step4_login": "skipped",
+    "step5_scores_calc": "partial: No response",
+    "step6_scores": "not_available"
+  },
+  "api_calls": 5,
+  "errors": [
+    "process-data did not fully succeed: No response",
+    "User registration failed (non-critical \u2014 customer exists)",
+    "Score calculation did not fully succeed (non-critical)"
+  ]
+}

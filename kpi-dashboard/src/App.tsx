@@ -180,6 +180,22 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="/dc-dashboard/playbooks"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/test-runner"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/dc-dashboard/data-integration"
           element={
             <PrivateRoute vertical="datacenter">
