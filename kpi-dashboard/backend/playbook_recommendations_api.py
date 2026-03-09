@@ -11,12 +11,69 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 import json
 import logging
+import utils.health_thresholds as ht
 
 logger = logging.getLogger(__name__)
 
 playbook_recommendations_api = Blueprint('playbook_recommendations_api', __name__)
 
 
+def get_recommendations_for_account(account_id, customer_id, health_score=None):
+    """Get ranked playbook recommendations for a specific account.
+
+    Evaluates all playbook types against the account and returns
+    those that are needed, ranked by urgency.
+
+    Args:
+        account_id: Account identifier
+        customer_id: Customer/tenant ID
+        health_score: Optional pre-calculated health score (0-100)
+
+    Returns:
+        dict with ranked recommendations list
+    """
+    account = Account.query.filter_by(
+        account_id=int(account_id),
+        customer_id=int(customer_id),
+    ).first()
+
+    if not account:
+        return {"account_id": account_id, "recommendations": [],
+                "error": f"Account {account_id} not found"}
+
+    playbooks = {
+        'voc-sprint': ('VoC Sprint', evaluate_account_for_voc_sprint),
+        'activation-blitz': ('Activation Blitz', evaluate_account_for_activation_blitz),
+        'sla-stabilizer': ('SLA Stabilizer', evaluate_account_for_sla_stabilizer),
+        'renewal-safeguard': ('Renewal Safeguard', evaluate_account_for_renewal_safeguard),
+        'expansion-timing': ('Expansion Timing', evaluate_account_for_expansion_timing),
+    }
+
+    recommendations = []
+    for pb_id, (pb_name, evaluator) in playbooks.items():
+        try:
+            result = evaluator(account, {})
+            if result.get('needed'):
+                recommendations.append({
+                    'playbook_id': pb_id,
+                    'playbook_name': pb_name,
+                    'urgency_score': result.get('urgency_score', 0),
+                    'urgency_level': result.get('urgency_level', 'Medium'),
+                    'reasons': result.get('reasons', []),
+                    'health_score': result.get('health_score'),
+                })
+        except Exception as e:
+            logger.debug(f"Error evaluating {pb_id} for account {account_id}: {e}")
+
+    recommendations.sort(key=lambda r: r['urgency_score'], reverse=True)
+
+    return {
+        'account_id': account_id,
+        'account_name': account.account_name,
+        'health_score': health_score,
+        'total_recommendations': len(recommendations),
+        'recommendations': recommendations,
+    }
 
 
 
@@ -152,7 +209,7 @@ def evaluate_account_for_voc_sprint(account, triggers):
     
     # Check health score drop
     health_drop_threshold = triggers.get('health_score_drop_threshold', 10)
-    if health_score < 50:  # Simplified check
+    if health_score < ht.at_risk_min():  # Below at-risk threshold = critical
         reasons.append(f"Low health score ({health_score:.1f})")
         score += 20
     
@@ -296,7 +353,7 @@ def evaluate_account_for_renewal_safeguard(account, triggers):
     # Check renewal window days (configurable)
     renewal_window_days = triggers.get('renewal_window_days', 90)
     # Simplified check - assume accounts with low health are approaching renewal
-    if health_score < 60:
+    if health_score < ht.healthy_min():  # Below healthy threshold
         reasons.append(f"Likely approaching renewal window ({renewal_window_days} days)")
         score += 20
     
