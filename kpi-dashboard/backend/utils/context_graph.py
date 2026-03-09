@@ -296,23 +296,35 @@ def _calculate_at_risk_from_health(account_id: int) -> float:
       - At-risk  (50 ≤ h < 70): 20 % of ARR at risk
       - Healthy  (h ≥ 70):       5 % of ARR at risk
 
+    Health score is read from the ``health_scores`` table (latest
+    measurement month).  ARR comes from ``accounts.revenue`` or
+    ``accounts.profile_metadata.arr``.
+
     This replaces the old approach of summing negative SIGNAL
     revenue_impact values, which produced cumulative / stale
     estimates that were never real independent revenue events.
     """
-    from models import Account
+    from models import Account, HealthScore
 
     account = Account.query.filter_by(account_id=account_id).first()
     if not account:
         return 0.0
 
+    # ── ARR ──
     arr = 0.0
     if account.revenue:
         arr = float(account.revenue)
     elif account.profile_metadata and isinstance(account.profile_metadata, dict):
         arr = float(account.profile_metadata.get('arr', 0) or 0)
 
-    health = float(account.health_score or 50)
+    # ── Latest health score ──
+    latest_hs = (
+        HealthScore.query
+        .filter_by(account_id=account_id)
+        .order_by(HealthScore.measurement_month.desc())
+        .first()
+    )
+    health = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else 50.0
 
     if health < 50:
         churn_pct = 0.40
