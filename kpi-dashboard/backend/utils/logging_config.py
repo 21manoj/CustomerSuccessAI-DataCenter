@@ -9,7 +9,11 @@ import sys
 import json
 from pathlib import Path
 from datetime import datetime
-import structlog
+
+try:
+    import structlog  # Optional: structured logging
+except ImportError:  # pragma: no cover - runtime fallback when structlog absent
+    structlog = None
 
 
 # =============================================================================
@@ -39,7 +43,13 @@ def setup_structured_logging():
     - Machine-readable logs
     - Easy parsing/analysis
     - Contextual information
+    If structlog is not installed, this becomes a no-op and the
+    standard logging setup is still available.
     """
+    if structlog is None:
+        # Fallback: do nothing; callers can still use standard logging.
+        return
+
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
@@ -223,30 +233,34 @@ class PerformanceLogger:
 
 def get_logger(name):
     """
-    Get a logger with the specified name
-    
-    Usage:
-        logger = get_logger(__name__)
-        logger.info("Processing account", account_id=1007, customer_id=1)
+    Get a logger with the specified name.
+
+    If structlog is available, returns a structlog logger; otherwise
+    falls back to the standard library logger.
     """
+    if structlog is None:
+        return logging.getLogger(name)
     return structlog.get_logger(name)
 
 
 def log_with_context(**context):
     """
-    Add context to all subsequent log calls
-    
-    Usage:
-        with log_with_context(account_id=1007, customer_id=1):
-            logger.info("Processing started")
-            # ... do work ...
-            logger.info("Processing completed")
+    Add context to all subsequent log calls.
+
+    When structlog is unavailable, this yields a standard logger
+    without structured context binding (best-effort fallback).
     """
     from contextlib import contextmanager
-    
+
     @contextmanager
     def _context_manager():
-        # Get logger and bind context
+        if structlog is None:
+            # Fallback: plain stdlib logger
+            logger = logging.getLogger()
+            yield logger
+            return
+
+        # Get logger and bind context (structlog path)
         logger = structlog.get_logger()
         bound_logger = logger.bind(**context)
         try:
@@ -254,7 +268,7 @@ def log_with_context(**context):
         finally:
             # Context is automatically cleared when exiting the context
             pass
-    
+
     return _context_manager()
 
 

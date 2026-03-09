@@ -65,11 +65,11 @@ class ConfigLoader:
                 # Fallback to defaults if import fails
                 self._vertical_definition = {
                     'pillars': [
-                        {'code': 'AI', 'name': 'AI Workload Performance', 'default_weight': 0.25},
-                        {'code': 'CH', 'name': 'Customer Health', 'default_weight': 0.20},
-                        {'code': 'DV', 'name': 'Deployment Velocity', 'default_weight': 0.15},
-                        {'code': 'EX', 'name': 'Expansion & Growth', 'default_weight': 0.20},
-                        {'code': 'OS', 'name': 'Operational Stability', 'default_weight': 0.20}
+                        {'code': 'P1', 'name': 'Deployment Velocity', 'default_weight': 0.15},
+                        {'code': 'P2', 'name': 'Operational Stability', 'default_weight': 0.20},
+                        {'code': 'P3', 'name': 'AI Workload Performance', 'default_weight': 0.25},
+                        {'code': 'P4', 'name': 'Channel & Partner Health', 'default_weight': 0.15},
+                        {'code': 'P5', 'name': 'Expansion Readiness', 'default_weight': 0.25}
                     ],
                     'default_kpis': []
                 }
@@ -110,18 +110,16 @@ class ConfigLoader:
         for pillar in pillars:
             code = pillar.get('code')
             if code:
-                # Map P1-P5 to AI, CH, DV, EX, OS if needed
-                pillar_map = {
-                    'P1': 'DV', 'P2': 'OS', 'P3': 'AI', 'P4': 'CH', 'P5': 'EX'
-                }
-                mapped_code = pillar_map.get(code, code)
-                weights[mapped_code] = pillar.get('default_weight', 0.20)
-        
-        # Ensure all 5 pillars are present
-        if len(weights) < 5:
-            weights = {
-                'AI': 0.25, 'CH': 0.20, 'DV': 0.15, 'EX': 0.20, 'OS': 0.20
-            }
+                weights[code] = pillar.get('default_weight', 0.20)
+
+        # If no pillar weights found from config, use canonical defaults
+        if len(weights) == 0:
+            try:
+                from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+                weights = {p: v.get('weight_l2', 0.20) for p, v in DC2S_PILLARS.items()}
+            except ImportError:
+                weights = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
+        # Note: partial pillar sets (e.g., 3 pillars) are valid — don't override
         
         return weights
     
@@ -139,15 +137,9 @@ class ConfigLoader:
         for kpi in self.vertical_definition.get('default_kpis', []):
             pillar = kpi.get('pillar')
             if pillar:
-                # Map P1-P5 to AI, CH, DV, EX, OS if needed
-                pillar_map = {
-                    'P1': 'DV', 'P2': 'OS', 'P3': 'AI', 'P4': 'CH', 'P5': 'EX'
-                }
-                mapped_pillar = pillar_map.get(pillar, pillar)
-                
-                if mapped_pillar not in kpis_by_pillar:
-                    kpis_by_pillar[mapped_pillar] = []
-                kpis_by_pillar[mapped_pillar].append(kpi.get('code'))
+                if pillar not in kpis_by_pillar:
+                    kpis_by_pillar[pillar] = []
+                kpis_by_pillar[pillar].append(kpi.get('code'))
         
         # Calculate equal weights
         for pillar, kpi_codes in kpis_by_pillar.items():
@@ -184,24 +176,6 @@ class ConfigLoader:
                 kpi_def.update(override)
                 return kpi_def
         
-        # Also check if it's a catalog-style KPI (AI-KPI1, CH-KPI4, etc.)
-        if '-' in kpi_code:
-            pillar = kpi_code.split('-')[0]
-            if pillar in ['AI', 'CH', 'DV', 'EX', 'OS']:
-                # Create a default definition for catalog KPIs
-                override = self.customer_config['kpi_overrides'].get(kpi_code, {})
-                
-                kpi_def = {
-                    'code': kpi_code,
-                    'pillar': pillar,
-                    'name': kpi_code,
-                    'target': override.get('target', 85.0),
-                    'operator': override.get('operator', '>'),
-                    'range': override.get('range', [0.0, 100.0]),
-                    'unit': override.get('unit', '%')
-                }
-                return kpi_def
-        
         return None
     
     def get_all_kpi_definitions(self) -> List[Dict]:
@@ -232,19 +206,15 @@ class ConfigLoader:
         return self.customer_config['kpi_weights'].get(pillar_code, {})
     
     def get_kpis_by_pillar(self) -> Dict[str, List[str]]:
-        """Group enabled KPIs by pillar"""
-        kpis_by_pillar = {'AI': [], 'CH': [], 'DV': [], 'EX': [], 'OS': []}
-        
+        """Group enabled KPIs by pillar. Only returns pillars that have KPIs."""
+        kpis_by_pillar: Dict[str, List[str]] = {}
+        valid_pillars = {'P1', 'P2', 'P3', 'P4', 'P5'}
+
         for kpi_code in self.get_enabled_kpis():
             kpi_def = self.get_kpi_definition(kpi_code)
             if kpi_def:
                 pillar = kpi_def.get('pillar')
-                # Map P1-P5 to AI, CH, DV, EX, OS if needed
-                pillar_map = {
-                    'P1': 'DV', 'P2': 'OS', 'P3': 'AI', 'P4': 'CH', 'P5': 'EX'
-                }
-                mapped_pillar = pillar_map.get(pillar, pillar)
-                if mapped_pillar in kpis_by_pillar:
-                    kpis_by_pillar[mapped_pillar].append(kpi_code)
-        
+                if pillar in valid_pillars:
+                    kpis_by_pillar.setdefault(pillar, []).append(kpi_code)
+
         return kpis_by_pillar

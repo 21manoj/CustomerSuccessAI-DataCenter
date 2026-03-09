@@ -30,7 +30,7 @@ def _get_catalog_defaults() -> Dict:
         }
         enabled_kpis = list(DC2S_KPIS.keys())
     except ImportError:
-        pillar_weights = {'AI': 0.25, 'CH': 0.20, 'DV': 0.15, 'EX': 0.20, 'OS': 0.20}
+        pillar_weights = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
         enabled_kpis = []
 
     return {

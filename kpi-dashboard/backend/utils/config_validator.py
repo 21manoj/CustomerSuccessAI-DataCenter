@@ -10,10 +10,10 @@ from typing import Dict, List, Tuple
 class ConfigValidator:
     """Validates DC2_S customer configurations"""
     
-    VALID_PILLARS = ['AI', 'CH', 'DV', 'EX', 'OS']
+    VALID_PILLARS = ['P1', 'P2', 'P3', 'P4', 'P5']
     VALID_OPERATORS = ['>', '<', '>=', '<=', '=']
     CUSTOM_KPI_PATTERN = r'^CUSTOM-[A-Z0-9-]+$'
-    CATALOG_KPI_PATTERN = r'^(AI|CH|DV|EX|OS)-KPI[0-9]+$'
+    CATALOG_KPI_PATTERN = r'^P[1-5]-KPI[0-9]+$'
     
     def validate_pillar_weights(self, weights: Dict[str, float]) -> Tuple[bool, List[str]]:
         """Validate pillar weights sum to 1.0"""
@@ -172,7 +172,7 @@ class ConfigValidator:
                     else:
                         continue
                 else:
-                    # Extract from catalog KPI code (e.g., "AI-KPI1" -> "AI")
+                    # Extract from catalog KPI code (e.g., "P3-KPI1" -> "P3")
                     pillar = kpi_code.split('-')[0]
                 
                 if pillar not in kpis_by_pillar:

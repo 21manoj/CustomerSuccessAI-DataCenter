@@ -14,7 +14,15 @@ from tenacity import (
     retry_if_exception_type,
     before_sleep_log
 )
-from qdrant_client.http.exceptions import UnexpectedResponse, ResponseHandlingException
+try:
+    from qdrant_client.http.exceptions import UnexpectedResponse, ResponseHandlingException
+except ImportError:
+    # qdrant_client not installed — define stub exceptions for graceful fallback
+    class UnexpectedResponse(Exception):
+        pass
+    class ResponseHandlingException(Exception):
+        pass
+
 from openai import OpenAIError, RateLimitError, APIError
 import anthropic
 

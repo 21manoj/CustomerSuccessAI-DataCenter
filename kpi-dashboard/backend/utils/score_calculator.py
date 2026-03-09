@@ -13,12 +13,23 @@ from pathlib import Path
 from models import db, DC2SKPI, CustomerConfig, KPIScore, PillarScore, HealthScore, Account
 from sqlalchemy import func
 from utils.config_validator import ConfigValidator
+import utils.health_thresholds as ht
+
+# Load canonical pillar weights from kpi_definitions (single source of truth)
+try:
+    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS as _PILLARS
+    DEFAULT_PILLAR_WEIGHTS = {
+        pid: info.get('weight_l2', 0.20)
+        for pid, info in _PILLARS.items()
+    }
+except ImportError:
+    DEFAULT_PILLAR_WEIGHTS = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
 
 class ScoreCalculator:
     """
     Calculates health scores based on customer configuration
     
-    Supports both catalog KPIs (AI-KPI1, CH-KPI4, etc.) and custom KPIs (CUSTOM-*)
+    Supports both catalog KPIs (P1-KPI1, P3-KPI4, etc.) and custom KPIs (CUSTOM-*)
     """
     
     def __init__(self, customer_id: int):
@@ -29,16 +40,24 @@ class ScoreCalculator:
     def _load_config(self) -> Dict:
         """Load customer configuration from database"""
         config = CustomerConfig.query.filter_by(customer_id=self.customer_id).first()
-        
+
         if not config or config.vertical != 'dc2_s':
             raise ValueError(f"No DC2_S config found for customer {self.customer_id}")
-        
+
+        # Use DB weights or fall back to bootstrap defaults
+        pillar_weights = config.dc2s_pillar_weights or {}
+        if not pillar_weights:
+            pillar_weights = DEFAULT_PILLAR_WEIGHTS.copy()
+
+        # Load KPI weights from DB; if empty, will be populated from kpi_definitions at L2 calc time
+        kpi_weights = config.dc2s_kpi_weights or {}
+
         return {
-            'pillar_weights': config.dc2s_pillar_weights or {},
+            'pillar_weights': pillar_weights,
             'enabled_kpis': config.dc2s_enabled_kpis or [],
             'kpi_definitions': config.dc2s_kpi_definitions or {},
             'kpi_overrides': config.dc2s_kpi_overrides or {},
-            'kpi_weights': config.dc2s_kpi_weights or {}
+            'kpi_weights': kpi_weights
         }
     
     def _get_kpi_definition(self, kpi_code: str) -> Optional[Dict]:
@@ -48,10 +67,10 @@ class ScoreCalculator:
         if kpi_code.startswith('CUSTOM-'):
             return self.config['kpi_definitions'].get(kpi_code)
         
-        # Check catalog KPIs - extract pillar from code (e.g., "AI-KPI1" -> "AI")
+        # Check catalog KPIs - extract pillar from code (e.g., "P3-KPI1" -> "P3")
         if '-' in kpi_code:
             pillar = kpi_code.split('-')[0]
-            if pillar in ['AI', 'CH', 'DV', 'EX', 'OS']:
+            if pillar in ['P1', 'P2', 'P3', 'P4', 'P5']:
                 # Create a default definition for catalog KPIs
                 # Use overrides if available
                 override = self.config['kpi_overrides'].get(kpi_code, {})
@@ -137,15 +156,8 @@ class ScoreCalculator:
         return score, status
     
     def _determine_status(self, score: float) -> str:
-        """Determine status based on score"""
-        if score >= 85:
-            return 'excellent'
-        elif score >= 70:
-            return 'good'
-        elif score >= 50:
-            return 'warning'
-        else:
-            return 'critical'
+        """Determine status using centralized thresholds: critical / at_risk / healthy."""
+        return ht.classify(score)
     
     # ================================================================
     # L2: PILLAR SCORE CALCULATION
@@ -154,20 +166,35 @@ class ScoreCalculator:
     def calculate_pillar_score(self, pillar_code: str, kpi_scores: Dict[str, float]) -> Tuple[float, str, Dict]:
         """
         Calculate pillar score as weighted average of KPI scores
-        
+
         Args:
             pillar_code: AI, CH, DV, EX, or OS
             kpi_scores: {kpi_code: score} for KPIs in this pillar
-        
+
         Returns:
             (pillar_score, status, contributing_kpis) tuple
         """
-        
-        # Get KPI weights for this pillar
+
+        # Get KPI weights for this pillar from CustomerConfig
         kpi_weights = self.config['kpi_weights'].get(pillar_code, {})
-        
+
         if not kpi_weights:
-            raise ValueError(f"No KPI weights configured for pillar {pillar_code}")
+            # Fallback: use weight_l1 from DC2S_KPIS catalog definitions
+            try:
+                from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+                for kpi_code in kpi_scores:
+                    if kpi_code in DC2S_KPIS:
+                        kpi_weights[kpi_code] = DC2S_KPIS[kpi_code].get('weight_l1', 0)
+            except ImportError:
+                pass
+
+        if not kpi_weights:
+            # Final fallback: equal weights
+            if kpi_scores:
+                equal_weight = 1.0 / len(kpi_scores)
+                kpi_weights = {k: equal_weight for k in kpi_scores}
+            else:
+                raise ValueError(f"No KPI weights configured for pillar {pillar_code}")
         
         # Calculate weighted average
         weighted_sum = 0.0
@@ -195,30 +222,31 @@ class ScoreCalculator:
     
     def calculate_health_score(self, pillar_scores: Dict[str, float]) -> Tuple[float, str, Optional[float], Optional[str]]:
         """
-        Calculate overall health score as weighted average of pillar scores
-        
+        Calculate overall health score as weighted average of pillar scores.
+        Supports partial pillar sets — normalizes by the sum of available pillar weights.
+
         Args:
-            pillar_scores: {pillar_code: score} for all 5 pillars
-        
+            pillar_scores: {pillar_code: score} for available pillars (1-5)
+
         Returns:
             (health_score, status, change_from_last, trend) tuple
         """
-        
+
         pillar_weights = self.config['pillar_weights']
-        
-        # Calculate weighted average
+
+        # Calculate weighted average (normalize by available weight sum)
         weighted_sum = 0.0
         total_weight = 0.0
-        
+
         for pillar_code, score in pillar_scores.items():
             weight = pillar_weights.get(pillar_code, 0)
             weighted_sum += score * weight
             total_weight += weight
-        
-        if abs(total_weight - 1.0) > 0.001:
-            raise ValueError(f"Pillar weights must sum to 1.0, got {total_weight}")
-        
-        health_score = weighted_sum
+
+        if total_weight == 0:
+            raise ValueError(f"No pillar weights found for pillars: {list(pillar_scores.keys())}")
+
+        health_score = weighted_sum / total_weight
         status = self._determine_status(health_score)
         
         # Note: Trend calculation requires account_id and measurement_month
@@ -348,13 +376,15 @@ class ScoreCalculator:
         # Step 4: Calculate L3 (Health score)
         print("\n🔹 L3: Calculating Health Score...")
         
-        if len(pillar_scores) == 5:  # All pillars present
+        # Calculate L3 health if we have at least 1 pillar with data
+        num_configured_pillars = len(self.config.get('pillar_weights', {})) or 5
+        if len(pillar_scores) >= 1:
             try:
                 health_score, health_status, change, trend = self.calculate_health_score(pillar_scores)
-                
+
                 # Calculate trend with account context (override with actual trend calculation)
                 change, trend = self._calculate_trend(health_score, account_id, measurement_month)
-                
+
                 health_score_record = {
                     'account_id': account_id,
                     'measurement_month': measurement_month,
@@ -365,16 +395,19 @@ class ScoreCalculator:
                     'contributing_pillars': {k: round(v, 2) for k, v in pillar_scores.items()},
                     'pillar_weights': self.config['pillar_weights']
                 }
-                
-                print(f"  ✅ Health Score: {health_score:.1f} ({health_status})")
+
+                if len(pillar_scores) < num_configured_pillars:
+                    print(f"  ✅ Health Score: {health_score:.1f} ({health_status}) — {len(pillar_scores)}/{num_configured_pillars} pillars with data")
+                else:
+                    print(f"  ✅ Health Score: {health_score:.1f} ({health_status})")
                 if trend:
                     print(f"     Trend: {trend} ({change:+.1f} from last month)")
-                
+
             except Exception as e:
                 print(f"  ❌ Health Score: Error - {e}")
                 health_score_record = None
         else:
-            print(f"  ⚠️  Incomplete pillar data ({len(pillar_scores)}/5 pillars)")
+            print(f"  ⚠️  No pillar data available — cannot calculate health score")
             health_score_record = None
         
         # Step 5: Save to database
@@ -419,7 +452,7 @@ class ScoreCalculator:
     def _group_kpis_by_pillar(self, kpi_codes: List[str]) -> Dict[str, List[str]]:
         """Group KPI codes by their pillar"""
         
-        kpis_by_pillar = {'AI': [], 'CH': [], 'DV': [], 'EX': [], 'OS': []}
+        kpis_by_pillar = {'P1': [], 'P2': [], 'P3': [], 'P4': [], 'P5': []}
         
         for kpi_code in kpi_codes:
             kpi_def = self._get_kpi_definition(kpi_code)
