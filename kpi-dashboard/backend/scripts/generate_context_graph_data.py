@@ -819,9 +819,10 @@ class ContextGraphGenerator:
                         if chain_ref:
                             break
 
-                    # Scale revenue to account ARR
-                    revenue_impact = pp.get('revenue_impact', 0) * arr_scale
-
+                    # Revenue impact is tracked exclusively on OUTCOME
+                    # nodes to prevent double-counting across the causal
+                    # chain (Signal → Decision → Outcome).  SIGNAL nodes
+                    # carry qualitative context only.
                     writer.writerow([
                         account_id,
                         signal_ref,
@@ -833,7 +834,7 @@ class ContextGraphGenerator:
                         stakeholder_name,
                         stakeholder_title,
                         chain_ref,
-                        round(revenue_impact, 2),
+                        '',                                     # revenue_impact — intentionally blank
                         round(random.uniform(0.7, 0.95), 2),
                         'csv_import',
                     ])

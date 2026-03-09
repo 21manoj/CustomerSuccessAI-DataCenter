@@ -230,15 +230,9 @@ def traverse_2hop(
         ContextNode.account_id == account_id,
     ).all()
 
-    # Revenue at risk: only negative-impact SIGNAL nodes (consistent with
-    # get_revenue_at_risk — avoids double-counting decisions/outcomes).
-    total_revenue = sum(
-        abs(float(n.revenue_impact) * float(n.confidence or 1.0))
-        for n in all_nodes
-        if n.node_type == 'SIGNAL'
-        and n.revenue_impact is not None
-        and float(n.revenue_impact) < 0
-    )
+    # Revenue at risk: derived from health-score × ARR (consistent with
+    # get_revenue_at_risk — signal nodes no longer carry revenue_impact).
+    total_revenue = _calculate_at_risk_from_health(account_id)
 
     return {
         'center': center.to_dict(),
@@ -293,20 +287,57 @@ def _deduplicate_outcome_amounts(amounts: List[float], threshold: float = 0.20) 
     return total
 
 
+def _calculate_at_risk_from_health(account_id: int) -> float:
+    """
+    Derive at-risk revenue from the account's health score and ARR.
+
+    Churn-probability bands (aligned with health thresholds):
+      - Critical (health < 50):  40 % of ARR at risk
+      - At-risk  (50 ≤ h < 70): 20 % of ARR at risk
+      - Healthy  (h ≥ 70):       5 % of ARR at risk
+
+    This replaces the old approach of summing negative SIGNAL
+    revenue_impact values, which produced cumulative / stale
+    estimates that were never real independent revenue events.
+    """
+    from models import Account
+
+    account = Account.query.filter_by(account_id=account_id).first()
+    if not account:
+        return 0.0
+
+    arr = 0.0
+    if account.revenue:
+        arr = float(account.revenue)
+    elif account.profile_metadata and isinstance(account.profile_metadata, dict):
+        arr = float(account.profile_metadata.get('arr', 0) or 0)
+
+    health = float(account.health_score or 50)
+
+    if health < 50:
+        churn_pct = 0.40
+    elif health < 70:
+        churn_pct = 0.20
+    else:
+        churn_pct = 0.05
+
+    return round(arr * churn_pct, 2)
+
+
 def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     """
     Aggregate revenue impact across all active nodes for an account.
     This is the primary CRO/CFO metric.
 
     Revenue-counting rules (prevents double-counting across the causal chain):
-      - **at_risk**:   Only SIGNAL nodes whose revenue_impact < 0 (active threats).
+      - **at_risk**:   Derived from health-score × ARR × churn-probability.
+                        SIGNAL nodes do NOT carry revenue_impact (those were
+                        stale / cumulative estimates, not real events).
       - **protected**: Only OUTCOME nodes with revenue_impact_type='protected'.
       - **expansion**: Only OUTCOME nodes with revenue_impact_type='expansion'.
       - **lost**:      Only OUTCOME nodes with revenue_impact_type='lost'.
       - DECISION nodes are *excluded* — they are intermediate steps whose
         value is realised through downstream OUTCOME nodes.
-      - Positive-impact SIGNAL nodes are *excluded* — they describe the same
-        upside that OUTCOME nodes already capture.
 
     Outcome de-duplication:
       Within each bucket, outcome amounts that are within 20 % of each other
@@ -323,8 +354,14 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         }
     """
     now = datetime.utcnow()
-    nodes = ContextNode.query.filter(
+
+    # ── at_risk: health-score × ARR (no longer from signal nodes) ──
+    at_risk = _calculate_at_risk_from_health(account_id)
+
+    # ── protected / expansion / lost: OUTCOME nodes only ──
+    outcome_nodes = ContextNode.query.filter(
         ContextNode.account_id == account_id,
+        ContextNode.node_type == 'OUTCOME',
         ContextNode.revenue_impact.isnot(None),
         db.or_(
             ContextNode.expires_at.is_(None),
@@ -332,20 +369,6 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         )
     ).all()
 
-    # ── Split by node type ──
-    outcome_nodes = [n for n in nodes if n.node_type == 'OUTCOME']
-    signal_nodes  = [n for n in nodes if n.node_type == 'SIGNAL']
-
-    # ── at_risk: only negative-impact SIGNAL nodes (active threats) ──
-    at_risk = 0.0
-    at_risk_count = 0
-    for n in signal_nodes:
-        impact = float(n.revenue_impact) * float(n.confidence or 1.0)
-        if impact < 0:
-            at_risk += abs(impact)
-            at_risk_count += 1
-
-    # ── protected / expansion / lost: only OUTCOME nodes ──
     outcome_buckets: Dict[str, List[float]] = {
         'protected': [], 'expansion': [], 'lost': [],
     }
@@ -360,7 +383,7 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     expansion  = _deduplicate_outcome_amounts(outcome_buckets['expansion'])
     lost       = _deduplicate_outcome_amounts(outcome_buckets['lost'])
 
-    node_count = at_risk_count + sum(len(v) for v in outcome_buckets.values())
+    node_count = len(outcome_nodes) + (1 if at_risk > 0 else 0)
 
     return {
         'at_risk':    round(at_risk, 2),

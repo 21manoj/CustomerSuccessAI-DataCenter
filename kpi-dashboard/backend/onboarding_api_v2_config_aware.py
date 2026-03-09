@@ -863,18 +863,16 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'stakeholder_title': row.get('stakeholder_title', ''),
                         'causal_chain_ref': row.get('causal_chain_ref', ''),
                     }
-                    rev_impact = None
-                    try:
-                        rev_impact = float(row.get('revenue_impact', 0))
-                    except (ValueError, TypeError):
-                        pass
+                    # Revenue impact is intentionally NOT stored on SIGNAL
+                    # nodes — it belongs exclusively on OUTCOME nodes to
+                    # prevent double-counting across the causal chain.
                     nid = _insert_node(
                         conn, customer_id, account_id_val,
                         'SIGNAL', row.get('signal_type', 'signal'),
                         str(row.get('content', ''))[:200],
                         props, tier=2,
                         event_time=row.get('signal_date'),
-                        revenue_impact=rev_impact,
+                        revenue_impact=None,
                         source_platform=row.get('source_platform', 'csv_import'),
                     )
                     if sig_ref:
