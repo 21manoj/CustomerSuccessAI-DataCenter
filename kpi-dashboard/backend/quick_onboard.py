@@ -56,7 +56,7 @@ def onboard(company_name=None, num_kpis=DEFAULT_NUM_KPIS):
             customer_id=customer_id,
             vertical='dc2_s',
             dc2s_enabled_kpis=enabled_kpis,
-            dc2s_pillar_weights={'AI': 0.25, 'CH': 0.20, 'DV': 0.15, 'EX': 0.20, 'OS': 0.20}
+            dc2s_pillar_weights={'P3': 0.25, 'P4': 0.20, 'P1': 0.15, 'P5': 0.20, 'P2': 0.20}
         )
         db.session.add(config)
         print(f"   ✅ Config: {len(enabled_kpis)} KPIs enabled")

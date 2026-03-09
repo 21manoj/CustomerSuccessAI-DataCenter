@@ -1,0 +1,203 @@
+{
+  "nodes": {
+    "SIGNAL": 300,
+    "OUTCOME": 40,
+    "STAKEHOLDER": 40,
+    "DECISION": 30,
+    "EXTERNAL_CONTEXT": 10,
+    "ACCOUNT": 10
+  },
+  "total_nodes": 430,
+  "edges": {
+    "SOURCED_FROM": 450,
+    "LED_TO": 170,
+    "INVOLVES": 50,
+    "INDICATES": 30,
+    "CAUSED_BY": 20,
+    "CORRELATES_WITH": 10
+  },
+  "total_edges": 730,
+  "null_edge_count": 0,
+  "sample_edges": [
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 75% -- the key expansion threshold. Capacity utilization at",
+      "to_type": "SIGNAL",
+      "to_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "weight": 0.92,
+      "revenue_impact": -1200000.0
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    },
+    {
+      "edge_type": "CAUSED_BY",
+      "from_type": "SIGNAL",
+      "from_label": "GPU utilization hits 85%. Training job completion rate drops to 82% as jobs queu",
+      "to_type": "SIGNAL",
+      "to_label": "Critical GPU memory exhaustion incident. Two production inference endpoints go d",
+      "weight": 0.92,
+      "revenue_impact": null
+    }
+  ]
+}

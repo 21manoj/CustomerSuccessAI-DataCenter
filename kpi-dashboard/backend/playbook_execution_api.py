@@ -7,6 +7,11 @@ Manages playbook execution, step tracking, and progress monitoring
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, PlaybookExecution, PlaybookReport
+
+try:
+    from activity_logging import activity_logger
+except ImportError:
+    activity_logger = None
 from datetime import datetime
 from dateutil import parser as date_parser
 import json
@@ -293,6 +298,23 @@ def execute_step(execution_id):
         # Save to database
         save_execution_to_db(execution_id, execution, customer_id)
         
+        # Activity log when playbook completes (e.g. last step sets status to completed)
+        if execution.get('status') == 'completed' and activity_logger:
+            try:
+                user_id = get_current_user_id()
+                playbook_id = execution.get('playbookId') or execution.get('playbook_id') or 'unknown'
+                account_id = execution.get('accountId') or execution.get('context', {}).get('accountId')
+                activity_logger.log_playbook_execution(
+                    customer_id=customer_id,
+                    user_id=user_id,
+                    playbook_id=str(playbook_id),
+                    execution_id=execution_id,
+                    account_id=account_id,
+                    status='success',
+                )
+            except Exception:
+                pass
+        
         return jsonify({
             'status': 'success',
             'execution': execution,
@@ -329,6 +351,24 @@ def update_execution(execution_id):
             execution['status'] = data['status']
             if data['status'] == 'completed':
                 execution['completedAt'] = datetime.utcnow().isoformat()
+                # Persist completion to DB
+                save_execution_to_db(execution_id, execution, customer_id)
+                # Activity log: high-value playbook completion (low volume)
+                if activity_logger:
+                    try:
+                        user_id = get_current_user_id()
+                        playbook_id = execution.get('playbookId') or execution.get('playbook_id') or 'unknown'
+                        account_id = execution.get('accountId') or execution.get('context', {}).get('accountId')
+                        activity_logger.log_playbook_execution(
+                            customer_id=customer_id,
+                            user_id=user_id,
+                            playbook_id=str(playbook_id),
+                            execution_id=execution_id,
+                            account_id=account_id,
+                            status='success',
+                        )
+                    except Exception:
+                        pass
         
         # Update other fields
         if 'metadata' in data:

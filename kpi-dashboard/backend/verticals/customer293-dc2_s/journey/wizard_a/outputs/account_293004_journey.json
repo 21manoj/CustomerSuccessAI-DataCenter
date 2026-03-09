@@ -1,0 +1,1604 @@
+{
+  "account_id": "293004",
+  "account_name": "Account 293004",
+  "pattern_type": "crisis_recovery",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-30",
+  "starting_health": 89.94,
+  "ending_health": 92.68,
+  "lowest_health": 34.96,
+  "highest_health": 94.0,
+  "total_weeks": 52,
+  "events": [
+    {
+      "week_number": 5,
+      "date": "2024-01-29",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 89.96,
+      "health_score_after": 34.96,
+      "outcome": "Production stopped, CEO furious, trust destroyed",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 5,
+      "date": "2024-01-29",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 89.96,
+      "health_score_after": 34.96,
+      "outcome": "Production stopped, CEO furious, trust destroyed",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 5,
+      "date": "2024-01-29",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 89.96,
+      "health_score_after": 34.96,
+      "outcome": "Production stopped, CEO furious, trust destroyed",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 5,
+      "date": "2024-01-29",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 89.96,
+      "health_score_after": 34.96,
+      "outcome": "Production stopped, CEO furious, trust destroyed",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 34.96,
+      "health_score_after": 40.47,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 34.96,
+      "health_score_after": 40.47,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 34.96,
+      "health_score_after": 40.47,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 34.96,
+      "health_score_after": 40.47,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 6,
+      "date": "2024-02-05",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 34.96,
+      "health_score_after": 40.47,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 40.47,
+      "health_score_after": 45.4,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "crisis",
+      "event_type": "budget_review",
+      "description": "Emergency budget meeting - Damages being calculated",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 40.47,
+      "health_score_after": 45.4,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "crisis",
+      "event_type": "budget_review",
+      "description": "Emergency budget meeting - Damages being calculated",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 40.47,
+      "health_score_after": 45.4,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 40.47,
+      "health_score_after": 45.4,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 7,
+      "date": "2024-02-12",
+      "phase": "crisis",
+      "event_type": "budget_review",
+      "description": "Emergency budget meeting - Damages being calculated",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 40.47,
+      "health_score_after": 45.4,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 45.4,
+      "health_score_after": 49.41,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 45.4,
+      "health_score_after": 49.41,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 45.4,
+      "health_score_after": 49.41,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 8,
+      "date": "2024-02-19",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 45.4,
+      "health_score_after": 49.41,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 9,
+      "date": "2024-02-26",
+      "phase": "at_risk",
+      "event_type": "budget_review",
+      "description": "CFO: 'Should we switch providers?' - Budget under review",
+      "sentiment": "negative",
+      "sentiment_value": -0.6,
+      "health_score_before": 49.41,
+      "health_score_after": 53.42,
+      "outcome": "Financial concerns remain, cautious",
+      "csm_action": {
+        "action_type": "flexible_payment_terms",
+        "description": "Flexible payment terms offered",
+        "response_time_hours": 72,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 10,
+      "date": "2024-03-04",
+      "phase": "at_risk",
+      "event_type": "budget_review",
+      "description": "CFO: 'Should we switch providers?' - Budget under review",
+      "sentiment": "negative",
+      "sentiment_value": -0.6,
+      "health_score_before": 53.42,
+      "health_score_after": 57.75,
+      "outcome": "Financial concerns remain, cautious",
+      "csm_action": {
+        "action_type": "flexible_payment_terms",
+        "description": "Flexible payment terms offered",
+        "response_time_hours": 72,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 11,
+      "date": "2024-03-11",
+      "phase": "at_risk",
+      "event_type": "budget_review",
+      "description": "CFO: 'Should we switch providers?' - Budget under review",
+      "sentiment": "negative",
+      "sentiment_value": -0.6,
+      "health_score_before": 57.75,
+      "health_score_after": 60.9,
+      "outcome": "Financial concerns remain, cautious",
+      "csm_action": {
+        "action_type": "discount_negotiation",
+        "description": "12% discount negotiated with finance",
+        "response_time_hours": 96,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 12,
+      "date": "2024-03-18",
+      "phase": "at_risk",
+      "event_type": "budget_review",
+      "description": "CFO: 'Should we switch providers?' - Budget under review",
+      "sentiment": "negative",
+      "sentiment_value": -0.6,
+      "health_score_before": 60.9,
+      "health_score_after": 64.24,
+      "outcome": "Financial concerns remain, cautious",
+      "csm_action": {
+        "action_type": "flexible_payment_terms",
+        "description": "Flexible payment terms offered",
+        "response_time_hours": 72,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 12,
+      "date": "2024-03-18",
+      "phase": "at_risk",
+      "event_type": "contract_discussion",
+      "description": "Budget review: $2.1M contract questioned by finance",
+      "sentiment": "negative",
+      "sentiment_value": -0.5,
+      "health_score_before": 60.9,
+      "health_score_after": 64.24,
+      "outcome": "Financial concerns remain, cautious",
+      "csm_action": {
+        "action_type": "flexible_payment_terms",
+        "description": "Flexible payment terms offered",
+        "response_time_hours": 72,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 13,
+      "date": "2024-03-25",
+      "phase": "at_risk",
+      "event_type": "contract_discussion",
+      "description": "Pricing compromise reached - 12% discount negotiated",
+      "sentiment": "positive",
+      "sentiment_value": 0.5,
+      "health_score_before": 64.24,
+      "health_score_after": 67.5,
+      "outcome": "Financial concerns remain, cautious"
+    },
+    {
+      "week_number": 14,
+      "date": "2024-04-01",
+      "phase": "at_risk",
+      "event_type": "contract_discussion",
+      "description": "Pricing compromise reached - 12% discount negotiated",
+      "sentiment": "positive",
+      "sentiment_value": 0.5,
+      "health_score_before": 67.5,
+      "health_score_after": 71.11,
+      "outcome": "Financial concerns remain, cautious",
+      "csm_action": {
+        "action_type": "discount_negotiation",
+        "description": "12% discount negotiated with finance",
+        "response_time_hours": 96,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "moderate",
+      "event_type": "technical_issue",
+      "description": "Quality metrics: 42% improvement shown",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 71.11,
+      "health_score_after": 74.02,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "moderate",
+      "event_type": "meeting",
+      "description": "Board: 'Cautiously positive' - Sentiment improving",
+      "sentiment": "positive",
+      "sentiment_value": 0.5,
+      "health_score_before": 71.11,
+      "health_score_after": 74.02,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "moderate",
+      "event_type": "milestone",
+      "description": "90-day uptime milestone - Confidence returning",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 74.02,
+      "health_score_after": 77.59,
+      "outcome": "Confidence returning, team re-engaging",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "moderate",
+      "event_type": "technical_issue",
+      "description": "Quality metrics: 42% improvement shown",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 74.02,
+      "health_score_after": 77.59,
+      "outcome": "Confidence returning, team re-engaging",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 17,
+      "date": "2024-04-22",
+      "phase": "moderate",
+      "event_type": "milestone",
+      "description": "90-day uptime milestone - Confidence returning",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 77.59,
+      "health_score_after": 80.91,
+      "outcome": "Confidence returning, team re-engaging",
+      "csm_action": {
+        "action_type": "performance_reporting",
+        "description": "Performance dashboard and reporting",
+        "response_time_hours": 72,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "moderate",
+      "event_type": "meeting",
+      "description": "Board: 'Cautiously positive' - Sentiment improving",
+      "sentiment": "positive",
+      "sentiment_value": 0.5,
+      "health_score_before": 80.91,
+      "health_score_after": 83.06,
+      "outcome": "Stable, expansion still frozen"
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "moderate",
+      "event_type": "technical_issue",
+      "description": "Quality metrics: 42% improvement shown",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 80.91,
+      "health_score_after": 83.06,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "moderate",
+      "event_type": "meeting",
+      "description": "Board: 'Cautiously positive' - Sentiment improving",
+      "sentiment": "positive",
+      "sentiment_value": 0.5,
+      "health_score_before": 83.06,
+      "health_score_after": 85.4,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "performance_reporting",
+        "description": "Performance dashboard and reporting",
+        "response_time_hours": 72,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "moderate",
+      "event_type": "meeting",
+      "description": "Expansion still frozen - Wait and see approach",
+      "sentiment": "neutral",
+      "sentiment_value": 0.2,
+      "health_score_before": 83.06,
+      "health_score_after": 85.4,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "proactive_training",
+        "description": "Proactive team training sessions (15 engineers)",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "moderate",
+      "event_type": "milestone",
+      "description": "90-day uptime milestone - Confidence returning",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 85.4,
+      "health_score_after": 87.87,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "moderate",
+      "event_type": "milestone",
+      "description": "90-day uptime milestone - Confidence returning",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 85.4,
+      "health_score_after": 87.87,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "proactive_training",
+        "description": "Proactive team training sessions (15 engineers)",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 21,
+      "date": "2024-05-20",
+      "phase": "moderate",
+      "event_type": "meeting",
+      "description": "Board: 'Cautiously positive' - Sentiment improving",
+      "sentiment": "positive",
+      "sentiment_value": 0.5,
+      "health_score_before": 87.87,
+      "health_score_after": 90.25,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "proactive_training",
+        "description": "Proactive team training sessions (15 engineers)",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 22,
+      "date": "2024-05-27",
+      "phase": "moderate",
+      "event_type": "milestone",
+      "description": "90-day uptime milestone - Confidence returning",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 90.25,
+      "health_score_after": 92.52,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 22,
+      "date": "2024-05-27",
+      "phase": "moderate",
+      "event_type": "champion_interaction",
+      "description": "New champion emerges (VP Operations) - Fresh perspective",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 90.25,
+      "health_score_after": 92.52,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 23,
+      "date": "2024-06-03",
+      "phase": "moderate",
+      "event_type": "milestone",
+      "description": "90-day uptime milestone - Confidence returning",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 92.52,
+      "health_score_after": 93.32,
+      "outcome": "Stable, expansion still frozen"
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "moderate",
+      "event_type": "technical_issue",
+      "description": "Quality metrics: 42% improvement shown",
+      "sentiment": "positive",
+      "sentiment_value": 0.6,
+      "health_score_before": 93.32,
+      "health_score_after": 93.67,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "moderate",
+      "event_type": "champion_interaction",
+      "description": "New champion emerges (VP Operations) - Fresh perspective",
+      "sentiment": "positive",
+      "sentiment_value": 0.7,
+      "health_score_before": 93.32,
+      "health_score_after": 93.67,
+      "outcome": "Stable, expansion still frozen",
+      "csm_action": {
+        "action_type": "new_use_case_support",
+        "description": "New use case support and enablement",
+        "response_time_hours": 48,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.67,
+      "health_score_after": 93.59,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.67,
+      "health_score_after": 93.59,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 26,
+      "date": "2024-06-24",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.59,
+      "health_score_after": 93.16,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 27,
+      "date": "2024-07-01",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.16,
+      "health_score_after": 93.19,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 28,
+      "date": "2024-07-08",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.19,
+      "health_score_after": 92.75,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 28,
+      "date": "2024-07-08",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.19,
+      "health_score_after": 92.75,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 29,
+      "date": "2024-07-15",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.75,
+      "health_score_after": 92.52,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 29,
+      "date": "2024-07-15",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.75,
+      "health_score_after": 92.52,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.52,
+      "health_score_after": 92.26,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.52,
+      "health_score_after": 92.26,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 30,
+      "date": "2024-07-22",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.52,
+      "health_score_after": 92.26,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 31,
+      "date": "2024-07-29",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.26,
+      "health_score_after": 92.54,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 31,
+      "date": "2024-07-29",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.26,
+      "health_score_after": 92.54,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 32,
+      "date": "2024-08-05",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.54,
+      "health_score_after": 92.55,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 32,
+      "date": "2024-08-05",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.54,
+      "health_score_after": 92.55,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 33,
+      "date": "2024-08-12",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.55,
+      "health_score_after": 92.82,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.82,
+      "health_score_after": 92.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 34,
+      "date": "2024-08-19",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.82,
+      "health_score_after": 92.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 35,
+      "date": "2024-08-26",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.68,
+      "health_score_after": 92.87,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 36,
+      "date": "2024-09-02",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.87,
+      "health_score_after": 93.35,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 37,
+      "date": "2024-09-09",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.35,
+      "health_score_after": 93.61,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 37,
+      "date": "2024-09-09",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.35,
+      "health_score_after": 93.61,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 38,
+      "date": "2024-09-16",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.61,
+      "health_score_after": 94.0,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 39,
+      "date": "2024-09-23",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 94.0,
+      "health_score_after": 93.93,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 39,
+      "date": "2024-09-23",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.0,
+      "health_score_after": 93.93,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_execution",
+        "description": "Contract renewal execution",
+        "response_time_hours": 72,
+        "cost_estimate": 3000
+      }
+    },
+    {
+      "week_number": 39,
+      "date": "2024-09-23",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 94.0,
+      "health_score_after": 93.93,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 40,
+      "date": "2024-09-30",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.93,
+      "health_score_after": 93.73,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 41,
+      "date": "2024-10-07",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.73,
+      "health_score_after": 93.88,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 41,
+      "date": "2024-10-07",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.73,
+      "health_score_after": 93.88,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 41,
+      "date": "2024-10-07",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.73,
+      "health_score_after": 93.88,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 42,
+      "date": "2024-10-14",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "200-day uptime milestone - Exceptional performance",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.88,
+      "health_score_after": 93.51,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 43,
+      "date": "2024-10-21",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.51,
+      "health_score_after": 93.36,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.36,
+      "health_score_after": 93.01,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.36,
+      "health_score_after": 93.01,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 44,
+      "date": "2024-10-28",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 93.36,
+      "health_score_after": 93.01,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 45,
+      "date": "2024-11-04",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "Early renewal discussion - Multi-year interest expressed",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.01,
+      "health_score_after": 92.77,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 45,
+      "date": "2024-11-04",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.01,
+      "health_score_after": 92.77,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 45,
+      "date": "2024-11-04",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 93.01,
+      "health_score_after": 92.77,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 46,
+      "date": "2024-11-11",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.77,
+      "health_score_after": 92.85,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 47,
+      "date": "2024-11-18",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.85,
+      "health_score_after": 93.08,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 48,
+      "date": "2024-11-25",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 93.08,
+      "health_score_after": 92.67,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 49,
+      "date": "2024-12-02",
+      "phase": "growth",
+      "event_type": "champion_interaction",
+      "description": "Offered to be reference customer - Full advocacy",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.67,
+      "health_score_after": 92.66,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 49,
+      "date": "2024-12-02",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 92.67,
+      "health_score_after": 92.66,
+      "outcome": "Sustained growth, advocacy unlocked"
+    },
+    {
+      "week_number": 49,
+      "date": "2024-12-02",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "2025 budget approved ($800K) - Major expansion planned",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.9,
+      "health_score_before": 92.67,
+      "health_score_after": 92.66,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.66,
+      "health_score_after": 92.55,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 92.66,
+      "health_score_after": 92.55,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "renewal_planning",
+        "description": "Renewal planning and strategy",
+        "response_time_hours": 168,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 50,
+      "date": "2024-12-09",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.66,
+      "health_score_after": 92.55,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "expansion_enablement",
+        "description": "Expansion enablement and POC support",
+        "response_time_hours": 96,
+        "cost_estimate": 8000
+      }
+    },
+    {
+      "week_number": 51,
+      "date": "2024-12-16",
+      "phase": "growth",
+      "event_type": "contract_discussion",
+      "description": "2-year renewal signed - $2.25M/yr commitment",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.55,
+      "health_score_after": 92.34,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    },
+    {
+      "week_number": 51,
+      "date": "2024-12-16",
+      "phase": "growth",
+      "event_type": "milestone",
+      "description": "150-day uptime milestone - Complete trust restored",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.95,
+      "health_score_before": 92.55,
+      "health_score_after": 92.34,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "marketing_collaboration",
+        "description": "Marketing collaboration and case study",
+        "response_time_hours": 200,
+        "cost_estimate": 2000
+      }
+    },
+    {
+      "week_number": 52,
+      "date": "2024-12-23",
+      "phase": "growth",
+      "event_type": "expansion_discussion",
+      "description": "Robotics expansion interest - New use cases identified",
+      "sentiment": "very_positive",
+      "sentiment_value": 0.85,
+      "health_score_before": 92.34,
+      "health_score_after": 92.68,
+      "outcome": "Sustained growth, advocacy unlocked",
+      "csm_action": {
+        "action_type": "strategic_planning",
+        "description": "Strategic multi-year planning",
+        "response_time_hours": 120,
+        "cost_estimate": 5000
+      }
+    }
+  ],
+  "summary": {
+    "pattern_type": "crisis_recovery",
+    "total_events": 92,
+    "crisis_week": 5,
+    "lowest_health_week": 5,
+    "recovery_duration_weeks": 20,
+    "total_csm_investment": 539000.0,
+    "health_recovered": 57.72,
+    "financial_impact": "40% ARR expansion",
+    "key_success_factors": [
+      "Immediate crisis response (< 2 hours)",
+      "Executive sponsor assignment (Day 1)",
+      "Over-communication (weekly exec calls)",
+      "Technical excellence (150+ days uptime)",
+      "Commercial flexibility (12% discount)",
+      "New champion cultivation"
+    ]
+  }
+}

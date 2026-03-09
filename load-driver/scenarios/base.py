@@ -47,6 +47,15 @@ class BaseScenario(ABC):
         """
         pass
 
+    def ensure_authenticated(self) -> bool:
+        """Ensure client is logged in. Call at start of scenarios that require auth. Returns True if authenticated."""
+        if getattr(self.client, '_authenticated', False):
+            return True
+        ok = self.client.login()
+        if not ok:
+            logger.warning("Scenario requires auth but login failed")
+        return ok
+
     def _record_api_call(self, method: str, endpoint: str, status: str):
         """Record an API call for metrics"""
         logger.debug(f"  {method} {endpoint} [{status}]")

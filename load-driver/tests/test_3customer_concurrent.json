@@ -1,0 +1,152 @@
+{
+  "C1": {
+    "profile_key": "C1",
+    "company_name": "MidScale Compute",
+    "status": "complete",
+    "days_injected": 90,
+    "score_calcs": 3,
+    "playbooks_triggered": 0,
+    "roi_results": {},
+    "errors": [],
+    "health_snapshots": [
+      {
+        "date": "2025-01-31",
+        "avg_health": 47.94,
+        "min": 30.8,
+        "max": 72.3,
+        "healthy": 1,
+        "at_risk": 1,
+        "critical": 3
+      },
+      {
+        "date": "2025-03-02",
+        "avg_health": 47.94,
+        "min": 30.8,
+        "max": 72.3,
+        "healthy": 1,
+        "at_risk": 1,
+        "critical": 3
+      },
+      {
+        "date": "2025-04-01",
+        "avg_health": 43.059999999999995,
+        "min": 35.3,
+        "max": 72.1,
+        "healthy": 1,
+        "at_risk": 0,
+        "critical": 4
+      }
+    ],
+    "num_accounts": 5,
+    "kpis": 12,
+    "pillars": 3
+  },
+  "C2": {
+    "profile_key": "C2",
+    "company_name": "FullStack DataCore",
+    "status": "complete",
+    "days_injected": 90,
+    "score_calcs": 3,
+    "playbooks_triggered": 0,
+    "roi_results": {
+      "historical": {
+        "available": true,
+        "summary": "{'customer_id': 61, 'last_updated': '2026-03-04T18:01:16.361390', 'model': 'outcome_roi', 'result': {'investment_breakdown': {'cs_initiatives': 473100.0, 'platform': 105600.0, 'total': 578700.0}, 'met"
+      },
+      "forward_1pct": {
+        "available": true,
+        "total_roi": null,
+        "summary": "{'customer_id': 61, 'last_updated': '2026-03-04T18:01:16.369941', 'model': 'outcome_roi', 'result': {'investment_breakdown': {'cs_initiatives': 197125.0, 'platform': 44000.0, 'total': 241125.0}, 'metr"
+      },
+      "forward_4pct": {
+        "available": true,
+        "total_roi": null,
+        "summary": "{'customer_id': 61, 'last_updated': '2026-03-04T18:01:16.376154', 'model': 'outcome_roi', 'result': {'investment_breakdown': {'cs_initiatives': 362710.0, 'platform': 80960.0, 'total': 443670.0}, 'metr"
+      },
+      "forward_6pct": {
+        "available": true,
+        "total_roi": null,
+        "summary": "{'customer_id': 61, 'last_updated': '2026-03-04T18:01:16.381838', 'model': 'outcome_roi', 'result': {'investment_breakdown': {'cs_initiatives': 473100.0, 'platform': 105600.0, 'total': 578700.0}, 'met"
+      },
+      "story": {
+        "available": true,
+        "summary": "{'customer_id': 61, 'last_updated': '2026-03-04T18:01:16.392410', 'model': 'outcome_roi', 'story': {'bridge': {'forward_roi_pct': 169.4, 'historical_roi_pct': 458.2, 'momentum_metrics': [{'display_name': 'Time to First Value', 'forward_dollars': 182251.27, 'forward_improvement': 4.0, 'historical_dol"
+      }
+    },
+    "errors": [],
+    "health_snapshots": [
+      {
+        "date": "2025-01-31",
+        "avg_health": 55.529999999999994,
+        "min": 27.8,
+        "max": 74.4,
+        "healthy": 5,
+        "at_risk": 1,
+        "critical": 4
+      },
+      {
+        "date": "2025-03-02",
+        "avg_health": 55.529999999999994,
+        "min": 27.8,
+        "max": 74.4,
+        "healthy": 5,
+        "at_risk": 1,
+        "critical": 4
+      },
+      {
+        "date": "2025-04-01",
+        "avg_health": 49.35,
+        "min": 25.7,
+        "max": 72.0,
+        "healthy": 3,
+        "at_risk": 2,
+        "critical": 5
+      }
+    ],
+    "num_accounts": 10,
+    "kpis": 15,
+    "pillars": 5
+  },
+  "C3": {
+    "profile_key": "C3",
+    "company_name": "Enterprise CloudMax",
+    "status": "complete",
+    "days_injected": 90,
+    "score_calcs": 3,
+    "playbooks_triggered": 0,
+    "roi_results": {},
+    "errors": [],
+    "health_snapshots": [
+      {
+        "date": "2025-01-31",
+        "avg_health": 64.6,
+        "min": 27.7,
+        "max": 81.6,
+        "healthy": 12,
+        "at_risk": 4,
+        "critical": 4
+      },
+      {
+        "date": "2025-03-02",
+        "avg_health": 64.6,
+        "min": 27.7,
+        "max": 81.6,
+        "healthy": 12,
+        "at_risk": 4,
+        "critical": 4
+      },
+      {
+        "date": "2025-04-01",
+        "avg_health": 64.695,
+        "min": 25.8,
+        "max": 74.7,
+        "healthy": 16,
+        "at_risk": 0,
+        "critical": 4
+      }
+    ],
+    "num_accounts": 20,
+    "kpis": 38,
+    "pillars": 5
+  }
+}

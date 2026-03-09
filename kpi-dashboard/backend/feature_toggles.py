@@ -19,6 +19,8 @@ class FeatureToggle(Enum):
     TEMPORAL_ANALYSIS = "temporal_analysis"
     MULTI_FORMAT_SUPPORT = "multi_format_support"
     REVENUE_INTELLIGENCE = "revenue_intelligence"
+    CONTEXT_GRAPH = "context_graph"
+    MCP_SERVER = "mcp_server"
 
 @dataclass
 class FeatureConfig:
@@ -89,7 +91,22 @@ class FeatureToggleManager:
                 version="1.0.0",
                 dependencies=[],
                 environment_required="production"
-            )
+            ),
+            FeatureToggle.CONTEXT_GRAPH: FeatureConfig(
+                enabled=True,
+                description="Context graph intelligence: causal signal edges, stakeholder tracking, "
+                            "decision lifecycle, outcome economics, story arcs",
+                version="1.0.0",
+                dependencies=[],
+                environment_required=None
+            ),
+            FeatureToggle.MCP_SERVER: FeatureConfig(
+                enabled=False,
+                description="Expose CS Pulse as MCP tool provider for external LLMs (Claude, Copilot, ChatGPT)",
+                version="1.0.0",
+                dependencies=[],
+                environment_required=None
+            ),
         }
         
         # Load from environment variables
@@ -179,6 +196,102 @@ def require_feature(feature: FeatureToggle):
 class FeatureNotEnabledException(Exception):
     """Exception raised when a required feature is not enabled"""
     pass
+
+
+# ============================================================
+# Context Graph Toggle — Per-Customer DB-Backed
+# ============================================================
+# The global FeatureToggle.CONTEXT_GRAPH acts as the platform
+# master switch. The per-customer toggle in the DB controls
+# whether a specific customer has context graph enabled.
+# Both must be ON for context graph features to activate.
+#
+# Sub-toggles allow incremental rollout:
+#   story_arcs, signal_edges, stakeholder_tracking,
+#   decision_lifecycle, outcome_economics, industry_benchmarks
+# ============================================================
+
+# Default sub-toggle config (all off)
+CONTEXT_GRAPH_DEFAULT_CONFIG = {
+    "story_arcs": False,
+    "signal_edges": False,
+    "stakeholder_tracking": False,
+    "decision_lifecycle": False,
+    "outcome_economics": False,
+    "industry_benchmarks": False,
+}
+
+
+def is_context_graph_enabled(customer_id: int) -> bool:
+    """
+    Check if context graph is enabled for a specific customer.
+    Requires BOTH the global platform toggle AND the per-customer
+    DB toggle to be ON.
+
+    Usage:
+        from feature_toggles import is_context_graph_enabled
+        if is_context_graph_enabled(customer_id):
+            # context graph path
+        else:
+            # flat signal path (existing behavior)
+    """
+    # Check global platform toggle first (fast, in-memory)
+    if not feature_toggles.is_enabled(FeatureToggle.CONTEXT_GRAPH):
+        return False
+
+    # Check per-customer DB toggle
+    try:
+        from models import FeatureToggle as FTModel
+        toggle = FTModel.query.filter_by(
+            customer_id=customer_id,
+            feature_name='context_graph'
+        ).first()
+        return toggle.enabled if toggle else False
+    except Exception:
+        return False
+
+
+def get_context_graph_config(customer_id: int) -> dict:
+    """
+    Get context graph sub-toggle config for a customer.
+    Returns the sub-toggle dict with defaults for any missing keys.
+
+    Usage:
+        cfg = get_context_graph_config(customer_id)
+        if cfg.get('signal_edges'):
+            edges = get_signal_edges(account_id)
+    """
+    if not is_context_graph_enabled(customer_id):
+        return {k: False for k in CONTEXT_GRAPH_DEFAULT_CONFIG}
+
+    try:
+        from models import FeatureToggle as FTModel
+        toggle = FTModel.query.filter_by(
+            customer_id=customer_id,
+            feature_name='context_graph'
+        ).first()
+        if toggle and toggle.config:
+            # Merge with defaults so new sub-toggles get False
+            merged = dict(CONTEXT_GRAPH_DEFAULT_CONFIG)
+            merged.update(toggle.config)
+            return merged
+    except Exception:
+        pass
+
+    return dict(CONTEXT_GRAPH_DEFAULT_CONFIG)
+
+
+def is_context_graph_sub_enabled(customer_id: int, sub_toggle: str) -> bool:
+    """
+    Check if a specific context graph sub-toggle is enabled.
+
+    Usage:
+        from feature_toggles import is_context_graph_sub_enabled
+        if is_context_graph_sub_enabled(customer_id, 'signal_edges'):
+            build_signal_edges(account_id)
+    """
+    cfg = get_context_graph_config(customer_id)
+    return cfg.get(sub_toggle, False)
 
 # Example usage
 if __name__ == "__main__":

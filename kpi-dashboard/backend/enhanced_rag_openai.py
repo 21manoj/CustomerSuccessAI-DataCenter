@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import openai
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
+from utils.embedding_model import get_embedding_model
 from models import db, KPI, Account, KPIUpload, CustomerConfig, PlaybookReport, DC2SKPI, User
 from query_cache import get_query_cache, cache_query_result, get_cached_query_result
 
@@ -27,8 +27,8 @@ class EnhancedRAGSystemOpenAI:
         # API key will be retrieved per-request from customer-specific storage
         # Don't set global openai.api_key here - use get_openai_api_key(customer_id) instead
         
-        # Initialize embedding model
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Use shared embedding model singleton (saves ~110MB per instance)
+        self.embedding_model = get_embedding_model()
         self.faiss_index = None
         self.kpi_data = []
         self.account_data = []

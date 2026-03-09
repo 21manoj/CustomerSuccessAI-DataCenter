@@ -21,7 +21,7 @@ interface Playbook {
 }
 
 interface PlaybookPanelProps {
-  tenantId: number | null;
+  tenantId: number | string | null;
 }
 
 const PlaybookPanel_dc: React.FC<PlaybookPanelProps> = ({ tenantId }) => {

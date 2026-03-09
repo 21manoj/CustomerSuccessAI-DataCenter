@@ -7,7 +7,7 @@
 
 export interface KPI {
   kpi_id: number;
-  account_id: number;
+  account_id: number | string;
   product_id?: number | null;
   product_name?: string | null;
   kpi_parameter: string;

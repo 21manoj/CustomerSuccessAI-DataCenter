@@ -1,0 +1,132 @@
+======================================================================
+  3-PILLAR / 8-KPI / 20-ACCOUNT — E2E ONBOARDING TEST
+  DC2_S Vertical — 2026-03-03 21:46:07
+  Platform: http://localhost:5059
+  Pillars:  ['AI', 'OS', 'EX'] (3 of 5)
+  KPIs:     8 of 38
+  Accounts: 20
+======================================================================
+
+======================================================================
+  PHASE 0: Pre-flight Checks
+======================================================================
+  Checking platform health...
+    ✅ PASS — Platform healthy
+  Logging in as superuser...
+    ✅ PASS — Superuser login OK
+
+======================================================================
+  PHASE 1: Register Customer
+======================================================================
+  Company:  NovaDC Infrastructure
+  Email:    admin@novadc-infra.test
+  Password: Test_novadc-infra_2026!
+  Checking for existing customer...
+  Found existing customer_id=49, cleaning up...
+    ✅ PASS — Cleaned up previous customer 49
+  Registering new customer...
+    ✅ PASS — Registered: customer_id=50, UUID=dc_cust_019cb761-d8f9-7d41-905a-1d7679ec...
+
+======================================================================
+  PHASE 2: Onboard with 3-Pillar Configuration
+======================================================================
+  Pillar weights: {"AI": 0.36, "OS": 0.28, "EX": 0.36}
+  Pattern mix:    {"stable": 0.4, "expansion": 0.2, "churn": 0.2, "crisis": 0.2}
+  Num accounts:   20
+    ✅ PASS — Onboarded: 20 accounts created
+    Account IDs: [50001, 50002, 50003, 50004, 50005]...50020
+    Config: pillars=5, weights={'AI': 0.36, 'EX': 0.36, 'OS': 0.28}
+
+  ────────────────────────────────────────────────────────────
+  Phase 2b: Restrict config to 8 KPIs and 3 pillars
+  ────────────────────────────────────────────────────────────
+  Logging in as customer...
+    ✅ PASS — Customer login OK
+  Updating CustomerConfig: 3 pillars, 8 KPIs...
+    ✅ PASS — Config updated via /api/config
+  Upgrading tier to 'enterprise'...
+    ✅ PASS — Tier: enterprise
+
+======================================================================
+  PHASE 3: Process Data
+======================================================================
+  Running process-data pipeline...
+    ✅ PASS — Data processed: 5 steps, 1 errors
+      Error: Embedding skipped (Qdrant unavailable): Traceback (most recent call last):
+  File "/app/backend/verticals/customer50-dc2_s/scripts/03_embed_customer50_OPENAI.py", line 19, in <module>
+    from qdrant_client import QdrantClient
+ModuleNotFoun
+
+======================================================================
+  PHASE 4: Calculate Health Scores
+======================================================================
+  Calculating scores for 2024-12...
+    ✅ PASS — Scores calculated: 20/20 accounts
+
+======================================================================
+  PHASE 5: Verify Results
+======================================================================
+
+  ────────────────────────────────────────────────────────────
+  5a: Verify 20 accounts
+  ────────────────────────────────────────────────────────────
+    ✅ PASS — Found 20 accounts (expected 20)
+
+  ────────────────────────────────────────────────────────────
+  5b: Verify health scores
+  ────────────────────────────────────────────────────────────
+    ✅ PASS — 20/20 accounts have health scores > 0
+    ✅ PASS — Health scores vary: min=36.7, max=100.0, avg=81.8, range=63.3
+
+    Health Distribution:
+      Healthy:   14 ( 70%)
+      At-Risk:    0 (  0%)
+      Critical:   6 ( 30%)
+      Unknown:    0
+
+  ────────────────────────────────────────────────────────────
+  5c: Verify health summary and pillar scores
+  ────────────────────────────────────────────────────────────
+    Health summary: 20 accounts, avg_health=78.6
+    Distribution: healthy=14, risk=0, critical=6
+    ✅ PASS — Health summary covers all 20 accounts
+    ✅ PASS — Average health computed: 78.6
+
+  ────────────────────────────────────────────────────────────
+  5c-extra: Verify 3-pillar weight acceptance
+  ────────────────────────────────────────────────────────────
+    ✅ PASS — Onboarding accepted 3-pillar weights: {'AI': 0.36, 'EX': 0.36, 'OS': 0.28}
+
+  ────────────────────────────────────────────────────────────
+  5d: Verify L4 customer health
+  ────────────────────────────────────────────────────────────
+    L4 Customer Health: 52.8
+    Total Accounts: 20
+    ✅ PASS — L4 health reasonable: 52.8 (expected 20-90 for this pattern mix)
+
+======================================================================
+  LOGIN CREDENTIALS
+======================================================================
+
+    ┌─────────────────────────────────────────────────┐
+    │  NovaDC Infrastructure — 3-Pillar Test Customer │
+    ├─────────────────────────────────────────────────┤
+    │  URL:       http://localhost                    │
+    │  Email:     admin@novadc-infra.test              │
+    │  Password:  Test_novadc-infra_2026!              │
+    │  Customer:  NovaDC Infrastructure                │
+    │  Cust ID:   50                                   │
+    │  Accounts:  20                                   │
+    │  Pillars:   AI, OS, EX (3 of 5)                │
+    │  KPIs:      8 of 38                               │
+    └─────────────────────────────────────────────────┘
+    
+
+======================================================================
+  FINAL SUMMARY
+======================================================================
+  Tests:  17 passed, 0 failed, 0 skipped
+  Time:   4.5s
+  Status: ALL PASS
+
+  ✅ 3-PILLAR / 8-KPI E2E TEST PASSED

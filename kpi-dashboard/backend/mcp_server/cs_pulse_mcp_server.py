@@ -34,7 +34,13 @@ mcp = FastMCP(
     "CS Pulse",
     instructions=(
         "AI-native Customer Success platform — health scoring, "
-        "signal detection, context graph intelligence, revenue analytics"
+        "signal detection, context graph intelligence, revenue analytics. "
+        "SCOPE CONVENTION: Every tool response includes a 'scope' field. "
+        "'account' = data for one account, 'portfolio' = aggregated across all accounts, "
+        "'node_traversal' = context graph path. "
+        "DOLLAR AMOUNTS: All financial figures include 'arr_basis' (explicit or baseline_10m) "
+        "and 'arr_basis_value' so you know the ARR used for scaling. "
+        "Never mix account-level and portfolio-level dollar figures without labeling scope."
     ),
 )
 
@@ -157,9 +163,20 @@ def list_accounts(customer_id: int) -> dict:
         # Sort by health (worst first)
         results.sort(key=lambda x: x["health_score"])
 
+        # Portfolio summary
+        total_arr = sum(r["arr"] for r in results)
+        avg_health = round(
+            sum(r["health_score"] for r in results) / len(results), 1
+        ) if results else 0
+
         return {
+            "scope": "portfolio",
             "customer_id": customer_id,
             "total_accounts": len(results),
+            "portfolio_summary": {
+                "total_arr": round(total_arr, 2),
+                "avg_health_score": avg_health,
+            },
             "accounts": results,
         }
 
@@ -203,6 +220,7 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
         arr = _get_account_arr(account)
 
         return {
+            "scope": "account",
             "account_id": account_id,
             "account_name": account.account_name,
             "health_score": round(health, 1),
@@ -265,12 +283,21 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
 
         at_risk.sort(key=lambda x: x["health_score"])
 
+        # Compute portfolio total ARR for pct_arr_at_risk
+        total_portfolio_arr = sum(_get_account_arr(a) for a in accounts)
+        pct_arr_at_risk = round(
+            (total_arr_at_risk / total_portfolio_arr * 100) if total_portfolio_arr else 0, 1
+        )
+
         return {
+            "scope": "portfolio",
             "customer_id": customer_id,
             "threshold": threshold,
             "at_risk_count": len(at_risk),
             "total_accounts": len(accounts),
             "total_arr_at_risk": round(total_arr_at_risk, 2),
+            "pct_arr_at_risk": pct_arr_at_risk,
+            "total_portfolio_arr": round(total_portfolio_arr, 2),
             "accounts": at_risk,
         }
 
@@ -307,6 +334,7 @@ def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
 
         account = Account.query.filter_by(account_id=account_id).first()
         result = _get_rev(account_id)
+        result["scope"] = "account"
         result["account_id"] = account_id
         result["account_name"] = account.account_name if account else "Unknown"
         return result
@@ -336,6 +364,7 @@ def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream"
         chain = _get_chain(node_id, direction=direction, max_depth=5)
 
         return {
+            "scope": "node_traversal",
             "start_node": start_node.to_dict(),
             "direction": direction,
             "chain_length": len(chain),
@@ -357,7 +386,9 @@ def get_graph_summary(customer_id: int, account_id: int) -> dict:
     with app.app_context():
         _check_context_graph(customer_id)
         from utils.context_graph import get_account_graph_summary
-        return get_account_graph_summary(account_id)
+        result = get_account_graph_summary(account_id)
+        result["scope"] = "account"
+        return result
 
 
 @mcp.tool
@@ -392,6 +423,7 @@ def search_signals(
         )
 
         return {
+            "scope": "account",
             "account_id": account_id,
             "node_type": node_type,
             "node_subtype": node_subtype,
@@ -423,19 +455,38 @@ def calculate_power_of_1(
     app = _get_flask_app()
 
     with app.app_context():
-        _ensure_registry()
-        from agent_tool_registry import get_tool_registry
+        from models import Account
+        from power_of_1_model import calculate_power_of_1_impact
 
-        registry = get_tool_registry()
-        kwargs = {"metric_id": metric_id, "improvement_pct": improvement_pct}
+        # Determine scope and ARR
         if account_arr:
-            kwargs["account_arr"] = account_arr
-        result = registry.invoke("power_of_1_calc", **kwargs)
+            scope = "account"
+            arr_source = "explicit_account_arr"
+            effective_arr = account_arr
+        else:
+            # Auto-compute portfolio total ARR
+            scope = "portfolio"
+            arr_source = "portfolio_total"
+            accounts = Account.query.filter(
+                Account.customer_id == int(customer_id),
+                Account.vertical == 'dc2_s',
+            ).all()
+            effective_arr = sum(_get_account_arr(a) for a in accounts)
+            if not effective_arr:
+                effective_arr = None  # fall back to $10M baseline
 
-        if not result.success:
-            raise ToolError(f"Power-of-1 calculation failed: {result.error}")
+        result = calculate_power_of_1_impact(
+            metric_id=metric_id,
+            improvement_pct=improvement_pct,
+            account_arr=effective_arr,
+        )
 
-        return result.result
+        if "error" in result:
+            raise ToolError(f"Power-of-1 calculation failed: {result['error']}")
+
+        result["scope"] = scope
+        result["arr_source"] = arr_source
+        return result
 
 
 @mcp.tool
@@ -483,6 +534,7 @@ def get_outcome_roi_story(
             account_ids=[account_id],
         )
 
+        story["scope"] = "account"
         return story
 
 
@@ -531,7 +583,9 @@ def get_playbook_recommendations(
         if not result.success:
             raise ToolError(f"Playbook recommendations failed: {result.error}")
 
-        return result.result
+        data = result.result
+        data["scope"] = "account"
+        return data
 
 
 # ===================================================================
@@ -661,6 +715,7 @@ def get_crm_account_data(customer_id: int, account_id: int) -> dict:
         uptime = kpi_values.get("P2-KPI4", 0)
 
         return {
+            "scope": "account",
             "source": "salesforce_simulated",
             "account_id": account_id,
             "account_name": account.account_name,
@@ -756,6 +811,7 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
             })
 
         return {
+            "scope": "account",
             "source": "servicenow_simulated",
             "account_id": account_id,
             "account_name": account.account_name,
@@ -812,10 +868,11 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
         kpi_values = _get_trailing_kpi_values(account_id)  # still needed for KPI values
 
         # Prefer pre-calculated health scores (single source of truth)
-        precalc_health, precalc_status, _ = get_precalculated_scores(account_id)
+        precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account_id)
         if precalc_health is not None:
             health = precalc_health
             health_status = precalc_status
+            pillars = precalc_pillars or {}
         else:
             health, pillars = calculate_kpi_health(kpi_values, customer_id)
             health_status = ht.classify(health)
@@ -867,6 +924,7 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
         champion_engagement = kpi_values.get("P5-KPI8", kpi_values.get("P4-KPI1", 0))
 
         return {
+            "scope": "account",
             "source": "survey_simulated",
             "account_id": account_id,
             "account_name": account.account_name,
@@ -930,6 +988,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
 
         if not accounts:
             return {
+                "scope": "portfolio",
                 "date": datetime.utcnow().strftime('%Y-%m-%d'),
                 "actions": [],
                 "summary": {
@@ -1112,6 +1171,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
         roi_metrics_involved = list({a['roi_metric_name'] for a in top_actions if a.get('roi_metric_name')})
 
         return {
+            "scope": "portfolio",
             "date": datetime.utcnow().strftime('%Y-%m-%d'),
             "actions": top_actions,
             "summary": {
@@ -1165,8 +1225,11 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         )
 
         return {
+            "scope": "portfolio",
             "customer_id": customer_id,
             "total_arr": total_arr,
+            "arr_basis": "portfolio_total",
+            "arr_basis_value": total_arr,
             "account_count": len(accounts),
             "data_source": data_source,
             "story": story,

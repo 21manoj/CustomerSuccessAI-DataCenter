@@ -174,9 +174,9 @@ class ProductionConfig(Config):
             raise ValueError(f"SECRET_KEY too short ({len(secret_key)} chars). Minimum 32 required!")
         return secret_key
     
-    # Security settings (HTTPS required)
-    SESSION_COOKIE_SECURE = True  # HTTPS only
-    REMEMBER_COOKIE_SECURE = True  # HTTPS only
+    # Security settings (HTTPS required; set SESSION_COOKIE_SECURE=false for HTTP-only deployment, e.g. EC2 without HTTPS)
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
+    REMEMBER_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
     SESSION_PROTECTION = 'strong'  # Maximum protection
     
     # Performance settings

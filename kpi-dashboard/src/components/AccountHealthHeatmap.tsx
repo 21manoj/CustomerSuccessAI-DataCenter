@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Eye } from 'lucide-react';
 
 interface Account {
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   revenue: number;
   industry: string;
@@ -33,34 +33,34 @@ interface Account {
 interface AccountHealthHeatmapProps {
   accounts: Account[];
   onAccountClick?: (account: Account | null) => void;
-  selectedAccountId?: number | null;
+  selectedAccountId?: number | string | null;
 }
 
 const AccountHealthHeatmap: React.FC<AccountHealthHeatmapProps> = ({ accounts, onAccountClick, selectedAccountId }) => {
 
   // Get health status and color
   const getHealthStatus = (score: number) => {
-    if (score >= 80) return { status: 'Healthy', color: 'green' };
-    if (score >= 70) return { status: 'At Risk', color: 'yellow' };
+    if (score >= 70) return { status: 'Healthy', color: 'green' };
+    if (score >= 50) return { status: 'At Risk', color: 'yellow' };
     return { status: 'Critical', color: 'red' };
   };
 
   // Get cell color based on health score (Finviz-style intensity)
   const getCellColor = (healthScore: number): string => {
-    if (healthScore >= 80) {
+    if (healthScore >= 70) {
       // Green gradient: darker = better (closer to 100)
-      if (healthScore >= 95) return 'bg-green-700';
-      if (healthScore >= 90) return 'bg-green-600';
+      if (healthScore >= 90) return 'bg-green-700';
+      if (healthScore >= 80) return 'bg-green-600';
       return 'bg-green-500';
     }
-    if (healthScore >= 70) {
-      // Yellow gradient: darker = worse (closer to 70)
-      if (healthScore <= 72) return 'bg-yellow-600';
+    if (healthScore >= 50) {
+      // Yellow gradient: darker = worse (closer to 50)
+      if (healthScore <= 55) return 'bg-yellow-600';
       return 'bg-yellow-500';
     }
     // Red gradient: darker = worse (closer to 0)
-    if (healthScore <= 50) return 'bg-red-700';
-    if (healthScore <= 60) return 'bg-red-600';
+    if (healthScore <= 20) return 'bg-red-700';
+    if (healthScore <= 35) return 'bg-red-600';
     return 'bg-red-500';
   };
 

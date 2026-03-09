@@ -72,16 +72,16 @@ export interface Playbook {
 export interface PlaybookExecution {
   id: string;
   playbookId: string;
-  accountId?: number;
-  customerId: number;
+  accountId?: number | string;
+  customerId: number | string;
   status: PlaybookStatus;
   currentStep?: string;
   startedAt: string;
   completedAt?: string;
   results: PlaybookResult[];
   context?: {
-    customerId?: number;
-    accountId?: number;
+    customerId?: number | string;
+    accountId?: number | string;
     accountName?: string;
     userId?: number;
     userName?: string;
@@ -101,8 +101,8 @@ export interface PlaybookResult {
 }
 
 export interface PlaybookContext {
-  customerId: number;
-  accountId?: number;
+  customerId: number | string;
+  accountId?: number | string;
   accountName?: string;
   userId: number;
   userName: string;

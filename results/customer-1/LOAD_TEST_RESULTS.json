@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-03-02T23:24:48.862786",
+  "base_url": "http://host.docker.internal:5059",
+  "scenarios": {
+    "onboarding": {
+      "name": "onboarding",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:48.863235",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:53.042854"
+    },
+    "kpi_simulation": {
+      "name": "kpi_simulation",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:53.043011",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:53.087525"
+    },
+    "rag_queries": {
+      "name": "rag_queries",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:53.087589",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:53.485451"
+    },
+    "signal_detection": {
+      "name": "signal_detection",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:53.487243",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:53.670389"
+    },
+    "raci_reports": {
+      "name": "raci_reports",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:53.671447",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:55.704852"
+    },
+    "churn_lifecycle": {
+      "name": "churn_lifecycle",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:55.707364",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:56.558867"
+    },
+    "tenant_isolation": {
+      "name": "tenant_isolation",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:56.560374",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:56.704991"
+    },
+    "cleanup": {
+      "name": "cleanup",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:56.705239",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:56.790321"
+    },
+    "roi_power_of_1": {
+      "name": "roi_power_of_1",
+      "status": "completed",
+      "start_time": "2026-03-02T23:24:56.790545",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "end_time": "2026-03-02T23:24:56.887565"
+    },
+    "n8n_workflow": {
+      "name": "n8n_workflow",
+      "status": "failed",
+      "start_time": "2026-03-02T23:24:56.887709",
+      "customers": [
+        1
+      ],
+      "details": {},
+      "error": "module 'scenarios.scenario_n8n_workflow' has no attribute 'ScenarioN8NWorkflow'"
+    }
+  },
+  "summary": {}
+}

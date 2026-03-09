@@ -1,0 +1,1711 @@
+{
+  "report_type": "roi_2pager",
+  "generated_at": "2026-03-04T08:20:05.570975",
+  "customer": {
+    "id": "48",
+    "name": "Meridian Data Centers",
+    "uuid": "dc_cust_019cb62a-2494-76dd-9a45-afb5939910cb",
+    "vertical": "dc",
+    "created_at": "2026-03-04 00:05:41.133596"
+  },
+  "summary": {
+    "total_arr": 24180231.0,
+    "account_count": 20,
+    "portfolio_health_l4": 56.0,
+    "simple_avg_l3": 54.3,
+    "health_distribution": {
+      "healthy": {
+        "count": 0,
+        "arr": 0
+      },
+      "at_risk": {
+        "count": 13,
+        "arr": 17065407.0
+      },
+      "critical": {
+        "count": 7,
+        "arr": 7114824.0
+      }
+    },
+    "revenue_at_risk": 24180231.0,
+    "revenue_at_risk_pct": 100.0
+  },
+  "roi": {
+    "snapshots": [
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 1.0,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 101.4,
+        "forward_impact": 485584.38,
+        "forward_investment": 241125.0,
+        "combined_roi": 599.6,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 1.5,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 165.0,
+        "forward_impact": 728376.56,
+        "forward_investment": 274882.5,
+        "combined_roi": 600.4,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 2.0,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 214.7,
+        "forward_impact": 971168.75,
+        "forward_investment": 308640.0,
+        "combined_roi": 601.1,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 2.5,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 254.5,
+        "forward_impact": 1213960.94,
+        "forward_investment": 342397.5,
+        "combined_roi": 601.7,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 3.0,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 287.3,
+        "forward_impact": 1456753.13,
+        "forward_investment": 376155.0,
+        "combined_roi": 602.4,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 3.5,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 314.6,
+        "forward_impact": 1699545.32,
+        "forward_investment": 409912.5,
+        "combined_roi": 602.9,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 4.0,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 337.8,
+        "forward_impact": 1942337.51,
+        "forward_investment": 443670.0,
+        "combined_roi": 603.5,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 5.0,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 375.0,
+        "forward_impact": 2427921.88,
+        "forward_investment": 511185.0,
+        "combined_roi": 604.5,
+        "total_arr": 24180231.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 6.0,
+        "historical_roi": 807.2,
+        "historical_impact": 5249801.0,
+        "historical_investment": 578700.0,
+        "forward_roi": 403.5,
+        "forward_impact": 2913506.26,
+        "forward_investment": 578700.0,
+        "combined_roi": 605.3,
+        "total_arr": 24180231.0
+      }
+    ],
+    "historical_roi_pct": 807.2,
+    "historical_impact": 5249801.0,
+    "forward_scenarios": [
+      {
+        "improvement_pct": 1.0,
+        "investment": 241125.0,
+        "impact": 485584.38,
+        "roi_pct": 101.4
+      },
+      {
+        "improvement_pct": 1.5,
+        "investment": 274882.5,
+        "impact": 728376.56,
+        "roi_pct": 165.0
+      },
+      {
+        "improvement_pct": 2.0,
+        "investment": 308640.0,
+        "impact": 971168.75,
+        "roi_pct": 214.7
+      },
+      {
+        "improvement_pct": 2.5,
+        "investment": 342397.5,
+        "impact": 1213960.94,
+        "roi_pct": 254.5
+      },
+      {
+        "improvement_pct": 3.0,
+        "investment": 376155.0,
+        "impact": 1456753.13,
+        "roi_pct": 287.3
+      },
+      {
+        "improvement_pct": 3.5,
+        "investment": 409912.5,
+        "impact": 1699545.32,
+        "roi_pct": 314.6
+      },
+      {
+        "improvement_pct": 4.0,
+        "investment": 443670.0,
+        "impact": 1942337.51,
+        "roi_pct": 337.8
+      },
+      {
+        "improvement_pct": 5.0,
+        "investment": 511185.0,
+        "impact": 2427921.88,
+        "roi_pct": 375.0
+      },
+      {
+        "improvement_pct": 6.0,
+        "investment": 578700.0,
+        "impact": 2913506.26,
+        "roi_pct": 403.5
+      }
+    ]
+  },
+  "playbook_executions": {
+    "total": 0,
+    "completed": 0,
+    "recent": []
+  },
+  "accounts": [
+    {
+      "account_id": 48011,
+      "account_name": "Meridian Data Centers - Account-11",
+      "revenue": 479620.0,
+      "health_score": 28.15,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 40.48,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 26.03,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 44.19,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 39.34,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 36.86,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -30.56,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -22.45,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 545.66,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI2",
+          "value": 39.6,
+          "target": 85.0,
+          "score": 46.59,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 39.01,
+          "target": 85.0,
+          "score": 45.89,
+          "status": "critical"
+        }
+      ]
+    },
+    {
+      "account_id": 48008,
+      "account_name": "Meridian Data Centers - Integration",
+      "revenue": 686274.0,
+      "health_score": 34.61,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 37.33,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 27.63,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 41.6,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 36.31,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 50.3,
+          "status": "at_risk"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -30.73,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -24.13,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 0.8,
+          "target": 85.0,
+          "score": 0.94,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 573.28,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 4746.78,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 41.93,
+          "target": 85.0,
+          "score": 49.33,
+          "status": "critical"
+        }
+      ]
+    },
+    {
+      "account_id": 48020,
+      "account_name": "Meridian Data Centers - Account-20",
+      "revenue": 451141.0,
+      "health_score": 35.44,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 38.44,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 37.26,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 41.68,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 36.52,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 51.39,
+          "status": "at_risk"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -31.66,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -24.33,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 1.46,
+          "target": 85.0,
+          "score": 1.72,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 558.8,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 4933.99,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 46.88,
+          "target": 85.0,
+          "score": 55.15,
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "account_id": 48002,
+      "account_name": "Meridian Data Centers - Staging",
+      "revenue": 1804791.0,
+      "health_score": 35.57,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 35.5,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 36.6,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 40.44,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 37.72,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 47.07,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -31.06,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -26.65,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 1.3,
+          "target": 85.0,
+          "score": 1.53,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 581.73,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 3874.27,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 42.75,
+          "target": 85.0,
+          "score": 50.29,
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "account_id": 48017,
+      "account_name": "Meridian Data Centers - Account-17",
+      "revenue": 997485.0,
+      "health_score": 35.61,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 39.48,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 29.35,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 45.4,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 37.27,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 39.82,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -28.11,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -31.56,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 0.47,
+          "target": 85.0,
+          "score": 0.55,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 507.8,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 2260.05,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 43.69,
+          "target": 85.0,
+          "score": 51.4,
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "account_id": 48014,
+      "account_name": "Meridian Data Centers - Account-14",
+      "revenue": 2342232.0,
+      "health_score": 35.86,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 42.79,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 30.2,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 44.69,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 38.33,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 34.52,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -24.44,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -27.39,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 1.01,
+          "target": 85.0,
+          "score": 1.19,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 530.35,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 1196.67,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 47.33,
+          "target": 85.0,
+          "score": 55.68,
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "account_id": 48005,
+      "account_name": "Meridian Data Centers - UAT",
+      "revenue": 353281.0,
+      "health_score": 36.73,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 41.2,
+          "status": "critical"
+        },
+        "CH": {
+          "score": 37.21,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 46.2,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 40.92,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 47.85,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -30.91,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -22.42,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 1.29,
+          "target": 85.0,
+          "score": 1.52,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 530.04,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 3417.15,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 44.2,
+          "target": 85.0,
+          "score": 52.0,
+          "status": "warning"
+        }
+      ]
+    },
+    {
+      "account_id": 48013,
+      "account_name": "Meridian Data Centers - Account-13",
+      "revenue": 1982199.0,
+      "health_score": 61.58,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.68,
+          "target": 85.0,
+          "score": 0.8,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.72,
+          "target": 85.0,
+          "score": 0.85,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 87.8,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 98.75,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 91.85,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48009,
+      "account_name": "Meridian Data Centers - Performance",
+      "revenue": 806440.0,
+      "health_score": 63.21,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.03,
+          "target": 85.0,
+          "score": 0.04,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.48,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 92.12,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 96.16,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48010,
+      "account_name": "Meridian Data Centers - Lab",
+      "revenue": 858106.0,
+      "health_score": 63.42,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.33,
+          "target": 85.0,
+          "score": 0.39,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 5.56,
+          "target": 85.0,
+          "score": 6.54,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 92.77,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 86.49,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 89.79,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48006,
+      "account_name": "Meridian Data Centers - DR",
+      "revenue": 1235915.0,
+      "health_score": 63.8,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 99.82,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.33,
+          "target": 85.0,
+          "score": 0.39,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.94,
+          "target": 85.0,
+          "score": 1.11,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 1.66,
+          "target": 85.0,
+          "score": 1.95,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 94.11,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 92.62,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 97.58,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48003,
+      "account_name": "Meridian Data Centers - Development",
+      "revenue": 2360496.0,
+      "health_score": 64.09,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 99.65,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.24,
+          "target": 85.0,
+          "score": 0.28,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.61,
+          "target": 85.0,
+          "score": 0.72,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 1.4,
+          "target": 85.0,
+          "score": 1.65,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.17,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 96.13,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 88.18,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48019,
+      "account_name": "Meridian Data Centers - Account-19",
+      "revenue": 2289573.0,
+      "health_score": 64.35,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 99.97,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.03,
+          "target": 85.0,
+          "score": 0.04,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.62,
+          "target": 85.0,
+          "score": 0.73,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 2.6,
+          "target": 85.0,
+          "score": 3.06,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.74,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 92.81,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 85.15,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48018,
+      "account_name": "Meridian Data Centers - Account-18",
+      "revenue": 1002406.0,
+      "health_score": 64.57,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.15,
+          "target": 85.0,
+          "score": 0.18,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.82,
+          "target": 85.0,
+          "score": 0.96,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 6.75,
+          "target": 85.0,
+          "score": 7.94,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 91.08,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 95.72,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 93.02,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48012,
+      "account_name": "Meridian Data Centers - Account-12",
+      "revenue": 1254673.0,
+      "health_score": 64.68,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.51,
+          "target": 85.0,
+          "score": 0.6,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 1.02,
+          "target": 85.0,
+          "score": 1.2,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 5.49,
+          "target": 85.0,
+          "score": 6.46,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.81,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 100.0,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 94.55,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48004,
+      "account_name": "Meridian Data Centers - QA",
+      "revenue": 1045438.0,
+      "health_score": 65.09,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 99.85,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.48,
+          "target": 85.0,
+          "score": 0.56,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.8,
+          "target": 85.0,
+          "score": 0.94,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 4.86,
+          "target": 85.0,
+          "score": 5.72,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.1,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 91.45,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 86.28,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48001,
+      "account_name": "Meridian Data Centers - Production",
+      "revenue": 451766.0,
+      "health_score": 66.15,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 99.95,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.48,
+          "target": 85.0,
+          "score": 0.56,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.59,
+          "target": 85.0,
+          "score": 0.69,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 3.49,
+          "target": 85.0,
+          "score": 4.11,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 98.55,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 92.75,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 93.93,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48007,
+      "account_name": "Meridian Data Centers - Sandbox",
+      "revenue": 2011260.0,
+      "health_score": 66.68,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.88,
+          "target": 85.0,
+          "score": 1.04,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 1.39,
+          "target": 85.0,
+          "score": 1.64,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 6.72,
+          "target": 85.0,
+          "score": 7.91,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 89.34,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 93.09,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 92.37,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48016,
+      "account_name": "Meridian Data Centers - Account-16",
+      "revenue": 955441.0,
+      "health_score": 68.09,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 99.59,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 99.67,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.31,
+          "target": 85.0,
+          "score": 0.36,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.59,
+          "target": 85.0,
+          "score": 0.69,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 4.41,
+          "target": 85.0,
+          "score": 5.19,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 100.0,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 92.2,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 93.26,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    },
+    {
+      "account_id": 48015,
+      "account_name": "Meridian Data Centers - Account-15",
+      "revenue": 811694.0,
+      "health_score": 68.31,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 99.78,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "EX": {
+          "score": 100.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 100.0,
+          "status": "healthy"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.17,
+          "target": 85.0,
+          "score": 0.2,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 1.13,
+          "target": 85.0,
+          "score": 1.33,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 5.35,
+          "target": 85.0,
+          "score": 6.29,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 92.11,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 92.48,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 87.61,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "excellent"
+        }
+      ]
+    }
+  ],
+  "config": {}
+}

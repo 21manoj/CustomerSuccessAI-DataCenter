@@ -9,7 +9,7 @@ import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
 
 interface KPICardProps {
-  tenantId: number | null;
+  tenantId: number | string | null;
   kpiId?: string;
   kpiName?: string;
   value?: number;

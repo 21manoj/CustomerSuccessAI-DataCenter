@@ -1,0 +1,57 @@
+{
+  "customer_id": 292,
+  "generated_at": "2026-03-08T14:28:44Z",
+  "seed": 42,
+  "accounts": {
+    "292001": {
+      "arc_id": "arc_seasonal_surge",
+      "health_score": 77.8,
+      "health_class": "healthy"
+    },
+    "292002": {
+      "arc_id": "arc_expansion_champion",
+      "health_score": 77.8,
+      "health_class": "healthy"
+    },
+    "292003": {
+      "arc_id": "arc_expansion_champion",
+      "health_score": 77.9,
+      "health_class": "healthy"
+    },
+    "292004": {
+      "arc_id": "arc_seasonal_surge",
+      "health_score": 88.4,
+      "health_class": "healthy"
+    },
+    "292005": {
+      "arc_id": "arc_land_and_expand",
+      "health_score": 88.2,
+      "health_class": "healthy"
+    },
+    "292006": {
+      "arc_id": "arc_competitive_displacement",
+      "health_score": 64.0,
+      "health_class": "at_risk"
+    },
+    "292007": {
+      "arc_id": "arc_silent_churn",
+      "health_score": 37.2,
+      "health_class": "critical"
+    },
+    "292008": {
+      "arc_id": "arc_expansion_champion",
+      "health_score": 88.4,
+      "health_class": "healthy"
+    },
+    "292009": {
+      "arc_id": "arc_exec_sponsor_change",
+      "health_score": 60.8,
+      "health_class": "at_risk"
+    },
+    "292010": {
+      "arc_id": "arc_silent_churn",
+      "health_score": 46.7,
+      "health_class": "critical"
+    }
+  }
+}

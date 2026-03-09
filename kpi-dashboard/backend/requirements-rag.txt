@@ -1,0 +1,14 @@
+# CS Pulse — Optional RAG / Vector DB Dependencies
+# Only needed if using RAG queries, embeddings, or Qdrant
+# Install: pip install -r requirements-rag.txt
+
+-r requirements-core.txt
+
+# Vector database client (Qdrant Cloud)
+qdrant-client>=1.7.0
+
+# Sentence embeddings (pulls PyTorch — adds ~800MB)
+sentence-transformers>=2.7.0
+
+# FAISS local vector search
+faiss-cpu==1.7.4

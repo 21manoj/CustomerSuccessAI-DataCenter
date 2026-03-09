@@ -1,0 +1,301 @@
+decision_ref,evidence_type,evidence_description,kpi_code,kpi_value,signal_ref,timestamp,confidence
+d1_exec_escalation,kpi_metric,P5-KPI8 dropped from 82 to 41 (champion engagement),,,,2025-10-19,0.78
+d1_exec_escalation,kpi_metric,P4-KPI3 missed QBR (0 of 4 annual target),,,,2025-10-19,0.78
+d1_exec_escalation,kpi_metric,P4-KPI1 dropped from 81 to 58 (partner engagement),,,,2025-10-19,0.94
+d1_exec_escalation,kpi_metric,P3-KPI1 declined 8% over 6 weeks (GPU utilization),,,,2025-10-19,0.8
+d1_exec_escalation,kpi_metric,P5-KPI7 degrade (major),P5-KPI7,,,2025-10-19,0.85
+d1_exec_escalation,kpi_metric,P4-KPI1 plateau (minor),P4-KPI1,,,2025-10-19,0.95
+d1_exec_escalation,kpi_metric,P5-KPI7 degrade (critical),P5-KPI7,,,2025-10-19,0.88
+d1_exec_escalation,kpi_metric,P5-KPI5 degrade (moderate),P5-KPI5,,,2025-10-19,0.86
+d1_exec_escalation,kpi_metric,P3-KPI1 degrade (moderate),P3-KPI1,,,2025-10-19,0.83
+d2_competitive_defense,observation,Competitive intel: rival quoting 15% lower TCO,,,,2025-11-03,0.83
+d2_competitive_defense,kpi_metric,P3-KPI1 GPU utilization declined to 62% from 74%,,,,2025-11-03,0.86
+d2_competitive_defense,observation,Customer ML team running parallel benchmarks for 6 weeks,,,,2025-11-03,0.82
+d2_competitive_defense,observation,Internal benchmarks show 22% throughput advantage at scale,,,,2025-11-03,0.81
+d2_competitive_defense,kpi_metric,P5-KPI7 degrade (major),P5-KPI7,,,2025-11-03,0.76
+d2_competitive_defense,kpi_metric,P4-KPI1 plateau (minor),P4-KPI1,,,2025-11-03,0.8
+d2_competitive_defense,kpi_metric,P5-KPI7 degrade (critical),P5-KPI7,,,2025-11-03,0.78
+d2_competitive_defense,kpi_metric,P5-KPI5 degrade (moderate),P5-KPI5,,,2025-11-03,0.81
+d2_competitive_defense,kpi_metric,P3-KPI1 degrade (moderate),P3-KPI1,,,2025-11-03,0.93
+d3_retention_package,observation,Champion re-engaged after CTO-to-CTO alignment,,,,2025-12-31,0.73
+d3_retention_package,observation,Competitive defense playbook neutralized rival's positioning,,,,2025-12-31,0.94
+d3_retention_package,kpi_metric,P5-KPI7 recovering from 12% to 42% (expansion probability),,,,2025-12-31,0.85
+d3_retention_package,kpi_metric,CTO shared 12-month AI roadmap requiring GPU expansion,,,,2025-12-31,0.76
+d3_retention_package,kpi_metric,P4-KPI3 improve (moderate),P4-KPI3,,,2025-12-31,0.78
+d3_retention_package,kpi_metric,P4-KPI1 improve (minor),P4-KPI1,,,2025-12-31,0.86
+d3_retention_package,kpi_metric,P3-KPI1 improve (major),P3-KPI1,,,2025-12-31,0.86
+d3_retention_package,kpi_metric,P3-KPI2 improve (moderate),P3-KPI2,,,2025-12-31,0.77
+d3_retention_package,kpi_metric,P3-KPI3 improve (moderate),P3-KPI3,,,2025-12-31,0.95
+d3_retention_package,kpi_metric,P5-KPI8 improve (major),P5-KPI8,,,2025-12-31,0.93
+d3_retention_package,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2025-12-31,0.84
+d3_retention_package,kpi_metric,P5-KPI7 improve (moderate),P5-KPI7,,,2025-12-31,0.77
+d3_retention_package,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2025-12-31,0.92
+d3_retention_package,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2025-12-31,0.85
+d3_retention_package,kpi_metric,P4-KPI2 improve (moderate),P4-KPI2,,,2025-12-31,0.89
+dec_poc_approval,kpi_metric,P3-KPI1: GPU utilization at 55% with room for POC workloads,,,,2025-07-10,0.88
+dec_poc_approval,kpi_metric,P3-KPI7: Only 2 workload types -- opportunity to diversify,,,,2025-07-10,0.8
+dec_poc_approval,kpi_metric,P5-KPI6: Zero new use cases in last 90 days,,,,2025-07-10,0.82
+dec_poc_approval,kpi_metric,P5-KPI8 improve (minor),P5-KPI8,,,2025-07-10,0.84
+dec_poc_approval,kpi_metric,P4-KPI3 improve (minor),P4-KPI3,,,2025-07-10,0.84
+dec_poc_approval,kpi_metric,P3-KPI7 improve (minor),P3-KPI7,,,2025-07-10,0.78
+dec_poc_approval,kpi_metric,P3-KPI1 improve (minor),P3-KPI1,,,2025-07-10,0.79
+dec_poc_approval,kpi_metric,P5-KPI6 improve (minor),P5-KPI6,,,2025-07-10,0.87
+dec_poc_approval,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-07-10,0.9
+dec_poc_approval,kpi_metric,P3-KPI2 improve (minor),P3-KPI2,,,2025-07-10,0.78
+dec_poc_approval,kpi_metric,P5-KPI1 improve (minor),P5-KPI1,,,2025-07-10,0.76
+dec_expansion_budget,kpi_metric,P3-KPI1: GPU utilization at 88% -- above critical threshold,,,,2025-10-22,0.78
+dec_expansion_budget,kpi_metric,P3-KPI2: Training job completion rate dropped from 93% to 82%,,,,2025-10-22,0.9
+dec_expansion_budget,kpi_metric,P5-KPI1: Capacity utilization at 92% -- near saturation,,,,2025-10-22,0.77
+dec_expansion_budget,kpi_metric,P5-KPI2: Capacity trajectory showing +12% MoM growth,,,,2025-10-22,0.7
+dec_expansion_budget,kpi_metric,P2-KPI3: Critical incidents doubled in 30 days due to resource contention,,,,2025-10-22,0.88
+dec_expansion_budget,observation,CSM-provided ROI analysis showing 35% return on expansion investment,,,,2025-10-22,0.91
+dec_expansion_budget,kpi_metric,P3-KPI1 spike (major),P3-KPI1,,,2025-10-22,0.87
+dec_expansion_budget,kpi_metric,P3-KPI2 degrade (moderate),P3-KPI2,,,2025-10-22,0.88
+dec_expansion_budget,kpi_metric,P3-KPI3 degrade (moderate),P3-KPI3,,,2025-10-22,0.92
+dec_expansion_budget,kpi_metric,P5-KPI1 spike (major),P5-KPI1,,,2025-10-22,0.84
+dec_expansion_budget,kpi_metric,P3-KPI5 degrade (critical),P3-KPI5,,,2025-10-22,0.85
+dec_expansion_budget,kpi_metric,P2-KPI3 degrade (major),P2-KPI3,,,2025-10-22,0.82
+dec_expansion_budget,kpi_metric,P2-KPI4 degrade (moderate),P2-KPI4,,,2025-10-22,0.9
+dec_expansion_budget,kpi_metric,P2-KPI5 degrade (moderate),P2-KPI5,,,2025-10-22,0.83
+dec_expansion_budget,kpi_metric,P3-KPI3 degrade (major),P3-KPI3,,,2025-10-22,0.94
+dec_expansion_budget,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2025-10-22,0.92
+dec_expansion_budget,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2025-10-22,0.95
+dec_expansion_budget,kpi_metric,P3-KPI4 degrade (moderate),P3-KPI4,,,2025-10-22,0.8
+dec_expansion_order,kpi_metric,P5-KPI7: Expansion probability at 92% -- highest confidence,,,,2026-01-14,0.76
+dec_expansion_order,kpi_metric,P5-KPI5: Budget approved and available,,,,2026-01-14,0.89
+dec_expansion_order,kpi_metric,P3-KPI2: Training job completion recovered to 88% with interim optimization,,,,2026-01-14,0.71
+dec_expansion_order,kpi_metric,P4-KPI1: Partner engagement strong -- smooth procurement process,,,,2026-01-14,0.89
+dec_expansion_order,kpi_metric,Reference call: Similar customer achieved 40% GPU utilization headroom post-expansion,,,,2026-01-14,0.88
+dec_expansion_order,observation,"CSM deployment timeline: 8 weeks to production, minimal disruption",,,,2026-01-14,0.9
+dec_expansion_order,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2026-01-14,0.83
+dec_expansion_order,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2026-01-14,0.88
+dec_expansion_order,kpi_metric,P4-KPI5 improve (moderate),P4-KPI5,,,2026-01-14,0.91
+dec_expansion_order,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2026-01-14,0.95
+dec_expansion_order,kpi_metric,P4-KPI2 improve (minor),P4-KPI2,,,2026-01-14,0.85
+dec_expansion_order,kpi_metric,P5-KPI7 improve (moderate),P5-KPI7,,,2026-01-14,0.76
+dec_expansion_order,kpi_metric,P3-KPI2 improve (moderate),P3-KPI2,,,2026-01-14,0.85
+dec_expansion_order,kpi_metric,P3-KPI3 improve (moderate),P3-KPI3,,,2026-01-14,0.87
+dec_expansion_order,kpi_metric,P3-KPI6 improve (minor),P3-KPI6,,,2026-01-14,0.92
+dec_expansion_order,kpi_metric,P2-KPI4 improve (minor),P2-KPI4,,,2026-01-14,0.92
+d1_exec_introduction,kpi_metric,P5-KPI8 dropped from 82 to 0 (champion engagement -- executive sponsor departed),,,,2025-10-08,0.72
+d1_exec_introduction,kpi_metric,P4-KPI3 QBR cancelled (0 of 4 annual target),,,,2025-10-08,0.93
+d1_exec_introduction,kpi_metric,P5-KPI5 budget signals frozen (new CTO initiated vendor review),,,,2025-10-08,0.7
+d1_exec_introduction,kpi_metric,P5-KPI7 expansion probability collapsed from 58% to 8%,,,,2025-10-08,0.74
+d1_exec_introduction,observation,New CTO background: 15 years at hyperscale cloud providers,,,,2025-10-08,0.92
+d1_exec_introduction,kpi_metric,P5-KPI8 degrade (critical),P5-KPI8,,,2025-10-08,0.94
+d1_exec_introduction,kpi_metric,P5-KPI7 degrade (critical),P5-KPI7,,,2025-10-08,0.76
+d1_exec_introduction,kpi_metric,P5-KPI5 degrade (major),P5-KPI5,,,2025-10-08,0.91
+d1_exec_introduction,kpi_metric,P4-KPI3 degrade (major),P4-KPI3,,,2025-10-08,0.8
+d1_exec_introduction,kpi_metric,P4-KPI1 degrade (major),P4-KPI1,,,2025-10-08,0.87
+d1_exec_introduction,kpi_metric,P5-KPI7 degrade (major),P5-KPI7,,,2025-10-08,0.83
+d1_exec_introduction,kpi_metric,P5-KPI5 degrade (moderate),P5-KPI5,,,2025-10-08,0.77
+d1_exec_introduction,kpi_metric,P3-KPI1 plateau (minor),P3-KPI1,,,2025-10-08,0.82
+d1_exec_introduction,kpi_metric,P5-KPI5 degrade (major),P5-KPI5,,,2025-10-08,0.88
+d1_exec_introduction,kpi_metric,P5-KPI7 degrade (moderate),P5-KPI7,,,2025-10-08,0.86
+d2_hybrid_assessment,observation,New CTO stated interest in 'proving hybrid value' during introduction meeting,,,,2025-11-18,0.86
+d2_hybrid_assessment,kpi_metric,P3-KPI1 GPU utilization at 68% -- workloads still running but team hesitant to expand,,,,2025-11-18,0.92
+d2_hybrid_assessment,observation,Internal benchmarks show 40% latency advantage for inference workloads on-prem,,,,2025-11-18,0.82
+d2_hybrid_assessment,observation,CFO waiting for TCO analysis before unfreezing infrastructure budget,,,,2025-11-18,0.84
+d2_hybrid_assessment,kpi_metric,P4-KPI1 plateau (minor),P4-KPI1,,,2025-11-18,0.87
+d2_hybrid_assessment,kpi_metric,P5-KPI7 degrade (moderate),P5-KPI7,,,2025-11-18,0.8
+d2_hybrid_assessment,kpi_metric,P4-KPI1 improve (minor),P4-KPI1,,,2025-11-18,0.89
+d2_hybrid_assessment,kpi_metric,P5-KPI8 improve (minor),P5-KPI8,,,2025-11-18,0.81
+d2_hybrid_assessment,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2025-11-18,0.8
+d2_hybrid_assessment,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2025-11-18,0.77
+d2_hybrid_assessment,kpi_metric,P5-KPI5 improve (minor),P5-KPI5,,,2025-11-18,0.95
+d3_strategic_partnership,observation,Hybrid assessment proved 40% latency advantage and 35% TCO advantage at scale,,,,2026-01-25,0.81
+d3_strategic_partnership,observation,VP Engineering advocating internally for hybrid approach,,,,2026-01-25,0.87
+d3_strategic_partnership,observation,CFO approved budget unfreeze based on TCO data,,,,2026-01-25,0.93
+d3_strategic_partnership,kpi_metric,P5-KPI7 recovering from 8% to 52% (expansion probability),,,,2026-01-25,0.71
+d3_strategic_partnership,kpi_metric,P5-KPI8 rebuilt from 0 to 72 (new CTO champion engagement),,,,2026-01-25,0.9
+d3_strategic_partnership,kpi_metric,P5-KPI8 improve (major),P5-KPI8,,,2026-01-25,0.81
+d3_strategic_partnership,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2026-01-25,0.82
+d3_strategic_partnership,kpi_metric,P5-KPI5 improve (moderate),P5-KPI5,,,2026-01-25,0.78
+d3_strategic_partnership,kpi_metric,P4-KPI3 improve (major),P4-KPI3,,,2026-01-25,0.86
+d3_strategic_partnership,kpi_metric,P4-KPI1 improve (major),P4-KPI1,,,2026-01-25,0.86
+d3_strategic_partnership,kpi_metric,P5-KPI7 improve (moderate),P5-KPI7,,,2026-01-25,0.91
+d3_strategic_partnership,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2026-01-25,0.78
+d3_strategic_partnership,kpi_metric,P3-KPI1 improve (minor),P3-KPI1,,,2026-01-25,0.77
+d3_strategic_partnership,kpi_metric,P4-KPI1 improve (minor),P4-KPI1,,,2026-01-25,0.92
+d1_escalate_competitive_threat,observation,CTO LinkedIn competitor engagement (w7),,,,2025-09-25,0.87
+d1_escalate_competitive_threat,observation,Competitor AE pricing proposal (w9),,,,2025-09-25,0.82
+d1_escalate_competitive_threat,signal,VP Engineering champion alert (w11),,,,2025-09-25,0.85
+d1_escalate_competitive_threat,observation,Budget conversations going dark (w13),,,,2025-09-25,0.76
+d1_escalate_competitive_threat,observation,NPS 22-point CTO confidence drop (w19),,,,2025-09-25,0.86
+d1_escalate_competitive_threat,kpi_metric,P4-KPI4 spike (moderate),P4-KPI4,,,2025-09-25,0.84
+d1_escalate_competitive_threat,kpi_metric,P5-KPI5 degrade (moderate),P5-KPI5,,,2025-09-25,0.88
+d1_escalate_competitive_threat,kpi_metric,P5-KPI8 degrade (moderate),P5-KPI8,,,2025-09-25,0.93
+d1_escalate_competitive_threat,kpi_metric,P4-KPI1 degrade (moderate),P4-KPI1,,,2025-09-25,0.84
+d1_escalate_competitive_threat,kpi_metric,P5-KPI5 degrade (major),P5-KPI5,,,2025-09-25,0.81
+d1_escalate_competitive_threat,kpi_metric,P5-KPI7 degrade (moderate),P5-KPI7,,,2025-09-25,0.86
+d2_deploy_value_report_cfo,kpi_metric,GPU utilization data showing 72% avg (value proof),,,,2025-11-30,0.81
+d2_deploy_value_report_cfo,observation,99.7% uptime over 18 months (reliability proof),,,,2025-11-30,0.79
+d2_deploy_value_report_cfo,observation,Training job completion 94% (operational proof),,,,2025-11-30,0.85
+d2_deploy_value_report_cfo,observation,Switching cost analysis: $1.8M migration + 6-month productivity loss,,,,2025-11-30,0.86
+d2_deploy_value_report_cfo,observation,Competitor benchmark counter: 23% distributed training advantage,,,,2025-11-30,0.81
+d2_deploy_value_report_cfo,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2025-11-30,0.8
+d2_deploy_value_report_cfo,kpi_metric,P5-KPI8 improve (minor),P5-KPI8,,,2025-11-30,0.92
+d2_deploy_value_report_cfo,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2025-11-30,0.79
+d2_deploy_value_report_cfo,kpi_metric,P4-KPI4 improve (moderate),P4-KPI4,,,2025-11-30,0.83
+d2_deploy_value_report_cfo,kpi_metric,P3-KPI1 improve (major),P3-KPI1,,,2025-11-30,0.85
+d2_deploy_value_report_cfo,kpi_metric,P3-KPI2 improve (moderate),P3-KPI2,,,2025-11-30,0.8
+d2_deploy_value_report_cfo,kpi_metric,P3-KPI3 improve (moderate),P3-KPI3,,,2025-11-30,0.86
+d2_deploy_value_report_cfo,kpi_metric,P3-KPI6 improve (major),P3-KPI6,,,2025-11-30,0.86
+d2_deploy_value_report_cfo,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2025-11-30,0.95
+d2_deploy_value_report_cfo,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2025-11-30,0.81
+d2_deploy_value_report_cfo,kpi_metric,P4-KPI1 improve (major),P4-KPI1,,,2025-11-30,0.95
+d2_deploy_value_report_cfo,kpi_metric,P5-KPI8 improve (major),P5-KPI8,,,2025-11-30,0.88
+d2_deploy_value_report_cfo,kpi_metric,P4-KPI4 improve (moderate),P4-KPI4,,,2025-11-30,0.8
+d3_negotiate_multiyear_retention,observation,CFO TCO analysis acceptance (w26),,,,2026-01-08,0.92
+d3_negotiate_multiyear_retention,observation,CTO-to-CTO co-innovation roadmap alignment (w29),,,,2026-01-08,0.89
+d3_negotiate_multiyear_retention,observation,VP Engineering champion endorsement,,,,2026-01-08,0.94
+d3_negotiate_multiyear_retention,observation,Counter-benchmark technical validation,,,,2026-01-08,0.93
+d3_negotiate_multiyear_retention,observation,Expansion probability recovered to 68% pre-signing,,,,2026-01-08,0.89
+d3_negotiate_multiyear_retention,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2026-01-08,0.92
+d3_negotiate_multiyear_retention,kpi_metric,P5-KPI8 improve (minor),P5-KPI8,,,2026-01-08,0.93
+d3_negotiate_multiyear_retention,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2026-01-08,0.91
+d3_negotiate_multiyear_retention,kpi_metric,P4-KPI4 improve (moderate),P4-KPI4,,,2026-01-08,0.8
+d3_negotiate_multiyear_retention,kpi_metric,P3-KPI1 improve (major),P3-KPI1,,,2026-01-08,0.91
+d3_negotiate_multiyear_retention,kpi_metric,P3-KPI2 improve (moderate),P3-KPI2,,,2026-01-08,0.79
+d3_negotiate_multiyear_retention,kpi_metric,P3-KPI3 improve (moderate),P3-KPI3,,,2026-01-08,0.79
+d3_negotiate_multiyear_retention,kpi_metric,P3-KPI6 improve (major),P3-KPI6,,,2026-01-08,0.8
+d3_negotiate_multiyear_retention,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2026-01-08,0.9
+d3_negotiate_multiyear_retention,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2026-01-08,0.9
+d3_negotiate_multiyear_retention,kpi_metric,P4-KPI1 improve (major),P4-KPI1,,,2026-01-08,0.89
+d3_negotiate_multiyear_retention,kpi_metric,P5-KPI8 improve (major),P5-KPI8,,,2026-01-08,0.78
+d3_negotiate_multiyear_retention,kpi_metric,P4-KPI4 improve (moderate),P4-KPI4,,,2026-01-08,0.77
+d_approve_capacity_analysis,observation,3-year seasonal pattern showing 38% Q4 compute surge,,,,2025-08-10,0.78
+d_approve_capacity_analysis,kpi_metric,P5-KPI7 Expansion Probability at 52%,,,,2025-08-10,0.81
+d_approve_capacity_analysis,observation,VP Data Science confirms additional 15% demand from new workloads,,,,2025-08-10,0.84
+d_approve_capacity_analysis,kpi_metric,P5-KPI1 Capacity Utilization will exceed 100% without expansion,,,,2025-08-10,0.88
+d_approve_capacity_analysis,kpi_metric,P5-KPI7 improve (moderate),P5-KPI7,,,2025-08-10,0.77
+d_approve_capacity_analysis,kpi_metric,P5-KPI2 improve (minor),P5-KPI2,,,2025-08-10,0.81
+d_approve_capacity_analysis,kpi_metric,P5-KPI3 improve (minor),P5-KPI3,,,2025-08-10,0.9
+d_approve_capacity_analysis,kpi_metric,P5-KPI4 improve (minor),P5-KPI4,,,2025-08-10,0.79
+d_approve_capacity_analysis,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2025-08-10,0.78
+d_approve_capacity_analysis,kpi_metric,P5-KPI7 improve (moderate),P5-KPI7,,,2025-08-10,0.86
+d_approve_capacity_analysis,kpi_metric,P5-KPI1 plateau (minor),P5-KPI1,,,2025-08-10,0.94
+d_approve_capacity_analysis,kpi_metric,P3-KPI1 plateau (minor),P3-KPI1,,,2025-08-10,0.86
+d_authorize_expansion_budget,observation,ROI analysis showing $800K savings vs. emergency spot capacity,,,,2025-10-14,0.91
+d_authorize_expansion_budget,kpi_metric,P5-KPI4 Compute Hour Consumption already trending up 8% MoM,,,,2025-10-14,0.76
+d_authorize_expansion_budget,observation,12-week hardware procurement lead time with 14-week window remaining,,,,2025-10-14,0.91
+d_authorize_expansion_budget,signal,Early seasonal signals confirming demand forecast accuracy,,,,2025-10-14,0.82
+d_authorize_expansion_budget,observation,VP Data Science championing the investment internally,,,,2025-10-14,0.9
+d_authorize_expansion_budget,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2025-10-14,0.9
+d_authorize_expansion_budget,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2025-10-14,0.82
+d_authorize_expansion_budget,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2025-10-14,0.77
+d_authorize_expansion_budget,kpi_metric,P5-KPI1 degrade (minor),P5-KPI1,,,2025-10-14,0.94
+d_authorize_expansion_budget,kpi_metric,P2-KPI5 improve (minor),P2-KPI5,,,2025-10-14,0.78
+d_authorize_expansion_budget,kpi_metric,P2-KPI4 plateau (minor),P2-KPI4,,,2025-10-14,0.94
+d_authorize_expansion_budget,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-10-14,0.92
+d_authorize_expansion_budget,kpi_metric,P3-KPI2 improve (minor),P3-KPI2,,,2025-10-14,0.89
+d_authorize_expansion_budget,kpi_metric,P5-KPI6 improve (moderate),P5-KPI6,,,2025-10-14,0.95
+d_authorize_expansion_budget,kpi_metric,P5-KPI1 improve (moderate),P5-KPI1,,,2025-10-14,0.94
+d_authorize_expansion_budget,kpi_metric,P5-KPI2 improve (major),P5-KPI2,,,2025-10-14,0.91
+d_authorize_expansion_budget,kpi_metric,P2-KPI5 improve (moderate),P2-KPI5,,,2025-10-14,0.82
+d_authorize_expansion_budget,kpi_metric,P2-KPI4 improve (minor),P2-KPI4,,,2025-10-14,0.91
+d_activate_surge_capacity,kpi_metric,Load testing confirmed expanded fleet sustains 95% utilization,,,,2025-12-28,0.77
+d_activate_surge_capacity,kpi_metric,P5-KPI4 Compute Hour Consumption spiking 18% in first 2 weeks,,,,2025-12-28,0.73
+d_activate_surge_capacity,kpi_metric,P3-KPI1 GPU Utilization already at 72% on expanded fleet,,,,2025-12-28,0.79
+d_activate_surge_capacity,kpi_metric,Black Friday demand forecast shows 88% peak utilization,,,,2025-12-28,0.89
+d_activate_surge_capacity,kpi_metric,P5-KPI4 spike (major),P5-KPI4,,,2025-12-28,0.8
+d_activate_surge_capacity,kpi_metric,P5-KPI1 improve (moderate),P5-KPI1,,,2025-12-28,0.83
+d_activate_surge_capacity,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-12-28,0.88
+d_activate_surge_capacity,kpi_metric,P2-KPI4 plateau (minor),P2-KPI4,,,2025-12-28,0.82
+d_activate_surge_capacity,kpi_metric,P3-KPI1 spike (major),P3-KPI1,,,2025-12-28,0.88
+d_activate_surge_capacity,kpi_metric,P3-KPI2 improve (moderate),P3-KPI2,,,2025-12-28,0.84
+d_activate_surge_capacity,kpi_metric,P3-KPI3 plateau (minor),P3-KPI3,,,2025-12-28,0.87
+d_activate_surge_capacity,kpi_metric,P5-KPI4 spike (major),P5-KPI4,,,2025-12-28,0.94
+d_activate_surge_capacity,kpi_metric,P2-KPI4 improve (minor),P2-KPI4,,,2025-12-28,0.82
+d_activate_surge_capacity,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2025-12-28,0.87
+d_activate_surge_capacity,kpi_metric,P4-KPI3 improve (moderate),P4-KPI3,,,2025-12-28,0.88
+d_activate_surge_capacity,kpi_metric,P5-KPI5 improve (moderate),P5-KPI5,,,2025-12-28,0.88
+d_activate_surge_capacity,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2025-12-28,0.84
+d_activate_surge_capacity,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2025-12-28,0.89
+d_activate_surge_capacity,kpi_metric,P4-KPI6 improve (moderate),P4-KPI6,,,2025-12-28,0.88
+d_activate_surge_capacity,kpi_metric,P5-KPI1 degrade (minor),P5-KPI1,,,2025-12-28,0.77
+dec_poc_workload_expansion,kpi_metric,P1-KPI1: Time-to-First-Workload achieved in 12 days (under 14-day target),,,,2025-05-04,0.94
+dec_poc_workload_expansion,kpi_metric,P3-KPI4: Training time 18 hours (under 24-hour benchmark),,,,2025-05-04,0.78
+dec_poc_workload_expansion,kpi_metric,P3-KPI1: GPU utilization at 35% -- ample capacity for second team,,,,2025-05-04,0.82
+dec_poc_workload_expansion,kpi_metric,P3-KPI2: Training job completion rate at 95%,,,,2025-05-04,0.72
+dec_poc_workload_expansion,kpi_metric,P1-KPI5 improve (moderate),P1-KPI5,,,2025-05-04,0.93
+dec_poc_workload_expansion,kpi_metric,P1-KPI2 improve (minor),P1-KPI2,,,2025-05-04,0.78
+dec_poc_workload_expansion,kpi_metric,P1-KPI3 improve (moderate),P1-KPI3,,,2025-05-04,0.84
+dec_poc_workload_expansion,kpi_metric,P1-KPI6 improve (moderate),P1-KPI6,,,2025-05-04,0.88
+dec_poc_workload_expansion,kpi_metric,P1-KPI4 improve (minor),P1-KPI4,,,2025-05-04,0.9
+dec_poc_workload_expansion,kpi_metric,P1-KPI1 improve (major),P1-KPI1,,,2025-05-04,0.94
+dec_poc_workload_expansion,kpi_metric,P3-KPI4 improve (moderate),P3-KPI4,,,2025-05-04,0.83
+dec_poc_workload_expansion,kpi_metric,P3-KPI2 improve (minor),P3-KPI2,,,2025-05-04,0.9
+dec_poc_workload_expansion,kpi_metric,P3-KPI1 improve (minor),P3-KPI1,,,2025-05-04,0.78
+dec_poc_workload_expansion,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2025-05-04,0.83
+dec_poc_workload_expansion,kpi_metric,P4-KPI1 improve (minor),P4-KPI1,,,2025-05-04,0.77
+dec_poc_workload_expansion,kpi_metric,P5-KPI7 improve (minor),P5-KPI7,,,2025-05-04,0.85
+dec_first_rack_expansion,kpi_metric,P5-KPI1: Capacity utilization at 80% -- expansion threshold breached,,,,2025-07-30,0.93
+dec_first_rack_expansion,kpi_metric,P3-KPI1: GPU utilization at 78% and climbing,,,,2025-07-30,0.77
+dec_first_rack_expansion,kpi_metric,P5-KPI2: Capacity trajectory at +15% MoM -- steep positive,,,,2025-07-30,0.87
+dec_first_rack_expansion,kpi_metric,P5-KPI3: Workload Growth Velocity at +22% MoM,,,,2025-07-30,0.75
+dec_first_rack_expansion,kpi_metric,P5-KPI7: Expansion Probability at 55%,,,,2025-07-30,0.81
+dec_first_rack_expansion,observation,CSM ROI analysis: $12K CAC fully recovered in 8 weeks,,,,2025-07-30,0.76
+dec_first_rack_expansion,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-07-30,0.82
+dec_first_rack_expansion,kpi_metric,P3-KPI7 improve (moderate),P3-KPI7,,,2025-07-30,0.95
+dec_first_rack_expansion,kpi_metric,P5-KPI3 improve (moderate),P5-KPI3,,,2025-07-30,0.82
+dec_first_rack_expansion,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-07-30,0.93
+dec_first_rack_expansion,kpi_metric,P3-KPI7 improve (minor),P3-KPI7,,,2025-07-30,0.88
+dec_first_rack_expansion,kpi_metric,P5-KPI4 improve (moderate),P5-KPI4,,,2025-07-30,0.76
+dec_first_rack_expansion,kpi_metric,P5-KPI1 improve (moderate),P5-KPI1,,,2025-07-30,0.81
+dec_first_rack_expansion,kpi_metric,P5-KPI2 improve (moderate),P5-KPI2,,,2025-07-30,0.94
+dec_first_rack_expansion,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-07-30,0.94
+dec_first_rack_expansion,kpi_metric,P5-KPI1 improve (moderate),P5-KPI1,,,2025-07-30,0.91
+dec_first_rack_expansion,kpi_metric,P5-KPI2 improve (major),P5-KPI2,,,2025-07-30,0.77
+dec_first_rack_expansion,kpi_metric,P5-KPI3 improve (major),P5-KPI3,,,2025-07-30,0.79
+dec_first_rack_expansion,kpi_metric,P5-KPI7 improve (moderate),P5-KPI7,,,2025-07-30,0.88
+dec_first_rack_expansion,kpi_metric,P5-KPI1 spike (moderate),P5-KPI1,,,2025-07-30,0.94
+dec_first_rack_expansion,kpi_metric,P5-KPI5 improve (moderate),P5-KPI5,,,2025-07-30,0.76
+dec_first_rack_expansion,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2025-07-30,0.82
+dec_first_rack_expansion,kpi_metric,P5-KPI8 improve (moderate),P5-KPI8,,,2025-07-30,0.95
+dec_adopt_inference_workloads,kpi_metric,P3-KPI7: Workload Diversity at 3 types -- inference adds 4th,,,,2025-09-11,0.75
+dec_adopt_inference_workloads,kpi_metric,P3-KPI1: GPU utilization at 55% post-expansion -- capacity available,,,,2025-09-11,0.91
+dec_adopt_inference_workloads,kpi_metric,P5-KPI6: Only 2 new use cases in 90 days -- inference adds growth vector,,,,2025-09-11,0.84
+dec_adopt_inference_workloads,observation,Solutions Architect: Inference latency target achievable on current hardware,,,,2025-09-11,0.85
+dec_adopt_inference_workloads,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2025-09-11,0.91
+dec_adopt_inference_workloads,kpi_metric,P5-KPI5 improve (major),P5-KPI5,,,2025-09-11,0.8
+dec_adopt_inference_workloads,kpi_metric,P4-KPI5 improve (moderate),P4-KPI5,,,2025-09-11,0.9
+dec_adopt_inference_workloads,kpi_metric,P1-KPI4 improve (major),P1-KPI4,,,2025-09-11,0.91
+dec_adopt_inference_workloads,kpi_metric,P1-KPI5 improve (major),P1-KPI5,,,2025-09-11,0.87
+dec_adopt_inference_workloads,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2025-09-11,0.81
+dec_adopt_inference_workloads,kpi_metric,P3-KPI2 improve (minor),P3-KPI2,,,2025-09-11,0.95
+dec_adopt_inference_workloads,kpi_metric,P5-KPI1 improve (moderate),P5-KPI1,,,2025-09-11,0.95
+dec_adopt_inference_workloads,kpi_metric,P3-KPI7 improve (moderate),P3-KPI7,,,2025-09-11,0.86
+dec_adopt_inference_workloads,kpi_metric,P5-KPI6 improve (moderate),P5-KPI6,,,2025-09-11,0.91
+dec_adopt_inference_workloads,kpi_metric,P3-KPI3 improve (minor),P3-KPI3,,,2025-09-11,0.77
+dec_adopt_inference_workloads,kpi_metric,P4-KPI3 improve (minor),P4-KPI3,,,2025-09-11,0.92
+dec_adopt_inference_workloads,kpi_metric,P4-KPI1 improve (moderate),P4-KPI1,,,2025-09-11,0.78
+dec_adopt_inference_workloads,kpi_metric,P5-KPI8 improve (minor),P5-KPI8,,,2025-09-11,0.82
+dec_strategic_expansion,kpi_metric,P5-KPI7: Expansion Probability at 78% -- high confidence,,,,2026-01-26,0.85
+dec_strategic_expansion,kpi_metric,P5-KPI2: Capacity trajectory sustained +12% MoM across 40 weeks,,,,2026-01-26,0.7
+dec_strategic_expansion,kpi_metric,P3-KPI1: GPU utilization at 75% on 4-rack footprint,,,,2026-01-26,0.77
+dec_strategic_expansion,kpi_metric,P5-KPI3: Workload Growth Velocity sustained above 10% MoM for 8 months,,,,2026-01-26,0.73
+dec_strategic_expansion,observation,First expansion ROI: paid back in 10 weeks,,,,2026-01-26,0.81
+dec_strategic_expansion,observation,Second expansion ROI: paid back in 12 weeks,,,,2026-01-26,0.73
+dec_strategic_expansion,observation,VP AI/ML 18-month roadmap requires 10-rack footprint,,,,2026-01-26,0.72
+dec_strategic_expansion,kpi_metric,P5-KPI8 improve (major),P5-KPI8,,,2026-01-26,0.84
+dec_strategic_expansion,kpi_metric,P5-KPI3 improve (moderate),P5-KPI3,,,2026-01-26,0.82
+dec_strategic_expansion,kpi_metric,P5-KPI6 improve (moderate),P5-KPI6,,,2026-01-26,0.87
+dec_strategic_expansion,kpi_metric,P3-KPI1 improve (moderate),P3-KPI1,,,2026-01-26,0.84
+dec_strategic_expansion,kpi_metric,P5-KPI1 improve (moderate),P5-KPI1,,,2026-01-26,0.79
+dec_strategic_expansion,kpi_metric,P5-KPI2 improve (moderate),P5-KPI2,,,2026-01-26,0.87
+dec_strategic_expansion,kpi_metric,P5-KPI7 improve (major),P5-KPI7,,,2026-01-26,0.9
+dec_strategic_expansion,kpi_metric,P5-KPI7 improve (critical),P5-KPI7,,,2026-01-26,0.93
+dec_strategic_expansion,kpi_metric,P5-KPI5 improve (critical),P5-KPI5,,,2026-01-26,0.88
+dec_strategic_expansion,kpi_metric,P4-KPI5 improve (major),P4-KPI5,,,2026-01-26,0.81
+dec_strategic_expansion,kpi_metric,P4-KPI1 improve (major),P4-KPI1,,,2026-01-26,0.88
+dec_strategic_expansion,kpi_metric,P1-KPI4 improve (major),P1-KPI4,,,2026-01-26,0.76
+dec_strategic_expansion,kpi_metric,P1-KPI2 improve (major),P1-KPI2,,,2026-01-26,0.95
+dec_strategic_expansion,kpi_metric,P3-KPI7 improve (major),P3-KPI7,,,2026-01-26,0.92
+dec_strategic_expansion,kpi_metric,P4-KPI6 improve (moderate),P4-KPI6,,,2026-01-26,0.84
+dec_strategic_expansion,kpi_metric,P5-KPI1 improve (major),P5-KPI1,,,2026-01-26,0.77
+dec_strategic_expansion,kpi_metric,P5-KPI3 improve (major),P5-KPI3,,,2026-01-26,0.89
+dec_strategic_expansion,kpi_metric,P1-KPI1 improve (moderate),P1-KPI1,,,2026-01-26,0.84
+dec_strategic_expansion,kpi_metric,P4-KPI1 improve (major),P4-KPI1,,,2026-01-26,0.93
+dec_strategic_expansion,kpi_metric,P5-KPI8 improve (major),P5-KPI8,,,2026-01-26,0.81
+dec_strategic_expansion,kpi_metric,P4-KPI3 improve (moderate),P4-KPI3,,,2026-01-26,0.78

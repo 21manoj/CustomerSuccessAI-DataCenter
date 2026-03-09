@@ -1,8 +1,23 @@
-version: '3.8'
+# ================================================================
+# Load Driver — Docker Compose (Ring 3: Test Harness)
+#
+# Connects to CS Pulse Platform on the kpi-dashboard_cspulse-net network.
+# Platform must be running first:
+#   cd kpi-dashboard && docker compose -f docker-compose.cspulse.yml up -d
+#
+# Then run load driver:
+#   docker compose -f docker-compose.loaddriver.yml up --build
+#
+# Single scenario (e.g. Scenario 7 — Data Ingestion):
+#   docker compose -f docker-compose.loaddriver.yml run --rm load-driver-customer-1 \
+#     python -u run_scenario.py --scenario 7 --customer-id 1 \
+#       --base-url http://cspulse-platform:5059 \
+#       --email dc2s_super@test.com --password 'DC2_Super_2024!'
+# ================================================================
 
 services:
   # ================================================================
-  # Load Driver - Customer 1 (50 accounts)
+  # Load Driver - Customer 1
   # ================================================================
   load-driver-customer-1:
     build:
@@ -10,12 +25,12 @@ services:
       dockerfile: Dockerfile
     container_name: cspulse-load-driver-cust-1
     environment:
-      CS_PULSE_BASE_URL: http://cs-pulse:5059
-      CS_PULSE_ADMIN_EMAIL: admin+cust1@cspulse.test
-      CS_PULSE_ADMIN_PASSWORD: LoadDriver2026!
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      QDRANT_URL: http://qdrant:6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      CS_PULSE_BASE_URL: http://cspulse-platform:5059
+      CS_PULSE_ADMIN_EMAIL: dc2s_super@test.com
+      CS_PULSE_ADMIN_PASSWORD: DC2_Super_2024!
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      QDRANT_URL: ${QDRANT_URL:-}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       LOG_LEVEL: INFO
       PYTHONUNBUFFERED: 1
     volumes:
@@ -23,14 +38,12 @@ services:
       - ./load-driver:/app
     command: >
       python -u driver.py
-      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6
+      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7
       --customers 1
-      --base-url http://cs-pulse:5059
+      --base-url http://cspulse-platform:5059
       --results-dir /app/results
     networks:
-      - cspulse
-    depends_on:
-      - cs-pulse
+      - kpi-dashboard_cspulse-net
     healthcheck:
       test: ["CMD", "test", "-f", "/app/results/LOAD_TEST_RESULTS.md"]
       interval: 30s
@@ -39,7 +52,7 @@ services:
       start_period: 60s
 
   # ================================================================
-  # Load Driver - Customer 2 (50 accounts)
+  # Load Driver - Customer 2
   # ================================================================
   load-driver-customer-2:
     build:
@@ -47,12 +60,12 @@ services:
       dockerfile: Dockerfile
     container_name: cspulse-load-driver-cust-2
     environment:
-      CS_PULSE_BASE_URL: http://cs-pulse:5059
-      CS_PULSE_ADMIN_EMAIL: admin+cust2@cspulse.test
-      CS_PULSE_ADMIN_PASSWORD: LoadDriver2026!
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      QDRANT_URL: http://qdrant:6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      CS_PULSE_BASE_URL: http://cspulse-platform:5059
+      CS_PULSE_ADMIN_EMAIL: dc2s_super@test.com
+      CS_PULSE_ADMIN_PASSWORD: DC2_Super_2024!
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      QDRANT_URL: ${QDRANT_URL:-}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       LOG_LEVEL: INFO
       PYTHONUNBUFFERED: 1
     volumes:
@@ -60,14 +73,12 @@ services:
       - ./load-driver:/app
     command: >
       python -u driver.py
-      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6
+      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7
       --customers 2
-      --base-url http://cs-pulse:5059
+      --base-url http://cspulse-platform:5059
       --results-dir /app/results
     networks:
-      - cspulse
-    depends_on:
-      - cs-pulse
+      - kpi-dashboard_cspulse-net
     healthcheck:
       test: ["CMD", "test", "-f", "/app/results/LOAD_TEST_RESULTS.md"]
       interval: 30s
@@ -76,7 +87,7 @@ services:
       start_period: 60s
 
   # ================================================================
-  # Load Driver - Customer 3 (50 accounts)
+  # Load Driver - Customer 3
   # ================================================================
   load-driver-customer-3:
     build:
@@ -84,12 +95,12 @@ services:
       dockerfile: Dockerfile
     container_name: cspulse-load-driver-cust-3
     environment:
-      CS_PULSE_BASE_URL: http://cs-pulse:5059
-      CS_PULSE_ADMIN_EMAIL: admin+cust3@cspulse.test
-      CS_PULSE_ADMIN_PASSWORD: LoadDriver2026!
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      QDRANT_URL: http://qdrant:6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      CS_PULSE_BASE_URL: http://cspulse-platform:5059
+      CS_PULSE_ADMIN_EMAIL: dc2s_super@test.com
+      CS_PULSE_ADMIN_PASSWORD: DC2_Super_2024!
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      QDRANT_URL: ${QDRANT_URL:-}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       LOG_LEVEL: INFO
       PYTHONUNBUFFERED: 1
     volumes:
@@ -97,14 +108,12 @@ services:
       - ./load-driver:/app
     command: >
       python -u driver.py
-      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6
+      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7
       --customers 3
-      --base-url http://cs-pulse:5059
+      --base-url http://cspulse-platform:5059
       --results-dir /app/results
     networks:
-      - cspulse
-    depends_on:
-      - cs-pulse
+      - kpi-dashboard_cspulse-net
     healthcheck:
       test: ["CMD", "test", "-f", "/app/results/LOAD_TEST_RESULTS.md"]
       interval: 30s
@@ -112,15 +121,6 @@ services:
       retries: 30
       start_period: 60s
 
-  # ================================================================
-  # CS Pulse Backend (referenced, not defined here)
-  # ================================================================
-  # Assumes cs-pulse service is running on network cspulse
-  # Start with: docker-compose -f docker-compose.yml up -d
-  # Then: docker-compose -f docker-compose.loaddriver.yml up -d
-
 networks:
-  cspulse:
+  kpi-dashboard_cspulse-net:
     external: true
-    # If not external, create with:
-    # docker network create cspulse

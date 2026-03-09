@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../../utils/api';
 import { Activity, MessageSquare, Shield, Filter, RefreshCw } from 'lucide-react';
 
 interface ActivityLog {
@@ -88,7 +89,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
       const response = await fetch(`/api/activity-logs?${queryParams}`, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || ''
+          'X-Customer-ID': getCustomerIdentifier(session)
         }
       });
 
@@ -111,7 +112,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
       const response = await fetch(`/api/activity-logs/summary?days=${filters.days}`, {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || ''
+          'X-Customer-ID': getCustomerIdentifier(session)
         }
       });
 
@@ -131,7 +132,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
       const response = await fetch('/api/data-quality/report', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || ''
+          'X-Customer-ID': getCustomerIdentifier(session)
         }
       });
 
@@ -162,7 +163,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-Customer-ID': session?.customer_id?.toString() || ''
+          'X-Customer-ID': getCustomerIdentifier(session)
         },
         body: JSON.stringify({
           query: ragQuery,
@@ -239,7 +240,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
       {activeTab === 'logs' && (
         <div>
           {/* Summary */}
-          {summary && (
+          {summary && summary.total_activities != null && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <h4 className="font-semibold text-gray-900 mb-3">
                 Activity Summary (Last {summary.period_days} days)
@@ -252,28 +253,31 @@ export const SystemEventsAndLogManagement: React.FC = () => {
                 <div>
                   <div className="text-gray-600">By Status</div>
                   <div className="text-xs text-gray-700">
-                    {Object.entries(summary.by_status).map(([status, count]) => (
-                      <div key={status}>{status}: {count}</div>
-                    ))}
+                    {summary.by_status && typeof summary.by_status === 'object' &&
+                      Object.entries(summary.by_status).map(([status, count]) => (
+                        <div key={status}>{status}: {String(count)}</div>
+                      ))}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-600">Top Categories</div>
                   <div className="text-xs text-gray-700">
-                    {Object.entries(summary.by_action_category)
-                      .sort((a, b) => b[1] - a[1])
-                      .slice(0, 3)
-                      .map(([cat, count]) => (
-                        <div key={cat}>{cat}: {count}</div>
-                      ))}
+                    {summary.by_action_category && typeof summary.by_action_category === 'object' &&
+                      Object.entries(summary.by_action_category)
+                        .sort((a, b) => Number(b[1]) - Number(a[1]))
+                        .slice(0, 3)
+                        .map(([cat, count]) => (
+                          <div key={cat}>{cat}: {String(count)}</div>
+                        ))}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-600">Top Users</div>
                   <div className="text-xs text-gray-700">
-                    {summary.top_users.slice(0, 3).map((user) => (
-                      <div key={user.user_id}>{user.user_name}: {user.count}</div>
-                    ))}
+                    {Array.isArray(summary.top_users) &&
+                      summary.top_users.slice(0, 3).map((user) => (
+                        <div key={user.user_id}>{user.user_name}: {user.count}</div>
+                      ))}
                   </div>
                 </div>
               </div>
@@ -399,7 +403,7 @@ export const SystemEventsAndLogManagement: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
-                          {log.details}
+                          {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
                         </td>
                       </tr>
                     ))}

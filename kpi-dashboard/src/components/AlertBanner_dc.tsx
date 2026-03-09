@@ -18,7 +18,7 @@ interface Alert {
 }
 
 interface AlertBannerProps {
-  tenantId: number | null;
+  tenantId: number | string | null;
 }
 
 const AlertBanner_dc: React.FC<AlertBannerProps> = ({ tenantId }) => {

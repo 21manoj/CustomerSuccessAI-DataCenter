@@ -20,7 +20,8 @@ import {
   Download,
   Calendar,
   X,
-  Play
+  Play,
+  Eye
 } from 'lucide-react';
 
 // ============================================================
@@ -29,7 +30,9 @@ import {
 
 type UploadMode = 'full_refresh' | 'incremental' | 'upsert' | 'merge';
 type SubTab = 'upload' | 'history' | 'templates';
-type FileType = 'accounts' | 'kpis' | 'signals' | 'products' | 'profiles' | 'customers';
+type FileType = 'accounts' | 'kpis' | 'signals' | 'products' | 'profiles' | 'customers'
+  | 'stakeholders' | 'engagement_events' | 'account_business_profiles' | 'decisions'
+  | 'outcomes' | 'signal_edges' | 'decision_evidence' | 'industry_benchmarks' | 'enhanced_signals';
 
 interface UploadHistoryItem {
   upload_id: number;
@@ -56,6 +59,7 @@ const DCDataIntegration: React.FC = () => {
   const [showWizardPrompt, setShowWizardPrompt] = useState(false);
   const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [viewModal, setViewModal] = useState<{ filename: string; content: string } | null>(null);
 
   useEffect(() => {
     if (activeSubTab === 'history') {
@@ -265,12 +269,25 @@ const DCDataIntegration: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">-- Select file type --</option>
-                  <option value="accounts">Accounts (accounts.csv)</option>
-                  <option value="kpis">KPIs (kpi_measurements.csv)</option>
-                  <option value="signals">Signals (qualitative_signals.csv)</option>
-                  <option value="products">Products (products.csv)</option>
-                  <option value="profiles">Profiles (account_profiles.csv)</option>
-                  <option value="customers">Customers (customers.csv)</option>
+                  <optgroup label="Core Data">
+                    <option value="accounts">Accounts (accounts.csv)</option>
+                    <option value="kpis">KPIs (kpi_measurements.csv)</option>
+                    <option value="signals">Signals (qualitative_signals.csv)</option>
+                    <option value="products">Products (products.csv)</option>
+                    <option value="profiles">Profiles (account_profiles.csv)</option>
+                    <option value="customers">Customers (customers.csv)</option>
+                  </optgroup>
+                  <optgroup label="Context Graph">
+                    <option value="stakeholders">Stakeholders (stakeholders.csv)</option>
+                    <option value="engagement_events">Engagement Events (engagement_events.csv)</option>
+                    <option value="account_business_profiles">Business Profiles (account_business_profiles.csv)</option>
+                    <option value="decisions">Decisions (decisions.csv)</option>
+                    <option value="outcomes">Outcomes (outcomes.csv)</option>
+                    <option value="signal_edges">Signal Edges (signal_edges.csv)</option>
+                    <option value="decision_evidence">Decision Evidence (decision_evidence.csv)</option>
+                    <option value="industry_benchmarks">Industry Benchmarks (industry_benchmarks.csv)</option>
+                    <option value="enhanced_signals">Enhanced Signals (enhanced_qualitative_signals.csv)</option>
+                  </optgroup>
                 </select>
                 <p className="text-xs text-gray-500 mt-2">
                   Choose the type of data file you're uploading
@@ -532,25 +549,27 @@ const DCDataIntegration: React.FC = () => {
 
           {/* Templates Tab */}
           {activeSubTab === 'templates' && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Download CSV templates for data upload
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { type: 'accounts', name: 'accounts.csv', desc: 'Account information template' },
-                  { type: 'kpis', name: 'kpi_measurements.csv', desc: 'KPI measurements template' },
-                  { type: 'signals', name: 'qualitative_signals.csv', desc: 'Qualitative signals template' },
-                  { type: 'products', name: 'products.csv', desc: 'Product catalog template' },
-                  { type: 'profiles', name: 'account_profiles.csv', desc: 'Account profiles template' },
-                  { type: 'customers', name: 'customers.csv', desc: 'Customer/tenant data template' },
-                ].map((template) => {
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-1">Core Data Templates</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Standard CSV templates for accounts, KPIs, signals, and profiles
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { type: 'accounts', name: 'accounts.csv', desc: 'Account information template' },
+                    { type: 'kpis', name: 'kpi_measurements.csv', desc: 'KPI measurements template' },
+                    { type: 'signals', name: 'qualitative_signals.csv', desc: 'Qualitative signals template' },
+                    { type: 'products', name: 'products.csv', desc: 'Product catalog template' },
+                    { type: 'profiles', name: 'account_profiles.csv', desc: 'Account profiles template' },
+                    { type: 'customers', name: 'customers.csv', desc: 'Customer/tenant data template' },
+                  ].map((template) => {
                   const handleDownload = async () => {
                     try {
                       const response = await fetch(`/api/onboarding/templates/${template.type}`, {
                         credentials: 'include',
                       });
-                      
+
                       if (response.ok) {
                         const blob = await response.blob();
                         const url = window.URL.createObjectURL(blob);
@@ -571,28 +590,242 @@ const DCDataIntegration: React.FC = () => {
                     }
                   };
 
+                  const handleView = async () => {
+                    try {
+                      const response = await fetch(`/api/onboarding/templates/${template.type}?view=true`, {
+                        credentials: 'include',
+                      });
+                      if (response.ok) {
+                        const data = await response.json();
+                        setViewModal({ filename: template.name, content: data.content });
+                      } else {
+                        const error = await response.json();
+                        alert(`Failed to view template: ${error.message || 'Unknown error'}`);
+                      }
+                    } catch (err) {
+                      console.error('View error:', err);
+                      alert('Failed to view template. Please try again.');
+                    }
+                  };
+
                   return (
                     <div key={template.type} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                       <div className="flex items-center justify-between mb-2">
                         <FileText className="w-5 h-5 text-gray-400" />
-                        <button 
-                          onClick={handleDownload}
-                          className="text-blue-600 hover:text-blue-700 transition-colors"
-                          title={`Download ${template.name}`}
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleView}
+                            className="text-gray-500 hover:text-blue-600 transition-colors"
+                            title={`View ${template.name}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={handleDownload}
+                            className="text-blue-600 hover:text-blue-700 transition-colors"
+                            title={`Download ${template.name}`}
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{template.name}</p>
                       <p className="text-xs text-gray-500 mt-1">{template.desc}</p>
                     </div>
                   );
                 })}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-1">Context Graph Templates</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Templates for stakeholders, decisions, outcomes, and signal relationships used by Revenue Intelligence
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { type: 'stakeholders', name: 'stakeholders.csv', desc: 'Stakeholder nodes — name, title, role, influence' },
+                    { type: 'engagement_events', name: 'engagement_events.csv', desc: 'Engagement signals — meetings, calls, escalations' },
+                    { type: 'account_business_profiles', name: 'account_business_profiles.csv', desc: 'Account context — ARR, industry, employee count' },
+                    { type: 'decisions', name: 'decisions.csv', desc: 'Decision nodes — title, maker, chosen option' },
+                    { type: 'outcomes', name: 'outcomes.csv', desc: 'Outcome nodes — type, revenue value, status' },
+                    { type: 'signal_edges', name: 'signal_edges.csv', desc: 'Signal relationships — edge type and weight' },
+                    { type: 'decision_evidence', name: 'decision_evidence.csv', desc: 'Decision evidence links — type and description' },
+                    { type: 'industry_benchmarks', name: 'industry_benchmarks.csv', desc: 'Industry benchmarks — KPI percentiles by industry' },
+                    { type: 'enhanced_signals', name: 'enhanced_qualitative_signals.csv', desc: 'Enhanced signals with graph metadata' },
+                  ].map((template) => {
+                    const handleDownload = async () => {
+                      try {
+                        const response = await fetch(`/api/onboarding/templates/${template.type}`, {
+                          credentials: 'include',
+                        });
+
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = template.name;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        } else {
+                          const error = await response.json();
+                          alert(`Failed to download template: ${error.message || 'Unknown error'}`);
+                        }
+                      } catch (err) {
+                        console.error('Download error:', err);
+                        alert('Failed to download template. Please try again.');
+                      }
+                    };
+
+                    const handleView = async () => {
+                      try {
+                        const response = await fetch(`/api/onboarding/templates/${template.type}?view=true`, {
+                          credentials: 'include',
+                        });
+                        if (response.ok) {
+                          const data = await response.json();
+                          setViewModal({ filename: template.name, content: data.content });
+                        } else {
+                          const error = await response.json();
+                          alert(`Failed to view template: ${error.message || 'Unknown error'}`);
+                        }
+                      } catch (err) {
+                        console.error('View error:', err);
+                        alert('Failed to view template. Please try again.');
+                      }
+                    };
+
+                    return (
+                      <div key={template.type} className="border border-purple-200 rounded-lg p-4 hover:border-purple-400 transition-colors bg-purple-50/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <FileText className="w-5 h-5 text-purple-400" />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleView}
+                              className="text-gray-500 hover:text-purple-600 transition-colors"
+                              title={`View ${template.name}`}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={handleDownload}
+                              className="text-purple-600 hover:text-purple-700 transition-colors"
+                              title={`Download ${template.name}`}
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">{template.name}</p>
+                        <p className="text-xs text-gray-500 mt-1">{template.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Template View Modal */}
+      {viewModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-500" />
+                <h3 className="text-lg font-semibold text-gray-900">{viewModal.filename}</h3>
+              </div>
+              <button
+                onClick={() => setViewModal(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* CSV Table Preview */}
+            <div className="flex-1 overflow-auto p-6">
+              {(() => {
+                const lines = viewModal.content.trim().split('\n');
+                if (lines.length === 0) return <p className="text-gray-500">Empty template</p>;
+
+                const headers = lines[0].split(',');
+                const rows = lines.slice(1).map(line => {
+                  // Simple CSV parse (handles basic cases)
+                  const values: string[] = [];
+                  let current = '';
+                  let inQuotes = false;
+                  for (const char of line) {
+                    if (char === '"') {
+                      inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                      values.push(current.trim());
+                      current = '';
+                    } else {
+                      current += char;
+                    }
+                  }
+                  values.push(current.trim());
+                  return values;
+                });
+
+                return (
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          {headers.map((h, i) => (
+                            <th key={i} className="px-3 py-2 text-left text-xs font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, ri) => (
+                          <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            {row.map((cell, ci) => (
+                              <td key={ci} className="px-3 py-2 text-gray-700 border-b border-gray-100 whitespace-nowrap max-w-xs truncate" title={cell}>
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                        {rows.length === 0 && (
+                          <tr>
+                            <td colSpan={headers.length} className="px-3 py-4 text-center text-gray-400 italic">
+                              No sample data rows (headers only)
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <p className="text-xs text-gray-500">
+                {viewModal.content.trim().split('\n').length - 1} sample row(s)
+              </p>
+              <button
+                onClick={() => setViewModal(null)}
+                className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

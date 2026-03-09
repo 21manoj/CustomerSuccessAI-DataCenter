@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import openai
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
+from utils.embedding_model import get_embedding_model
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
@@ -26,8 +26,8 @@ class EnhancedRAGHistoricalSystem:
         # Initialize OpenAI client
         openai.api_key = os.getenv('OPENAI_API_KEY')
         
-        # Initialize embedding model
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Use shared embedding model singleton (saves ~110MB per instance)
+        self.embedding_model = get_embedding_model()
         self.embedding_dimension = 384
         
         # Initialize Qdrant client - ONLY supports Qdrant Cloud (via URL)

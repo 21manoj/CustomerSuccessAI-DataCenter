@@ -1,0 +1,94 @@
+{
+  "_description": "Single source of truth for CSV column definitions. Both backend generate_synthetic_customer_data.py and load-driver csv_generator.py MUST use these exact column names. The onboarding API (onboarding_api_v2_config_aware.py) validates against these.",
+  "_version": "1.0",
+  "_updated": "2026-03-05",
+
+  "regular_model": {
+    "_description": "6 CSVs for the regular (flat signal) model. No context graph.",
+    "files": {
+      "accounts.csv": {
+        "required_columns": ["account_id", "customer_id", "account_name", "industry", "region"],
+        "optional_columns": ["vertical", "tier", "arr", "revenue", "contract_start", "contract_end", "renewal_date", "csm_name", "csm_email", "account_status", "uuid"],
+        "db_table": "accounts"
+      },
+      "kpi_measurements.csv": {
+        "required_columns": ["account_id", "kpi_code", "measured_at", "value"],
+        "optional_columns": ["kpi_name", "pillar", "target", "weight", "unit", "status"],
+        "db_table": "dc2s_kpis",
+        "note": "NEVER use kpi_data.csv — always kpi_measurements.csv"
+      },
+      "qualitative_signals.csv": {
+        "required_columns": ["signal_id", "account_id", "signal_date", "content", "sentiment"],
+        "optional_columns": ["signal_type", "sentiment_score", "stakeholder_level", "stakeholder_title", "keywords"],
+        "db_table": "qualitative_signals"
+      },
+      "products.csv": {
+        "required_columns": ["account_id", "product_name"],
+        "optional_columns": ["product_category", "quantity", "unit_price", "deployment_date", "status", "customer_id"],
+        "db_table": "products"
+      },
+      "profiles.csv": {
+        "required_columns": ["account_id", "customer_id", "account_name"],
+        "optional_columns": ["assigned_csm", "csm_manager", "executive_sponsor", "arr", "mrr", "primary_champion_name", "primary_champion_title", "primary_champion_email", "primary_champion_engagement_score", "last_updated"],
+        "db_table": "accounts (profile_metadata JSON)"
+      },
+      "customers.csv": {
+        "required_columns": ["customer_id", "customer_name"],
+        "optional_columns": ["uuid", "vertical", "created_at", "email", "phone", "domain"],
+        "db_table": "customers"
+      }
+    }
+  },
+
+  "context_graph_model": {
+    "_description": "9 additional CSVs for context graph mode. Generated from story arc manifests. These are ON TOP of the 6 regular CSVs.",
+    "files": {
+      "stakeholders.csv": {
+        "required_columns": ["account_id", "stakeholder_name", "title", "role", "influence_score"],
+        "optional_columns": ["email", "engagement_frequency", "sentiment", "department", "is_active", "source_platform"],
+        "db_table": "context_nodes (node_type=STAKEHOLDER)"
+      },
+      "engagement_events.csv": {
+        "required_columns": ["account_id", "event_date", "event_type", "description"],
+        "optional_columns": ["stakeholder_name", "sentiment_shift", "channel", "duration_minutes", "outcome", "source_platform"],
+        "db_table": "context_nodes (node_type=SIGNAL, subtype=engagement)"
+      },
+      "account_business_profiles.csv": {
+        "required_columns": ["account_id", "arr", "industry", "employee_count"],
+        "optional_columns": ["fiscal_year_end", "tech_stack", "cloud_provider", "competitive_landscape", "strategic_initiatives", "budget_cycle"],
+        "db_table": "context_nodes (node_type=ACCOUNT)"
+      },
+      "decisions.csv": {
+        "required_columns": ["account_id", "decision_date", "title", "decision_maker_role", "chosen_option"],
+        "optional_columns": ["options_considered", "revenue_impact", "risk_level", "evidence_refs", "outcome_description", "confidence"],
+        "db_table": "context_nodes (node_type=DECISION)"
+      },
+      "outcomes.csv": {
+        "required_columns": ["account_id", "outcome_date", "title", "outcome_type", "revenue_value"],
+        "optional_columns": ["evidence", "confidence", "related_decision_id", "source_platform"],
+        "db_table": "context_nodes (node_type=OUTCOME)"
+      },
+      "signal_edges.csv": {
+        "required_columns": ["from_signal_ref", "to_signal_ref", "edge_type", "weight"],
+        "optional_columns": ["confidence", "lag_days", "revenue_impact", "evidence", "source_platform", "created_by"],
+        "db_table": "context_edges"
+      },
+      "decision_evidence.csv": {
+        "required_columns": ["decision_ref", "evidence_type", "evidence_description"],
+        "optional_columns": ["kpi_code", "kpi_value", "signal_ref", "timestamp", "confidence"],
+        "db_table": "context_edges (edge_type=SOURCED_FROM)"
+      },
+      "industry_benchmarks.csv": {
+        "required_columns": ["kpi_code", "benchmark_source", "industry_p50"],
+        "optional_columns": ["industry_p25", "industry_p75", "account_percentile", "sample_size", "benchmark_date"],
+        "db_table": "context_nodes (node_type=EXTERNAL_CONTEXT)"
+      },
+      "enhanced_qualitative_signals.csv": {
+        "required_columns": ["account_id", "signal_date", "signal_type", "content", "sentiment"],
+        "optional_columns": ["sentiment_score", "stakeholder_name", "stakeholder_title", "causal_chain_ref", "revenue_impact", "confidence", "source_platform"],
+        "db_table": "context_nodes (node_type=SIGNAL) + context_edges",
+        "note": "Enhanced version of qualitative_signals.csv with graph metadata"
+      }
+    }
+  }
+}

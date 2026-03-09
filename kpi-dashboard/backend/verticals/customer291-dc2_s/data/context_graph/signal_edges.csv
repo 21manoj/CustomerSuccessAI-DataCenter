@@ -1,0 +1,185 @@
+from_signal_ref,to_signal_ref,edge_type,weight,confidence,lag_days,revenue_impact,evidence,source_platform,created_by
+phase1:w2 - Champion skips architecture review,phase1:w5 - Email response time degrades,LED_TO,0.7,0.7,21,-3200000,Causal chain: Champion Silence to Churn Risk,csv_import,story_arc_generator
+phase1:w5 - Email response time degrades,phase2:w2 - Champion fully disengages,LED_TO,0.85,0.85,49,-3200000,Causal chain: Champion Silence to Churn Risk,csv_import,story_arc_generator
+phase2:w2 - Champion fully disengages,phase2:w7 - QBR missed,CAUSED_BY,0.9,0.9,35,-3200000,Causal chain: Champion Silence to Churn Risk,csv_import,story_arc_generator
+phase2:w7 - QBR missed,phase3:w1 - Silent Churn Risk alert,INDICATES,0.92,0.92,28,-3200000,Causal chain: Champion Silence to Churn Risk,csv_import,story_arc_generator
+phase2:w5 - Competitor begins stealth POC,phase2:w9 - GPU utilization drops 8%,CAUSED_BY,0.88,0.88,28,-960000,Causal chain: Competitive Evaluation to Usage Decline,csv_import,story_arc_generator
+phase2:w9 - GPU utilization drops 8%,phase3:w4 - Competitive intel confirms parallel benchmarks,INDICATES,0.82,0.82,35,-960000,Causal chain: Competitive Evaluation to Usage Decline,csv_import,story_arc_generator
+phase3:w4 - Competitive intel confirms parallel benchmarks,phase4:w3 - Deploy competitive defense playbook,LED_TO,0.95,0.95,21,-960000,Causal chain: Competitive Evaluation to Usage Decline,csv_import,story_arc_generator
+phase3:w2 - CSM escalates to VP Sales,phase4:w1 - CTO-to-CTO call,LED_TO,0.95,0.95,21,3200000,Causal chain: Executive Intervention to Retention,csv_import,story_arc_generator
+phase4:w1 - CTO-to-CTO call,phase4:w5 - Champion re-engages,LED_TO,0.8,0.8,28,3200000,Causal chain: Executive Intervention to Retention,csv_import,story_arc_generator
+phase4:w3 - Deploy competitive defense playbook,phase4:w5 - Champion re-engages,CORRELATES_WITH,0.75,0.75,14,3200000,Causal chain: Executive Intervention to Retention,csv_import,story_arc_generator
+phase4:w5 - Champion re-engages,phase4:w7 - Retention package negotiated,LED_TO,0.9,0.9,14,3200000,Causal chain: Executive Intervention to Retention,csv_import,story_arc_generator
+phase4:w7 - Retention package negotiated,phase5:w2 - Retention contract signed,LED_TO,0.95,0.95,21,3200000,Causal chain: Executive Intervention to Retention,csv_import,story_arc_generator
+signal:phase1:w2,signal:phase1:w5,LED_TO,0.7,0.8,0,0,"{""label"": ""Champion disengagement pattern"", ""lag_weeks"": 3}",csv_import,story_arc_generator
+signal:phase1:w5,stakeholder:champion,INVOLVES,0.9,0.8,0,0,"{""label"": ""VP Engineering engagement decline""}",csv_import,story_arc_generator
+stakeholder:champion,signal:phase2:w2,CAUSED_BY,0.85,0.8,0,0,"{""label"": ""Full champion withdrawal""}",csv_import,story_arc_generator
+signal:phase2:w5,signal:phase2:w9,CAUSED_BY,0.88,0.8,0,0,"{""label"": ""Competitor POC causes workload migration"", ""lag_weeks"": 4}",csv_import,story_arc_generator
+signal:phase2:w7,signal:phase3:w1,INDICATES,0.92,0.8,0,0,"{""label"": ""Missed QBR compounds churn risk signal""}",csv_import,story_arc_generator
+signal:phase3:w1,decision:phase3:w2,LED_TO,0.95,0.8,0,0,"{""label"": ""Alert triggers executive escalation""}",csv_import,story_arc_generator
+decision:phase3:w2,decision:phase4:w1,LED_TO,0.95,0.8,0,0,"{""label"": ""Escalation triggers CTO-to-CTO call""}",csv_import,story_arc_generator
+signal:phase3:w4,decision:phase4:w3,LED_TO,0.9,0.8,0,0,"{""label"": ""Competitive intel triggers defense playbook""}",csv_import,story_arc_generator
+decision:phase4:w3,outcome:phase4:w5,LED_TO,0.8,0.8,0,0,"{""label"": ""Technical proof-of-performance re-engages champion""}",csv_import,story_arc_generator
+decision:phase4:w1,outcome:phase4:w5,LED_TO,0.85,0.8,0,0,"{""label"": ""Executive alignment re-engages champion""}",csv_import,story_arc_generator
+outcome:phase4:w5,decision:phase4:w7,LED_TO,0.9,0.8,0,0,"{""label"": ""Re-engaged champion enables retention negotiation""}",csv_import,story_arc_generator
+decision:phase4:w7,outcome:phase5:w2,LED_TO,0.95,0.8,0,0,"{""label"": ""Retention package leads to signed contract""}",csv_import,story_arc_generator
+outcome:phase5:w2,outcome:phase5:w4,CORRELATES_WITH,0.75,0.8,0,0,"{""label"": ""Signed deal restores workload confidence""}",csv_import,story_arc_generator
+outcome:phase5:w4,outcome:phase5:w6,LED_TO,0.7,0.8,0,0,"{""label"": ""Restored usage drives expansion conversation""}",csv_import,story_arc_generator
+stakeholder:detractor,signal:phase2:w5,SOURCED_FROM,0.88,0.8,0,0,"{""label"": ""Competitor sales rep initiates stealth POC""}",csv_import,story_arc_generator
+stakeholder:decision_maker,decision:phase4:w1,INVOLVES,0.95,0.8,0,0,"{""label"": ""VP Sales leads executive intervention""}",csv_import,story_arc_generator
+phase0:w3 - POC for new LLM workloads approved,phase1:w2 - GPU utilization crosses 70%,LED_TO,0.85,0.85,49,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase1:w2 - GPU utilization crosses 70%,phase1:w4 - GPU utilization hits 75% expansion threshold,LED_TO,0.9,0.9,14,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase1:w4 - GPU utilization hits 75% expansion threshold,"phase2:w2 - GPU utilization hits 85%, performance degrades",LED_TO,0.88,0.88,42,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+"phase2:w2 - GPU utilization hits 85%, performance degrades",phase2:w6 - CTO requests expansion proposal,LED_TO,0.92,0.92,28,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase2:w6 - CTO requests expansion proposal,phase3:w2 - CTO approves $5.2M expansion budget,LED_TO,0.8,0.8,28,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase3:w2 - CTO approves $5.2M expansion budget,phase4:w2 - Expansion PO signed,LED_TO,0.9,0.9,42,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase1:w4 - GPU utilization hits 75% expansion threshold,phase2:w2 - Training job completion rate drops,CAUSED_BY,0.92,0.92,42,-1200000,Causal chain: Capacity Crunch to Performance Degradation,csv_import,story_arc_generator
+phase2:w2 - Training job completion rate drops,phase2:w4 - Critical GPU memory exhaustion incident,LED_TO,0.85,0.85,14,-1200000,Causal chain: Capacity Crunch to Performance Degradation,csv_import,story_arc_generator
+phase2:w4 - Critical GPU memory exhaustion incident,phase2:w6 - VP Engineering escalates to CTO,LED_TO,0.95,0.95,14,-1200000,Causal chain: Capacity Crunch to Performance Degradation,csv_import,story_arc_generator
+phase0:w1 - QBR reveals AI roadmap expansion,phase0:w3 - VP Engineering proposes POC,LED_TO,0.8,0.8,14,5200000,Causal chain: Champion Enablement to Budget Approval,csv_import,story_arc_generator
+phase1:w7 - CSM builds ROI deck for champion,phase2:w6 - VP Engineering escalates with data,INDICATES,0.85,0.85,49,5200000,Causal chain: Champion Enablement to Budget Approval,csv_import,story_arc_generator
+phase2:w6 - VP Engineering escalates with data,phase3:w2 - CTO approves $5.2M budget,LED_TO,0.88,0.88,28,5200000,Causal chain: Champion Enablement to Budget Approval,csv_import,story_arc_generator
+phase2:w4 - Critical GPU memory exhaustion incident,phase3:w5 - GPU scheduling optimization deployed,LED_TO,0.9,0.9,49,400000,Causal chain: Interim Optimization Preserves Relationship,csv_import,story_arc_generator
+phase3:w5 - GPU scheduling optimization deployed,phase4:w2 - Expansion PO signed,CORRELATES_WITH,0.75,0.75,21,400000,Causal chain: Interim Optimization Preserves Relationship,csv_import,story_arc_generator
+stakeholder:champion,decision:dec_poc_approval,INVOLVES,0.9,0.8,0,0,"{""role"": ""proposer"", ""influence"": ""high""}",csv_import,story_arc_generator
+decision:dec_poc_approval,signal:phase1:w2,LED_TO,0.85,0.8,0,0,"{""mechanism"": ""POC workloads drive GPU utilization increase"", ""lag_weeks"": 7}",csv_import,story_arc_generator
+signal:phase1:w4,signal:phase2:w2,LED_TO,0.88,0.8,0,0,"{""mechanism"": ""Continued workload growth pushes utilization past capacity"", ""kpi_driver"": ""P3-KPI1""}",csv_import,story_arc_generator
+signal:phase2:w2,signal:phase2:w4,CAUSED_BY,0.92,0.8,0,0,"{""mechanism"": ""Resource contention causes GPU memory exhaustion"", ""kpi_driver"": ""P3-KPI5""}",csv_import,story_arc_generator
+signal:phase2:w4,decision:dec_expansion_budget,LED_TO,0.95,0.8,0,0,"{""mechanism"": ""Critical incident creates urgency for expansion"", ""sentiment_impact"": ""negative_to_urgent""}",csv_import,story_arc_generator
+stakeholder:champion,decision:dec_expansion_budget,INVOLVES,0.9,0.8,0,0,"{""role"": ""advocate"", ""evidence_provider"": true}",csv_import,story_arc_generator
+stakeholder:exec_sponsor,decision:dec_expansion_budget,INVOLVES,0.95,0.8,0,0,"{""role"": ""approver"", ""budget_authority"": true}",csv_import,story_arc_generator
+decision:dec_expansion_budget,decision:dec_expansion_order,LED_TO,0.9,0.8,0,0,"{""mechanism"": ""Budget approval enables procurement"", ""lag_weeks"": 12}",csv_import,story_arc_generator
+stakeholder:decision_maker,decision:dec_expansion_order,INVOLVES,0.8,0.8,0,0,"{""role"": ""signer"", ""procurement_authority"": true}",csv_import,story_arc_generator
+decision:dec_expansion_order,outcome:out_expansion_deal,LED_TO,1.0,0.8,0,0,"{""mechanism"": ""Signed PO directly creates expansion revenue""}",csv_import,story_arc_generator
+signal:phase1:w4,outcome:out_expansion_deal,INDICATES,0.75,0.8,0,0,"{""mechanism"": ""75% GPU utilization threshold was the leading indicator of expansion"", ""lead_time_weeks"": 18}",csv_import,story_arc_generator
+outcome:out_expansion_deal,outcome:out_arr_growth,LED_TO,0.95,0.8,0,0,"{""mechanism"": ""Expansion deal directly grows ARR""}",csv_import,story_arc_generator
+stakeholder:champion,outcome:out_cs_roi,INVOLVES,0.85,0.8,0,0,"{""mechanism"": ""Champion enablement was the primary CS investment driver""}",csv_import,story_arc_generator
+signal:phase2:w4,outcome:out_churn_averted,INDICATES,0.8,0.8,0,0,"{""mechanism"": ""Critical incident nearly triggered competitive evaluation""}",csv_import,story_arc_generator
+phase1:w4 - CTO response time degrades,phase1:w6 - Leadership change rumor surfaces,INDICATES,0.65,0.65,14,-4100000,Causal chain: CTO Departure to Engagement Vacuum,csv_import,story_arc_generator
+phase1:w6 - Leadership change rumor surfaces,phase2:w1 - CTO departure announced,LED_TO,0.95,0.95,7,-4100000,Causal chain: CTO Departure to Engagement Vacuum,csv_import,story_arc_generator
+phase2:w1 - CTO departure announced,phase2:w2 - QBR cancelled,CAUSED_BY,0.92,0.92,7,-4100000,Causal chain: CTO Departure to Engagement Vacuum,csv_import,story_arc_generator
+phase2:w1 - CTO departure announced,phase2:w3 - New CTO arrives with cloud-first agenda,LED_TO,0.98,0.98,14,-4100000,Causal chain: CTO Departure to Engagement Vacuum,csv_import,story_arc_generator
+phase2:w3 - New CTO arrives with cloud-first agenda,phase2:w5 - Infrastructure cost audit demanded,CAUSED_BY,0.9,0.9,14,-4100000,Causal chain: Cloud-First Agenda to Budget Freeze,csv_import,story_arc_generator
+phase2:w5 - Infrastructure cost audit demanded,phase3:w2 - Platform fires compound risk alert,INDICATES,0.88,0.88,21,-4100000,Causal chain: Cloud-First Agenda to Budget Freeze,csv_import,story_arc_generator
+phase2:w5 - Infrastructure cost audit demanded,phase3:w4 - CRO secures introduction meeting,LED_TO,0.85,0.85,35,-4100000,Causal chain: Cloud-First Agenda to Budget Freeze,csv_import,story_arc_generator
+phase3:w1 - CSM escalates to CRO,phase3:w4 - CRO secures introduction meeting,LED_TO,0.9,0.9,21,4100000,Causal chain: Executive Outreach to Hybrid Value Demonstration,csv_import,story_arc_generator
+phase3:w4 - CRO secures introduction meeting,phase3:w6 - First CRO-CTO meeting productive,LED_TO,0.85,0.85,14,4100000,Causal chain: Executive Outreach to Hybrid Value Demonstration,csv_import,story_arc_generator
+phase3:w6 - First CRO-CTO meeting productive,phase4:w1 - Hybrid assessment team deployed,LED_TO,0.92,0.92,7,4100000,Causal chain: Executive Outreach to Hybrid Value Demonstration,csv_import,story_arc_generator
+phase4:w1 - Hybrid assessment team deployed,phase4:w3 - Assessment results delivered,LED_TO,0.95,0.95,14,4100000,Causal chain: Executive Outreach to Hybrid Value Demonstration,csv_import,story_arc_generator
+phase4:w3 - Assessment results delivered,phase4:w4 - VP Engineering presents hybrid roadmap,LED_TO,0.88,0.88,7,6100000,Causal chain: Value Demonstration to New Champion,csv_import,story_arc_generator
+phase4:w4 - VP Engineering presents hybrid roadmap,phase4:w6 - CFO approves budget unfreeze,LED_TO,0.82,0.82,14,6100000,Causal chain: Value Demonstration to New Champion,csv_import,story_arc_generator
+phase4:w6 - CFO approves budget unfreeze,phase5:w2 - New CTO signs strategic partnership,LED_TO,0.9,0.9,14,6100000,Causal chain: Value Demonstration to New Champion,csv_import,story_arc_generator
+phase5:w2 - New CTO signs strategic partnership,phase5:w4 - Full QBR restored with expansion pipeline,LED_TO,0.92,0.92,14,6100000,Causal chain: Value Demonstration to New Champion,csv_import,story_arc_generator
+phase5:w4 - Full QBR restored with expansion pipeline,phase5:w6 - New CTO becomes external advocate,LED_TO,0.75,0.75,14,6100000,Causal chain: Value Demonstration to New Champion,csv_import,story_arc_generator
+signal:phase1:w4,signal:phase1:w6,INDICATES,0.65,0.8,0,0,"{""label"": ""CTO disengagement precedes departure rumor"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+signal:phase1:w6,stakeholder:phase2:w1,LED_TO,0.95,0.8,0,0,"{""label"": ""Departure rumor confirmed by announcement""}",csv_import,story_arc_generator
+stakeholder:phase2:w1,signal:phase2:w2,CAUSED_BY,0.92,0.8,0,0,"{""label"": ""CTO departure triggers QBR cancellation"", ""lag_weeks"": 1}",csv_import,story_arc_generator
+stakeholder:phase2:w1,stakeholder:phase2:w3,LED_TO,0.98,0.8,0,0,"{""label"": ""Departure leads to new CTO appointment"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+stakeholder:phase2:w3,signal:phase2:w5,CAUSED_BY,0.9,0.8,0,0,"{""label"": ""Cloud-first CTO demands infrastructure cost audit"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+stakeholder:champion,stakeholder:phase2:w1,INVOLVES,0.95,0.8,0,0,"{""label"": ""Former CTO champion departs""}",csv_import,story_arc_generator
+signal:phase2:w5,decision:phase3:w1,LED_TO,0.88,0.8,0,0,"{""label"": ""Cost audit threat triggers CSM escalation""}",csv_import,story_arc_generator
+decision:phase3:w1,decision:phase3:w4,LED_TO,0.9,0.8,0,0,"{""label"": ""CSM escalation leads to CRO executive outreach"", ""lag_weeks"": 3}",csv_import,story_arc_generator
+decision:phase3:w4,outcome:phase3:w6,LED_TO,0.85,0.8,0,0,"{""label"": ""Executive introduction leads to productive first meeting"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+outcome:phase3:w6,decision:phase4:w1,LED_TO,0.92,0.8,0,0,"{""label"": ""CTO's interest triggers hybrid assessment deployment""}",csv_import,story_arc_generator
+decision:phase4:w1,outcome:phase4:w3,LED_TO,0.95,0.8,0,0,"{""label"": ""Assessment team delivers benchmark results"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+outcome:phase4:w3,outcome:phase4:w4,LED_TO,0.88,0.8,0,0,"{""label"": ""Benchmark data enables VP Engineering to champion hybrid roadmap""}",csv_import,story_arc_generator
+outcome:phase4:w4,outcome:phase4:w6,LED_TO,0.82,0.8,0,0,"{""label"": ""Hybrid roadmap convinces CFO to unfreeze budget"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+outcome:phase4:w6,outcome:phase5:w2,LED_TO,0.9,0.8,0,0,"{""label"": ""Budget unfreeze enables strategic partnership signing"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+outcome:phase5:w2,outcome:phase5:w4,LED_TO,0.92,0.8,0,0,"{""label"": ""Partnership restores full QBR cadence and expansion pipeline"", ""lag_weeks"": 2}",csv_import,story_arc_generator
+stakeholder:decision_maker,outcome:phase5:w2,INVOLVES,0.95,0.8,0,0,"{""label"": ""New CTO signs strategic partnership""}",csv_import,story_arc_generator
+stakeholder:exec_sponsor,decision:phase3:w4,INVOLVES,0.9,0.8,0,0,"{""label"": ""CRO drives executive introduction""}",csv_import,story_arc_generator
+signal:phase3:w2,decision:phase3:w1,CORRELATES_WITH,0.88,0.8,0,0,"{""label"": ""Platform compound risk alert validates escalation decision""}",csv_import,story_arc_generator
+stakeholder:technical_lead,outcome:phase4:w4,INVOLVES,0.8,0.8,0,0,"{""label"": ""VP Engineering bridges old and new leadership as internal advocate""}",csv_import,story_arc_generator
+phase1:w7 — CTO LinkedIn competitor engagement detected,phase2:w1 — Competitor AE sends aggressive pricing proposal,LED_TO,0.75,0.75,14,-380000,Causal chain: Competitor Contact to CTO Interest,csv_import,story_arc_generator
+phase2:w1 — Competitor AE sends aggressive pricing proposal,phase2:w5 — Budget expansion conversations go dark,CAUSED_BY,0.85,0.85,28,-380000,Causal chain: Competitor Contact to CTO Interest,csv_import,story_arc_generator
+phase2:w1 — Competitor pricing proposal,phase3:w1 — CTO announces formal vendor evaluation,LED_TO,0.9,0.9,42,-1900000,Causal chain: Evaluation RFP to Engagement Collapse,csv_import,story_arc_generator
+phase3:w1 — Formal vendor evaluation announced,phase3:w3 — Competitor GPU benchmark POC,LED_TO,0.88,0.88,14,-1900000,Causal chain: Evaluation RFP to Engagement Collapse,csv_import,story_arc_generator
+phase3:w3 — Competitor benchmark POC,phase3:w5 — NPS 22-point drop in CTO confidence,CAUSED_BY,0.82,0.82,14,-1900000,Causal chain: Evaluation RFP to Engagement Collapse,csv_import,story_arc_generator
+phase3:w5 — NPS drop,phase3:w8 — Engagement metrics hit arc low,LED_TO,0.78,0.78,21,-1900000,Causal chain: Evaluation RFP to Engagement Collapse,csv_import,story_arc_generator
+phase2:w3 — VP Engineering alerts CSM about competitor outreach,phase3:w6 — CSM escalates to VP Sales with signal dossier,LED_TO,0.92,0.92,63,0,Causal chain: Champion Alert to CS Intelligence,csv_import,story_arc_generator
+phase3:w6 — CSM escalates competitive threat to VP Sales,phase4:w1 — VP Sales executive dinner with CTO,LED_TO,0.95,0.95,21,1710000,Causal chain: CS Value Defense to CFO Alignment,csv_import,story_arc_generator
+phase4:w1 — VP Sales executive dinner,phase4:w2 — Value-realization report deployed to CFO,LED_TO,0.9,0.9,7,1710000,Causal chain: CS Value Defense to CFO Alignment,csv_import,story_arc_generator
+phase4:w2 — Value-realization report to CFO,phase4:w5 — CFO acknowledges switching costs exceed savings,CAUSED_BY,0.88,0.88,21,1710000,Causal chain: CS Value Defense to CFO Alignment,csv_import,story_arc_generator
+phase3:w3 — Competitor benchmark POC claims 15% advantage,phase4:w4 — Engineering delivers head-to-head benchmark counter,SUPERSEDES,0.92,0.92,63,570000,Causal chain: Benchmark Counter to Technical Confidence,csv_import,story_arc_generator
+phase4:w4 — Our benchmark counter shows 23% distributed training advantage,phase4:w7 — CTO-to-CTO roadmap and co-innovation call,LED_TO,0.85,0.85,21,570000,Causal chain: Benchmark Counter to Technical Confidence,csv_import,story_arc_generator
+phase4:w5 — CFO acknowledges switching costs,phase4:w7 — CTO-to-CTO co-innovation call,LED_TO,0.88,0.88,14,4200000,Causal chain: Executive Alignment to Multi-Year Retention and Expansion,csv_import,story_arc_generator
+phase4:w7 — CTO-to-CTO co-innovation call,phase5:w1 — 3-year retention agreement signed,LED_TO,0.93,0.93,14,4200000,Causal chain: Executive Alignment to Multi-Year Retention and Expansion,csv_import,story_arc_generator
+phase5:w1 — Multi-year retention signed,phase5:w5 — CFO approves Phase 2 expansion budget,LED_TO,0.8,0.8,28,4200000,Causal chain: Executive Alignment to Multi-Year Retention and Expansion,csv_import,story_arc_generator
+signal:phase1:w7,external:phase2:w1,INDICATES,0.75,0.8,0,0,"{""signal_type"": ""competitive_interest"", ""detection_method"": ""social_listening""}",csv_import,story_arc_generator
+external:phase2:w1,signal:phase2:w5,CAUSED_BY,0.85,0.8,0,0,"{""impact_type"": ""budget_freeze"", ""lag_weeks"": 4}",csv_import,story_arc_generator
+stakeholder:champion,signal:phase2:w3,SOURCED_FROM,0.92,0.8,0,0,"{""trust_level"": ""high"", ""relationship_type"": ""champion_alert""}",csv_import,story_arc_generator
+signal:phase2:w3,decision:d1_escalate_competitive_threat,LED_TO,0.9,0.8,0,0,"{""decision_trigger"": ""champion_intelligence""}",csv_import,story_arc_generator
+external:phase3:w3,signal:phase3:w5,CAUSED_BY,0.82,0.8,0,0,"{""impact_type"": ""confidence_erosion"", ""competitor_claim"": ""15% perf/watt advantage""}",csv_import,story_arc_generator
+decision:d1_escalate_competitive_threat,stakeholder:exec_sponsor_vp_sales,INVOLVES,0.95,0.8,0,0,"{""engagement_type"": ""executive_escalation""}",csv_import,story_arc_generator
+stakeholder:exec_sponsor_vp_sales,stakeholder:decision_maker_cto,INVOLVES,0.88,0.8,0,0,"{""engagement_type"": ""executive_dinner"", ""phase"": 4}",csv_import,story_arc_generator
+decision:d2_deploy_value_report_cfo,stakeholder:exec_sponsor_cfo,INVOLVES,0.9,0.8,0,0,"{""deliverable"": ""value_realization_report"", ""content"": ""TCO_defense""}",csv_import,story_arc_generator
+external:phase3:w3,outcome:phase4:w4,SUPERSEDES,0.92,0.8,0,0,"{""counter_type"": ""benchmark_refutation"", ""our_advantage"": ""23% distributed training, 18% inference latency""}",csv_import,story_arc_generator
+decision:d2_deploy_value_report_cfo,decision:d3_negotiate_multiyear_retention,LED_TO,0.88,0.8,0,0,"{""mechanism"": ""CFO alignment enabled retention negotiation""}",csv_import,story_arc_generator
+decision:d3_negotiate_multiyear_retention,outcome:o1_arr_retained,LED_TO,0.95,0.8,0,0,"{""deal_structure"": ""3yr_with_refresh_guarantee""}",csv_import,story_arc_generator
+outcome:o1_arr_retained,outcome:o4_expansion_unlocked,LED_TO,0.8,0.8,0,0,"{""mechanism"": ""retention_removes_uncertainty_enables_investment""}",csv_import,story_arc_generator
+stakeholder:champion,outcome:o1_arr_retained,INVOLVES,0.85,0.8,0,0,"{""role"": ""internal_advocate"", ""loyalty"": ""maintained_under_pressure""}",csv_import,story_arc_generator
+signal:phase3:w8,signal:phase2:w5,CORRELATES_WITH,0.78,0.8,0,0,"{""pattern"": ""engagement_budget_covariance"", ""insight"": ""engagement drop and budget silence are correlated competitive threat indicators""}",csv_import,story_arc_generator
+CSM runs historical pattern analysis across 3 years of utilization data,Platform signal analyst flags seasonal capacity risk,LED_TO,0.88,0.88,21,1600000,Causal chain: Historical Pattern to Capacity Forecast,csv_import,story_arc_generator
+Platform signal analyst flags seasonal capacity risk,CSM presents seasonal capacity forecast to VP Data Science,LED_TO,0.92,0.92,14,1600000,Causal chain: Historical Pattern to Capacity Forecast,csv_import,story_arc_generator
+CSM presents seasonal capacity forecast to VP Data Science,Joint capacity planning workshop completed,LED_TO,0.85,0.85,21,1600000,Causal chain: Historical Pattern to Capacity Forecast,csv_import,story_arc_generator
+VP Data Science presents expansion proposal to CFO,CSM produces comprehensive ROI deck,LED_TO,0.82,0.82,14,1600000,Causal chain: Budget Approval Through CFO,csv_import,story_arc_generator
+CSM produces comprehensive ROI deck,Early seasonal signals appear confirming forecast,CORRELATES_WITH,0.78,0.78,14,1600000,Causal chain: Budget Approval Through CFO,csv_import,story_arc_generator
+Early seasonal signals appear confirming forecast,CSM escalates procurement timeline risk,LED_TO,0.9,0.9,14,1600000,Causal chain: Budget Approval Through CFO,csv_import,story_arc_generator
+CSM escalates procurement timeline risk,CFO approves $1.6M expansion budget,LED_TO,0.85,0.85,7,1600000,Causal chain: Budget Approval Through CFO,csv_import,story_arc_generator
+CFO approves $1.6M expansion budget,First GPU rack delivered and installation begins,LED_TO,0.92,0.92,21,800000,Causal chain: Hardware Procurement to Surge Readiness,csv_import,story_arc_generator
+First GPU rack delivered and installation begins,First rack fully operational and validated,LED_TO,0.95,0.95,21,800000,Causal chain: Hardware Procurement to Surge Readiness,csv_import,story_arc_generator
+First rack fully operational and validated,Second GPU rack installed and operational,LED_TO,0.9,0.9,21,800000,Causal chain: Hardware Procurement to Surge Readiness,csv_import,story_arc_generator
+Second GPU rack installed and operational,Q4 surge begins with expanded capacity,LED_TO,0.95,0.95,14,800000,Causal chain: Hardware Procurement to Surge Readiness,csv_import,story_arc_generator
+Q4 surge begins with expanded capacity,Black Friday peak sustained at 88% utilization with zero SLA breaches,LED_TO,0.92,0.92,14,2400000,Causal chain: Surge Performance to Validated ROI,csv_import,story_arc_generator
+Black Friday peak sustained at 88% utilization with zero SLA breaches,CSM presents real-time ROI dashboard to CFO,LED_TO,0.88,0.88,21,2400000,Causal chain: Surge Performance to Validated ROI,csv_import,story_arc_generator
+CSM presents real-time ROI dashboard to CFO,CFO validates predictive capacity planning model,LED_TO,0.85,0.85,21,2400000,Causal chain: Surge Performance to Validated ROI,csv_import,story_arc_generator
+signal:phase1:w7,signal:phase2:w2,LED_TO,0.88,0.8,0,0,"{""description"": ""CSM historical pattern analysis directly informed platform signal analyst seasonal risk detection""}",csv_import,story_arc_generator
+signal:phase2:w2,stakeholder:champion,INVOLVES,0.9,0.8,0,0,"{""description"": ""VP Data Science engaged to validate seasonal pattern against internal demand forecasts""}",csv_import,story_arc_generator
+signal:phase2:w4,decision:phase2:w7,LED_TO,0.85,0.8,0,0,"{""description"": ""Capacity forecast meeting drove joint planning workshop and hardware requirements definition""}",csv_import,story_arc_generator
+decision:phase2:w7,signal:phase3:w2,LED_TO,0.82,0.8,0,0,"{""description"": ""Capacity planning workshop output became the expansion proposal presented to CFO""}",csv_import,story_arc_generator
+signal:phase3:w2,stakeholder:decision_maker,INVOLVES,0.95,0.8,0,0,"{""description"": ""CFO is the key decision maker for $1.6M expansion budget approval""}",csv_import,story_arc_generator
+signal:phase3:w4,signal:phase3:w6,CORRELATES_WITH,0.78,0.8,0,0,"{""description"": ""ROI deck production coincides with early seasonal signals validating the forecast""}",csv_import,story_arc_generator
+signal:phase3:w6,signal:phase3:w8,LED_TO,0.88,0.8,0,0,"{""description"": ""Early seasonal signals confirming forecast triggered procurement timeline escalation""}",csv_import,story_arc_generator
+signal:phase3:w8,decision:phase4:w1,LED_TO,0.92,0.8,0,0,"{""description"": ""Procurement deadline escalation drove CFO to approve expansion budget""}",csv_import,story_arc_generator
+decision:phase4:w1,signal:phase4:w4,LED_TO,0.95,0.8,0,0,"{""description"": ""Budget approval triggered hardware procurement and first rack delivery""}",csv_import,story_arc_generator
+signal:phase4:w4,signal:phase4:w7,LED_TO,0.92,0.8,0,0,"{""description"": ""First rack delivery led to operational validation and workload migration""}",csv_import,story_arc_generator
+signal:phase4:w7,signal:phase4:w10,LED_TO,0.9,0.8,0,0,"{""description"": ""First rack validation enabled second rack deployment completing full expansion""}",csv_import,story_arc_generator
+signal:phase4:w10,signal:phase5:w2,LED_TO,0.95,0.8,0,0,"{""description"": ""Full expansion capacity readiness enabled smooth Q4 surge absorption""}",csv_import,story_arc_generator
+signal:phase5:w2,signal:phase5:w4,LED_TO,0.92,0.8,0,0,"{""description"": ""Initial surge ramp confirmed forecast accuracy, building confidence for Black Friday peak""}",csv_import,story_arc_generator
+signal:phase5:w4,signal:phase5:w7,LED_TO,0.88,0.8,0,0,"{""description"": ""Zero-downtime Black Friday peak drove mid-surge ROI validation meeting with CFO""}",csv_import,story_arc_generator
+signal:phase5:w7,signal:phase5:w10,LED_TO,0.85,0.8,0,0,"{""description"": ""CFO ROI validation mid-surge confirmed predictive model value through end of surge period""}",csv_import,story_arc_generator
+stakeholder:champion,decision:phase4:w1,INVOLVES,0.88,0.8,0,0,"{""description"": ""VP Data Science championed the expansion budget internally, influencing CFO approval""}",csv_import,story_arc_generator
+stakeholder:technical_lead,signal:phase4:w10,INVOLVES,0.85,0.8,0,0,"{""description"": ""Infrastructure Director oversaw phased hardware deployment and load testing validation""}",csv_import,story_arc_generator
+phase0:w1 - Hardware delivery and rack commissioning,phase0:w5 - First workload completes successfully in 12 days,LED_TO,0.9,0.9,28,4800000,Causal chain: Fast Deployment to GPU Adoption Flywheel,csv_import,story_arc_generator
+"phase0:w5 - First workload succeeds, VP AI/ML impressed","phase1:w2 - Second ML team onboarded, GPU at 48%",LED_TO,0.85,0.85,35,4800000,Causal chain: Fast Deployment to GPU Adoption Flywheel,csv_import,story_arc_generator
+phase1:w2 - Second ML team onboarded,"phase1:w8 - GPU utilization hits 72%, expansion signal",LED_TO,0.88,0.88,42,4800000,Causal chain: Fast Deployment to GPU Adoption Flywheel,csv_import,story_arc_generator
+"phase1:w8 - GPU utilization at 72%, capacity at 75%","phase1:w10 - Capacity planning meeting, 80% threshold",LED_TO,0.9,0.9,14,600000,Causal chain: Utilization Threshold to First Expansion,csv_import,story_arc_generator
+phase1:w10 - VP AI/ML proposes POC expansion,phase2:w2 - Infrastructure Director approves first expansion,LED_TO,0.85,0.85,28,600000,Causal chain: Utilization Threshold to First Expansion,csv_import,story_arc_generator
+phase2:w2 - First expansion approved ($600K),phase2:w4 - Second rack commissioned and online,LED_TO,0.92,0.92,14,600000,Causal chain: Utilization Threshold to First Expansion,csv_import,story_arc_generator
+phase2:w6 - VP AI/ML approves inference workload POC,"phase3:w3 - Inference workloads go live, diversity at 5",LED_TO,0.85,0.85,35,1200000,Causal chain: New Workload Types Drive Second Expansion,csv_import,story_arc_generator
+"phase3:w3 - Inference live, GPU climbing","phase3:w6 - GPU crosses 80%, second expansion trigger fires",LED_TO,0.88,0.88,21,1200000,Causal chain: New Workload Types Drive Second Expansion,csv_import,story_arc_generator
+phase3:w6 - Second expansion trigger,phase3:w10 - CFO approves second expansion ($1.2M),LED_TO,0.82,0.82,28,1200000,Causal chain: New Workload Types Drive Second Expansion,csv_import,story_arc_generator
+"phase3:w12 - Second expansion commissioned, 4 racks running",phase4:w2 - VP AI/ML shares 18-month AI roadmap,LED_TO,0.8,0.8,14,1800000,Causal chain: Proven Expansion ROI to Strategic Partnership,csv_import,story_arc_generator
+phase4:w2 - AI roadmap requires 10-rack footprint,phase4:w4 - Platform data validates capacity projections,INDICATES,0.85,0.85,14,1800000,Causal chain: Proven Expansion ROI to Strategic Partnership,csv_import,story_arc_generator
+phase4:w4 - CFO requests formal expansion proposal,phase4:w6 - CFO approves strategic 6-rack expansion ($1.8M),LED_TO,0.88,0.88,14,1800000,Causal chain: Proven Expansion ROI to Strategic Partnership,csv_import,story_arc_generator
+phase0:w5 - CSM captures first-workload success metrics,phase1:w10 - CSM presents ROI at capacity planning meeting,LED_TO,0.82,0.82,91,3600000,Causal chain: CSM Enablement Creates Expansion Flywheel,csv_import,story_arc_generator
+phase1:w10 - CSM builds expansion business case for champion,phase2:w2 - Data-driven expansion decision approved,LED_TO,0.85,0.85,28,3600000,Causal chain: CSM Enablement Creates Expansion Flywheel,csv_import,story_arc_generator
+phase2:w8 - CSM presents compounding ROI at QBR,phase3:w10 - CFO approves based on proven ROI pattern,LED_TO,0.8,0.8,70,3600000,Causal chain: CSM Enablement Creates Expansion Flywheel,csv_import,story_arc_generator
+phase3:w10 - Second expansion proves L&E playbook,phase4:w6 - Strategic partnership approved on track record,LED_TO,0.78,0.78,56,3600000,Causal chain: CSM Enablement Creates Expansion Flywheel,csv_import,story_arc_generator
+stakeholder:champion,decision:dec_poc_workload_expansion,INVOLVES,0.9,0.8,0,0,"{""role"": ""proposer"", ""influence"": ""high""}",csv_import,story_arc_generator
+decision:dec_poc_workload_expansion,signal:phase1:w5,LED_TO,0.85,0.8,0,0,"{""mechanism"": ""Second ML team onboarding drives GPU utilization from 35% to 60%"", ""lag_weeks"": 7}",csv_import,story_arc_generator
+signal:phase1:w8,signal:phase1:w10,LED_TO,0.9,0.8,0,0,"{""mechanism"": ""72% GPU utilization triggers capacity planning conversation"", ""kpi_driver"": ""P3-KPI1""}",csv_import,story_arc_generator
+signal:phase1:w10,decision:dec_first_rack_expansion,LED_TO,0.85,0.8,0,0,"{""mechanism"": ""80% capacity threshold and CSM ROI analysis drive expansion approval"", ""kpi_driver"": ""P5-KPI1""}",csv_import,story_arc_generator
+stakeholder:decision_maker,decision:dec_first_rack_expansion,INVOLVES,0.8,0.8,0,0,"{""role"": ""approver"", ""procurement_authority"": true}",csv_import,story_arc_generator
+stakeholder:exec_sponsor,decision:dec_first_rack_expansion,INVOLVES,0.95,0.8,0,0,"{""role"": ""budget_approver"", ""budget_authority"": true}",csv_import,story_arc_generator
+decision:dec_first_rack_expansion,outcome:out_first_expansion,LED_TO,1.0,0.8,0,0,"{""mechanism"": ""Approved expansion directly generates $600K ARR""}",csv_import,story_arc_generator
+decision:dec_adopt_inference_workloads,signal:phase3:w3,LED_TO,0.85,0.8,0,0,"{""mechanism"": ""Inference workloads go live, driving utilization back up on 2-rack footprint"", ""lag_weeks"": 5}",csv_import,story_arc_generator
+signal:phase3:w6,decision:dec_strategic_expansion,INDICATES,0.78,0.8,0,0,"{""mechanism"": ""Second utilization threshold breach signals sustainable growth pattern"", ""kpi_driver"": ""P5-KPI1""}",csv_import,story_arc_generator
+stakeholder:champion,decision:dec_strategic_expansion,INVOLVES,0.9,0.8,0,0,"{""role"": ""advocate"", ""evidence_provider"": true, ""ai_roadmap_owner"": true}",csv_import,story_arc_generator
+stakeholder:exec_sponsor,decision:dec_strategic_expansion,INVOLVES,0.95,0.8,0,0,"{""role"": ""approver"", ""budget_authority"": true, ""strategic_partnership"": true}",csv_import,story_arc_generator
+decision:dec_strategic_expansion,outcome:out_strategic_expansion,LED_TO,1.0,0.8,0,0,"{""mechanism"": ""Strategic expansion approval generates $1.8M ARR""}",csv_import,story_arc_generator
+outcome:out_first_expansion,outcome:out_second_expansion,LED_TO,0.85,0.8,0,0,"{""mechanism"": ""Proven first expansion ROI creates confidence for larger second expansion""}",csv_import,story_arc_generator
+outcome:out_second_expansion,outcome:out_strategic_expansion,LED_TO,0.8,0.8,0,0,"{""mechanism"": ""Two successful expansions establish trust for strategic partnership deal""}",csv_import,story_arc_generator
+outcome:out_strategic_expansion,outcome:out_nrr_400,LED_TO,0.95,0.8,0,0,"{""mechanism"": ""Three expansion waves compound to 400% NRR""}",csv_import,story_arc_generator
+outcome:out_cac_payback,outcome:out_first_expansion,INDICATES,0.82,0.8,0,0,"{""mechanism"": ""Fast CAC payback validates investment thesis and de-risks expansion decision"", ""lead_time_weeks"": 10}",csv_import,story_arc_generator
+signal:phase1:w5,outcome:out_nrr_400,INDICATES,0.72,0.8,0,0,"{""mechanism"": ""60% GPU utilization with steep trajectory was the earliest leading indicator of the full L&E journey"", ""lead_time_weeks"": 35}",csv_import,story_arc_generator

@@ -70,18 +70,18 @@ DATACENTER_LOCATIONS = [
 ]
 CSM_ASSIGNED = ["Sarah Chen", "Marcus Johnson", "Emily Rodriguez", "David Park"]
 
-# KPI codes (DC2_S vertical KPIs)
+# KPI codes (DC2_S vertical KPIs) — P-format only
 KPI_CODES = [
-    # Data Velocity (DV)
-    "DV-KPI1", "DV-KPI2", "DV-KPI3", "DV-KPI4", "DV-KPI5", "DV-KPI6",
-    # Operational Stability (OS)
-    "OS-KPI1", "OS-KPI2", "OS-KPI3", "OS-KPI4", "OS-KPI5", "OS-KPI6", "OS-KPI7",
-    # AI Performance (AI)
-    "AI-KPI1", "AI-KPI2", "AI-KPI3", "AI-KPI4", "AI-KPI5", "AI-KPI6",
-    # Customer Health (CH)
-    "CH-KPI1", "CH-KPI2", "CH-KPI3", "CH-KPI4", "CH-KPI5", "CH-KPI6",
-    # Expansion (EX)
-    "EX-KPI1", "EX-KPI2", "EX-KPI3", "EX-KPI4", "EX-KPI5", "EX-KPI6", "EX-KPI7", "EX-KPI8"
+    # P1 - Deployment Velocity
+    "P1-KPI1", "P1-KPI2", "P1-KPI3", "P1-KPI4", "P1-KPI5", "P1-KPI6",
+    # P2 - Operational Stability
+    "P2-KPI1", "P2-KPI2", "P2-KPI3", "P2-KPI4", "P2-KPI5", "P2-KPI6", "P2-KPI7",
+    # P3 - AI Workload Performance
+    "P3-KPI1", "P3-KPI2", "P3-KPI3", "P3-KPI4", "P3-KPI5", "P3-KPI6",
+    # P4 - Channel & Partner Health
+    "P4-KPI1", "P4-KPI2", "P4-KPI3", "P4-KPI4", "P4-KPI5", "P4-KPI6",
+    # P5 - Expansion Readiness
+    "P5-KPI1", "P5-KPI2", "P5-KPI3", "P5-KPI4", "P5-KPI5", "P5-KPI6", "P5-KPI7", "P5-KPI8"
 ]
 
 # Product IDs

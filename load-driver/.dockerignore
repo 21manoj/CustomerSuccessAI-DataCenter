@@ -1,0 +1,10 @@
+# Load Driver Docker Build Exclusions
+.git
+__pycache__/
+*.pyc
+results/
+*.log
+.env
+.DS_Store
+.vscode/
+.idea/

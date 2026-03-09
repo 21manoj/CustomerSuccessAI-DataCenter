@@ -13,7 +13,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { classify, classifyColor, classifyBadgeClass, classifyLabel, thresholdValues, getThresholds } from '../../utils/healthThresholds';
 import { useSession } from '../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../utils/api';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -66,7 +68,7 @@ interface SmartAction {
 interface DailyAction {
   id: string;
   rank: number;
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   action_title: string;
   action_description: string;
@@ -79,6 +81,10 @@ interface DailyAction {
   account_health: number;
   estimated_hours: number;
   estimated_duration_display: string;
+  roi_metric_id?: string;
+  roi_metric_name?: string;
+  roi_projected_impact?: number;
+  roi_impact_type?: string;
 }
 
 interface DailyActionsSummary {
@@ -87,6 +93,8 @@ interface DailyActionsSummary {
   high_count: number;
   opportunity_count: number;
   total_estimated_hours: number;
+  total_roi_projected_impact?: number;
+  roi_metrics_involved?: string[];
 }
 
 interface PortfolioSummary {
@@ -228,20 +236,9 @@ const TrendIndicator: React.FC<{ trend: string; value?: number }> = ({ trend, va
 };
 
 const HealthBadge: React.FC<{ score: number }> = ({ score }) => {
-  let bgColor = 'bg-green-100 text-green-800';
-  let label = 'Healthy';
-  
-  if (score < 50) {
-    bgColor = 'bg-red-100 text-red-800';
-    label = 'Critical';
-  } else if (score < 70) {
-    bgColor = 'bg-yellow-100 text-yellow-800';
-    label = 'At Risk';
-  }
-  
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor}`}>
-      {label}
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${classifyBadgeClass(score)}`}>
+      {classifyLabel(score)}
     </span>
   );
 };
@@ -445,11 +442,7 @@ const AccountHealthCard: React.FC<{
     { key: 'service', label: 'Service', icon: <Clock className="w-4 h-4" /> }
   ];
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'green';
-    if (score >= 60) return 'yellow';
-    return 'red';
-  };
+  const getScoreColor = (score: number) => classify(score) === 'healthy' ? 'green' : classify(score) === 'at_risk' ? 'yellow' : 'red';
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -462,8 +455,7 @@ const AccountHealthCard: React.FC<{
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold" style={{
-              color: account.health_score >= 80 ? '#16a34a' : 
-                     account.health_score >= 60 ? '#ca8a04' : '#dc2626'
+              color: classifyColor(account.health_score)
             }}>
               {account.health_score}
             </div>
@@ -653,7 +645,7 @@ const DailyActionsPanel: React.FC<{
   onFilterChange: (f: 'all' | 'critical' | 'high' | 'opportunity') => void;
   loading: boolean;
   onStartPlaybook: (action: DailyAction) => void;
-  onViewAccount: (accountId: number) => void;
+  onViewAccount: (accountId: number | string) => void;
 }> = ({ actions, summary, filter, onFilterChange, loading, onStartPlaybook, onViewAccount }) => {
   const filtered = filter === 'all' ? actions : actions.filter(a => a.urgency === filter);
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -711,8 +703,10 @@ const DailyActionsPanel: React.FC<{
           <p className="text-[10px] text-gray-500 uppercase tracking-wide">Est. Hours</p>
         </div>
         <div className="text-center">
-          <p className="text-xl font-bold text-emerald-600">0%</p>
-          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Complete</p>
+          <p className="text-xl font-bold text-emerald-600">
+            {summary.total_roi_projected_impact ? `$${(summary.total_roi_projected_impact / 1000).toFixed(0)}K` : '$0'}
+          </p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">ROI Impact</p>
         </div>
       </div>
 
@@ -744,11 +738,11 @@ const DailyActionsPanel: React.FC<{
                       <circle cx="18" cy="18" r="14" fill="none" stroke="#e5e7eb" strokeWidth="3" />
                       <circle
                         cx="18" cy="18" r="14" fill="none"
-                        stroke={action.account_health >= 70 ? '#22c55e' : action.account_health >= 50 ? '#eab308' : '#ef4444'}
-                        strokeWidth="3" strokeDasharray={`${(action.account_health / 100) * 88} 88`} strokeLinecap="round"
+                        stroke={classifyColor(action.account_health)}
+                        strokeWidth="3" strokeDasharray={`${(Math.max(0, action.account_health) / 100) * 88} 88`} strokeLinecap="round"
                       />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{action.account_health}</span>
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{Math.max(0, Math.round(action.account_health))}</span>
                   </div>
                 </div>
 
@@ -761,6 +755,12 @@ const DailyActionsPanel: React.FC<{
                     >
                       {action.account_name}
                     </button>
+                    {action.roi_metric_name && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {action.roi_metric_name}
+                        {action.roi_projected_impact ? ` +$${(action.roi_projected_impact / 1000).toFixed(0)}K` : ''}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-gray-900 truncate">{action.action_title}</p>
                   <p className="text-xs text-gray-500 truncate">{action.action_description}</p>
@@ -843,7 +843,7 @@ const ExecutiveDashboard: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportModalContent, setReportModalContent] = useState<AnalysisReport | null>(null);
   const [dailyActions, setDailyActions] = useState<DailyAction[]>([]);
-  const [dailySummary, setDailySummary] = useState<DailyActionsSummary>({ total_actions: 0, critical_count: 0, high_count: 0, opportunity_count: 0, total_estimated_hours: 0 });
+  const [dailySummary, setDailySummary] = useState<DailyActionsSummary>({ total_actions: 0, critical_count: 0, high_count: 0, opportunity_count: 0, total_estimated_hours: 0, total_roi_projected_impact: 0, roi_metrics_involved: [] });
   const [dailyFilter, setDailyFilter] = useState<'all' | 'critical' | 'high' | 'opportunity'>('all');
   const [dailyLoading, setDailyLoading] = useState(false);
 
@@ -866,7 +866,7 @@ const ExecutiveDashboard: React.FC = () => {
       };
       
       // Add customer ID header
-      headers['X-Customer-ID'] = session.customer_id.toString();
+      headers['X-Customer-ID'] = getCustomerIdentifier(session);
       
       const accountsResponse = await fetch('/api/accounts', {
         credentials: 'include',
@@ -932,8 +932,9 @@ const ExecutiveDashboard: React.FC = () => {
             }
             
             // Calculate probabilities based on health score
-            const churnProb = healthScore < 50 ? 80 : healthScore < 70 ? 40 : 15;
-            const expansionProb = healthScore > 80 ? 75 : healthScore > 60 ? 30 : 5;
+            const cls = classify(healthScore);
+            const churnProb = cls === 'critical' ? 80 : cls === 'at_risk' ? 40 : 15;
+            const expansionProb = cls === 'healthy' ? 75 : cls === 'at_risk' ? 30 : 5;
             
             // Get pillar scores from health trend if available, otherwise use defaults
             const pillarScores = latestTrend ? {
@@ -996,9 +997,10 @@ const ExecutiveDashboard: React.FC = () => {
           setAccounts(healthAccounts);
           
           // Update portfolio summary
-          const healthy = healthAccounts.filter(a => a.health_score >= 70).length;
-          const atRisk = healthAccounts.filter(a => a.health_score >= 50 && a.health_score < 70).length;
-          const critical = healthAccounts.filter(a => a.health_score < 50).length;
+          const { healthy_min, at_risk_min } = thresholdValues();
+          const healthy = healthAccounts.filter(a => a.health_score >= healthy_min).length;
+          const atRisk = healthAccounts.filter(a => a.health_score >= at_risk_min && a.health_score < healthy_min).length;
+          const critical = healthAccounts.filter(a => a.health_score < at_risk_min).length;
           const avgScore = healthAccounts.length > 0 
             ? healthAccounts.reduce((sum, a) => sum + a.health_score, 0) / healthAccounts.length 
             : 0;
@@ -1008,7 +1010,7 @@ const ExecutiveDashboard: React.FC = () => {
           const arrAtRisk = accountsArray
             .filter((acc: any) => {
               const accHealth = healthAccounts.find(a => String(a.account_id) === String(acc.account_id));
-              return accHealth && accHealth.health_score < 70;
+              return accHealth && accHealth.health_score < 80;
             })
             .reduce((sum: number, acc: any) => sum + (acc.revenue || 0), 0);
           
@@ -1179,7 +1181,7 @@ const ExecutiveDashboard: React.FC = () => {
     }
   };
 
-  const handleViewDailyAccount = (accountId: number) => {
+  const handleViewDailyAccount = (accountId: number | string) => {
     navigate(`/dc-dashboard/tenants/${accountId}`);
   };
 

@@ -22,6 +22,8 @@ import {
   Trash2,
   RefreshCw,
   AlertTriangle,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -57,7 +59,7 @@ interface ScenarioRun {
 interface RunStatus {
   run_id: string;
   status: 'running' | 'completed';
-  customer_id: number;
+  customer_id: string | number;
   start_time: string;
   end_time: string | null;
   scenarios: ScenarioRun[];
@@ -72,7 +74,7 @@ interface RunStatus {
 interface RunSummary {
   run_id: string;
   status: string;
-  customer_id: number;
+  customer_id: string | number;
   start_time: string;
   end_time: string | null;
   scenario_count: number;
@@ -85,6 +87,73 @@ interface RunSummary {
 }
 
 // ---------------------------------------------------------------------------
+// Advanced Options Types & Defaults
+// ---------------------------------------------------------------------------
+
+interface PatternMix {
+  crisis: number;
+  churn: number;
+  stable: number;
+  expansion: number;
+}
+
+interface PillarWeights {
+  AI: number;
+  CH: number;
+  DV: number;
+  EX: number;
+  OS: number;
+}
+
+interface AdvancedOptions {
+  numAccounts: number;
+  dryRun: boolean;
+  seed: number | null;
+  industry: string;
+  onboardingMode: 'demo' | 'custom';
+  showcasePatternMix: PatternMix;
+  weights: PillarWeights;
+}
+
+interface RunPreset {
+  label: string;
+  description: string;
+  numAccounts: number;
+  industry: string;
+  seed: number | null;
+}
+
+const PRESETS: RunPreset[] = [
+  { label: 'Quick Demo', description: '3 accounts, fast feedback', numAccounts: 3, industry: 'Technology', seed: null },
+  { label: 'Standard', description: '10 accounts, balanced test', numAccounts: 10, industry: 'Technology', seed: 42 },
+  { label: 'Full Load Test', description: '50 accounts, comprehensive', numAccounts: 50, industry: 'Technology', seed: 42 },
+];
+
+const DEFAULT_PATTERN_MIX: PatternMix = { crisis: 0.15, churn: 0.15, stable: 0.50, expansion: 0.20 };
+const DEFAULT_WEIGHTS: PillarWeights = { AI: 0.10, CH: 0.30, DV: 0.30, EX: 0.05, OS: 0.25 };
+
+const DEFAULT_OPTIONS: AdvancedOptions = {
+  numAccounts: 3,
+  dryRun: false,
+  seed: null,
+  industry: 'Technology',
+  onboardingMode: 'demo',
+  showcasePatternMix: { ...DEFAULT_PATTERN_MIX },
+  weights: { ...DEFAULT_WEIGHTS },
+};
+
+const INDUSTRIES = [
+  'Technology', 'Financial Services', 'Healthcare', 'Manufacturing',
+  'Retail', 'Energy', 'Telecommunications', 'Government', 'Education',
+  'Media & Entertainment',
+];
+
+const PILLAR_LABELS: Record<keyof PillarWeights, string> = {
+  AI: 'AI Intelligence', CH: 'Customer Health', DV: 'Data Value',
+  EX: 'Experience', OS: 'Operational Scale',
+};
+
+// ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
 
@@ -95,12 +164,29 @@ const api = {
     return data.scenarios || [];
   },
 
-  async startRun(scenarioIds: string[], customerId: number): Promise<{ run_id: string }> {
+  async startRun(scenarioIds: string[], customerId: string | number, options?: AdvancedOptions): Promise<{ run_id: string }> {
+    const body: Record<string, any> = {
+      scenario_ids: scenarioIds,
+      customer_id: customerId,
+    };
+
+    if (options) {
+      body.options = {
+        num_accounts: options.numAccounts,
+        dry_run: options.dryRun,
+        seed: options.seed,
+        industry: options.industry,
+        onboarding_mode: options.onboardingMode,
+        showcase_pattern_mix: options.showcasePatternMix,
+        weights: options.weights,
+      };
+    }
+
     const res = await fetch('/api/test-runner/start', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario_ids: scenarioIds, customer_id: customerId }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -183,17 +269,47 @@ const DCTestRunner: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Advanced options
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [options, setOptions] = useState<AdvancedOptions>({ ...DEFAULT_OPTIONS });
+
+  // Entitlements — controls feature visibility
+  const [entitlements, setEntitlements] = useState<Record<string, boolean>>({});
+  const [customerTier, setCustomerTier] = useState<string>('starter');
+
+  const hasAdvancedEntitlement = entitlements['test_runner_advanced'] ?? false;
+
   // Results — expanded scenario IDs
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // History
   const [history, setHistory] = useState<RunSummary[]>([]);
 
-  // ------- Load scenarios + history on mount -------
+  // ------- Load scenarios + history + entitlements on mount -------
   useEffect(() => {
     api.getScenarios().then(setScenarios).catch(() => {});
     api.getRuns().then(setHistory).catch(() => {});
   }, []);
+
+  // Fetch entitlements whenever customerId changes
+  useEffect(() => {
+    const cid = customerId?.trim();
+    if (!cid) return;
+
+    fetch(`/api/entitlements?customer_id=${cid}`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.entitlements) {
+          setEntitlements(data.entitlements);
+          setCustomerTier(data.tier || 'starter');
+        }
+      })
+      .catch(() => {
+        // Entitlements API not available — default to all allowed
+        setEntitlements({});
+        setCustomerTier('starter');
+      });
+  }, [customerId]);
 
   // ------- Polling -------
   const stopPolling = useCallback(() => {
@@ -245,15 +361,50 @@ const DCTestRunner: React.FC = () => {
     }
   };
 
+  // ------- Advanced Options helpers -------
+  const setOption = <K extends keyof AdvancedOptions>(key: K, value: AdvancedOptions[K]) => {
+    setOptions(prev => ({ ...prev, [key]: value }));
+  };
+
+  const applyPreset = (preset: RunPreset) => {
+    setOptions(prev => ({
+      ...prev,
+      numAccounts: preset.numAccounts,
+      industry: preset.industry,
+      seed: preset.seed,
+    }));
+  };
+
+  const patternMixTotal = Object.values(options.showcasePatternMix).reduce((a, b) => a + b, 0);
+  const weightsTotal = Object.values(options.weights).reduce((a, b) => a + b, 0);
+  const patternMixValid = Math.abs(patternMixTotal - 1.0) < 0.02;
+  const weightsValid = Math.abs(weightsTotal - 1.0) < 0.02;
+
+  // Scenario-aware booleans
+  const hasOnboarding = selected.has('1');
+  const hasCleanup = selected.has('4');
+
   const handleStart = async () => {
-    const cid = parseInt(customerId, 10);
-    if (!cid || cid <= 0) {
+    const cid = customerId?.trim();
+    if (!cid) {
       setError('Enter a valid customer ID');
       return;
     }
     if (selected.size === 0) {
       setError('Select at least one scenario');
       return;
+    }
+
+    // Validate advanced options when panel is open
+    if (showAdvanced && hasOnboarding) {
+      if (!patternMixValid) {
+        setError(`Journey pattern mix must sum to 1.0 (currently ${patternMixTotal.toFixed(2)})`);
+        return;
+      }
+      if (!weightsValid) {
+        setError(`Pillar weights must sum to 1.0 (currently ${weightsTotal.toFixed(2)})`);
+        return;
+      }
     }
 
     setError(null);
@@ -263,7 +414,7 @@ const DCTestRunner: React.FC = () => {
     try {
       // Sort selected IDs in canonical order
       const orderedIds = scenarios.map(s => s.id).filter(id => selected.has(id));
-      const { run_id } = await api.startRun(orderedIds, cid);
+      const { run_id } = await api.startRun(orderedIds, cid, showAdvanced ? options : undefined);
       startPolling(run_id);
     } catch (e: any) {
       setError(e.message || 'Failed to start');
@@ -302,6 +453,15 @@ const DCTestRunner: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Test Runner</h2>
           <p className="text-sm text-gray-500">Drive load-driver E2E scenarios against CS Pulse via HTTP</p>
         </div>
+        {customerTier && (
+          <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${
+            customerTier === 'enterprise' ? 'bg-purple-100 text-purple-800' :
+            customerTier === 'professional' ? 'bg-blue-100 text-blue-800' :
+            'bg-gray-100 text-gray-600'
+          }`}>
+            {customerTier}
+          </span>
+        )}
       </div>
 
       {/* ============================================================ */}
@@ -348,6 +508,222 @@ const DCTestRunner: React.FC = () => {
               </div>
             </label>
           ))}
+        </div>
+
+        {/* ── Advanced Options ── */}
+        <div className="border-t border-gray-100">
+          <button
+            onClick={() => hasAdvancedEntitlement && setShowAdvanced(!showAdvanced)}
+            className={`w-full px-6 py-3 flex items-center justify-between text-sm font-medium transition-colors ${
+              hasAdvancedEntitlement
+                ? 'text-gray-600 hover:bg-gray-50 cursor-pointer'
+                : 'text-gray-400 cursor-not-allowed'
+            }`}
+            title={hasAdvancedEntitlement ? undefined : 'Upgrade to Professional tier to unlock Advanced Options'}
+          >
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              Advanced Options
+              {!hasAdvancedEntitlement && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                  <Lock className="w-3 h-3" />
+                  Professional
+                </span>
+              )}
+            </span>
+            {hasAdvancedEntitlement && (
+              showAdvanced
+                ? <ChevronDown className="w-4 h-4" />
+                : <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+
+          {showAdvanced && hasAdvancedEntitlement && (
+            <div className="px-6 pb-4 space-y-5">
+
+              {/* Presets */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                  Presets
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {PRESETS.map(p => (
+                    <button
+                      key={p.label}
+                      onClick={() => applyPreset(p)}
+                      className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                        options.numAccounts === p.numAccounts
+                          ? 'border-blue-400 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
+                      }`}
+                      title={p.description}
+                    >
+                      {p.label} ({p.numAccounts})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Global Options */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Num Accounts</label>
+                  <input
+                    type="number"
+                    value={options.numAccounts}
+                    onChange={e => setOption('numAccounts', Math.max(1, parseInt(e.target.value, 10) || 3))}
+                    min={1}
+                    max={200}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Seed <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={options.seed ?? ''}
+                    onChange={e => setOption('seed', e.target.value ? parseInt(e.target.value, 10) : null)}
+                    placeholder="random"
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Scenario 1: Onboarding Options */}
+              {hasOnboarding && (
+                <div className="border border-blue-200 bg-blue-50/30 rounded-lg p-4 space-y-4">
+                  <h4 className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">1</span>
+                    Onboarding Options
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Industry</label>
+                      <select
+                        value={options.industry}
+                        onChange={e => setOption('industry', e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      >
+                        {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Mode</label>
+                      <div className="flex gap-4 mt-1.5">
+                        {(['demo', 'custom'] as const).map(mode => (
+                          <label key={mode} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                            <input
+                              type="radio"
+                              name="onboarding_mode"
+                              checked={options.onboardingMode === mode}
+                              onChange={() => setOption('onboardingMode', mode)}
+                              className="text-blue-600 focus:ring-blue-500"
+                            />
+                            {mode === 'demo' ? 'Demo (synthetic)' : 'Custom (user CSVs)'}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Journey Pattern Mix */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium text-gray-500">Journey Pattern Mix</label>
+                      <span className={`text-xs font-mono ${patternMixValid ? 'text-green-600' : 'text-red-600'}`}>
+                        Total: {patternMixTotal.toFixed(2)} {patternMixValid ? '✓' : '(must = 1.0)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {(Object.keys(DEFAULT_PATTERN_MIX) as Array<keyof PatternMix>).map(key => (
+                        <div key={key}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs text-gray-600 capitalize">{key}</span>
+                            <span className="text-xs font-mono text-gray-500">
+                              {(options.showcasePatternMix[key] * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={options.showcasePatternMix[key] * 100}
+                            onChange={e => {
+                              const newMix = { ...options.showcasePatternMix };
+                              newMix[key] = parseInt(e.target.value, 10) / 100;
+                              setOption('showcasePatternMix', newMix);
+                            }}
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pillar Weights */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium text-gray-500">Pillar Weights (DC2_S)</label>
+                      <span className={`text-xs font-mono ${weightsValid ? 'text-green-600' : 'text-red-600'}`}>
+                        Total: {weightsTotal.toFixed(2)} {weightsValid ? '✓' : '(must = 1.0)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-3">
+                      {(Object.keys(DEFAULT_WEIGHTS) as Array<keyof PillarWeights>).map(key => (
+                        <div key={key}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-bold text-gray-600" title={PILLAR_LABELS[key]}>{key}</span>
+                            <span className="text-xs font-mono text-gray-500">
+                              {(options.weights[key] * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={options.weights[key] * 100}
+                            onChange={e => {
+                              const newW = { ...options.weights };
+                              newW[key] = parseInt(e.target.value, 10) / 100;
+                              setOption('weights', newW);
+                            }}
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Scenario 4: Cleanup Options */}
+              {hasCleanup && (
+                <div className="border border-amber-200 bg-amber-50/30 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">4</span>
+                    Cleanup Options
+                  </h4>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={options.dryRun}
+                      onChange={e => setOption('dryRun', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    Dry Run (preview only — do not delete)
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 ml-6">
+                    Shows what would be deleted without actually removing any data
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Controls row */}

@@ -19,6 +19,8 @@ from models import CustomerWorkflowConfig, FeatureToggle
 from auth_middleware import get_current_customer_id
 from sqlalchemy import and_, or_, func, text
 import logging
+import shutil
+from pathlib import Path
 from datetime import datetime
 
 # Optional imports
@@ -188,6 +190,28 @@ def cleanup_customer(customer_id):
                 }), 500
         else:
             db.session.rollback()  # Rollback dry-run changes
+
+        # ================================================================
+        # FILESYSTEM CLEANUP (journey files, CSVs, generated scripts)
+        # ================================================================
+        files_removed = False
+        verticals_base = Path(__file__).parent / 'verticals'
+        # Customer directories follow pattern: customer{id}-dc2_s
+        for pattern in [f'customer{customer_id}-*', f'customer{customer_id}_*']:
+            for cust_dir in verticals_base.glob(pattern):
+                if cust_dir.is_dir():
+                    if dry_run:
+                        logger.info(f"  (DRY RUN) Would remove directory: {cust_dir}")
+                        deletion_count['filesystem'] = deletion_count.get('filesystem', 0) + 1
+                    else:
+                        try:
+                            shutil.rmtree(cust_dir)
+                            logger.info(f"  ✓ Removed customer directory: {cust_dir}")
+                            deletion_count['filesystem'] = deletion_count.get('filesystem', 0) + 1
+                            files_removed = True
+                        except Exception as e:
+                            logger.warning(f"  Failed to remove {cust_dir}: {e}")
+                            errors.append(f"Filesystem cleanup: {e}")
 
         # ================================================================
         # VERIFICATION (Check for orphans)

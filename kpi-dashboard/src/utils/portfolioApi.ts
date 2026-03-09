@@ -246,7 +246,7 @@ export async function listPortfolioCompanies(portfolioId: number): Promise<{
 
 /** Add a company to a portfolio */
 export async function addPortfolioCompany(portfolioId: number, data: {
-  customer_id: number;
+  customer_id: number | string;
   vertical?: string;
   status?: string;
   role?: string;

@@ -173,20 +173,12 @@ const IndustryContextPanel: React.FC<IndustryContextPanelProps> = ({
 // ============================================================================
 
 function getHealthStatus(healthScore: number) {
-  if (healthScore >= 80) {
+  if (healthScore >= 70) {
     return {
-      label: 'Excellent',
+      label: 'Healthy',
       icon: '🟢',
       bgColor: 'bg-green-100',
       textColor: 'text-green-800',
-      description: 'Customer is thriving with strong performance across all metrics.'
-    };
-  } else if (healthScore >= 70) {
-    return {
-      label: 'Healthy',
-      icon: '✅',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700',
       description: 'Customer is performing well. Continue current engagement strategy.'
     };
   } else if (healthScore >= 50) {
@@ -199,7 +191,7 @@ function getHealthStatus(healthScore: number) {
     };
   } else {
     return {
-      label: 'Crisis',
+      label: 'Critical',
       icon: '🚨',
       bgColor: 'bg-red-100',
       textColor: 'text-red-800',
@@ -211,7 +203,7 @@ function getHealthStatus(healthScore: number) {
 function getRecommendations(week: WeekData): string[] {
   const recommendations: string[] = [];
   
-  // Health-based recommendations
+  // Health-based recommendations: critical (<50), at-risk (50-70), healthy (>=70)
   if (week.health_score < 50) {
     recommendations.push('Schedule immediate executive call to address critical issues');
     recommendations.push('Activate war room for incident resolution');

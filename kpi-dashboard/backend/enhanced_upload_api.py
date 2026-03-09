@@ -165,6 +165,20 @@ def upload_excel_enhanced():
         # Publish event for automatic RAG rebuild
         event_manager.publish_kpi_upload(customer_id, upload_id, len(kpi_data))
         
+        # Activity log: high-value upload event (low volume)
+        try:
+            from activity_logging import activity_logger
+            activity_logger.log_upload(
+                customer_id=customer_id,
+                user_id=user_id,
+                upload_type="kpi",
+                filename=upload.original_filename or file.filename or "upload",
+                upload_id=upload_id,
+                status="success",
+            )
+        except Exception as e:
+            logger.warning("Activity log upload failed: %s", e)
+        
         return jsonify({
             'upload_id': upload_id,
             'version': new_version,

@@ -431,11 +431,11 @@ def build_datacenter_config() -> VerticalConfig:
     }
 
     cfg.health_score.pillar_weights = {
-        "AI": 0.20,
-        "CH": 0.25,
-        "DV": 0.20,
-        "EX": 0.15,
-        "OS": 0.20,
+        "P3": 0.20,
+        "P4": 0.25,
+        "P1": 0.20,
+        "P5": 0.15,
+        "P2": 0.20,
     }
 
     # DC playbook trigger adjustments

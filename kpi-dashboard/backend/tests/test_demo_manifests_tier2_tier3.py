@@ -333,8 +333,7 @@ class TestTier2_KPIData:
         """KPI pillar codes should be from the DC2_S set."""
         with seeded_app.app_context():
             pillars = db.session.query(DC2SKPI.pillar).distinct().all()
-            valid = {'AI', 'CH', 'DV', 'EX', 'OS',
-                     'P1', 'P2', 'P3', 'P4', 'P5'}
+            valid = {'P1', 'P2', 'P3', 'P4', 'P5'}
             for (p,) in pillars:
                 assert p in valid, f"Unexpected pillar code: {p}"
 

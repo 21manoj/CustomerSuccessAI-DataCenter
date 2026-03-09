@@ -30,7 +30,7 @@ import {
 // ============================================================
 
 interface Tenant {
-  tenant_id: number;
+  tenant_id: number | string;
   tenant_name: string;
   health_score: number;
   status: 'healthy' | 'at_risk' | 'critical';
@@ -41,6 +41,8 @@ interface Tenant {
     assigned_csm?: string;
     products_used?: string;
   };
+  pillar_scores?: Record<string, number>;
+  enabled_pillars?: string[];
 }
 
 interface PillarScore {
@@ -48,6 +50,7 @@ interface PillarScore {
   name: string;
   score: number;
   weight: number;
+  enabled: boolean;
 }
 
 interface TenantPlacardProps {
@@ -64,31 +67,30 @@ const DCTenantPlacard: React.FC<TenantPlacardProps> = ({ tenant }) => {
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
-  useEffect(() => {
-    fetchPillarScores();
-  }, [tenant.tenant_id]);
-
-  const fetchPillarScores = async () => {
-    try {
-      setLoading(true);
-      // TODO: Replace with actual API endpoint when available
-      // For now, use default pillar structure
-      const defaultPillars: PillarScore[] = [
-        { pillar: 'P1', name: 'Deployment Velocity', score: 85, weight: 0.15 },
-        { pillar: 'P2', name: 'Operational Stability', score: 45, weight: 0.20 },
-        { pillar: 'P3', name: 'AI Workload Performance', score: 78, weight: 0.25 },
-        { pillar: 'P4', name: 'Channel & Partner Health', score: 82, weight: 0.15 },
-        { pillar: 'P5', name: 'Expansion Readiness', score: 68, weight: 0.25 },
-      ];
-      
-      // TODO: Fetch from /api/journey/:accountId/pillars when available
-      setPillarScores(defaultPillars);
-    } catch (err) {
-      console.error('Error fetching pillar scores:', err);
-    } finally {
-      setLoading(false);
-    }
+  // All 5 pillars with metadata; score comes from API, enabled from config
+  const PILLAR_META: Record<string, { name: string; weight: number }> = {
+    P1: { name: 'Deployment Velocity', weight: 0.15 },
+    P2: { name: 'Operational Stability', weight: 0.20 },
+    P3: { name: 'AI Workload Performance', weight: 0.25 },
+    P4: { name: 'Channel & Partner Health', weight: 0.15 },
+    P5: { name: 'Expansion Readiness', weight: 0.25 },
   };
+
+  useEffect(() => {
+    const enabledSet = new Set(tenant.enabled_pillars || Object.keys(PILLAR_META));
+    const apiScores = tenant.pillar_scores || {};
+
+    const pillars: PillarScore[] = Object.entries(PILLAR_META).map(([code, meta]) => ({
+      pillar: code,
+      name: meta.name,
+      score: Math.round(apiScores[code] ?? 0),
+      weight: meta.weight,
+      enabled: enabledSet.has(code),
+    }));
+
+    setPillarScores(pillars);
+    setLoading(false);
+  }, [tenant.tenant_id, tenant.pillar_scores, tenant.enabled_pillars]);
 
   const getHealthColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -165,7 +167,7 @@ const DCTenantPlacard: React.FC<TenantPlacardProps> = ({ tenant }) => {
             <p className="text-sm font-medium text-gray-700 mb-3">Pillar Scores</p>
             <div className="grid grid-cols-5 gap-3">
               {pillarScores.map((pillar) => (
-                <div key={pillar.pillar} className="text-center">
+                <div key={pillar.pillar} className={`text-center ${!pillar.enabled ? 'opacity-30' : ''}`}>
                   <div className="relative w-16 h-16 mx-auto mb-2">
                     <svg className="transform -rotate-90 w-16 h-16">
                       <circle
@@ -176,23 +178,29 @@ const DCTenantPlacard: React.FC<TenantPlacardProps> = ({ tenant }) => {
                         strokeWidth="4"
                         fill="none"
                       />
-                      <circle
-                        cx="32"
-                        cy="32"
-                        r="28"
-                        stroke={pillar.score >= 80 ? '#10b981' : pillar.score >= 50 ? '#f59e0b' : '#ef4444'}
-                        strokeWidth="4"
-                        fill="none"
-                        strokeDasharray={`${(pillar.score / 100) * 175.9} 175.9`}
-                        strokeLinecap="round"
-                      />
+                      {pillar.enabled && (
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          stroke={pillar.score >= 70 ? '#10b981' : pillar.score >= 50 ? '#f59e0b' : '#ef4444'}
+                          strokeWidth="4"
+                          fill="none"
+                          strokeDasharray={`${(pillar.score / 100) * 175.9} 175.9`}
+                          strokeLinecap="round"
+                        />
+                      )}
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-xs font-bold text-gray-900">{pillar.score}</span>
+                      <span className={`text-xs font-bold ${pillar.enabled ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {pillar.enabled ? pillar.score : '—'}
+                      </span>
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-gray-700">{pillar.pillar}</p>
-                  <p className="text-xs text-gray-500">{pillar.name}</p>
+                  <p className={`text-xs font-medium ${pillar.enabled ? 'text-gray-700' : 'text-gray-400'}`}>{pillar.pillar}</p>
+                  <p className={`text-xs ${pillar.enabled ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {pillar.name}{!pillar.enabled ? ' (disabled)' : ''}
+                  </p>
                 </div>
               ))}
             </div>

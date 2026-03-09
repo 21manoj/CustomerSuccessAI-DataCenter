@@ -10,5 +10,6 @@ kpi_dashboard.db
 *_CREDENTIALS*.txt
 .env
 .env.*
+*.pem
 __pycache__/
 *.pyc

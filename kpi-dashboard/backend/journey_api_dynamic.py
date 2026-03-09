@@ -185,17 +185,8 @@ def convert_to_weekly_format(journey_data, account_id=None):
 
 
 def _normalize_kpi_code_for_journey(kpi_code, dc2s_kpis):
-    """Map AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes for DC2S_KPIS lookup."""
-    if kpi_code in dc2s_kpis:
-        return kpi_code
-    if "-" in str(kpi_code):
-        parts = str(kpi_code).split("-", 1)
-        if len(parts) == 2 and parts[0] in ("AI", "CH", "DV", "EX", "OS"):
-            catalog = {"AI": "P3", "CH": "P4", "DV": "P1", "EX": "P5", "OS": "P2"}
-            lookup = catalog.get(parts[0], "") + "-" + parts[1]
-            if lookup in dc2s_kpis:
-                return lookup
-    return None
+    """Validate kpi_code exists in dc2s_kpis. Returns kpi_code or None."""
+    return kpi_code if kpi_code in dc2s_kpis else None
 
 
 def _kpi_normalized_score(kpi_code, value, dc2s_kpis):
@@ -322,6 +313,168 @@ def get_account_name(customer_id, account_id):
     
     return f'Account {account_id}'
 
+# ─── DB-based Journey Storage ─────────────────────────────────────
+def _load_journey_from_db(customer_id, account_id):
+    """Load journey data from the journey_data table (preferred source)."""
+    try:
+        from extensions import db
+        from models import JourneyData
+        row = JourneyData.query.filter_by(
+            customer_id=int(customer_id),
+            account_id=int(account_id)
+        ).first()
+        if row and row.journey_json:
+            return row.journey_json
+    except Exception as e:
+        # Table might not exist yet; fall through silently
+        import traceback
+        current_app.logger.debug(f"DB journey load failed (non-fatal): {e}")
+    return None
+
+
+def _save_journey_to_db(customer_id, account_id, journey_data):
+    """Save journey data to the journey_data table (upsert)."""
+    try:
+        from extensions import db
+        from models import JourneyData
+        existing = JourneyData.query.filter_by(
+            customer_id=int(customer_id),
+            account_id=int(account_id)
+        ).first()
+        if existing:
+            existing.journey_json = journey_data
+            existing.total_weeks = journey_data.get('total_weeks')
+            existing.journey_pattern = journey_data.get('pattern', journey_data.get('journey_pattern'))
+            existing.updated_at = datetime.utcnow()
+        else:
+            row = JourneyData(
+                customer_id=int(customer_id),
+                account_id=int(account_id),
+                journey_json=journey_data,
+                total_weeks=journey_data.get('total_weeks'),
+                journey_pattern=journey_data.get('pattern', journey_data.get('journey_pattern')),
+            )
+            db.session.add(row)
+        db.session.commit()
+        current_app.logger.info(f"Journey data saved to DB for account {account_id}")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"Failed to save journey to DB (non-fatal): {e}")
+
+
+def _generate_journey_from_kpi_data(customer_id, account_id):
+    """
+    Auto-generate journey data from existing dc2s_kpis measurements.
+    Creates a weekly journey timeline from raw KPI data — no Wizard A needed.
+    """
+    try:
+        from extensions import db
+        from models import DC2SKPI, Account
+        from sqlalchemy import func
+        import random
+
+        account = Account.query.filter_by(
+            account_id=int(account_id),
+            customer_id=int(customer_id)
+        ).first()
+        if not account:
+            return None
+
+        # Get date range of KPI data
+        date_range = db.session.query(
+            func.min(DC2SKPI.measured_at),
+            func.max(DC2SKPI.measured_at),
+            func.count(DC2SKPI.kpi_id)
+        ).filter(DC2SKPI.account_id == int(account_id)).first()
+
+        if not date_range or not date_range[0] or date_range[2] == 0:
+            return None
+
+        min_date, max_date, total_records = date_range
+        total_days = (max_date - min_date).days + 1
+        total_weeks = max(total_days // 7, 1)
+
+        # Get all KPI data grouped by week
+        all_kpis = DC2SKPI.query.filter(
+            DC2SKPI.account_id == int(account_id)
+        ).order_by(DC2SKPI.measured_at.asc()).all()
+
+        # Group KPIs by week
+        weeks_data = defaultdict(lambda: defaultdict(list))
+        for kpi in all_kpis:
+            week_num = (kpi.measured_at - min_date).days // 7
+            weeks_data[week_num][kpi.kpi_code].append(float(kpi.value))
+
+        # Build journey phases based on health trajectory
+        phases = ['deployment', 'stabilization', 'optimization', 'expansion']
+        phase_boundaries = [0, total_weeks // 4, total_weeks // 2, 3 * total_weeks // 4, total_weeks]
+
+        # Build journey events (same format as Wizard A output)
+        events = []
+        prev_health = 50
+        for week_num in range(total_weeks):
+            week_kpis = weeks_data.get(week_num, {})
+
+            # Calculate health score for this week
+            kpi_scores = []
+            kpi_details = {}
+            for kpi_code, values in week_kpis.items():
+                avg_val = sum(values) / len(values)
+                kpi_details[kpi_code] = round(avg_val, 2)
+                # Simplified score: percentage of target (assume target ~85)
+                kpi_scores.append(min(100, avg_val / 85 * 100))
+
+            health_score = sum(kpi_scores) / len(kpi_scores) if kpi_scores else prev_health
+
+            # Determine phase
+            phase = phases[0]
+            for i in range(len(phases)):
+                if phase_boundaries[i] <= week_num < phase_boundaries[i + 1]:
+                    phase = phases[i]
+                    break
+
+            week_start = min_date + timedelta(weeks=week_num)
+            events.append({
+                'week_number': week_num + 1,
+                'date': week_start.strftime('%Y-%m-%d'),
+                'event_type': 'kpi_update',
+                'description': f'Week {week_num + 1} KPI update ({len(kpi_details)} KPIs)',
+                'health_score_before': round(prev_health, 1),
+                'health_score_after': round(health_score, 1),
+                'phase': phase,
+                'sentiment': 'positive' if health_score >= prev_health else 'negative',
+                'kpis': kpi_details,
+            })
+            prev_health = health_score
+
+        # Build journey JSON (compatible with Wizard A format)
+        journey_data = {
+            'account_id': int(account_id),
+            'account_name': account.account_name,
+            'customer_id': int(customer_id),
+            'total_weeks': total_weeks,
+            'start_date': min_date.strftime('%Y-%m-%d'),
+            'end_date': max_date.strftime('%Y-%m-%d'),
+            'starting_health': events[0]['health_score_after'] if events else 50,
+            'ending_health': events[-1]['health_score_after'] if events else 50,
+            'journey_pattern': 'auto_generated',
+            'generator_version': '2.0_db',
+            'phases': phases,
+            'events': events,
+        }
+
+        current_app.logger.info(
+            f"Auto-generated journey data for account {account_id}: "
+            f"{total_weeks} weeks, {total_records} KPI records"
+        )
+        return journey_data
+
+    except Exception as e:
+        import traceback
+        current_app.logger.warning(f"Journey auto-generation failed: {e}\n{traceback.format_exc()}")
+        return None
+
+
 # Create dynamic blueprint
 journey_dynamic_api = Blueprint('journey_dynamic_api', __name__, url_prefix='/api/journey')
 
@@ -329,11 +482,11 @@ journey_dynamic_api = Blueprint('journey_dynamic_api', __name__, url_prefix='/ap
 def get_journey_dynamic(account_id):
     """
     Dynamic journey endpoint - works for ANY customer!
-    Uses account's actual customer_id from DB when available (fixes accounts like 10003
-    where account_id // 1000 would be wrong). Falls back to derived customer_id otherwise.
+    Priority: 1) DB (journey_data table), 2) Filesystem (legacy JSON files).
+    Uses account's actual customer_id from DB when available.
     """
     try:
-        # Prefer customer_id from the account record so we look in the right vertical folder
+        # Prefer customer_id from the account record
         customer_id = None
         try:
             from auth_middleware import get_current_customer_id
@@ -350,21 +503,33 @@ def get_journey_dynamic(account_id):
             pass
         if customer_id is None:
             customer_id = get_customer_from_account(account_id)
-        
-        # Find journey file (try resolved customer_id first, then derived)
-        journey_file = find_journey_file(customer_id, account_id)
-        if not journey_file and customer_id != get_customer_from_account(account_id):
-            journey_file = find_journey_file(get_customer_from_account(account_id), account_id)
-        
-        if not journey_file:
+
+        # ── Priority 1: Load from DB (journey_data table) ──
+        journey_data = _load_journey_from_db(customer_id, int(account_id))
+
+        # ── Priority 2: Fallback to filesystem (legacy JSON files) ──
+        if not journey_data:
+            journey_file = find_journey_file(customer_id, account_id)
+            if not journey_file and customer_id != get_customer_from_account(account_id):
+                journey_file = find_journey_file(get_customer_from_account(account_id), account_id)
+
+            if journey_file:
+                journey_data = load_journey_data(journey_file)
+                # Migrate to DB for future reads
+                _save_journey_to_db(customer_id, int(account_id), journey_data)
+
+        # ── Priority 3: Auto-generate from dc2s_kpis data ──
+        if not journey_data:
+            journey_data = _generate_journey_from_kpi_data(customer_id, int(account_id))
+            if journey_data:
+                _save_journey_to_db(customer_id, int(account_id), journey_data)
+
+        if not journey_data:
             return jsonify({
                 'error': f'Account {account_id} journey data not found',
                 'customer_id': customer_id,
-                'message': 'No journey JSON file found for this account. This account may not have journey data generated yet. Has Wizard A been run?'
+                'message': 'No journey data available for this account. Data may still be loading.'
             }), 404
-        
-        # Load journey data
-        journey_data = load_journey_data(journey_file)
         
         # Convert to weekly format
         weekly_data, start_date = convert_to_weekly_format(journey_data, account_id)

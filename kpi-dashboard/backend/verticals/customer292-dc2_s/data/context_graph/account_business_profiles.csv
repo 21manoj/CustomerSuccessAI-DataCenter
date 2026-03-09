@@ -1,0 +1,11 @@
+account_id,arr,industry,employee_count,fiscal_year_end,tech_stack,cloud_provider,competitive_landscape,strategic_initiatives,budget_cycle
+292001,2692204.44,Technology,5000,June,NVIDIA H100 + vSphere,Hybrid (AWS + On-Prem),None identified,"[""AI/ML model training at scale"", ""Edge compute expansion""]",Q1 (Jan-Mar)
+292002,1800884.35,Manufacturing,1000,September,AMD MI300X + Slurm,On-Premises Only,Lenovo ThinkSystem,"[""Multi-cloud strategy"", ""Real-time inference deployment"", ""Edge compute expansion""]",Q3 (Jul-Sep)
+292003,2166000.79,Manufacturing,2500,September,Custom GPU Cluster + Ray,On-Premises Only,None identified,"[""AI/ML model training at scale"", ""Data center modernization""]",Q2 (Apr-Jun)
+292004,3052242.08,Media,25000,December,NVIDIA DGX + Kubernetes,Hybrid (AWS + On-Prem),HPE ProLiant,"[""Data center modernization"", ""Real-time inference deployment""]",Q2 (Apr-Jun)
+292005,1180963.96,Technology,10000,March,NVIDIA H100 + vSphere,Hybrid (Azure + On-Prem),Lenovo ThinkSystem,"[""Real-time inference deployment"", ""Generative AI adoption""]",Q2 (Apr-Jun)
+292006,4859563.36,Technology,10000,December,Custom GPU Cluster + Ray,Multi-Cloud Hybrid,None identified,"[""Edge compute expansion"", ""AI/ML model training at scale"", ""Sustainability & power efficiency""]",Q2 (Apr-Jun)
+292007,2435650.51,Media,2500,December,Mixed GPU + OpenShift,On-Premises Only,Lenovo ThinkSystem,"[""Generative AI adoption"", ""Multi-cloud strategy"", ""Data center modernization"", ""AI/ML model training at scale""]",Q3 (Jul-Sep)
+292008,1698219.1,Manufacturing,5000,December,NVIDIA H100 + vSphere,Hybrid (Azure + On-Prem),None identified,"[""Data center modernization"", ""Edge compute expansion"", ""Real-time inference deployment"", ""Sustainability & power efficiency""]",Q3 (Jul-Sep)
+292009,4385144.39,Retail,5000,September,NVIDIA H100 + vSphere,Multi-Cloud Hybrid,Lenovo ThinkSystem,"[""Edge compute expansion"", ""Generative AI adoption"", ""AI/ML model training at scale""]",Q3 (Jul-Sep)
+292010,3932731.87,Financial Services,5000,September,Custom GPU Cluster + Ray,On-Premises Only,None identified,"[""Data center modernization"", ""Edge compute expansion"", ""Real-time inference deployment""]",Q3 (Jul-Sep)

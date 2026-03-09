@@ -59,7 +59,7 @@ def _generate_run_id() -> str:
     return datetime.now().strftime('run_%Y%m%d_%H%M%S')
 
 
-def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, base_url: str):
+def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, base_url: str, options: Dict[str, Any] = None):
     """
     Execute a single scenario via subprocess and update _runs state.
     Called from a background thread.
@@ -88,6 +88,23 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
             '--output-dir', str(output_dir),
             '--verbose'
         ]
+
+        # Append advanced options as CLI flags (from UI Advanced Options panel)
+        if options:
+            if options.get('num_accounts'):
+                cmd.extend(['--num-accounts', str(int(options['num_accounts']))])
+            if options.get('dry_run'):
+                cmd.append('--dry-run')
+            if options.get('seed') is not None:
+                cmd.extend(['--seed', str(int(options['seed']))])
+            if options.get('industry'):
+                cmd.extend(['--industry', str(options['industry'])])
+            if options.get('onboarding_mode'):
+                cmd.extend(['--onboarding-mode', str(options['onboarding_mode'])])
+            if options.get('showcase_pattern_mix'):
+                cmd.extend(['--showcase-pattern-mix', json.dumps(options['showcase_pattern_mix'])])
+            if options.get('weights'):
+                cmd.extend(['--weights', json.dumps(options['weights'])])
 
         logger.info(f"[{run_id}] Starting scenario {scenario_id}: {' '.join(cmd)}")
 
@@ -154,10 +171,10 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
         logger.error(f"[{run_id}] Scenario {scenario_id} error: {e}")
 
 
-def _run_all_scenarios(run_id: str, scenario_ids: list, customer_id: int, base_url: str):
+def _run_all_scenarios(run_id: str, scenario_ids: list, customer_id: int, base_url: str, options: Dict[str, Any] = None):
     """Run scenarios sequentially in a background thread."""
     for scenario_id in scenario_ids:
-        _run_scenario_subprocess(run_id, scenario_id, customer_id, base_url)
+        _run_scenario_subprocess(run_id, scenario_id, customer_id, base_url, options)
 
     # Mark run as completed
     with _runs_lock:
@@ -252,6 +269,19 @@ def start_run():
     # Determine base URL (the backend itself)
     base_url = data.get('base_url', 'http://localhost:5059')
 
+    # Advanced options from UI (num_accounts, dry_run, seed, industry, etc.)
+    options = data.get('options', {})
+
+    # Entitlement check: filter advanced options based on customer tier
+    stripped_options = []
+    try:
+        from entitlements import filter_test_runner_options
+        options, stripped_options = filter_test_runner_options(int(customer_id), options)
+        if stripped_options:
+            logger.info(f"Entitlement gate: stripped advanced options {stripped_options} for customer {customer_id}")
+    except ImportError:
+        pass  # entitlements module not available — allow all options
+
     run_id = _generate_run_id()
 
     run_entry = {
@@ -273,6 +303,7 @@ def start_run():
             for sid in scenario_ids
         ],
         'summary': None,
+        'options': options,  # Store for observability in status responses
     }
 
     with _runs_lock:
@@ -281,7 +312,7 @@ def start_run():
     # Spawn background thread
     t = threading.Thread(
         target=_run_all_scenarios,
-        args=(run_id, scenario_ids, customer_id, base_url),
+        args=(run_id, scenario_ids, customer_id, base_url, options),
         daemon=True
     )
     t.start()

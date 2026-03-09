@@ -2,6 +2,7 @@
   "_description": "Power of 1 economic model — configurable via Settings UI. All dollar values in USD.",
   "_arr_base": 10000000,
   "_note": "annual_impact_per_pct, total_investment, cs_initiative_cost, platform_cost are per-1%-improvement at the ARR base above",
+  "_arr_basis_note": "All dollar values (impacts, investments, scaling_scenarios) are calibrated at _arr_base=$10M. When used via MCP tools or API, the engine auto-scales by arr_scale = actual_arr / 10_000_000. The returned 'arr_basis' field indicates whether the value was scaled ('explicit') or used the $10M baseline ('baseline_10m').",
 
   "metrics": {
     "TTFV": {
@@ -75,7 +76,7 @@
       "primary_pillar": "business_outcomes",
       "secondary_pillars": ["usage_onboarding", "relationship_strength"],
       "linked_playbooks": ["expansion-accelerator", "voc-sprint"],
-      "linked_kpi_codes": ["EX-KPI1", "EX-KPI2", "CH-KPI3"],
+      "linked_kpi_codes": ["P5-KPI1", "P5-KPI2", "P4-KPI3"],
       "total_hours": 1000,
       "quarters": ["Q2", "Q3"],
       "impact_breakdown": {
@@ -130,7 +131,7 @@
       "primary_pillar": "business_outcomes",
       "secondary_pillars": ["support_engagement", "customer_sentiment"],
       "linked_playbooks": ["renewal-safeguard", "sla-stabilizer"],
-      "linked_kpi_codes": ["CH-KPI1", "CH-KPI2", "OS-KPI3"],
+      "linked_kpi_codes": ["P4-KPI1", "P4-KPI2", "P2-KPI3"],
       "total_hours": 1280,
       "quarters": ["Q1", "Q2", "Q3", "Q4"],
       "impact_breakdown": {
@@ -185,7 +186,7 @@
       "primary_pillar": "support_engagement",
       "secondary_pillars": ["customer_sentiment"],
       "linked_playbooks": ["sla-stabilizer"],
-      "linked_kpi_codes": ["OS-KPI1", "OS-KPI2"],
+      "linked_kpi_codes": ["P2-KPI1", "P2-KPI2"],
       "total_hours": 840,
       "quarters": ["Q2", "Q3"],
       "impact_breakdown": {
@@ -240,7 +241,7 @@
       "primary_pillar": "usage_onboarding",
       "secondary_pillars": ["customer_sentiment"],
       "linked_playbooks": ["activation-blitz"],
-      "linked_kpi_codes": ["AI-KPI2", "AI-KPI3", "DV-KPI1"],
+      "linked_kpi_codes": ["P3-KPI2", "P3-KPI3", "P1-KPI1"],
       "total_hours": 800,
       "quarters": ["Q3", "Q4"],
       "impact_breakdown": {
@@ -295,7 +296,7 @@
       "primary_pillar": "business_outcomes",
       "secondary_pillars": ["usage_onboarding", "relationship_strength"],
       "linked_playbooks": ["expansion-accelerator"],
-      "linked_kpi_codes": ["EX-KPI1", "EX-KPI3"],
+      "linked_kpi_codes": ["P5-KPI1", "P5-KPI3"],
       "total_hours": 640,
       "quarters": ["Q3", "Q4"],
       "impact_breakdown": {

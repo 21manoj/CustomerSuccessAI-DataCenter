@@ -65,7 +65,7 @@ def create_customer_config(customer_id, num_enabled_kpis=15):
     kpis_per_pillar = num_enabled_kpis // 5
     extra_kpis = num_enabled_kpis % 5
     
-    for i, pillar in enumerate(['AI', 'CH', 'DV', 'EX', 'OS']):
+    for i, pillar in enumerate(['P1', 'P2', 'P3', 'P4', 'P5']):
         pillar_kpis = [k['code'] for k in all_kpis if k['pillar'] == pillar]
         
         # Add extra KPI to first pillars if not evenly divisible
@@ -78,11 +78,11 @@ def create_customer_config(customer_id, num_enabled_kpis=15):
         vertical='dc2_s',
         dc2s_enabled_kpis=enabled_kpis,
         dc2s_pillar_weights={
-            'AI': 0.25,
-            'CH': 0.20,
-            'DV': 0.15,
-            'EX': 0.20,
-            'OS': 0.20
+            'P1': 0.15,
+            'P2': 0.20,
+            'P3': 0.25,
+            'P4': 0.15,
+            'P5': 0.25
         }
     )
     db.session.add(config)

@@ -38,8 +38,9 @@ elif env == 'testing':
 else:
     app.config.from_object('config.DevelopmentConfig')
 
-# Enable debug mode for better error messages
-app.config['DEBUG'] = True
+# DEBUG: from env; default true in development, false in production
+_default_debug = 'true' if os.getenv('FLASK_ENV') != 'production' else 'false'
+app.config['DEBUG'] = os.getenv('FLASK_DEBUG', _default_debug).lower() == 'true'
 
 # Database configuration - USE POSTGRESQL (no more SQLite!)
 database_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
@@ -75,8 +76,9 @@ else:
     limiter = None
     print("⚠️  flask-limiter not installed, rate limiting disabled")
 
-# Ensure sessions table exists before initializing Flask-Session
+# Ensure sessions table (and all app tables) exist before initializing Flask-Session
 with app.app_context():
+    from models import JourneyData  # ensure journey_data table is created by create_all
     db.create_all()  # This will create the sessions table if it doesn't exist
 
 # Initialize Flask-Session (database-backed sessions)
@@ -165,8 +167,13 @@ import models
 import models_action_interface  # Phase 1 — Action Interface tables
 from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig
 
-# Register only essential APIs
-from upload_api import upload_api
+# Register only essential APIs (legacy upload_api may be absent; V2/V3 used when available)
+try:
+    from upload_api import upload_api as upload_api_legacy
+    HAS_LEGACY_UPLOAD_API = True
+except ImportError:
+    upload_api_legacy = None
+    HAS_LEGACY_UPLOAD_API = False
 from kpi_api import kpi_api
 from download_api import download_api
 from data_management_api import data_management_api
@@ -207,12 +214,24 @@ from rehydration_api import rehydration_api
 from data_quality_api import data_quality_api
 from customer_profile_api import customer_profile_api
 from enhanced_upload_api import enhanced_upload_api
-from enhanced_rag_openai_api import enhanced_rag_openai_api
+try:
+    from enhanced_rag_openai_api import enhanced_rag_openai_api
+    HAS_ENHANCED_RAG_OPENAI_API = True
+except ImportError as e:
+    enhanced_rag_openai_api = None
+    HAS_ENHANCED_RAG_OPENAI_API = False
+    print(f"⚠️  enhanced_rag_openai_api not available (e.g. faiss missing): {e}")
 from secure_file_api import secure_file_api
 from master_file_api import master_file_api
 from account_snapshot_api import account_snapshot_api
 from admin_cleanup_api import admin_cleanup_api
-from wizard_blueprint import wizard_bp
+try:
+    from wizard_blueprint import wizard_bp
+    HAS_WIZARD_BP = True
+except ImportError as e:
+    wizard_bp = None
+    HAS_WIZARD_BP = False
+    print(f"⚠️  wizard_blueprint not available (e.g. celery missing): {e}")
 # Config-aware onboarding API (V2)
 try:
     from onboarding_api_v2_config_aware import onboarding_api as onboarding_api_v2
@@ -301,9 +320,11 @@ if UPLOAD_API_V3_AVAILABLE:
 elif UPLOAD_API_V2_AVAILABLE:
     app.register_blueprint(upload_api_v2, url_prefix='/api')
     print("⚠️  Registered Config-Aware Upload API V2: /api/upload/* (V3 not available, using V2)")
-else:
-    app.register_blueprint(upload_api)
+elif HAS_LEGACY_UPLOAD_API:
+    app.register_blueprint(upload_api_legacy)
     print("⚠️  Registered Upload API (legacy) - V3 and V2 not available")
+else:
+    print("⚠️  No upload API module found (V3/V2/legacy); upload routes may be missing")
 app.register_blueprint(enhanced_upload_api)
 app.register_blueprint(kpi_api)
 app.register_blueprint(download_api)
@@ -336,6 +357,17 @@ app.register_blueprint(export_api)
 app.register_blueprint(rehydration_api)
 app.register_blueprint(account_snapshot_api)
 app.register_blueprint(admin_cleanup_api)
+
+# Data Ingestion API — Ring 1 generic endpoints for n8n / external integrations
+try:
+    from data_ingestion_api import data_ingestion_api
+    app.register_blueprint(data_ingestion_api)
+    print("✅ Registered Data Ingestion API: /api/data-ingestion/*")
+    print("   - POST /api/data-ingestion/kpis (source-agnostic KPI ingest)")
+    print("   - POST /api/data-ingestion/signals (qualitative signals)")
+    print("   - POST /api/data-ingestion/contacts (champion/contact updates)")
+except ImportError as e:
+    print(f"⚠️  data_ingestion_api not available: {e}")
 
 # Test Runner API (drives load-driver scenarios from UI)
 try:
@@ -370,7 +402,8 @@ except ImportError as e:
 app.register_blueprint(openai_key_api)
 app.register_blueprint(data_quality_api)
 app.register_blueprint(customer_profile_api)
-app.register_blueprint(enhanced_rag_openai_api)
+if HAS_ENHANCED_RAG_OPENAI_API:
+    app.register_blueprint(enhanced_rag_openai_api)
 app.register_blueprint(master_file_api)
 
 # Register Revenue Intelligence API if available
@@ -393,6 +426,23 @@ try:
     print("✅ Registered Outcome ROI API: /api/outcome-roi/*")
 except ImportError as e:
     print(f"⚠️  Warning: Outcome ROI API not available: {e}")
+
+# Register Context Graph API (graph traversal + revenue intelligence)
+try:
+    from context_graph_api import context_graph_api
+    app.register_blueprint(context_graph_api)
+    print("✅ Registered Context Graph API: /api/context-graph/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Context Graph API not available: {e}")
+
+
+# Register Story Arc API (story arc manifests for revenue intelligence)
+try:
+    from story_arc_api import story_arc_api
+    app.register_blueprint(story_arc_api)
+    print("✅ Registered Story Arc API: /api/story-arcs/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Story Arc API not available: {e}")
 
 # Register Signal Analyst Agent API if available
 if HAS_SIGNAL_ANALYST_API:
@@ -457,8 +507,9 @@ if limiter:
     with app.app_context():
         # Expensive compute operations
         limiter.limit("5 per minute")(app.view_functions.get('product_analytics_api.recalculate_product_health', lambda: None))
-        limiter.limit("5 per minute")(app.view_functions.get('enhanced_rag_openai_api.enhanced_query', lambda: None))
-        limiter.limit("5 per minute")(app.view_functions.get('enhanced_rag_openai_api.build_enhanced_knowledge_base', lambda: None))
+        if HAS_ENHANCED_RAG_OPENAI_API:
+            limiter.limit("5 per minute")(app.view_functions.get('enhanced_rag_openai_api.enhanced_query', lambda: None))
+            limiter.limit("5 per minute")(app.view_functions.get('enhanced_rag_openai_api.build_enhanced_knowledge_base', lambda: None))
         # Upload operations
         limiter.limit("10 per minute")(app.view_functions.get('upload_api.upload_csv', lambda: None))
         limiter.limit("10 per minute")(app.view_functions.get('enhanced_upload_api.upload_enhanced', lambda: None))
@@ -729,14 +780,21 @@ def logout():
 
 @app.route('/api/session/status', methods=['GET'])
 def session_status():
-    """Check if user is authenticated"""
+    """Check if user is authenticated — includes UUIDs for external identification"""
     if current_user.is_authenticated:
+        from models import User, Customer
+        user = db.session.get(User, current_user.user_id)
+        customer = db.session.get(Customer, current_user.customer_id) if current_user.customer_id else None
         return jsonify({
             'authenticated': True,
             'user': {
                 'user_id': current_user.user_id,
                 'email': current_user.email,
-                'customer_id': current_user.customer_id
+                'customer_id': current_user.customer_id,
+                # UUID fields
+                'customer_uuid': getattr(customer, 'uuid', None) if customer else None,
+                'user_uuid': getattr(user, 'uuid', None) if user else None,
+                'vertical': getattr(customer, 'vertical', None) if customer else None,
             }
         }), 200
     else:
@@ -749,17 +807,23 @@ def session_info():
     """
     Backwards-compat endpoint for frontend session check.
     Mirrors /api/session/status shape with user details when authenticated.
+    Includes UUIDs for external identification.
     """
     if current_user.is_authenticated:
         from models import User, Customer
         user = db.session.get(User, current_user.user_id)
+        customer = db.session.get(Customer, current_user.customer_id) if current_user.customer_id else None
         return jsonify({
             'authenticated': True,
             'user': {
                 'user_id': user.user_id,
                 'email': user.email,
                 'user_name': user.user_name,
-                'customer_id': user.customer_id
+                'customer_id': user.customer_id,
+                # UUID fields
+                'customer_uuid': getattr(customer, 'uuid', None) if customer else None,
+                'user_uuid': getattr(user, 'uuid', None) if user else None,
+                'vertical': getattr(customer, 'vertical', None) if customer else None,
             }
         }), 200
     return jsonify({'authenticated': False}), 401
@@ -777,6 +841,31 @@ def session_refresh():
         'status': 'success',
         'expires_at': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat()
     }), 200
+# ========================================
+# UUID BACKFILL ADMIN ENDPOINT
+# ========================================
+@app.route('/api/admin/uuid-backfill', methods=['POST'])
+def trigger_uuid_backfill():
+    """
+    Admin endpoint to backfill UUIDs for all existing records.
+    Idempotent — safe to run multiple times.
+    """
+    try:
+        from uuid_backfill import backfill_uuids
+        stats = backfill_uuids()
+        return jsonify({
+            'status': 'success',
+            'message': 'UUID backfill complete',
+            'stats': stats
+        }), 200
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'message': f'UUID backfill failed: {str(e)}',
+            'traceback': traceback.format_exc()
+        }), 500
+
 # ========================================
 # GLOBAL ERROR HANDLERS
 # ========================================
@@ -840,22 +929,32 @@ def handle_exception(error):
         'status': 500
     }), 500
 
-# Request logging
+# Request logging: every API request/response to application log (method, path, status; user when available)
 @app.before_request
 def log_request_info():
-    """Log incoming requests"""
+    """Log incoming API requests (method, path)."""
     if request.path.startswith('/api/'):
         logger.info(f"API Request: {request.method} {request.path}")
 
 @app.after_request
 def log_response_info(response):
-    """Log API responses"""
+    """Log API responses (method, path, status) and user when authenticated."""
     if request.path.startswith('/api/'):
-        logger.info(f"API Response: {request.method} {request.path} -> {response.status_code}")
+        user_part = ""
+        try:
+            is_auth = current_user.is_authenticated() if callable(getattr(current_user, "is_authenticated", None)) else bool(getattr(current_user, "is_authenticated", False))
+            if is_auth:
+                user_part = f" user={getattr(current_user, 'email', None) or getattr(current_user, 'user_id', '')}"
+        except Exception:
+            pass
+        logger.info(f"API Response: {request.method} {request.path} -> {response.status_code}{user_part}")
     return response
 # Register Wizard A Blueprint (last to avoid conflicts)
-app.register_blueprint(wizard_bp)
-print("✅ Wizard A blueprint registered")
+if HAS_WIZARD_BP:
+    app.register_blueprint(wizard_bp)
+    print("✅ Wizard A blueprint registered")
+else:
+    print("⚠️  Wizard A blueprint skipped (celery/wizard_tasks not available)")
 
 # Register Onboarding API (V2 config-aware only — legacy onboarding_api removed)
 if ONBOARDING_API_V2_AVAILABLE:
@@ -911,6 +1010,22 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Approval Queue API not available: {e}")
 
+# Register Onboarding Agent API (AI-powered activation for new customers)
+try:
+    from agents.onboarding_agent_api import onboarding_agent_api
+    app.register_blueprint(onboarding_agent_api)
+    print("✅ Registered Onboarding Agent API: /api/onboarding-agent/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Onboarding Agent API not available: {e}")
+
+# Register Entitlement API (tier-based feature gating)
+try:
+    from entitlements import entitlement_api
+    app.register_blueprint(entitlement_api)
+    print("✅ Registered Entitlement API: /api/entitlements/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Entitlement API not available: {e}")
+
 # Initialize Agent Tool Registry at startup
 try:
     from agent_tool_registry import register_all_tools
@@ -935,6 +1050,17 @@ try:
     print("✅ Registered Report Generation API: /api/reports/*")
 except ImportError as e:
     print(f"⚠️  Warning: Report Generation API not available: {e}")
+
+# MCP Server status (inbound — external LLMs call into CS Pulse)
+try:
+    from feature_toggles import feature_toggles, FeatureToggle
+    if feature_toggles.is_enabled(FeatureToggle.MCP_SERVER):
+        print("✅ MCP Server enabled — external LLMs can connect via stdio or HTTP")
+        print("   Run: python backend/mcp_server/cs_pulse_mcp_server.py")
+    else:
+        print("ℹ️  MCP Server disabled (set FEATURE_MCP_SERVER=true to enable)")
+except Exception:
+    pass
 
 @app.route('/debug/routes')
 def list_routes():

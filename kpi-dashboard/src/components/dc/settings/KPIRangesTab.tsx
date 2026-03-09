@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../../utils/api';
 import { Target, Activity, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface KPIRange {
@@ -45,7 +46,7 @@ export const KPIRangesTab: React.FC = () => {
       const response = await fetch('/api/dc2s/config/kpi-ranges', {
         credentials: 'include',
         headers: {
-          'X-Customer-ID': session?.customer_id?.toString() || ''
+          'X-Customer-ID': getCustomerIdentifier(session)
         }
       });
 

@@ -1,0 +1,29 @@
+from_signal_ref,to_signal_ref,edge_type,weight,confidence,lag_days,revenue_impact,evidence,source_platform,created_by
+phase0:w3 - POC for new LLM workloads approved,phase1:w2 - GPU utilization crosses 70%,LED_TO,0.85,0.85,49,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase1:w2 - GPU utilization crosses 70%,phase1:w4 - GPU utilization hits 75% expansion threshold,LED_TO,0.9,0.9,14,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase1:w4 - GPU utilization hits 75% expansion threshold,"phase2:w2 - GPU utilization hits 85%, performance degrades",LED_TO,0.88,0.88,42,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+"phase2:w2 - GPU utilization hits 85%, performance degrades",phase2:w6 - CTO requests expansion proposal,LED_TO,0.92,0.92,28,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase2:w6 - CTO requests expansion proposal,phase3:w2 - CTO approves $5.2M expansion budget,LED_TO,0.8,0.8,28,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase3:w2 - CTO approves $5.2M expansion budget,phase4:w2 - Expansion PO signed,LED_TO,0.9,0.9,42,5200000,Causal chain: GPU Utilization to Expansion Order,csv_import,story_arc_generator
+phase1:w4 - GPU utilization hits 75% expansion threshold,phase2:w2 - Training job completion rate drops,CAUSED_BY,0.92,0.92,42,-1200000,Causal chain: Capacity Crunch to Performance Degradation,csv_import,story_arc_generator
+phase2:w2 - Training job completion rate drops,phase2:w4 - Critical GPU memory exhaustion incident,LED_TO,0.85,0.85,14,-1200000,Causal chain: Capacity Crunch to Performance Degradation,csv_import,story_arc_generator
+phase2:w4 - Critical GPU memory exhaustion incident,phase2:w6 - VP Engineering escalates to CTO,LED_TO,0.95,0.95,14,-1200000,Causal chain: Capacity Crunch to Performance Degradation,csv_import,story_arc_generator
+phase0:w1 - QBR reveals AI roadmap expansion,phase0:w3 - VP Engineering proposes POC,LED_TO,0.8,0.8,14,5200000,Causal chain: Champion Enablement to Budget Approval,csv_import,story_arc_generator
+phase1:w7 - CSM builds ROI deck for champion,phase2:w6 - VP Engineering escalates with data,INDICATES,0.85,0.85,49,5200000,Causal chain: Champion Enablement to Budget Approval,csv_import,story_arc_generator
+phase2:w6 - VP Engineering escalates with data,phase3:w2 - CTO approves $5.2M budget,LED_TO,0.88,0.88,28,5200000,Causal chain: Champion Enablement to Budget Approval,csv_import,story_arc_generator
+phase2:w4 - Critical GPU memory exhaustion incident,phase3:w5 - GPU scheduling optimization deployed,LED_TO,0.9,0.9,49,400000,Causal chain: Interim Optimization Preserves Relationship,csv_import,story_arc_generator
+phase3:w5 - GPU scheduling optimization deployed,phase4:w2 - Expansion PO signed,CORRELATES_WITH,0.75,0.75,21,400000,Causal chain: Interim Optimization Preserves Relationship,csv_import,story_arc_generator
+stakeholder:champion,decision:dec_poc_approval,INVOLVES,0.9,0.8,0,0,"{""role"": ""proposer"", ""influence"": ""high""}",csv_import,story_arc_generator
+decision:dec_poc_approval,signal:phase1:w2,LED_TO,0.85,0.8,0,0,"{""mechanism"": ""POC workloads drive GPU utilization increase"", ""lag_weeks"": 7}",csv_import,story_arc_generator
+signal:phase1:w4,signal:phase2:w2,LED_TO,0.88,0.8,0,0,"{""mechanism"": ""Continued workload growth pushes utilization past capacity"", ""kpi_driver"": ""P3-KPI1""}",csv_import,story_arc_generator
+signal:phase2:w2,signal:phase2:w4,CAUSED_BY,0.92,0.8,0,0,"{""mechanism"": ""Resource contention causes GPU memory exhaustion"", ""kpi_driver"": ""P3-KPI5""}",csv_import,story_arc_generator
+signal:phase2:w4,decision:dec_expansion_budget,LED_TO,0.95,0.8,0,0,"{""mechanism"": ""Critical incident creates urgency for expansion"", ""sentiment_impact"": ""negative_to_urgent""}",csv_import,story_arc_generator
+stakeholder:champion,decision:dec_expansion_budget,INVOLVES,0.9,0.8,0,0,"{""role"": ""advocate"", ""evidence_provider"": true}",csv_import,story_arc_generator
+stakeholder:exec_sponsor,decision:dec_expansion_budget,INVOLVES,0.95,0.8,0,0,"{""role"": ""approver"", ""budget_authority"": true}",csv_import,story_arc_generator
+decision:dec_expansion_budget,decision:dec_expansion_order,LED_TO,0.9,0.8,0,0,"{""mechanism"": ""Budget approval enables procurement"", ""lag_weeks"": 12}",csv_import,story_arc_generator
+stakeholder:decision_maker,decision:dec_expansion_order,INVOLVES,0.8,0.8,0,0,"{""role"": ""signer"", ""procurement_authority"": true}",csv_import,story_arc_generator
+decision:dec_expansion_order,outcome:out_expansion_deal,LED_TO,1.0,0.8,0,0,"{""mechanism"": ""Signed PO directly creates expansion revenue""}",csv_import,story_arc_generator
+signal:phase1:w4,outcome:out_expansion_deal,INDICATES,0.75,0.8,0,0,"{""mechanism"": ""75% GPU utilization threshold was the leading indicator of expansion"", ""lead_time_weeks"": 18}",csv_import,story_arc_generator
+outcome:out_expansion_deal,outcome:out_arr_growth,LED_TO,0.95,0.8,0,0,"{""mechanism"": ""Expansion deal directly grows ARR""}",csv_import,story_arc_generator
+stakeholder:champion,outcome:out_cs_roi,INVOLVES,0.85,0.8,0,0,"{""mechanism"": ""Champion enablement was the primary CS investment driver""}",csv_import,story_arc_generator
+signal:phase2:w4,outcome:out_churn_averted,INDICATES,0.8,0.8,0,0,"{""mechanism"": ""Critical incident nearly triggered competitive evaluation""}",csv_import,story_arc_generator

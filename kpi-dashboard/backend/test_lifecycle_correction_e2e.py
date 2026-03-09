@@ -36,6 +36,10 @@ from models import (
     DC2SKPI, KPIScore, PillarScore, HealthScore
 )
 from utils.score_calculator import ScoreCalculator, calculate_customer_scores, calculate_account_scores
+try:
+    import utils.health_thresholds as ht
+except ImportError:
+    ht = None
 
 
 # ============================================================================
@@ -54,25 +58,32 @@ from utils.score_calculator import ScoreCalculator, calculate_customer_scores, c
 # For score=90 → value=76.5; score=50 → value=42.5; score=30 → value=25.5
 
 KPI_CODES = [
-    'AI-KPI1', 'AI-KPI2',
-    'CH-KPI1', 'CH-KPI2',
-    'DV-KPI1', 'DV-KPI2',
-    'EX-KPI1', 'EX-KPI2',
-    'OS-KPI1', 'OS-KPI2',
+    'P3-KPI1', 'P3-KPI2',
+    'P4-KPI1', 'P4-KPI2',
+    'P1-KPI1', 'P1-KPI2',
+    'P5-KPI1', 'P5-KPI2',
+    'P2-KPI1', 'P2-KPI2',
 ]
 
-PILLAR_CODES = ['AI', 'CH', 'DV', 'EX', 'OS']
+PILLAR_CODES = ['P3', 'P4', 'P1', 'P5', 'P2']
 
-# Pillar weights for the test customer (must sum to 1.0)
-PILLAR_WEIGHTS = {'AI': 0.25, 'CH': 0.20, 'DV': 0.15, 'EX': 0.20, 'OS': 0.20}
+# Pillar weights loaded from canonical source (must sum to 1.0)
+try:
+    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+    PILLAR_WEIGHTS = {
+        pid: info.get('weight_l2', 0.20)
+        for pid, info in DC2S_PILLARS.items()
+    }
+except ImportError:
+    PILLAR_WEIGHTS = {'P3': 0.25, 'P4': 0.15, 'P1': 0.15, 'P5': 0.25, 'P2': 0.20}
 
 # KPI weights per pillar (2 KPIs per pillar, equal weight)
 KPI_WEIGHTS = {
-    'AI': {'AI-KPI1': 0.5, 'AI-KPI2': 0.5},
-    'CH': {'CH-KPI1': 0.5, 'CH-KPI2': 0.5},
-    'DV': {'DV-KPI1': 0.5, 'DV-KPI2': 0.5},
-    'EX': {'EX-KPI1': 0.5, 'EX-KPI2': 0.5},
-    'OS': {'OS-KPI1': 0.5, 'OS-KPI2': 0.5},
+    'P3': {'P3-KPI1': 0.5, 'P3-KPI2': 0.5},
+    'P4': {'P4-KPI1': 0.5, 'P4-KPI2': 0.5},
+    'P1': {'P1-KPI1': 0.5, 'P1-KPI2': 0.5},
+    'P5': {'P5-KPI1': 0.5, 'P5-KPI2': 0.5},
+    'P2': {'P2-KPI1': 0.5, 'P2-KPI2': 0.5},
 }
 
 
@@ -405,10 +416,12 @@ def get_status_distribution(account_ids: list, month: date) -> dict:
         score = float(hs.health_score)
         status = hs.health_status
 
-        # Map status labels to our 3-tier buckets
-        if status in ('excellent', 'good') or score >= 70:
+        # Map status labels to our 3-tier buckets (centralized thresholds)
+        _healthy_min = ht.healthy_min() if ht else 70
+        _at_risk_min = ht.at_risk_min() if ht else 50
+        if status in ('excellent', 'good', 'healthy') or score >= _healthy_min:
             dist['healthy'] += 1
-        elif status == 'warning' or (50 <= score < 70):
+        elif status in ('warning', 'at_risk') or score >= _at_risk_min:
             dist['at_risk'] += 1
         else:
             dist['critical'] += 1

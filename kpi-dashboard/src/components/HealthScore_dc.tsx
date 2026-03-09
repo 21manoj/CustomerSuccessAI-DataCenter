@@ -9,7 +9,7 @@ import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
 
 interface HealthScoreProps {
-  tenantId: number | null;
+  tenantId: number | string | null;
 }
 
 const HealthScore_dc: React.FC<HealthScoreProps> = ({ tenantId }) => {

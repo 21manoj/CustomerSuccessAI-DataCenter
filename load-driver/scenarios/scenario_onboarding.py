@@ -70,14 +70,41 @@ class ScenarioOnboarding(BaseScenario):
             original_timeout = self.client.timeout
             self.client.timeout = 180
             # Build onboarding payload
+            industry = (getattr(self.args, 'industry', None) or 'Technology') if self.args else 'Technology'
             onboarding_payload = {
                 'customer_name': company_name,
-                'industry': 'Technology'
+                'industry': industry
             }
+
             # Allow --num-accounts to control account count (default: 3)
-            if self.args and hasattr(self.args, 'num_accounts') and self.args.num_accounts:
+            if self.args and getattr(self.args, 'num_accounts', None):
                 onboarding_payload['num_accounts'] = self.args.num_accounts
                 logger.info(f"    Requesting {self.args.num_accounts} accounts")
+
+            # Allow --onboarding-mode (demo = synthetic data, custom = user CSVs)
+            if self.args and getattr(self.args, 'onboarding_mode', None):
+                onboarding_payload['onboarding_mode'] = self.args.onboarding_mode
+                logger.info(f"    Onboarding mode: {self.args.onboarding_mode}")
+
+            # Allow --showcase-pattern-mix (journey pattern distribution)
+            if self.args and getattr(self.args, 'showcase_pattern_mix', None):
+                import json as _json
+                try:
+                    mix = _json.loads(self.args.showcase_pattern_mix) if isinstance(self.args.showcase_pattern_mix, str) else self.args.showcase_pattern_mix
+                    onboarding_payload['showcase_pattern_mix'] = mix
+                    logger.info(f"    Journey pattern mix: {mix}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"    Could not parse showcase_pattern_mix: {e}")
+
+            # Allow --weights (DC2_S pillar weights)
+            if self.args and getattr(self.args, 'weights', None):
+                import json as _json
+                try:
+                    weights = _json.loads(self.args.weights) if isinstance(self.args.weights, str) else self.args.weights
+                    onboarding_payload['weights'] = weights
+                    logger.info(f"    Pillar weights: {weights}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"    Could not parse weights: {e}")
 
             complete_response = self.client.post(
                 '/api/onboarding/complete',
@@ -182,6 +209,7 @@ class ScenarioOnboarding(BaseScenario):
             # Step 4: Login and verify dashboard
             # ================================================================
             logger.info("  Step 4: Login and verify dashboard")
+            client_for_onboarded = None  # Client authenticated as the newly onboarded customer (for steps 5–6)
 
             if user_customer_id:
                 from client import CSPulseClient
@@ -193,6 +221,8 @@ class ScenarioOnboarding(BaseScenario):
                 )
                 login_ok = new_client.login()
                 api_calls += 1
+                if login_ok:
+                    client_for_onboarded = new_client
 
                 if login_ok:
                     logger.info("    OK: Login successful")
@@ -224,8 +254,8 @@ class ScenarioOnboarding(BaseScenario):
             logger.info("  Step 5: /api/dc2s/scores/calculate (score pipeline)")
 
             start_step5 = time.time()
-            # Use the logged-in client if available, otherwise the original
-            score_client = new_client if (user_customer_id and 'new_client' in dir()) else self.client
+            # Use client authenticated as the onboarded customer when available
+            score_client = client_for_onboarded or self.client
             scores_calc = score_client.post(
                 '/api/dc2s/scores/calculate',
                 {'customer_id': customer_id, 'measurement_month': '2024-12-01'}
@@ -244,14 +274,13 @@ class ScenarioOnboarding(BaseScenario):
                 errors.append("Score calculation did not fully succeed (non-critical)")
 
             # ================================================================
-            # Step 6: Verify scores exist (use original customer_id from complete)
+            # Step 6: Verify scores exist (use authenticated client for onboarded customer)
             # ================================================================
             logger.info("  Step 6: Verify scores exist")
 
-            # Try to get scores for the customer created by /complete
-            scores_response = self.client.get(
-                f'/api/dc2s/scores/customer/{customer_id}/latest',
-                skip_auth_check=True
+            # Use same client as step 5 so backend sees valid session for this customer
+            scores_response = score_client.get(
+                f'/api/dc2s/scores/customer/{customer_id}/latest'
             )
             api_calls += 1
 

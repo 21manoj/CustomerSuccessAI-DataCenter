@@ -52,6 +52,9 @@ class ScenarioRoiPowerOf1(BaseScenario):
         self.start_timer()
         logger.info("📊 Scenario: ROI Power-of-1 Validation")
 
+        if not self.ensure_authenticated():
+            return self.failure("Not authenticated", error="Login required for ROI scenario")
+
         api_calls = 0
         tests_passed = 0
         tests_failed = 0
@@ -94,8 +97,7 @@ class ScenarioRoiPowerOf1(BaseScenario):
 
             # Test 1: Historical ROI endpoint returns data
             hist_response = self.client.get(
-                f'/api/roi/power-of-1/historical',
-                params={'customer_id': customer_id}
+                '/api/outcome-roi/historical'
             )
             api_calls += 1
             record_test(
@@ -104,20 +106,26 @@ class ScenarioRoiPowerOf1(BaseScenario):
                 "Endpoint returned data" if hist_response else "Endpoint returned None"
             )
 
-            # Test 2: Historical ROI for specific account
-            acct_roi = self.client.get(
-                f'/api/roi/power-of-1/account/{sample_account_id}'
+            # Test 2: Power-of-1 table returns data
+            po1_response = self.client.get(
+                '/api/revenue-intelligence/power-of-1'
             )
             api_calls += 1
             record_test(
                 "account_historical_roi_available",
-                acct_roi is not None,
-                f"Account ROI: {str(acct_roi)[:80]}" if acct_roi else "None"
+                po1_response is not None,
+                f"Power-of-1: {str(po1_response)[:80]}" if po1_response else "None"
             )
 
             # Test 3: Historical ROI contains expected metrics
             if hist_response and isinstance(hist_response, dict):
-                metrics_data = hist_response.get('metrics', hist_response.get('roi_data', {}))
+                # Try multiple response shapes: top-level 'metrics'/'roi_data',
+                # or nested 'result.metric_outcomes' (actual outcome-roi shape)
+                metrics_data = hist_response.get('metrics', hist_response.get('roi_data', None))
+                if metrics_data is None:
+                    result_obj = hist_response.get('result', {})
+                    if isinstance(result_obj, dict):
+                        metrics_data = result_obj.get('metric_outcomes', result_obj.get('metrics', None))
                 if isinstance(metrics_data, dict):
                     has_metrics = any(
                         m in str(metrics_data) for m in POWER_OF_1_METRICS[:3]

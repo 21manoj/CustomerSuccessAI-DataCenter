@@ -9,7 +9,7 @@ import HealthScore_dc from './HealthScore_dc';
 import KPICard_dc from './KPICard_dc';
 
 interface TenantDetailsProps {
-  tenantId: number;
+  tenantId: number | string;
   tenantName?: string;
 }
 

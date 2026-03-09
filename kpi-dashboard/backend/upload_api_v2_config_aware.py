@@ -562,6 +562,22 @@ def health_check():
         import json
         metadata_file.write_text(json.dumps(metadata, indent=2))
         
+        # Activity log: high-value upload event (low volume)
+        try:
+            from activity_logging import activity_logger
+            from auth_middleware import get_current_user_id
+            user_id = get_current_user_id()
+            activity_logger.log_upload(
+                customer_id=customer_id,
+                user_id=user_id,
+                upload_type=file_type,
+                filename=filename,
+                upload_id=None,
+                status="success",
+            )
+        except Exception:
+            pass
+        
         return jsonify({
             'status': 'success',
             'message': f'File uploaded successfully',

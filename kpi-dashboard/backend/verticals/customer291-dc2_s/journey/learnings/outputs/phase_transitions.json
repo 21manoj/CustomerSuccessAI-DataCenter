@@ -1,0 +1,51 @@
+{
+  "healthy\u2192growth": {
+    "from_phase": "healthy",
+    "to_phase": "growth",
+    "probability": 0.0375,
+    "avg_weeks_between": 1.0,
+    "sample_size": 6
+  },
+  "moderate\u2192at_risk": {
+    "from_phase": "moderate",
+    "to_phase": "at_risk",
+    "probability": 0.044444444444444446,
+    "avg_weeks_between": 1.0,
+    "sample_size": 2
+  },
+  "at_risk\u2192crisis": {
+    "from_phase": "at_risk",
+    "to_phase": "crisis",
+    "probability": 0.05555555555555555,
+    "avg_weeks_between": 2.5,
+    "sample_size": 2
+  },
+  "healthy\u2192crisis": {
+    "from_phase": "healthy",
+    "to_phase": "crisis",
+    "probability": 0.01875,
+    "avg_weeks_between": 3.3333333333333335,
+    "sample_size": 3
+  },
+  "crisis\u2192at_risk": {
+    "from_phase": "crisis",
+    "to_phase": "at_risk",
+    "probability": 0.03614457831325301,
+    "avg_weeks_between": 1.0,
+    "sample_size": 3
+  },
+  "at_risk\u2192moderate": {
+    "from_phase": "at_risk",
+    "to_phase": "moderate",
+    "probability": 0.08333333333333333,
+    "avg_weeks_between": 1.0,
+    "sample_size": 3
+  },
+  "moderate\u2192growth": {
+    "from_phase": "moderate",
+    "to_phase": "growth",
+    "probability": 0.06666666666666667,
+    "avg_weeks_between": 1.0,
+    "sample_size": 3
+  }
+}

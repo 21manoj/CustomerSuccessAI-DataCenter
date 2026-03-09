@@ -1,0 +1,86 @@
+{
+  "_description": "Context Graph Feature Toggle Schema. Defines the sub-toggles and their behavior for incremental rollout of context graph intelligence.",
+  "_usage": {
+    "global_toggle": "FeatureToggle.CONTEXT_GRAPH in feature_toggles.py (platform-wide master switch)",
+    "per_customer_toggle": "FeatureToggle model in DB, feature_name='context_graph' (per-tenant)",
+    "helper_functions": {
+      "is_context_graph_enabled(customer_id)": "Returns True only when BOTH global AND customer toggles are ON",
+      "get_context_graph_config(customer_id)": "Returns full sub-toggle dict with defaults",
+      "is_context_graph_sub_enabled(customer_id, 'signal_edges')": "Check single sub-toggle"
+    },
+    "api_endpoints": {
+      "GET /api/features/context-graph": "Get status (global + customer + sub-toggles)",
+      "POST /api/features/context-graph": "Enable/disable + set sub-toggles",
+      "PUT /api/features/context-graph/sub-toggle": "Update single sub-toggle"
+    }
+  },
+  "sub_toggles": {
+    "story_arcs": {
+      "default": false,
+      "description": "Generate and consume story arc manifests with causal chains instead of flat journey patterns",
+      "impacts": [
+        "generate_synthetic_customer_data.py — generates 9 additional CSVs",
+        "load-driver/csv_generator.py — uses story arc manifests",
+        "demo manifests — use CAST + PLOT_POINTS + CAUSAL_CHAINS format"
+      ]
+    },
+    "signal_edges": {
+      "default": false,
+      "description": "Build causal and correlation edges between signals (CAUSED_BY, CORRELATES_WITH, PRECEDED_BY)",
+      "impacts": [
+        "onboarding_api — ingests signal_edges.csv",
+        "signal_analyst_agent — traverses edges for causal context",
+        "data_ingestion_api — creates edges from real-time events"
+      ]
+    },
+    "stakeholder_tracking": {
+      "default": false,
+      "description": "Track stakeholders as graph nodes with engagement events, silence detection, influence scoring",
+      "impacts": [
+        "onboarding_api — ingests stakeholders.csv + engagement_events.csv",
+        "signal_analyst_agent — considers stakeholder engagement in analysis",
+        "CSM actions — generates stakeholder-specific recommendations"
+      ]
+    },
+    "decision_lifecycle": {
+      "default": false,
+      "description": "Track decisions through lifecycle: recommended → accepted/rejected/expired → executed → outcome",
+      "impacts": [
+        "onboarding_api — ingests decisions.csv + decision_evidence.csv",
+        "playbook system — creates decision nodes linked to playbook executions",
+        "outcome tracking — links decisions to outcomes for feedback loops"
+      ]
+    },
+    "outcome_economics": {
+      "default": false,
+      "description": "ROI scoring per decision with cost, expected revenue impact, confidence, evidence chain",
+      "impacts": [
+        "onboarding_api — ingests outcomes.csv",
+        "outcome_roi_engine — enhanced with decision-level ROI",
+        "executive dashboard — CRO/CFO revenue intelligence views"
+      ],
+      "depends_on": ["decision_lifecycle"]
+    },
+    "industry_benchmarks": {
+      "default": false,
+      "description": "External context nodes enabling 'your GPU util is 11pts below industry median' comparisons",
+      "impacts": [
+        "onboarding_api — ingests industry_benchmarks.csv",
+        "signal_analyst_agent — includes benchmark context in analysis",
+        "health calculation — adds benchmark-relative scoring"
+      ]
+    }
+  },
+  "guard_pattern": {
+    "description": "How every consumer should check the toggle before using context graph features",
+    "example_python": "from feature_toggles import is_context_graph_enabled, is_context_graph_sub_enabled\n\n# Master check\nif is_context_graph_enabled(customer_id):\n    # Context graph path\n    if is_context_graph_sub_enabled(customer_id, 'signal_edges'):\n        edges = get_signal_edges(account_id)\nelse:\n    # Flat signal path (existing behavior, always works)\n    signals = get_qualitative_signals(account_id)"
+  },
+  "rollout_order": [
+    {"phase": 1, "sub_toggle": "signal_edges", "reason": "Foundation — causal edges are the graph"},
+    {"phase": 2, "sub_toggle": "stakeholder_tracking", "reason": "People context enriches signal interpretation"},
+    {"phase": 3, "sub_toggle": "story_arcs", "reason": "Narrative manifests depend on edges + stakeholders"},
+    {"phase": 4, "sub_toggle": "decision_lifecycle", "reason": "Requires edges + stakeholders to generate evidence"},
+    {"phase": 5, "sub_toggle": "outcome_economics", "reason": "Requires decisions to calculate ROI"},
+    {"phase": 6, "sub_toggle": "industry_benchmarks", "reason": "External context, independent but last priority"}
+  ]
+}

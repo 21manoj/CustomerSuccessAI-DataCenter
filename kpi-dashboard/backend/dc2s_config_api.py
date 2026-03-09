@@ -15,22 +15,24 @@ logger = logging.getLogger(__name__)
 
 dc2s_config_api = Blueprint('dc2s_config_api', __name__, url_prefix='/api/dc2s/config')
 
-# Map bootstrap pillar keys (P1_deployment_velocity, etc.) to frontend codes (AI, CH, DV, EX, OS)
+# Map bootstrap pillar keys (P1_deployment_velocity, etc.) to P-format codes (P1..P5)
 BOOTSTRAP_PILLAR_TO_CODE = {
-    'P1_deployment_velocity': 'DV',
-    'P2_operational_stability': 'OS',
-    'P3_ai_workload_performance': 'AI',
-    'P4_channel_partner_health': 'CH',
-    'P5_expansion_readiness': 'EX',
+    'P1_deployment_velocity': 'P1',
+    'P2_operational_stability': 'P2',
+    'P3_ai_workload_performance': 'P3',
+    'P4_channel_partner_health': 'P4',
+    'P5_expansion_readiness': 'P5',
 }
 
-DEFAULT_PILLAR_WEIGHTS = {
-    "AI": 0.25,
-    "CH": 0.20,
-    "DV": 0.15,
-    "EX": 0.20,
-    "OS": 0.20,
-}
+# Load canonical pillar weights from kpi_definitions (single source of truth)
+try:
+    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+    DEFAULT_PILLAR_WEIGHTS = {
+        pid: info.get('weight_l2', 0.20)
+        for pid, info in DC2S_PILLARS.items()
+    }
+except ImportError:
+    DEFAULT_PILLAR_WEIGHTS = {"P1": 0.15, "P2": 0.20, "P3": 0.25, "P4": 0.15, "P5": 0.25}
 
 
 def _load_bootstrap_full(customer_id):
@@ -108,18 +110,27 @@ def get_config():
             'updated_at': None
         })
     
-    # Get KPI definitions from vertical config if not in customer config
+    # Get KPI definitions from customer config, or populate from DC2S catalog
     kpi_definitions = config.dc2s_kpi_definitions or {}
     if not kpi_definitions:
         try:
-            from utils.vertical_config_loader import ConfigLoader
-            loader = ConfigLoader()
-            vertical_config = loader.get_vertical_config('dc2_s')
-            if vertical_config and 'kpis' in vertical_config:
-                kpi_definitions = {kpi['code']: kpi for kpi in vertical_config['kpis']}
+            from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+            for kpi_code, kpi_info in DC2S_KPIS.items():
+                pillar = kpi_info.get('pillar', '')
+                target = kpi_info.get('target', {})
+                kpi_definitions[kpi_code] = {
+                    'name': kpi_info.get('name', kpi_code),
+                    'pillar': pillar,
+                    'unit': kpi_info.get('unit', '%'),
+                    'target': target.get('value') if isinstance(target, dict) else target,
+                    'operator': target.get('operator', '>') if isinstance(target, dict) else '>',
+                    'higher_is_better': kpi_info.get('higher_is_better', True),
+                    'weight_l1': kpi_info.get('weight_l1', 0),
+                    'ranges': kpi_info.get('ranges', {}),
+                }
         except Exception as e:
             import logging
-            logging.warning(f"Could not load KPI definitions from vertical config: {e}")
+            logging.warning(f"Could not load KPI definitions from catalog: {e}")
     
     # Single source for read-only tab: either learned (Wizard C) or bootstrap — never mix
     has_learned = config.dc2s_kpi_weights and len(config.dc2s_kpi_weights) > 0
@@ -296,7 +307,7 @@ def add_custom_kpi():
         config = CustomerConfig(
             customer_id=customer_id,
             vertical='dc2_s',
-            dc2s_pillar_weights={"AI": 0.25, "CH": 0.20, "DV": 0.15, "EX": 0.20, "OS": 0.20},
+            dc2s_pillar_weights={"P3": 0.25, "P4": 0.15, "P1": 0.15, "P5": 0.25, "P2": 0.20},
             dc2s_enabled_kpis=[],
             dc2s_kpi_overrides={},
             dc2s_kpi_weights={},
@@ -494,3 +505,55 @@ def get_weight_history():
     return jsonify({
         'history': []
     })
+
+
+# ============================================================
+# HEALTH THRESHOLDS CONFIG (single source of truth)
+# ============================================================
+
+@dc2s_config_api.route('/health-thresholds', methods=['GET'])
+def get_health_thresholds():
+    """
+    GET /api/dc2s/config/health-thresholds
+    Returns the health score thresholds (healthy/at-risk/critical boundaries).
+    Frontend and backend both use this as the single source of truth.
+    """
+    from utils.health_thresholds import get_thresholds
+    return jsonify(get_thresholds())
+
+
+@dc2s_config_api.route('/health-thresholds', methods=['PUT'])
+def update_health_thresholds():
+    """
+    PUT /api/dc2s/config/health-thresholds
+    Update health score thresholds from Settings UI.
+    Body: { "healthy_min": 70, "at_risk_min": 50 }
+    """
+    import os
+    from utils.health_thresholds import reload, _CONFIG_PATH
+
+    data = request.get_json()
+    healthy_min = data.get('healthy_min')
+    at_risk_min = data.get('at_risk_min')
+
+    if healthy_min is None or at_risk_min is None:
+        return jsonify({'error': 'healthy_min and at_risk_min are required'}), 400
+    if not (0 < at_risk_min < healthy_min <= 100):
+        return jsonify({'error': 'Must satisfy 0 < at_risk_min < healthy_min <= 100'}), 400
+
+    # Read current config, update, write back
+    with open(_CONFIG_PATH, 'r') as f:
+        config = json.load(f)
+
+    config['thresholds']['healthy']['min'] = int(healthy_min)
+    config['thresholds']['at_risk']['min'] = int(at_risk_min)
+
+    with open(_CONFIG_PATH, 'w') as f:
+        json.dump(config, f, indent=2)
+        f.write('\n')
+
+    # Reload cached values
+    thresholds = reload()
+
+    logger.info(f"Health thresholds updated: healthy>={healthy_min}, at_risk>={at_risk_min}")
+    return jsonify(thresholds)

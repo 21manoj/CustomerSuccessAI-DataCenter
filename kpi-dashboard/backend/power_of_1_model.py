@@ -278,8 +278,12 @@ def calculate_power_of_1_impact(
 
     # Scale factor: if account ARR differs from assumed $10M base
     arr_scale = 1.0
+    arr_basis = "baseline_10m"
+    arr_basis_value = 10_000_000
     if account_arr is not None:
         arr_scale = account_arr / 10_000_000
+        arr_basis = "explicit"
+        arr_basis_value = account_arr
 
     direct_impact = metric.annual_impact_per_pct * improvement_pct * arr_scale
 
@@ -314,6 +318,9 @@ def calculate_power_of_1_impact(
         "roi": round(roi, 4),
         "payback_months": round(payback_months, 1),
         "category": metric.category.value,
+        "arr_basis": arr_basis,
+        "arr_scale": round(arr_scale, 6),
+        "arr_basis_value": arr_basis_value,
         "impact_breakdown": {
             "revenue_increase": round(
                 metric.impact_breakdown.get(ImpactType.REVENUE_INCREASE, 0) * improvement_pct * arr_scale, 2
@@ -364,8 +371,14 @@ def calculate_portfolio_impact(
 
     roi = (total_impact - investment) / investment if investment > 0 else 0
 
+    # Scale scenarios dynamically if ARR differs from $10M base
+    scaled_scenarios = _scale_scenarios(arr_scale) if arr_scale != 1.0 else SCALING_SCENARIOS
+
     return {
         "improvement_pct": improvement_pct,
+        "arr_basis": "explicit" if total_arr is not None else "baseline_10m",
+        "arr_basis_value": total_arr if total_arr is not None else 10_000_000,
+        "arr_scale": round(arr_scale, 6),
         "metrics": results,
         "totals": {
             "direct_impact": round(total_direct, 2),
@@ -381,7 +394,7 @@ def calculate_portfolio_impact(
                 (investment / (total_impact / 12)) if total_impact > 0 else float('inf'), 1
             ),
         },
-        "scaling_scenarios": SCALING_SCENARIOS,
+        "scaling_scenarios": scaled_scenarios,
         "time_economics": TIME_ECONOMICS,
     }
 
@@ -488,6 +501,27 @@ def get_metric_cost(metric_id: str) -> Dict:
 # ============================================================
 # INTERNAL HELPERS
 # ============================================================
+
+def _scale_scenarios(arr_scale: float) -> Dict:
+    """Scale the static SCALING_SCENARIOS by an ARR ratio.
+
+    All dollar values in scaling_scenarios are calibrated at _arr_base=$10M.
+    When the actual portfolio/account ARR differs, we scale proportionally.
+    """
+    scaled = {}
+    for key, scenario in SCALING_SCENARIOS.items():
+        s = dict(scenario)  # shallow copy
+        for dollar_field in ("direct_impact", "compounding_impact", "total_impact", "three_year_net"):
+            if s.get(dollar_field) is not None:
+                s[dollar_field] = round(s[dollar_field] * arr_scale, 0)
+        # Recalculate year_1_roi with scaled impact and investment
+        investment = s.get("investment", 247000)
+        total = s.get("total_impact", 0) or 0
+        if investment and total:
+            s["year_1_roi"] = round((total - investment) / investment, 2)
+        scaled[key] = s
+    return scaled
+
 
 def _calculate_cascade_impact(metric_id: str, improvement_pct: float, arr_scale: float) -> float:
     """Calculate cascading compounding impact through the flywheel."""

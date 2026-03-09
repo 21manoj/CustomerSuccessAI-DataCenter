@@ -74,7 +74,7 @@ const GovernanceSettings: React.FC<GovernanceSettingsProps> = ({ isAuthenticated
       accounts_with_aggregates_in_primary: number;
     };
     details: Array<{
-      account_id: number;
+      account_id: number | string;
       account_name: string;
       products_count: number;
       duplicate_account_level_params: string[];

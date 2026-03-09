@@ -1,0 +1,13 @@
+# CS Pulse — Development Dependencies (includes all)
+# Install: pip install -r requirements-dev.txt
+
+-r requirements-rag.txt
+
+# Testing
+pytest==7.4.3
+
+# Code formatting
+black==23.12.1
+
+# Cython compilation (for Docker builds)
+Cython>=3.0.0

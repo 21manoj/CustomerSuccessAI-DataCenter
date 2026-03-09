@@ -1,0 +1,345 @@
+{
+  "test": "context_graph_e2e",
+  "started_at": "2026-03-05T09:35:26.186240",
+  "steps": {
+    "1_create_customer": {
+      "status": 200,
+      "response": {
+        "account_details": [
+          {
+            "account_id": 289001,
+            "account_name": "ContextGraph-Test-0305-0935-Production",
+            "uuid": "dc_acct_019cbf11-9547-754d-906e-f7c7e6052bee"
+          },
+          {
+            "account_id": 289002,
+            "account_name": "ContextGraph-Test-0305-0935-Staging",
+            "uuid": "dc_acct_019cbf11-9557-7d8a-806e-a37aeb882205"
+          },
+          {
+            "account_id": 289003,
+            "account_name": "ContextGraph-Test-0305-0935-Development",
+            "uuid": "dc_acct_019cbf11-9559-7dae-a672-54c2f7a3d1ae"
+          },
+          {
+            "account_id": 289004,
+            "account_name": "ContextGraph-Test-0305-0935-Environment",
+            "uuid": "dc_acct_019cbf11-955a-7722-a698-7df56ef6dc9b"
+          },
+          {
+            "account_id": 289005,
+            "account_name": "ContextGraph-Test-0305-0935-Workspace",
+            "uuid": "dc_acct_019cbf11-955b-7102-b91a-42abee6ada7c"
+          },
+          {
+            "account_id": 289006,
+            "account_name": "ContextGraph-Test-0305-0935-Cluster",
+            "uuid": "dc_acct_019cbf11-955b-7743-84db-c534d14b59ff"
+          },
+          {
+            "account_id": 289007,
+            "account_name": "ContextGraph-Test-0305-0935-Instance",
+            "uuid": "dc_acct_019cbf11-955d-7326-8b35-440c131c95e1"
+          },
+          {
+            "account_id": 289008,
+            "account_name": "ContextGraph-Test-0305-0935-Node",
+            "uuid": "dc_acct_019cbf11-955d-7476-8275-4d7c366e227a"
+          },
+          {
+            "account_id": 289009,
+            "account_name": "ContextGraph-Test-0305-0935-Server",
+            "uuid": "dc_acct_019cbf11-955e-78ea-a558-09996e0d5a4c"
+          },
+          {
+            "account_id": 289010,
+            "account_name": "ContextGraph-Test-0305-0935-System",
+            "uuid": "dc_acct_019cbf11-955f-7dde-8bc1-5c023b4986e4"
+          }
+        ],
+        "account_id_range": "289001 - 289010",
+        "accounts": 10,
+        "config": {
+          "enabled_kpis": 15,
+          "pillars": 5,
+          "vertical": "dc2_s",
+          "weights": {
+            "AI": 0.25,
+            "CH": 0.2,
+            "DV": 0.15,
+            "EX": 0.2,
+            "OS": 0.2
+          }
+        },
+        "csv_files_generated": true,
+        "customer_id": 289,
+        "customer_name": "ContextGraph-Test-0305-0935",
+        "customer_uuid": "dc_cust_019cbf11-9406-7850-9b7c-87fd5e6cea57",
+        "directory_provisioned": true,
+        "message": "Onboarding complete! Customer, user, config, accounts, and demo CSV files created.",
+        "onboarding_mode": "demo",
+        "success": true
+      }
+    },
+    "2_generate_csvs": {
+      "arc_id": "arc_expansion_champion",
+      "files_generated": 9,
+      "csv_stats": {
+        "stakeholders": {
+          "filename": "stakeholders.csv",
+          "rows": 40,
+          "bytes": 4871
+        },
+        "engagement_events": {
+          "filename": "engagement_events.csv",
+          "rows": 150,
+          "bytes": 37216
+        },
+        "account_business_profiles": {
+          "filename": "account_business_profiles.csv",
+          "rows": 10,
+          "bytes": 2158
+        },
+        "decisions": {
+          "filename": "decisions.csv",
+          "rows": 30,
+          "bytes": 24781
+        },
+        "outcomes": {
+          "filename": "outcomes.csv",
+          "rows": 40,
+          "bytes": 9820
+        },
+        "signal_edges": {
+          "filename": "signal_edges.csv",
+          "rows": 28,
+          "bytes": 5544
+        },
+        "decision_evidence": {
+          "filename": "decision_evidence.csv",
+          "rows": 45,
+          "bytes": 4272
+        },
+        "industry_benchmarks": {
+          "filename": "industry_benchmarks.csv",
+          "rows": 10,
+          "bytes": 893
+        },
+        "enhanced_signals": {
+          "filename": "enhanced_qualitative_signals.csv",
+          "rows": 150,
+          "bytes": 40702
+        }
+      }
+    },
+    "3_upload_csvs": {
+      "stakeholders": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/stakeholders.csv",
+          "file_type": "stakeholders",
+          "filename": "stakeholders.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "engagement_events": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/engagement_events.csv",
+          "file_type": "engagement_events",
+          "filename": "engagement_events.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "account_business_profiles": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/account_business_profiles.csv",
+          "file_type": "account_business_profiles",
+          "filename": "account_business_profiles.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "decisions": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/decisions.csv",
+          "file_type": "decisions",
+          "filename": "decisions.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "outcomes": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/outcomes.csv",
+          "file_type": "outcomes",
+          "filename": "outcomes.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "signal_edges": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/signal_edges.csv",
+          "file_type": "signal_edges",
+          "filename": "signal_edges.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "decision_evidence": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/decision_evidence.csv",
+          "file_type": "decision_evidence",
+          "filename": "decision_evidence.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "industry_benchmarks": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/industry_benchmarks.csv",
+          "file_type": "industry_benchmarks",
+          "filename": "industry_benchmarks.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      },
+      "enhanced_signals": {
+        "status": 200,
+        "ok": true,
+        "response": {
+          "customer_id": 289,
+          "file_path": "verticals/customer289-dc2_s/data/context_graph/enhanced_qualitative_signals.csv",
+          "file_type": "enhanced_signals",
+          "filename": "enhanced_qualitative_signals.csv",
+          "message": "File saved to customer directory",
+          "next_step": "Run POST /api/onboarding/process-data to load data to database",
+          "status": "success",
+          "upload_mode": "incremental"
+        }
+      }
+    },
+    "4_feature_toggle": {
+      "customer_id": 289,
+      "enabled": true
+    },
+    "5_process_data": {
+      "http_status": 200,
+      "duration_s": 4.82,
+      "steps_completed": [
+        "data_loading",
+        "journey_generation",
+        "journey_db_persist",
+        "journey_api_ready"
+      ],
+      "context_graph": {},
+      "errors": [
+        "Embedding skipped (Qdrant unavailable): /Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL "
+      ],
+      "response": {
+        "customer_id": 289,
+        "errors": [
+          "Embedding skipped (Qdrant unavailable): /Users/manojgupta/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL "
+        ],
+        "execution_state": {
+          "data_loaded": true,
+          "embeddings_created": false,
+          "journey_generated": true,
+          "validation_run": false,
+          "weight_calibrated": false
+        },
+        "message": "Data processing completed with warnings",
+        "optional_steps_skipped": [
+          "embeddings",
+          "validation",
+          "pattern_analysis",
+          "weight_calibration"
+        ],
+        "status": "warning",
+        "steps_completed": [
+          "data_loading",
+          "journey_generation",
+          "journey_db_persist",
+          "journey_api_ready"
+        ],
+        "total_steps": 4,
+        "validation": {
+          "csv_kpis": 15,
+          "details": {
+            "enabled_records": 1800,
+            "filter_percentage": "0.0%",
+            "filtered_records": 0,
+            "total_records": 1800
+          },
+          "disabled_kpis": [],
+          "enabled_kpis": 15,
+          "valid": true,
+          "warnings": [],
+          "will_filter": false
+        }
+      }
+    },
+    "6_verification": {
+      "total_nodes": 0,
+      "total_edges": 0,
+      "sample_nodes": [],
+      "revenue_summary": {}
+    }
+  },
+  "customer_id": 289,
+  "company_name": "ContextGraph-Test-0305-0935",
+  "completed_at": "2026-03-05T09:35:43.484423",
+  "overall_status": "PARTIAL",
+  "summary": {
+    "customer_id": 289,
+    "company_name": "ContextGraph-Test-0305-0935",
+    "arc_id": "arc_expansion_champion",
+    "accounts": 10,
+    "kpis": 15,
+    "csvs_uploaded": "9/9",
+    "nodes_inserted": 0,
+    "edges_inserted": 0,
+    "process_data_duration_s": 4.82
+  }
+}

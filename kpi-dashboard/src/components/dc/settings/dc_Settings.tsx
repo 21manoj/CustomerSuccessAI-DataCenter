@@ -25,19 +25,21 @@ import {
   Sliders,
   BarChart2,
   Clock,
-  User
+  User,
+  Shield
 } from 'lucide-react';
 import { KPIConfigurationSettings } from '../../settings/dc2s/KPIConfigurationSettings';
 import { PillarAndKPIWeightManagement } from './PillarAndKPIWeightManagement';
 import { KPIRangesTab } from './KPIRangesTab';
 import { SystemEventsAndLogManagement } from './SystemEventsAndLogManagement';
 import DataQualitySection from './DataQualitySection';
+import EntitlementsAdmin from './EntitlementsAdmin';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users';
+type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements';
 
 interface PillarWeight {
   pillar: string;
@@ -178,6 +180,7 @@ const DCSettings: React.FC = () => {
             { id: 'system-events' as SubTab, label: 'System Events and Log Management', icon: Activity },
             { id: 'general' as SubTab, label: 'General Configuration', icon: Settings },
             { id: 'data' as SubTab, label: 'Data Management', icon: Database },
+            { id: 'entitlements' as SubTab, label: 'Entitlements', icon: Shield },
             { id: 'integrations' as SubTab, label: 'Integrations', icon: Key },
             { id: 'users' as SubTab, label: 'User Management', icon: Users },
           ].map(tab => (
@@ -258,6 +261,11 @@ const DCSettings: React.FC = () => {
                 <DataQualitySection />
               </div>
             </div>
+          )}
+
+          {/* Entitlements & Feature Flags */}
+          {activeSubTab === 'entitlements' && (
+            <EntitlementsAdmin />
           )}
 
           {/* Integrations */}

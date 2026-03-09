@@ -37,6 +37,8 @@ class LoadDriver:
     Executes scenarios in order, collects results, generates report
     """
 
+    # Scenario order matters: run cleanup (4) last so customer/user are not deleted
+    # before ROI (5) and data_ingestion (7). Recommended: 1,2a,2b,2c,2d,2e,3,5,7,8,4
     SCENARIOS = {
         '1': 'onboarding',
         '2a': 'kpi_simulation',
@@ -47,7 +49,10 @@ class LoadDriver:
         '3': 'tenant_isolation',
         '4': 'cleanup',
         '5': 'roi_power_of_1',
-        '6': 'n8n_workflow'
+        '6': 'n8n_workflow',
+        '7': 'data_ingestion',
+        '8': 'context_graph',
+        '9': 'roi_simulation'
     }
 
     def __init__(
@@ -59,8 +64,8 @@ class LoadDriver:
     ):
         """Initialize load driver"""
         self.base_url = base_url or os.getenv('CS_PULSE_BASE_URL', 'http://localhost:5059')
-        self.admin_email = admin_email or os.getenv('CS_PULSE_ADMIN_EMAIL', 'admin@test.com')
-        self.admin_password = admin_password or os.getenv('CS_PULSE_ADMIN_PASSWORD', 'password')
+        self.admin_email = admin_email or os.getenv('CS_PULSE_ADMIN_EMAIL', 'admin@sacme.com')
+        self.admin_password = admin_password or os.getenv('CS_PULSE_ADMIN_PASSWORD', 'test123')
         self.results_dir = Path(results_dir or 'results')
         self.results_dir.mkdir(exist_ok=True)
 
@@ -257,8 +262,8 @@ def main():
     )
     parser.add_argument(
         '--scenarios',
-        default='1,2a,2b,2c,2d,2e,3,4,5,6',
-        help='Comma-separated scenario IDs (1,2a,2b,2c,2d,2e,3,4,5,6)'
+        default='1,2a,2b,2c,2d,2e,3,4,5,6,7',
+        help='Comma-separated scenario IDs (1,2a,2b,2c,2d,2e,3,4,5,6,7)'
     )
     parser.add_argument(
         '--customers',
@@ -274,6 +279,35 @@ def main():
         '--results-dir',
         default='results',
         help='Directory for test results'
+    )
+    parser.add_argument(
+        '--num-accounts',
+        type=int,
+        default=None,
+        help='Number of accounts per customer (scenario 1, default: 3)'
+    )
+    parser.add_argument(
+        '--arc-id',
+        default='arc_expansion_champion',
+        help='Story arc ID for scenario 8 (default: arc_expansion_champion)'
+    )
+    parser.add_argument(
+        '--months',
+        type=int,
+        default=6,
+        help='Months to simulate (scenario 9, default: 6)'
+    )
+    parser.add_argument(
+        '--improvement',
+        type=float,
+        default=2.5,
+        help='Total improvement %% (scenario 9, default: 2.5)'
+    )
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help='Random seed for reproducible data generation'
     )
     parser.add_argument(
         '--dry-run',

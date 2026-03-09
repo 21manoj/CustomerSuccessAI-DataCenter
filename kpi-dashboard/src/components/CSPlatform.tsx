@@ -44,7 +44,7 @@ import PortcoCEODashboard from './dashboard/PortcoCEODashboard';
 
 interface Product {
   product_id: number;
-  account_id: number;
+  account_id: number | string;
   product_name: string;
   product_sku?: string;
   product_type?: string;
@@ -63,7 +63,7 @@ interface KPI {
   impact_level: string;
   measurement_frequency: string;
   source_review: string;
-  account_id?: number;
+  account_id?: number | string;
   account_name?: string;
   product_id?: number | null; // Explicitly nullable to prevent type coercion issues
   aggregation_type?: string;
@@ -71,7 +71,7 @@ interface KPI {
 }
 
 interface Account {
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   revenue: number;
   industry: string;
@@ -185,8 +185,8 @@ const CSPlatform = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Multi-product state
-  const [products, setProducts] = useState<{[accountId: number]: Product[]}>({});
-  const [selectedProduct, setSelectedProduct] = useState<{accountId: number, productId: number | null} | null>(null);
+  const [products, setProducts] = useState<{[accountId: string]: Product[]}>({});
+  const [selectedProduct, setSelectedProduct] = useState<{accountId: number | string, productId: number | null} | null>(null);
   const [viewMode, setViewMode] = useState<'account' | 'product'>('account');
   
   // Cleanup state variables
@@ -219,7 +219,7 @@ const CSPlatform = () => {
     business_outcomes_score: number;
     relationship_strength_score: number;
   }>>([]);
-  const [selectedAccountForTrends, setSelectedAccountForTrends] = useState<number | null>(null);
+  const [selectedAccountForTrends, setSelectedAccountForTrends] = useState<number | string | null>(null);
   const [selectedKpiForTrends, setSelectedKpiForTrends] = useState<string | null>(null);
   const [timeSeriesStats, setTimeSeriesStats] = useState<{
     total_data_points: number;
@@ -258,7 +258,7 @@ const CSPlatform = () => {
       company_avg_revenue_growth: number;
     };
     accounts_needing_attention: Array<{
-      account_id: number;
+      account_id: number | string;
       account_name: string;
       overall_health_score: number;
       category_scores: Record<string, number>;
@@ -267,7 +267,7 @@ const CSPlatform = () => {
       revenue_growth_pct: number;
     }>;
     healthy_declining_revenue: Array<{
-      account_id: number;
+      account_id: number | string;
       account_name: string;
       overall_health_score: number;
       category_scores: Record<string, number>;
@@ -488,7 +488,7 @@ const CSPlatform = () => {
   }, [session?.customer_id]);
 
   // Fetch account snapshot for more context
-  const fetchAccountSnapshot = async (accountId: number) => {
+  const fetchAccountSnapshot = async (accountId: number | string) => {
     if (!session?.customer_id) return;
     
     setLoadingSnapshot(true);
@@ -542,7 +542,7 @@ const CSPlatform = () => {
   };
 
   // Fetch products for all accounts
-  const fetchProducts = async (accountId: number) => {
+  const fetchProducts = async (accountId: number | string) => {
     if (!session?.customer_id) return;
     
     try {
@@ -941,7 +941,7 @@ const CSPlatform = () => {
   };
 
   // Fetch KPI trends for a specific KPI and account
-  const fetchKpiTrends = async (kpiName: string, accountId: number) => {
+  const fetchKpiTrends = async (kpiName: string, accountId: number | string) => {
     if (!session?.customer_id) return;
     
     try {
@@ -964,7 +964,7 @@ const CSPlatform = () => {
   };
 
   // Fetch account health trends
-  const fetchAccountHealthTrends = async (accountId: number) => {
+  const fetchAccountHealthTrends = async (accountId: number | string) => {
     if (!session?.customer_id) return;
     
     try {
@@ -4533,19 +4533,19 @@ const CSPlatform = () => {
                         <div className="mb-6">
                           <h4 className="text-lg font-semibold text-gray-900 mb-4">Maturity Tier Classification</h4>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className={`p-4 rounded-lg border-2 ${rollupResults.health_scores.overall >= 67 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                            <div className={`p-4 rounded-lg border-2 ${rollupResults.health_scores.overall >= 80 ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
                               <div className="text-sm font-medium text-gray-600">Healthy</div>
-                              <div className="text-lg font-bold text-gray-900">67-100</div>
+                              <div className="text-lg font-bold text-gray-900">80-100</div>
                               <div className="text-xs text-gray-500">High performance</div>
                             </div>
-                            <div className={`p-4 rounded-lg border-2 ${rollupResults.health_scores.overall >= 34 && rollupResults.health_scores.overall < 67 ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-gray-50'}`}>
+                            <div className={`p-4 rounded-lg border-2 ${rollupResults.health_scores.overall >= 50 && rollupResults.health_scores.overall < 80 ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-gray-50'}`}>
                               <div className="text-sm font-medium text-gray-600">At Risk</div>
-                              <div className="text-lg font-bold text-gray-900">34-66</div>
+                              <div className="text-lg font-bold text-gray-900">50-79</div>
                               <div className="text-xs text-gray-500">Medium performance</div>
                             </div>
-                            <div className={`p-4 rounded-lg border-2 ${rollupResults.health_scores.overall < 34 ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                            <div className={`p-4 rounded-lg border-2 ${rollupResults.health_scores.overall < 50 ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
                               <div className="text-sm font-medium text-gray-600">Critical</div>
-                              <div className="text-lg font-bold text-gray-900">0-33</div>
+                              <div className="text-lg font-bold text-gray-900">0-49</div>
                               <div className="text-xs text-gray-500">Low performance</div>
                             </div>
                           </div>

@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import anthropic
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
+from utils.embedding_model import get_embedding_model
 from models import db, KPI, Account, KPIUpload, CustomerConfig
 
 # Load environment variables
@@ -22,7 +22,7 @@ class EnhancedRAGSystem:
     def __init__(self):
         """Initialize the enhanced RAG system with FAISS and Claude"""
         self.anthropic_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.embedding_model = get_embedding_model()
         self.faiss_index = None
         self.kpi_data = []
         self.account_data = []

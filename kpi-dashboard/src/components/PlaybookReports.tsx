@@ -7,6 +7,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, CheckCircle, XCircle, TrendingUp, Users, Target, Calendar } from 'lucide-react';
+import { useSession } from '../contexts/SessionContext';
+import { getCustomerIdentifier } from '../utils/api';
 
 interface PlaybookReportsProps {
   customerId: number;
@@ -43,6 +45,7 @@ interface ExecutionSummary {
 }
 
 export default function PlaybookReports({ customerId }: PlaybookReportsProps) {
+  const { session } = useSession();
   const [executions, setExecutions] = useState<ExecutionSummary[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +65,7 @@ export default function PlaybookReports({ customerId }: PlaybookReportsProps) {
   const fetchExecutions = async () => {
     try {
       const response = await fetch('/api/playbooks/reports', {
-        headers: { 'X-Customer-ID': customerId.toString() }
+        headers: { 'X-Customer-ID': getCustomerIdentifier(session) }
       });
       if (response.ok) {
         const data = await response.json();
@@ -79,7 +82,7 @@ export default function PlaybookReports({ customerId }: PlaybookReportsProps) {
     try {
       setLoadingReport(true);
       const response = await fetch(`/api/playbooks/executions/${executionId}/report`, {
-        headers: { 'X-Customer-ID': customerId.toString() }
+        headers: { 'X-Customer-ID': getCustomerIdentifier(session) }
       });
       if (response.ok) {
         const data = await response.json();

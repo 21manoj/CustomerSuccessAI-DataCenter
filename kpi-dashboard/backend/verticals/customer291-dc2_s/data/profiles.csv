@@ -1,0 +1,11 @@
+account_id,customer_id,account_name,assigned_csm,csm_manager,executive_sponsor,arr,mrr,primary_champion_name,primary_champion_title,primary_champion_email,primary_champion_engagement_score,last_updated
+291001,291,Sacme-Production,Sarah Chen,Sam Rivera,Pat Richardson,10733280,894440.0,Alex Rivera,Chief Data Officer,alex.rivera@sacme.com,90.0,2026-03-07 08:36:24
+291002,291,Sacme-Staging,Sarah Chen,Jordan Blake,Sam Nakamura,8882247,740187.0,Jordan Blake,VP Data Science,jordan.blake@sacme.com,79.4,2026-03-07 08:36:24
+291003,291,Sacme-Development,Mike Johnson,Sam Rivera,Pat Richardson,8659127,721594.0,Taylor Morgan,Head of Infrastructure,taylor.morgan@sacme.com,80.0,2026-03-07 08:36:24
+291004,291,Sacme-Analytics,Mike Johnson,Alex Chen,Chris Martinez,8465973,705498.0,Casey Wu,VP Engineering,casey.wu@sacme.com,63.4,2026-03-07 08:36:24
+291005,291,Sacme-AI-Training,Lisa Park,Sam Rivera,Pat Richardson,2865881,238823.0,Riley Anderson,VP Engineering,riley.anderson@sacme.com,55.7,2026-03-07 08:36:24
+291006,291,Sacme-Edge-Compute,Emma Wilson,Alex Chen,Chris Martinez,2190266,182522.0,Quinn Harris,Director of AI,quinn.harris@sacme.com,65.4,2026-03-07 08:36:24
+291007,291,Sacme-DR-Backup,Mike Johnson,Jordan Blake,Sam Nakamura,2181439,181787.0,Avery Scott,Head of Infrastructure,avery.scott@sacme.com,69.6,2026-03-07 08:36:24
+291008,291,Sacme-Testing,Lisa Park,Alex Chen,Sam Nakamura,2136799,178067.0,Morgan Lee,Chief Data Officer,morgan.lee@sacme.com,76.0,2026-03-07 08:36:24
+291009,291,Sacme-Research,David Kim,Alex Chen,Pat Richardson,1971478,164290.0,Jamie Torres,Chief Data Officer,jamie.torres@sacme.com,74.8,2026-03-07 08:36:24
+291010,291,Sacme-Integration,Sarah Chen,Sam Rivera,Chris Martinez,1913510,159459.0,Drew Campbell,Head of Infrastructure,drew.campbell@sacme.com,60.2,2026-03-07 08:36:24

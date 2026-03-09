@@ -34,6 +34,11 @@ class EventType(Enum):
     PLAYBOOK_AUTO_TRIGGERED = "playbook_auto_triggered"
     APPROVAL_REQUESTED = "approval_requested"
     APPROVAL_DECIDED = "approval_decided"
+    # Onboarding lifecycle events
+    ONBOARDING_COMPLETE = "onboarding_complete"
+    ACCOUNT_GRADUATED = "account_graduated"
+    # Playbook feedback
+    PLAYBOOK_EXECUTION_COMPLETED = "playbook_execution_completed"
 
 @dataclass
 class Event:
@@ -466,7 +471,56 @@ class EventManager:
         except ImportError as e:
             self.health_score_subscriber = None
             logger.warning(f"HealthScoreRollupSubscriber not available: {e}")
-    
+
+        # ── Context graph regeneration (auto-regenerate on health threshold crossing) ──
+        self.context_graph_subscriber = None
+        try:
+            from context_graph_regen_subscriber import ContextGraphRegenerationSubscriber
+            self.context_graph_subscriber = ContextGraphRegenerationSubscriber(cooldown_seconds=300)
+            self.publisher.subscribe(
+                EventType.HEALTH_SCORES_UPDATED,
+                self.context_graph_subscriber.handle_event,
+            )
+            logger.info("✅ Context graph auto-regeneration enabled (event-driven, on health threshold crossing)")
+        except ImportError as e:
+            logger.warning(f"ContextGraphRegenerationSubscriber not available: {e}")
+
+        # ── Agent pipeline subscribers ─────────────────────────────
+        try:
+            from agent_event_subscribers import (
+                OnboardingCompleteSubscriber,
+                AgentAnalysisSubscriber,
+                PlaybookAutoTriggerSubscriber,
+                ApprovalDecisionSubscriber,
+                PlaybookFeedbackSubscriber,
+            )
+
+            self.onboarding_subscriber = OnboardingCompleteSubscriber(cooldown_seconds=300)
+            self.agent_analysis_subscriber = AgentAnalysisSubscriber()
+            self.playbook_trigger_subscriber = PlaybookAutoTriggerSubscriber()
+            self.approval_decision_subscriber = ApprovalDecisionSubscriber()
+            self.playbook_feedback_subscriber = PlaybookFeedbackSubscriber()
+
+            # Onboarding / data change → Signal Analyst auto-trigger
+            self.publisher.subscribe(EventType.ONBOARDING_COMPLETE, self.onboarding_subscriber.handle_event)
+            self.publisher.subscribe(EventType.KPI_DATA_UPLOADED, self.onboarding_subscriber.handle_event)
+
+            # Agent analysis complete → route to approval queue
+            self.publisher.subscribe(EventType.AGENT_ANALYSIS_COMPLETE, self.agent_analysis_subscriber.handle_event)
+
+            # Playbook auto-triggered → orchestrator execution
+            self.publisher.subscribe(EventType.PLAYBOOK_AUTO_TRIGGERED, self.playbook_trigger_subscriber.handle_event)
+
+            # Human approval decision → follow-up actions
+            self.publisher.subscribe(EventType.APPROVAL_DECIDED, self.approval_decision_subscriber.handle_event)
+
+            # Playbook execution completed → feedback loop to agent memory
+            self.publisher.subscribe(EventType.PLAYBOOK_EXECUTION_COMPLETED, self.playbook_feedback_subscriber.handle_event)
+
+            logger.info("✅ Agent pipeline subscribers registered (onboarding→analysis→approval→playbook→feedback)")
+        except ImportError as e:
+            logger.warning(f"Agent event subscribers not available: {e}")
+
     def publish_kpi_upload(self, customer_id: int, upload_id: int, kpi_count: int):
         """Publish KPI upload event"""
         self.publisher.publish(

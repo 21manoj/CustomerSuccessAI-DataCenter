@@ -1,0 +1,2 @@
+account_id,decision_date,title,decision_maker_role,chosen_option,options_considered,revenue_impact,risk_level,outcome_description,confidence
+10001,2026-02-05,GPU Cluster Expansion,CTO,Scale existing cluster,Scale existing; New vendor; Cloud migration,500000,medium,Approved 40% capacity increase,0.85

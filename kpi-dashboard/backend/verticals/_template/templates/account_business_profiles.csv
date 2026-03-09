@@ -1,0 +1,2 @@
+account_id,arr,industry,employee_count,fiscal_year_end,tech_stack,cloud_provider,competitive_landscape,strategic_initiatives
+10001,2500000,Technology,5000,December,"NVIDIA DGX, VMware, Kubernetes",hybrid,"CoreWeave, Lambda Labs","AI training expansion, multi-cloud migration"

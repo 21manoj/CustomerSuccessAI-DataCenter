@@ -95,9 +95,9 @@ python driver.py \
 # Required
 CS_PULSE_BASE_URL=http://localhost:5059
 
-# Optional but recommended
-CS_PULSE_ADMIN_EMAIL=admin@test.com
-CS_PULSE_ADMIN_PASSWORD=password
+# Optional (defaults: admin@sacme.com / test123, customer 291)
+CS_PULSE_ADMIN_EMAIL=admin@sacme.com
+CS_PULSE_ADMIN_PASSWORD=test123
 OPENAI_API_KEY=sk-...
 QDRANT_URL=http://localhost:6333
 QDRANT_API_KEY=...

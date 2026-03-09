@@ -1,0 +1,11 @@
+account_id,arr,industry,employee_count,fiscal_year_end,tech_stack,cloud_provider,competitive_landscape,strategic_initiatives,budget_cycle
+291001,4719944.17,Media,5000,June,NVIDIA DGX + Kubernetes,Hybrid (GCP + On-Prem),Dell PowerEdge,"[""AI/ML model training at scale"", ""Data center modernization"", ""Real-time inference deployment"", ""HPC workload migration""]",Q1 (Jan-Mar)
+291002,4379651.71,Financial Services,1000,December,Mixed GPU + OpenShift,Hybrid (AWS + On-Prem),HPE ProLiant,"[""HPC workload migration"", ""Multi-cloud strategy""]",Q1 (Jan-Mar)
+291003,3945850.65,Financial Services,5000,June,Custom GPU Cluster + Ray,Hybrid (AWS + On-Prem),Dell PowerEdge,"[""Sustainability & power efficiency"", ""AI/ML model training at scale""]",Q1 (Jan-Mar)
+291004,3520530.44,Retail,25000,September,NVIDIA H100 + vSphere,Hybrid (AWS + On-Prem),Dell PowerEdge,"[""Edge compute expansion"", ""AI/ML model training at scale"", ""Multi-cloud strategy"", ""Data center modernization""]",Q1 (Jan-Mar)
+291005,1413283.6,Retail,500,June,Mixed GPU + OpenShift,Hybrid (GCP + On-Prem),Lenovo ThinkSystem,"[""Multi-cloud strategy"", ""AI/ML model training at scale""]",Q4 (Oct-Dec)
+291006,4534914.49,Technology,5000,June,NVIDIA H100 + vSphere,Hybrid (AWS + On-Prem),None identified,"[""Sustainability & power efficiency"", ""HPC workload migration""]",Q4 (Oct-Dec)
+291007,3132557.64,Media,25000,June,Custom GPU Cluster + Ray,Hybrid (AWS + On-Prem),Dell PowerEdge,"[""HPC workload migration"", ""Real-time inference deployment"", ""Edge compute expansion""]",Q4 (Oct-Dec)
+291008,2164411.13,Manufacturing,2500,March,NVIDIA H100 + vSphere,Hybrid (AWS + On-Prem),Lenovo ThinkSystem,"[""Multi-cloud strategy"", ""Data center modernization"", ""Sustainability & power efficiency""]",Q3 (Jul-Sep)
+291009,4237245.93,Retail,1000,December,AMD MI300X + Slurm,Hybrid (GCP + On-Prem),None identified,"[""Edge compute expansion"", ""Multi-cloud strategy"", ""HPC workload migration"", ""Generative AI adoption""]",Q4 (Oct-Dec)
+291010,3762431.11,Technology,2500,March,NVIDIA H100 + vSphere,Hybrid (AWS + On-Prem),Lenovo ThinkSystem,"[""Multi-cloud strategy"", ""Edge compute expansion"", ""Sustainability & power efficiency"", ""HPC workload migration""]",Q3 (Jul-Sep)

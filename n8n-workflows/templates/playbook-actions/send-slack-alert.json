@@ -1,0 +1,308 @@
+{
+  "name": "CS Pulse Playbook - Send Slack Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cspulse-slack-alert",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Playbook Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "cspulse-slack-alert"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate and transform the incoming payload from CS Pulse\nconst body = $input.first().json.body || $input.first().json;\n\n// Expected payload structure from CS Pulse:\n// {\n//   action_id: string,\n//   playbook_id: string,\n//   customer_id: number,\n//   customer_name: string,\n//   action_type: 'send_slack_alert',\n//   parameters: {\n//     channel: string,\n//     severity: 'critical' | 'warning' | 'info',\n//     title: string,\n//     message: string,\n//     health_score: number,\n//     kpi_details: object[],\n//     dashboard_url: string\n//   },\n//   callback_url: string,\n//   triggered_by: string,\n//   triggered_at: string\n// }\n\nconst required = ['action_id', 'playbook_id', 'customer_id', 'parameters'];\nconst missing = required.filter(f => !body[f]);\n\nif (missing.length > 0) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nconst params = body.parameters || {};\nconst severity = (params.severity || 'info').toLowerCase();\n\n// Map severity to Slack emoji and color\nconst severityMap = {\n  critical: { emoji: ':red_circle:', color: '#FF0000' },\n  warning: { emoji: ':large_orange_circle:', color: '#FFA500' },\n  info: { emoji: ':large_blue_circle:', color: '#0066FF' }\n};\n\nconst sev = severityMap[severity] || severityMap.info;\n\n// Build KPI details section if provided\nlet kpiSection = '';\nif (params.kpi_details && params.kpi_details.length > 0) {\n  kpiSection = params.kpi_details.map(kpi => \n    `  *${kpi.name}*: ${kpi.value}${kpi.unit ? ' ' + kpi.unit : ''} (${kpi.trend || 'stable'})`\n  ).join('\\n');\n}\n\nconst dashboardUrl = params.dashboard_url || \n  `${process.env.CS_PULSE_URL || '{{CS_PULSE_URL}}'}/dashboard/customer/${body.customer_id}`;\n\nreturn [{\n  json: {\n    action_id: body.action_id,\n    playbook_id: body.playbook_id,\n    customer_id: body.customer_id,\n    customer_name: body.customer_name || `Customer ${body.customer_id}`,\n    callback_url: body.callback_url || `${process.env.CS_PULSE_URL || '{{CS_PULSE_URL}}'}/api/webhooks/playbook-callback`,\n    channel: params.channel || process.env.SLACK_CHANNEL || '{{SLACK_CHANNEL}}',\n    severity: severity,\n    emoji: sev.emoji,\n    color: sev.color,\n    title: params.title || `CS Pulse Alert: ${body.customer_name || body.customer_id}`,\n    message: params.message || 'A playbook action has been triggered.',\n    health_score: params.health_score,\n    kpi_section: kpiSection,\n    dashboard_url: dashboardUrl,\n    triggered_by: body.triggered_by || 'system',\n    triggered_at: body.triggered_at || new Date().toISOString()\n  }\n}];"
+      },
+      "id": "validate-and-format",
+      "name": "Validate and Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": "={{ $json.channel }}",
+        "text": "={{ $json.emoji }} *{{ $json.title }}*",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        },
+        "attachments": [
+          {
+            "color": "={{ $json.color }}",
+            "pretext": "",
+            "title": "={{ $json.customer_name }} (ID: {{ $json.customer_id }})",
+            "title_link": "={{ $json.dashboard_url }}",
+            "text": "={{ $json.message }}",
+            "fields": [
+              {
+                "title": "Severity",
+                "value": "={{ $json.severity.charAt(0).toUpperCase() + $json.severity.slice(1) }}",
+                "short": true
+              },
+              {
+                "title": "Health Score",
+                "value": "={{ $json.health_score !== undefined ? $json.health_score + '/100' : 'N/A' }}",
+                "short": true
+              },
+              {
+                "title": "Playbook",
+                "value": "={{ $json.playbook_id }}",
+                "short": true
+              },
+              {
+                "title": "Triggered By",
+                "value": "={{ $json.triggered_by }}",
+                "short": true
+              }
+            ],
+            "footer": "CS Pulse Playbook Engine",
+            "footer_icon": "",
+            "ts": ""
+          }
+        ],
+        "blocksUi": ""
+      },
+      "id": "send-slack-message",
+      "name": "Send Slack Message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [720, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack Bot Token"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare success callback\nconst slackResponse = $input.first().json;\nconst originalData = $('Validate and Format').first().json;\n\nreturn [{\n  json: {\n    action_id: originalData.action_id,\n    playbook_id: originalData.playbook_id,\n    customer_id: originalData.customer_id,\n    status: 'completed',\n    result: {\n      slack_channel: originalData.channel,\n      slack_message_ts: slackResponse.ts || slackResponse.message?.ts,\n      slack_thread_ts: slackResponse.message?.thread_ts || null,\n      message_sent: true\n    },\n    completed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-success-callback",
+      "name": "Prepare Success Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare error callback\nconst error = $input.first();\nconst originalData = $('Validate and Format').first().json;\n\nreturn [{\n  json: {\n    action_id: originalData.action_id,\n    playbook_id: originalData.playbook_id,\n    customer_id: originalData.customer_id,\n    status: 'failed',\n    error: {\n      message: error.json?.message || 'Failed to send Slack message',\n      code: error.json?.statusCode || 'SLACK_SEND_FAILED',\n      channel: originalData.channel,\n      details: error.json?.description || null\n    },\n    failed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-error-callback",
+      "name": "Prepare Error Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validate and Format').first().json.callback_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($input.first().json) }}",
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxRetries": 2,
+            "retryInterval": 3000,
+            "retryOnStatusCodes": "429,500,502,503,504"
+          }
+        }
+      },
+      "id": "callback-success",
+      "name": "Callback to CS Pulse (Success)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CS Pulse API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validate and Format').first().json.callback_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($input.first().json) }}",
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxRetries": 2,
+            "retryInterval": 3000,
+            "retryOnStatusCodes": "429,500,502,503,504"
+          }
+        }
+      },
+      "id": "callback-error",
+      "name": "Callback to CS Pulse (Error)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 420],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CS Pulse API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', action_id: $('Validate and Format').first().json.action_id, slack_sent: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-webhook-success",
+      "name": "Respond Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', action_id: $('Validate and Format').first().json.action_id, error: 'Slack message send failed' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-webhook-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 420]
+    }
+  ],
+  "connections": {
+    "Playbook Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Format": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Error Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback to CS Pulse (Success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback to CS Pulse (Error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback to CS Pulse (Success)": {
+      "main": [
+        [
+          {
+            "node": "Respond Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback to CS Pulse (Error)": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "cs-pulse",
+      "id": "1"
+    },
+    {
+      "name": "playbook-action",
+      "id": "3"
+    },
+    {
+      "name": "slack",
+      "id": "5"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-03T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -248,7 +248,7 @@ class ApprovalQueueService:
 
     @staticmethod
     def _to_dict(request: ApprovalRequest) -> Dict:
-        return {
+        result = {
             "request_id": request.id,
             "customer_id": request.customer_id,
             "account_id": request.account_id,
@@ -266,6 +266,20 @@ class ApprovalQueueService:
             "decision_notes": request.decision_notes,
             "created_at": request.created_at.isoformat() if request.created_at else None,
         }
+
+        # Enrich with UUID fields (best-effort)
+        try:
+            from uuid_utils import resolve_customer, resolve_account
+            customer = resolve_customer(request.customer_id, allow_none=True)
+            if customer:
+                result['customer_uuid'] = getattr(customer, 'uuid', None)
+            account = resolve_account(request.account_id, allow_none=True)
+            if account:
+                result['account_uuid'] = getattr(account, 'uuid', None)
+        except Exception:
+            pass
+
+        return result
 
 
 # ============================================================

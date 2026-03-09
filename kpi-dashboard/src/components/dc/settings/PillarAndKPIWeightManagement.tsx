@@ -13,6 +13,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useCustomerConfig } from '../../../hooks/useCustomerConfig';
 import { useSession } from '../../../contexts/SessionContext';
 import { Sliders, Clock, User, Brain, AlertCircle } from 'lucide-react';
+import { DEFAULT_PILLAR_WEIGHTS } from '../../../utils/pillarDefaults';
 
 interface WeightChangeHistory {
   change_id: number;
@@ -106,9 +107,9 @@ export const PillarAndKPIWeightManagement: React.FC = () => {
     );
   }
 
-  const pillarWeights = config.pillar_weights || { AI: 0.25, CH: 0.20, DV: 0.15, EX: 0.20, OS: 0.20 };
+  const pillarWeights = config.pillar_weights || DEFAULT_PILLAR_WEIGHTS;
   const kpiWeights = config.kpi_weights || {};
-  const totalPillarWeight = Object.values(pillarWeights).reduce((a, b) => a + b, 0);
+  const totalPillarWeight = (Object.values(pillarWeights) as number[]).reduce((a, b) => a + b, 0);
 
   const weightsSource = config.weights_source || 'bootstrap';
   const weightsUpdatedAt = config.weights_updated_at;

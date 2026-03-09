@@ -214,7 +214,12 @@ def evaluate_voc_triggers(customer_id, triggers):
             account_triggers.append("Account marked as 'At Risk'")
         
         # Check health score drop (would need historical data)
-        if account.health_score < 50:  # Simplified check
+        try:
+            import utils.health_thresholds as _ht
+            _at_risk_min = _ht.at_risk_min()
+        except ImportError:
+            _at_risk_min = 50
+        if account.health_score < _at_risk_min:  # Centralized threshold
             account_triggers.append(f"Low health score ({account.health_score:.1f})")
         
         if account_triggers:
@@ -267,7 +272,12 @@ def evaluate_activation_triggers(customer_id, triggers):
             account_triggers.append(f"Low active users (~{active_users_proxy})")
         
         # Check DAU/MAU (simulated)
-        dau_mau_proxy = 0.15 if account.health_score < 60 else 0.30
+        try:
+            import utils.health_thresholds as _ht2
+            _healthy_min_proxy = _ht2.healthy_min()
+        except ImportError:
+            _healthy_min_proxy = 70
+        dau_mau_proxy = 0.15 if account.health_score < _healthy_min_proxy else 0.30
         if dau_mau_proxy < dau_mau_threshold:
             account_triggers.append(f"Low DAU/MAU ratio (~{dau_mau_proxy:.2f})")
         

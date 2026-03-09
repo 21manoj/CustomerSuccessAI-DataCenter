@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiCall } from '../utils/api';
-
-export interface PillarWeights {
-  AI: number;
-  CH: number;
-  DV: number;
-  EX: number;
-  OS: number;
-}
+import { DEFAULT_PILLAR_WEIGHTS, type PillarWeights } from '../utils/pillarDefaults';
+export type { PillarWeights } from '../utils/pillarDefaults';
 
 export interface KPIWeights {
   [pillar: string]: {
@@ -72,7 +66,7 @@ export function useCustomerConfig() {
             customer_id: 0,
             is_default: true,
             weights_source: 'bootstrap',
-            pillar_weights: { AI: 0.25, CH: 0.20, DV: 0.15, EX: 0.20, OS: 0.20 },
+            pillar_weights: { ...DEFAULT_PILLAR_WEIGHTS },
             enabled_kpis: [],
             kpi_definitions: {},
             kpi_overrides: {},
@@ -89,7 +83,7 @@ export function useCustomerConfig() {
             customer_id: 0,
             is_default: true,
             weights_source: 'bootstrap',
-            pillar_weights: { AI: 0.25, CH: 0.20, DV: 0.15, EX: 0.20, OS: 0.20 },
+            pillar_weights: { ...DEFAULT_PILLAR_WEIGHTS },
             enabled_kpis: [],
             kpi_definitions: {},
             kpi_overrides: {},
@@ -115,7 +109,7 @@ export function useCustomerConfig() {
       setConfig({
         customer_id: 0,
         is_default: true,
-        pillar_weights: { AI: 0.25, CH: 0.20, DV: 0.15, EX: 0.20, OS: 0.20 },
+        pillar_weights: { ...DEFAULT_PILLAR_WEIGHTS },
         enabled_kpis: [],
         kpi_definitions: {},
         kpi_overrides: {},

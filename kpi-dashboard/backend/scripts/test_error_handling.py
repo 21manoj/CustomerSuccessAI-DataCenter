@@ -47,7 +47,7 @@ def test_error_handling():
         json={
             "kpi_code": "INVALID-KPI-CODE",  # Should start with CUSTOM-
             "kpi_definition": {
-                "pillar": "AI",
+                "pillar": "P3",
                 "name": "Test KPI",
                 "target": 85.0,
                 "operator": ">",
@@ -87,11 +87,11 @@ def test_error_handling():
         f"{BASE_URL}/api/dc2s/config/pillar-weights",
         json={
             "pillar_weights": {
-                "AI": 0.50,
-                "CH": 0.30,
-                "DV": 0.20,
-                "EX": 0.10,
-                "OS": 0.10
+                "P3": 0.50,
+                "P4": 0.30,
+                "P1": 0.20,
+                "P5": 0.10,
+                "P2": 0.10
             }
         }
     )

@@ -405,3 +405,7 @@ class ScenarioN8nWorkflow(BaseScenario):
         except Exception as e:
             logger.error(f"❌ N8N Workflow test failed: {e}")
             return self.failure("N8N Workflow failed", error=str(e), api_calls=api_calls)
+
+
+# Driver builds class name from scenario_id "n8n_workflow" as ScenarioN8NWorkflow ("n8n".title() -> "N8N")
+ScenarioN8NWorkflow = ScenarioN8nWorkflow

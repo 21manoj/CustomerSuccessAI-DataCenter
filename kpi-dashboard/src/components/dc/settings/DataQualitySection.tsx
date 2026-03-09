@@ -9,7 +9,7 @@ import { apiCall } from '../../../utils/api';
 import { AlertTriangle, CheckCircle, RefreshCw, BarChart3 } from 'lucide-react';
 
 interface Discrepancy {
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   kpi_code: string;
   kpi_name: string;

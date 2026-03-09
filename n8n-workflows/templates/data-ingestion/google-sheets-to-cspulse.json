@@ -1,0 +1,262 @@
+{
+  "name": "Google Sheets to CS Pulse - KPI Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "{{GOOGLE_SHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "KPI Data",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "trigger-google-sheets",
+      "name": "Google Sheets Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Map Google Sheets columns to CS Pulse KPI schema\n// Adjust the column mappings below to match your sheet structure\nconst items = $input.all();\nconst mapped = [];\n\nfor (const item of items) {\n  const row = item.json;\n  \n  mapped.push({\n    json: {\n      customer_id: parseInt(row['Customer ID'] || '{{CUSTOMER_ID}}'),\n      kpi_name: row['KPI Name'] || row['Metric'],\n      kpi_category: row['Category'] || 'operational',\n      value: parseFloat(row['Value'] || row['Score'] || '0'),\n      unit: row['Unit'] || 'count',\n      period: row['Period'] || row['Date'] || new Date().toISOString().split('T')[0],\n      source: 'google_sheets',\n      metadata: {\n        sheet_id: '{{GOOGLE_SHEET_ID}}',\n        sheet_name: row['Sheet'] || 'KPI Data',\n        row_number: row['row_number'] || null,\n        ingested_at: new Date().toISOString()\n      }\n    }\n  });\n}\n\nreturn mapped;"
+      },
+      "id": "transform-kpi-data",
+      "name": "Transform to KPI Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "id": "batch-items",
+      "name": "Batch Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CS_PULSE_URL || '{{CS_PULSE_URL}}'}}/api/data-ingestion/kpis",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kpis: $items().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "maxRetries": 3,
+            "retryInterval": 5000,
+            "retryOnStatusCodes": "429,500,502,503,504"
+          }
+        }
+      },
+      "id": "post-to-cspulse",
+      "name": "POST to CS Pulse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CS Pulse API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log successful ingestion\nconst response = $input.first().json;\nreturn [{\n  json: {\n    status: 'success',\n    ingested_count: response.ingested_count || $items().length,\n    timestamp: new Date().toISOString(),\n    message: `Successfully ingested ${response.ingested_count || 'N/A'} KPI records`\n  }\n}];"
+      },
+      "id": "log-success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Handle errors and prepare retry or notification\nconst error = $input.first();\nconst errorDetails = {\n  status: 'error',\n  timestamp: new Date().toISOString(),\n  error_message: error.json?.message || 'Unknown error during KPI ingestion',\n  status_code: error.json?.statusCode || 'N/A',\n  failed_batch_size: $items().length,\n  workflow: 'google-sheets-to-cspulse'\n};\n\nreturn [{ json: errorDetails }];"
+      },
+      "id": "handle-error",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CS_PULSE_URL || '{{CS_PULSE_URL}}'}}/api/webhooks/ingestion-status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($input.first().json) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "notify-error-callback",
+      "name": "Notify CS Pulse of Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1360, 420],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CS Pulse API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "no-op-end",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1580, 300]
+    }
+  ],
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Transform to KPI Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform to KPI Schema": {
+      "main": [
+        [
+          {
+            "node": "Batch Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Items": {
+      "main": [
+        [
+          {
+            "node": "POST to CS Pulse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to CS Pulse": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Notify CS Pulse of Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify CS Pulse of Error": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "cs-pulse",
+      "id": "1"
+    },
+    {
+      "name": "data-ingestion",
+      "id": "2"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-03T00:00:00.000Z",
+  "versionId": "1"
+}

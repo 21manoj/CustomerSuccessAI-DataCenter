@@ -1,4 +1,4 @@
 signal_id,account_id,signal_date,signal_type,sentiment,content
-1,10001,2026-01-15,email,positive,Customer expressed satisfaction with recent deployment
-2,10001,2026-01-12,meeting,neutral,QBR meeting scheduled for next month
-3,10001,2026-01-14,escalation,negative,"Performance issue reported, resolved within 2 hours"
+1,10001,2026-02-28,email,positive,Customer expressed satisfaction with recent deployment
+2,10001,2026-02-25,meeting,neutral,QBR meeting scheduled for next month
+3,10001,2026-02-27,escalation,negative,"Performance issue reported, resolved within 2 hours"

@@ -1,44 +1,127 @@
-version: '3.8'
+# ================================================================
+# CS Pulse Platform — Production Docker Compose
+#
+# For AWS EC2 deployment with:
+#   - Resource limits
+#   - Proper logging configuration
+#   - Security hardening (read-only rootfs, no new privileges)
+#   - Named volumes for data persistence
+#
+# Usage:
+#   docker compose -f docker-compose.production.yml up -d
+#
+# Required environment variables (via .env file or AWS SSM/Secrets Manager):
+#   POSTGRES_PASSWORD  — strong database password (min 32 chars; never use default from Postgres Dockerfile)
+#   OPENAI_API_KEY     — OpenAI API key
+#   ANTHROPIC_API_KEY  — Anthropic API key
+#   SECRET_KEY         — Flask session secret key (min 32 chars; required in production)
+#
+# Do not set FLASK_DEBUG=true in production.
+# ================================================================
 
 services:
-  backend:
+  # ──────────────────────────────────────────────
+  # PostgreSQL Database
+  # ──────────────────────────────────────────────
+  postgres:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.production
-    container_name: kpi-dashboard-backend
-    ports:
-      - "5059:5059"
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    container_name: cspulse-postgres
     environment:
-      - FLASK_ENV=production
-      - SQLALCHEMY_DATABASE_URI=sqlite:///instance/kpi_dashboard.db
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      POSTGRES_DB: cs_pulse
+      POSTGRES_USER: cspulse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"   # Host 5433 to avoid conflict with local Postgres on 5432
     volumes:
-      - backend_data:/app/instance
-    restart: unless-stopped
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - cspulse-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "-H", "X-Customer-ID: 6", "http://localhost:5059/api/accounts"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "pg_isready -U cspulse -d cs_pulse"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  frontend:
+  # ──────────────────────────────────────────────
+  # CS Pulse Platform (Flask + React + Nginx)
+  # ──────────────────────────────────────────────
+  cs-pulse:
     build:
       context: .
-      dockerfile: Dockerfile.production
-    container_name: kpi-dashboard-frontend
+      dockerfile: Dockerfile.cspulse
+    container_name: cspulse-platform
     ports:
-      - "80:80"
+      - "9080:80"       # Host 9080 to avoid conflict with other server on 80
+      - "9443:443"      # HTTPS (when TLS configured in nginx)
+    environment:
+      DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
+
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      FLASK_APP: app_v3_minimal.py
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}
+    volumes:
+      - uploads:/app/backend/uploads
+      - verticals:/app/backend/verticals
+      - instance:/app/backend/instance
     depends_on:
-      - backend
-    restart: unless-stopped
+      postgres:
+        condition: service_healthy
+    networks:
+      - cspulse-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5059/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 45s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+networks:
+  cspulse-net:
+    driver: bridge
 
 volumes:
-  backend_data:
+  pgdata:
+    driver: local
+  uploads:
+    driver: local
+  verticals:
+    driver: local
+  instance:
     driver: local

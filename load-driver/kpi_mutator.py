@@ -8,6 +8,7 @@ Drift Profiles:
   - critical: Sharp drop (5-10% per month for 3 months, then stabilize)
   - recovering: Was critical, now improving (3-5% per month)
   - seasonal: Cyclical pattern (±10% over 6-month cycle)
+  - playbook_improving: Weight-aware improvement (per-KPI drift rates from Wizard C weights)
 
 Power-of-1 Alignment:
   Maps DC2_S KPI codes to Power-of-1 metrics so ROI can be verified:
@@ -24,29 +25,36 @@ import math
 from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
 
-
-# KPI codes grouped by pillar
-KPI_CODES = {
-    'AI': ['AI-KPI1', 'AI-KPI2', 'AI-KPI3'],
-    'CH': ['CH-KPI1', 'CH-KPI2', 'CH-KPI3'],
-    'DV': ['DV-KPI1', 'DV-KPI2', 'DV-KPI3'],
-    'EX': ['EX-KPI1', 'EX-KPI2', 'EX-KPI3'],
-    'OS': ['OS-KPI1', 'OS-KPI2', 'OS-KPI3'],
-}
-
-ALL_KPI_CODES = [code for codes in KPI_CODES.values() for code in codes]
-
-# Default targets per KPI code
-DEFAULT_TARGETS = {code: 85.0 for code in ALL_KPI_CODES}
+# Load KPI definitions from shared catalog (single source of truth)
+try:
+    from catalog_loader import get_kpi_list_for_load_driver, get_kpi_target, get_kpi_weight
+    _catalog_kpis = get_kpi_list_for_load_driver()
+    KPI_CODES = {}
+    for kpi in _catalog_kpis:
+        KPI_CODES.setdefault(kpi['pillar'], []).append(kpi['code'])
+    ALL_KPI_CODES = [kpi['code'] for kpi in _catalog_kpis]
+    DEFAULT_TARGETS = {kpi['code']: get_kpi_target(kpi['code']) for kpi in _catalog_kpis}
+    _KPI_WEIGHTS = {kpi['code']: get_kpi_weight(kpi['code']) for kpi in _catalog_kpis}
+except Exception:
+    KPI_CODES = {
+        'P1': ['P1-KPI1', 'P1-KPI2', 'P1-KPI3'],
+        'P2': ['P2-KPI1', 'P2-KPI2', 'P2-KPI3'],
+        'P3': ['P3-KPI1', 'P3-KPI2', 'P3-KPI3'],
+        'P4': ['P4-KPI1', 'P4-KPI2', 'P4-KPI3'],
+        'P5': ['P5-KPI1', 'P5-KPI2', 'P5-KPI3'],
+    }
+    ALL_KPI_CODES = [code for codes in KPI_CODES.values() for code in codes]
+    DEFAULT_TARGETS = {code: 85.0 for code in ALL_KPI_CODES}
+    _KPI_WEIGHTS = {code: 0.33 for code in ALL_KPI_CODES}
 
 # Power-of-1 metric mapping (DC2_S KPI → Power-of-1 metric)
 POWER_OF_1_MAP = {
-    'DV-KPI3': 'TTFV',                    # Time-to-First-Workload → TTFV
-    'EX-KPI2': 'expansion_rate',           # Expansion Pipeline → expansion_rate
-    'AI-KPI1': 'product_adoption',         # GPU Utilization → product_adoption
-    'OS-KPI2': 'ticket_resolution_time',   # Mean Time to Recovery → ticket_resolution
-    'EX-KPI1': 'NRR',                      # Capacity Utilization → NRR
-    'CH-KPI1': 'GRR',                      # Partner Engagement → GRR
+    'P1-KPI3': 'TTFV',                    # Time-to-First-Workload → TTFV
+    'P5-KPI2': 'expansion_rate',           # Expansion Pipeline → expansion_rate
+    'P3-KPI1': 'product_adoption',         # GPU Utilization → product_adoption
+    'P2-KPI2': 'ticket_resolution_time',   # Mean Time to Recovery → ticket_resolution
+    'P5-KPI1': 'NRR',                      # Capacity Utilization → NRR
+    'P4-KPI1': 'GRR',                      # Partner Engagement → GRR
 }
 
 
@@ -58,7 +66,7 @@ class KPIMutator:
         mutator = KPIMutator(seed=42)
         month_data = mutator.generate_12_months(
             account_id=1001,
-            baseline_values={'AI-KPI1': 82.0, ...},
+            baseline_values={'P3-KPI1': 82.0, ...},
             profile='declining'
         )
     """
@@ -67,6 +75,17 @@ class KPIMutator:
         if seed is not None:
             random.seed(seed)
         self.noise_scale = 2.0  # Base noise in percentage points
+        self._kpi_drift_rates = {}  # Per-KPI drift rates for playbook_improving profile
+
+    def set_kpi_drift_rates(self, rates: Dict[str, float]):
+        """
+        Set per-KPI drift rates for the 'playbook_improving' profile.
+
+        Args:
+            rates: Dict of kpi_code → drift rate (points/month).
+                   Higher-weighted KPIs get larger drift rates.
+        """
+        self._kpi_drift_rates = rates
 
     def generate_12_months(
         self,
@@ -98,7 +117,7 @@ class KPIMutator:
                 target = DEFAULT_TARGETS.get(kpi_code, 85.0)
 
                 # Apply drift profile
-                value = self._apply_drift(baseline, target, month_offset, profile)
+                value = self._apply_drift(baseline, target, month_offset, profile, kpi_code=kpi_code)
 
                 # Determine status
                 if value >= target * 0.95:
@@ -115,7 +134,7 @@ class KPIMutator:
                     'value': round(value, 2),
                     'target': target,
                     'pillar': pillar,
-                    'weight': 0.25,
+                    'weight': _KPI_WEIGHTS.get(kpi_code, 0.33),
                     'status': status
                 })
 
@@ -126,7 +145,8 @@ class KPIMutator:
         baseline: float,
         target: float,
         month: int,
-        profile: str
+        profile: str,
+        kpi_code: str = None
     ) -> float:
         """Apply drift profile to a single KPI value"""
         noise = random.gauss(0, self.noise_scale)
@@ -159,6 +179,13 @@ class KPIMutator:
             # Cyclical: ±10% over 6-month cycle
             cycle = 10.0 * math.sin(2 * math.pi * month / 6)
             return max(0, min(100, baseline + cycle + noise))
+
+        elif profile == 'playbook_improving':
+            # Weight-aware improvement: per-KPI drift rates from Wizard C weights
+            # Higher-weighted KPIs (by L1 weight × pillar economic impact) improve faster
+            drift_rate = self._kpi_drift_rates.get(kpi_code, 0.5)
+            drift = month * drift_rate + noise * 0.3  # Lower noise for controlled playbook execution
+            return max(0, min(100, baseline + drift))
 
         else:
             return baseline + noise

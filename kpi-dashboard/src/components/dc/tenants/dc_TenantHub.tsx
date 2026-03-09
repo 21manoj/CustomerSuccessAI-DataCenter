@@ -28,7 +28,7 @@ import { RefreshCw, AlertTriangle, Server } from 'lucide-react';
 // ============================================================
 
 interface Tenant {
-  tenant_id: number;
+  tenant_id: number | string;
   tenant_name: string;
   health_score: number;
   status: 'healthy' | 'at_risk' | 'critical';
@@ -65,8 +65,8 @@ const DCTenantHub: React.FC = () => {
   const { accountId } = useParams<{ accountId?: string }>();
   
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState<number | null>(
-    accountId ? parseInt(accountId) : null
+  const [selectedTenantId, setSelectedTenantId] = useState<number | string | null>(
+    accountId || null
   );
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('journey');
   const [loading, setLoading] = useState(true);
@@ -84,10 +84,7 @@ const DCTenantHub: React.FC = () => {
   // Update selected tenant from URL
   useEffect(() => {
     if (accountId) {
-      const id = parseInt(accountId);
-      if (!isNaN(id)) {
-        setSelectedTenantId(id);
-      }
+      setSelectedTenantId(accountId);
     } else {
       setSelectedTenantId(null);
     }
@@ -190,7 +187,7 @@ const DCTenantHub: React.FC = () => {
     return 'critical';
   };
 
-  const handleSelectTenant = (tenantId: number | null) => {
+  const handleSelectTenant = (tenantId: number | string | null) => {
     setSelectedTenantId(tenantId);
     if (tenantId) {
       navigate(`/dc-dashboard/tenants/${tenantId}?tab=${activeSubTab}`);

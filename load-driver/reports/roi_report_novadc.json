@@ -1,0 +1,1631 @@
+{
+  "report_type": "roi_2pager",
+  "generated_at": "2026-03-04T08:20:06.850647",
+  "customer": {
+    "id": "50",
+    "name": "NovaDC Infrastructure",
+    "uuid": "dc_cust_019cb761-d8f9-7d41-905a-1d7679ec605d",
+    "vertical": "dc",
+    "created_at": "2026-03-04 05:46:09.002164"
+  },
+  "summary": {
+    "total_arr": 31845598.0,
+    "account_count": 20,
+    "portfolio_health_l4": 51.8,
+    "simple_avg_l3": 53.8,
+    "health_distribution": {
+      "healthy": {
+        "count": 0,
+        "arr": 0
+      },
+      "at_risk": {
+        "count": 14,
+        "arr": 20623160.0
+      },
+      "critical": {
+        "count": 6,
+        "arr": 11222438.0
+      }
+    },
+    "revenue_at_risk": 31845598.0,
+    "revenue_at_risk_pct": 100.0
+  },
+  "roi": {
+    "snapshots": [
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 1.0,
+        "historical_roi": 1094.8,
+        "historical_impact": 6914038.67,
+        "historical_investment": 578700.0,
+        "forward_roi": 165.2,
+        "forward_impact": 639519.32,
+        "forward_investment": 241125.0,
+        "combined_roi": 821.4,
+        "total_arr": 31845598.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 2.5,
+        "historical_roi": 1094.8,
+        "historical_impact": 6914038.67,
+        "historical_investment": 578700.0,
+        "forward_roi": 366.9,
+        "forward_impact": 1598798.3,
+        "forward_investment": 342397.5,
+        "combined_roi": 824.2,
+        "total_arr": 31845598.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 4.0,
+        "historical_roi": 1094.8,
+        "historical_impact": 6914038.67,
+        "historical_investment": 578700.0,
+        "forward_roi": 476.6,
+        "forward_impact": 2558077.27,
+        "forward_investment": 443670.0,
+        "combined_roi": 826.5,
+        "total_arr": 31845598.0
+      },
+      {
+        "date": "2026-03-04",
+        "improvement_pct": 6.0,
+        "historical_roi": 1094.8,
+        "historical_impact": 6914038.67,
+        "historical_investment": 578700.0,
+        "forward_roi": 563.1,
+        "forward_impact": 3837115.91,
+        "forward_investment": 578700.0,
+        "combined_roi": 828.9,
+        "total_arr": 31845598.0
+      }
+    ],
+    "historical_roi_pct": 1094.8,
+    "historical_impact": 6914038.67,
+    "forward_scenarios": [
+      {
+        "improvement_pct": 1.0,
+        "investment": 241125.0,
+        "impact": 639519.32,
+        "roi_pct": 165.2
+      },
+      {
+        "improvement_pct": 2.5,
+        "investment": 342397.5,
+        "impact": 1598798.3,
+        "roi_pct": 366.9
+      },
+      {
+        "improvement_pct": 4.0,
+        "investment": 443670.0,
+        "impact": 2558077.27,
+        "roi_pct": 476.6
+      },
+      {
+        "improvement_pct": 6.0,
+        "investment": 578700.0,
+        "impact": 3837115.91,
+        "roi_pct": 563.1
+      }
+    ]
+  },
+  "playbook_executions": {
+    "total": 1,
+    "completed": 1,
+    "recent": [
+      {
+        "execution_id": "dc-exec-18e3f804d390",
+        "account_id": 50011,
+        "playbook_id": "PB-01",
+        "status": "completed",
+        "started_at": "2026-03-04 06:13:47.072644",
+        "completed_at": "2026-03-04 06:14:27.787613",
+        "account_name": "NovaDC Infrastructure - Account-11"
+      }
+    ]
+  },
+  "accounts": [
+    {
+      "account_id": 50009,
+      "account_name": "NovaDC Infrastructure - Performance",
+      "revenue": 1792273.0,
+      "health_score": 23.95,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 52.73,
+          "status": "at_risk"
+        },
+        "CH": {
+          "score": 23.24,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 49.17,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 8.58,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 6.7,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -23.19,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -26.31,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 592.26,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 46.85,
+          "target": 85.0,
+          "score": 55.12,
+          "status": "at_risk"
+        },
+        {
+          "kpi_code": "DV-KPI2",
+          "value": 41.25,
+          "target": 85.0,
+          "score": 48.53,
+          "status": "critical"
+        }
+      ]
+    },
+    {
+      "account_id": 50018,
+      "account_name": "NovaDC Infrastructure - Account-18",
+      "revenue": 1863898.0,
+      "health_score": 24.49,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 52.21,
+          "status": "at_risk"
+        },
+        "CH": {
+          "score": 21.21,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 48.12,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 10.71,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 6.57,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -22.66,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -19.59,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 506.36,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 45.11,
+          "target": 85.0,
+          "score": 53.07,
+          "status": "at_risk"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 39.78,
+          "target": 85.0,
+          "score": 46.8,
+          "status": "critical"
+        }
+      ]
+    },
+    {
+      "account_id": 50015,
+      "account_name": "NovaDC Infrastructure - Account-15",
+      "revenue": 2328679.0,
+      "health_score": 25.61,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 55.51,
+          "status": "at_risk"
+        },
+        "CH": {
+          "score": 22.87,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 44.88,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 10.06,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 7.17,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -27.99,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -21.56,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 533.75,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 41.22,
+          "target": 85.0,
+          "score": 48.49,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 40.24,
+          "target": 85.0,
+          "score": 47.34,
+          "status": "critical"
+        }
+      ]
+    },
+    {
+      "account_id": 50012,
+      "account_name": "NovaDC Infrastructure - Account-12",
+      "revenue": 2174104.0,
+      "health_score": 33.21,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 53.04,
+          "status": "at_risk"
+        },
+        "CH": {
+          "score": 21.84,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 47.29,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 8.25,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 39.8,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -28.37,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -30.01,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 0.69,
+          "target": 85.0,
+          "score": 0.81,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 518.23,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 951.12,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 47.35,
+          "target": 85.0,
+          "score": 55.71,
+          "status": "at_risk"
+        }
+      ]
+    },
+    {
+      "account_id": 50006,
+      "account_name": "NovaDC Infrastructure - DR",
+      "revenue": 2144072.0,
+      "health_score": 33.53,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 51.62,
+          "status": "at_risk"
+        },
+        "CH": {
+          "score": 19.66,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 50.12,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 10.7,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 39.64,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -31.82,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -32.17,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 0.53,
+          "target": 85.0,
+          "score": 0.62,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 528.58,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 6555.06,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "DV-KPI3",
+          "value": 46.86,
+          "target": 85.0,
+          "score": 55.13,
+          "status": "at_risk"
+        }
+      ]
+    },
+    {
+      "account_id": 50003,
+      "account_name": "NovaDC Infrastructure - Development",
+      "revenue": 919412.0,
+      "health_score": 34.43,
+      "health_status": "critical",
+      "pillars": {
+        "AI": {
+          "score": 54.51,
+          "status": "at_risk"
+        },
+        "CH": {
+          "score": 22.47,
+          "status": "critical"
+        },
+        "DV": {
+          "score": 46.42,
+          "status": "critical"
+        },
+        "EX": {
+          "score": 10.42,
+          "status": "critical"
+        },
+        "OS": {
+          "score": 39.5,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "EX-KPI2",
+          "value": -29.83,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "EX-KPI3",
+          "value": -26.37,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "CH-KPI3",
+          "value": 0.68,
+          "target": 85.0,
+          "score": 0.8,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 514.92,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "OS-KPI2",
+          "value": 3097.92,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "DV-KPI2",
+          "value": 41.8,
+          "target": 85.0,
+          "score": 49.18,
+          "status": "critical"
+        }
+      ]
+    },
+    {
+      "account_id": 50014,
+      "account_name": "NovaDC Infrastructure - Account-14",
+      "revenue": 2174564.0,
+      "health_score": 60.69,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 72.31,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.22,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 59.67,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 70.54,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 33.08,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.21,
+          "target": 85.0,
+          "score": 0.25,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.71,
+          "target": 85.0,
+          "score": 0.84,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 100.0,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 86.66,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 96.53,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50008,
+      "account_name": "NovaDC Infrastructure - Integration",
+      "revenue": 1117321.0,
+      "health_score": 62.02,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 77.04,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 72.98,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 61.61,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 69.55,
+          "status": "at_risk"
+        },
+        "OS": {
+          "score": 33.04,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.74,
+          "target": 85.0,
+          "score": 0.87,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 8.32,
+          "target": 85.0,
+          "score": 9.79,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.82,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 96.5,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 92.36,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50019,
+      "account_name": "NovaDC Infrastructure - Account-19",
+      "revenue": 485483.0,
+      "health_score": 62.4,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 73.68,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.49,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 59.37,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 74.0,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 32.97,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.57,
+          "target": 85.0,
+          "score": 0.67,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.01,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 93.41,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 96.91,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50001,
+      "account_name": "NovaDC Infrastructure - Production",
+      "revenue": 2162847.0,
+      "health_score": 63.28,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 73.68,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.58,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 60.73,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 76.48,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 32.93,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.06,
+          "target": 85.0,
+          "score": 0.07,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.43,
+          "target": 85.0,
+          "score": 0.51,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.11,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 97.36,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 91.92,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50007,
+      "account_name": "NovaDC Infrastructure - Sandbox",
+      "revenue": 2104746.0,
+      "health_score": 63.36,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 75.83,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.24,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 58.26,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 74.5,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 33.01,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.08,
+          "target": 85.0,
+          "score": 0.09,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.67,
+          "target": 85.0,
+          "score": 0.79,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 1.62,
+          "target": 85.0,
+          "score": 1.91,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 85.99,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 92.03,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 93.33,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50016,
+      "account_name": "NovaDC Infrastructure - Account-16",
+      "revenue": 805871.0,
+      "health_score": 63.44,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 74.45,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.18,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 60.36,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 76.02,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 33.13,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.18,
+          "target": 85.0,
+          "score": 0.21,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.89,
+          "target": 85.0,
+          "score": 1.05,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 2.47,
+          "target": 85.0,
+          "score": 2.91,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 91.89,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 96.3,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 88.52,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50004,
+      "account_name": "NovaDC Infrastructure - QA",
+      "revenue": 1574065.0,
+      "health_score": 63.74,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 73.68,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.25,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 58.67,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 77.55,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 33.19,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.54,
+          "target": 85.0,
+          "score": 0.64,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.62,
+          "target": 85.0,
+          "score": 0.73,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 93.68,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 100.0,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 96.85,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50010,
+      "account_name": "NovaDC Infrastructure - Lab",
+      "revenue": 1659498.0,
+      "health_score": 64.17,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 77.03,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.5,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 60.62,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 75.7,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 32.82,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.21,
+          "target": 85.0,
+          "score": 0.25,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 6.33,
+          "target": 85.0,
+          "score": 7.45,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 90.35,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 98.02,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 90.11,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50013,
+      "account_name": "NovaDC Infrastructure - Account-13",
+      "revenue": 1376914.0,
+      "health_score": 64.65,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 73.68,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.36,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 59.46,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 80.39,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 32.8,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "AI-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.16,
+          "target": 85.0,
+          "score": 0.19,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 86.04,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 100.0,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 94.73,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50011,
+      "account_name": "NovaDC Infrastructure - Account-11",
+      "revenue": 1707503.0,
+      "health_score": 65.44,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 81.29,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.23,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 61.46,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 74.86,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 32.93,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.48,
+          "target": 85.0,
+          "score": 0.56,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 8.01,
+          "target": 85.0,
+          "score": 9.42,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 89.39,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 93.73,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 86.8,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50020,
+      "account_name": "NovaDC Infrastructure - Account-20",
+      "revenue": 1681080.0,
+      "health_score": 66.39,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 88.28,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.15,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 59.32,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 70.14,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 33.41,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.5,
+          "target": 85.0,
+          "score": 0.59,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 1.29,
+          "target": 85.0,
+          "score": 1.52,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 3.74,
+          "target": 85.0,
+          "score": 4.4,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 97.48,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 85.22,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 91.58,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50005,
+      "account_name": "NovaDC Infrastructure - UAT",
+      "revenue": 1335559.0,
+      "health_score": 66.61,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 88.82,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.24,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 59.1,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 70.62,
+          "status": "healthy"
+        },
+        "OS": {
+          "score": 32.91,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.0,
+          "target": 85.0,
+          "score": 0.0,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.43,
+          "target": 85.0,
+          "score": 0.51,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 3.3,
+          "target": 85.0,
+          "score": 3.88,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 97.19,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 87.83,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 95.18,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50002,
+      "account_name": "NovaDC Infrastructure - Staging",
+      "revenue": 2209484.0,
+      "health_score": 66.83,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 90.59,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 72.94,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 60.13,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 69.28,
+          "status": "at_risk"
+        },
+        "OS": {
+          "score": 33.12,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.13,
+          "target": 85.0,
+          "score": 0.15,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.94,
+          "target": 85.0,
+          "score": 1.11,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 5.35,
+          "target": 85.0,
+          "score": 6.29,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI1",
+          "value": 88.04,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 98.78,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 87.74,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "account_id": 50017,
+      "account_name": "NovaDC Infrastructure - Account-17",
+      "revenue": 228225.0,
+      "health_score": 67.35,
+      "health_status": "at_risk",
+      "pillars": {
+        "AI": {
+          "score": 93.74,
+          "status": "healthy"
+        },
+        "CH": {
+          "score": 73.06,
+          "status": "healthy"
+        },
+        "DV": {
+          "score": 59.28,
+          "status": "at_risk"
+        },
+        "EX": {
+          "score": 67.76,
+          "status": "at_risk"
+        },
+        "OS": {
+          "score": 32.88,
+          "status": "critical"
+        }
+      },
+      "worst_kpis": [
+        {
+          "kpi_code": "OS-KPI1",
+          "value": 0.16,
+          "target": 85.0,
+          "score": 0.19,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "OS-KPI3",
+          "value": 0.23,
+          "target": 85.0,
+          "score": 0.27,
+          "status": "critical"
+        },
+        {
+          "kpi_code": "DV-KPI1",
+          "value": 3.67,
+          "target": 85.0,
+          "score": 4.32,
+          "status": "critical"
+        }
+      ],
+      "best_kpis": [
+        {
+          "kpi_code": "AI-KPI2",
+          "value": 97.76,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI1",
+          "value": 89.09,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        },
+        {
+          "kpi_code": "CH-KPI2",
+          "value": 89.64,
+          "target": 85.0,
+          "score": 100.0,
+          "status": "healthy"
+        }
+      ]
+    }
+  ],
+  "config": {}
+}

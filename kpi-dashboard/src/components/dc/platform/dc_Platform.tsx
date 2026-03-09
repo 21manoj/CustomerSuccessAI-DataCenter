@@ -26,7 +26,9 @@ import {
   Zap,
   DollarSign,
   Layers,
-  FlaskConical
+  FlaskConical,
+  ShieldCheck,
+  GitBranch
 } from 'lucide-react';
 import { useSession } from '../../../contexts/SessionContext';
 
@@ -41,13 +43,15 @@ import DCTenantHub from '../tenants/dc_TenantHub';
 import DCDataIntegration from '../data-integration/dc_DataIntegration';
 import DCSettings from '../settings/dc_Settings';
 import DCPlaybooks from '../playbooks/DCPlaybooks';
+import DCApprovalQueue from '../approvals/DCApprovalQueue';
 import DCTestRunner from '../test-runner/DCTestRunner';
+import DCRevenueIntelligence from '../revenue-intelligence/DCRevenueIntelligence';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-type TabId = 'executive' | 'tenants' | 'signals' | 'ai-insights' | 'admin-insights' | 'playbooks' | 'test-runner' | 'data-integration' | 'settings' | 'outcome-roi' | 'portco';
+type TabId = 'executive' | 'tenants' | 'signals' | 'ai-insights' | 'admin-insights' | 'playbooks' | 'approvals' | 'test-runner' | 'revenue-intelligence' | 'data-integration' | 'settings' | 'outcome-roi' | 'portco';
 
 interface Tab {
   id: TabId;
@@ -67,9 +71,11 @@ const TABS: Tab[] = [
   { id: 'ai-insights', label: 'AI Insights', icon: Brain, route: '/dc-dashboard/ai-insights' },
   { id: 'admin-insights', label: 'Admin Insights', icon: Activity, route: '/dc-dashboard/admin-insights' },
   { id: 'playbooks', label: 'Playbooks', icon: Zap, route: '/dc-dashboard/playbooks' },
+  { id: 'approvals', label: 'Approval Queue', icon: ShieldCheck, route: '/dc-dashboard/approvals' },
   { id: 'test-runner', label: 'Test Runner', icon: FlaskConical, route: '/dc-dashboard/test-runner' },
   { id: 'outcome-roi', label: 'Outcome ROI', icon: DollarSign, route: '/outcome-roi' },
   { id: 'portco', label: 'Power of 1 (Portfolio CEO)', icon: Layers, route: '/portco-dashboard' },
+  { id: 'revenue-intelligence', label: 'Revenue Intelligence', icon: GitBranch, route: '/dc-dashboard/revenue-intelligence' },
   { id: 'data-integration', label: 'Data Integration', icon: Upload, route: '/dc-dashboard/data-integration' },
   { id: 'settings', label: 'Settings', icon: Settings, route: '/dc-dashboard/settings' }
 ];
@@ -93,7 +99,9 @@ const DCPlatform: React.FC = () => {
     if (path.includes('/ai-insights')) return 'ai-insights';
     if (path.includes('/admin-insights')) return 'admin-insights';
     if (path.includes('/playbooks')) return 'playbooks';
+    if (path.includes('/approvals')) return 'approvals';
     if (path.includes('/test-runner')) return 'test-runner';
+    if (path.includes('/revenue-intelligence')) return 'revenue-intelligence';
     if (path === '/outcome-roi') return 'outcome-roi';
     if (path === '/portco-dashboard') return 'portco';
     if (path.includes('/data-integration')) return 'data-integration';
@@ -176,7 +184,7 @@ const DCPlatform: React.FC = () => {
         </nav>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-8 bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
+        <main className="flex-1 min-w-0 overflow-hidden p-8 bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
           {activeTab === 'executive' && <ExecutiveDashboard />}
           
           {activeTab === 'tenants' && <DCTenantHub />}
@@ -184,7 +192,7 @@ const DCPlatform: React.FC = () => {
           {activeTab === 'signals' && (
             <div className="bg-white rounded-lg shadow-sm p-6">
               {accountId ? (
-                <SignalAnalyst accountId={parseInt(accountId)} accountName={`Account ${accountId}`} />
+                <SignalAnalyst accountId={accountId} accountName={`Account ${accountId}`} />
               ) : (
                 <div className="text-center py-12">
                   <p className="text-gray-600 mb-4">Please select an account to analyze</p>
@@ -204,7 +212,11 @@ const DCPlatform: React.FC = () => {
 
           {activeTab === 'playbooks' && <DCPlaybooks />}
 
+          {activeTab === 'approvals' && <DCApprovalQueue />}
+
           {activeTab === 'test-runner' && <DCTestRunner />}
+
+          {activeTab === 'revenue-intelligence' && <DCRevenueIntelligence />}
 
           {activeTab === 'data-integration' && <DCDataIntegration />}
           

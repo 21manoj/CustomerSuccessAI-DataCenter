@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useSession } from '../../../contexts/SessionContext';
 import { apiCall } from '../../../utils/api';
+import { DEFAULT_PILLAR_WEIGHTS, PILLAR_META } from '../../../utils/pillarDefaults';
 
 // ============================================================
 // TYPES
@@ -50,7 +51,7 @@ interface Pillar {
 }
 
 interface TenantKPIDetailsProps {
-  tenantId: number;
+  tenantId: number | string;
 }
 
 // ============================================================
@@ -91,9 +92,13 @@ const DCTenantKPIDetails: React.FC<TenantKPIDetailsProps> = ({ tenantId }) => {
       // DC2_S: Use health-score API (has real data); scores/account/:id/latest uses HealthScore table (often empty for DC2_S)
       let pillarScores: any[] = [];
       let healthScore = 0;
-      const pillarWeightsDefault: Record<string, number> = {
-        P1: 0.15, P2: 0.20, P3: 0.25, P4: 0.15, P5: 0.25
-      };
+      // Derive P-code weights from the canonical DB-code defaults
+      const pillarWeightsDefault: Record<string, number> = Object.fromEntries(
+        Object.entries(PILLAR_META).map(([pCode, meta]) => [
+          pCode,
+          DEFAULT_PILLAR_WEIGHTS[meta.code as keyof typeof DEFAULT_PILLAR_WEIGHTS] ?? 0.20,
+        ])
+      );
       let pillarWeights: Record<string, number> = { ...pillarWeightsDefault };
 
       const healthScoreResponse = await apiCall(`/api/dc2s/health-score/${tenantId}`, { method: 'GET' });
@@ -133,14 +138,25 @@ const DCTenantKPIDetails: React.FC<TenantKPIDetailsProps> = ({ tenantId }) => {
         }
       }
 
-      // DC2_S pillar codes P1-P5 and display names
-      const pillarNames: Record<string, string> = {
-        P1: 'Deployment Velocity',
-        P2: 'Operational Stability',
-        P3: 'AI Workload Performance',
-        P4: 'Channel & Partner Health',
-        P5: 'Expansion Readiness'
-      };
+      // DC2_S pillar codes P1-P5 and display names (from centralized PILLAR_META)
+      const pillarNames: Record<string, string> = Object.fromEntries(
+        Object.entries(PILLAR_META).map(([code, meta]) => [code, meta.name])
+      );
+
+      // Fetch enabled pillars from accounts endpoint
+      let enabledPillars: Set<string> = new Set(['P1', 'P2', 'P3', 'P4', 'P5']);
+      try {
+        const accountsResp = await apiCall('/api/dc2s/accounts', { method: 'GET' });
+        if (accountsResp.ok) {
+          const accountsData = await accountsResp.json();
+          const ep = accountsData.enabled_pillars;
+          if (Array.isArray(ep) && ep.length > 0) {
+            enabledPillars = new Set(ep);
+          }
+        }
+      } catch (e) {
+        // use defaults
+      }
 
       // Group KPIs by pillar (API returns pillar P1, P2, ... P5)
       const kpisByPillar: Record<string, any[]> = {};
@@ -152,8 +168,8 @@ const DCTenantKPIDetails: React.FC<TenantKPIDetailsProps> = ({ tenantId }) => {
         kpisByPillar[pillar].push(kpi);
       });
 
-      // Build pillar structure using P1-P5 so KPIs show under correct pillars
-      const pillarCodes = ['P1', 'P2', 'P3', 'P4', 'P5'];
+      // Build pillar structure — only show enabled pillars
+      const pillarCodes = ['P1', 'P2', 'P3', 'P4', 'P5'].filter(p => enabledPillars.has(p));
       const pillarsData: Pillar[] = pillarCodes.map(pillarCode => {
         const pillarScore = pillarScores.find((p: any) => p.pillar_code === pillarCode);
         const score = pillarScore ? parseFloat(pillarScore.pillar_score || 0) : 0;

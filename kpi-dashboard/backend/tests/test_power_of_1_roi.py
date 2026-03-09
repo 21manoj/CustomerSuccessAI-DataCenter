@@ -240,11 +240,11 @@ class TestKPICodeMapping:
 
     @pytest.mark.parametrize("kpi_code,expected_metric", [
         ("P1-KPI1", "TTFV"),
-        ("EX-KPI1", "NRR"),
-        ("CH-KPI1", "GRR"),
-        ("OS-KPI1", "ticket_resolution_time"),
-        ("AI-KPI2", "product_adoption"),
-        ("EX-KPI3", "expansion_rate"),
+        ("P5-KPI1", "NRR"),
+        ("P4-KPI1", "GRR"),
+        ("P2-KPI1", "ticket_resolution_time"),
+        ("P3-KPI2", "product_adoption"),
+        ("P5-KPI3", "expansion_rate"),
     ])
     def test_kpi_to_metric_mapping(self, kpi_code, expected_metric):
         result = get_metric_for_kpi_code(kpi_code)

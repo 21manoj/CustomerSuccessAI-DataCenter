@@ -1,0 +1,360 @@
+signal_id,account_id,signal_date,signal_type,content,sentiment,sentiment_score
+sig_291001_1,291001,2025-03-17,meeting,Customer reference case study approved,positive,0.67
+sig_291001_2,291001,2025-03-15,health_check,No significant changes in workload patterns,neutral,0.21
+sig_291001_3,291001,2025-03-26,health_check,No significant changes in workload patterns,neutral,0.2
+sig_291001_4,291001,2025-04-29,customer_feedback,Customer reference case study approved,positive,0.89
+sig_291001_5,291001,2025-03-31,incident,Executive sponsor very engaged in QBR,positive,0.9
+sig_291001_6,291001,2025-05-01,customer_feedback,Budget review flagged by customer CFO,negative,-0.6
+sig_291001_7,291001,2025-05-15,meeting,Standard QBR conducted with all stakeholders,neutral,0.12
+sig_291001_8,291001,2025-05-20,incident,Renewal discussion progressing normally,neutral,0.23
+sig_291001_9,291001,2025-05-12,milestone,GPU utilization continues to increase month over month,positive,0.79
+sig_291001_10,291001,2025-06-17,customer_feedback,Executive sponsor missed scheduled QBR,negative,-0.74
+sig_291001_11,291001,2025-06-16,health_check,Standard QBR conducted with all stakeholders,neutral,0.02
+sig_291001_12,291001,2025-07-17,meeting,Customer exploring expansion into inference workloads,positive,0.93
+sig_291001_13,291001,2025-06-29,customer_feedback,Executive sponsor missed scheduled QBR,negative,-0.33
+sig_291001_14,291001,2025-07-11,incident,Delayed migration timeline impacting ROI,negative,-0.76
+sig_291001_15,291001,2025-07-20,meeting,Customer exploring expansion into inference workloads,positive,0.53
+sig_291001_16,291001,2025-08-24,incident,No significant changes in workload patterns,neutral,0.18
+sig_291001_17,291001,2025-08-12,health_check,Renewal discussions progressing positively,positive,0.89
+sig_291001_18,291001,2025-09-04,customer_feedback,Technical architecture review exceeded expectations,positive,0.72
+sig_291001_19,291001,2025-09-18,meeting,Budget review flagged by customer CFO,negative,-0.74
+sig_291001_20,291001,2025-09-23,meeting,Standard QBR conducted with all stakeholders,neutral,0.19
+sig_291001_21,291001,2025-09-29,incident,Renewal discussion progressing normally,neutral,0.06
+sig_291001_22,291001,2025-09-28,meeting,Routine maintenance completed on schedule,neutral,0.14
+sig_291001_23,291001,2025-11-21,customer_feedback,Executive sponsor missed scheduled QBR,negative,-0.55
+sig_291001_24,291001,2025-11-09,health_check,Standard QBR conducted with all stakeholders,neutral,0.17
+sig_291001_25,291001,2025-12-06,incident,Customer reference case study approved,positive,0.53
+sig_291001_26,291001,2025-12-24,meeting,Standard QBR conducted with all stakeholders,neutral,0.2
+sig_291001_27,291001,2025-12-14,milestone,Customer exploring expansion into inference workloads,positive,0.88
+sig_291001_28,291001,2025-12-05,milestone,Standard QBR conducted with all stakeholders,neutral,0.2
+sig_291001_29,291001,2026-01-03,health_check,Increase in support ticket volume observed,negative,-0.52
+sig_291001_30,291001,2026-01-03,meeting,Executive sponsor missed scheduled QBR,negative,-0.73
+sig_291001_31,291001,2025-12-26,health_check,Renewal discussion progressing normally,neutral,0.1
+sig_291001_32,291001,2026-02-06,customer_feedback,Routine maintenance completed on schedule,neutral,0.05
+sig_291001_33,291001,2026-02-09,incident,Routine maintenance completed on schedule,neutral,0.2
+sig_291001_34,291001,2026-01-29,milestone,New data center buildout approved by customer,positive,0.95
+sig_291002_35,291002,2025-03-21,health_check,Routine maintenance completed on schedule,neutral,0.04
+sig_291002_36,291002,2025-03-03,incident,New data center buildout approved by customer,positive,0.73
+sig_291002_37,291002,2025-04-02,customer_feedback,Technical architecture review exceeded expectations,positive,0.63
+sig_291002_38,291002,2025-04-05,health_check,Increase in support ticket volume observed,negative,-0.65
+sig_291002_39,291002,2025-04-23,incident,GPU utilization continues to increase month over month,positive,0.76
+sig_291002_40,291002,2025-05-27,meeting,GPU utilization continues to increase month over month,positive,0.63
+sig_291002_41,291002,2025-05-16,customer_feedback,Technical architecture review exceeded expectations,positive,0.92
+sig_291002_42,291002,2025-05-23,health_check,Customer exploring expansion into inference workloads,positive,0.61
+sig_291002_43,291002,2025-05-31,milestone,Customer reference case study approved,positive,0.77
+sig_291002_44,291002,2025-05-31,milestone,Budget review flagged by customer CFO,negative,-0.44
+sig_291002_45,291002,2025-05-31,incident,Renewal discussions progressing positively,positive,0.59
+sig_291002_46,291002,2025-05-30,customer_feedback,Renewal discussions progressing positively,positive,0.65
+sig_291002_47,291002,2025-07-27,meeting,Executive sponsor missed scheduled QBR,negative,-0.87
+sig_291002_48,291002,2025-07-21,health_check,Increase in support ticket volume observed,negative,-0.38
+sig_291002_49,291002,2025-08-13,health_check,Customer reference case study approved,positive,0.77
+sig_291002_50,291002,2025-08-27,customer_feedback,Customer exploring expansion into inference workloads,positive,0.75
+sig_291002_51,291002,2025-09-04,meeting,Renewal discussion progressing normally,neutral,0.05
+sig_291002_52,291002,2025-09-21,incident,Customer exploring expansion into inference workloads,positive,0.94
+sig_291002_53,291002,2025-09-09,incident,Renewal discussions progressing positively,positive,0.67
+sig_291002_54,291002,2025-10-17,milestone,Staff training completed for new features,neutral,0.09
+sig_291002_55,291002,2025-10-11,milestone,Standard QBR conducted with all stakeholders,neutral,0.03
+sig_291002_56,291002,2025-11-12,customer_feedback,Delayed migration timeline impacting ROI,negative,-0.38
+sig_291002_57,291002,2025-11-22,meeting,Successful deployment of new AI training workloads,positive,0.56
+sig_291002_58,291002,2025-12-01,milestone,New data center buildout approved by customer,positive,0.74
+sig_291002_59,291002,2025-12-15,meeting,Budget review flagged by customer CFO,negative,-0.55
+sig_291002_60,291002,2025-11-27,incident,GPU utilization continues to increase month over month,positive,0.62
+sig_291002_61,291002,2026-01-04,incident,GPU utilization continues to increase month over month,positive,0.61
+sig_291002_62,291002,2026-01-09,incident,Successful deployment of new AI training workloads,positive,0.83
+sig_291002_63,291002,2026-01-17,meeting,Increase in support ticket volume observed,negative,-0.47
+sig_291002_64,291002,2026-01-21,incident,Competitor mentioned in stakeholder conversation,negative,-0.81
+sig_291002_65,291002,2026-02-09,health_check,Executive sponsor missed scheduled QBR,negative,-0.49
+sig_291002_66,291002,2026-02-04,incident,Routine maintenance completed on schedule,neutral,0.22
+sig_291002_67,291002,2026-02-05,incident,Executive sponsor missed scheduled QBR,negative,-0.52
+sig_291002_68,291002,2026-01-25,incident,Executive sponsor very engaged in QBR,positive,0.51
+sig_291003_69,291003,2025-03-07,milestone,Technical architecture review exceeded expectations,positive,0.59
+sig_291003_70,291003,2025-03-22,customer_feedback,Renewal discussions progressing positively,positive,0.9
+sig_291003_71,291003,2025-03-27,milestone,Executive sponsor very engaged in QBR,positive,0.62
+sig_291003_72,291003,2025-04-04,customer_feedback,Customer reference case study approved,positive,0.59
+sig_291003_73,291003,2025-04-19,incident,Routine maintenance completed on schedule,neutral,0.19
+sig_291003_74,291003,2025-05-23,milestone,Budget review flagged by customer CFO,negative,-0.55
+sig_291003_75,291003,2025-05-06,milestone,New data center buildout approved by customer,positive,0.65
+sig_291003_76,291003,2025-05-18,incident,Renewal discussion progressing normally,neutral,0.15
+sig_291003_77,291003,2025-05-21,customer_feedback,Routine maintenance completed on schedule,neutral,0.1
+sig_291003_78,291003,2025-06-20,meeting,Routine maintenance completed on schedule,neutral,0.17
+sig_291003_79,291003,2025-06-04,incident,Customer reference case study approved,positive,0.59
+sig_291003_80,291003,2025-07-10,milestone,Successful deployment of new AI training workloads,positive,0.52
+sig_291003_81,291003,2025-07-25,incident,Technical architecture review exceeded expectations,positive,0.64
+sig_291003_82,291003,2025-07-19,milestone,Customer exploring expansion into inference workloads,positive,0.87
+sig_291003_83,291003,2025-08-24,incident,Staff training completed for new features,neutral,0.2
+sig_291003_84,291003,2025-08-16,meeting,Renewal discussion progressing normally,neutral,0.01
+sig_291003_85,291003,2025-08-07,customer_feedback,New data center buildout approved by customer,positive,0.6
+sig_291003_86,291003,2025-09-12,health_check,Technical architecture review exceeded expectations,positive,0.79
+sig_291003_87,291003,2025-09-17,health_check,Customer reference case study approved,positive,0.85
+sig_291003_88,291003,2025-09-03,meeting,Routine maintenance completed on schedule,neutral,0.22
+sig_291003_89,291003,2025-10-12,meeting,Routine maintenance completed on schedule,neutral,0.23
+sig_291003_90,291003,2025-10-07,customer_feedback,Increase in support ticket volume observed,negative,-0.83
+sig_291003_91,291003,2025-10-03,milestone,Customer exploring expansion into inference workloads,positive,0.56
+sig_291003_92,291003,2025-10-20,milestone,GPU utilization continues to increase month over month,positive,0.66
+sig_291003_93,291003,2025-11-13,milestone,Delayed migration timeline impacting ROI,negative,-0.53
+sig_291003_94,291003,2025-11-23,meeting,Routine maintenance completed on schedule,neutral,0.18
+sig_291003_95,291003,2025-11-12,health_check,Budget review flagged by customer CFO,negative,-0.64
+sig_291003_96,291003,2025-11-12,customer_feedback,Executive sponsor very engaged in QBR,positive,0.65
+sig_291003_97,291003,2025-12-04,health_check,Customer exploring expansion into inference workloads,positive,0.54
+sig_291003_98,291003,2025-12-02,milestone,New data center buildout approved by customer,positive,0.6
+sig_291003_99,291003,2026-01-01,health_check,Customer reference case study approved,positive,0.78
+sig_291003_100,291003,2026-01-12,incident,New data center buildout approved by customer,positive,0.93
+sig_291003_101,291003,2026-02-23,customer_feedback,Standard QBR conducted with all stakeholders,neutral,0.14
+sig_291003_102,291003,2026-01-28,meeting,Budget review flagged by customer CFO,negative,-0.86
+sig_291003_103,291003,2026-02-13,milestone,Renewal discussions progressing positively,positive,0.63
+sig_291003_104,291003,2026-02-10,milestone,Customer reference case study approved,positive,0.75
+sig_291004_105,291004,2025-03-24,incident,Technical architecture review exceeded expectations,positive,0.53
+sig_291004_106,291004,2025-03-23,meeting,Renewal discussion progressing normally,neutral,0.18
+sig_291004_107,291004,2025-04-23,health_check,Routine maintenance completed on schedule,neutral,0.05
+sig_291004_108,291004,2025-04-18,meeting,Routine maintenance completed on schedule,neutral,0.19
+sig_291004_109,291004,2025-04-18,health_check,Technical architecture review exceeded expectations,positive,0.78
+sig_291004_110,291004,2025-05-11,customer_feedback,Technical architecture review exceeded expectations,positive,0.71
+sig_291004_111,291004,2025-05-28,customer_feedback,Competitor mentioned in stakeholder conversation,negative,-0.84
+sig_291004_112,291004,2025-06-20,milestone,Renewal discussion progressing normally,neutral,0.21
+sig_291004_113,291004,2025-06-21,meeting,Renewal discussion progressing normally,neutral,0.15
+sig_291004_114,291004,2025-07-11,meeting,GPU utilization continues to increase month over month,positive,0.89
+sig_291004_115,291004,2025-07-15,customer_feedback,Renewal discussion progressing normally,neutral,0.03
+sig_291004_116,291004,2025-07-21,customer_feedback,Technical architecture review exceeded expectations,positive,0.58
+sig_291004_117,291004,2025-08-08,customer_feedback,Customer reference case study approved,positive,0.6
+sig_291004_118,291004,2025-08-19,customer_feedback,Renewal discussion progressing normally,neutral,0.28
+sig_291004_119,291004,2025-08-08,milestone,Renewal discussions progressing positively,positive,0.6
+sig_291004_120,291004,2025-09-17,meeting,No significant changes in workload patterns,neutral,0.03
+sig_291004_121,291004,2025-09-20,incident,Successful deployment of new AI training workloads,positive,0.61
+sig_291004_122,291004,2025-08-31,health_check,Budget review flagged by customer CFO,negative,-0.56
+sig_291004_123,291004,2025-08-28,meeting,Customer reference case study approved,positive,0.7
+sig_291004_124,291004,2025-10-02,health_check,Standard QBR conducted with all stakeholders,neutral,0.17
+sig_291004_125,291004,2025-10-03,incident,Executive sponsor very engaged in QBR,positive,0.69
+sig_291004_126,291004,2025-10-18,health_check,Renewal discussions progressing positively,positive,0.61
+sig_291004_127,291004,2025-10-27,health_check,Routine maintenance completed on schedule,neutral,0.07
+sig_291004_128,291004,2025-11-05,meeting,Standard QBR conducted with all stakeholders,neutral,0.24
+sig_291004_129,291004,2025-11-17,milestone,Routine maintenance completed on schedule,neutral,0.1
+sig_291004_130,291004,2025-11-14,meeting,Routine maintenance completed on schedule,neutral,0.05
+sig_291004_131,291004,2025-12-17,customer_feedback,Successful deployment of new AI training workloads,positive,0.81
+sig_291004_132,291004,2025-12-22,health_check,Executive sponsor missed scheduled QBR,negative,-0.82
+sig_291004_133,291004,2025-12-08,milestone,Competitor mentioned in stakeholder conversation,negative,-0.36
+sig_291004_134,291004,2025-12-04,milestone,GPU utilization trending downward,negative,-0.9
+sig_291004_135,291004,2026-01-01,customer_feedback,GPU utilization continues to increase month over month,positive,0.76
+sig_291004_136,291004,2025-12-30,meeting,GPU utilization trending downward,negative,-0.81
+sig_291004_137,291004,2026-02-05,customer_feedback,Increase in support ticket volume observed,negative,-0.57
+sig_291004_138,291004,2026-01-26,milestone,Standard QBR conducted with all stakeholders,neutral,0.15
+sig_291005_139,291005,2025-03-01,milestone,Successful deployment of new AI training workloads,positive,0.54
+sig_291005_140,291005,2025-03-15,health_check,Executive sponsor very engaged in QBR,positive,0.86
+sig_291005_141,291005,2025-03-07,milestone,Executive sponsor very engaged in QBR,positive,0.5
+sig_291005_142,291005,2025-04-15,health_check,Successful deployment of new AI training workloads,positive,0.94
+sig_291005_143,291005,2025-04-06,customer_feedback,GPU utilization trending downward,negative,-0.35
+sig_291005_144,291005,2025-04-06,health_check,Standard QBR conducted with all stakeholders,neutral,0.01
+sig_291005_145,291005,2025-04-28,incident,GPU utilization continues to increase month over month,positive,0.53
+sig_291005_146,291005,2025-05-09,customer_feedback,Renewal discussion progressing normally,neutral,0.07
+sig_291005_147,291005,2025-05-25,milestone,Executive sponsor very engaged in QBR,positive,0.91
+sig_291005_148,291005,2025-05-28,incident,Increase in support ticket volume observed,negative,-0.45
+sig_291005_149,291005,2025-06-15,meeting,Renewal discussions progressing positively,positive,0.52
+sig_291005_150,291005,2025-06-01,meeting,GPU utilization continues to increase month over month,positive,0.81
+sig_291005_151,291005,2025-06-24,customer_feedback,Successful deployment of new AI training workloads,positive,0.77
+sig_291005_152,291005,2025-06-20,milestone,Renewal discussions progressing positively,positive,0.59
+sig_291005_153,291005,2025-07-04,meeting,GPU utilization continues to increase month over month,positive,0.77
+sig_291005_154,291005,2025-07-11,milestone,GPU utilization continues to increase month over month,positive,0.93
+sig_291005_155,291005,2025-08-05,customer_feedback,Routine maintenance completed on schedule,neutral,0.22
+sig_291005_156,291005,2025-08-14,customer_feedback,New data center buildout approved by customer,positive,0.88
+sig_291005_157,291005,2025-08-26,health_check,Increase in support ticket volume observed,negative,-0.86
+sig_291005_158,291005,2025-09-24,incident,Successful deployment of new AI training workloads,positive,0.75
+sig_291005_159,291005,2025-09-23,health_check,Customer exploring expansion into inference workloads,positive,0.83
+sig_291005_160,291005,2025-09-13,incident,Customer reference case study approved,positive,0.72
+sig_291005_161,291005,2025-08-28,health_check,Renewal discussions progressing positively,positive,0.81
+sig_291005_162,291005,2025-10-23,meeting,Budget review flagged by customer CFO,negative,-0.48
+sig_291005_163,291005,2025-10-05,health_check,New data center buildout approved by customer,positive,0.6
+sig_291005_164,291005,2025-10-12,meeting,Successful deployment of new AI training workloads,positive,0.63
+sig_291005_165,291005,2025-11-06,milestone,Customer exploring expansion into inference workloads,positive,0.94
+sig_291005_166,291005,2025-10-27,customer_feedback,Technical architecture review exceeded expectations,positive,0.81
+sig_291005_167,291005,2025-10-29,health_check,Renewal discussions progressing positively,positive,0.52
+sig_291005_168,291005,2025-11-06,incident,Budget review flagged by customer CFO,negative,-0.63
+sig_291005_169,291005,2025-12-12,customer_feedback,Technical architecture review exceeded expectations,positive,0.83
+sig_291005_170,291005,2025-12-06,meeting,GPU utilization continues to increase month over month,positive,0.56
+sig_291005_171,291005,2025-12-16,milestone,Successful deployment of new AI training workloads,positive,0.72
+sig_291005_172,291005,2025-12-19,milestone,Technical architecture review exceeded expectations,positive,0.88
+sig_291005_173,291005,2025-12-27,health_check,Routine maintenance completed on schedule,neutral,0.06
+sig_291005_174,291005,2026-01-01,meeting,Customer reference case study approved,positive,0.76
+sig_291005_175,291005,2026-02-22,milestone,Renewal discussions progressing positively,positive,0.93
+sig_291005_176,291005,2026-02-23,incident,Technical architecture review exceeded expectations,positive,0.59
+sig_291006_177,291006,2025-03-17,milestone,Standard QBR conducted with all stakeholders,neutral,0.28
+sig_291006_178,291006,2025-03-27,meeting,Renewal discussions progressing positively,positive,0.52
+sig_291006_179,291006,2025-03-11,meeting,New data center buildout approved by customer,positive,0.79
+sig_291006_180,291006,2025-03-23,milestone,GPU utilization trending downward,negative,-0.75
+sig_291006_181,291006,2025-04-06,customer_feedback,Delayed migration timeline impacting ROI,negative,-0.59
+sig_291006_182,291006,2025-04-23,milestone,Successful deployment of new AI training workloads,positive,0.72
+sig_291006_183,291006,2025-03-31,meeting,Customer reference case study approved,positive,0.76
+sig_291006_184,291006,2025-05-25,milestone,Renewal discussions progressing positively,positive,0.74
+sig_291006_185,291006,2025-05-25,incident,Standard QBR conducted with all stakeholders,neutral,0.11
+sig_291006_186,291006,2025-05-05,milestone,No significant changes in workload patterns,neutral,0.23
+sig_291006_187,291006,2025-06-22,milestone,Executive sponsor very engaged in QBR,positive,0.5
+sig_291006_188,291006,2025-06-03,incident,Renewal discussion progressing normally,neutral,0.1
+sig_291006_189,291006,2025-06-07,milestone,Customer reference case study approved,positive,0.68
+sig_291006_190,291006,2025-07-22,milestone,Customer exploring expansion into inference workloads,positive,0.51
+sig_291006_191,291006,2025-07-26,incident,Routine maintenance completed on schedule,neutral,0.21
+sig_291006_192,291006,2025-07-25,customer_feedback,Standard QBR conducted with all stakeholders,neutral,0.22
+sig_291006_193,291006,2025-08-05,incident,Competitor mentioned in stakeholder conversation,negative,-0.31
+sig_291006_194,291006,2025-08-07,customer_feedback,Increase in support ticket volume observed,negative,-0.44
+sig_291006_195,291006,2025-09-26,health_check,Renewal discussions progressing positively,positive,0.72
+sig_291006_196,291006,2025-08-29,customer_feedback,Customer reference case study approved,positive,0.78
+sig_291006_197,291006,2025-09-08,milestone,No significant changes in workload patterns,neutral,0.17
+sig_291006_198,291006,2025-10-14,incident,Staff training completed for new features,neutral,0.23
+sig_291006_199,291006,2025-10-21,health_check,Competitor mentioned in stakeholder conversation,negative,-0.69
+sig_291006_200,291006,2025-11-22,meeting,Staff training completed for new features,neutral,0.22
+sig_291006_201,291006,2025-11-19,incident,Delayed migration timeline impacting ROI,negative,-0.74
+sig_291006_202,291006,2025-11-06,customer_feedback,Successful deployment of new AI training workloads,positive,0.54
+sig_291006_203,291006,2025-10-29,incident,Customer exploring expansion into inference workloads,positive,0.89
+sig_291006_204,291006,2025-12-21,milestone,Renewal discussions progressing positively,positive,0.75
+sig_291006_205,291006,2025-12-18,incident,Renewal discussions progressing positively,positive,0.88
+sig_291006_206,291006,2026-01-15,meeting,Standard QBR conducted with all stakeholders,neutral,0.15
+sig_291006_207,291006,2026-01-23,incident,Delayed migration timeline impacting ROI,negative,-0.42
+sig_291006_208,291006,2026-02-13,milestone,Renewal discussions progressing positively,positive,0.67
+sig_291006_209,291006,2026-02-17,incident,Delayed migration timeline impacting ROI,negative,-0.79
+sig_291006_210,291006,2026-02-05,health_check,Executive sponsor missed scheduled QBR,negative,-0.6
+sig_291006_211,291006,2026-02-14,health_check,Renewal discussions progressing positively,positive,0.8
+sig_291007_212,291007,2025-03-05,health_check,Customer reference case study approved,positive,0.73
+sig_291007_213,291007,2025-03-24,customer_feedback,Increase in support ticket volume observed,negative,-0.65
+sig_291007_214,291007,2025-03-09,health_check,Routine maintenance completed on schedule,neutral,0.03
+sig_291007_215,291007,2025-03-05,milestone,Routine maintenance completed on schedule,neutral,0.11
+sig_291007_216,291007,2025-04-11,milestone,Successful deployment of new AI training workloads,positive,0.54
+sig_291007_217,291007,2025-04-27,meeting,Renewal discussion progressing normally,neutral,0.04
+sig_291007_218,291007,2025-05-02,health_check,GPU utilization trending downward,negative,-0.39
+sig_291007_219,291007,2025-05-03,milestone,Customer exploring expansion into inference workloads,positive,0.56
+sig_291007_220,291007,2025-05-29,customer_feedback,Routine maintenance completed on schedule,neutral,0.02
+sig_291007_221,291007,2025-06-05,milestone,GPU utilization continues to increase month over month,positive,0.82
+sig_291007_222,291007,2025-06-17,customer_feedback,Executive sponsor very engaged in QBR,positive,0.64
+sig_291007_223,291007,2025-06-19,meeting,Increase in support ticket volume observed,negative,-0.53
+sig_291007_224,291007,2025-07-09,milestone,Customer exploring expansion into inference workloads,positive,0.76
+sig_291007_225,291007,2025-07-23,health_check,Renewal discussions progressing positively,positive,0.59
+sig_291007_226,291007,2025-07-15,milestone,Customer exploring expansion into inference workloads,positive,0.67
+sig_291007_227,291007,2025-07-31,customer_feedback,No significant changes in workload patterns,neutral,0.3
+sig_291007_228,291007,2025-08-22,milestone,Successful deployment of new AI training workloads,positive,0.65
+sig_291007_229,291007,2025-07-31,milestone,Technical architecture review exceeded expectations,positive,0.78
+sig_291007_230,291007,2025-09-20,milestone,New data center buildout approved by customer,positive,0.52
+sig_291007_231,291007,2025-09-18,customer_feedback,Renewal discussions progressing positively,positive,0.57
+sig_291007_232,291007,2025-10-05,milestone,Renewal discussion progressing normally,neutral,0.02
+sig_291007_233,291007,2025-10-01,customer_feedback,Routine maintenance completed on schedule,neutral,0.18
+sig_291007_234,291007,2025-11-22,meeting,No significant changes in workload patterns,neutral,0.14
+sig_291007_235,291007,2025-10-30,incident,GPU utilization trending downward,negative,-0.54
+sig_291007_236,291007,2025-11-22,meeting,Renewal discussions progressing positively,positive,0.81
+sig_291007_237,291007,2025-12-01,meeting,Renewal discussions progressing positively,positive,0.61
+sig_291007_238,291007,2025-12-19,incident,GPU utilization continues to increase month over month,positive,0.74
+sig_291007_239,291007,2025-12-21,health_check,GPU utilization continues to increase month over month,positive,0.85
+sig_291007_240,291007,2026-01-09,health_check,Customer exploring expansion into inference workloads,positive,0.87
+sig_291007_241,291007,2026-01-09,meeting,Standard QBR conducted with all stakeholders,neutral,0.26
+sig_291007_242,291007,2026-02-04,milestone,Successful deployment of new AI training workloads,positive,0.77
+sig_291007_243,291007,2026-02-02,milestone,New data center buildout approved by customer,positive,0.81
+sig_291007_244,291007,2026-02-05,meeting,Routine maintenance completed on schedule,neutral,0.18
+sig_291007_245,291007,2026-02-02,meeting,Successful deployment of new AI training workloads,positive,0.53
+sig_291008_246,291008,2025-03-02,customer_feedback,Customer exploring expansion into inference workloads,positive,0.78
+sig_291008_247,291008,2025-03-12,meeting,Customer exploring expansion into inference workloads,positive,0.59
+sig_291008_248,291008,2025-04-28,meeting,Staff training completed for new features,neutral,0.19
+sig_291008_249,291008,2025-04-03,meeting,Executive sponsor very engaged in QBR,positive,0.7
+sig_291008_250,291008,2025-04-27,incident,New data center buildout approved by customer,positive,0.95
+sig_291008_251,291008,2025-05-01,milestone,Customer reference case study approved,positive,0.56
+sig_291008_252,291008,2025-05-24,milestone,Standard QBR conducted with all stakeholders,neutral,0.29
+sig_291008_253,291008,2025-06-28,health_check,Renewal discussions progressing positively,positive,0.92
+sig_291008_254,291008,2025-06-14,meeting,Increase in support ticket volume observed,negative,-0.63
+sig_291008_255,291008,2025-06-19,health_check,GPU utilization continues to increase month over month,positive,0.57
+sig_291008_256,291008,2025-06-05,milestone,Technical architecture review exceeded expectations,positive,0.78
+sig_291008_257,291008,2025-07-21,health_check,Technical architecture review exceeded expectations,positive,0.82
+sig_291008_258,291008,2025-07-02,meeting,Executive sponsor very engaged in QBR,positive,0.56
+sig_291008_259,291008,2025-07-05,health_check,Customer reference case study approved,positive,0.59
+sig_291008_260,291008,2025-08-14,customer_feedback,Renewal discussions progressing positively,positive,0.62
+sig_291008_261,291008,2025-08-03,milestone,Renewal discussions progressing positively,positive,0.84
+sig_291008_262,291008,2025-08-08,incident,Renewal discussions progressing positively,positive,0.77
+sig_291008_263,291008,2025-09-10,milestone,Increase in support ticket volume observed,negative,-0.44
+sig_291008_264,291008,2025-09-01,customer_feedback,Routine maintenance completed on schedule,neutral,0.18
+sig_291008_265,291008,2025-10-23,milestone,Renewal discussions progressing positively,positive,0.81
+sig_291008_266,291008,2025-10-13,incident,GPU utilization trending downward,negative,-0.65
+sig_291008_267,291008,2025-10-04,health_check,Customer exploring expansion into inference workloads,positive,0.83
+sig_291008_268,291008,2025-09-30,milestone,GPU utilization trending downward,negative,-0.79
+sig_291008_269,291008,2025-11-12,milestone,Customer reference case study approved,positive,0.73
+sig_291008_270,291008,2025-11-18,milestone,New data center buildout approved by customer,positive,0.77
+sig_291008_271,291008,2025-10-30,meeting,No significant changes in workload patterns,neutral,0.2
+sig_291008_272,291008,2025-11-09,customer_feedback,No significant changes in workload patterns,neutral,0.19
+sig_291008_273,291008,2025-12-11,milestone,GPU utilization continues to increase month over month,positive,0.64
+sig_291008_274,291008,2025-12-24,health_check,Technical architecture review exceeded expectations,positive,0.53
+sig_291008_275,291008,2025-12-09,customer_feedback,Renewal discussions progressing positively,positive,0.56
+sig_291008_276,291008,2025-12-24,health_check,Customer exploring expansion into inference workloads,positive,0.63
+sig_291008_277,291008,2026-01-03,meeting,Customer reference case study approved,positive,0.72
+sig_291008_278,291008,2026-01-02,customer_feedback,Customer reference case study approved,positive,0.62
+sig_291008_279,291008,2026-01-24,incident,Renewal discussion progressing normally,neutral,0.07
+sig_291008_280,291008,2026-01-24,meeting,Technical architecture review exceeded expectations,positive,0.62
+sig_291008_281,291008,2026-01-28,incident,Technical architecture review exceeded expectations,positive,0.65
+sig_291008_282,291008,2026-02-18,incident,No significant changes in workload patterns,neutral,0.16
+sig_291009_283,291009,2025-03-27,milestone,New data center buildout approved by customer,positive,0.88
+sig_291009_284,291009,2025-03-10,incident,Budget review flagged by customer CFO,negative,-0.6
+sig_291009_285,291009,2025-03-07,health_check,Renewal discussions progressing positively,positive,0.62
+sig_291009_286,291009,2025-04-29,incident,Successful deployment of new AI training workloads,positive,0.59
+sig_291009_287,291009,2025-04-12,customer_feedback,Renewal discussions progressing positively,positive,0.51
+sig_291009_288,291009,2025-04-19,milestone,Technical architecture review exceeded expectations,positive,0.77
+sig_291009_289,291009,2025-05-07,milestone,Standard QBR conducted with all stakeholders,neutral,0.15
+sig_291009_290,291009,2025-05-09,meeting,Executive sponsor very engaged in QBR,positive,0.51
+sig_291009_291,291009,2025-05-05,incident,Delayed migration timeline impacting ROI,negative,-0.77
+sig_291009_292,291009,2025-05-12,meeting,New data center buildout approved by customer,positive,0.65
+sig_291009_293,291009,2025-06-10,health_check,Successful deployment of new AI training workloads,positive,0.68
+sig_291009_294,291009,2025-06-07,customer_feedback,Customer reference case study approved,positive,0.82
+sig_291009_295,291009,2025-07-19,meeting,GPU utilization trending downward,negative,-0.63
+sig_291009_296,291009,2025-07-21,meeting,Customer reference case study approved,positive,0.87
+sig_291009_297,291009,2025-07-01,milestone,New data center buildout approved by customer,positive,0.72
+sig_291009_298,291009,2025-08-02,milestone,Renewal discussion progressing normally,neutral,0.11
+sig_291009_299,291009,2025-08-02,milestone,Renewal discussions progressing positively,positive,0.91
+sig_291009_300,291009,2025-08-02,health_check,Customer reference case study approved,positive,0.9
+sig_291009_301,291009,2025-09-25,health_check,Competitor mentioned in stakeholder conversation,negative,-0.78
+sig_291009_302,291009,2025-09-13,customer_feedback,GPU utilization trending downward,negative,-0.33
+sig_291009_303,291009,2025-10-08,milestone,No significant changes in workload patterns,neutral,0.17
+sig_291009_304,291009,2025-10-14,health_check,Standard QBR conducted with all stakeholders,neutral,0.24
+sig_291009_305,291009,2025-10-13,health_check,Renewal discussions progressing positively,positive,0.62
+sig_291009_306,291009,2025-11-13,health_check,Delayed migration timeline impacting ROI,negative,-0.31
+sig_291009_307,291009,2025-11-22,meeting,Customer reference case study approved,positive,0.61
+sig_291009_308,291009,2025-11-16,meeting,Technical architecture review exceeded expectations,positive,0.88
+sig_291009_309,291009,2025-12-08,milestone,Renewal discussions progressing positively,positive,0.83
+sig_291009_310,291009,2025-12-05,health_check,Standard QBR conducted with all stakeholders,neutral,0.23
+sig_291009_311,291009,2025-12-20,meeting,Successful deployment of new AI training workloads,positive,0.68
+sig_291009_312,291009,2025-12-30,meeting,Executive sponsor very engaged in QBR,positive,0.84
+sig_291009_313,291009,2025-12-26,milestone,Renewal discussions progressing positively,positive,0.75
+sig_291009_314,291009,2026-01-24,meeting,No significant changes in workload patterns,neutral,0.2
+sig_291009_315,291009,2026-01-23,customer_feedback,Delayed migration timeline impacting ROI,negative,-0.35
+sig_291009_316,291009,2026-02-23,customer_feedback,New data center buildout approved by customer,positive,0.68
+sig_291009_317,291009,2026-02-20,health_check,GPU utilization continues to increase month over month,positive,0.76
+sig_291009_318,291009,2026-02-10,customer_feedback,Executive sponsor missed scheduled QBR,negative,-0.84
+sig_291009_319,291009,2026-01-29,milestone,New data center buildout approved by customer,positive,0.86
+sig_291010_320,291010,2025-03-21,incident,Successful deployment of new AI training workloads,positive,0.58
+sig_291010_321,291010,2025-03-18,health_check,Renewal discussion progressing normally,neutral,0.24
+sig_291010_322,291010,2025-03-07,incident,GPU utilization continues to increase month over month,positive,0.94
+sig_291010_323,291010,2025-04-15,customer_feedback,New data center buildout approved by customer,positive,0.66
+sig_291010_324,291010,2025-04-28,incident,No significant changes in workload patterns,neutral,0.04
+sig_291010_325,291010,2025-04-14,milestone,Staff training completed for new features,neutral,0.03
+sig_291010_326,291010,2025-04-19,milestone,Renewal discussion progressing normally,neutral,0.19
+sig_291010_327,291010,2025-05-15,health_check,Standard QBR conducted with all stakeholders,neutral,0.13
+sig_291010_328,291010,2025-05-05,meeting,Technical architecture review exceeded expectations,positive,0.9
+sig_291010_329,291010,2025-05-05,health_check,Renewal discussion progressing normally,neutral,0.09
+sig_291010_330,291010,2025-06-28,customer_feedback,Renewal discussion progressing normally,neutral,0.1
+sig_291010_331,291010,2025-05-30,health_check,Customer exploring expansion into inference workloads,positive,0.86
+sig_291010_332,291010,2025-07-15,incident,Renewal discussion progressing normally,neutral,0.27
+sig_291010_333,291010,2025-07-28,meeting,GPU utilization trending downward,negative,-0.73
+sig_291010_334,291010,2025-07-08,milestone,Customer exploring expansion into inference workloads,positive,0.86
+sig_291010_335,291010,2025-08-08,customer_feedback,GPU utilization continues to increase month over month,positive,0.83
+sig_291010_336,291010,2025-08-21,health_check,GPU utilization trending downward,negative,-0.65
+sig_291010_337,291010,2025-08-02,customer_feedback,No significant changes in workload patterns,neutral,0.09
+sig_291010_338,291010,2025-08-18,milestone,Delayed migration timeline impacting ROI,negative,-0.51
+sig_291010_339,291010,2025-08-28,meeting,No significant changes in workload patterns,neutral,0.04
+sig_291010_340,291010,2025-09-07,meeting,Standard QBR conducted with all stakeholders,neutral,0.03
+sig_291010_341,291010,2025-09-16,health_check,Customer reference case study approved,positive,0.94
+sig_291010_342,291010,2025-09-14,health_check,Customer exploring expansion into inference workloads,positive,0.69
+sig_291010_343,291010,2025-09-29,incident,Staff training completed for new features,neutral,0.06
+sig_291010_344,291010,2025-10-19,customer_feedback,Renewal discussions progressing positively,positive,0.53
+sig_291010_345,291010,2025-10-01,health_check,Customer reference case study approved,positive,0.84
+sig_291010_346,291010,2025-10-14,meeting,Renewal discussion progressing normally,neutral,0.18
+sig_291010_347,291010,2025-11-23,milestone,Executive sponsor very engaged in QBR,positive,0.5
+sig_291010_348,291010,2025-11-16,customer_feedback,Successful deployment of new AI training workloads,positive,0.58
+sig_291010_349,291010,2025-11-08,customer_feedback,Renewal discussion progressing normally,neutral,0.13
+sig_291010_350,291010,2025-11-12,incident,GPU utilization trending downward,negative,-0.83
+sig_291010_351,291010,2025-12-19,incident,Executive sponsor very engaged in QBR,positive,0.93
+sig_291010_352,291010,2025-12-08,health_check,New data center buildout approved by customer,positive,0.81
+sig_291010_353,291010,2025-12-23,health_check,Executive sponsor missed scheduled QBR,negative,-0.76
+sig_291010_354,291010,2026-01-12,customer_feedback,Renewal discussion progressing normally,neutral,0.27
+sig_291010_355,291010,2025-12-31,milestone,Customer exploring expansion into inference workloads,positive,0.73
+sig_291010_356,291010,2026-02-10,customer_feedback,Renewal discussions progressing positively,positive,0.55
+sig_291010_357,291010,2026-02-10,meeting,Renewal discussions progressing positively,positive,0.9
+sig_291010_358,291010,2026-02-04,customer_feedback,GPU utilization continues to increase month over month,positive,0.62
+sig_291010_359,291010,2026-02-19,incident,Technical architecture review exceeded expectations,positive,0.54

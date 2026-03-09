@@ -33,16 +33,12 @@ COPY . .
 # Create results directory
 RUN mkdir -p /app/results
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5059/api/health || exit 1
-
-# Environment variables
+# Environment variables (override at run time; no secrets in image)
 ENV PYTHONUNBUFFERED=1
 ENV LOG_LEVEL=INFO
-ENV CS_PULSE_BASE_URL=http://cs-pulse:5059
-ENV QDRANT_URL=http://qdrant:6333
+# CS_PULSE_BASE_URL must be set when running (e.g. docker run -e CS_PULSE_BASE_URL=https://your-app.example.com)
+ENV CS_PULSE_BASE_URL=https://platform.example.com
 
 # Entry point: run driver
 ENTRYPOINT ["python", "-u", "driver.py"]
-CMD ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6", "--customers", "1,2,3"]
+CMD ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7", "--customers", "1,2,3"]

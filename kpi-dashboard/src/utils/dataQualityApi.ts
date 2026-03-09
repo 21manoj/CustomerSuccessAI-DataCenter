@@ -236,7 +236,7 @@ export const getPipelineStatus = async (uploadId?: string): Promise<PipelineStat
 };
 
 // Get data lineage (mock for now)
-export const getDataLineage = async (accountId: number, kpiParameter: string): Promise<DataLineage> => {
+export const getDataLineage = async (accountId: number | string, kpiParameter: string): Promise<DataLineage> => {
   return {
     sourceFile: 'datacenter_upload_2024-12-07.csv',
     sourceColumn: 'Infrastructure Uptime',

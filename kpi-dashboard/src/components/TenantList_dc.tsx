@@ -7,7 +7,7 @@ import React from 'react';
 import { Eye, Server, Users } from 'lucide-react';
 
 interface Tenant {
-  tenant_id: number;
+  tenant_id: number | string;
   tenant_name: string;
   health_score: number;
   status: 'healthy' | 'at_risk' | 'critical' | 'risk';
@@ -32,20 +32,20 @@ interface Tenant {
 
 interface TenantListProps {
   tenants: Tenant[];
-  onSelectTenant: (tenantId: number | null) => void;
-  selectedTenant: number | null;
+  onSelectTenant: (tenantId: number | string | null) => void;
+  selectedTenant: number | string | null;
 }
 
 const TenantList_dc: React.FC<TenantListProps> = ({ tenants, onSelectTenant, selectedTenant }) => {
   const getHealthStatus = (score: number) => {
-    if (score >= 80) return { status: 'Healthy', color: 'green' };
-    if (score >= 60) return { status: 'At Risk', color: 'yellow' };
+    if (score >= 70) return { status: 'Healthy', color: 'green' };
+    if (score >= 50) return { status: 'At Risk', color: 'yellow' };
     return { status: 'Critical', color: 'red' };
   };
 
   const getHealthColor = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
+    if (score >= 70) return 'bg-green-500';
+    if (score >= 50) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 

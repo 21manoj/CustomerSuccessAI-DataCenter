@@ -289,3 +289,70 @@ def system_health():
         'checks': checks,
         'timestamp': datetime.utcnow().isoformat(),
     }), 200 if all_healthy else 503
+
+
+# ============================================================
+# CONTEXT GRAPH REGENERATION STATUS
+# ============================================================
+
+@observability_api.route('/api/observability/context-graph-regen', methods=['GET'])
+def context_graph_regen_status():
+    """
+    GET /api/observability/context-graph-regen
+    Returns context graph regeneration subscriber status:
+    cached health classifications, pending regenerations, last regen times.
+    """
+    try:
+        from event_system import event_manager
+        sub = getattr(event_manager, 'context_graph_subscriber', None)
+        if sub is None:
+            return jsonify({
+                'status': 'disabled',
+                'message': 'ContextGraphRegenerationSubscriber not registered',
+            }), 200
+
+        return jsonify({
+            'status': 'active',
+            **sub.get_status(),
+        }), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+@observability_api.route('/api/observability/context-graph-regen/trigger', methods=['POST'])
+def context_graph_regen_trigger():
+    """
+    POST /api/observability/context-graph-regen/trigger
+    Manually trigger context graph regeneration for a customer.
+    Body: {"customer_id": 291}
+    """
+    try:
+        from event_system import event_manager
+        sub = getattr(event_manager, 'context_graph_subscriber', None)
+        if sub is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'ContextGraphRegenerationSubscriber not registered',
+            }), 400
+
+        data = request.get_json() or {}
+        customer_id = data.get('customer_id')
+        if not customer_id:
+            return jsonify({'error': 'customer_id required'}), 400
+
+        import threading
+        regen_thread = threading.Thread(
+            target=sub._regenerate_customer,
+            args=(int(customer_id),),
+            name=f"context-graph-regen-manual-{customer_id}",
+            daemon=True,
+        )
+        regen_thread.start()
+
+        return jsonify({
+            'status': 'triggered',
+            'customer_id': customer_id,
+            'message': f'Context graph regeneration started for customer {customer_id}',
+        }), 202
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500

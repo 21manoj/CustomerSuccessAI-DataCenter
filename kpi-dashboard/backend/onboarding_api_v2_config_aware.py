@@ -19,11 +19,12 @@ import subprocess
 import pandas as pd
 from datetime import datetime
 import json
+import logging
 import os
 import sys
 import time
 import uuid
-from typing import Tuple, List, Dict, Optional
+from typing import Any, Tuple, List, Dict, Optional
 from werkzeug.utils import secure_filename
 
 # Import db - avoid circular import with app_v3_minimal
@@ -36,13 +37,26 @@ from werkzeug.security import generate_password_hash
 from id_generator import generate_id
 from uuid_utils import ensure_uuid, ensure_customer_uuid_on_account
 
-# File types supported for upload
+# File types supported for upload (regular 6-CSV model)
 FILE_TYPES = {
     'accounts': 'accounts.csv',
     'kpis': 'kpi_measurements.csv',
     'signals': 'qualitative_signals.csv',
     'products': 'products.csv',
     'profiles': 'profiles.csv'
+}
+
+# Context graph 9-CSV model (requires context_graph feature toggle)
+CONTEXT_GRAPH_FILE_TYPES = {
+    'stakeholders': 'stakeholders.csv',
+    'engagement_events': 'engagement_events.csv',
+    'account_business_profiles': 'account_business_profiles.csv',
+    'decisions': 'decisions.csv',
+    'outcomes': 'outcomes.csv',
+    'signal_edges': 'signal_edges.csv',
+    'decision_evidence': 'decision_evidence.csv',
+    'industry_benchmarks': 'industry_benchmarks.csv',
+    'enhanced_signals': 'enhanced_qualitative_signals.csv',
 }
 
 onboarding_api = Blueprint('onboarding_v2', __name__)
@@ -110,13 +124,14 @@ def execute_script(script_path: Path, customer_id: int, timeout: int = 300,
 
 
 # Expected DC2_S pillar names for weight validation
-DC2S_PILLAR_NAMES = {'AI', 'CH', 'DV', 'EX', 'OS'}
+DC2S_PILLAR_NAMES = {'P1', 'P2', 'P3', 'P4', 'P5'}
 
 
 def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
     """
     Validate custom pillar weights for /complete request.
-    Checks: sum to 1.0, all pillars present, non-negative, valid pillar names.
+    Checks: sum to 1.0, valid pillar names, non-negative.
+    Supports partial pillar sets (e.g., 3 pillars for a new customer).
     Returns (True, None) if valid, (False, error_message) otherwise.
     """
     if not weights:
@@ -126,11 +141,12 @@ def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
     total = sum(float(v) for v in weights.values())
     if abs(total - 1.0) > 0.01:
         return (False, f"weights sum to {total:.4f}, expected 1.0")
-    if set(weights.keys()) != DC2S_PILLAR_NAMES:
-        missing = DC2S_PILLAR_NAMES - set(weights.keys())
-        extra = set(weights.keys()) - DC2S_PILLAR_NAMES
-        if missing or extra:
-            return (False, f"weights must have exactly pillars {DC2S_PILLAR_NAMES}; missing: {missing or 'none'}; extra: {extra or 'none'}")
+    # Allow subset of pillars, but all must be valid pillar names
+    extra = set(weights.keys()) - DC2S_PILLAR_NAMES
+    if extra:
+        return (False, f"unknown pillar names: {extra}; valid pillars are {DC2S_PILLAR_NAMES}")
+    if len(weights) < 1:
+        return (False, "at least 1 pillar weight required")
     if any(float(v) < 0 for v in weights.values()):
         return (False, "weights must be non-negative")
     return (True, None)
@@ -421,17 +437,8 @@ def _get_dc2s_kpi_valid_ranges():
 
 
 def _normalize_kpi_code_for_range(kpi_code, valid_codes):
-    """Map AI/CH/DV/EX/OS to P1-P5 for range lookup."""
-    if kpi_code in valid_codes:
-        return kpi_code
-    if '-' in str(kpi_code):
-        parts = str(kpi_code).split('-', 1)
-        if len(parts) == 2 and parts[0] in ('AI', 'CH', 'DV', 'EX', 'OS'):
-            catalog = {'AI': 'P3', 'CH': 'P4', 'DV': 'P1', 'EX': 'P5', 'OS': 'P2'}
-            lookup = catalog.get(parts[0], '') + '-' + parts[1]
-            if lookup in valid_codes:
-                return lookup
-    return None
+    """Validate kpi_code exists in valid_codes. Returns kpi_code or None."""
+    return kpi_code if kpi_code in valid_codes else None
 
 
 def validate_kpi_values_against_ranges(df_kpis: pd.DataFrame) -> Tuple[List[Dict], List[str]]:
@@ -502,6 +509,509 @@ def filter_kpi_csv_by_config(df: pd.DataFrame, customer_id: int, strict_mode: bo
     return (df, warnings)
 
 # ============================================================================
+# Context Graph Ingestion (9 additional CSVs → context_nodes + context_edges)
+# ============================================================================
+
+def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[str, Any]:
+    """
+    Ingest 9 context graph CSVs into context_nodes and context_edges tables.
+    Only called when the context_graph feature toggle is ON for this customer.
+
+    Returns dict with counts and any errors encountered.
+    """
+    from sqlalchemy import text
+    import pandas as pd
+
+    result = {'nodes_inserted': 0, 'edges_inserted': 0, 'files_loaded': [], 'errors': []}
+
+    # Helper: upsert a context node and return the node_id
+    def _clean_val(v):
+        """Convert pandas NaN/NaT to None for PostgreSQL compatibility."""
+        import math
+        if v is None or v is pd.NaT:
+            return None
+        if isinstance(v, float) and math.isnan(v):
+            return None
+        return v
+
+    def _sanitize_props(props):
+        """Replace pandas NaN/NaT values with None for valid JSON serialization."""
+        if not props:
+            return props
+        return {k: _clean_val(v) for k, v in props.items()}
+
+    def _insert_node(conn, customer_id, account_id, node_type, node_subtype,
+                     label, properties, tier=1, source_platform='csv_import',
+                     source_event_id=None, event_time=None,
+                     revenue_impact=None, revenue_impact_type=None):
+        # occurred_at is NOT NULL — always provide a value
+        resolved_etime = _clean_val(event_time) or datetime.utcnow().strftime('%Y-%m-%d')
+        row = conn.execute(text("""
+            INSERT INTO context_nodes
+                (customer_id, account_id, node_type, node_subtype, title,
+                 properties, tier, source_platform, source_event_id,
+                 occurred_at, revenue_impact, revenue_impact_type)
+            VALUES
+                (:cid, :aid, :ntype, :nsub, :title,
+                 :props, :tier, :src, :src_eid,
+                 :etime, :rev, :rev_type)
+            RETURNING node_id
+        """), {
+            'cid': customer_id, 'aid': int(account_id),
+            'ntype': node_type, 'nsub': _clean_val(node_subtype),
+            'title': label, 'props': json.dumps(_sanitize_props(properties)) if properties else None,
+            'tier': tier, 'src': _clean_val(source_platform), 'src_eid': _clean_val(source_event_id),
+            'etime': resolved_etime, 'rev': _clean_val(revenue_impact),
+            'rev_type': _clean_val(revenue_impact_type)
+        })
+        return row.scalar()
+
+    # --- Clear existing context graph data for this customer (idempotent) ---
+    try:
+        with engine.begin() as conn:
+            # Delete edges by customer_id (covers both resolved and NULL node refs)
+            conn.execute(text("""
+                DELETE FROM context_edges WHERE customer_id = :cid
+            """), {'cid': customer_id})
+            conn.execute(text("""
+                DELETE FROM context_nodes WHERE customer_id = :cid
+            """), {'cid': customer_id})
+            current_app.logger.info(f"Cleared existing context graph data for customer {customer_id}")
+    except Exception as e:
+        current_app.logger.warning(f"Could not clear old context graph data: {e}")
+
+    # ── Ref→node_id lookup maps (populated during ingestion, used for edge resolution) ──
+    # stakeholder_role_map: role → {account_id → node_id}
+    # decision_ref_map: decision_id → {account_id → node_id}
+    # outcome_ref_map: outcome_id → {account_id → node_id}
+    # signal_ref_map: signal_ref → {account_id → node_id}
+    stakeholder_role_map = {}
+    decision_ref_map = {}
+    outcome_ref_map = {}
+    signal_ref_map = {}
+    all_account_ids = set()
+
+    # ── 1. stakeholders.csv → STAKEHOLDER nodes ──
+    stakeholders_file = data_dir / 'stakeholders.csv'
+    if stakeholders_file.exists():
+        try:
+            df = pd.read_csv(stakeholders_file)
+            with engine.begin() as conn:
+                for _, row in df.iterrows():
+                    account_id_val = int(row['account_id'])
+                    all_account_ids.add(account_id_val)
+                    role = row.get('role', 'end_user')
+                    props = {
+                        'email': row.get('email', ''),
+                        'engagement_frequency': row.get('engagement_frequency', ''),
+                        'department': row.get('department', ''),
+                        'is_active': row.get('is_active', True),
+                    }
+                    nid = _insert_node(
+                        conn, customer_id, account_id_val,
+                        'STAKEHOLDER', role,
+                        f"{row['stakeholder_name']} ({row['title']})",
+                        props, tier=1, source_platform=row.get('source_platform', 'csv_import'),
+                        event_time=row.get('first_observed_at'),
+                    )
+                    stakeholder_role_map.setdefault(role, {})[account_id_val] = nid
+                    result['nodes_inserted'] += 1
+            result['files_loaded'].append('stakeholders.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} stakeholder nodes")
+        except Exception as e:
+            result['errors'].append(f"stakeholders.csv: {str(e)}")
+            current_app.logger.error(f"Error loading stakeholders.csv: {e}", exc_info=True)
+
+    # ── 2. engagement_events.csv → SIGNAL nodes (subtype=engagement) ──
+    events_file = data_dir / 'engagement_events.csv'
+    if events_file.exists():
+        try:
+            df = pd.read_csv(events_file)
+            with engine.begin() as conn:
+                for idx, row in df.iterrows():
+                    account_id_val = int(row['account_id'])
+                    all_account_ids.add(account_id_val)
+                    props = {
+                        'channel': row.get('channel', ''),
+                        'duration_minutes': row.get('duration_minutes', 0),
+                        'outcome': row.get('outcome', ''),
+                        'stakeholder_name': row.get('stakeholder_name', ''),
+                        'sentiment_shift': row.get('sentiment_shift', 0),
+                    }
+                    _insert_node(
+                        conn, customer_id, account_id_val,
+                        'SIGNAL', 'engagement',
+                        row.get('description', '')[:200],
+                        props, tier=2,
+                        event_time=row.get('event_date'),
+                        source_platform=row.get('source_platform', 'csv_import'),
+                    )
+                    result['nodes_inserted'] += 1
+            result['files_loaded'].append('engagement_events.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} engagement event nodes")
+        except Exception as e:
+            result['errors'].append(f"engagement_events.csv: {str(e)}")
+            current_app.logger.error(f"Error loading engagement_events.csv: {e}", exc_info=True)
+
+    # ── 3. account_business_profiles.csv → ACCOUNT nodes ──
+    profiles_file = data_dir / 'account_business_profiles.csv'
+    if profiles_file.exists():
+        try:
+            df = pd.read_csv(profiles_file)
+            with engine.begin() as conn:
+                for _, row in df.iterrows():
+                    props = {
+                        'arr': row.get('arr', 0),
+                        'employee_count': row.get('employee_count', 0),
+                        'fiscal_year_end': row.get('fiscal_year_end', ''),
+                        'tech_stack': row.get('tech_stack', ''),
+                        'cloud_provider': row.get('cloud_provider', ''),
+                        'competitive_landscape': row.get('competitive_landscape', ''),
+                        'strategic_initiatives': row.get('strategic_initiatives', ''),
+                        'budget_cycle': row.get('budget_cycle', ''),
+                    }
+                    _insert_node(
+                        conn, customer_id, row['account_id'],
+                        'ACCOUNT', 'business_profile',
+                        f"Account {row['account_id']} - {row.get('industry', '')}",
+                        props, tier=1,
+                        event_time=row.get('profile_date'),
+                    )
+                    result['nodes_inserted'] += 1
+            result['files_loaded'].append('account_business_profiles.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} account business profile nodes")
+        except Exception as e:
+            result['errors'].append(f"account_business_profiles.csv: {str(e)}")
+            current_app.logger.error(f"Error loading account_business_profiles.csv: {e}", exc_info=True)
+
+    # ── 4. decisions.csv → DECISION nodes ──
+    decisions_file = data_dir / 'decisions.csv'
+    if decisions_file.exists():
+        try:
+            df = pd.read_csv(decisions_file)
+            with engine.begin() as conn:
+                for idx, row in df.iterrows():
+                    account_id_val = int(row['account_id'])
+                    all_account_ids.add(account_id_val)
+                    decision_id = str(row.get('decision_id', '')).strip()
+                    props = {
+                        'decision_id': decision_id,
+                        'decision_maker_role': row.get('decision_maker_role', ''),
+                        'chosen_option': row.get('chosen_option', ''),
+                        'options_considered': row.get('options_considered', ''),
+                        'risk_level': row.get('risk_level', 'medium'),
+                        'evidence_refs': row.get('evidence_refs', ''),
+                        'outcome_description': row.get('outcome_description', ''),
+                    }
+                    rev_impact = None
+                    try:
+                        rev_impact = float(row.get('revenue_impact', 0))
+                    except (ValueError, TypeError):
+                        pass
+                    nid = _insert_node(
+                        conn, customer_id, account_id_val,
+                        'DECISION', row.get('risk_level', 'medium'),
+                        row.get('title', '')[:200],
+                        props, tier=1,
+                        event_time=row.get('decision_date'),
+                        revenue_impact=rev_impact,
+                        revenue_impact_type='at_risk' if (rev_impact and rev_impact < 0) else 'protected',
+                        source_event_id=decision_id or f"decision_{idx}",
+                    )
+                    if decision_id:
+                        decision_ref_map.setdefault(decision_id, {})[account_id_val] = nid
+                    result['nodes_inserted'] += 1
+            result['files_loaded'].append('decisions.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} decision nodes")
+        except Exception as e:
+            result['errors'].append(f"decisions.csv: {str(e)}")
+            current_app.logger.error(f"Error loading decisions.csv: {e}", exc_info=True)
+
+    # ── 5. outcomes.csv → OUTCOME nodes ──
+    outcomes_file = data_dir / 'outcomes.csv'
+    if outcomes_file.exists():
+        try:
+            df = pd.read_csv(outcomes_file)
+            with engine.begin() as conn:
+                for _, row in df.iterrows():
+                    account_id_val = int(row['account_id'])
+                    all_account_ids.add(account_id_val)
+                    outcome_id = str(row.get('outcome_id', '')).strip()
+                    rev_val = None
+                    try:
+                        rev_val = float(row.get('revenue_value', 0))
+                    except (ValueError, TypeError):
+                        pass
+                    outcome_type = row.get('outcome_type', 'retention')
+                    rev_type_map = {
+                        'expansion': 'expansion', 'retention': 'protected',
+                        'churn_averted': 'protected', 'cost_reduction': 'protected',
+                        'churn_loss': 'lost',
+                    }
+                    props = {
+                        'outcome_id': outcome_id,
+                        'evidence': row.get('evidence', ''),
+                        'related_decision_id': row.get('related_decision_id', ''),
+                    }
+                    nid = _insert_node(
+                        conn, customer_id, account_id_val,
+                        'OUTCOME', outcome_type,
+                        row.get('title', '')[:200],
+                        props, tier=1,
+                        event_time=row.get('outcome_date'),
+                        revenue_impact=rev_val,
+                        revenue_impact_type=rev_type_map.get(outcome_type, 'none'),
+                        source_platform=row.get('source_platform', 'csv_import'),
+                    )
+                    if outcome_id:
+                        outcome_ref_map.setdefault(outcome_id, {})[account_id_val] = nid
+                    result['nodes_inserted'] += 1
+            result['files_loaded'].append('outcomes.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} outcome nodes")
+        except Exception as e:
+            result['errors'].append(f"outcomes.csv: {str(e)}")
+            current_app.logger.error(f"Error loading outcomes.csv: {e}", exc_info=True)
+
+    # ── 6. industry_benchmarks.csv → EXTERNAL_CONTEXT nodes ──
+    benchmarks_file = data_dir / 'industry_benchmarks.csv'
+    if benchmarks_file.exists():
+        try:
+            df = pd.read_csv(benchmarks_file)
+            # Benchmarks are global, not per-account; use first account of customer
+            with engine.begin() as conn:
+                first_acc = conn.execute(text(
+                    "SELECT account_id FROM accounts WHERE customer_id = :cid ORDER BY account_id LIMIT 1"
+                ), {'cid': customer_id}).scalar()
+                if first_acc:
+                    for _, row in df.iterrows():
+                        props = {
+                            'benchmark_source': row.get('benchmark_source', ''),
+                            'industry_p50': row.get('industry_p50', 0),
+                            'industry_p25': row.get('industry_p25', 0),
+                            'industry_p75': row.get('industry_p75', 0),
+                            'account_percentile': row.get('account_percentile', 50),
+                            'sample_size': row.get('sample_size', 0),
+                            'benchmark_date': row.get('benchmark_date', ''),
+                        }
+                        _insert_node(
+                            conn, customer_id, first_acc,
+                            'EXTERNAL_CONTEXT', 'industry_benchmark',
+                            f"Benchmark: {row.get('kpi_code', '')}",
+                            props, tier=1,
+                            source_event_id=f"bench_{row.get('kpi_code', '')}",
+                            event_time=row.get('benchmark_date'),
+                        )
+                        result['nodes_inserted'] += 1
+            result['files_loaded'].append('industry_benchmarks.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} benchmark nodes")
+        except Exception as e:
+            result['errors'].append(f"industry_benchmarks.csv: {str(e)}")
+            current_app.logger.error(f"Error loading industry_benchmarks.csv: {e}", exc_info=True)
+
+    # ── 7. enhanced_qualitative_signals.csv → SIGNAL nodes (with graph metadata) ──
+    enhanced_file = data_dir / 'enhanced_qualitative_signals.csv'
+    if enhanced_file.exists():
+        try:
+            df = pd.read_csv(enhanced_file)
+            with engine.begin() as conn:
+                for idx, row in df.iterrows():
+                    account_id_val = int(row['account_id'])
+                    all_account_ids.add(account_id_val)
+                    sig_ref = str(row.get('signal_ref', '')).strip()
+                    props = {
+                        'signal_ref': sig_ref,
+                        'signal_type': row.get('signal_type', 'signal'),
+                        'sentiment': row.get('sentiment', 'neutral'),
+                        'sentiment_score': row.get('sentiment_score', 0),
+                        'stakeholder_name': row.get('stakeholder_name', ''),
+                        'stakeholder_title': row.get('stakeholder_title', ''),
+                        'causal_chain_ref': row.get('causal_chain_ref', ''),
+                    }
+                    rev_impact = None
+                    try:
+                        rev_impact = float(row.get('revenue_impact', 0))
+                    except (ValueError, TypeError):
+                        pass
+                    nid = _insert_node(
+                        conn, customer_id, account_id_val,
+                        'SIGNAL', row.get('signal_type', 'signal'),
+                        str(row.get('content', ''))[:200],
+                        props, tier=2,
+                        event_time=row.get('signal_date'),
+                        revenue_impact=rev_impact,
+                        source_platform=row.get('source_platform', 'csv_import'),
+                    )
+                    if sig_ref:
+                        signal_ref_map.setdefault(sig_ref, {})[account_id_val] = nid
+                    result['nodes_inserted'] += 1
+            result['files_loaded'].append('enhanced_qualitative_signals.csv')
+            current_app.logger.info(f"✅ Loaded {len(df)} enhanced signal nodes")
+        except Exception as e:
+            result['errors'].append(f"enhanced_qualitative_signals.csv: {str(e)}")
+            current_app.logger.error(f"Error loading enhanced_qualitative_signals.csv: {e}", exc_info=True)
+
+    # ── Helper: resolve a signal_edges ref to a node_id for a given account ──
+    import re as _re
+
+    def _resolve_ref(ref: str, account_id: int):
+        """Resolve a signal_edges ref string to a node_id.
+
+        Ref formats:
+          stakeholder:champion        → stakeholder_role_map['champion'][account_id]
+          decision:dec_poc_approval    → decision_ref_map['dec_poc_approval'][account_id]
+          outcome:out_expansion_deal   → outcome_ref_map['out_expansion_deal'][account_id]
+          signal:phase1:w2             → signal_ref_map['phase1:w2'][account_id]
+          phase1:w2 - GPU util...      → extract 'phase1:w2', lookup signal_ref_map
+        """
+        ref = ref.strip()
+        if not ref:
+            return None
+
+        # stakeholder:<role>
+        if ref.startswith('stakeholder:'):
+            role = ref.split(':', 1)[1]
+            return stakeholder_role_map.get(role, {}).get(account_id)
+
+        # decision:<id>
+        if ref.startswith('decision:'):
+            did = ref.split(':', 1)[1]
+            return decision_ref_map.get(did, {}).get(account_id)
+
+        # outcome:<id>
+        if ref.startswith('outcome:'):
+            oid = ref.split(':', 1)[1]
+            return outcome_ref_map.get(oid, {}).get(account_id)
+
+        # signal:phase1:w2  (prefixed)
+        if ref.startswith('signal:'):
+            sref = ref.split(':', 1)[1]  # "phase1:w2"
+            return signal_ref_map.get(sref, {}).get(account_id)
+
+        # phase1:w2 - description  (causal chain format)
+        m = _re.match(r'(phase\d+:w\d+)', ref)
+        if m:
+            sref = m.group(1)
+            return signal_ref_map.get(sref, {}).get(account_id)
+
+        return None
+
+    # ── 8. signal_edges.csv → context_edges (with ref resolution) ──
+    edges_file = data_dir / 'signal_edges.csv'
+    if edges_file.exists():
+        try:
+            df = pd.read_csv(edges_file)
+            unresolved = 0
+            with engine.begin() as conn:
+                for _, row in df.iterrows():
+                    from_ref = str(row.get('from_signal_ref', ''))
+                    to_ref = str(row.get('to_signal_ref', ''))
+                    rev_impact = None
+                    try:
+                        rev_impact = float(row.get('revenue_impact', 0))
+                    except (ValueError, TypeError):
+                        pass
+
+                    props = _sanitize_props({
+                        'from_signal_ref': from_ref,
+                        'to_signal_ref': to_ref,
+                        'evidence': row.get('evidence', ''),
+                        'created_by': row.get('created_by', 'csv_import'),
+                    })
+
+                    # Edges are arc-level (not per-account), so replicate for each account
+                    for acct_id in sorted(all_account_ids):
+                        from_nid = _resolve_ref(from_ref, acct_id)
+                        to_nid = _resolve_ref(to_ref, acct_id)
+
+                        if from_nid and to_nid:
+                            conn.execute(text("""
+                                INSERT INTO context_edges
+                                    (customer_id, from_node_id, to_node_id,
+                                     edge_type, weight, confidence,
+                                     lag_days, revenue_impact, properties, source_platform)
+                                VALUES
+                                    (:cid, :from_nid, :to_nid,
+                                     :etype, :weight, :conf,
+                                     :lag, :rev, :props, :src)
+                            """), {
+                                'cid': customer_id,
+                                'from_nid': from_nid,
+                                'to_nid': to_nid,
+                                'etype': row.get('edge_type', 'CORRELATES_WITH'),
+                                'weight': float(row.get('weight', 0.5)),
+                                'conf': float(row.get('confidence', 0.5)),
+                                'lag': int(row.get('lag_days', 0)),
+                                'rev': rev_impact,
+                                'props': json.dumps(props),
+                                'src': row.get('source_platform', 'csv_import'),
+                            })
+                            result['edges_inserted'] += 1
+                        else:
+                            unresolved += 1
+
+            if unresolved:
+                current_app.logger.warning(
+                    f"signal_edges: {unresolved} edge-account pairs could not be resolved"
+                )
+            result['files_loaded'].append('signal_edges.csv')
+            current_app.logger.info(
+                f"✅ Loaded {result['edges_inserted']} signal edges "
+                f"({len(df)} rows × {len(all_account_ids)} accounts, {unresolved} unresolved)"
+            )
+        except Exception as e:
+            result['errors'].append(f"signal_edges.csv: {str(e)}")
+            current_app.logger.error(f"Error loading signal_edges.csv: {e}", exc_info=True)
+
+    # ── 9. decision_evidence.csv → context_edges (SOURCED_FROM, with ref resolution) ──
+    evidence_file = data_dir / 'decision_evidence.csv'
+    if evidence_file.exists():
+        try:
+            df = pd.read_csv(evidence_file)
+            evidence_edges = 0
+            with engine.begin() as conn:
+                for _, row in df.iterrows():
+                    dec_ref = str(row.get('decision_ref', '')).strip()
+                    props = _sanitize_props({
+                        'decision_ref': dec_ref,
+                        'evidence_type': row.get('evidence_type', ''),
+                        'evidence_description': row.get('evidence_description', ''),
+                        'kpi_code': row.get('kpi_code', ''),
+                        'kpi_value': row.get('kpi_value', ''),
+                        'signal_ref': row.get('signal_ref', ''),
+                    })
+                    conf = float(_clean_val(row.get('confidence', 0.8)) or 0.8)
+
+                    # Resolve decision_ref → node_id for each account
+                    acct_map = decision_ref_map.get(dec_ref, {})
+                    for acct_id, dec_nid in acct_map.items():
+                        conn.execute(text("""
+                            INSERT INTO context_edges
+                                (customer_id, from_node_id, to_node_id,
+                                 edge_type, weight, confidence,
+                                 properties, source_platform)
+                            VALUES
+                                (:cid, :from_nid, :to_nid,
+                                 'SOURCED_FROM', 0.8, :conf, :props, 'csv_import')
+                        """), {
+                            'cid': customer_id,
+                            'from_nid': dec_nid,
+                            'to_nid': dec_nid,  # self-ref (evidence points to the decision)
+                            'conf': conf,
+                            'props': json.dumps(props),
+                        })
+                        evidence_edges += 1
+                        result['edges_inserted'] += 1
+
+            result['files_loaded'].append('decision_evidence.csv')
+            current_app.logger.info(f"✅ Loaded {evidence_edges} decision evidence edges")
+        except Exception as e:
+            result['errors'].append(f"decision_evidence.csv: {str(e)}")
+            current_app.logger.error(f"Error loading decision_evidence.csv: {e}", exc_info=True)
+
+    return result
+
+
+# ============================================================================
 # Onboarding Endpoints
 # ============================================================================
 
@@ -526,11 +1036,11 @@ def complete_onboarding():
             "last_name": "Administrator",         // Optional: admin last name
             "num_accounts": 10,                   // Optional: number of accounts (default: 3)
             "weights": {                          // Optional: custom pillar weights
-                "AI": 0.10,
-                "CH": 0.30,
-                "DV": 0.30,
-                "EX": 0.05,
-                "OS": 0.25
+                "P3": 0.10,
+                "P4": 0.30,
+                "P1": 0.30,
+                "P5": 0.05,
+                "P2": 0.25
             }
         }
     
@@ -635,60 +1145,71 @@ def complete_onboarding():
                 # Don't fail silently - this is a critical step
                 raise
         
-        # Step 1: Create customer (GAP 1.4: idempotency - return existing if idempotent=True)
+        # Step 1: Create or reuse customer
+        # If customer_id is provided and exists → REUSE (continue with accounts + provisioning)
+        # If customer_id is provided but doesn't exist → create with that ID
+        # If no customer_id → create new (auto-increment)
+        reused_customer = False
         if customer_id_explicit:
             existing = db.session.get(Customer, customer_id_explicit)
             if existing:
                 if idempotent:
-                    # Return existing customer (idempotent success)
-                    customer_dir = get_customer_directory(customer_id_explicit, vertical)
-                    config = CustomerConfig.query.filter_by(customer_id=customer_id_explicit).first()
-                    accounts = Account.query.filter_by(customer_id=customer_id_explicit).all()
-                    return jsonify({
-                        "success": True,
-                        "customer_id": existing.customer_id,
-                        "customer_name": existing.customer_name,
-                        "idempotent": True,
-                        "message": "Customer already exists (idempotent). Returning existing customer.",
-                        "accounts": len(accounts),
-                        "account_details": [{"account_id": a.account_id, "account_name": a.account_name} for a in accounts],
-                        "config": {
-                            "enabled_kpis": len(config.dc2s_enabled_kpis or []) if config else 0,
-                            "weights": (config.dc2s_pillar_weights if config else None) or custom_weights or {},
-                            "vertical": getattr(config, "vertical", None) or vertical
-                        },
-                        "directory_provisioned": customer_dir.exists() if customer_dir else False,
-                    })
-                return jsonify({
-                    "error": f"Customer with ID {customer_id_explicit} already exists",
-                    "existing_customer": existing.customer_name,
-                    "hint": "Send idempotent=true to return existing customer instead of error"
-                }), 400
-        
-        customer = Customer(customer_name=customer_name)
-        if domain:
-            customer.domain = domain
-        if email:
-            customer.email = email
-        if customer_id_explicit:
-            # Try to set explicit ID (may fail if ID already in use)
-            try:
-                customer.customer_id = customer_id_explicit
-            except Exception as e:
-                current_app.logger.warning(f"Could not set explicit customer_id: {e}")
+                    # Idempotent mode: check if ALREADY fully onboarded (has accounts)
+                    existing_accounts = Account.query.filter_by(customer_id=customer_id_explicit).all()
+                    if existing_accounts:
+                        # Already onboarded — return existing state
+                        customer_dir = get_customer_directory(customer_id_explicit, vertical)
+                        config = CustomerConfig.query.filter_by(customer_id=customer_id_explicit).first()
+                        return jsonify({
+                            "success": True,
+                            "customer_id": existing.customer_id,
+                            "customer_name": existing.customer_name,
+                            "customer_uuid": getattr(existing, 'uuid', None),
+                            "idempotent": True,
+                            "message": "Customer already onboarded (idempotent). Returning existing state.",
+                            "accounts": len(existing_accounts),
+                            "account_details": [{"account_id": a.account_id, "account_name": a.account_name} for a in existing_accounts],
+                            "config": {
+                                "enabled_kpis": len(config.dc2s_enabled_kpis or []) if config else 0,
+                                "weights": (config.dc2s_pillar_weights if config else None) or custom_weights or {},
+                                "vertical": getattr(config, "vertical", None) or vertical
+                            },
+                            "directory_provisioned": customer_dir.exists() if customer_dir else False,
+                        })
+
+                # Reuse existing customer — continue with account creation + provisioning
+                customer = existing
+                customer_id = existing.customer_id
+                customer_uuid_value = getattr(existing, 'uuid', None)
+                reused_customer = True
+                current_app.logger.info(f"♻️  Reusing existing customer: id={customer_id}, name={existing.customer_name}")
 
         # UUID generation — resolve vertical to valid prefix (dc2_s → dc)
         uuid_vertical = 'dc' if vertical.startswith('dc') else vertical
         if uuid_vertical not in ('dc', 'saas', 'msp'):
             uuid_vertical = 'dc'  # Default to dc for data center verticals
-        ensure_uuid(customer, uuid_vertical)
 
-        db.session.add(customer)
-        db.session.flush()  # Get customer_id
+        if not reused_customer:
+            customer = Customer(customer_name=customer_name)
+            if domain:
+                customer.domain = domain
+            if email:
+                customer.email = email
+            if customer_id_explicit:
+                # Try to set explicit ID (may fail if ID already in use)
+                try:
+                    customer.customer_id = customer_id_explicit
+                except Exception as e:
+                    current_app.logger.warning(f"Could not set explicit customer_id: {e}")
 
-        customer_id = customer.customer_id
-        customer_uuid_value = customer.uuid  # Save before session detach
-        current_app.logger.info(f"✅ Customer created: id={customer_id}, uuid={customer_uuid_value}")
+            ensure_uuid(customer, uuid_vertical)
+
+            db.session.add(customer)
+            db.session.flush()  # Get customer_id
+
+            customer_id = customer.customer_id
+            customer_uuid_value = customer.uuid  # Save before session detach
+            current_app.logger.info(f"✅ Customer created: id={customer_id}, uuid={customer_uuid_value}")
         
         # Provision directory if not already done
         if not directory_provisioned:
@@ -791,20 +1312,20 @@ def complete_onboarding():
         # Step 3: Create or Update CustomerConfig with default or custom settings
         # Default: Enable first 15 KPIs (3 per pillar)
         default_enabled_kpis = [
-            'AI-KPI1', 'AI-KPI2', 'AI-KPI3',
-            'CH-KPI1', 'CH-KPI2', 'CH-KPI3',
-            'DV-KPI1', 'DV-KPI2', 'DV-KPI3',
-            'EX-KPI1', 'EX-KPI2', 'EX-KPI3',
-            'OS-KPI1', 'OS-KPI2', 'OS-KPI3'
+            'P1-KPI1', 'P1-KPI2', 'P1-KPI3',
+            'P2-KPI1', 'P2-KPI2', 'P2-KPI3',
+            'P3-KPI1', 'P3-KPI2', 'P3-KPI3',
+            'P4-KPI1', 'P4-KPI2', 'P4-KPI3',
+            'P5-KPI1', 'P5-KPI2', 'P5-KPI3'
         ]
-        
+
         # Use custom weights if provided, otherwise defaults
         pillar_weights = custom_weights if custom_weights else {
-            'AI': 0.25,
-            'CH': 0.20,
-            'DV': 0.15,
-            'EX': 0.20,
-            'OS': 0.20
+            'P1': 0.15,
+            'P2': 0.20,
+            'P3': 0.25,
+            'P4': 0.15,
+            'P5': 0.25
         }
         
         # Check if config already exists (for idempotency)
@@ -1079,14 +1600,14 @@ def process_data():
     2. Embedding Generation (03_embed_*.py) - PostgreSQL → Qdrant
     3. Data Validation (04_validate_*.py) - Optional integrity checks
     4. Journey Generation (wizard_a_*.py) - Creates journey JSON files
-    5. Pattern Analysis (wizard_b_*.py) - Optional pattern detection
+    5. Pattern Analysis (wizard_b_*.py) - Extracts patterns, early warnings, phase transitions
     6. Weight Calibration (wizard_c_*.py) - Optional self-learning weights
     
     Request:
         {
             "customer_id": 123,
             "skip_validation": false,    // Optional: skip validation script
-            "skip_wizard_b": true,       // Optional: skip Wizard B
+            "skip_wizard_b": false,      // Optional: skip Wizard B (default: run it)
             "skip_wizard_c": false,      // Optional: skip Wizard C (default: run it)
             "upload_mode": "incremental" // Optional: full_refresh, incremental, upsert, merge
         }
@@ -1117,7 +1638,7 @@ def process_data():
     try:
         customer_id = int(customer_id)
         skip_validation = data.get('skip_validation', False)
-        skip_wizard_b = data.get('skip_wizard_b', True)  # Default: skip Wizard B
+        skip_wizard_b = data.get('skip_wizard_b', False)  # Default: run Wizard B
         skip_wizard_c = data.get('skip_wizard_c', False)  # Default: run Wizard C
         upload_mode = data.get('upload_mode', 'incremental')
         strict_mode = data.get('strict_mode', False)  # P2: Strict CSV validation mode
@@ -1300,6 +1821,15 @@ def process_data():
                 if kpi_range_errors:
                     current_app.logger.info(f"  KPI range warnings (load allowed): {len(kpi_range_errors)} value(s) outside ranges")
                 current_app.logger.info(f"  Loading {len(df_kpis)} KPI records (enabled KPIs only)")
+                # dc2s_kpis table has: account_id, kpi_code, value, target, pillar, weight, status, measured_at (no kpi_name/unit)
+                dc2s_kpi_columns = ['account_id', 'kpi_code', 'value', 'target', 'pillar', 'weight', 'status', 'measured_at']
+                cols_to_use = [c for c in dc2s_kpi_columns if c in df_kpis.columns]
+                if 'account_id' not in cols_to_use or 'kpi_code' not in cols_to_use or 'value' not in cols_to_use:
+                    return jsonify({
+                        "status": "error",
+                        "message": "kpi_measurements.csv must contain at least account_id, kpi_code, value"
+                    }), 400
+                df_kpis = df_kpis[cols_to_use].copy()
                 with engine.begin() as conn:
                     # Idempotent: delete existing dc2s_kpis for this customer's accounts
                     conn.execute(text("""
@@ -1424,6 +1954,43 @@ def process_data():
                 **execution_state
             }), 500
         
+        # ========================================================================
+        # STEP 1b: Context Graph Ingestion (9 CSVs → context_nodes/edges)
+        # Only runs when context_graph feature toggle is ON for this customer.
+        # ========================================================================
+        try:
+            from feature_toggles import is_context_graph_enabled
+            if is_context_graph_enabled(customer_id):
+                current_app.logger.info(f"Step 1b: Context graph enabled — ingesting 9 context graph CSVs")
+                # Look for context graph CSVs in data/ or data/context_graph/
+                cg_data_dir = data_dir / 'context_graph'
+                if not cg_data_dir.exists():
+                    cg_data_dir = data_dir  # Fall back to same directory as regular CSVs
+
+                cg_result = ingest_context_graph_csvs(customer_id, cg_data_dir, engine)
+                execution_state['steps_completed'].append('context_graph_ingestion')
+                execution_state['context_graph'] = {
+                    'nodes_inserted': cg_result['nodes_inserted'],
+                    'edges_inserted': cg_result['edges_inserted'],
+                    'files_loaded': cg_result['files_loaded'],
+                }
+                if cg_result['errors']:
+                    execution_state['errors'].extend(
+                        [f"context_graph: {e}" for e in cg_result['errors']]
+                    )
+                current_app.logger.info(
+                    f"✅ Context graph: {cg_result['nodes_inserted']} nodes, "
+                    f"{cg_result['edges_inserted']} edges from {len(cg_result['files_loaded'])} files"
+                )
+            else:
+                current_app.logger.info("Context graph not enabled for this customer — skipping step 1b")
+        except ImportError:
+            current_app.logger.info("Feature toggles module not available — skipping context graph")
+        except Exception as e:
+            # Non-fatal: context graph ingestion failure shouldn't block the rest
+            current_app.logger.warning(f"Context graph ingestion failed (non-fatal): {e}")
+            execution_state['errors'].append(f"context_graph_ingestion: {str(e)}")
+
         # ========================================================================
         # STEP 2: Embedding Generation Script
         # ========================================================================
@@ -1599,32 +2166,78 @@ def process_data():
             else:
                 execution_state['steps_completed'].append('journey_generation')
                 current_app.logger.info(f"✅ Journey data generated in {script_duration:.2f}s")
-        
+
+                # Persist journey JSON files to database (journey_data table)
+                # This ensures they survive container rebuilds
+                try:
+                    from models import JourneyData
+                    output_path = Path(output_dir)
+                    journey_files_saved = 0
+                    for jf in output_path.glob('account_*_journey.json'):
+                        try:
+                            with open(jf, 'r') as f:
+                                journey_json = json.load(f)
+                            # Extract account_id from filename
+                            fname = jf.stem  # e.g., account_60001_journey
+                            acct_id = int(fname.split('_')[1])
+                            existing = JourneyData.query.filter_by(
+                                customer_id=customer_id, account_id=acct_id
+                            ).first()
+                            if existing:
+                                existing.journey_json = journey_json
+                                existing.total_weeks = journey_json.get('total_weeks')
+                                existing.journey_pattern = journey_json.get('pattern')
+                                existing.updated_at = datetime.utcnow()
+                            else:
+                                db.session.add(JourneyData(
+                                    customer_id=customer_id,
+                                    account_id=acct_id,
+                                    journey_json=journey_json,
+                                    total_weeks=journey_json.get('total_weeks'),
+                                    journey_pattern=journey_json.get('pattern'),
+                                ))
+                            journey_files_saved += 1
+                        except Exception as jf_err:
+                            db.session.rollback()  # keep session usable for next file and rest of process-data
+                            current_app.logger.warning(f"Failed to save journey file {jf.name} to DB: {jf_err}")
+                    if journey_files_saved > 0:
+                        db.session.commit()
+                        current_app.logger.info(f"✅ Saved {journey_files_saved} journey files to database")
+                    execution_state['steps_completed'].append('journey_db_persist')
+                except Exception as db_err:
+                    db.session.rollback()
+                    current_app.logger.warning(f"Journey DB persist failed (non-fatal): {db_err}")
+
         # ========================================================================
-        # STEP 5: Pattern Analysis (Wizard B) - Optional
+        # STEP 5: Pattern Analysis (Wizard B) - Runs by default
+        # Reads journey data from JourneyData DB table, writes results to
+        # WizardRun + WizardLearning tables. No subprocess, no filesystem.
         # ========================================================================
-        if not skip_wizard_b and wizard_a_output_dir:
-            current_app.logger.info(f"Step 5: Executing pattern analyzer (Wizard B) for customer {customer_id}")
-            # P1: Add script name variations for Wizard B
-            wizard_b_script = customer_dir / "journey" / "wizard_b" / "wizard_b_pattern_analyzer.py"
-            
-            if not wizard_b_script.exists():
-                wizard_b_script = customer_dir / "journey" / "wizard_b" / "pattern_analyzer.py"
-            
-            if wizard_b_script.exists():
+        if not skip_wizard_b:
+            current_app.logger.info(f"Step 5: Running pattern analyzer (Wizard B) for customer {customer_id}")
+            try:
+                import sys as _sys
+                _wizard_b_dir = str(Path(__file__).resolve().parent / 'verticals' / '_template' / 'journey' / 'wizard_b')
+                if _wizard_b_dir not in _sys.path:
+                    _sys.path.insert(0, _wizard_b_dir)
+                from wizard_b_pattern_analyzer import run_wizard_b
+
                 script_start_time = time.time()
-                success, stdout, stderr = execute_script(
-                    wizard_b_script, customer_id, timeout=300,
-                    additional_args=[wizard_a_output_dir]
-                )
+                wizard_b_result = run_wizard_b(customer_id)
                 script_duration = time.time() - script_start_time
-                
-                if success:
-                    execution_state['steps_completed'].append('pattern_analysis')
-                    current_app.logger.info(f"✅ Pattern analysis completed in {script_duration:.2f}s")
-                else:
-                    execution_state['errors'].append(f"Pattern analysis warnings: {stderr}")
-                    current_app.logger.warning(f"Pattern analysis returned warnings: {stderr}")
+
+                execution_state['steps_completed'].append('pattern_analysis')
+                current_app.logger.info(
+                    f"✅ Pattern analysis completed in {script_duration:.2f}s — "
+                    f"run_id={wizard_b_result.get('run_id')}, "
+                    f"patterns={wizard_b_result.get('total_patterns')}"
+                )
+            except ValueError as ve:
+                # No journey data yet — non-fatal, skip gracefully
+                current_app.logger.warning(f"Wizard B skipped: {ve}")
+            except Exception as wb_err:
+                execution_state['errors'].append(f"Pattern analysis error: {wb_err}")
+                current_app.logger.warning(f"Pattern analysis failed (non-fatal): {wb_err}")
         
         # ========================================================================
         # STEP 6: Weight Calibration (Wizard C) - Optional but recommended
@@ -1638,7 +2251,21 @@ def process_data():
             
             if wizard_c_script.exists():
                 script_start_time = time.time()
-                success, stdout, stderr = execute_script(wizard_c_script, customer_id, timeout=300)
+                # Wizard C needs --input-dir (Wizard A outputs), --output-dir, and --customer-id
+                wizard_c_output_dir = str(customer_dir / "journey" / "wizard_c" / "outputs")
+                wizard_c_args = [
+                    '--input-dir', wizard_a_output_dir or str(customer_dir / "journey" / "wizard_a" / "outputs"),
+                    '--output-dir', wizard_c_output_dir,
+                    '--customer-id', str(customer_id),
+                ]
+                # If Wizard B produced a pattern summary, pass it too
+                pattern_summary = customer_dir / "journey" / "wizard_b" / "outputs" / "pattern_summary.csv"
+                if pattern_summary.exists():
+                    wizard_c_args.extend(['--pattern-file', str(pattern_summary)])
+                success, stdout, stderr = execute_script(
+                    wizard_c_script, customer_id, timeout=300,
+                    additional_args=wizard_c_args
+                )
                 script_duration = time.time() - script_start_time
                 
                 if success:
@@ -1649,7 +2276,10 @@ def process_data():
                     calibrated_weights = None
                     try:
                         # Try file-based approach first (more reliable)
-                        weights_file = customer_dir / "journey" / "wizard_c" / "outputs" / f"customer_{customer_id}_calibrated_weights.json"
+                        # Wizard C writes "optimized_weights.json"; also check legacy name
+                        weights_file = customer_dir / "journey" / "wizard_c" / "outputs" / "optimized_weights.json"
+                        if not weights_file.exists():
+                            weights_file = customer_dir / "journey" / "wizard_c" / "outputs" / f"customer_{customer_id}_calibrated_weights.json"
                         if weights_file.exists():
                             with open(weights_file, 'r') as f:
                                 calibrated_weights = json.load(f)
@@ -1683,19 +2313,28 @@ def process_data():
                             if config:
                                 # GAP 3.4: Capture old weights before update for response
                                 old_pillar_weights = (config.dc2s_pillar_weights or {}).copy()
+                                # Wizard C outputs nested structure: {kpi_weights: {...}, category_weights: {...}, ...}
+                                # Unwrap if we got the full calibration object
+                                if 'kpi_weights' in calibrated_weights and isinstance(calibrated_weights['kpi_weights'], dict):
+                                    kpi_level_weights = calibrated_weights['kpi_weights']
+                                    category_level_weights = calibrated_weights.get('category_weights', {})
+                                    current_app.logger.info(f"✅ Unwrapped Wizard C calibration: {len(kpi_level_weights)} KPI weights, {len(category_level_weights)} category weights")
+                                else:
+                                    kpi_level_weights = calibrated_weights
+                                    category_level_weights = {}
                                 # P1: Support both pillar-level and KPI-level weight updates
-                                pillar_keys = [k for k in calibrated_weights.keys() if k.startswith('P') or k in ['AI', 'CH', 'DV', 'EX', 'OS']]
-                                kpi_keys = [k for k in calibrated_weights.keys() if '-' in k]  # e.g., 'AI-KPI1'
+                                pillar_keys = [k for k in kpi_level_weights.keys() if k.startswith('P')]
+                                kpi_keys = [k for k in kpi_level_weights.keys() if '-' in k or k.startswith('DC2S_')]
                                 
                                 if pillar_keys:
                                     # Update pillar weights
-                                    new_pillar_weights = {k: calibrated_weights[k] for k in pillar_keys}
+                                    new_pillar_weights = {k: kpi_level_weights[k] for k in pillar_keys}
                                     config.dc2s_pillar_weights = new_pillar_weights
                                     current_app.logger.info(f"✅ Updated pillar weights: {list(new_pillar_weights.keys())}")
-                                
+
                                 if kpi_keys:
                                     # Update KPI-level weights
-                                    kpi_weights = {k: calibrated_weights[k] for k in kpi_keys}
+                                    kpi_weights = {k: kpi_level_weights[k] for k in kpi_keys}
                                     # Check if dc2s_kpi_weights attribute exists
                                     if hasattr(config, 'dc2s_kpi_weights'):
                                         config.dc2s_kpi_weights = kpi_weights
@@ -1797,6 +2436,76 @@ def process_data():
         if customer_id in _onboarding_progress:
             _onboarding_progress[customer_id]['in_progress'] = False
             _onboarding_progress[customer_id]['steps_completed'] = list(execution_state['steps_completed'])
+
+        # ── Post-onboarding: publish event + auto-trigger Onboarding Agent ──
+        try:
+            from event_system import get_event_manager, EventType
+            event_mgr = get_event_manager()
+            if event_mgr:
+                # Collect account IDs for the event payload
+                _acct_ids = []
+                try:
+                    if 'accounts' in dir() or 'accounts' in locals():
+                        _acct_ids = [getattr(a, 'account_id', str(a)) for a in accounts]
+                    elif account_ids_from_request:
+                        _acct_ids = list(account_ids_from_request)
+                except Exception:
+                    pass
+
+                event_mgr.publisher.publish(
+                    EventType.ONBOARDING_COMPLETE,
+                    customer_id=customer_id,
+                    data={
+                        'trigger': 'onboarding_complete',
+                        'account_ids': _acct_ids,
+                        'onboarding_mode': onboarding_mode,
+                        'steps_completed': list(execution_state['steps_completed']),
+                    },
+                )
+                current_app.logger.info(f"📡 Published ONBOARDING_COMPLETE event for customer {customer_id}")
+        except Exception as evt_err:
+            current_app.logger.warning(f"Failed to publish onboarding event: {evt_err}")
+
+        # Auto-trigger Onboarding Agent in background (non-blocking)
+        try:
+            import threading
+
+            def _run_onboarding_agent_bg(cid, mode):
+                try:
+                    from agents.onboarding_agent import OnboardingAgent
+                    # Determine provider from available keys
+                    import os as _os
+                    provider = 'anthropic' if _os.getenv('ANTHROPIC_API_KEY') else 'openai'
+                    agent = OnboardingAgent(customer_id=cid, provider=provider)
+
+                    # Load customer info for analysis
+                    from agents.onboarding_agent_api import _load_customer_data
+                    cust_data = _load_customer_data(cid)
+                    if cust_data:
+                        agent.analyze_new_customer(
+                            customer_name=cust_data['customer_name'],
+                            industry=cust_data['industry'],
+                            onboarding_mode=mode,
+                            accounts=cust_data['accounts'],
+                            kpi_snapshot=cust_data.get('kpi_snapshot'),
+                        )
+                        logging.getLogger(__name__).info(
+                            f"🤖 Onboarding Agent completed activation plan for customer {cid}"
+                        )
+                except Exception as agent_err:
+                    logging.getLogger(__name__).warning(
+                        f"Onboarding Agent background run failed for customer {cid}: {agent_err}"
+                    )
+
+            threading.Thread(
+                target=_run_onboarding_agent_bg,
+                args=(customer_id, onboarding_mode),
+                daemon=True,
+            ).start()
+            current_app.logger.info(f"🤖 Launched Onboarding Agent background analysis for customer {customer_id}")
+        except Exception as agent_err:
+            current_app.logger.warning(f"Failed to launch Onboarding Agent: {agent_err}")
+
         return jsonify(response_payload)
         
     except Exception as e:
@@ -1920,8 +2629,9 @@ def upload_onboarding_csv():
             }), 400
         
         # Determine target filename based on file_type
+        is_context_graph_file = False
         if file_type in FILE_TYPES:
-            # Map file_type to expected filename
+            # Regular 6-CSV model
             filename_map = {
                 'accounts': 'accounts.csv',
                 'kpis': 'kpi_measurements.csv',
@@ -1930,11 +2640,20 @@ def upload_onboarding_csv():
                 'profiles': 'profiles.csv'
             }
             target_filename = filename_map.get(file_type, filename)
+        elif file_type in CONTEXT_GRAPH_FILE_TYPES:
+            # Context graph 9-CSV model
+            target_filename = CONTEXT_GRAPH_FILE_TYPES[file_type]
+            is_context_graph_file = True
         else:
             target_filename = filename
-        
-        # Save file to customer data directory
-        file_path = data_dir / target_filename
+
+        # Context graph files go into data/context_graph/ subdirectory
+        if is_context_graph_file:
+            cg_dir = data_dir / 'context_graph'
+            cg_dir.mkdir(parents=True, exist_ok=True)
+            file_path = cg_dir / target_filename
+        else:
+            file_path = data_dir / target_filename
         
         try:
             upload_warnings = []
@@ -2148,14 +2867,17 @@ TEMPLATE_MAP = {
 
 @onboarding_api.route('/templates/<file_type>', methods=['GET'])
 def download_template(file_type):
-    """Download CSV template file for onboarding"""
-    if file_type not in TEMPLATE_MAP:
+    """Download CSV template file for onboarding (core + context graph types)"""
+    # Merge core templates + context graph templates into one lookup
+    all_templates = {**TEMPLATE_MAP, **CONTEXT_GRAPH_FILE_TYPES}
+
+    if file_type not in all_templates:
         return jsonify({
             'status': 'error',
-            'message': f'Invalid file type: {file_type}. Supported: {", ".join(TEMPLATE_MAP.keys())}'
+            'message': f'Invalid file type: {file_type}. Supported: {", ".join(sorted(all_templates.keys()))}'
         }), 400
 
-    template_filename = TEMPLATE_MAP[file_type]
+    template_filename = all_templates[file_type]
     template_path = Path(__file__).parent / "verticals" / "_template" / "templates" / template_filename
 
     if not template_path.exists():
@@ -2164,6 +2886,16 @@ def download_template(file_type):
             'status': 'error',
             'message': f'Template file not found: {template_filename}'
         }), 404
+
+    # Check if caller wants inline view (not attachment download)
+    if request.args.get('view', 'false').lower() == 'true':
+        content = template_path.read_text()
+        return jsonify({
+            'status': 'success',
+            'file_type': file_type,
+            'filename': template_filename,
+            'content': content
+        })
 
     return send_file(
         str(template_path),
@@ -2189,9 +2921,37 @@ def list_templates():
         {'file_type': 'customers', 'filename': 'customers.csv',
          'description': 'Customer/tenant-level data', 'required': False}
     ]
+
+    # Context graph templates (only shown when requested)
+    context_graph_templates = [
+        {'file_type': 'stakeholders', 'filename': 'stakeholders.csv',
+         'description': 'Stakeholder map with influence scores', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'engagement_events', 'filename': 'engagement_events.csv',
+         'description': 'Engagement events with sentiment shifts', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'account_business_profiles', 'filename': 'account_business_profiles.csv',
+         'description': 'Business context (tech stack, initiatives)', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'decisions', 'filename': 'decisions.csv',
+         'description': 'Decision points with options and revenue impact', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'outcomes', 'filename': 'outcomes.csv',
+         'description': 'Revenue outcomes (expansion, retention, churn)', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'signal_edges', 'filename': 'signal_edges.csv',
+         'description': 'Causal links between signals', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'decision_evidence', 'filename': 'decision_evidence.csv',
+         'description': 'Evidence supporting decisions', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'industry_benchmarks', 'filename': 'industry_benchmarks.csv',
+         'description': 'Industry benchmark data by KPI', 'required': False, 'model': 'context_graph'},
+        {'file_type': 'enhanced_signals', 'filename': 'enhanced_qualitative_signals.csv',
+         'description': 'Signals with graph metadata (causal chain, revenue impact)', 'required': False, 'model': 'context_graph'},
+    ]
+
+    include_context_graph = request.args.get('include_context_graph', 'false').lower() == 'true'
+    if include_context_graph:
+        templates.extend(context_graph_templates)
+
     return jsonify({
         'status': 'success',
         'templates': templates,
+        'context_graph_templates': context_graph_templates,
         'download_url': '/api/onboarding/templates/{file_type}'
     })
 

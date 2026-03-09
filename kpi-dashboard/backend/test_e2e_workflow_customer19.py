@@ -108,11 +108,11 @@ def step1_complete_onboarding(client=None):
         "last_name": "Administrator",
         "num_accounts": 10,
         "weights": {
-            "AI": 0.10,
-            "CH": 0.30,
-            "DV": 0.30,
-            "EX": 0.05,
-            "OS": 0.25
+            "P3": 0.10,
+            "P4": 0.30,
+            "P1": 0.30,
+            "P5": 0.05,
+            "P2": 0.25
         }
     }
     
@@ -142,7 +142,7 @@ def step1_complete_onboarding(client=None):
                 (data.get('user') is not None, "user object present"),
                 (data.get('user', {}).get('username') == "dc2s_admin", "username matches"),
                 (data.get('user', {}).get('email') == "admin@dc2s-demo.example.com", "email matches"),
-                (data.get('config', {}).get('weights', {}).get('AI') == 0.10, "custom weights applied"),
+                (data.get('config', {}).get('weights', {}).get('P3') == 0.10, "custom weights applied"),
                 (data.get('directory_provisioned') == True, "directory provisioned"),
                 (data.get('csv_files_generated') == True, "CSV files generated"),
             ]
@@ -266,8 +266,8 @@ def step3_verify_database():
                 checks.append((config.vertical == "dc2_s", "Vertical = dc2_s"))
                 weights = config.dc2s_pillar_weights
                 if weights:
-                    checks.append((weights.get('AI') == 0.10, "AI weight = 0.10"))
-                    checks.append((weights.get('CH') == 0.30, "CH weight = 0.30"))
+                    checks.append((weights.get('P3') == 0.10, "P3 weight = 0.10"))
+                    checks.append((weights.get('P4') == 0.30, "P4 weight = 0.30"))
             
             all_pass = all(check[0] for check in checks)
             for check, msg in checks:

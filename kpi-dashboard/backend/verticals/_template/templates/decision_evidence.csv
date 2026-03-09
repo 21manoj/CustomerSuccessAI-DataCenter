@@ -1,0 +1,3 @@
+decision_ref,evidence_type,evidence_description,kpi_code,kpi_value,signal_ref,timestamp,confidence
+DEC-001,kpi_improvement,GPU utilization improved 15% after optimization,P3-KPI1,92.5,,2026-03-07,0.9
+DEC-001,stakeholder_feedback,VP Infrastructure confirmed value in QBR,,,SIG-003,2026-03-07,0.85

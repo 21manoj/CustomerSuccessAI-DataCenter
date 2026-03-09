@@ -1,0 +1,230 @@
+================================================================================
+  CS PULSE — ROI ACHIEVEMENT REPORT
+  NovaDC Infrastructure
+  Generated: 2026-03-04 08:19
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           PAGE 1: EXECUTIVE SUMMARY                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  Customer:     NovaDC Infrastructure                                         │
+│  Total ARR:    $31.8M                                                        │
+│  Accounts:     20                                                            │
+│  Vertical:     dc                                                            │
+│  Period:       2024-12-01 → 2024-12-01                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+─── HEALTH SCORE DISTRIBUTION ─────────────────────────────────────────────────
+
+  Portfolio Health (L4):  51.8  (revenue-weighted)
+  Simple Average (L3):   53.8
+
+  🟢 Healthy  (≥70):    0 accounts  │          $0 ARR
+  🟡 At-Risk  (50-69):  14 accounts  │      $20.6M ARR
+  🔴 Critical (<50):     6 accounts  │      $11.2M ARR
+
+  ⚠️  Revenue at Risk:  $31.8M  (100.0% of portfolio)
+  ✅ Revenue Protected: $0  (0.0% of portfolio)
+
+─── ROI ANALYSIS ──────────────────────────────────────────────────────────────
+
+  HISTORICAL ROI (Realized)
+  ────────────────────────
+  Total Impact:      $6.9M
+  Total Investment:  $579K
+  ROI:               1094.8%
+  For Every $1 Invested → $11.95 Returned
+
+  FORWARD ROI (Projected, by Target Improvement)
+  ──────────────────────────────────────────────
+    Target %   Investment       Impact      ROI   Combined
+  ────────── ──────────── ──────────── ──────── ──────────
+        1.0%        $241K        $640K   165.2%     821.4%
+        2.5%        $342K        $1.6M   366.9%     824.2%
+        4.0%        $444K        $2.6M   476.6%     826.5%
+        6.0%        $579K        $3.8M   563.1%     828.9%
+
+─── PLAYBOOK ACTIVITY ──────────────────────────────────────────────────────────
+
+  Total Executions: 1  │  Completed: 1  │  Running: 0
+
+  Playbook                  Account                        Status      
+  ───────────────────────── ────────────────────────────── ────────────
+  Deployment Acceleration   NovaDC Infrastructure - Acco   completed   
+
+
+────────────────────────────────────────────────────────────────────────────────
+                                 END OF PAGE 1                                  
+────────────────────────────────────────────────────────────────────────────────
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     PAGE 2: ACCOUNT-LEVEL DETAIL (L2 / L3)                     │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  NovaDC Infrastructure — Per-Account Health & Pillar Breakdown                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+─── ACCOUNT HEALTH SCORES (L3) ────────────────────────────────────────────────
+
+   # Account Name                           Revenue  Score    Status
+  ── ─────────────────────────────────── ────────── ────── ─────────
+   1 NovaDC Infrastructure - Performan        $1.8M  23.9 🔴 critical
+   2 NovaDC Infrastructure - Account-1        $1.9M  24.5 🔴 critical
+   3 NovaDC Infrastructure - Account-1        $2.3M  25.6 🔴 critical
+   4 NovaDC Infrastructure - Account-1        $2.2M  33.2 🔴 critical
+   5 NovaDC Infrastructure - DR               $2.1M  33.5 🔴 critical
+   6 NovaDC Infrastructure - Developme        $919K  34.4 🔴 critical
+   7 NovaDC Infrastructure - Account-1        $2.2M  60.7 🟡 at_risk 
+   8 NovaDC Infrastructure - Integrati        $1.1M  62.0 🟡 at_risk 
+   9 NovaDC Infrastructure - Account-1        $485K  62.4 🟡 at_risk 
+  10 NovaDC Infrastructure - Productio        $2.2M  63.3 🟡 at_risk 
+  11 NovaDC Infrastructure - Sandbox          $2.1M  63.4 🟡 at_risk 
+  12 NovaDC Infrastructure - Account-1        $806K  63.4 🟡 at_risk 
+  13 NovaDC Infrastructure - QA               $1.6M  63.7 🟡 at_risk 
+  14 NovaDC Infrastructure - Lab              $1.7M  64.2 🟡 at_risk 
+  15 NovaDC Infrastructure - Account-1        $1.4M  64.7 🟡 at_risk 
+  16 NovaDC Infrastructure - Account-1        $1.7M  65.4 🟡 at_risk 
+  17 NovaDC Infrastructure - Account-2        $1.7M  66.4 🟡 at_risk 
+  18 NovaDC Infrastructure - UAT              $1.3M  66.6 🟡 at_risk 
+  19 NovaDC Infrastructure - Staging          $2.2M  66.8 🟡 at_risk 
+  20 NovaDC Infrastructure - Account-1        $228K  67.3 🟡 at_risk 
+
+─── PILLAR BREAKDOWN (L2) — At-Risk & Critical Accounts ───────────────────────
+
+  🔴 NovaDC Infrastructure - Performance  (Score: 23.9, ARR: $1.8M)
+      OS Operational Stability          🔴   6.7  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      EX Experience & Expansion         🔴   8.6  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CH Customer Health Engagement     🔴  23.2  ██████░░░░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🔴  49.2  ██████████████░░░░░░░░░░░░░░░░
+      AI AI & Analytics Intelligence    🟡  52.7  ███████████████░░░░░░░░░░░░░░░
+     ⚠️  Worst KPIs:
+        EX-KPI2    Score:   0.0  Value:    -23.2  Target:   85.0
+        EX-KPI3    Score:   0.0  Value:    -26.3  Target:   85.0
+        OS-KPI2    Score:   0.0  Value:      0.0  Target:   85.0
+
+  🔴 NovaDC Infrastructure - Account-18  (Score: 24.5, ARR: $1.9M)
+      OS Operational Stability          🔴   6.6  █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      EX Experience & Expansion         🔴  10.7  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CH Customer Health Engagement     🔴  21.2  ██████░░░░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🔴  48.1  ██████████████░░░░░░░░░░░░░░░░
+      AI AI & Analytics Intelligence    🟡  52.2  ███████████████░░░░░░░░░░░░░░░
+     ⚠️  Worst KPIs:
+        EX-KPI2    Score:   0.0  Value:    -22.7  Target:   85.0
+        EX-KPI3    Score:   0.0  Value:    -19.6  Target:   85.0
+        OS-KPI2    Score:   0.0  Value:      0.0  Target:   85.0
+
+  🔴 NovaDC Infrastructure - Account-15  (Score: 25.6, ARR: $2.3M)
+      OS Operational Stability          🔴   7.2  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      EX Experience & Expansion         🔴  10.1  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CH Customer Health Engagement     🔴  22.9  ██████░░░░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🔴  44.9  █████████████░░░░░░░░░░░░░░░░░
+      AI AI & Analytics Intelligence    🟡  55.5  ████████████████░░░░░░░░░░░░░░
+     ⚠️  Worst KPIs:
+        EX-KPI2    Score:   0.0  Value:    -28.0  Target:   85.0
+        EX-KPI3    Score:   0.0  Value:    -21.6  Target:   85.0
+        OS-KPI2    Score:   0.0  Value:      0.0  Target:   85.0
+
+  🔴 NovaDC Infrastructure - Account-12  (Score: 33.2, ARR: $2.2M)
+      EX Experience & Expansion         🔴   8.2  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CH Customer Health Engagement     🔴  21.8  ██████░░░░░░░░░░░░░░░░░░░░░░░░
+      OS Operational Stability          🔴  39.8  ███████████░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🔴  47.3  ██████████████░░░░░░░░░░░░░░░░
+      AI AI & Analytics Intelligence    🟡  53.0  ███████████████░░░░░░░░░░░░░░░
+     ⚠️  Worst KPIs:
+        EX-KPI2    Score:   0.0  Value:    -28.4  Target:   85.0
+        EX-KPI3    Score:   0.0  Value:    -30.0  Target:   85.0
+        CH-KPI3    Score:   0.8  Value:      0.7  Target:   85.0
+
+  🔴 NovaDC Infrastructure - DR  (Score: 33.5, ARR: $2.1M)
+      EX Experience & Expansion         🔴  10.7  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CH Customer Health Engagement     🔴  19.7  █████░░░░░░░░░░░░░░░░░░░░░░░░░
+      OS Operational Stability          🔴  39.6  ███████████░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🟡  50.1  ███████████████░░░░░░░░░░░░░░░
+      AI AI & Analytics Intelligence    🟡  51.6  ███████████████░░░░░░░░░░░░░░░
+     ⚠️  Worst KPIs:
+        EX-KPI2    Score:   0.0  Value:    -31.8  Target:   85.0
+        EX-KPI3    Score:   0.0  Value:    -32.2  Target:   85.0
+        CH-KPI3    Score:   0.6  Value:      0.5  Target:   85.0
+
+  🔴 NovaDC Infrastructure - Development  (Score: 34.4, ARR: $919K)
+      EX Experience & Expansion         🔴  10.4  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CH Customer Health Engagement     🔴  22.5  ██████░░░░░░░░░░░░░░░░░░░░░░░░
+      OS Operational Stability          🔴  39.5  ███████████░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🔴  46.4  █████████████░░░░░░░░░░░░░░░░░
+      AI AI & Analytics Intelligence    🟡  54.5  ████████████████░░░░░░░░░░░░░░
+     ⚠️  Worst KPIs:
+        EX-KPI2    Score:   0.0  Value:    -29.8  Target:   85.0
+        EX-KPI3    Score:   0.0  Value:    -26.4  Target:   85.0
+        CH-KPI3    Score:   0.8  Value:      0.7  Target:   85.0
+
+  🟡 NovaDC Infrastructure - Account-14  (Score: 60.7, ARR: $2.2M)
+      OS Operational Stability          🔴  33.1  █████████░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🟡  59.7  █████████████████░░░░░░░░░░░░░
+      EX Experience & Expansion         🟢  70.5  █████████████████████░░░░░░░░░
+      AI AI & Analytics Intelligence    🟢  72.3  █████████████████████░░░░░░░░░
+      CH Customer Health Engagement     🟢  73.2  █████████████████████░░░░░░░░░
+     ⚠️  Worst KPIs:
+        AI-KPI3    Score:   0.0  Value:      0.0  Target:   85.0
+        OS-KPI1    Score:   0.2  Value:      0.2  Target:   85.0
+        OS-KPI3    Score:   0.8  Value:      0.7  Target:   85.0
+
+  🟡 NovaDC Infrastructure - Integration  (Score: 62.0, ARR: $1.1M)
+      OS Operational Stability          🔴  33.0  █████████░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🟡  61.6  ██████████████████░░░░░░░░░░░░
+      EX Experience & Expansion         🟡  69.5  ████████████████████░░░░░░░░░░
+      CH Customer Health Engagement     🟢  73.0  █████████████████████░░░░░░░░░
+      AI AI & Analytics Intelligence    🟢  77.0  ███████████████████████░░░░░░░
+     ⚠️  Worst KPIs:
+        OS-KPI3    Score:   0.0  Value:      0.0  Target:   85.0
+        OS-KPI1    Score:   0.9  Value:      0.7  Target:   85.0
+        DV-KPI1    Score:   9.8  Value:      8.3  Target:   85.0
+
+  🟡 NovaDC Infrastructure - Account-19  (Score: 62.4, ARR: $485K)
+      OS Operational Stability          🔴  33.0  █████████░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🟡  59.4  █████████████████░░░░░░░░░░░░░
+      CH Customer Health Engagement     🟢  73.5  ██████████████████████░░░░░░░░
+      AI AI & Analytics Intelligence    🟢  73.7  ██████████████████████░░░░░░░░
+      EX Experience & Expansion         🟢  74.0  ██████████████████████░░░░░░░░
+     ⚠️  Worst KPIs:
+        AI-KPI3    Score:   0.0  Value:      0.0  Target:   85.0
+        OS-KPI3    Score:   0.0  Value:      0.0  Target:   85.0
+        OS-KPI1    Score:   0.7  Value:      0.6  Target:   85.0
+
+  🟡 NovaDC Infrastructure - Production  (Score: 63.3, ARR: $2.2M)
+      OS Operational Stability          🔴  32.9  █████████░░░░░░░░░░░░░░░░░░░░░
+      DV Deployment Velocity            🟡  60.7  ██████████████████░░░░░░░░░░░░
+      CH Customer Health Engagement     🟢  73.6  ██████████████████████░░░░░░░░
+      AI AI & Analytics Intelligence    🟢  73.7  ██████████████████████░░░░░░░░
+      EX Experience & Expansion         🟢  76.5  ██████████████████████░░░░░░░░
+     ⚠️  Worst KPIs:
+        AI-KPI3    Score:   0.0  Value:      0.0  Target:   85.0
+        OS-KPI3    Score:   0.1  Value:      0.1  Target:   85.0
+        OS-KPI1    Score:   0.5  Value:      0.4  Target:   85.0
+
+─── TOP PERFORMERS ────────────────────────────────────────────────────────────
+
+  No healthy accounts yet.
+
+─── KPI PORTFOLIO ANALYSIS ────────────────────────────────────────────────────
+
+  Bottom 5 KPIs (by avg score across all accounts):
+    OS-KPI1    Avg:   2.5  ░░░░░░░░░░░░░░░░░░░░░░░░░  (20 accounts)
+    OS-KPI3    Avg:   4.4  █░░░░░░░░░░░░░░░░░░░░░░░░  (20 accounts)
+    CH-KPI3    Avg:   7.9  █░░░░░░░░░░░░░░░░░░░░░░░░  (20 accounts)
+    DV-KPI1    Avg:  18.1  ████░░░░░░░░░░░░░░░░░░░░░  (20 accounts)
+    EX-KPI2    Avg:  28.1  ███████░░░░░░░░░░░░░░░░░░  (20 accounts)
+
+  Top 5 KPIs (by avg score across all accounts):
+    CH-KPI2    Avg:  80.2  ████████████████████░░░░░  (20 accounts)
+    DV-KPI2    Avg:  83.4  ████████████████████░░░░░  (20 accounts)
+    AI-KPI2    Avg:  83.7  ████████████████████░░░░░  (20 accounts)
+    OS-KPI2    Avg:  85.0  █████████████████████░░░░  (20 accounts)
+    DV-KPI3    Avg:  85.6  █████████████████████░░░░  (20 accounts)
+
+────────────────────────────────────────────────────────────────────────────────
+                                 END OF PAGE 2                                  
+────────────────────────────────────────────────────────────────────────────────
+
+  Report generated by CS Pulse Load Driver
+  2026-03-04 08:19:42
+  Customer ID: 50 | NovaDC Infrastructure

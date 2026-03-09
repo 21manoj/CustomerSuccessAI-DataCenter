@@ -402,7 +402,7 @@ const PortfolioSettings: React.FC<{
   const handleAddCompany = async () => {
     if (!newCustomerId) return;
     try {
-      await addPortfolioCompany(portfolioId, { customer_id: parseInt(newCustomerId) });
+      await addPortfolioCompany(portfolioId, { customer_id: newCustomerId });
       setNewCustomerId('');
       onRefresh();
     } catch (err: any) {

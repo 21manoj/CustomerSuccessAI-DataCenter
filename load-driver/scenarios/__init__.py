@@ -12,6 +12,9 @@ Scenario Map:
   4   - Cleanup (FK-safe customer data deletion)
   5   - ROI Power-of-1 (historical + forward projections)
   6   - N8N Workflow (playbook handoff + webhook callbacks)
+  7   - Data Ingestion (Ring 3: Google Sheets + n8n simulator pipeline)
+  8   - Context Graph (story arc → 9 CSVs → context_nodes/edges)
+  9   - ROI Simulation (weight-aware improvement → proper pipeline → ROI validation)
 """
 
 from .base import BaseScenario
@@ -25,6 +28,9 @@ from .scenario_tenant_isolation import ScenarioTenantIsolation
 from .scenario_cleanup import ScenarioCleanup
 from .scenario_roi_power_of_1 import ScenarioRoiPowerOf1
 from .scenario_n8n_workflow import ScenarioN8nWorkflow
+from .scenario_data_ingestion import ScenarioDataIngestion
+from .scenario_context_graph import ScenarioContextGraph
+from .scenario_roi_simulation import ScenarioRoiSimulation
 
 __all__ = [
     'BaseScenario',
@@ -38,4 +44,7 @@ __all__ = [
     'ScenarioCleanup',
     'ScenarioRoiPowerOf1',
     'ScenarioN8nWorkflow',
+    'ScenarioDataIngestion',
+    'ScenarioContextGraph',
+    'ScenarioRoiSimulation',
 ]

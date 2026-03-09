@@ -27,8 +27,7 @@ PUBLIC_ENDPOINTS = [
     '/api/onboarding/processing-status',
     '/api/onboarding/templates',  # Template download endpoints
     '/api/onboarding/validate-csv',  # CSV validation endpoint
-    # Test runner - external load driver UI (needs to be public for scenario listing)
-    '/api/test-runner',
+    # /api/test-runner and /api/admin/uuid-backfill are protected (require auth)
 ]
 
 # Public path prefixes (for static files)
@@ -187,33 +186,48 @@ def is_public_endpoint(path):
 
 def get_current_customer_id():
     """
-    Get customer ID from authenticated user session or header fallback.
-    
-    SECURITY: Prefers Flask-Login session, falls back to X-Customer-ID header for compatibility.
-    
+    Get customer ID (always integer) from authenticated user session or header fallback.
+
+    SECURITY: Prefers Flask-Login session, falls back to X-Customer-ID header.
+    If the header contains a UUID, resolves it to the integer customer_id.
+
     Returns:
-        int: customer_id from current_user session or header
+        int: customer_id (always integer for internal use)
         None: if not authenticated and no header provided
     """
-    # First try Flask-Login session (preferred)
+    # First try Flask-Login session (preferred — always returns integer)
     try:
         if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
             return current_user.customer_id
     except (AttributeError, RuntimeError):
         # Flask-Login not initialized or not in request context
         pass
-    
+
     # Fallback to header for compatibility (when Flask-Login not set up)
     customer_id_header = request.headers.get('X-Customer-ID')
     if customer_id_header:
-        try:
-            return int(customer_id_header)
-        except (ValueError, TypeError):
-            # May be a UUID-style identifier — return as string
-            if customer_id_header.strip():
-                return customer_id_header.strip()
+        header_val = customer_id_header.strip()
+        if not header_val:
             return None
-    
+
+        # Try integer first
+        try:
+            return int(header_val)
+        except (ValueError, TypeError):
+            pass
+
+        # UUID string — resolve to integer customer_id
+        try:
+            from uuid_utils import resolve_customer
+            customer = resolve_customer(header_val, allow_none=True)
+            if customer:
+                return customer.customer_id
+            logger.warning(f"UUID in X-Customer-ID header did not resolve: {header_val}")
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to resolve X-Customer-ID UUID: {e}")
+            return None
+
     logger.warning("get_current_customer_id() called but user not authenticated and no X-Customer-ID header")
     return None
 

@@ -97,10 +97,10 @@ class ScenarioKpiSimulation(BaseScenario):
                     month_rows = [r for r in month_data if r['measured_at'] == month_str]
                     all_rows.extend(month_rows)
 
-                # Upload via KPI upload endpoint
+                # Upload via data-ingestion endpoint
                 upload_response = self.client.post(
-                    '/api/dc2s/kpis/bulk-upload',
-                    {'kpi_data': all_rows, 'measurement_month': month_str}
+                    '/api/data-ingestion/kpis',
+                    {'records': all_rows, 'source': 'kpi_simulation'}
                 )
                 api_calls += 1
 

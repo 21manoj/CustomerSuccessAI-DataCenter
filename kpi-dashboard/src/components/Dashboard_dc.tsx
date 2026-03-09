@@ -28,7 +28,7 @@ interface PerformanceSummary {
     company_avg_revenue_growth: number;
   };
   accounts_needing_attention: Array<{
-    account_id: number;
+    account_id: number | string;
     account_name: string;
     overall_health_score: number;
     category_scores: Record<string, number>;
@@ -37,7 +37,7 @@ interface PerformanceSummary {
     revenue_growth_pct: number;
   }>;
   healthy_declining_revenue: Array<{
-    account_id: number;
+    account_id: number | string;
     account_name: string;
     overall_health_score: number;
     category_scores: Record<string, number>;
@@ -48,7 +48,7 @@ interface PerformanceSummary {
 }
 
 interface Tenant {
-  tenant_id: number;
+  tenant_id: number | string;
   tenant_name: string;
   health_score: number;
   status: 'healthy' | 'at_risk' | 'critical' | 'risk';
@@ -69,6 +69,8 @@ interface Tenant {
   };
   kpi_count?: number;
   last_measured?: string;
+  pillar_scores?: Record<string, number>;
+  enabled_pillars?: string[];
 }
 
 interface KPI {
@@ -76,7 +78,7 @@ interface KPI {
   category: string;
   kpi_parameter: string;
   data: string;
-  account_id: number;
+  account_id: number | string;
   account_name?: string;
   upload_id?: number;
   upload_filename?: string;
@@ -92,7 +94,7 @@ const Dashboard_dc: React.FC = () => {
   const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [kpiData, setKpiData] = useState<KPI[]>([]);
-  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<number | string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'kpis' | 'analytics' | 'rag-analysis' | 'alerts' | 'upload' | 'reports' | 'settings' | 'insights'>('dashboard');
   const [expandedCategories, setExpandedCategories] = useState<{[key: string]: boolean}>({});
@@ -156,13 +158,15 @@ const Dashboard_dc: React.FC = () => {
           tenant_id: acc.account_id,
           tenant_name: acc.account_name,
           health_score: acc.overall_health || acc.health_score || 0,
-          status: (acc.status === 'risk' ? 'at_risk' : acc.status || (acc.overall_health >= 80 ? 'healthy' : acc.overall_health >= 60 ? 'at_risk' : 'critical')),
+          status: (acc.status === 'risk' ? 'at_risk' : acc.status || (acc.overall_health >= 80 ? 'healthy' : acc.overall_health >= 50 ? 'at_risk' : 'critical')),
           industry: acc.industry,
           region: acc.region,
           account_status: acc.account_status || 'Active',
           metadata: acc.metadata || {},
           kpi_count: acc.kpi_count,
           last_measured: acc.last_measured,
+          pillar_scores: acc.pillar_scores || {},
+          enabled_pillars: acc.enabled_pillars || accountsData.enabled_pillars || [],
         }));
         
         setTenants(tenantsData);

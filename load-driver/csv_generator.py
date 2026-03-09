@@ -4,12 +4,15 @@ CSV Generator — Creates synthetic customer data files for load testing
 
 Generates realistic CSV files matching the DC2_S vertical schema:
   - accounts.csv: Account records with company names, tiers, ARR
-  - kpi_data.csv: 15 KPIs × N accounts × M months of measurements
+  - kpi_measurements.csv: KPIs × N accounts × M months of measurements
   - products.csv: Product/service records per account
   - contacts.csv: Customer contacts (CSMs, executives, technical leads)
+  - qualitative_signals.csv: Scenario-aware qualitative signals
+  - profiles.csv: Account profile/champion data
 
 Uses Faker for realistic company/person names.
 Convention: account_id = customer_id × 1000 + offset (1-based)
+CSV names MUST match onboarding API expectations (FILE_TYPES in onboarding_api_v2_config_aware.py)
 """
 
 import csv
@@ -17,6 +20,7 @@ import io
 import random
 import math
 import logging
+import uuid as uuid_mod
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -29,29 +33,17 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# DC2_S KPI definitions (15 KPIs across 5 pillars)
-DC2S_KPIS = [
-    # Pillar: AI Workload (25%)
-    {'code': 'AI-KPI1', 'name': 'GPU Utilization Rate', 'pillar': 'AI', 'weight': 0.35, 'unit': '%'},
-    {'code': 'AI-KPI2', 'name': 'AI Model Deployment Frequency', 'pillar': 'AI', 'weight': 0.35, 'unit': 'count/month'},
-    {'code': 'AI-KPI3', 'name': 'Inference Latency P95', 'pillar': 'AI', 'weight': 0.30, 'unit': 'ms'},
-    # Pillar: Channel (15%)
-    {'code': 'CH-KPI1', 'name': 'Partner Engagement Score', 'pillar': 'CH', 'weight': 0.40, 'unit': 'score'},
-    {'code': 'CH-KPI2', 'name': 'Channel Revenue Share', 'pillar': 'CH', 'weight': 0.30, 'unit': '%'},
-    {'code': 'CH-KPI3', 'name': 'Partner Certification Level', 'pillar': 'CH', 'weight': 0.30, 'unit': 'level'},
-    # Pillar: Deployment (15%)
-    {'code': 'DV-KPI1', 'name': 'Infrastructure Uptime', 'pillar': 'DV', 'weight': 0.35, 'unit': '%'},
-    {'code': 'DV-KPI2', 'name': 'Deployment Success Rate', 'pillar': 'DV', 'weight': 0.35, 'unit': '%'},
-    {'code': 'DV-KPI3', 'name': 'Time-to-First-Workload', 'pillar': 'DV', 'weight': 0.30, 'unit': 'days'},
-    # Pillar: Expansion (25%)
-    {'code': 'EX-KPI1', 'name': 'Capacity Utilization', 'pillar': 'EX', 'weight': 0.35, 'unit': '%'},
-    {'code': 'EX-KPI2', 'name': 'Expansion Pipeline Value', 'pillar': 'EX', 'weight': 0.35, 'unit': '$'},
-    {'code': 'EX-KPI3', 'name': 'Upsell Conversion Rate', 'pillar': 'EX', 'weight': 0.30, 'unit': '%'},
-    # Pillar: Operational (20%)
-    {'code': 'OS-KPI1', 'name': 'SLA Compliance Rate', 'pillar': 'OS', 'weight': 0.35, 'unit': '%'},
-    {'code': 'OS-KPI2', 'name': 'Mean Time to Recovery', 'pillar': 'OS', 'weight': 0.35, 'unit': 'hours'},
-    {'code': 'OS-KPI3', 'name': 'Incident Resolution Rate', 'pillar': 'OS', 'weight': 0.30, 'unit': '%'},
-]
+# DC2_S KPI definitions loaded from shared catalog (single source of truth)
+try:
+    from catalog_loader import get_kpi_list_for_load_driver
+    DC2S_KPIS = get_kpi_list_for_load_driver()
+    logger.info(f"Loaded {len(DC2S_KPIS)} KPIs from catalog JSON")
+except Exception as e:
+    logger.warning(f"Failed to load catalog: {e}, using minimal fallback")
+    DC2S_KPIS = [
+        {'code': f'{p}-KPI{i}', 'name': f'{p}-KPI{i}', 'pillar': p, 'weight': 0.33, 'unit': '%'}
+        for p in ['P1', 'P2', 'P3', 'P4', 'P5'] for i in range(1, 4)
+    ]
 
 # Account tiers and their ARR ranges
 TIERS = {
@@ -136,9 +128,9 @@ class CSVGenerator:
         files['accounts.csv'] = str(accounts_file)
 
         kpi_csv = self.generate_kpi_csv(months=3)
-        kpi_file = output_path / 'kpi_data.csv'
+        kpi_file = output_path / 'kpi_measurements.csv'
         kpi_file.write_text(kpi_csv)
-        files['kpi_data.csv'] = str(kpi_file)
+        files['kpi_measurements.csv'] = str(kpi_file)
 
         products_csv = self.generate_products_csv()
         products_file = output_path / 'products.csv'
@@ -150,6 +142,17 @@ class CSVGenerator:
         contacts_file.write_text(contacts_csv)
         files['contacts.csv'] = str(contacts_file)
 
+        # CSVs matching backend generator (onboarding API expects these)
+        signals_csv = self.generate_qualitative_signals_csv()
+        signals_file = output_path / 'qualitative_signals.csv'
+        signals_file.write_text(signals_csv)
+        files['qualitative_signals.csv'] = str(signals_file)
+
+        profiles_csv = self.generate_profiles_csv()
+        profiles_file = output_path / 'profiles.csv'
+        profiles_file.write_text(profiles_csv)
+        files['profiles.csv'] = str(profiles_file)
+
         logger.info(f"Generated {len(files)} CSV files in {output_dir}")
         for name, path in files.items():
             logger.info(f"  {name}: {path}")
@@ -157,21 +160,29 @@ class CSVGenerator:
         return files
 
     def generate_accounts_csv(self) -> str:
-        """Generate accounts.csv with N realistic account records"""
+        """Generate accounts.csv with N realistic account records.
+
+        Columns aligned with backend generate_synthetic_customer_data.py
+        and onboarding_api_v2_config_aware.py expectations.
+        """
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Header
+        # Header — matches backend generator + onboarding API expectations
         writer.writerow([
-            'account_id', 'account_name', 'industry', 'region',
-            'tier', 'arr', 'contract_start', 'contract_end',
-            'csm_name', 'csm_email', 'account_status'
+            'account_id', 'customer_id', 'account_name', 'industry', 'region',
+            'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
+            'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid'
         ])
+
+        # Store generated accounts for use by signals/profiles generators
+        self._accounts = []
 
         for i in range(self.num_accounts):
             account_id = self.account_base + i
             tier = self._pick_tier()
             arr_min, arr_max = TIERS[tier]
+            arr = round(random.uniform(arr_min, arr_max), 2)
 
             if fake:
                 company = fake.company()
@@ -184,26 +195,49 @@ class CSVGenerator:
 
             contract_start = datetime(2024, 1, 1) + timedelta(days=random.randint(0, 180))
             contract_end = contract_start + timedelta(days=365)
+            renewal_date = contract_end - timedelta(days=30)
+            status = random.choice(['active', 'active', 'active', 'at_risk', 'churning'])
+
+            # Assign scenario based on account index (matches backend pattern)
+            scenarios = ['improving', 'stable_healthy', 'declining']
+            scenario = scenarios[i % 3]
+
+            acct = {
+                'account_id': account_id,
+                'account_name': company,
+                'csm_name': csm_name,
+                'arr': arr,
+                'status': status,
+                'scenario': scenario,
+            }
+            self._accounts.append(acct)
 
             writer.writerow([
                 account_id,
+                self.customer_id,
                 company,
                 random.choice(INDUSTRIES),
                 random.choice(REGIONS),
+                'dc2_s',
                 tier,
-                round(random.uniform(arr_min, arr_max), 2),
+                arr,
+                arr,  # revenue = arr for consistency
                 contract_start.strftime('%Y-%m-%d'),
                 contract_end.strftime('%Y-%m-%d'),
+                renewal_date.strftime('%Y-%m-%d'),
                 csm_name,
                 csm_email,
-                random.choice(['active', 'active', 'active', 'at_risk', 'churning']),
+                status,
+                f'dc_acct_{uuid_mod.uuid4().hex[:12]}',
             ])
 
         return output.getvalue()
 
     def generate_kpi_csv(self, months: int = 3) -> str:
         """
-        Generate kpi_data.csv with 15 KPIs × N accounts × M months
+        Generate kpi_measurements.csv with KPIs × N accounts × M months
+
+        Column names aligned with backend generator and onboarding API.
 
         Args:
             months: Number of months of data (default 3)
@@ -211,10 +245,10 @@ class CSVGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Header
+        # Header — matches backend generator column names
         writer.writerow([
             'account_id', 'kpi_code', 'kpi_name', 'pillar',
-            'measured_at', 'value', 'target', 'weight', 'unit'
+            'measured_at', 'value', 'target', 'weight', 'unit', 'status'
         ])
 
         base_date = datetime(2024, 10, 1)  # Start from Oct 2024
@@ -228,6 +262,7 @@ class CSVGenerator:
                 for kpi in DC2S_KPIS:
                     target = self._get_kpi_target(kpi['code'])
                     value = self._generate_kpi_value(kpi['code'], target, month_offset)
+                    status = self._classify_kpi_status(kpi['code'], value)
 
                     writer.writerow([
                         account_id,
@@ -239,6 +274,7 @@ class CSVGenerator:
                         round(target, 2),
                         kpi['weight'],
                         kpi['unit'],
+                        status,
                     ])
 
         return output.getvalue()
@@ -328,21 +364,21 @@ class CSVGenerator:
     def _get_kpi_target(self, kpi_code: str) -> float:
         """Get realistic target value for a KPI code"""
         targets = {
-            'AI-KPI1': 85.0,   # GPU Utilization %
-            'AI-KPI2': 12.0,   # Deployments/month
-            'AI-KPI3': 50.0,   # Latency ms (lower is better, but stored as score)
-            'CH-KPI1': 80.0,   # Partner engagement score
-            'CH-KPI2': 30.0,   # Channel revenue %
-            'CH-KPI3': 4.0,    # Certification level (1-5)
-            'DV-KPI1': 99.9,   # Uptime %
-            'DV-KPI2': 95.0,   # Deploy success %
-            'DV-KPI3': 14.0,   # Days to first workload (lower better)
-            'EX-KPI1': 75.0,   # Capacity util %
-            'EX-KPI2': 500000, # Pipeline $
-            'EX-KPI3': 25.0,   # Upsell conversion %
-            'OS-KPI1': 98.0,   # SLA compliance %
-            'OS-KPI2': 4.0,    # MTTR hours (lower better)
-            'OS-KPI3': 90.0,   # Incident resolution %
+            'P3-KPI1': 85.0,   # GPU Utilization %
+            'P3-KPI2': 12.0,   # Deployments/month
+            'P3-KPI3': 50.0,   # Latency ms (lower is better, but stored as score)
+            'P4-KPI1': 80.0,   # Partner engagement score
+            'P4-KPI2': 30.0,   # Channel revenue %
+            'P4-KPI3': 4.0,    # Certification level (1-5)
+            'P1-KPI1': 99.9,   # Uptime %
+            'P1-KPI2': 95.0,   # Deploy success %
+            'P1-KPI3': 14.0,   # Days to first workload (lower better)
+            'P5-KPI1': 75.0,   # Capacity util %
+            'P5-KPI2': 500000, # Pipeline $
+            'P5-KPI3': 25.0,   # Upsell conversion %
+            'P2-KPI1': 98.0,   # SLA compliance %
+            'P2-KPI2': 4.0,    # MTTR hours (lower better)
+            'P2-KPI3': 90.0,   # Incident resolution %
         }
         return targets.get(kpi_code, 85.0)
 
@@ -356,18 +392,220 @@ class CSVGenerator:
         value += month * target * 0.01
 
         # Ensure reasonable bounds
-        if kpi_code in ('DV-KPI1', 'OS-KPI1'):  # Uptime/SLA should be high
+        if kpi_code in ('P1-KPI1', 'P2-KPI1'):  # Uptime/SLA should be high
             value = max(90.0, min(100.0, value))
-        elif kpi_code in ('AI-KPI3', 'DV-KPI3', 'OS-KPI2'):  # Lower is better
+        elif kpi_code in ('P3-KPI3', 'P1-KPI3', 'P2-KPI2'):  # Lower is better
             value = max(1.0, value)
-        elif kpi_code == 'CH-KPI3':  # Certification level 1-5
+        elif kpi_code == 'P4-KPI3':  # Certification level 1-5
             value = max(1.0, min(5.0, value))
-        elif kpi_code == 'EX-KPI2':  # Pipeline value (dollar amount)
+        elif kpi_code == 'P5-KPI2':  # Pipeline value (dollar amount)
             value = max(0, value)
         else:
             value = max(0, min(100, value))
 
         return value
+
+    def generate_qualitative_signals_csv(self, months: int = 3) -> str:
+        """Generate qualitative_signals.csv — scenario-aware signals.
+
+        Matches backend generator column names for onboarding API compatibility.
+        Must call generate_accounts_csv() first to populate self._accounts.
+        """
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            'signal_id', 'account_id', 'signal_date', 'signal_type',
+            'content', 'sentiment', 'sentiment_score'
+        ])
+
+        signal_types = ['customer_feedback', 'meeting', 'milestone', 'health_check', 'incident']
+
+        # Scenario-aware signal templates (matching backend generator pattern)
+        templates = {
+            'improving': {
+                'positive': [
+                    'GPU utilization continues to increase month over month',
+                    'Successful deployment of new AI training workloads',
+                    'Executive sponsor very engaged in QBR',
+                    'Customer exploring expansion into inference workloads',
+                ],
+                'neutral': [
+                    'Routine maintenance completed on schedule',
+                    'Standard QBR conducted with all stakeholders',
+                ],
+            },
+            'stable_healthy': {
+                'positive': [
+                    'Consistent uptime metrics exceeding SLA',
+                    'Partner relationship remains strong',
+                ],
+                'neutral': [
+                    'No significant changes in workload patterns',
+                    'Standard operational review completed',
+                    'Renewal discussion progressing normally',
+                ],
+            },
+            'declining': {
+                'negative': [
+                    'Increase in support ticket volume observed',
+                    'Executive sponsor missed scheduled QBR',
+                    'GPU utilization trending downward',
+                    'Competitor mentioned in stakeholder conversation',
+                ],
+                'neutral': [
+                    'Awaiting response on renewal terms',
+                    'Budget review flagged by customer CFO',
+                ],
+            },
+        }
+
+        base_date = datetime(2024, 10, 1)
+        counter = 0
+
+        accounts = getattr(self, '_accounts', [])
+        if not accounts:
+            # Fallback if accounts not generated yet
+            accounts = [{'account_id': self.account_base + i, 'scenario': ['improving', 'stable_healthy', 'declining'][i % 3]}
+                        for i in range(self.num_accounts)]
+
+        for acct in accounts:
+            account_id = acct['account_id']
+            scenario = acct.get('scenario', 'stable_healthy')
+            scenario_templates = templates.get(scenario, templates['stable_healthy'])
+
+            for month_offset in range(months):
+                # 2-3 signals per account per month
+                num_signals = random.randint(2, 3)
+                for _ in range(num_signals):
+                    counter += 1
+                    signal_date = base_date + timedelta(days=30 * month_offset + random.randint(0, 29))
+
+                    # Pick sentiment based on scenario
+                    if scenario == 'improving':
+                        sentiment = random.choices(['positive', 'neutral'], weights=[0.7, 0.3])[0]
+                    elif scenario == 'declining':
+                        sentiment = random.choices(['negative', 'neutral'], weights=[0.6, 0.4])[0]
+                    else:
+                        sentiment = random.choices(['positive', 'neutral'], weights=[0.5, 0.5])[0]
+
+                    content_pool = scenario_templates.get(sentiment, scenario_templates.get('neutral', ['No update']))
+                    content = random.choice(content_pool)
+
+                    sentiment_scores = {'positive': round(random.uniform(0.5, 0.95), 2),
+                                       'neutral': round(random.uniform(0.0, 0.3), 2),
+                                       'negative': round(random.uniform(-0.9, -0.3), 2)}
+
+                    writer.writerow([
+                        f'sig_{account_id}_{counter}',
+                        account_id,
+                        signal_date.strftime('%Y-%m-%d'),
+                        random.choice(signal_types),
+                        content,
+                        sentiment,
+                        sentiment_scores[sentiment],
+                    ])
+
+        return output.getvalue()
+
+    def generate_profiles_csv(self) -> str:
+        """Generate profiles.csv — account profile/champion data.
+
+        Matches backend generator column names for onboarding API compatibility.
+        Must call generate_accounts_csv() first to populate self._accounts.
+        """
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            'account_id', 'customer_id', 'account_name', 'assigned_csm',
+            'csm_manager', 'executive_sponsor', 'arr', 'mrr',
+            'primary_champion_name', 'primary_champion_title',
+            'primary_champion_email', 'primary_champion_engagement_score',
+            'last_updated'
+        ])
+
+        champion_titles = [
+            'VP Engineering', 'CTO', 'Director of AI',
+            'Head of Infrastructure', 'VP Data Science',
+            'Director of IT Operations', 'Chief Data Officer'
+        ]
+        csm_managers = ['Sam Rivera', 'Alex Chen', 'Jordan Blake']
+
+        accounts = getattr(self, '_accounts', [])
+        if not accounts:
+            accounts = [{'account_id': self.account_base + i, 'account_name': f'Account-{i}',
+                         'csm_name': f'CSM-{i}', 'arr': 500000}
+                        for i in range(self.num_accounts)]
+
+        for acct in accounts:
+            if fake:
+                champion_name = fake.name()
+                champion_email = fake.email()
+                exec_sponsor = fake.name()
+            else:
+                champion_name = f"Champion-{acct['account_id']}"
+                champion_email = f"champion@account{acct['account_id']}.com"
+                exec_sponsor = f"ExecSponsor-{acct['account_id']}"
+
+            arr = acct.get('arr', 500000)
+            writer.writerow([
+                acct['account_id'],
+                self.customer_id,
+                acct.get('account_name', f"Account-{acct['account_id']}"),
+                acct.get('csm_name', 'CSM'),
+                random.choice(csm_managers),
+                exec_sponsor,
+                arr,
+                round(arr / 12, 2),
+                champion_name,
+                random.choice(champion_titles),
+                champion_email,
+                round(random.uniform(50, 95), 1),
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            ])
+
+        return output.getvalue()
+
+    def _classify_kpi_status(self, kpi_code: str, value: float) -> str:
+        """Classify KPI value as healthy/risk/critical using health thresholds.
+
+        Uses simplified threshold logic consistent with backend score_calculator.py.
+        For lower-is-better KPIs, lower values are healthier.
+        """
+        # Lower-is-better KPIs (time, latency, failure rates)
+        lower_is_better = {'P3-KPI3', 'P1-KPI3', 'P2-KPI2',
+                          'P1-KPI1', 'P1-KPI4', 'P1-KPI5',
+                          'P2-KPI1', 'P2-KPI6', 'P2-KPI7',
+                          'P3-KPI3', 'P3-KPI4', 'P4-KPI4'}
+
+        if kpi_code in lower_is_better:
+            # For lower-is-better: score is inversely related
+            # Approximate: if value <= target → healthy, up to 1.5x target → risk, above → critical
+            target = self._get_kpi_target(kpi_code)
+            if target > 0:
+                ratio = value / target
+                if ratio <= 1.0:
+                    return 'healthy'
+                elif ratio <= 1.5:
+                    return 'risk'
+                else:
+                    return 'critical'
+            return 'healthy'
+        else:
+            # Higher-is-better: normalize to 0-100 scale
+            # Use health thresholds: >=70 healthy, 50-69 risk, <50 critical
+            target = self._get_kpi_target(kpi_code)
+            if target > 0:
+                score = min(100, (value / target) * 100)
+            else:
+                score = 50
+            if score >= 70:
+                return 'healthy'
+            elif score >= 50:
+                return 'risk'
+            else:
+                return 'critical'
 
     def _product_category(self, product_name: str) -> str:
         """Map product name to category"""

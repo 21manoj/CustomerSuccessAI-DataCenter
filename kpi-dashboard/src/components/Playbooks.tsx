@@ -18,7 +18,7 @@ interface PlaybooksProps {
 }
 
 interface Account {
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   revenue: number;
   account_status: string;
@@ -224,7 +224,7 @@ export default function Playbooks({ customerId }: PlaybooksProps) {
     setSelectedAccount(null);
   };
 
-  const handleStartPlaybook = async (playbookId: string, accountId?: number, accountName?: string) => {
+  const handleStartPlaybook = async (playbookId: string, accountId?: number | string, accountName?: string) => {
     try {
       const context = {
         customerId,

@@ -41,6 +41,9 @@ SCENARIO_MAP = {
     '4': ('cleanup', 'ScenarioCleanup', 'Customer Cleanup'),
     '5': ('roi_power_of_1', 'ScenarioRoiPowerOf1', 'ROI Power-of-1'),
     '6': ('n8n_workflow', 'ScenarioN8nWorkflow', 'N8N Workflow Integration'),
+    '7': ('data_ingestion', 'ScenarioDataIngestion', 'Data Ingestion Pipeline (Ring 3)'),
+    '8': ('context_graph', 'ScenarioContextGraph', 'Context Graph (story arc → 9 CSVs)'),
+    '9': ('roi_simulation', 'ScenarioRoiSimulation', 'Weight-Aware ROI Simulation'),
 }
 
 
@@ -134,11 +137,19 @@ def main():
     parser.add_argument('--scenario', '-s', required=True, help='Scenario ID (1, 2a, 2b, ...)')
     parser.add_argument('--customer-id', '-c', type=int, default=100, help='Customer ID')
     parser.add_argument('--base-url', default='http://localhost:5059', help='Backend URL')
-    parser.add_argument('--email', default='admin@test.com', help='Admin email for auth')
-    parser.add_argument('--password', default='password', help='Admin password for auth')
+    parser.add_argument('--email', default='admin@sacme.com', help='Admin email for auth')
+    parser.add_argument('--password', default='test123', help='Admin password for auth')
     parser.add_argument('--output-dir', default='.', help='Output directory for results')
     parser.add_argument('--dry-run', action='store_true', help='Preview-only mode (scenario 4: show what would be deleted)')
     parser.add_argument('--num-accounts', type=int, default=None, help='Number of accounts to create (scenario 1, default: 3)')
+    parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducible data generation')
+    parser.add_argument('--industry', default=None, help='Industry vertical (scenario 1, default: Technology)')
+    parser.add_argument('--onboarding-mode', default=None, choices=['demo', 'custom'], help='Onboarding mode: demo (synthetic) or custom (user CSVs)')
+    parser.add_argument('--showcase-pattern-mix', default=None, help='Journey pattern mix as JSON string, e.g. \'{"crisis":0.15,"churn":0.15,"stable":0.50,"expansion":0.20}\'')
+    parser.add_argument('--weights', default=None, help='DC2_S pillar weights as JSON string, e.g. \'{"AI":0.10,"CH":0.30,"DV":0.30,"EX":0.05,"OS":0.25}\'')
+    parser.add_argument('--arc-id', default='arc_expansion_champion', help='Story arc ID for scenario 8 (default: arc_expansion_champion)')
+    parser.add_argument('--months', type=int, default=6, help='Months to simulate (scenario 9, default: 6)')
+    parser.add_argument('--improvement', type=float, default=2.5, help='Total improvement %% (scenario 9, default: 2.5)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Debug logging')
 
     args = parser.parse_args()

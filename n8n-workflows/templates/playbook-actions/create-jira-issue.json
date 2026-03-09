@@ -1,0 +1,276 @@
+{
+  "name": "CS Pulse Playbook - Create Jira Issue",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cspulse-jira-action",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Playbook Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "cspulse-jira-action"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate incoming payload from CS Pulse playbook orchestrator\nconst body = $input.first().json.body || $input.first().json;\n\n// Expected payload structure from CS Pulse:\n// {\n//   action_id: string,\n//   playbook_id: string,\n//   customer_id: number,\n//   customer_name: string,\n//   action_type: 'create_jira_issue',\n//   parameters: {\n//     summary: string,\n//     description: string,\n//     issue_type: string,\n//     priority: string,\n//     labels: string[],\n//     custom_fields: object\n//   },\n//   callback_url: string,\n//   triggered_by: string,\n//   triggered_at: string\n// }\n\nconst required = ['action_id', 'playbook_id', 'customer_id', 'parameters'];\nconst missing = required.filter(f => !body[f]);\n\nif (missing.length > 0) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nconst params = body.parameters || {};\n\nreturn [{\n  json: {\n    action_id: body.action_id,\n    playbook_id: body.playbook_id,\n    customer_id: body.customer_id,\n    customer_name: body.customer_name || `Customer ${body.customer_id}`,\n    callback_url: body.callback_url || `${process.env.CS_PULSE_URL || '{{CS_PULSE_URL}}'}/api/webhooks/playbook-callback`,\n    summary: params.summary || `[CS Pulse] Action required for ${body.customer_name || body.customer_id}`,\n    description: params.description || 'Action triggered by CS Pulse playbook.',\n    issue_type: params.issue_type || 'Task',\n    priority: params.priority || 'Medium',\n    labels: params.labels || ['cs-pulse', 'playbook-action'],\n    custom_fields: params.custom_fields || {},\n    triggered_by: body.triggered_by || 'system',\n    triggered_at: body.triggered_at || new Date().toISOString()\n  }\n}];"
+      },
+      "id": "validate-payload",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "resource": "issue",
+        "operation": "create",
+        "project": "={{$env.JIRA_PROJECT_KEY || '{{JIRA_PROJECT_KEY}}'}}",
+        "issueType": "={{ $json.issue_type }}",
+        "summary": "={{ $json.summary }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}\n\n---\n*Triggered by CS Pulse Playbook*\n- Playbook ID: {{ $json.playbook_id }}\n- Action ID: {{ $json.action_id }}\n- Customer: {{ $json.customer_name }} (ID: {{ $json.customer_id }})\n- Triggered by: {{ $json.triggered_by }}\n- Triggered at: {{ $json.triggered_at }}",
+          "priority": "={{ $json.priority }}",
+          "labels": "={{ $json.labels }}"
+        }
+      },
+      "id": "create-jira-issue",
+      "name": "Create Jira Issue",
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [720, 300],
+      "credentials": {
+        "jiraSoftwareCloudApi": {
+          "id": "",
+          "name": "Jira Account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare success callback payload\nconst jiraResponse = $input.first().json;\nconst originalData = $('Validate Payload').first().json;\n\nreturn [{\n  json: {\n    action_id: originalData.action_id,\n    playbook_id: originalData.playbook_id,\n    customer_id: originalData.customer_id,\n    status: 'completed',\n    result: {\n      jira_issue_key: jiraResponse.key,\n      jira_issue_id: jiraResponse.id,\n      jira_issue_url: `${process.env.JIRA_BASE_URL || '{{JIRA_BASE_URL}}'}/browse/${jiraResponse.key}`,\n      summary: jiraResponse.fields?.summary || originalData.summary\n    },\n    completed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-success-callback",
+      "name": "Prepare Success Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare error callback payload\nconst error = $input.first();\nconst originalData = $('Validate Payload').first().json;\n\nreturn [{\n  json: {\n    action_id: originalData.action_id,\n    playbook_id: originalData.playbook_id,\n    customer_id: originalData.customer_id,\n    status: 'failed',\n    error: {\n      message: error.json?.message || 'Failed to create Jira issue',\n      code: error.json?.statusCode || 'JIRA_CREATE_FAILED',\n      details: error.json?.description || null\n    },\n    failed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-error-callback",
+      "name": "Prepare Error Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validate Payload').first().json.callback_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($input.first().json) }}",
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxRetries": 2,
+            "retryInterval": 3000,
+            "retryOnStatusCodes": "429,500,502,503,504"
+          }
+        }
+      },
+      "id": "callback-success",
+      "name": "Callback to CS Pulse (Success)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CS Pulse API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Validate Payload').first().json.callback_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($input.first().json) }}",
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxRetries": 2,
+            "retryInterval": 3000,
+            "retryOnStatusCodes": "429,500,502,503,504"
+          }
+        }
+      },
+      "id": "callback-error",
+      "name": "Callback to CS Pulse (Error)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 420],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CS Pulse API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'accepted', action_id: $('Validate Payload').first().json.action_id, jira_issue_key: $input.first().json?.key || 'pending' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-webhook-success",
+      "name": "Respond Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', action_id: $('Validate Payload').first().json.action_id, error: 'Jira issue creation failed' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-webhook-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 420]
+    }
+  ],
+  "connections": {
+    "Playbook Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Create Jira Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Jira Issue": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Error Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback to CS Pulse (Success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback to CS Pulse (Error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback to CS Pulse (Success)": {
+      "main": [
+        [
+          {
+            "node": "Respond Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback to CS Pulse (Error)": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "cs-pulse",
+      "id": "1"
+    },
+    {
+      "name": "playbook-action",
+      "id": "3"
+    },
+    {
+      "name": "jira",
+      "id": "4"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-03T00:00:00.000Z",
+  "versionId": "1"
+}

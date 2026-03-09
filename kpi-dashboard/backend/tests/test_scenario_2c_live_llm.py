@@ -50,8 +50,8 @@ def _churn_signals():
             SignalData(
                 similarity=0.95,
                 payload={
-                    "pillar": "AI",
-                    "metric_type": "AI-KPI1",
+                    "pillar": "P3",
+                    "metric_type": "P3-KPI1",
                     "current_value": 5500,
                     "trend": -0.35,
                     "text": "GPU utilization declined 35% over 14 days (8500 → 5500)",
@@ -60,8 +60,8 @@ def _churn_signals():
             SignalData(
                 similarity=0.90,
                 payload={
-                    "pillar": "OS",
-                    "metric_type": "OS-KPI2",
+                    "pillar": "P2",
+                    "metric_type": "P2-KPI2",
                     "current_value": 12,
                     "trend": 0.60,
                     "text": "P1 tickets spiked 60% — 12 open incidents in last 7 days",
@@ -70,8 +70,8 @@ def _churn_signals():
             SignalData(
                 similarity=0.88,
                 payload={
-                    "pillar": "EX",
-                    "metric_type": "EX-KPI1",
+                    "pillar": "P5",
+                    "metric_type": "P5-KPI1",
                     "current_value": 3.2,
                     "trend": -0.25,
                     "text": "NPS score dropped from 4.3 → 3.2",
@@ -129,8 +129,8 @@ def _expansion_signals():
             SignalData(
                 similarity=0.95,
                 payload={
-                    "pillar": "AI",
-                    "metric_type": "AI-KPI1",
+                    "pillar": "P3",
+                    "metric_type": "P3-KPI1",
                     "current_value": 9800,
                     "trend": 0.25,
                     "text": "GPU utilization at 98% — nearing capacity (target: 10000)",
@@ -139,8 +139,8 @@ def _expansion_signals():
             SignalData(
                 similarity=0.90,
                 payload={
-                    "pillar": "CH",
-                    "metric_type": "CH-KPI1",
+                    "pillar": "P4",
+                    "metric_type": "P4-KPI1",
                     "current_value": 99.99,
                     "trend": 0.01,
                     "text": "Uptime at 99.99% — exceeding SLA target of 99.95%",
@@ -275,8 +275,8 @@ class TestLiveTriggerValidator:
             customer_id=1,
             playbook_id="PB-02",
             trigger_context={
-                "AI-KPI1": {"value": 5500, "threshold": 7000},
-                "OS-KPI2": {"value": 12, "threshold": 5},
+                "P3-KPI1": {"value": 5500, "threshold": 7000},
+                "P2-KPI2": {"value": 12, "threshold": 5},
             },
             account_name="Acme DataCenter Corp",
             account_arr=500000.0,
@@ -310,7 +310,7 @@ class TestLiveTriggerValidator:
             account_id="test-2c-cache-001",
             customer_id=1,
             playbook_id="PB-05",
-            trigger_context={"EX-KPI1": {"value": 3.2, "threshold": 4.0}},
+            trigger_context={"P5-KPI1": {"value": 3.2, "threshold": 4.0}},
             account_name="Cache Test Corp",
             health_score=42.0,
             use_cache=True,
@@ -326,7 +326,7 @@ class TestLiveTriggerValidator:
             account_id="test-2c-cache-001",
             customer_id=1,
             playbook_id="PB-05",
-            trigger_context={"EX-KPI1": {"value": 3.2, "threshold": 4.0}},
+            trigger_context={"P5-KPI1": {"value": 3.2, "threshold": 4.0}},
             account_name="Cache Test Corp",
             health_score=42.0,
             use_cache=True,
@@ -372,8 +372,8 @@ class TestCoherenceCheck:
             playbook_id="PB-04",  # Expansion playbook
             trigger_context={
                 # But the KPIs tell a churn story
-                "AI-KPI1": {"value": 3000, "threshold": 7000},
-                "OS-KPI2": {"value": 15, "threshold": 5},
+                "P3-KPI1": {"value": 3000, "threshold": 7000},
+                "P2-KPI2": {"value": 15, "threshold": 5},
             },
             account_name="Contradictory Signals Corp",
             account_arr=300000.0,

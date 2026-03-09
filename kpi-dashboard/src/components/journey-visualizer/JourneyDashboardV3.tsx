@@ -30,6 +30,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSession } from '../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../utils/api';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1212,10 +1213,10 @@ const JourneyDashboardV3: React.FC<JourneyDashboardV3Props> = ({ accountId: prop
         credentials: 'include', // Include session cookies
         headers: {
           'Content-Type': 'application/json',
-          'X-Customer-ID': session?.customer_id?.toString() || '',
+          'X-Customer-ID': getCustomerIdentifier(session),
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           console.error('Authentication failed - session may have expired or cookies not being sent');
@@ -1323,7 +1324,7 @@ const JourneyDashboardV3: React.FC<JourneyDashboardV3Props> = ({ accountId: prop
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-Customer-ID': session?.customer_id?.toString() || ''
+          'X-Customer-ID': getCustomerIdentifier(session)
         },
         credentials: 'include',
         body: JSON.stringify({ account_id: accountId })

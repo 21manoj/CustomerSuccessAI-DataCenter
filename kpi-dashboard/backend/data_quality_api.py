@@ -39,17 +39,8 @@ def _get_dc2s_kpi_ranges():
 
 
 def _normalize_kpi_code(kpi_code, dc2s_codes):
-    """Map AI/CH/DV/EX/OS pillar codes to P1-P5 for DC2S_KPIS lookup."""
-    if kpi_code in dc2s_codes:
-        return kpi_code
-    if '-' in str(kpi_code):
-        parts = str(kpi_code).split('-', 1)
-        if len(parts) == 2 and parts[0] in ('AI', 'CH', 'DV', 'EX', 'OS'):
-            catalog = {'AI': 'P3', 'CH': 'P4', 'DV': 'P1', 'EX': 'P5', 'OS': 'P2'}
-            lookup = catalog.get(parts[0], '') + '-' + parts[1]
-            if lookup in dc2s_codes:
-                return lookup
-    return None
+    """Validate kpi_code exists in dc2s_codes. Returns kpi_code or None."""
+    return kpi_code if kpi_code in dc2s_codes else None
 
 
 def _parse_percent(value: str):

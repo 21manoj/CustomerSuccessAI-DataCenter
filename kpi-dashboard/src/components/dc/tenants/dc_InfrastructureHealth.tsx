@@ -40,7 +40,7 @@ interface InfrastructureKPI {
 }
 
 interface InfrastructureHealthProps {
-  tenantId: number;
+  tenantId: number | string;
 }
 
 // ============================================================

@@ -21,6 +21,127 @@ from datetime import datetime, timedelta
 import random
 
 
+# ──────────────────────────────────────────────────────────────
+# Range-aware KPI value generation
+# DC2_S KPIs have diverse units (days, hours, counts, ms, etc.)
+# with very different valid ranges. The generator MUST respect these.
+# ──────────────────────────────────────────────────────────────
+# No longer needed — all codes are P-format only
+
+
+def _build_kpi_range_map():
+    """Build a range map keyed by BOTH P-format and AI/CH/DV/EX/OS-format codes.
+
+    Returns dict: kpi_code → {abs_min, abs_max, healthy_min, healthy_max,
+                               risk_min, risk_max, critical_min, critical_max,
+                               higher_is_better, unit}
+    """
+    try:
+        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+    except ImportError:
+        print("   ⚠️  DC2S_KPIS not available — falling back to generic 0-100 range")
+        return {}
+
+    range_map = {}
+    for kpi_code, defn in DC2S_KPIS.items():
+        ranges = defn.get('ranges', {})
+        all_mins, all_maxs = [], []
+        healthy = ranges.get('healthy', {})
+        risk = ranges.get('risk', {})
+        critical = ranges.get('critical', {})
+        for band in (healthy, risk, critical):
+            if isinstance(band.get('min'), (int, float)):
+                all_mins.append(float(band['min']))
+            if isinstance(band.get('max'), (int, float)):
+                all_maxs.append(float(band['max']))
+        if not all_mins or not all_maxs:
+            continue
+        entry = {
+            'abs_min': min(all_mins),
+            'abs_max': max(all_maxs),
+            'healthy_min': float(healthy.get('min', 0)),
+            'healthy_max': float(healthy.get('max', 100)),
+            'risk_min': float(risk.get('min', 0)),
+            'risk_max': float(risk.get('max', 100)),
+            'critical_min': float(critical.get('min', 0)),
+            'critical_max': float(critical.get('max', 100)),
+            'higher_is_better': defn.get('higher_is_better', True),
+            'unit': defn.get('unit', '%'),
+        }
+        range_map[kpi_code] = entry
+    return range_map
+
+
+def _get_kpi_status(value, kpi_range):
+    """Determine health status from actual DC2_S range bands."""
+    if not kpi_range:
+        return 'healthy' if value >= 70 else ('risk' if value >= 50 else 'critical')
+    h_min, h_max = kpi_range['healthy_min'], kpi_range['healthy_max']
+    r_min, r_max = kpi_range['risk_min'], kpi_range['risk_max']
+    if h_min <= value <= h_max:
+        return 'healthy'
+    elif r_min <= value <= r_max:
+        return 'risk'
+    else:
+        return 'critical'
+
+
+def _generate_kpi_value(scenario, month_idx, num_months, kpi_range):
+    """Generate a KPI value within the correct range for the given scenario.
+
+    Scenarios:
+      - improving: Start in critical/risk → trend toward healthy
+      - declining: Start in healthy → trend toward critical/risk
+      - stable_healthy: Stay in/near healthy band
+    """
+    if not kpi_range:
+        # Fallback for unknown KPIs
+        if scenario == 'improving':
+            base = 50 + (month_idx * 3)
+        elif scenario == 'declining':
+            base = 80 - (month_idx * 2)
+        else:
+            base = 75
+        return max(0, min(100, base + random.uniform(-5, 5)))
+
+    hi_better = kpi_range['higher_is_better']
+    abs_min = kpi_range['abs_min']
+    abs_max = kpi_range['abs_max']
+    h_min = kpi_range['healthy_min']
+    h_max = kpi_range['healthy_max']
+    c_min = kpi_range['critical_min']
+    c_max = kpi_range['critical_max']
+    full_span = abs_max - abs_min if abs_max != abs_min else 1.0
+
+    progress = month_idx / max(num_months - 1, 1)  # 0.0 → 1.0
+
+    if scenario == 'improving':
+        if hi_better:
+            start_val = c_min + (c_max - c_min) * 0.5
+            end_val = h_min + (h_max - h_min) * 0.7
+        else:
+            start_val = c_min + (c_max - c_min) * 0.5
+            end_val = h_min + (h_max - h_min) * 0.3
+        base = start_val + (end_val - start_val) * progress
+    elif scenario == 'declining':
+        if hi_better:
+            start_val = h_min + (h_max - h_min) * 0.7
+            end_val = c_min + (c_max - c_min) * 0.5
+        else:
+            start_val = h_min + (h_max - h_min) * 0.3
+            end_val = c_min + (c_max - c_min) * 0.5
+        base = start_val + (end_val - start_val) * progress
+    else:  # stable_healthy
+        if hi_better:
+            base = h_min + (h_max - h_min) * 0.6
+        else:
+            base = h_min + (h_max - h_min) * 0.4
+
+    # Add noise (±5% of full range)
+    noise = random.uniform(-0.05, 0.05) * full_span
+    return max(abs_min, min(abs_max, base + noise))
+
+
 # Column order for accounts.csv: matches sample_account_profiles_dc2_s.xlsx
 # (Customer Profile Input sheet + Champion & Stakeholder sheet + Last updated)
 ACCOUNTS_CSV_COLUMNS = [
@@ -132,41 +253,56 @@ def generate_accounts_csv(customer_id, num_accounts=10, company_name=None):
 
 
 def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
-    """Generate KPI measurements from config (ENABLED KPIs only)"""
-    
+    """Generate KPI measurements from config (ENABLED KPIs only).
+
+    Range-aware: uses DC2S_KPIS reference ranges to generate values
+    in the correct units (days, hours, counts, etc.) — not a flat 0-100 scale.
+    """
+
     with app.app_context():
         loader = ConfigLoader(customer_id)
         enabled_kpis = loader.get_enabled_kpis()
-        
+
+        # Build range map from DC2S_KPIS (keyed by both P-format and AI/CH/DV/EX/OS-format)
+        kpi_range_map = _build_kpi_range_map()
+        range_aware_count = sum(1 for k in enabled_kpis if k in kpi_range_map)
+
         print(f"   Config-aware: Using {len(enabled_kpis)} enabled KPIs")
+        print(f"   Range-aware: {range_aware_count}/{len(enabled_kpis)} KPIs have DC2S reference ranges")
         print(f"   KPIs: {', '.join(sorted(enabled_kpis)[:5])}..." if enabled_kpis else "   No enabled KPIs!")
-        
+
         measurements = []
         start_date = datetime(2024, 1, 1)
-        
+
         # For each account
         for _, account in accounts_df.iterrows():
             account_id = account['account_id']
-            
+
             # Determine scenario based on account
             scenario_idx = account_id % 3
             scenarios = ['improving', 'stable_healthy', 'declining']
             scenario = scenarios[scenario_idx]
-            
-            # For each month
+
+            # For each month — use calendar-aligned 1st-of-month dates
             for month_idx in range(num_months):
-                measured_at = start_date + timedelta(days=30 * month_idx)
-                
+                month_offset = start_date.month - 1 + month_idx
+                year = start_date.year + month_offset // 12
+                month = month_offset % 12 + 1
+                measured_at = datetime(year, month, 1)
+
                 # For each ENABLED KPI (config-aware!)
                 config = loader.customer_config
                 kpi_overrides = (config or {}).get('kpi_overrides', {})
                 for kpi_code in enabled_kpis:
                     kpi_def = loader.get_kpi_definition(kpi_code)
-                    
+
                     if not kpi_def:
                         continue
-                    
-                    # Get target: apply dc2s_kpi_overrides (custom target) from config (GAP 1.2)
+
+                    # Look up real range for this KPI
+                    kpi_range = kpi_range_map.get(kpi_code)
+
+                    # Get target: apply dc2s_kpi_overrides (custom target) from config
                     override = kpi_overrides.get(kpi_code, {})
                     target_value = override.get('target')
                     if target_value is None:
@@ -175,37 +311,44 @@ def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
                         target_value = target_value.get('value', 85.0)
                     elif target_value is None:
                         target_value = 85.0
-                    
-                    # Generate value based on scenario
-                    if scenario == 'improving':
-                        base = 50 + (month_idx * 3)  # Improving trend
-                    elif scenario == 'declining':
-                        base = 80 - (month_idx * 2)  # Declining trend
-                    else:
-                        base = 75  # Stable
-                    
-                    # Add randomness
-                    value = max(0, min(100, base + random.uniform(-5, 5)))
-                    
-                    # ✅ CORRECTED: Match DC2SKPI model from models.py
-                    # Database columns: measured_at, target, status (NOT measurement_month, target_value, health_state)
+
+                    # Fix generic 85.0 default — use healthy midpoint for range-aware KPIs
+                    if kpi_range and target_value == 85.0:
+                        target_value = round(
+                            (kpi_range['healthy_min'] + kpi_range['healthy_max']) / 2, 2
+                        )
+
+                    # Generate value within the correct range for this KPI's unit
+                    value = _generate_kpi_value(scenario, month_idx, num_months, kpi_range)
+
+                    # Determine status from actual range bands (not hardcoded 70/50 thresholds)
+                    status = _get_kpi_status(value, kpi_range)
+
                     measurements.append({
                         'account_id': account_id,
                         'kpi_code': kpi_code,
-                        'measured_at': measured_at.strftime('%Y-%m-%d'),  # ✅ DB column name
+                        'measured_at': measured_at.strftime('%Y-%m-%d'),
                         'value': round(value, 2),
-                        'target': target_value,  # ✅ DB column name (not target_value)
+                        'target': target_value,
                         'pillar': kpi_def.get('pillar', 'Unknown'),
                         'weight': kpi_def.get('weight', 0.25),
-                        'status': 'healthy' if value >= 70 else ('risk' if value >= 50 else 'critical')  # ✅ DB column name
-                        # ✅ Removed: unit, threshold_breached (not in DC2SKPI model)
+                        'status': status,
                     })
-        
+
         print(f"   Generated {len(measurements)} KPI measurements")
         print(f"     Accounts: {len(accounts_df)}")
         print(f"     Enabled KPIs: {len(enabled_kpis)}")
         print(f"     Months: {num_months}")
-        
+
+        # Quick sanity check: report value ranges per KPI
+        if measurements:
+            df_tmp = pd.DataFrame(measurements)
+            for kpi in sorted(df_tmp['kpi_code'].unique())[:5]:
+                subset = df_tmp[df_tmp['kpi_code'] == kpi]['value']
+                rng = kpi_range_map.get(kpi, {})
+                unit = rng.get('unit', '?')
+                print(f"     {kpi}: {subset.min():.1f} – {subset.max():.1f} {unit}")
+
         return pd.DataFrame(measurements)
 
 
@@ -222,38 +365,96 @@ def generate_customers_csv(customer_id, company_name):
 
 
 def generate_qualitative_signals_csv(customer_id, accounts_df, num_months=12):
-    """Generate qualitative_signals.csv"""
-    
+    """Generate qualitative_signals.csv with scenario-aware content.
+
+    Signal content and sentiment are tied to the account's scenario (improving/stable/declining)
+    so that the Signal Analyst receives meaningful qualitative data to work with.
+    """
+    # Scenario-specific signal templates: (signal_type, content_template, sentiment, score_range)
+    SIGNAL_TEMPLATES = {
+        'improving': [
+            ('customer_feedback', 'NPS survey response: Score improved from {prev} to {curr}. Customer praised faster GPU provisioning.', 'positive', (0.4, 0.9)),
+            ('meeting', 'QBR held — customer reported improved deployment times and wants to expand AI workloads.', 'positive', (0.5, 0.8)),
+            ('milestone', 'Customer achieved 99.9% uptime target for the first time this quarter.', 'positive', (0.6, 1.0)),
+            ('health_check', 'Proactive health review: RMA rates declining, PUE improving toward target.', 'positive', (0.3, 0.7)),
+            ('customer_feedback', 'Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.', 'positive', (0.4, 0.8)),
+            ('meeting', 'Expansion discussion: customer evaluating additional rack capacity for Q{quarter} growth.', 'positive', (0.5, 0.9)),
+            ('incident', 'Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.', 'neutral', (-0.1, 0.2)),
+            ('customer_feedback', 'Champion {champion} confirmed renewal intent and requested pricing for GPU cluster expansion.', 'positive', (0.6, 0.95)),
+        ],
+        'stable_healthy': [
+            ('health_check', 'Routine health check: all KPIs within healthy ranges. No action required.', 'neutral', (-0.1, 0.3)),
+            ('meeting', 'Monthly sync — customer satisfied with current service levels. No escalations.', 'neutral', (0.0, 0.4)),
+            ('customer_feedback', 'NPS survey: Score steady at {curr}/10. Customer values reliability.', 'neutral', (0.1, 0.4)),
+            ('milestone', 'Contract renewal processed — 12-month extension at current terms.', 'positive', (0.3, 0.6)),
+            ('health_check', 'Quarterly review: GPU utilization stable at ~75%, power efficiency on target.', 'neutral', (0.0, 0.3)),
+            ('customer_feedback', 'Feedback form: "Service meets expectations. Would like more proactive reporting."', 'neutral', (0.0, 0.3)),
+            ('meeting', 'Stakeholder check-in: no open issues. Discussed roadmap for next quarter.', 'neutral', (0.1, 0.4)),
+            ('incident', 'Scheduled maintenance window completed successfully. All systems nominal.', 'neutral', (0.0, 0.2)),
+        ],
+        'declining': [
+            ('incident', 'Critical: GPU cluster outage lasted {hours}h. Customer escalated to VP level.', 'negative', (-0.9, -0.4)),
+            ('customer_feedback', 'NPS score dropped from {prev} to {curr}. Customer cited repeated provisioning delays.', 'negative', (-0.8, -0.3)),
+            ('meeting', 'Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.', 'negative', (-0.7, -0.4)),
+            ('health_check', 'Health review flagged declining PUE and rising support ticket volume.', 'negative', (-0.6, -0.2)),
+            ('customer_feedback', 'Champion {champion} expressed frustration with batch throughput degradation.', 'negative', (-0.7, -0.3)),
+            ('incident', 'SLA breach: network latency exceeded threshold for {hours}h. Root cause under investigation.', 'negative', (-0.8, -0.5)),
+            ('meeting', 'QBR cancelled by customer — cited "lack of visible improvement" in service quality.', 'negative', (-0.6, -0.3)),
+            ('customer_feedback', 'Support satisfaction: 2.1/5. Customer requests executive-level engagement.', 'negative', (-0.9, -0.5)),
+        ],
+    }
+
+    champion_names = ['Alex Chen', 'Sarah Johnson', 'Mike Thompson', 'Lisa Wang', 'David Kumar']
+
     signals = []
     start_date = datetime(2024, 1, 1)
-    signal_types = ['health_check', 'customer_feedback', 'incident', 'milestone', 'meeting']
-    sentiments = ['positive', 'neutral', 'negative']
-    
     signal_counter = 1
-    
+
     for _, account in accounts_df.iterrows():
         account_id = account['account_id']
-        
-        for month in range(num_months):
-            signal_date = start_date + timedelta(days=30 * month + random.randint(0, 28))
-            
+        account_name = account.get('account_name', f'Account-{account_id}')
+
+        # Same scenario assignment as KPI generator
+        scenario_idx = account_id % 3
+        scenarios = ['improving', 'stable_healthy', 'declining']
+        scenario = scenarios[scenario_idx]
+        templates = SIGNAL_TEMPLATES[scenario]
+        champion = random.choice(champion_names)
+
+        for month_idx in range(num_months):
+            month_offset = start_date.month - 1 + month_idx
+            year = start_date.year + month_offset // 12
+            month = month_offset % 12 + 1
+            signal_date = datetime(year, month, random.randint(1, 28))
+            quarter = (month - 1) // 3 + 1
+
             # 2-3 signals per account per month
             for _ in range(random.randint(2, 3)):
-                # ✅ Generate unique signal_id (required PK in QualitativeSignal model)
                 signal_id = f'sig_{account_id}_{signal_counter:04d}'
                 signal_counter += 1
-                
+
+                template = random.choice(templates)
+                sig_type, content_tmpl, sentiment, (score_lo, score_hi) = template
+
+                content = content_tmpl.format(
+                    account_name=account_name,
+                    prev=random.randint(4, 7),
+                    curr=random.randint(5, 9) if scenario != 'declining' else random.randint(2, 5),
+                    hours=random.randint(2, 8),
+                    quarter=quarter,
+                    champion=champion,
+                )
+
                 signals.append({
-                    'signal_id': signal_id,  # ✅ Required PK
+                    'signal_id': signal_id,
                     'account_id': account_id,
-                    # ✅ NO customer_id - QualitativeSignal model doesn't have it
                     'signal_date': signal_date.strftime('%Y-%m-%d'),
-                    'signal_type': random.choice(signal_types),
-                    'content': f'Signal for {account["account_name"]} on {signal_date.strftime("%Y-%m-%d")}',  # ✅ DB column name (not signal_text)
-                    'sentiment': random.choice(sentiments),
-                    'sentiment_score': round(random.uniform(-1, 1), 2)
+                    'signal_type': sig_type,
+                    'content': content,
+                    'sentiment': sentiment,
+                    'sentiment_score': round(random.uniform(score_lo, score_hi), 2)
                 })
-    
+
     return pd.DataFrame(signals)
 
 

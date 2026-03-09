@@ -119,11 +119,11 @@ def _seed_customer():
     for days_ago, value in [(14, 8500), (7, 7200), (1, 5500)]:
         kpi = DC2SKPI(
             account_id=E2E_ACCOUNT_ID,
-            kpi_code="AI-KPI1",
+            kpi_code="P3-KPI1",
             measured_at=datetime.utcnow() - timedelta(days=days_ago),
             value=value,
             target=9000.0,
-            pillar="AI",
+            pillar="P3",
         )
         db.session.add(kpi)
 
@@ -162,7 +162,7 @@ class TestFullClosedLoop:
         result = validator._fallback_rule_based(
             playbook_id="renewal-safeguard",
             trigger_context={
-                "AI-KPI1": {"value": 5500, "threshold": 7000, "operator": "<"},
+                "P3-KPI1": {"value": 5500, "threshold": 7000, "operator": "<"},
                 "health_score": {"value": 38, "threshold": 50, "operator": "<"},
             },
             health_score=38.0,
@@ -184,11 +184,11 @@ class TestFullClosedLoop:
             started_at=datetime.utcnow(),
             execution_mode="workflow",
             execution_data={
-                "trigger_context": {"AI-KPI1": {"value": 5500, "threshold": 7000}},
+                "trigger_context": {"P3-KPI1": {"value": 5500, "threshold": 7000}},
                 "validation": result.model_dump(mode="json"),
             },
             trigger_context={
-                "AI-KPI1": {"value": 5500, "threshold": 7000},
+                "P3-KPI1": {"value": 5500, "threshold": 7000},
             },
             llm_validation_result=result.model_dump(mode="json"),
         )
@@ -216,7 +216,7 @@ class TestFullClosedLoop:
             predicted_expansion_prob=0.10,
             actual_churn=False,
             actual_expansion=False,
-            kpi_improvements={"AI-KPI1": 0.15},
+            kpi_improvements={"P3-KPI1": 0.15},
             signals_considered=["quantitative", "qualitative"],
             power_of_1_metric="GRR",
             dollar_impact_realized=12500.0,

@@ -1,0 +1,353 @@
+{
+  "account_id": "294027",
+  "account_name": "Account 294027",
+  "pattern_type": "ignored_churn",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-30",
+  "starting_health": 70,
+  "ending_health": 15,
+  "lowest_health": 15,
+  "highest_health": 70,
+  "total_weeks": 52,
+  "events": [
+    {
+      "week_number": 11,
+      "date": "2024-03-11",
+      "phase": "at_risk",
+      "event_type": "budget_review",
+      "description": "CFO: 'Should we switch providers?' - Budget under review",
+      "sentiment": "negative",
+      "sentiment_value": -0.6,
+      "health_score_before": 56.49,
+      "health_score_after": 54.99,
+      "outcome": "Financial concerns remain, cautious"
+    },
+    {
+      "week_number": 15,
+      "date": "2024-04-08",
+      "phase": "at_risk",
+      "event_type": "budget_review",
+      "description": "CFO: 'Should we switch providers?' - Budget under review",
+      "sentiment": "negative",
+      "sentiment_value": -0.6,
+      "health_score_before": 50.99,
+      "health_score_after": 50.62,
+      "outcome": "Financial concerns remain, cautious"
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 50.62,
+      "health_score_after": 49.73,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 16,
+      "date": "2024-04-15",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 50.62,
+      "health_score_after": 49.73,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 17,
+      "date": "2024-04-22",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 49.73,
+      "health_score_after": 49.4,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 17,
+      "date": "2024-04-22",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 49.73,
+      "health_score_after": 49.4,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 49.4,
+      "health_score_after": 47.29,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 18,
+      "date": "2024-04-29",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 49.4,
+      "health_score_after": 47.29,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "crisis",
+      "event_type": "executive_engagement",
+      "description": "Board questioning infrastructure decision",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 47.29,
+      "health_score_after": 45.33,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 19,
+      "date": "2024-05-06",
+      "phase": "crisis",
+      "event_type": "support_ticket",
+      "description": "Critical support ticket - Production loss quantified",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 47.29,
+      "health_score_after": 45.33,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 20,
+      "date": "2024-05-13",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 45.33,
+      "health_score_after": 43.4,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 21,
+      "date": "2024-05-20",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 43.4,
+      "health_score_after": 43.02,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 22,
+      "date": "2024-05-27",
+      "phase": "crisis",
+      "event_type": "executive_engagement",
+      "description": "Board questioning infrastructure decision",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 43.02,
+      "health_score_after": 42.91,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 23,
+      "date": "2024-06-03",
+      "phase": "crisis",
+      "event_type": "executive_engagement",
+      "description": "Board questioning infrastructure decision",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 42.91,
+      "health_score_after": 40.89,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 24,
+      "date": "2024-06-10",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 40.89,
+      "health_score_after": 38.47,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "war_room",
+        "description": "Emergency war room convened (Day 0)",
+        "response_time_hours": 2,
+        "cost_estimate": 15000
+      }
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 38.47,
+      "health_score_after": 37.77,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 25,
+      "date": "2024-06-17",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 38.47,
+      "health_score_after": 37.77,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 26,
+      "date": "2024-06-24",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 37.77,
+      "health_score_after": 37.24,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    },
+    {
+      "week_number": 27,
+      "date": "2024-07-01",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 37.24,
+      "health_score_after": 35.28,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "root_cause_analysis",
+        "description": "Root cause analysis initiated",
+        "response_time_hours": 4,
+        "cost_estimate": 10000
+      }
+    },
+    {
+      "week_number": 27,
+      "date": "2024-07-01",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 37.24,
+      "health_score_after": 35.28,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 28,
+      "date": "2024-07-08",
+      "phase": "crisis",
+      "event_type": "escalation",
+      "description": "CEO threatening to change vendors - Trust destroyed",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.9,
+      "health_score_before": 35.28,
+      "health_score_after": 33.37,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 29,
+      "date": "2024-07-15",
+      "phase": "crisis",
+      "event_type": "executive_engagement",
+      "description": "Board questioning infrastructure decision",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.85,
+      "health_score_before": 33.37,
+      "health_score_after": 30.65,
+      "outcome": "Crisis mitigation in progress, situation critical"
+    },
+    {
+      "week_number": 29,
+      "date": "2024-07-15",
+      "phase": "crisis",
+      "event_type": "outage",
+      "description": "14-HOUR OUTAGE - Complete production stoppage",
+      "sentiment": "very_negative",
+      "sentiment_value": -0.95,
+      "health_score_before": 33.37,
+      "health_score_after": 30.65,
+      "outcome": "Crisis mitigation in progress, situation critical",
+      "csm_action": {
+        "action_type": "executive_sponsor",
+        "description": "Executive sponsor assigned immediately",
+        "response_time_hours": 2,
+        "cost_estimate": 25000
+      }
+    }
+  ],
+  "summary": {
+    "pattern_type": "ignored_churn",
+    "total_events": 23,
+    "lowest_health_week": 40,
+    "total_csm_investment": 135000.0,
+    "health_decline": 55,
+    "financial_impact": "100% ARR lost - churn",
+    "key_failure_factors": [
+      "Ignored early warning signs",
+      "Minimal CSM engagement",
+      "No proactive outreach",
+      "Late intervention attempts",
+      "Lost account to competition"
+    ]
+  }
+}

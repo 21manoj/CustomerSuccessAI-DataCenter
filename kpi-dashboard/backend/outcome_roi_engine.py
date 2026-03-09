@@ -191,8 +191,14 @@ def calculate_historical_roi(
             linked_playbooks=metric.linked_playbooks,
         ))
 
-    # Use real summed investment, fall back to override or config default
-    investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
+    # Scale investment with observed improvement level:
+    # Lower actual improvement means fewer work packages were deployed.
+    raw_investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
+    # Investment scales with ARR — larger customers need proportionally larger CS programs
+    raw_investment *= arr_scale
+    avg_improvement = sum(improvement_pcts) / len(improvement_pcts) if improvement_pcts else 1.0
+    utilization = min(1.0, 0.30 + 0.70 * (avg_improvement / 6.0))
+    investment = raw_investment * utilization
 
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
@@ -201,7 +207,6 @@ def calculate_historical_roi(
     # ROI
     roi_pct = ((total_impact - investment) / investment * 100) if investment > 0 else 0
     payback_months = (investment / (total_impact / 12)) if total_impact > 0 else float('inf')
-    avg_improvement = sum(improvement_pcts) / len(improvement_pcts) if improvement_pcts else 0
 
     # Sort by dollar impact for top outcomes
     sorted_outcomes = sorted(metric_outcomes, key=lambda m: m.dollar_impact, reverse=True)
@@ -372,8 +377,15 @@ def calculate_forward_roi(
             linked_playbooks=metric.linked_playbooks,
         ))
 
-    # Use real summed investment, fall back to override or config default
-    investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
+    # Scale investment with target improvement %:
+    # At low targets (1%), only foundation work packages are deployed (~40% utilization).
+    # At the target scenario (4%), most work packages are active (~77%).
+    # At stretch goals (6%), all work packages are fully deployed (100%).
+    raw_investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
+    # Investment scales with ARR — larger customers need proportionally larger CS programs
+    raw_investment *= arr_scale
+    utilization = min(1.0, 0.30 + 0.70 * (target_improvement_pct / 6.0))
+    investment = raw_investment * utilization
 
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
@@ -441,11 +453,15 @@ def calculate_outcome_story(
     investment_override: Optional[float] = None,
     projection_months: int = 6,
     historical_period_label: str = "Last 6 Months",
+    accounts_at_risk: Optional[Dict[str, List]] = None,
+    customer_id: Optional[int] = None,
+    account_ids: Optional[List[int]] = None,
 ) -> Dict:
     """
     Build the complete outcome story: historical proof + forward projection.
 
     Returns both sides with a bridging narrative showing continuity.
+    When context graph is enabled, includes graph-based causal evidence.
     """
     # Historical ROI
     historical = calculate_historical_roi(
@@ -477,7 +493,32 @@ def calculate_outcome_story(
     # Build the bridge narrative
     bridge = _build_bridge_narrative(historical, forward)
 
-    return {
+    # ARR scaling for scenarios and roadmap
+    arr_scale = 1.0
+    arr_basis = "baseline_10m"
+    arr_basis_value = 10_000_000
+    if account_arr is not None:
+        arr_scale = account_arr / 10_000_000
+        arr_basis = "explicit"
+        arr_basis_value = account_arr
+
+    # Build roadmap from Power of 1 work packages — aligned to forward projection
+    roadmap = _build_implementation_roadmap(
+        target_improvement_pct=target_improvement_pct,
+        projection_months=projection_months,
+        forward_result=forward,
+        accounts_at_risk=accounts_at_risk,
+        arr_scale=arr_scale,
+    )
+
+    # Scale scenarios dynamically if ARR differs from $10M base
+    from power_of_1_model import _scale_scenarios
+    scaled_scenarios = _scale_scenarios(arr_scale) if arr_scale != 1.0 else SCALING_SCENARIOS
+
+    result = {
+        "arr_basis": arr_basis,
+        "arr_basis_value": arr_basis_value,
+        "arr_scale": round(arr_scale, 6),
         "historical": _result_to_dict(historical),
         "forward": _result_to_dict(forward),
         "combined": {
@@ -495,7 +536,206 @@ def calculate_outcome_story(
             ),
         },
         "bridge": bridge,
-        "scaling_scenarios": SCALING_SCENARIOS,
+        "scaling_scenarios": scaled_scenarios,
+        "roadmap": roadmap,
+    }
+
+    # Context graph enrichment (feature-toggle gated, graceful fallback)
+    if customer_id and account_ids:
+        try:
+            graph_evidence = _build_graph_enrichment(customer_id, account_ids)
+            if graph_evidence:
+                result['context_graph'] = graph_evidence
+        except Exception:
+            pass  # Graph data is enrichment, not required
+
+    return result
+
+
+# ============================================================
+# IMPLEMENTATION ROADMAP
+# ============================================================
+
+def _build_implementation_roadmap(
+    target_improvement_pct: float,
+    projection_months: int,
+    forward_result: Optional[OutcomeROIResult] = None,
+    accounts_at_risk: Optional[Dict[str, List]] = None,
+    arr_scale: float = 1.0,
+) -> Dict:
+    """
+    Build the 'how to get there' roadmap from Power of 1 work packages.
+
+    ALIGNED to forward projection:
+    - Dollar impacts match forward panel exactly (period-scaled, not annual)
+    - Investment matches forward projection's resource-model figure
+    - ALL 6 metrics shown in summary (not filtered by quarter)
+    - Quarters scoped to projection window (6mo → Q1+Q2)
+    """
+    # ── Determine active quarters based on projection window ──
+    num_quarters = max(1, min(4, (projection_months + 2) // 3))  # 6mo→2, 9mo→3, 12mo→4
+    all_quarter_names = ["Q1", "Q2", "Q3", "Q4"]
+    active_quarter_names = all_quarter_names[:num_quarters]
+
+    quarter_labels = {
+        "Q1": {"label": "Foundation", "months": "Months 1-3", "focus": "Setup & quick wins"},
+        "Q2": {"label": "Intelligence", "months": "Months 4-6", "focus": "Data-driven insights"},
+        "Q3": {"label": "Excellence", "months": "Months 7-9", "focus": "Optimization & scaling"},
+        "Q4": {"label": "Optimization", "months": "Months 10-12", "focus": "Sustained performance"},
+    }
+
+    # Hourly rates for cost estimation (work package detail only)
+    ROLE_RATES = {"csm": 95, "cs_ops": 85, "product": 110, "platform": 120, "leadership": 150}
+
+    # ── Build forward-aligned metric impact lookup ──
+    # Use the EXACT dollar_impact from forward projection for each metric
+    forward_impact_by_metric = {}
+    if forward_result:
+        for m in forward_result.metric_outcomes:
+            forward_impact_by_metric[m.metric_id] = m.dollar_impact
+
+    # ── Metric summary: ALL 6 metrics with period-scaled impacts ──
+    metric_summary = []
+    for metric_id, metric in POWER_OF_1_METRICS.items():
+        # Dollar impact: use forward projection's exact figure if available,
+        # otherwise compute period-scaled value ourselves (with ARR scaling)
+        if metric_id in forward_impact_by_metric:
+            estimated_impact = forward_impact_by_metric[metric_id]
+        else:
+            estimated_impact = round(
+                metric.annual_impact_per_pct * target_improvement_pct * (projection_months / 12.0) * arr_scale, 0
+            )
+
+        # Dollar impact per 1% — scaled by ARR
+        dollar_impact_per_pct = round(
+            metric.annual_impact_per_pct * (projection_months / 12.0) * arr_scale, 0
+        )
+
+        # Which quarters does this metric's work fall in?
+        metric_quarters = [q for q in metric.quarters if q in active_quarter_names]
+
+        # Accounts needing attention for this metric (top 5 worst)
+        metric_at_risk = []
+        if accounts_at_risk and metric_id in accounts_at_risk:
+            metric_at_risk = accounts_at_risk[metric_id][:5]  # Top 5 worst
+
+        at_risk_revenue = sum(a.get('revenue', 0) for a in metric_at_risk)
+
+        metric_summary.append({
+            "metric_id": metric_id,
+            "display_name": metric.display_name,
+            "estimated_impact": round(estimated_impact, 0),
+            "dollar_impact_per_pct": dollar_impact_per_pct,
+            "target_improvement_pct": target_improvement_pct,
+            "active_quarters": metric_quarters,
+            "all_quarters": metric.quarters,
+            "linked_kpis": metric.linked_kpi_codes,
+            "linked_playbooks": metric.linked_playbooks,
+            "accounts_at_risk": metric_at_risk,
+            "at_risk_revenue": round(at_risk_revenue, 0),
+            "at_risk_count": len(accounts_at_risk.get(metric_id, [])) if accounts_at_risk else 0,
+        })
+
+    # ── Build quarterly work-package breakdown (only active quarters) ──
+    quarters = []
+    for q_name in active_quarter_names:
+        q_info = quarter_labels[q_name]
+        q_metrics = []
+        q_total_hours = 0
+        q_total_cost = 0
+
+        for metric_id, metric in POWER_OF_1_METRICS.items():
+            if q_name not in metric.quarters:
+                continue
+
+            # Use forward-aligned impact for this metric
+            if metric_id in forward_impact_by_metric:
+                est_impact = forward_impact_by_metric[metric_id]
+            else:
+                est_impact = round(
+                    metric.annual_impact_per_pct * target_improvement_pct * (projection_months / 12.0) * arr_scale, 0
+                )
+
+            # Distribute impact across the metric's active quarters
+            active_qs_for_metric = [q for q in metric.quarters if q in active_quarter_names]
+            quarter_share = len(active_qs_for_metric)
+            per_quarter_impact = round(est_impact / max(quarter_share, 1), 0)
+
+            metric_wps = []
+            for wp in metric.work_packages:
+                wp_cost = sum(
+                    getattr(wp.roles, role, 0) * rate
+                    for role, rate in ROLE_RATES.items()
+                )
+                metric_wps.append({
+                    "name": wp.name.replace("_", " ").title(),
+                    "description": wp.description,
+                    "hours": wp.hours,
+                    "cost": round(wp_cost, 0),
+                    "roles": {
+                        "CSM": getattr(wp.roles, "csm", 0),
+                        "CS Ops": getattr(wp.roles, "cs_ops", 0),
+                        "Product": getattr(wp.roles, "product", 0),
+                        "Platform": getattr(wp.roles, "platform", 0),
+                        "Leadership": getattr(wp.roles, "leadership", 0),
+                    },
+                    "deliverables": wp.deliverables,
+                })
+                q_total_hours += wp.hours
+                q_total_cost += wp_cost
+
+            # Top 3 at-risk accounts for this metric in this quarter's view
+            q_metric_at_risk = []
+            if accounts_at_risk and metric_id in accounts_at_risk:
+                q_metric_at_risk = accounts_at_risk[metric_id][:3]
+
+            if metric_wps:
+                q_metrics.append({
+                    "metric_id": metric_id,
+                    "display_name": metric.display_name,
+                    "dollar_impact_per_pct": round(metric.annual_impact_per_pct * (projection_months / 12.0) * arr_scale, 0),
+                    "target_improvement_pct": target_improvement_pct,
+                    "estimated_impact": round(per_quarter_impact, 0),
+                    "total_metric_impact": round(est_impact, 0),
+                    "work_packages": metric_wps,
+                    "accounts_at_risk": q_metric_at_risk,
+                })
+
+        quarters.append({
+            "quarter": q_name,
+            "label": q_info["label"],
+            "months": q_info["months"],
+            "focus": q_info["focus"],
+            "metrics": q_metrics,
+            "total_hours": round(q_total_hours, 0),
+            "total_cost": round(q_total_cost, 0),
+        })
+
+    # ── Totals: use forward projection's investment (resource-model based) ──
+    wp_total_hours = sum(q["total_hours"] for q in quarters)
+    wp_total_cost = sum(q["total_cost"] for q in quarters)
+
+    # Use forward projection's real investment if available (resource-model based);
+    # fall back to summed work-package costs for the active quarters
+    if forward_result:
+        total_investment = forward_result.summary.total_investment
+        total_impact = forward_result.summary.total_impact
+        roi_pct = forward_result.summary.roi_pct
+    else:
+        total_investment = wp_total_cost
+        total_impact = sum(m["estimated_impact"] for m in metric_summary)
+        roi_pct = ((total_impact - total_investment) / total_investment * 100) if total_investment > 0 else 0
+
+    return {
+        "projection_months": projection_months,
+        "target_improvement_pct": target_improvement_pct,
+        "metric_summary": metric_summary,
+        "quarters": quarters,
+        "total_hours": round(wp_total_hours, 0),
+        "total_cost": round(total_investment, 0),
+        "total_projected_impact": round(total_impact, 0),
+        "roi_pct": round(roi_pct, 1),
+        "source_note": "** Based on CS GrowthPulse Power of 1 framework. Dollar impacts are period-scaled ({0}mo). Benchmarks: Gainsight Pulse 2024, TSIA Research, KeyBanc SaaS Metrics Survey, Bain & Co. NPS Economics.".format(projection_months),
     }
 
 
@@ -623,6 +863,125 @@ def _build_bridge_narrative(
     }
 
 
+def _build_graph_enrichment(
+    customer_id: int,
+    account_ids: List[int],
+) -> Optional[Dict]:
+    """
+    Pull context graph evidence to enrich the outcome story.
+
+    Returns None if context graph is disabled or no data exists.
+    Gracefully degrades — never raises.
+    """
+    try:
+        from feature_toggles import is_context_graph_enabled
+        if not is_context_graph_enabled(customer_id):
+            return None
+    except ImportError:
+        return None
+
+    from utils.context_graph import get_revenue_at_risk
+    from models import ContextNode, ContextEdge, Account
+    from extensions import db
+
+    # ── Aggregate revenue across all accounts ──
+    total_rev = {'at_risk': 0, 'protected': 0, 'expansion': 0, 'lost': 0, 'net_impact': 0}
+    accounts_with_graph = 0
+
+    for aid in account_ids:
+        try:
+            rev = get_revenue_at_risk(aid)
+            if rev.get('node_count', 0) > 0:
+                accounts_with_graph += 1
+                for k in ('at_risk', 'protected', 'expansion', 'lost', 'net_impact'):
+                    total_rev[k] += rev.get(k, 0)
+        except Exception:
+            continue
+
+    if accounts_with_graph == 0:
+        return None
+
+    # ── Count signals and edges across customer's accounts ──
+    now = datetime.utcnow()
+    signal_count = ContextNode.query.filter(
+        ContextNode.account_id.in_(account_ids),
+        ContextNode.node_type == 'SIGNAL',
+        db.or_(
+            ContextNode.expires_at.is_(None),
+            ContextNode.expires_at > now,
+        ),
+    ).count()
+
+    # Edge count: edges where either end belongs to these accounts
+    account_node_ids = db.session.query(ContextNode.node_id).filter(
+        ContextNode.account_id.in_(account_ids),
+    ).subquery()
+
+    edge_count = ContextEdge.query.filter(
+        db.or_(
+            ContextEdge.from_node_id.in_(account_node_ids),
+            ContextEdge.to_node_id.in_(account_node_ids),
+        ),
+    ).count()
+
+    # ── Top 5 OUTCOME nodes by revenue_impact ──
+    outcome_nodes = ContextNode.query.filter(
+        ContextNode.account_id.in_(account_ids),
+        ContextNode.node_type == 'OUTCOME',
+        ContextNode.revenue_impact.isnot(None),
+        db.or_(
+            ContextNode.expires_at.is_(None),
+            ContextNode.expires_at > now,
+        ),
+    ).order_by(
+        db.func.abs(ContextNode.revenue_impact).desc()
+    ).limit(5).all()
+
+    key_outcomes = []
+    for n in outcome_nodes:
+        account = Account.query.filter_by(account_id=n.account_id).first()
+        key_outcomes.append({
+            'title': n.title,
+            'account_id': n.account_id,
+            'account_name': account.account_name if account else str(n.account_id),
+            'revenue_impact': float(n.revenue_impact) if n.revenue_impact else 0,
+            'revenue_impact_type': n.revenue_impact_type or 'at_risk',
+            'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
+        })
+
+    # ── DECISION nodes (most recent 10) ──
+    decision_nodes = ContextNode.query.filter(
+        ContextNode.account_id.in_(account_ids),
+        ContextNode.node_type == 'DECISION',
+        db.or_(
+            ContextNode.expires_at.is_(None),
+            ContextNode.expires_at > now,
+        ),
+    ).order_by(ContextNode.occurred_at.desc()).limit(10).all()
+
+    key_decisions = []
+    for n in decision_nodes:
+        account = Account.query.filter_by(account_id=n.account_id).first()
+        key_decisions.append({
+            'title': n.title,
+            'account_id': n.account_id,
+            'account_name': account.account_name if account else str(n.account_id),
+            'revenue_impact': float(n.revenue_impact) if n.revenue_impact else 0,
+            'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
+            'node_subtype': n.node_subtype,
+        })
+
+    return {
+        'revenue_summary': {k: round(v, 2) for k, v in total_rev.items()},
+        'graph_signal_count': signal_count,
+        'graph_edge_count': edge_count,
+        'key_outcomes': key_outcomes,
+        'key_decisions': key_decisions,
+        'accounts_with_graph': accounts_with_graph,
+        'total_accounts': len(account_ids),
+    }
+
+
 def _generate_narrative(
     historical: OutcomeROIResult,
     forward: OutcomeROIResult,
@@ -652,3 +1011,239 @@ def _generate_narrative(
         )
 
     return " ".join(parts)
+
+
+# ============================================================
+# HISTORICAL TIMELINE — "What happened and why"
+# ============================================================
+
+def build_historical_timeline(
+    customer_id: int,
+    account_ids: List[int],
+    metric_actuals: Dict[str, Dict],
+    months: int = 6,
+) -> Optional[Dict]:
+    """
+    Build a month-by-month timeline correlating ROI metric movements
+    with context graph signals, decisions, and outcomes.
+
+    Returns None if context graph is disabled or no data exists.
+    """
+    try:
+        from feature_toggles import is_context_graph_enabled
+        if not is_context_graph_enabled(customer_id):
+            return None
+    except ImportError:
+        return None
+
+    from models import ContextNode, ContextEdge, Account, KPIScore
+    from extensions import db
+    from utils.context_graph import get_causal_chain
+    from power_of_1_model import get_metric_for_kpi_code
+    from dateutil.relativedelta import relativedelta
+
+    now = datetime.utcnow()
+    period_end = now.replace(day=1)  # First of current month
+    period_start = period_end - relativedelta(months=months)
+
+    # ── Build monthly bins ──
+    timeline = []
+    cumulative = {'protected': 0, 'expanded': 0, 'at_risk': 0, 'lost': 0}
+    all_outcome_nodes = []
+
+    for i in range(months):
+        month_start = period_start + relativedelta(months=i)
+        month_end = month_start + relativedelta(months=1)
+        month_key = month_start.strftime('%Y-%m')
+        month_label = month_start.strftime('%b %Y')
+
+        # Query context nodes for this month
+        month_nodes = ContextNode.query.filter(
+            ContextNode.account_id.in_(account_ids),
+            ContextNode.occurred_at >= month_start,
+            ContextNode.occurred_at < month_end,
+        ).all()
+
+        # Group by node_type
+        signals = []
+        decisions = []
+        outcomes = []
+        stakeholder_count = 0
+        month_rev = {'protected': 0, 'expanded': 0, 'at_risk': 0, 'lost': 0}
+
+        for n in month_nodes:
+            entry = {
+                'node_id': n.node_id,
+                'title': n.title,
+                'subtype': n.node_subtype,
+                'account_id': n.account_id,
+                'revenue_impact': float(n.revenue_impact) if n.revenue_impact else 0,
+                'revenue_impact_type': n.revenue_impact_type or 'at_risk',
+                'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
+            }
+
+            if n.node_type == 'SIGNAL':
+                signals.append(entry)
+            elif n.node_type == 'DECISION':
+                decisions.append(entry)
+            elif n.node_type == 'OUTCOME':
+                outcomes.append(entry)
+                all_outcome_nodes.append(n)
+            elif n.node_type == 'STAKEHOLDER':
+                stakeholder_count += 1
+
+            # Accumulate revenue by type
+            if n.revenue_impact:
+                impact = float(n.revenue_impact) * float(n.confidence or 1.0)
+                bucket = n.revenue_impact_type or 'at_risk'
+                if bucket == 'expansion':
+                    month_rev['expanded'] += impact
+                elif bucket == 'protected':
+                    month_rev['protected'] += impact
+                elif bucket == 'lost':
+                    month_rev['lost'] += impact
+                else:
+                    month_rev['at_risk'] += impact
+
+        # Update cumulative
+        for k in cumulative:
+            cumulative[k] += month_rev[k]
+
+        # Query KPI movements for this month
+        month_date = month_start.date()
+        kpi_movements = []
+        kpi_scores = KPIScore.query.filter(
+            KPIScore.account_id.in_(account_ids),
+            KPIScore.measurement_month == month_date,
+            KPIScore.kpi_score.isnot(None),
+        ).all()
+
+        # Group by kpi_code, compute average score across accounts
+        kpi_map = {}
+        for ks in kpi_scores:
+            code = ks.kpi_code
+            if code not in kpi_map:
+                kpi_map[code] = {'scores': [], 'values': []}
+            kpi_map[code]['scores'].append(float(ks.kpi_score))
+            if ks.kpi_value is not None:
+                kpi_map[code]['values'].append(float(ks.kpi_value))
+
+        for code, data in kpi_map.items():
+            avg_score = sum(data['scores']) / len(data['scores'])
+            metric_name = get_metric_for_kpi_code(code)
+            kpi_movements.append({
+                'kpi_code': code,
+                'metric': metric_name,
+                'avg_score': round(avg_score, 1),
+                'account_count': len(data['scores']),
+            })
+
+        # Sort signals by revenue impact (highest first)
+        signals.sort(key=lambda s: abs(s['revenue_impact']), reverse=True)
+
+        timeline.append({
+            'month': month_key,
+            'label': month_label,
+            'signals': signals[:10],  # Top 10 per month
+            'decisions': decisions,
+            'outcomes': outcomes,
+            'stakeholder_actions': stakeholder_count,
+            'kpi_movements': kpi_movements[:8],  # Top 8
+            'revenue_impact': {k: round(v, 2) for k, v in month_rev.items()},
+            'cumulative_impact': {k: round(v, 2) for k, v in cumulative.items()},
+            'signal_count': len(signals),
+            'decision_count': len(decisions),
+            'outcome_count': len(outcomes),
+        })
+
+    # ── Build causal highlights for top outcomes ──
+    causal_highlights = []
+    # Sort outcomes by revenue impact
+    all_outcome_nodes.sort(
+        key=lambda n: abs(float(n.revenue_impact or 0)),
+        reverse=True,
+    )
+
+    for outcome_node in all_outcome_nodes[:5]:
+        try:
+            chain_raw = get_causal_chain(
+                outcome_node.node_id,
+                direction='upstream',
+                max_depth=4,
+            )
+            chain_entries = []
+            # Add upstream cause nodes
+            for step in chain_raw:
+                node_data = step['node']
+                chain_entries.append({
+                    'type': node_data.get('node_type', 'UNKNOWN'),
+                    'title': node_data.get('title', ''),
+                    'month': node_data.get('occurred_at', '')[:7] if node_data.get('occurred_at') else '',
+                    'revenue_impact': node_data.get('revenue_impact', 0),
+                })
+
+            # Add the outcome itself at the end
+            chain_entries.append({
+                'type': 'OUTCOME',
+                'title': outcome_node.title,
+                'month': outcome_node.occurred_at.strftime('%Y-%m') if outcome_node.occurred_at else '',
+                'revenue_impact': float(outcome_node.revenue_impact) if outcome_node.revenue_impact else 0,
+            })
+
+            # Reverse so it reads signal → decision → outcome (chronological)
+            chain_entries.reverse()
+            # Re-reverse: upstream chain was already in upstream order,
+            # we want chronological: earliest first
+            # Actually: chain_raw is in traversal order (upstream),
+            # so reverse gives chronological
+            # The outcome was appended last, so after reverse it's first — swap:
+            # Let's sort by month instead
+            chain_entries.sort(key=lambda e: e.get('month', ''))
+
+            if chain_entries:
+                causal_highlights.append({
+                    'outcome': {
+                        'title': outcome_node.title,
+                        'revenue': float(outcome_node.revenue_impact) if outcome_node.revenue_impact else 0,
+                        'type': outcome_node.revenue_impact_type or 'at_risk',
+                        'account_id': outcome_node.account_id,
+                    },
+                    'chain': chain_entries,
+                })
+        except Exception:
+            continue
+
+    # ── Summary stats ──
+    total_signals = sum(m['signal_count'] for m in timeline)
+    total_decisions = sum(m['decision_count'] for m in timeline)
+    total_outcomes = sum(m['outcome_count'] for m in timeline)
+
+    # Find peak risk month
+    peak_risk_month = ''
+    peak_risk_amount = 0
+    for m in timeline:
+        risk = m['revenue_impact'].get('at_risk', 0)
+        if risk > peak_risk_amount:
+            peak_risk_amount = risk
+            peak_risk_month = m['month']
+
+    return {
+        'period': {
+            'start': period_start.strftime('%Y-%m-%d'),
+            'end': period_end.strftime('%Y-%m-%d'),
+            'months': months,
+        },
+        'timeline': timeline,
+        'causal_highlights': causal_highlights,
+        'summary': {
+            'total_signals': total_signals,
+            'total_decisions': total_decisions,
+            'total_outcomes': total_outcomes,
+            'total_revenue_protected': round(cumulative['protected'], 2),
+            'total_revenue_expanded': round(cumulative['expanded'], 2),
+            'total_revenue_at_risk': round(cumulative['at_risk'], 2),
+            'total_revenue_lost': round(cumulative['lost'], 2),
+            'peak_risk_month': peak_risk_month,
+            'peak_risk_amount': round(peak_risk_amount, 2),
+        },
+    }

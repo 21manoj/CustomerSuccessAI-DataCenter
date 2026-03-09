@@ -14,50 +14,50 @@ from sqlalchemy import func, distinct
 
 # KPI to Pillar mapping (from your existing 35 KPIs)
 KPI_TO_PILLAR_MAPPING = {
-    # AI Workload Performance
-    'DC2S_PERF_GPU_UTIL': 'AI',
-    'DC2S_PERF_CPU_UTIL': 'AI',
-    'DC2S_PERF_MEM_UTIL': 'AI',
-    'DC2S_PERF_THROUGHPUT': 'AI',
-    'DC2S_PERF_LATENCY': 'AI',
-    'DC2S_PERF_IOPS': 'AI',
-    'DC2S_PERF_NETWORK_UTIL': 'AI',
-    
-    # Customer Health
-    'DC2S_SUP_CUSTOMER_SATISFACTION': 'CH',
-    'DC2S_BIZ_FEATURE_ADOPTION': 'CH',
-    'DC2S_BIZ_TIME_TO_VALUE': 'CH',
-    'DC2S_SUP_TICKET_RESOLUTION_TIME': 'CH',
-    
-    # Deployment Velocity
-    'DC2S_SCALE_DEPLOYMENT_VELOCITY': 'DV',
-    'DC2S_SCALE_CLUSTER_EXPANSION': 'DV',
-    'DC2S_SCALE_WORKLOAD_GROWTH': 'DV',
-    'DC2S_SCALE_AUTO_SCALING_SCORE': 'DV',
-    'DC2S_SCALE_ELASTICITY_SCORE': 'DV',
-    
-    # Expansion & Growth
-    'DC2S_BIZ_ROI': 'EX',
-    'DC2S_BIZ_REVENUE_IMPACT': 'EX',
-    'DC2S_BIZ_STRATEGIC_ALIGNMENT': 'EX',
-    'DC2S_BIZ_COMPETITIVE_ADVANTAGE': 'EX',
-    'DC2S_BIZ_INNOVATION_SCORE': 'EX',
-    'DC2S_SCALE_CAPACITY_HEADROOM': 'EX',
-    
-    # Operational Stability
-    'DC2S_SUP_UPTIME_PCT': 'OS',
-    'DC2S_SUP_MTBF': 'OS',
-    'DC2S_SUP_MTTR': 'OS',
-    'DC2S_SUP_SLA_COMPLIANCE': 'OS',
-    'DC2S_COST_TOTAL_MONTHLY': 'OS',
-    'DC2S_COST_PER_WORKLOAD': 'OS',
-    'DC2S_COST_POWER_EFFICIENCY': 'OS',
-    'DC2S_COST_COOLING_EFFICIENCY': 'OS',
-    'DC2S_COST_OPTIMIZATION_SCORE': 'OS',
-    'DC2S_COST_CAPEX_UTILIZATION': 'OS',
-    'DC2S_COST_OPEX_RATIO': 'OS',
-    'DC2S_PERF_STORAGE_UTIL': 'OS',
-    'DC2S_SCALE_STORAGE_GROWTH': 'OS'
+    # P3 - AI Workload Performance
+    'DC2S_PERF_GPU_UTIL': 'P3',
+    'DC2S_PERF_CPU_UTIL': 'P3',
+    'DC2S_PERF_MEM_UTIL': 'P3',
+    'DC2S_PERF_THROUGHPUT': 'P3',
+    'DC2S_PERF_LATENCY': 'P3',
+    'DC2S_PERF_IOPS': 'P3',
+    'DC2S_PERF_NETWORK_UTIL': 'P3',
+
+    # P4 - Customer Health
+    'DC2S_SUP_CUSTOMER_SATISFACTION': 'P4',
+    'DC2S_BIZ_FEATURE_ADOPTION': 'P4',
+    'DC2S_BIZ_TIME_TO_VALUE': 'P4',
+    'DC2S_SUP_TICKET_RESOLUTION_TIME': 'P4',
+
+    # P1 - Delivery & Velocity
+    'DC2S_SCALE_DEPLOYMENT_VELOCITY': 'P1',
+    'DC2S_SCALE_CLUSTER_EXPANSION': 'P1',
+    'DC2S_SCALE_WORKLOAD_GROWTH': 'P1',
+    'DC2S_SCALE_AUTO_SCALING_SCORE': 'P1',
+    'DC2S_SCALE_ELASTICITY_SCORE': 'P1',
+
+    # P5 - Experience (Expansion & Growth)
+    'DC2S_BIZ_ROI': 'P5',
+    'DC2S_BIZ_REVENUE_IMPACT': 'P5',
+    'DC2S_BIZ_STRATEGIC_ALIGNMENT': 'P5',
+    'DC2S_BIZ_COMPETITIVE_ADVANTAGE': 'P5',
+    'DC2S_BIZ_INNOVATION_SCORE': 'P5',
+    'DC2S_SCALE_CAPACITY_HEADROOM': 'P5',
+
+    # P2 - Operational Stability
+    'DC2S_SUP_UPTIME_PCT': 'P2',
+    'DC2S_SUP_MTBF': 'P2',
+    'DC2S_SUP_MTTR': 'P2',
+    'DC2S_SUP_SLA_COMPLIANCE': 'P2',
+    'DC2S_COST_TOTAL_MONTHLY': 'P2',
+    'DC2S_COST_PER_WORKLOAD': 'P2',
+    'DC2S_COST_POWER_EFFICIENCY': 'P2',
+    'DC2S_COST_COOLING_EFFICIENCY': 'P2',
+    'DC2S_COST_OPTIMIZATION_SCORE': 'P2',
+    'DC2S_COST_CAPEX_UTILIZATION': 'P2',
+    'DC2S_COST_OPEX_RATIO': 'P2',
+    'DC2S_PERF_STORAGE_UTIL': 'P2',
+    'DC2S_SCALE_STORAGE_GROWTH': 'P2'
 }
 
 def initialize_customer9_config():
@@ -98,17 +98,17 @@ def initialize_customer9_config():
         print(f"   Found {len(kpi_codes)} unique KPIs")
         
         # Group KPIs by pillar
-        kpis_by_pillar = {'AI': [], 'CH': [], 'DV': [], 'EX': [], 'OS': []}
+        kpis_by_pillar = {'P1': [], 'P2': [], 'P3': [], 'P4': [], 'P5': []}
         unmapped_kpis = []
         
         for kpi_code in kpi_codes:
             # Try mapping first (for DC2S_PERF_* format)
             pillar = KPI_TO_PILLAR_MAPPING.get(kpi_code)
             
-            # If not found, try extracting from catalog format (AI-KPI1 -> AI)
+            # If not found, try extracting from catalog format (P3-KPI1 -> P3)
             if not pillar and '-' in kpi_code:
                 prefix = kpi_code.split('-')[0]
-                if prefix in ['AI', 'CH', 'DV', 'EX', 'OS']:
+                if prefix in ['P1', 'P2', 'P3', 'P4', 'P5']:
                     pillar = prefix
             
             if pillar and pillar in kpis_by_pillar:
@@ -129,11 +129,11 @@ def initialize_customer9_config():
         
         # Calculate weights
         pillar_weights = {
-            'AI': 0.25,
-            'CH': 0.20,
-            'DV': 0.15,
-            'EX': 0.20,
-            'OS': 0.20
+            'P3': 0.25,
+            'P4': 0.20,
+            'P1': 0.15,
+            'P5': 0.20,
+            'P2': 0.20
         }
         
         kpi_weights = {}
@@ -179,11 +179,11 @@ def initialize_customer9_config():
         print()
         print("Configuration Summary:")
         print(f"  • Total KPIs: {len(kpi_codes)}")
-        print(f"  • AI KPIs: {len(kpis_by_pillar['AI'])}")
-        print(f"  • CH KPIs: {len(kpis_by_pillar['CH'])}")
-        print(f"  • DV KPIs: {len(kpis_by_pillar['DV'])}")
-        print(f"  • EX KPIs: {len(kpis_by_pillar['EX'])}")
-        print(f"  • OS KPIs: {len(kpis_by_pillar['OS'])}")
+        print(f"  • P1 (Delivery & Velocity) KPIs: {len(kpis_by_pillar['P1'])}")
+        print(f"  • P2 (Operational Stability) KPIs: {len(kpis_by_pillar['P2'])}")
+        print(f"  • P3 (AI Workload Performance) KPIs: {len(kpis_by_pillar['P3'])}")
+        print(f"  • P4 (Customer Health) KPIs: {len(kpis_by_pillar['P4'])}")
+        print(f"  • P5 (Experience) KPIs: {len(kpis_by_pillar['P5'])}")
         print()
         print("Next steps:")
         print("  1. Test config API: curl http://localhost:5059/api/dc2s/config")

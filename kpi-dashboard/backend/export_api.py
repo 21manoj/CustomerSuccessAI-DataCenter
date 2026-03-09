@@ -1,5 +1,10 @@
 from flask import Blueprint, request, jsonify, send_file
 from auth_middleware import get_current_customer_id, get_current_user_id
+
+try:
+    from activity_logging import activity_logger
+except ImportError:
+    activity_logger = None
 from extensions import db
 from models import (
     KPI, KPIUpload, Account, Product, CustomerConfig, HealthTrend, 
@@ -119,6 +124,20 @@ def export_excel(upload_id):
         # Generate filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"KPI_Export_v{upload.version}_{timestamp}.xlsx"
+        
+        # Activity log: high-value export event (low volume)
+        if activity_logger:
+            try:
+                user_id = get_current_user_id()
+                activity_logger.log_export(
+                    customer_id=upload.customer_id,
+                    user_id=user_id if user_id is not None else 0,
+                    export_type="excel",
+                    filename=filename,
+                    status="success",
+                )
+            except Exception:
+                pass
         
         return send_file(
             excel_bytes,
@@ -742,6 +761,20 @@ def export_all_account_data():
         
         # Return file with proper headers for download
         logger.info(f"Excel file generated successfully: {filename}, size: {excel_bytes.tell()} bytes")
+        
+        # Activity log: high-value export event (low volume)
+        if activity_logger:
+            try:
+                user_id = get_current_user_id()
+                activity_logger.log_export(
+                    customer_id=customer_id,
+                    user_id=user_id if user_id is not None else 0,
+                    export_type="excel",
+                    filename=filename,
+                    status="success",
+                )
+            except Exception:
+                pass
         
         response = send_file(
             excel_bytes,

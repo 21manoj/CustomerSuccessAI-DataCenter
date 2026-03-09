@@ -19,6 +19,25 @@ import os
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
+
+# ============================================================
+# DB HELPER — Wizard B
+# ============================================================
+
+def _get_active_wizard_b_learning(customer_id):
+    """
+    Return the active WizardLearning row for this customer, or None.
+    Deferred import to avoid circular dependency.
+    """
+    try:
+        from models import WizardLearning
+        if customer_id is not None:
+            return WizardLearning.get_active(customer_id=int(customer_id))
+        return None
+    except Exception:
+        return None
+
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -115,24 +134,40 @@ def get_admin_summary():
         
         base_path = get_customer_data_path(customer_id)
         
-        # Get Wizard B summary
+        # Get Wizard B summary — DB first, then filesystem fallback
         wizard_b_summary = {
             "total_patterns": 0,
             "total_accounts": 0,
-            "last_analysis": None
+            "last_analysis": None,
+            "source": "none"
         }
-        
-        run_name, run_dir = get_latest_learnings_run(base_path)
-        if run_dir:
-            pattern_file = run_dir / 'pattern_profiles.json'
-            if pattern_file.exists():
-                with open(pattern_file, 'r') as f:
-                    patterns = json.load(f)
-                wizard_b_summary = {
-                    "total_patterns": len(patterns),
-                    "total_accounts": sum(p.get('n_accounts', 0) for p in patterns.values() if isinstance(p, dict)),
-                    "last_analysis": datetime.fromtimestamp(pattern_file.stat().st_mtime).isoformat()
-                }
+
+        learning = _get_active_wizard_b_learning(customer_id)
+        if learning and learning.learnings:
+            profiles = learning.learnings.get('pattern_profiles', {})
+            wizard_b_summary = {
+                "total_patterns": len(profiles),
+                "total_accounts": sum(
+                    p.get('n_accounts', 0)
+                    for p in profiles.values() if isinstance(p, dict)
+                ),
+                "last_analysis": learning.created_at.isoformat() if learning.created_at else None,
+                "source": "database"
+            }
+        else:
+            # Filesystem fallback
+            run_name, run_dir = get_latest_learnings_run(base_path)
+            if run_dir:
+                pattern_file = run_dir / 'pattern_profiles.json'
+                if pattern_file.exists():
+                    with open(pattern_file, 'r') as f:
+                        patterns = json.load(f)
+                    wizard_b_summary = {
+                        "total_patterns": len(patterns),
+                        "total_accounts": sum(p.get('n_accounts', 0) for p in patterns.values() if isinstance(p, dict)),
+                        "last_analysis": datetime.fromtimestamp(pattern_file.stat().st_mtime).isoformat(),
+                        "source": "filesystem"
+                    }
         
         bootstrap_accuracy = 0.70
         bootstrap_file = base_path / 'data' / 'bootstrap' / 'bootstrap_weights_config.json'
@@ -187,10 +222,21 @@ def get_wizard_b_patterns():
         customer_id = get_current_customer_id()
         if customer_id:
             customer_id = int(customer_id)
-        
+
+        # DB first
+        learning = _get_active_wizard_b_learning(customer_id)
+        if learning and learning.learnings:
+            profiles = learning.learnings.get('pattern_profiles', {})
+            return jsonify({
+                "patterns": profiles,
+                "run_id": learning.run_id,
+                "analyzed_at": learning.created_at.isoformat() if learning.created_at else None,
+                "source": "database"
+            })
+
+        # Filesystem fallback
         base_path = get_customer_data_path(customer_id)
         current_app.logger.info(f"[Wizard B patterns] customer_id={customer_id} base_path={base_path}")
-        # Prefer latest run that actually has Wizard B output (pattern_profiles.json)
         run_name, pattern_file = get_latest_pattern_file(base_path, 'pattern_profiles.json')
         current_app.logger.info(f"[Wizard B patterns] run_name={run_name} pattern_file={pattern_file}")
         if pattern_file and pattern_file.exists():
@@ -199,9 +245,9 @@ def get_wizard_b_patterns():
             return jsonify({
                 "patterns": patterns,
                 "run_id": run_name,
-                "analyzed_at": datetime.fromtimestamp(pattern_file.stat().st_mtime).isoformat()
+                "analyzed_at": datetime.fromtimestamp(pattern_file.stat().st_mtime).isoformat(),
+                "source": "filesystem"
             })
-        # Fallback: latest wizard run dir + candidate paths
         latest_run = get_latest_wizard_run(base_path)
         if not latest_run:
             return jsonify({
@@ -219,13 +265,14 @@ def get_wizard_b_patterns():
                 return jsonify({
                     "patterns": patterns,
                     "run_id": latest_run.name,
-                    "analyzed_at": datetime.fromtimestamp(candidate.stat().st_mtime).isoformat()
+                    "analyzed_at": datetime.fromtimestamp(candidate.stat().st_mtime).isoformat(),
+                    "source": "filesystem"
                 })
         return jsonify({
             "patterns": {},
             "message": "Pattern profiles not found. Run Wizard B pattern analysis first."
         })
-        
+
     except Exception as e:
         current_app.logger.error(f"Error loading patterns: {str(e)}")
         return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
@@ -241,10 +288,22 @@ def get_wizard_b_early_warnings():
         customer_id = get_current_customer_id()
         if customer_id:
             customer_id = int(customer_id)
-        
+
+        # DB first
+        learning = _get_active_wizard_b_learning(customer_id)
+        if learning:
+            # Prefer validation_rules, fall back to learnings blob
+            rules = learning.validation_rules
+            if rules is None and learning.learnings:
+                rules = learning.learnings.get('early_warning_rules', [])
+            if rules is not None:
+                return jsonify({
+                    "rules": rules,
+                    "source": "database"
+                })
+
+        # Filesystem fallback
         base_path = get_customer_data_path(customer_id)
-        latest_run = get_latest_wizard_run(base_path)
-        
         run_name, run_dir = get_latest_learnings_run(base_path)
         if not run_dir:
             return jsonify({"rules": [], "message": "No analysis found"})
@@ -277,15 +336,15 @@ def get_wizard_b_early_warnings():
                 ],
                 "source": "default"
             })
-        
+
         with open(rules_file, 'r') as f:
             rules = json.load(f)
-        
+
         return jsonify({
             "rules": rules,
-            "source": "learned"
+            "source": "filesystem"
         })
-        
+
     except Exception as e:
         current_app.logger.error(f"Error loading early warnings: {str(e)}")
         return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
@@ -301,25 +360,35 @@ def get_wizard_b_report():
         customer_id = get_current_customer_id()
         if customer_id:
             customer_id = int(customer_id)
-        
+
+        # DB first
+        learning = _get_active_wizard_b_learning(customer_id)
+        if learning and learning.analysis_report:
+            return jsonify({
+                "report": learning.analysis_report,
+                "run_id": learning.run_id,
+                "source": "database"
+            })
+
+        # Filesystem fallback
         base_path = get_customer_data_path(customer_id)
-        latest_run = get_latest_wizard_run(base_path)
-        
         run_name, run_dir = get_latest_learnings_run(base_path)
         if not run_dir:
             return jsonify({"report": "# No Analysis Report\n\nRun Wizard B to generate pattern analysis."})
         report_file = run_dir / 'ANALYSIS_REPORT.md'
         if not report_file.exists():
             return jsonify({"report": "# Analysis Report Not Found\n\nReport file missing from latest run."})
-        
+
         with open(report_file, 'r') as f:
             report = f.read()
-        
+
+        latest_run = get_latest_wizard_run(base_path)
         return jsonify({
             "report": report,
-            "run_id": latest_run.name
+            "run_id": latest_run.name if latest_run else run_name,
+            "source": "filesystem"
         })
-        
+
     except Exception as e:
         current_app.logger.error(f"Error loading report: {str(e)}")
         return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500

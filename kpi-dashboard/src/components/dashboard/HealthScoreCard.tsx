@@ -5,7 +5,7 @@ import TrendIndicator from '../shared/TrendIndicator';
 import { HealthScoreData } from '../../utils/healthScoreApi';
 
 export interface HealthScoreCardProps {
-  accountId: number;
+  accountId: number | string;
   accountName: string;
   healthScore: number;
   categoryScores: {

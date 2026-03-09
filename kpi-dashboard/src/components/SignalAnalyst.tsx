@@ -57,8 +57,8 @@ const SignalAnalyst: React.FC<SignalAnalystProps> = ({ accountId, accountName })
   };
 
   const getHealthScoreColor = (score: number): string => {
-    if (score >= 80) return '#10b981'; // Green
-    if (score >= 60) return '#f59e0b'; // Yellow
+    if (score >= 70) return '#10b981'; // Green
+    if (score >= 50) return '#f59e0b'; // Yellow
     return '#ef4444'; // Red
   };
 
@@ -222,8 +222,8 @@ const SignalAnalyst: React.FC<SignalAnalystProps> = ({ accountId, accountName })
                 <span className="metric-unit">/100</span>
               </div>
               <div className="metric-trend">
-                {(analysisResult.health_score || 0) >= 80 ? '✅ Healthy' : 
-                 (analysisResult.health_score || 0) >= 60 ? '⚠️ Monitor' : 
+                {(analysisResult.health_score || 0) >= 70 ? '✅ Healthy' :
+                 (analysisResult.health_score || 0) >= 50 ? '⚠️ Monitor' :
                  '🚨 Action Needed'}
               </div>
             </div>

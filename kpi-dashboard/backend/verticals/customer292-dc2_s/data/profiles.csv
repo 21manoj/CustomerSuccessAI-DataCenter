@@ -1,0 +1,11 @@
+account_id,customer_id,account_name,assigned_csm,csm_manager,executive_sponsor,arr,mrr,primary_champion_name,primary_champion_title,primary_champion_email,primary_champion_engagement_score,last_updated
+292001,292,Tacme-Production,David Kim,Sam Rivera,Pat Richardson,126165485,10513790.0,Alex Rivera,Head of Infrastructure,alex.rivera@tacme.com,66.1,2026-03-07 08:36:33
+292002,292,Tacme-Staging,Sarah Chen,Jordan Blake,Chris Martinez,72316927,6026411.0,Jordan Blake,VP Engineering,jordan.blake@tacme.com,66.8,2026-03-07 08:36:33
+292003,292,Tacme-Development,David Kim,Sam Rivera,Chris Martinez,60493482,5041124.0,Taylor Morgan,VP Engineering,taylor.morgan@tacme.com,55.1,2026-03-07 08:36:33
+292004,292,Tacme-Analytics,Lisa Park,Jordan Blake,Chris Martinez,55553933,4629494.0,Casey Wu,Director of IT Operations,casey.wu@tacme.com,72.7,2026-03-07 08:36:33
+292005,292,Tacme-AI-Training,Mike Johnson,Jordan Blake,Pat Richardson,55165449,4597121.0,Riley Anderson,CTO,riley.anderson@tacme.com,82.5,2026-03-07 08:36:33
+292006,292,Tacme-Edge-Compute,Emma Wilson,Alex Chen,Pat Richardson,29224299,2435358.0,Quinn Harris,Director of AI,quinn.harris@tacme.com,93.3,2026-03-07 08:36:33
+292007,292,Tacme-DR-Backup,Emma Wilson,Sam Rivera,Chris Martinez,28458087,2371507.0,Avery Scott,VP Data Science,avery.scott@tacme.com,61.4,2026-03-07 08:36:33
+292008,292,Tacme-Testing,David Kim,Jordan Blake,Chris Martinez,24565402,2047117.0,Morgan Lee,VP Engineering,morgan.lee@tacme.com,58.2,2026-03-07 08:36:33
+292009,292,Tacme-Research,Mike Johnson,Jordan Blake,Pat Richardson,24071578,2005965.0,Jamie Torres,VP Data Science,jamie.torres@tacme.com,93.1,2026-03-07 08:36:33
+292010,292,Tacme-Integration,David Kim,Jordan Blake,Pat Richardson,23985358,1998780.0,Drew Campbell,Director of IT Operations,drew.campbell@tacme.com,79.7,2026-03-07 08:36:33

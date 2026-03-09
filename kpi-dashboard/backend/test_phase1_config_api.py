@@ -61,7 +61,7 @@ def test_add_custom_kpi(session):
         "kpi_code": "CUSTOM-GPU-TEMP",
         "user_email": "admin@customer9.com",
         "kpi_definition": {
-            "pillar": "AI",
+            "pillar": "P3",
             "name": "GPU Temperature",
             "description": "Average GPU temperature across cluster",
             "unit": "°C",
@@ -102,11 +102,11 @@ def test_update_pillar_weights(session):
     new_weights = {
         "user_email": "admin@customer9.com",
         "pillar_weights": {
-            "AI": 0.30,
-            "CH": 0.20,
-            "DV": 0.15,
-            "EX": 0.20,
-            "OS": 0.15
+            "P3": 0.30,
+            "P4": 0.20,
+            "P1": 0.15,
+            "P5": 0.20,
+            "P2": 0.15
         }
     }
     

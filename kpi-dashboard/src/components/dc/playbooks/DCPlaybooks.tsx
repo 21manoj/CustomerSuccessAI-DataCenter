@@ -57,7 +57,7 @@ interface Execution {
   execution_id: string;
   playbook_id: string;
   playbook_name: string;
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   status: string;
   started_at: string;
@@ -73,7 +73,7 @@ interface ExecutionSummary {
   execution_id: string;
   playbook_id: string;
   playbook_name: string;
-  account_id: number;
+  account_id: number | string;
   account_name: string;
   status: string;
   started_at: string;
@@ -138,7 +138,7 @@ interface Report {
 }
 
 interface AccountOption {
-  account_id: number;
+  account_id: number | string;
   account_name: string;
 }
 
@@ -168,7 +168,7 @@ const DCPlaybooks: React.FC = () => {
   // Execution mode
   const [activeExecution, setActiveExecution] = useState<Execution | null>(null);
   const [startingPlaybook, setStartingPlaybook] = useState<PlaybookDef | null>(null);
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | string | null>(null);
 
   // Reports
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);

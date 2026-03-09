@@ -116,6 +116,41 @@
 - **BI Tools**: Tableau, Power BI, Looker connectors
 - **Database Connectors**: PostgreSQL, MySQL, BigQuery
 
+#### **🤖 MCP-Based Onboarding & Data Ingestion (TBD)**
+> Claude as MCP client connecting to customer's source system MCP servers (SFDC, Jira, HubSpot) and writing to CS Pulse via MCP write tools. System prompt at `backend/mcp_server/onboarding_system_prompt.md`.
+
+- **[TBD] CS Pulse MCP Write Tools**: Add ~8 write tools to the MCP server: `create_customer`, `ingest_accounts`, `ingest_kpis`, `ingest_signals`, `ingest_contacts`, `process_data`, `get_onboarding_status`, `get_csv_schema`
+- **[TBD] Incremental Sync Tools**: Add `get_last_sync_timestamp` and `recalculate_health` MCP tools for scheduled refresh per KPI measurement frequency (realtime/daily/weekly/monthly/quarterly)
+- **[TBD] Three Incremental Update Patterns**: (1) Scheduled MCP pull — Claude-driven cron queries source MCP servers, (2) Webhook push — n8n/Zapier triggers on SFDC/HubSpot events, (3) Hybrid — webhooks for real-time signals + scheduled pull for batch KPIs
+- **[TBD] Wire System Prompt**: Integrate `onboarding_system_prompt.md` into the MCP server as a resource or system prompt for Claude clients (covers 6-phase onboarding: Discover → Gather → Map → Validate → Load → Report)
+- **[TBD] Test MCP Onboarding E2E**: Validate full flow using mock SFDC MCP server → Claude orchestrator → CS Pulse MCP write tools → process-data pipeline
+- **[TBD] ROI Derivation Transparency**: ROI is derived inside CS Pulse (Power of 1 Engine), not ingested from source systems. MCP read tools (`get_roi_summary`, `get_revenue_at_risk`) expose computed results; no external ROI MCP server needed
+
+#### **📋 Contract Lifecycle & Account Plans (Parked — Post-Demo)**
+> **Status**: Parked — de-risked for post-demo implementation
+> **Priority**: High (Phase 2)
+> **Prerequisite**: Current demo flow (Scenarios 1–9) must be validated first
+
+**Context**: The platform currently has `contract_start`, `contract_end`, `renewal_date` as optional CSV columns and `days_to_renewal`/`lifecycle_stage` in `profile_metadata` JSON, but they are inert data — nothing in the score engine, story arcs, or ROI pipeline actually uses them for decision-making. Adding contract lifecycle as a first-class entity would make every existing feature smarter.
+
+**Phase 1 — Contract Lifecycle Model** (high ROI, moderate effort):
+- **[TBD] Dedicated `Contract` DB table**: `contract_id`, `account_id`, `start_date`, `end_date`, `renewal_date`, `arr_value`, `auto_renew`, `sla_tier` — promote from optional CSV/JSON metadata to first-class ORM entity
+- **[TBD] `SLATarget` table**: `contract_id`, `kpi_code`, `threshold`, `penalty_amount` — SLA thresholds distinct from internal KPI targets; breaching an SLA is a contractual event, not just a health dip
+- **[TBD] `CONTRACT_RISK` context graph node type**: When KPI drops below SLA threshold → generate CONTRACT_RISK signal node with `revenue_impact = penalty_clause_value`, distinct from generic health signals
+- **[TBD] Contract-aware story arc selection**: Wire `days_to_renewal` into arc trigger logic — arcs should be *selected* by contract phase (e.g., churn arc fires near renewal), not randomly assigned
+- **[TBD] Renewal-aware ROI narrative**: Scenario 9 OUTCOME nodes contextualized with renewal proximity — "$89K revenue protected, 45 days before $2.4M renewal" instead of just "$89K protected"
+- **[TBD] Contract CSV in onboarding**: Add `contracts.csv` to `csv_schemas.json` (required: `account_id`, `start_date`, `end_date`, `arr_value`; optional: `renewal_date`, `sla_tier`, `auto_renew`, `terms`)
+
+**Phase 2 — Account/Success Plans** (transformative, higher effort):
+- **[TBD] `AccountPlan` model**: Milestones, engagement cadence (QBR/EBR schedule), success criteria per deployment phase
+- **[TBD] Plan-aware playbook prioritization**: CSM daily actions scored by plan milestone proximity — actions near a milestone deadline rank higher
+- **[TBD] Outcome tracking against plan commitments**: Planned vs. actual milestone achievement, surfaced in context graph OUTCOME nodes
+- **[TBD] QBR/EBR auto-generation**: Account review content generated from plan progress + context graph causal chains + ROI data
+
+**Why Parked**: Current demo flow (KPI math + causal narrative + ROI) is complete and defensible. Adding contract data is a force multiplier but introduces new DB models, migration risk, and CSV schema changes. Ship and validate first, then layer on contract lifecycle as the temporal spine.
+
+---
+
 #### **⚡ Performance & Scalability**
 - **Database Migration**: SQLite → PostgreSQL → Cloud database
 - **Caching Layer**: Redis for session and query caching

@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Search, 
-  MessageSquare, 
-  TrendingUp, 
-  Users, 
-  AlertTriangle, 
-  BarChart3, 
-  Target, 
+import {
+  MessageSquare,
+  TrendingUp,
+  Users,
+  AlertTriangle,
+  BarChart3,
+  Target,
   Zap,
   Brain,
   Lightbulb,
   ChevronRight,
-  Copy,
   RefreshCw,
   Loader2,
   CheckCircle,
@@ -20,6 +18,15 @@ import {
   Activity,
   Calendar,
   LineChart,
+  Server,
+  Cpu,
+  Thermometer,
+  Shield,
+  Gauge,
+  Network,
+  HardDrive,
+  GitBranch,
+  DollarSign,
 } from 'lucide-react';
 import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
@@ -99,7 +106,7 @@ const RAGAnalysis: React.FC = () => {
   const [customQuery, setCustomQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<QueryTemplate | null>(null);
   const [isKnowledgeBaseBuilt, setIsKnowledgeBaseBuilt] = useState(false);
-  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'qdrant-cloud' | 'historical' | 'temporal'>('qdrant-cloud');
+  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'qdrant-cloud' | 'historical' | 'temporal'>('working');
   const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
   const statusCheckRef = useRef<boolean>(false);
   
@@ -154,177 +161,234 @@ const RAGAnalysis: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.customer_id]);
 
-  // Pre-defined query templates
+  // Pre-defined query templates — Data Center focused
   const queryTemplates: QueryTemplate[] = [
-    // Revenue Analysis
+    // Infrastructure & Capacity
     {
-      id: 'revenue-top-accounts',
-      category: 'Revenue Analysis',
-      title: 'Top Revenue Accounts',
-      description: 'Identify accounts with the highest revenue',
-      query: 'Which accounts have the highest revenue?',
-      icon: TrendingUp,
-      color: 'bg-green-500',
-      query_type: 'revenue_analysis',
+      id: 'gpu-utilization',
+      category: 'Infrastructure & Capacity',
+      title: 'GPU Utilization Analysis',
+      description: 'GPU utilization rates across accounts, identify over/under-utilized',
+      query: 'What is the GPU utilization across all accounts? Which accounts have underutilized or overloaded GPUs?',
+      icon: Cpu,
+      color: 'bg-emerald-500',
+      query_type: 'kpi_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'revenue-total',
-      category: 'Revenue Analysis',
-      title: 'Total Revenue Overview',
-      description: 'Get total revenue across all accounts',
-      query: 'What is the total revenue across all accounts?',
-      icon: BarChart3,
-      color: 'bg-green-500',
-      query_type: 'revenue_analysis',
+      id: 'rack-capacity',
+      category: 'Infrastructure & Capacity',
+      title: 'Rack Capacity & Density',
+      description: 'Rack utilization and density metrics across accounts',
+      query: 'Show me rack capacity utilization and density metrics across accounts',
+      icon: Server,
+      color: 'bg-emerald-500',
+      query_type: 'kpi_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'revenue-growth',
-      category: 'Revenue Analysis',
-      title: 'Revenue Growth Analysis',
-      description: 'Analyze revenue growth patterns and trends',
-      query: 'Show me revenue growth analysis and trends',
-      icon: TrendingUp,
-      color: 'bg-green-500',
-      query_type: 'revenue_analysis',
+      id: 'power-cooling',
+      category: 'Infrastructure & Capacity',
+      title: 'Power & Cooling Efficiency',
+      description: 'PUE, cooling efficiency, and energy cost analysis',
+      query: 'Analyze power usage effectiveness (PUE) and cooling efficiency across data center accounts',
+      icon: Thermometer,
+      color: 'bg-emerald-500',
+      query_type: 'kpi_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'revenue-industry',
-      category: 'Revenue Analysis',
-      title: 'Industry Revenue Breakdown',
-      description: 'Compare revenue performance by industry',
-      query: 'How does revenue vary by industry?',
-      icon: BarChart3,
-      color: 'bg-green-500',
-      query_type: 'revenue_analysis',
+      id: 'infra-health',
+      category: 'Infrastructure & Capacity',
+      title: 'Infrastructure Health Overview',
+      description: 'Overall infrastructure health scores and alerts',
+      query: 'Give me an overview of infrastructure health scores and which accounts need immediate attention',
+      icon: Server,
+      color: 'bg-emerald-500',
+      query_type: 'account_analysis',
       collection: 'quantitative'
     },
 
-    // Account Health & Performance
+    // AI Workload Performance
+    {
+      id: 'training-completion',
+      category: 'AI Workload Performance',
+      title: 'Training Completion Rate',
+      description: 'AI training job completion rates and failure analysis',
+      query: 'What are the AI training completion rates? Which accounts have the most failed or delayed training jobs?',
+      icon: Brain,
+      color: 'bg-violet-500',
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'inference-latency',
+      category: 'AI Workload Performance',
+      title: 'Inference Latency Analysis',
+      description: 'Inference latency metrics and SLA compliance',
+      query: 'Analyze inference latency metrics across accounts and identify any SLA violations',
+      icon: Gauge,
+      color: 'bg-violet-500',
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'workload-diversity',
+      category: 'AI Workload Performance',
+      title: 'Workload Diversity & Mix',
+      description: 'Workload diversity index and compute type distribution',
+      query: 'Show me the workload diversity index and compute mix (training vs inference vs HPC) across accounts',
+      icon: HardDrive,
+      color: 'bg-violet-500',
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'model-throughput',
+      category: 'AI Workload Performance',
+      title: 'Model Throughput Trends',
+      description: 'Model throughput and scaling velocity',
+      query: 'What are the model throughput trends and which accounts are scaling their AI workloads fastest?',
+      icon: TrendingUp,
+      color: 'bg-violet-500',
+      query_type: 'trend_analysis',
+      collection: 'historical'
+    },
+
+    // Account Health & Risk
     {
       id: 'account-health',
-      category: 'Account Health',
+      category: 'Account Health & Risk',
       title: 'Account Health Overview',
-      description: 'Get comprehensive account health analysis',
-      query: 'Show me account health scores and performance',
-      icon: Users,
+      description: 'Health scores — critical, at-risk, and healthy accounts',
+      query: 'Show me account health scores and identify which accounts are critical (below 50), at-risk (50-69), or healthy (70+)',
+      icon: Activity,
       color: 'bg-blue-500',
       query_type: 'account_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'account-risk',
-      category: 'Account Health',
-      title: 'At-Risk Accounts',
-      description: 'Identify accounts that might be at risk of churn',
-      query: 'Which accounts are at risk of churn?',
+      id: 'churn-risk',
+      category: 'Account Health & Risk',
+      title: 'Churn Risk Assessment',
+      description: 'Accounts with highest churn probability and key risk signals',
+      query: 'Which accounts are at highest risk of churn? What are the key risk signals and revenue at risk?',
       icon: AlertTriangle,
       color: 'bg-red-500',
       query_type: 'account_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'account-performance',
-      category: 'Account Health',
+      id: 'account-ranking',
+      category: 'Account Health & Risk',
       title: 'Account Performance Ranking',
-      description: 'Rank accounts by overall performance',
-      query: 'Which accounts are performing best?',
+      description: 'Rank accounts by health score, highlight biggest movers',
+      query: 'Rank all accounts by overall health score and highlight the biggest improvers and decliners',
       icon: Target,
       color: 'bg-blue-500',
       query_type: 'account_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'account-engagement',
-      category: 'Account Health',
-      title: 'Account Engagement Analysis',
-      description: 'Analyze account engagement levels',
-      query: 'Show me account engagement analysis',
+      id: 'engagement-signals',
+      category: 'Account Health & Risk',
+      title: 'Customer Engagement Signals',
+      description: 'Support tickets, executive alignment, NPS, and engagement',
+      query: 'Analyze customer engagement signals including support ticket trends, executive alignment, and NPS scores',
       icon: Users,
       color: 'bg-blue-500',
       query_type: 'account_analysis',
       collection: 'quantitative'
     },
 
-    // KPI Performance
+    // Revenue & Expansion Intelligence
     {
-      id: 'kpi-top-performing',
-      category: 'KPI Performance',
-      title: 'Top Performing KPIs',
-      description: 'Identify the best performing KPIs',
-      query: 'What are the top performing KPIs?',
-      icon: Target,
-      color: 'bg-purple-500',
+      id: 'revenue-at-risk',
+      category: 'Revenue & Expansion',
+      title: 'Revenue at Risk',
+      description: 'Total ARR at risk from churn and contraction signals',
+      query: 'What is the total revenue at risk? Which accounts have the highest churn probability and ARR exposure?',
+      icon: DollarSign,
+      color: 'bg-amber-500',
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'expansion-opportunities',
+      category: 'Revenue & Expansion',
+      title: 'Expansion Opportunities',
+      description: 'Growth signals from capacity utilization and workload demand',
+      query: 'Identify expansion opportunities based on GPU utilization trends, capacity headroom, and workload growth patterns',
+      icon: Zap,
+      color: 'bg-amber-500',
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'context-graph-signals',
+      category: 'Revenue & Expansion',
+      title: 'Context Graph Signals',
+      description: 'Revenue decisions and outcomes from context graph data',
+      query: 'What revenue decisions and outcomes have been captured? Show me context graph signals including decisions, outcomes, and their revenue impact',
+      icon: GitBranch,
+      color: 'bg-amber-500',
+      query_type: 'revenue_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'stakeholder-analysis',
+      category: 'Revenue & Expansion',
+      title: 'Stakeholder Influence Map',
+      description: 'Key stakeholders, roles, influence, and sentiment',
+      query: 'Show me key stakeholders across accounts — their roles (champion, detractor, exec sponsor), influence scores, and sentiment trends',
+      icon: Users,
+      color: 'bg-amber-500',
+      query_type: 'account_analysis',
+      collection: 'quantitative'
+    },
+
+    // Operational Excellence
+    {
+      id: 'sla-compliance',
+      category: 'Operational Excellence',
+      title: 'SLA Compliance Analysis',
+      description: 'SLA adherence rates and violation patterns',
+      query: 'Analyze SLA compliance rates across accounts and identify systemic SLA violations or patterns',
+      icon: Shield,
+      color: 'bg-cyan-500',
       query_type: 'kpi_analysis',
       collection: 'quantitative'
     },
     {
-      id: 'kpi-customer-satisfaction',
-      category: 'KPI Performance',
-      title: 'Customer Satisfaction Analysis',
-      description: 'Analyze customer satisfaction scores',
-      query: 'Show me customer satisfaction analysis',
+      id: 'uptime-availability',
+      category: 'Operational Excellence',
+      title: 'Uptime & Availability',
+      description: 'Uptime metrics, incidents, and availability trends',
+      query: 'What are the uptime and availability metrics? Which accounts have had the most incidents or downtime?',
+      icon: Network,
+      color: 'bg-cyan-500',
+      query_type: 'kpi_analysis',
+      collection: 'quantitative'
+    },
+    {
+      id: 'support-tickets',
+      category: 'Operational Excellence',
+      title: 'Support Ticket Trends',
+      description: 'Ticket volume, resolution time, and escalation patterns',
+      query: 'Show me support ticket volume trends, average resolution time, and escalation patterns across accounts',
       icon: MessageSquare,
-      color: 'bg-purple-500',
-      query_type: 'kpi_analysis',
-      collection: 'quantitative'
-    },
-    {
-      id: 'kpi-categories',
-      category: 'KPI Performance',
-      title: 'KPI Category Performance',
-      description: 'Compare performance across KPI categories',
-      query: 'How are different KPI categories performing?',
-      icon: BarChart3,
-      color: 'bg-purple-500',
-      query_type: 'kpi_analysis',
-      collection: 'quantitative'
-    },
-    {
-      id: 'kpi-trends',
-      category: 'KPI Performance',
-      title: 'KPI Trends & Patterns',
-      description: 'Identify trends and patterns in KPI data',
-      query: 'What are the key trends in our KPI performance?',
-      icon: TrendingUp,
-      color: 'bg-purple-500',
+      color: 'bg-cyan-500',
       query_type: 'kpi_analysis',
       collection: 'quantitative'
     },
 
-    // Industry & Regional Analysis
+    // Historical Trends & Predictions
     {
-      id: 'industry-analysis',
-      category: 'Industry Analysis',
-      title: 'Industry Performance',
-      description: 'Compare performance across industries',
-      query: 'How do we perform across different industries?',
-      icon: BarChart3,
-      color: 'bg-orange-500',
-      query_type: 'general',
-      collection: 'quantitative'
-    },
-    {
-      id: 'regional-analysis',
-      category: 'Regional Analysis',
-      title: 'Regional Performance',
-      description: 'Analyze performance by geographic region',
-      query: 'Show me regional performance analysis',
-      icon: BarChart3,
-      color: 'bg-orange-500',
-      query_type: 'general',
-      collection: 'quantitative'
-    },
-
-    // Historical Trend Analysis
-    {
-      id: 'historical-trends',
-      category: 'Historical Analysis',
-      title: 'Overall Trend Analysis',
-      description: 'Analyze trends across all KPIs and accounts over time',
-      query: 'Show me trends across all KPIs and accounts over time',
+      id: 'health-evolution',
+      category: 'Historical Trends',
+      title: 'Health Score Evolution',
+      description: 'Health score trajectory over the last 6 months',
+      query: 'How have account health scores evolved over the last 6 months? Show improving and declining trends',
       icon: LineChart,
       color: 'bg-indigo-500',
       query_type: 'trend_analysis',
@@ -332,117 +396,47 @@ const RAGAnalysis: React.FC = () => {
     },
     {
       id: 'kpi-trends-historical',
-      category: 'Historical Analysis',
-      title: 'KPI Trend Analysis',
-      description: 'Analyze historical trends for specific KPIs',
-      query: 'Show me historical trends in Time to First Value over time',
+      category: 'Historical Trends',
+      title: 'Infrastructure KPI Trends',
+      description: 'Historical trends for key infrastructure KPIs',
+      query: 'Show me historical trends for key infrastructure KPIs — GPU utilization, PUE, uptime, and training completion rate',
       icon: TrendingUp,
       color: 'bg-indigo-500',
       query_type: 'trend_analysis',
       collection: 'historical'
     },
     {
-      id: 'account-trends-historical',
-      category: 'Historical Analysis',
-      title: 'Account Performance Trends',
-      description: 'Track account performance changes over time',
-      query: 'Show me how account performance has changed over time',
-      icon: Users,
+      id: 'capacity-forecast',
+      category: 'Historical Trends',
+      title: 'Capacity Planning Forecast',
+      description: 'Predict capacity needs based on utilization trends',
+      query: 'Based on historical utilization trends, which accounts will need capacity upgrades in the next quarter?',
+      icon: BarChart3,
       color: 'bg-indigo-500',
       query_type: 'trend_analysis',
       collection: 'historical'
     },
     {
-      id: 'health-evolution',
-      category: 'Historical Analysis',
-      title: 'Health Score Evolution',
-      description: 'Track health score changes over time',
-      query: 'How have health scores evolved over time?',
-      icon: Activity,
-      color: 'bg-indigo-500',
-      query_type: 'trend_analysis',
-      collection: 'historical'
-    },
-    {
-      id: 'temporal-patterns',
-      category: 'Historical Analysis',
-      title: 'Temporal Patterns',
-      description: 'Identify seasonal and cyclical patterns',
-      query: 'What temporal patterns and seasonality do you see in the data?',
-      icon: Calendar,
-      color: 'bg-indigo-500',
-      query_type: 'temporal_analysis',
-      collection: 'historical'
-    },
-    {
-      id: 'predictive-insights',
-      category: 'Historical Analysis',
-      title: 'Predictive Insights',
-      description: 'Get predictions based on historical data',
-      query: 'What predictions can you make based on historical trends?',
+      id: 'predictive-risk',
+      category: 'Historical Trends',
+      title: 'Predictive Risk Insights',
+      description: 'Churn and health predictions from historical patterns',
+      query: 'What predictions can you make about churn risk and health trajectory based on historical trends?',
       icon: Clock,
       color: 'bg-indigo-500',
       query_type: 'trend_analysis',
       collection: 'historical'
     },
-
-    // Monthly Revenue Analysis
     {
-      id: 'monthly-revenue',
-      category: 'Monthly Revenue Analysis',
-      title: 'Monthly Revenue Breakdown',
-      description: 'Get detailed monthly revenue analysis with account breakdowns',
-      query: 'Which accounts have the highest revenue across last 4 months? please provide month details as well?',
+      id: 'seasonal-patterns',
+      category: 'Historical Trends',
+      title: 'Seasonal Workload Patterns',
+      description: 'Cyclical patterns in workload demand and infrastructure',
+      query: 'What temporal patterns and seasonality do you see in workload demand, GPU utilization, and infrastructure metrics?',
       icon: Calendar,
-      color: 'bg-purple-500',
-      query_type: 'revenue_analysis',
-      collection: 'quantitative'  // Current state analysis, not historical trends
-    },
-    {
-      id: 'revenue-trends',
-      category: 'Monthly Revenue Analysis',
-      title: 'Revenue Trends & Patterns',
-      description: 'Analyze revenue growth patterns and identify trends',
-      query: 'Analyze revenue trends and patterns over the last 6 months',
-      icon: TrendingUp,
-      color: 'bg-purple-500',
-      query_type: 'trend_analysis',
-      collection: 'historical'  // Focus on trends over time
-    },
-    {
-      id: 'top-accounts-monthly',
-      category: 'Monthly Revenue Analysis',
-      title: 'Top Accounts by Month',
-      description: 'See which accounts performed best each month',
-      query: 'Which accounts performed best each month? Show monthly rankings',
-      icon: BarChart3,
-      color: 'bg-purple-500',
-      query_type: 'account_analysis',
-      collection: 'historical'  // Monthly rankings = temporal analysis
-    },
-
-    // Strategic Insights
-    {
-      id: 'strategic-insights',
-      category: 'Strategic Insights',
-      title: 'Strategic Recommendations',
-      description: 'Get AI-powered strategic recommendations',
-      query: 'What strategic recommendations do you have for improving our business?',
-      icon: Lightbulb,
-      color: 'bg-yellow-500',
-      query_type: 'general',
-      collection: 'quantitative'  // Based on quantitative data analysis
-    },
-    {
-      id: 'growth-opportunities',
-      category: 'Strategic Insights',
-      title: 'Growth Opportunities',
-      description: 'Identify potential growth opportunities',
-      query: 'What growth opportunities do you see in our data?',
-      icon: Zap,
-      color: 'bg-yellow-500',
-      query_type: 'general',
-      collection: 'quantitative'  // Based on quantitative data analysis
+      color: 'bg-indigo-500',
+      query_type: 'temporal_analysis',
+      collection: 'historical'
     }
   ];
 
@@ -469,6 +463,8 @@ const RAGAnalysis: React.FC = () => {
         endpoint = '/api/rag-temporal/status';
       } else if (vectorDb === 'qdrant' || vectorDb === 'qdrant-cloud') {
         endpoint = '/api/rag-qdrant/status';
+      } else if (vectorDb === 'working') {
+        endpoint = '/api/direct-rag/status';
       } else {
         endpoint = '/api/rag-openai/status';
       }
@@ -734,7 +730,7 @@ const RAGAnalysis: React.FC = () => {
             AI Insights
           </h2>
           <p className="text-gray-600 mt-1">
-            Ask intelligent questions about your KPI and account data, including historical trends and temporal analysis
+            Ask questions about infrastructure health, workload performance, revenue intelligence, and account risk
           </p>
         </div>
         
@@ -885,7 +881,7 @@ const RAGAnalysis: React.FC = () => {
                 <div className="text-center py-12 text-gray-400">
                   <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-20" />
                   <p className="text-lg">Start a conversation</p>
-                  <p className="text-sm mt-2">Ask questions about your accounts, KPIs, or playbooks</p>
+                  <p className="text-sm mt-2">Ask about infrastructure health, GPU utilization, churn risk, or revenue intelligence</p>
                 </div>
               )}
               
@@ -918,16 +914,16 @@ const RAGAnalysis: React.FC = () => {
                         <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-gray-200">
                           <span className="text-xs text-gray-500">Sources:</span>
                           {message.response.sources.local_database && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">📊 Database</span>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">📊 KPI Database</span>
                           )}
                           {message.response.sources.salesforce && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">☁️ Salesforce</span>
+                            <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-md">🖥️ DCIM</span>
                           )}
                           {message.response.sources.servicenow && (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-md">🎫 ServiceNow</span>
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-md">📡 Monitoring</span>
                           )}
                           {message.response.sources.surveys && (
-                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-md">📋 Surveys</span>
+                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-md">🔗 Context Graph</span>
                           )}
                         </div>
                       )}

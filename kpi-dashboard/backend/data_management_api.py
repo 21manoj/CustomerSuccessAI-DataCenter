@@ -165,89 +165,56 @@ def trigger_wizard_a():
 @data_management_api.route('/api/data/trigger-wizard-b', methods=['POST'])
 def trigger_wizard_b():
     """
-    Trigger Wizard B (Pattern Analysis) to analyze journey patterns
-    
-    This endpoint runs the wizard_b_pattern_analyzer.py script for the current customer
-    using the latest Wizard A output (test_run directory).
+    Trigger Wizard B (Pattern Analysis) to analyze journey patterns.
+
+    Reads journey data from the JourneyData DB table (populated by Wizard A /
+    process-data step 4.5) and writes results to WizardRun + WizardLearning
+    tables.  No subprocess, no filesystem.
     """
     try:
         customer_id = get_current_customer_id()
-        
-        # Determine customer directory
-        backend_dir = Path(__file__).parent
-        customer_dir = backend_dir / "verticals" / f"customer{customer_id}-dc2_s"
-        
-        if not customer_dir.exists():
-            return jsonify({
-                'status': 'error',
-                'message': f'Customer directory not found: {customer_dir}'
-            }), 404
-        
-        # Find Wizard B script
-        wizard_b_script = customer_dir / "journey" / "wizard_b" / "wizard_b_pattern_analyzer.py"
-        
-        if not wizard_b_script.exists():
-            return jsonify({
-                'status': 'error',
-                'message': f'Wizard B script not found: {wizard_b_script}'
-            }), 404
-        
-        # Find latest Wizard A test_run directory
-        wizard_a_dir = customer_dir / "journey" / "wizard_a"
-        if not wizard_a_dir.exists():
-            return jsonify({
-                'status': 'error',
-                'message': 'Wizard A output directory not found. Please run Wizard A first.'
-            }), 404
-        
-        # Find the most recent test_run directory
-        test_runs = [d for d in wizard_a_dir.iterdir() if d.is_dir() and d.name.startswith('test_run_')]
-        
-        if not test_runs:
-            return jsonify({
-                'status': 'error',
-                'message': 'No Wizard A test_run directories found. Please run Wizard A first.'
-            }), 404
-        
-        # Get the most recent test_run
-        latest_test_run = max(test_runs, key=lambda x: x.stat().st_mtime)
-        
-        current_app.logger.info(f"Triggering Wizard B (Pattern Analysis) for customer {customer_id}")
-        current_app.logger.info(f"Script: {wizard_b_script}")
-        current_app.logger.info(f"Using Wizard A output: {latest_test_run.name}")
-        
-        # Wizard B script takes the test_run directory as argument
-        # The script expects a relative path from the wizard_b directory, or absolute path
-        # Since we're running from wizard_b directory, we need to pass relative path
-        # Or we can pass absolute path - let's use absolute path for clarity
-        script_args = [str(latest_test_run.resolve())]
-        
-        # Execute Wizard B script
+
+        current_app.logger.info(
+            f"Triggering Wizard B (Pattern Analysis) for customer {customer_id} — DB mode"
+        )
+
+        import sys as _sys
+        _wizard_b_dir = str(Path(__file__).parent / 'verticals' / '_template' / 'journey' / 'wizard_b')
+        if _wizard_b_dir not in _sys.path:
+            _sys.path.insert(0, _wizard_b_dir)
+        from wizard_b_pattern_analyzer import run_wizard_b
+
         script_start_time = time.time()
-        success, stdout, stderr = execute_script(wizard_b_script, customer_id, timeout=600, additional_args=script_args)
+        result = run_wizard_b(customer_id)
         script_duration = time.time() - script_start_time
-        
-        if not success:
-            current_app.logger.error(f"Wizard B execution failed: {stderr}")
-            return jsonify({
-                'status': 'error',
-                'message': 'Pattern analysis script failed',
-                'error': stderr,
-                'duration_seconds': round(script_duration, 2)
-            }), 500
-        
-        current_app.logger.info(f"✅ Wizard B completed successfully in {script_duration:.2f} seconds")
-        
+
+        current_app.logger.info(
+            f"✅ Wizard B completed in {script_duration:.2f}s — "
+            f"run_id={result.get('run_id')}, patterns={result.get('total_patterns')}"
+        )
+
         return jsonify({
             'status': 'success',
             'message': 'Pattern analysis completed successfully',
             'customer_id': customer_id,
-            'script_path': str(wizard_b_script),
-            'wizard_a_run': latest_test_run.name,
+            'run_id': result.get('run_id'),
+            'version': result.get('version'),
+            'total_patterns': result.get('total_patterns'),
+            'total_transitions': result.get('total_transitions'),
+            'total_warnings': result.get('total_warnings'),
+            'total_journeys': result.get('total_journeys'),
             'duration_seconds': round(script_duration, 2),
-            'output': stdout[:500] if stdout else None
+            'source': 'database'
         })
-        
+
+    except ValueError as ve:
+        # No journey data — return 404
+        current_app.logger.warning(f"Wizard B: {ve}")
+        return jsonify({
+            'status': 'error',
+            'message': str(ve)
+        }), 404
+
     except Exception as e:
         current_app.logger.error(f"Error triggering Wizard B: {str(e)}", exc_info=True)
         return jsonify({

@@ -18,21 +18,24 @@ class QueryCache:
     - Automatic cleanup of expired entries
     """
     
-    def __init__(self, default_ttl: int = 3600):
+    def __init__(self, default_ttl: int = 3600, max_entries: int = 50):
         """
         Initialize query cache
-        
+
         Args:
             default_ttl: Time-to-live in seconds (default: 1 hour)
+            max_entries: Maximum cache entries before LRU eviction (default: 50)
         """
         self.cache: Dict[str, Dict[str, Any]] = {}
         self.default_ttl = default_ttl
+        self.max_entries = max_entries
         self.stats = {
             'hits': 0,
             'misses': 0,
             'total_queries': 0,
             'cache_size': 0,
-            'cost_saved': 0.0  # Estimated cost saved
+            'cost_saved': 0.0,  # Estimated cost saved
+            'evictions': 0
         }
     
     def _generate_cache_key(self, customer_id: int, query: str, query_type: str = 'general') -> str:
@@ -107,7 +110,17 @@ class QueryCache:
         """
         cache_key = self._generate_cache_key(customer_id, query, query_type)
         ttl = ttl or self.default_ttl
-        
+
+        # Evict expired entries first, then LRU if still over limit
+        if len(self.cache) >= self.max_entries:
+            self.cleanup_expired()
+
+        if len(self.cache) >= self.max_entries:
+            # LRU eviction: remove the least-recently-accessed entry
+            lru_key = min(self.cache, key=lambda k: self.cache[k]['last_accessed'])
+            del self.cache[lru_key]
+            self.stats['evictions'] += 1
+
         self.cache[cache_key] = {
             'result': result,
             'created_at': datetime.utcnow(),
@@ -119,9 +132,9 @@ class QueryCache:
             'query_type': query_type,
             'hit_count': 0
         }
-        
+
         self.stats['cache_size'] = len(self.cache)
-        print(f"💾 CACHED: {query[:50]}... (TTL: {ttl}s)")
+        print(f"💾 CACHED: {query[:50]}... (TTL: {ttl}s, {len(self.cache)}/{self.max_entries})")
     
     def invalidate(self, customer_id: Optional[int] = None, 
                    pattern: Optional[str] = None) -> int:

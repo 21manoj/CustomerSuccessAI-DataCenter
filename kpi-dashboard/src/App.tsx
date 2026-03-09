@@ -188,7 +188,23 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="/dc-dashboard/approvals"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/dc-dashboard/test-runner"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/revenue-intelligence"
           element={
             <PrivateRoute vertical="datacenter">
               <DCPlatform />

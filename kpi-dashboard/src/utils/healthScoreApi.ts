@@ -1,7 +1,8 @@
 import { apiCall } from './api';
+import { thresholdValues } from './healthThresholds';
 
 export interface HealthScoreData {
-  accountId: number;
+  accountId: number | string;
   healthScore: number;
   categoryScores: {
     reliability: number;
@@ -54,7 +55,7 @@ export interface SmartAction {
   urgency: 'critical' | 'high' | 'opportunity';
   title: string;
   description: string;
-  accountId: number;
+  accountId: number | string;
   accountName: string;
   actions: Array<{
     label: string;
@@ -79,7 +80,7 @@ const getCustomerId = (): string | null => {
 };
 
 // Get health score for a specific account
-export const getAccountHealthScore = async (accountId: number): Promise<HealthScoreData> => {
+export const getAccountHealthScore = async (accountId: number | string): Promise<HealthScoreData> => {
   const customerId = getCustomerId();
   const response = await apiCall(`/api/accounts/${accountId}`, {
     method: 'GET',
@@ -150,10 +151,11 @@ export const getPortfolioOverview = async (): Promise<PortfolioOverview> => {
   const data = await response.json();
   const accounts = Array.isArray(data) ? data : (data?.accounts || []);
 
-  // Categorize accounts
-  const healthy = accounts.filter((a: any) => (a.health_score || 0) >= 80);
-  const atRisk = accounts.filter((a: any) => (a.health_score || 0) >= 60 && (a.health_score || 0) < 80);
-  const critical = accounts.filter((a: any) => (a.health_score || 0) < 60);
+  // Categorize accounts using centralized thresholds
+  const { healthy_min, at_risk_min } = thresholdValues();
+  const healthy = accounts.filter((a: any) => (a.health_score || 0) >= healthy_min);
+  const atRisk = accounts.filter((a: any) => (a.health_score || 0) >= at_risk_min && (a.health_score || 0) < healthy_min);
+  const critical = accounts.filter((a: any) => (a.health_score || 0) < at_risk_min);
   
   // Calculate averages
   const avgHealthy = healthy.length > 0 
@@ -192,7 +194,7 @@ export const getPortfolioOverview = async (): Promise<PortfolioOverview> => {
 };
 
 // Get health trends
-export const getHealthTrends = async (accountId?: number, months: number = 6): Promise<HealthTrend[]> => {
+export const getHealthTrends = async (accountId?: number | string, months: number = 6): Promise<HealthTrend[]> => {
   const customerId = getCustomerId();
   const url = accountId 
     ? `/api/health-trends?account_id=${accountId}`

@@ -4,11 +4,18 @@ HTTP Client Wrapper for CS Pulse Platform
 Handles authentication, session management, retries, and health checks
 """
 
-import requests
+import warnings
 import json
 import time
 import logging
 from typing import Dict, Any, Optional, Tuple
+
+# Suppress LibreSSL/NotOpenSSL warning before importing requests/urllib3
+# (macOS ships LibreSSL instead of OpenSSL — harmless for HTTP connections)
+warnings.filterwarnings("ignore", message=".*LibreSSL.*")
+warnings.filterwarnings("ignore", message=".*NotOpenSSL.*")
+
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry as UrllibRetry
 
@@ -54,6 +61,7 @@ class CSPulseClient:
         self.email = email
         self.password = password
         self.customer_id = customer_id
+        self.customer_uuid = None  # Populated after login from response
         self.timeout = timeout
         self.session = requests.Session()
 
@@ -108,24 +116,60 @@ class CSPulseClient:
 
         Returns:
             True if login successful, False otherwise
+
+        Note:
+            Uses direct request (not self.post) to access raw Set-Cookie header.
+            The Flask session cookie may have Secure flag which prevents
+            requests.Session from auto-sending it over HTTP. We extract the
+            cookie value manually and set it via the Cookie header.
         """
         if not self.email or not self.password:
             logger.error("❌ Email and password required for login")
             return False
 
         try:
-            response = self.post(
-                '/api/login',
-                {
-                    'email': self.email,
-                    'password': self.password
-                },
-                skip_auth_check=True  # login endpoint doesn't require existing session
+            url = f"{self.base_url}/api/login"
+            raw_response = self.session.post(
+                url,
+                json={'email': self.email, 'password': self.password},
+                timeout=self.timeout
             )
 
-            if response and response.get('status') == 'success':
+            if raw_response.status_code != 200:
+                logger.error(f"❌ Login failed: HTTP {raw_response.status_code}")
+                return False
+
+            response = raw_response.json()
+
+            if response.get('status') == 'success':
                 self._authenticated = True
-                logger.info(f"✅ Logged in as {self.email}")
+
+                # ── Fix Secure cookie issue ──
+                # Flask may set Secure flag on session cookie, which prevents
+                # requests from sending it over HTTP. Extract manually.
+                set_cookie = raw_response.headers.get('Set-Cookie', '')
+                for part in set_cookie.split(';'):
+                    part = part.strip()
+                    if part.startswith('cs_session='):
+                        cookie_val = part.split('=', 1)[1]
+                        self.session.headers.update({'Cookie': f'cs_session={cookie_val}'})
+                        logger.debug(f"Set manual Cookie header (Secure flag workaround)")
+                        break
+
+                # Capture UUID from login response (prefer for X-Customer-ID header)
+                # UUID may be at top level or nested under 'user'
+                customer_uuid = response.get('customer_uuid')
+                if not customer_uuid:
+                    user_data = response.get('user', {})
+                    customer_uuid = user_data.get('customer_uuid')
+
+                if customer_uuid:
+                    self.customer_uuid = customer_uuid
+                    self.session.headers.update({'X-Customer-ID': customer_uuid})
+                    logger.info(f"✅ Logged in as {self.email} (UUID: {customer_uuid})")
+                else:
+                    logger.info(f"✅ Logged in as {self.email} (no UUID — using integer ID)")
+
                 return True
             else:
                 logger.error(f"❌ Login failed: {response}")
@@ -317,6 +361,45 @@ class CSPulseClient:
         )
         return response
 
+    def upload_csv(
+        self,
+        customer_id: int,
+        file_type: str,
+        csv_content: str,
+        filename: str = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Upload a CSV file to onboarding endpoint (multipart form).
+
+        /api/onboarding/upload is a public endpoint — no auth required.
+
+        Args:
+            customer_id: Customer ID
+            file_type: e.g. 'accounts', 'kpis', 'stakeholders', etc.
+            csv_content: CSV string content
+            filename: Override filename (defaults to file_type.csv)
+        """
+        url = f"{self.base_url}/api/onboarding/upload"
+        fname = filename or f"{file_type}.csv"
+        try:
+            # Temporarily remove Content-Type header — requests must set
+            # its own multipart/form-data boundary for file uploads
+            saved_ct = self.session.headers.pop('Content-Type', None)
+            response = self.session.post(
+                url,
+                files={'file': (fname, csv_content, 'text/csv')},
+                data={'customer_id': customer_id, 'file_type': file_type},
+                timeout=self.timeout
+            )
+            if saved_ct:
+                self.session.headers['Content-Type'] = saved_ct
+            response.raise_for_status()
+            return response.json() if response.content else {}
+        except Exception as e:
+            if saved_ct:
+                self.session.headers['Content-Type'] = saved_ct
+            logger.error(f"Upload error ({file_type}): {e}")
+            return None
+
     def process_data(
         self,
         customer_id: int,
@@ -419,6 +502,61 @@ class CSPulseClient:
         except Exception as e:
             logger.warning(f"Qdrant unavailable: {e}")
             return None
+
+    def is_context_graph_enabled(self, customer_id: int = None) -> bool:
+        """
+        Check if context graph feature is enabled for the given customer.
+        Checks the /api/features/context-graph endpoint which returns
+        'active' = (global_enabled AND customer_enabled).
+
+        Args:
+            customer_id: Customer ID to check (defaults to self.customer_id)
+
+        Returns:
+            True if context_graph toggle is active, False otherwise
+        """
+        cid = customer_id or self.customer_id
+        response = self.get('/api/features/context-graph', params={'customer_id': cid})
+        if response and response.get('status') == 'success':
+            # 'active' = global AND customer toggle both on
+            return response.get('active', False)
+        return False
+
+    def ingest_context_graph(
+        self,
+        customer_id: int,
+        nodes: list,
+        edges: list,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Incrementally upsert context graph nodes and edges.
+        Non-destructive: deduplicates via source_event_id (nodes) and
+        (from_node_id, to_node_id, edge_type, source_platform) for edges.
+
+        Args:
+            customer_id: Customer owning the data
+            nodes: List of node dicts (account_id, node_type, title, ...)
+            edges: List of edge dicts (from_source_event_id, to_source_event_id, edge_type, ...)
+
+        Returns:
+            {status, nodes_upserted, nodes_created, edges_upserted, edges_created, ...}
+        """
+        response = self.post(
+            '/api/context-graph/ingest',
+            {
+                'customer_id': customer_id,
+                'nodes': nodes,
+                'edges': edges,
+            }
+        )
+        return response
+
+    def get_context_graph_summary(
+        self,
+        account_id: int
+    ) -> Optional[Dict[str, Any]]:
+        """Get context graph summary (node counts, edge counts, revenue) for an account."""
+        return self.get('/api/context-graph/summary', params={'account_id': account_id})
 
 
 # Convenience function for quick setup

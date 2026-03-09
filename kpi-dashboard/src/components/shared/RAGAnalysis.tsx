@@ -22,6 +22,7 @@ import {
   LineChart,
 } from 'lucide-react';
 import { useSession } from '../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../utils/api';
 
 interface RAGResponse {
   query: string;
@@ -98,7 +99,7 @@ const RAGAnalysis: React.FC = () => {
   const [customQuery, setCustomQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<QueryTemplate | null>(null);
   const [isKnowledgeBaseBuilt, setIsKnowledgeBaseBuilt] = useState(false);
-  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'qdrant-cloud' | 'historical' | 'temporal'>('qdrant-cloud');
+  const [vectorDb, setVectorDb] = useState<'working' | 'faiss' | 'qdrant' | 'qdrant-cloud' | 'historical' | 'temporal'>('working');
   const [isHistoricalBuilt, setIsHistoricalBuilt] = useState(false);
   const statusCheckRef = useRef<boolean>(false);
   
@@ -475,14 +476,14 @@ const RAGAnalysis: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const result = await response.json();
-        
+
         if (vectorDb === 'historical') {
           if (result.is_built) {
             setIsHistoricalBuilt(true);
@@ -547,10 +548,10 @@ const RAGAnalysis: React.FC = () => {
         const statusResponse = await fetch('/api/direct-rag/status', {
           method: 'GET',
           headers: {
-            'X-Customer-ID': session.customer_id.toString()
+            'X-Customer-ID': getCustomerIdentifier(session)
           }
         });
-        
+
         if (statusResponse.ok) {
           const statusData = await statusResponse.json();
           setIsKnowledgeBaseBuilt(true);
@@ -566,7 +567,7 @@ const RAGAnalysis: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'Content-Type': 'application/json'
         }
       });
@@ -625,7 +626,7 @@ const RAGAnalysis: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'X-Customer-ID': session.customer_id.toString(),
+          'X-Customer-ID': getCustomerIdentifier(session),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -747,10 +748,10 @@ const RAGAnalysis: React.FC = () => {
               className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isBuilding}
             >
-              <option value="qdrant-cloud">Qdrant Cloud (Recommended)</option>
+              <option value="working">Direct RAG (No Vector DB needed)</option>
+              <option value="faiss">FAISS (In-Memory Vector Search)</option>
+              <option value="qdrant-cloud">Qdrant Cloud (Requires API Key)</option>
               <option value="qdrant">Qdrant (Local/Self-hosted)</option>
-              <option value="faiss">FAISS (In-Memory Fallback)</option>
-              <option value="working">Working RAG System (Simple)</option>
               <option value="historical">Historical Analysis</option>
               <option value="temporal">Monthly Revenue Analysis</option>
             </select>

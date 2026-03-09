@@ -44,10 +44,10 @@ class CustomerConfig(db.Model):
     vertical = db.Column(db.String(50), default='saas')  # 'saas' or 'dc2_s'
     
     # DC2_S Configuration (JSON blobs)
-    dc2s_pillar_weights = db.Column(db.JSON, nullable=True)     # {"AI": 0.25, "CH": 0.20, ...}
-    dc2s_enabled_kpis = db.Column(db.JSON, nullable=True)       # ["AI-KPI1", "CUSTOM-GPU-1", ...]
-    dc2s_kpi_overrides = db.Column(db.JSON, nullable=True)      # {"AI-KPI1": {"target": 90}, ...}
-    dc2s_kpi_weights = db.Column(db.JSON, nullable=True)        # {"AI": {"AI-KPI1": 0.4, ...}, ...}
+    dc2s_pillar_weights = db.Column(db.JSON, nullable=True)     # {"P1": 0.15, "P2": 0.20, ...}
+    dc2s_enabled_kpis = db.Column(db.JSON, nullable=True)       # ["P3-KPI1", "CUSTOM-GPU-1", ...]
+    dc2s_kpi_overrides = db.Column(db.JSON, nullable=True)      # {"P3-KPI1": {"target": 90}, ...}
+    dc2s_kpi_weights = db.Column(db.JSON, nullable=True)        # {"P3": {"P3-KPI1": 0.4, ...}, ...}
     dc2s_kpi_definitions = db.Column(db.JSON, nullable=True)    # Custom KPI definitions
     
     # Metadata
@@ -410,6 +410,163 @@ class FeatureToggle(db.Model):
     __table_args__ = (
         db.UniqueConstraint('customer_id', 'feature_name', name='unique_customer_feature'),
     )
+
+# ============================================================
+# CONTEXT GRAPH TABLES
+# ============================================================
+# Feature flag: 'context_graph' in FeatureToggle table
+# Three-tier storage: T1 permanent, T2 decaying (TTL), T3 ephemeral
+# Every node/edge carries revenue_impact for CRO/CFO lens.
+# Guard: from feature_toggles import is_context_graph_enabled
+
+class ContextNode(db.Model):
+    """
+    Graph node representing an entity in the account context graph.
+
+    Node types: ACCOUNT, SIGNAL, STAKEHOLDER, DECISION, OUTCOME, EXTERNAL_CONTEXT
+    Every node belongs to exactly one account (tenant isolation).
+    Revenue impact fields support the CRO/CFO outcome-focused lens.
+    """
+    __tablename__ = 'context_nodes'
+
+    node_id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+
+    # Node classification
+    node_type = db.Column(db.String(30), nullable=False, index=True)
+    # SIGNAL, STAKEHOLDER, DECISION, OUTCOME, EXTERNAL_CONTEXT
+    node_subtype = db.Column(db.String(50), index=True)
+    # e.g. SIGNAL→kpi_change|ticket|nps; DECISION→playbook|escalation|exec_engagement
+
+    # Storage tier: 1=permanent, 2=decaying, 3=ephemeral
+    tier = db.Column(db.SmallInteger, nullable=False, default=2)
+
+    # Core content
+    title = db.Column(db.String(500))
+    properties = db.Column(db.JSON, nullable=False, default=dict)
+    # Flexible payload — schema varies by node_type
+
+    # Revenue impact (CRO/CFO lens — every node should answer "so what in $?")
+    revenue_impact = db.Column(db.Numeric(15, 2))       # ARR at risk or protected
+    revenue_impact_type = db.Column(db.String(30))       # at_risk, protected, expansion, lost
+    confidence = db.Column(db.Numeric(3, 2), default=1.0) # 0.00-1.00
+
+    # Source tracking
+    source_platform = db.Column(db.String(50))           # sfdc, hubspot, intercom, cs_pulse, csv_import
+    source_event_id = db.Column(db.String(200))          # External ID for dedup
+    source_ref = db.Column(db.String(200))               # e.g. SFDC Opportunity ID
+
+    # Temporal
+    occurred_at = db.Column(db.DateTime, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime)                   # NULL = never expires (Tier 1)
+    weight_decay = db.Column(db.Numeric(3, 2), default=1.0) # Current weight after decay
+
+    # Lifecycle
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    __table_args__ = (
+        db.Index('idx_ctx_node_account_type', 'account_id', 'node_type'),
+        db.Index('idx_ctx_node_customer', 'customer_id', 'node_type'),
+        db.Index('idx_ctx_node_occurred', 'account_id', 'occurred_at'),
+        db.Index('idx_ctx_node_tier_expires', 'tier', 'expires_at'),
+        db.Index('idx_ctx_node_source', 'source_platform', 'source_event_id'),
+    )
+
+    def to_dict(self):
+        return {
+            'node_id': self.node_id,
+            'customer_id': self.customer_id,
+            'account_id': self.account_id,
+            'node_type': self.node_type,
+            'node_subtype': self.node_subtype,
+            'tier': self.tier,
+            'title': self.title,
+            'properties': self.properties,
+            'revenue_impact': float(self.revenue_impact) if self.revenue_impact else None,
+            'revenue_impact_type': self.revenue_impact_type,
+            'confidence': float(self.confidence) if self.confidence else None,
+            'source_platform': self.source_platform,
+            'source_event_id': self.source_event_id,
+            'occurred_at': self.occurred_at.isoformat() if self.occurred_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+        }
+
+
+class ContextEdge(db.Model):
+    """
+    Typed, weighted, temporal edge between two context graph nodes.
+
+    Edge types: CAUSED_BY, INDICATES, LED_TO, CORRELATES_WITH,
+                INVOLVES, BELONGS_TO, BENCHMARKED_BY, SOURCED_FROM, SUPERSEDES
+
+    Edges carry revenue context: "this signal CAUSED_BY that failure
+    and the combined chain puts $2.4M ARR at risk."
+    """
+    __tablename__ = 'context_edges'
+
+    edge_id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=True, index=True)
+    from_node_id = db.Column(db.Integer, db.ForeignKey('context_nodes.node_id', ondelete='CASCADE'), nullable=False, index=True)
+    to_node_id = db.Column(db.Integer, db.ForeignKey('context_nodes.node_id', ondelete='CASCADE'), nullable=False, index=True)
+
+    # Edge classification
+    edge_type = db.Column(db.String(30), nullable=False, index=True)
+    lag_days = db.Column(db.Integer)
+    # CAUSED_BY, INDICATES, LED_TO, CORRELATES_WITH, INVOLVES,
+    # BELONGS_TO, BENCHMARKED_BY, SOURCED_FROM, SUPERSEDES
+
+    # Weight and confidence
+    weight = db.Column(db.Numeric(3, 2), nullable=False, default=1.0)  # 0.00-1.00
+    confidence = db.Column(db.Numeric(3, 2), default=1.0)
+
+    # Revenue context on the edge itself
+    revenue_impact = db.Column(db.Numeric(15, 2))        # $ impact of this causal link
+    revenue_impact_type = db.Column(db.String(30))
+
+    # Edge payload
+    properties = db.Column(db.JSON, default=dict)
+    # e.g. {"lag_days": 14, "evidence": "ticket volume spike preceded churn signal"}
+
+    # Source tracking
+    source_platform = db.Column(db.String(50))
+    created_by = db.Column(db.String(50))                 # "cs_pulse_engine", "csv_import", "mcp_sfdc"
+
+    # Temporal
+    occurred_at = db.Column(db.DateTime)
+    expires_at = db.Column(db.DateTime)
+
+    # Lifecycle
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    # Relationships
+    from_node = db.relationship('ContextNode', foreign_keys=[from_node_id], backref='outgoing_edges')
+    to_node = db.relationship('ContextNode', foreign_keys=[to_node_id], backref='incoming_edges')
+
+    __table_args__ = (
+        db.Index('idx_ctx_edge_from', 'from_node_id', 'edge_type'),
+        db.Index('idx_ctx_edge_to', 'to_node_id', 'edge_type'),
+        db.Index('idx_ctx_edge_type', 'edge_type'),
+        db.Index('idx_ctx_edge_pair', 'from_node_id', 'to_node_id', 'edge_type'),
+    )
+
+    def to_dict(self):
+        return {
+            'edge_id': self.edge_id,
+            'from_node_id': self.from_node_id,
+            'to_node_id': self.to_node_id,
+            'edge_type': self.edge_type,
+            'weight': float(self.weight) if self.weight else None,
+            'confidence': float(self.confidence) if self.confidence else None,
+            'revenue_impact': float(self.revenue_impact) if self.revenue_impact else None,
+            'revenue_impact_type': self.revenue_impact_type,
+            'properties': self.properties,
+            'source_platform': self.source_platform,
+            'created_by': self.created_by,
+            'occurred_at': self.occurred_at.isoformat() if self.occurred_at else None,
+        }
+
 
 class QueryAudit(db.Model):
     """Audit log for all RAG queries - for compliance and analytics"""
@@ -804,8 +961,8 @@ class PillarScore(db.Model):
     pillar_status = db.Column(db.String(20))        # excellent, good, warning, critical
     
     # Contributing KPIs (for transparency)
-    contributing_kpis = db.Column(db.JSON)  # {"AI-KPI1": 85, "AI-KPI2": 90, "CUSTOM-GPU-1": 88}
-    kpi_weights = db.Column(db.JSON)        # {"AI-KPI1": 0.4, "AI-KPI2": 0.35, "CUSTOM-GPU-1": 0.25}
+    contributing_kpis = db.Column(db.JSON)  # {"P3-KPI1": 85, "P3-KPI2": 90, "CUSTOM-GPU-1": 88}
+    kpi_weights = db.Column(db.JSON)        # {"P3-KPI1": 0.4, "P3-KPI2": 0.35, "CUSTOM-GPU-1": 0.25}
     
     # Metadata
     calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -844,8 +1001,8 @@ class HealthScore(db.Model):
     change_from_last_month = db.Column(db.Numeric(5, 2))
     
     # Contributing Pillars (for transparency)
-    contributing_pillars = db.Column(db.JSON)  # {"AI": 85, "CH": 90, "DV": 80, "EX": 88, "OS": 92}
-    pillar_weights = db.Column(db.JSON)        # {"AI": 0.25, "CH": 0.20, "DV": 0.15, "EX": 0.20, "OS": 0.20}
+    contributing_pillars = db.Column(db.JSON)  # {"P1": 80, "P2": 92, "P3": 85, "P4": 90, "P5": 88}
+    pillar_weights = db.Column(db.JSON)        # {"P1": 0.15, "P2": 0.20, "P3": 0.25, "P4": 0.15, "P5": 0.25}
     
     # Metadata
     calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -1227,11 +1384,12 @@ class WizardRun(db.Model):
 
 
 class WizardLearning(db.Model):
-    """Stores extracted learnings from wizard runs"""
+    """Stores extracted learnings from wizard runs (Wizard B pattern analysis, etc.)"""
     __tablename__ = 'wizard_learnings'
 
     id = db.Column(db.Integer, primary_key=True)
-    version = db.Column(db.String(20), nullable=False, unique=True, index=True)
+    version = db.Column(db.String(20), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=True, index=True)
 
     source_runs = db.Column(db.JSON)
     run_id = db.Column(db.String(50), db.ForeignKey('wizard_runs.run_id'))
@@ -1240,6 +1398,7 @@ class WizardLearning(db.Model):
     industry_benchmarks = db.Column(db.JSON)
     validation_rules = db.Column(db.JSON)
     edge_cases = db.Column(db.JSON)
+    analysis_report = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     is_active = db.Column(db.Boolean, default=True, index=True)
@@ -1247,23 +1406,53 @@ class WizardLearning(db.Model):
     total_accounts_tested = db.Column(db.Integer)
     avg_accuracy = db.Column(db.Float)
 
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', 'version', name='uq_wizard_learning_customer_version'),
+    )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.version:
+            # Auto-increment version scoped to customer
+            query = WizardLearning.query
+            if self.customer_id is not None:
+                query = query.filter_by(customer_id=self.customer_id)
+            latest = query.order_by(WizardLearning.created_at.desc()).first()
+            if latest and latest.version:
+                try:
+                    num = float(latest.version.replace('v', ''))
+                    self.version = f"v{num + 0.1:.1f}"
+                except (ValueError, TypeError):
+                    self.version = "v1.0"
+            else:
+                self.version = "v1.0"
+
     def activate(self):
-        WizardLearning.query.update({'is_active': False})
+        """Make this the active learning for this customer (deactivates others)."""
+        WizardLearning.query.filter_by(
+            customer_id=self.customer_id
+        ).update({'is_active': False})
         self.is_active = True
-        db.session.commit()
+        db.session.flush()
 
     @classmethod
-    def get_active(cls):
-        return cls.query.filter_by(is_active=True).first()
+    def get_active(cls, customer_id=None):
+        """Get the currently active learning, optionally filtered by customer."""
+        query = cls.query.filter_by(is_active=True)
+        if customer_id is not None:
+            query = query.filter_by(customer_id=customer_id)
+        return query.first()
 
     def to_dict(self):
         return {
             'version': self.version,
+            'customer_id': self.customer_id,
             'source_runs': self.source_runs,
             'learnings': self.learnings,
             'industry_benchmarks': self.industry_benchmarks,
             'validation_rules': self.validation_rules,
             'edge_cases': self.edge_cases,
+            'analysis_report': self.analysis_report,
             'created_at': self.created_at.isoformat(),
             'is_active': self.is_active,
             'total_accounts_tested': self.total_accounts_tested,
@@ -1295,3 +1484,59 @@ class WizardFile(db.Model):
             'created_at': self.created_at.isoformat(),
             'description': self.description,
         }
+
+
+class ROISnapshot(db.Model):
+    """Persisted ROI calculation snapshots for audit trail and trending."""
+    __tablename__ = 'roi_snapshots'
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    snapshot_date = db.Column(db.Date, nullable=False, default=db.func.current_date())
+    improvement_pct = db.Column(db.Float, nullable=False)
+
+    # Historical ROI (realized)
+    historical_roi_pct = db.Column(db.Float)
+    historical_impact = db.Column(db.Float)
+    historical_investment = db.Column(db.Float)
+
+    # Forward ROI (projected)
+    forward_roi_pct = db.Column(db.Float)
+    forward_impact = db.Column(db.Float)
+    forward_investment = db.Column(db.Float)
+
+    # Combined
+    combined_roi_pct = db.Column(db.Float)
+    total_arr = db.Column(db.Float)
+
+    # Per-metric detail (JSON blob for drill-down)
+    metric_details = db.Column(db.JSON)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_roi_snap_cust_date', 'customer_id', 'snapshot_date'),
+    )
+
+
+class JourneyData(db.Model):
+    """
+    Stores journey timeline data per account (replaces filesystem JSON files).
+    Used by Journey Visualizer UI. Previously stored at:
+    verticals/customer{X}-dc2_s/journey/wizard_a/outputs/account_{id}_journey.json
+    """
+    __tablename__ = 'journey_data'
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, nullable=False, index=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+    journey_json = db.Column(db.JSON, nullable=False)
+    total_weeks = db.Column(db.Integer)
+    journey_pattern = db.Column(db.String(50))
+    generator_version = db.Column(db.String(20), default='1.0')
+    generated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', 'account_id', name='uq_journey_data_customer_account'),
+    )

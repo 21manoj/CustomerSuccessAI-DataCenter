@@ -580,38 +580,44 @@ def main():
         print()
         print("💾 Saving weights to CustomerConfig...")
         
-        # Map calibration weights to pillar structure
-        # Note: This mapping depends on your KPI structure
-        # You may need to adjust based on your actual KPI codes
+        # Use calibrated category weights mapped to pillars
+        cat_weights = calibration.get('category_weights', {})
         pillar_weights = {
-            'AI': 0.25, 'CH': 0.20, 'DV': 0.15, 'EX': 0.20, 'OS': 0.20
+            'P3': cat_weights.get('Performance & Utilization', 0.25),
+            'P4': cat_weights.get('Support & Reliability', 0.20),
+            'P1': cat_weights.get('Scalability & Growth', 0.15),
+            'P5': cat_weights.get('Business Value', 0.20),
+            'P2': cat_weights.get('Cost Efficiency', 0.20),
         }
-        
-        # Group KPI weights by pillar (adjust based on your KPI codes)
+        # Normalize so they sum to 1.0
+        total = sum(pillar_weights.values())
+        if total > 0:
+            pillar_weights = {k: v / total for k, v in pillar_weights.items()}
+
+        # Group KPI weights by pillar
         kpi_weights_by_pillar = {
-            'AI': {},
-            'CH': {},
-            'DV': {},
-            'EX': {},
-            'OS': {}
+            'P3': {},
+            'P4': {},
+            'P1': {},
+            'P5': {},
+            'P2': {}
         }
-        
-        # Map KPI codes to pillars (adjust based on your structure)
+
+        # Map KPI codes to pillars - handles both DC2S_ prefixed and short codes
         for kpi_code, weight in calibration['kpi_weights'].items():
-            # Simple mapping - adjust based on your KPI naming convention
-            if kpi_code.startswith('P'):
-                pillar = 'AI'  # Performance -> AI
-            elif kpi_code.startswith('C'):
-                pillar = 'OS'  # Cost -> Operational Stability
-            elif kpi_code.startswith('S'):
-                pillar = 'EX'  # Scalability -> Expansion
-            elif kpi_code.startswith('R'):
-                pillar = 'CH'  # Reliability -> Customer Health
-            elif kpi_code.startswith('B'):
-                pillar = 'EX'  # Business -> Expansion
+            if 'PERF' in kpi_code or kpi_code.startswith('P'):
+                pillar = 'P3'  # Performance -> AI Workload Performance
+            elif 'COST' in kpi_code or kpi_code.startswith('C'):
+                pillar = 'P2'  # Cost -> Operational Stability
+            elif 'SCALE' in kpi_code or kpi_code.startswith('S'):
+                pillar = 'P1'  # Scalability -> Deployment Velocity
+            elif 'SUP' in kpi_code or kpi_code.startswith('R'):
+                pillar = 'P4'  # Support/Reliability -> Customer Health
+            elif 'BIZ' in kpi_code or kpi_code.startswith('B'):
+                pillar = 'P5'  # Business -> Expansion
             else:
-                pillar = 'DV'  # Default to Deployment Velocity
-            
+                pillar = 'P1'  # Default fallback
+
             if pillar in kpi_weights_by_pillar:
                 kpi_weights_by_pillar[pillar][kpi_code] = weight
         

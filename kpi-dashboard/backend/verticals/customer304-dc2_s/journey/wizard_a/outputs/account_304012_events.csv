@@ -1,0 +1,32 @@
+week_number,date,phase,event_type,description,sentiment,sentiment_value,health_score_before,health_score_after,outcome,csm_action_type,csm_action_desc,csm_response_hours,csm_cost
+1,2024-01-01,moderate,champion_interaction,New champion emerges (VP Operations) - Fresh perspective,positive,0.7,70,70,"Stable, expansion still frozen",,,,
+2,2024-01-08,at_risk,budget_review,CFO: 'Should we switch providers?' - Budget under review,negative,-0.6,70,68.14,"Financial concerns remain, cautious",,,,
+3,2024-01-15,at_risk,milestone,"60-day uptime milestone - Slow progress, cautious optimism",neutral,0.2,68.14,67.11,"Financial concerns remain, cautious",,,,
+4,2024-01-22,at_risk,contract_discussion,Budget review: $2.1M contract questioned by finance,negative,-0.5,67.11,64.7,"Financial concerns remain, cautious",,,,
+5,2024-01-29,at_risk,budget_review,CFO: 'Should we switch providers?' - Budget under review,negative,-0.6,64.7,62.59,"Financial concerns remain, cautious",,,,
+8,2024-02-19,at_risk,milestone,"60-day uptime milestone - Slow progress, cautious optimism",neutral,0.2,58.83,56.07,"Financial concerns remain, cautious",,,,
+9,2024-02-26,at_risk,contract_discussion,Pricing compromise reached - 12% discount negotiated,positive,0.5,56.07,55.82,"Financial concerns remain, cautious",,,,
+12,2024-03-18,at_risk,budget_review,CFO: 'Should we switch providers?' - Budget under review,negative,-0.6,52.99,50.25,"Financial concerns remain, cautious",,,,
+13,2024-03-25,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,50.25,47.79,"Crisis mitigation in progress, situation critical",,,,
+13,2024-03-25,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,50.25,47.79,"Crisis mitigation in progress, situation critical",,,,
+14,2024-04-01,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,47.79,45.68,"Crisis mitigation in progress, situation critical",,,,
+14,2024-04-01,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,47.79,45.68,"Crisis mitigation in progress, situation critical",root_cause_analysis,Root cause analysis initiated,4,10000
+15,2024-04-08,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,45.68,44.56,"Crisis mitigation in progress, situation critical",executive_sponsor,Executive sponsor assigned immediately,2,25000
+16,2024-04-15,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,44.56,44.2,"Crisis mitigation in progress, situation critical",,,,
+17,2024-04-22,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,44.2,41.82,"Crisis mitigation in progress, situation critical",,,,
+18,2024-04-29,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,41.82,41.74,"Crisis mitigation in progress, situation critical",,,,
+18,2024-04-29,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,41.82,41.74,"Crisis mitigation in progress, situation critical",,,,
+19,2024-05-06,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,41.74,39.12,"Crisis mitigation in progress, situation critical",,,,
+19,2024-05-06,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,41.74,39.12,"Crisis mitigation in progress, situation critical",,,,
+20,2024-05-13,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,39.12,38.86,"Crisis mitigation in progress, situation critical",,,,
+20,2024-05-13,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,39.12,38.86,"Crisis mitigation in progress, situation critical",root_cause_analysis,Root cause analysis initiated,4,10000
+21,2024-05-20,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,38.86,38.46,"Crisis mitigation in progress, situation critical",executive_sponsor,Executive sponsor assigned immediately,2,25000
+22,2024-05-27,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,38.46,36.08,"Crisis mitigation in progress, situation critical",root_cause_analysis,Root cause analysis initiated,4,10000
+23,2024-06-03,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,36.08,34.42,"Crisis mitigation in progress, situation critical",,,,
+24,2024-06-10,crisis,executive_engagement,Board questioning infrastructure decision,very_negative,-0.85,34.42,34.06,"Crisis mitigation in progress, situation critical",,,,
+24,2024-06-10,crisis,budget_review,Emergency budget meeting - Damages being calculated,very_negative,-0.85,34.42,34.06,"Crisis mitigation in progress, situation critical",,,,
+25,2024-06-17,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,34.06,33.01,"Crisis mitigation in progress, situation critical",war_room,Emergency war room convened (Day 0),2,15000
+26,2024-06-24,crisis,support_ticket,Critical support ticket - Production loss quantified,very_negative,-0.9,33.01,31.62,"Crisis mitigation in progress, situation critical",,,,
+26,2024-06-24,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,33.01,31.62,"Crisis mitigation in progress, situation critical",root_cause_analysis,Root cause analysis initiated,4,10000
+27,2024-07-01,crisis,escalation,CEO threatening to change vendors - Trust destroyed,very_negative,-0.9,31.62,31.33,"Crisis mitigation in progress, situation critical",,,,
+28,2024-07-08,crisis,outage,14-HOUR OUTAGE - Complete production stoppage,very_negative,-0.95,31.33,30.14,"Crisis mitigation in progress, situation critical",,,,

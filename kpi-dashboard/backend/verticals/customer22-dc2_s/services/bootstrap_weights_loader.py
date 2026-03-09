@@ -16,6 +16,27 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Load canonical pillar weights from kpi_definitions (single source of truth)
+try:
+    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+    _CANONICAL_PILLAR_WEIGHTS = {
+        pid: info.get('weight_l2', 0.20)
+        for pid, info in DC2S_PILLARS.items()
+    }
+except ImportError:
+    _CANONICAL_PILLAR_WEIGHTS = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
+
+# Load health thresholds from centralized config
+try:
+    import utils.health_thresholds as _ht
+    _HEALTHY_MIN = _ht.healthy_min()
+    _AT_RISK_MIN = _ht.at_risk_min()
+except ImportError:
+    _HEALTHY_MIN = 70
+    _AT_RISK_MIN = 50
+
+_DEFAULT_PILLAR_WEIGHT = sum(_CANONICAL_PILLAR_WEIGHTS.values()) / len(_CANONICAL_PILLAR_WEIGHTS)
+
 
 @dataclass
 class KPIWeight:
@@ -107,7 +128,7 @@ class BootstrapWeightsLoader:
             for pillar_id, pillar_info in pillar_data.items():
                 # Handle different config formats
                 if isinstance(pillar_info, dict):
-                    pillar_weight = pillar_info.get('weight', pillar_info.get('pillar_weight', 0.2))
+                    pillar_weight = pillar_info.get('weight', pillar_info.get('pillar_weight', _CANONICAL_PILLAR_WEIGHTS.get(pillar_id, _DEFAULT_PILLAR_WEIGHT)))
                     pillar_name = pillar_info.get('name', pillar_id)
                     kpi_list = pillar_info.get('kpis', pillar_info.get('kpi_weights', []))
                 else:
@@ -190,8 +211,10 @@ class BootstrapWeightsLoader:
         """Get weight for a specific KPI"""
         return self.kpi_weights.get(kpi_id, default)
     
-    def get_pillar_weight(self, pillar_id: str, default: float = 0.2) -> float:
+    def get_pillar_weight(self, pillar_id: str, default: float = None) -> float:
         """Get weight for a specific pillar"""
+        if default is None:
+            default = _CANONICAL_PILLAR_WEIGHTS.get(pillar_id, _DEFAULT_PILLAR_WEIGHT)
         return self.pillar_weights.get(pillar_id, default)
     
     def get_kpi_pillar(self, kpi_id: str) -> Optional[str]:
@@ -208,18 +231,11 @@ class BootstrapWeightsLoader:
         return self.pillar_weights.copy()
     
     def get_thresholds(self) -> Dict[str, Dict[str, int]]:
-        """Get health score thresholds"""
-        if not self.config:
-            return {
-                'healthy': {'min': 70, 'max': 100},
-                'at_risk': {'min': 40, 'max': 69},
-                'crisis': {'min': 0, 'max': 39}
-            }
-        # Try to get from config metadata or use defaults
+        """Get health score thresholds (from centralized config)"""
         return {
-            'healthy': {'min': 70, 'max': 100},
-            'at_risk': {'min': 40, 'max': 69},
-            'crisis': {'min': 0, 'max': 39}
+            'healthy': {'min': _HEALTHY_MIN, 'max': 100},
+            'at_risk': {'min': _AT_RISK_MIN, 'max': _HEALTHY_MIN - 1},
+            'crisis': {'min': 0, 'max': _AT_RISK_MIN - 1}
         }
     
     def get_critical_kpis(self) -> List[str]:
@@ -288,10 +304,10 @@ class BootstrapWeightsLoader:
         
         if is_pillar_scores:
             # Direct pillar scores - just calculate weighted average
-            total_weight = sum(self.pillar_weights.get(p, 0.2) for p in kpi_values.keys())
+            total_weight = sum(self.pillar_weights.get(p, _CANONICAL_PILLAR_WEIGHTS.get(p, _DEFAULT_PILLAR_WEIGHT)) for p in kpi_values.keys())
             if total_weight > 0:
                 health_score = sum(
-                    score * self.pillar_weights.get(pillar, 0.2) 
+                    score * self.pillar_weights.get(pillar, _CANONICAL_PILLAR_WEIGHTS.get(pillar, _DEFAULT_PILLAR_WEIGHT))
                     for pillar, score in kpi_values.items()
                 ) / total_weight
             else:
@@ -330,10 +346,10 @@ class BootstrapWeightsLoader:
         
         # Calculate overall health score (weighted by pillar weights)
         if pillar_scores:
-            total_pillar_weight = sum(self.pillar_weights.get(p, 0.2) for p in pillar_scores)
+            total_pillar_weight = sum(self.pillar_weights.get(p, _CANONICAL_PILLAR_WEIGHTS.get(p, _DEFAULT_PILLAR_WEIGHT)) for p in pillar_scores)
             if total_pillar_weight > 0:
                 health_score = sum(
-                    score * self.pillar_weights.get(pillar, 0.2) 
+                    score * self.pillar_weights.get(pillar, _CANONICAL_PILLAR_WEIGHTS.get(pillar, _DEFAULT_PILLAR_WEIGHT))
                     for pillar, score in pillar_scores.items()
                 ) / total_pillar_weight
             else:
@@ -345,10 +361,10 @@ class BootstrapWeightsLoader:
             else:
                 health_score = 50.0
         
-        # Classify health
-        if health_score >= 70:
+        # Classify health (using centralized thresholds)
+        if health_score >= _HEALTHY_MIN:
             classification = 'healthy'
-        elif health_score >= 40:
+        elif health_score >= _AT_RISK_MIN:
             classification = 'at_risk'
         else:
             classification = 'crisis'

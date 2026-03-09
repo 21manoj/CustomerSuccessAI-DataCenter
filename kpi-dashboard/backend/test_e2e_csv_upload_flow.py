@@ -501,9 +501,6 @@ def create_test_csvs(customer_id: int, data_dir: Path):
         log(f"   Config has {len(enabled_kpis)} enabled KPIs")
         log(f"   Loader should filter {len(all_kpis) - len(enabled_kpis)} KPIs")
         
-        # Map P1-P5 codes to AI/CH/DV/EX/OS format
-        pillar_code_map = {'P1': 'DV', 'P2': 'OS', 'P3': 'AI', 'P4': 'CH', 'P5': 'EX'}
-        
         # Generate accounts
         accounts = []
         for i in range(3):
@@ -516,9 +513,9 @@ def create_test_csvs(customer_id: int, data_dir: Path):
                 'region': 'us-west-2',
                 'account_status': 'active'
             })
-        
+
         # Generate KPIs - ALL KPIs (not just enabled!)
-        # Map P1-P5 codes to AI/CH/DV/EX/OS format for config compatibility
+        # KPI codes already use P-format (P1-KPI1, P2-KPI1, etc.)
         kpis = []
         start_date = datetime(2024, 1, 1)
         for account in accounts:
@@ -526,17 +523,7 @@ def create_test_csvs(customer_id: int, data_dir: Path):
                 measured_at = start_date.replace(month=month+1)
                 # Generate ALL KPIs (not just enabled)
                 for kpi in all_kpis:
-                    original_code = kpi['code']  # e.g., P1-KPI1
-                    
-                    # Convert to config format: P1-KPI1 -> DV-KPI1, P3-KPI1 -> AI-KPI1
-                    if '-' in original_code:
-                        pillar_prefix, kpi_suffix = original_code.split('-', 1)
-                        if pillar_prefix in pillar_code_map:
-                            kpi_code = f"{pillar_code_map[pillar_prefix]}-{kpi_suffix}"
-                        else:
-                            kpi_code = original_code
-                    else:
-                        kpi_code = original_code
+                    kpi_code = kpi['code']  # e.g., P1-KPI1
                     
                     # Handle target
                     target_value = kpi.get('target', {})

@@ -1,0 +1,1134 @@
+{
+  "version": "1.1",
+  "pillars": {
+    "P1": {
+      "name": "Deployment Velocity",
+      "weight_l2": 0.15,
+      "kpi_count": 8
+    },
+    "P2": {
+      "name": "Operational Stability",
+      "weight_l2": 0.2,
+      "kpi_count": 8
+    },
+    "P3": {
+      "name": "AI Workload Performance",
+      "weight_l2": 0.25,
+      "kpi_count": 8
+    },
+    "P4": {
+      "name": "Channel & Partner Health",
+      "weight_l2": 0.15,
+      "kpi_count": 6
+    },
+    "P5": {
+      "name": "Expansion Readiness",
+      "weight_l2": 0.25,
+      "kpi_count": 8
+    }
+  },
+  "kpis": {
+    "P1-KPI1": {
+      "name": "Time-to-First-Workload",
+      "pillar": "P1",
+      "weight_l1": 0.2,
+      "frequency": "monthly",
+      "unit": "days",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 14
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 14,
+          "color": "green"
+        },
+        "risk": {
+          "min": 14,
+          "max": 21,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 21,
+          "max": 60,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI2": {
+      "name": "Installation Completion Rate",
+      "pillar": "P1",
+      "weight_l1": 0.15,
+      "frequency": "monthly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 90
+      },
+      "ranges": {
+        "healthy": {
+          "min": 90,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 75,
+          "max": 90,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 75,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI3": {
+      "name": "Configuration Accuracy",
+      "pillar": "P1",
+      "weight_l1": 0.12,
+      "frequency": "weekly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 95
+      },
+      "ranges": {
+        "healthy": {
+          "min": 95,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 85,
+          "max": 95,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 85,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI4": {
+      "name": "Deployment Cycle Time",
+      "pillar": "P1",
+      "weight_l1": 0.15,
+      "frequency": "monthly",
+      "unit": "days",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 30
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 30,
+          "color": "green"
+        },
+        "risk": {
+          "min": 30,
+          "max": 45,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 45,
+          "max": 90,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI5": {
+      "name": "Hardware Commissioning Time",
+      "pillar": "P1",
+      "weight_l1": 0.13,
+      "frequency": "monthly",
+      "unit": "days",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 7
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 7,
+          "color": "green"
+        },
+        "risk": {
+          "min": 7,
+          "max": 14,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 14,
+          "max": 30,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI6": {
+      "name": "Network Readiness Score",
+      "pillar": "P1",
+      "weight_l1": 0.1,
+      "frequency": "weekly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 90
+      },
+      "ranges": {
+        "healthy": {
+          "min": 90,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 70,
+          "max": 90,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 70,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI7": {
+      "name": "Deployment Team Velocity",
+      "pillar": "P1",
+      "weight_l1": 0.08,
+      "frequency": "weekly",
+      "unit": "servers/day",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 5
+      },
+      "ranges": {
+        "healthy": {
+          "min": 5,
+          "max": 20,
+          "color": "green"
+        },
+        "risk": {
+          "min": 3,
+          "max": 5,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 3,
+          "color": "red"
+        }
+      }
+    },
+    "P1-KPI8": {
+      "name": "Documentation Completeness",
+      "pillar": "P1",
+      "weight_l1": 0.07,
+      "frequency": "monthly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 95
+      },
+      "ranges": {
+        "healthy": {
+          "min": 95,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 80,
+          "max": 95,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 80,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI1": {
+      "name": "RMA Frequency Rate",
+      "pillar": "P2",
+      "weight_l1": 0.2,
+      "frequency": "weekly",
+      "unit": "percentage",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 2.6
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 1.2,
+          "color": "green"
+        },
+        "risk": {
+          "min": 1.2,
+          "max": 2.6,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 2.6,
+          "max": 10,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI2": {
+      "name": "MTBF (Mean Time Between Failures)",
+      "pillar": "P2",
+      "weight_l1": 0.18,
+      "frequency": "weekly",
+      "unit": "hours",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 8760
+      },
+      "ranges": {
+        "healthy": {
+          "min": 8760,
+          "max": 100000,
+          "color": "green"
+        },
+        "risk": {
+          "min": 4380,
+          "max": 8760,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 4380,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI3": {
+      "name": "Critical Incidents (30d)",
+      "pillar": "P2",
+      "weight_l1": 0.17,
+      "frequency": "daily",
+      "unit": "count",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 3
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 1,
+          "color": "green"
+        },
+        "risk": {
+          "min": 1,
+          "max": 3,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 3,
+          "max": 20,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI4": {
+      "name": "System Uptime Percentage",
+      "pillar": "P2",
+      "weight_l1": 0.15,
+      "frequency": "daily",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 99.5
+      },
+      "ranges": {
+        "healthy": {
+          "min": 99.5,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 98.0,
+          "max": 99.5,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 98.0,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI5": {
+      "name": "Thermal Management Score",
+      "pillar": "P2",
+      "weight_l1": 0.12,
+      "frequency": "realtime",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 95
+      },
+      "ranges": {
+        "healthy": {
+          "min": 95,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 85,
+          "max": 95,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 85,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI6": {
+      "name": "Power Efficiency (PUE)",
+      "pillar": "P2",
+      "weight_l1": 0.08,
+      "frequency": "realtime",
+      "unit": "ratio",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 1.3
+      },
+      "ranges": {
+        "healthy": {
+          "min": 1.0,
+          "max": 1.2,
+          "color": "green"
+        },
+        "risk": {
+          "min": 1.2,
+          "max": 1.4,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 1.4,
+          "max": 3.0,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI7": {
+      "name": "Mean Time To Repair (MTTR)",
+      "pillar": "P2",
+      "weight_l1": 0.06,
+      "frequency": "weekly",
+      "unit": "hours",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 4
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 4,
+          "color": "green"
+        },
+        "risk": {
+          "min": 4,
+          "max": 12,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 12,
+          "max": 72,
+          "color": "red"
+        }
+      }
+    },
+    "P2-KPI8": {
+      "name": "Preventive Maintenance Compliance",
+      "pillar": "P2",
+      "weight_l1": 0.04,
+      "frequency": "monthly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 95
+      },
+      "ranges": {
+        "healthy": {
+          "min": 95,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 80,
+          "max": 95,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 80,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI1": {
+      "name": "GPU Utilization Rate",
+      "pillar": "P3",
+      "weight_l1": 0.22,
+      "frequency": "realtime",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 65
+      },
+      "ranges": {
+        "healthy": {
+          "min": 65,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 45,
+          "max": 65,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 45,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI2": {
+      "name": "Training Job Completion Rate",
+      "pillar": "P3",
+      "weight_l1": 0.2,
+      "frequency": "daily",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 90
+      },
+      "ranges": {
+        "healthy": {
+          "min": 90,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 75,
+          "max": 90,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 75,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI3": {
+      "name": "Inference Latency (P95)",
+      "pillar": "P3",
+      "weight_l1": 0.15,
+      "frequency": "realtime",
+      "unit": "milliseconds",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 50
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 50,
+          "color": "green"
+        },
+        "risk": {
+          "min": 50,
+          "max": 100,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 100,
+          "max": 1000,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI4": {
+      "name": "Model Training Time",
+      "pillar": "P3",
+      "weight_l1": 0.14,
+      "frequency": "daily",
+      "unit": "hours",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 24
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 24,
+          "color": "green"
+        },
+        "risk": {
+          "min": 24,
+          "max": 48,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 48,
+          "max": 168,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI5": {
+      "name": "GPU Memory Efficiency",
+      "pillar": "P3",
+      "weight_l1": 0.12,
+      "frequency": "realtime",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 80
+      },
+      "ranges": {
+        "healthy": {
+          "min": 80,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 60,
+          "max": 80,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 60,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI6": {
+      "name": "Distributed Training Efficiency",
+      "pillar": "P3",
+      "weight_l1": 0.09,
+      "frequency": "daily",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 85
+      },
+      "ranges": {
+        "healthy": {
+          "min": 85,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 70,
+          "max": 85,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 70,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI7": {
+      "name": "Workload Diversity Score",
+      "pillar": "P3",
+      "weight_l1": 0.05,
+      "frequency": "weekly",
+      "unit": "count",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 3
+      },
+      "ranges": {
+        "healthy": {
+          "min": 3,
+          "max": 10,
+          "color": "green"
+        },
+        "risk": {
+          "min": 2,
+          "max": 3,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 2,
+          "color": "red"
+        }
+      }
+    },
+    "P3-KPI8": {
+      "name": "Batch Processing Throughput",
+      "pillar": "P3",
+      "weight_l1": 0.03,
+      "frequency": "daily",
+      "unit": "samples/hour",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 10000
+      },
+      "ranges": {
+        "healthy": {
+          "min": 10000,
+          "max": 1000000,
+          "color": "green"
+        },
+        "risk": {
+          "min": 5000,
+          "max": 10000,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 5000,
+          "color": "red"
+        }
+      }
+    },
+    "P4-KPI1": {
+      "name": "Partner Engagement Score",
+      "pillar": "P4",
+      "weight_l1": 0.22,
+      "frequency": "monthly",
+      "unit": "score",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 75
+      },
+      "ranges": {
+        "healthy": {
+          "min": 75,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 50,
+          "max": 75,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 50,
+          "color": "red"
+        }
+      }
+    },
+    "P4-KPI2": {
+      "name": "VAR Performance Rating",
+      "pillar": "P4",
+      "weight_l1": 0.2,
+      "frequency": "monthly",
+      "unit": "score",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 80
+      },
+      "ranges": {
+        "healthy": {
+          "min": 80,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 60,
+          "max": 80,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 60,
+          "color": "red"
+        }
+      }
+    },
+    "P4-KPI3": {
+      "name": "Joint QBR Frequency",
+      "pillar": "P4",
+      "weight_l1": 0.18,
+      "frequency": "quarterly",
+      "unit": "count",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 4
+      },
+      "ranges": {
+        "healthy": {
+          "min": 4,
+          "max": 12,
+          "color": "green"
+        },
+        "risk": {
+          "min": 2,
+          "max": 4,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 2,
+          "color": "red"
+        }
+      }
+    },
+    "P4-KPI4": {
+      "name": "Channel Conflict Score",
+      "pillar": "P4",
+      "weight_l1": 0.15,
+      "frequency": "monthly",
+      "unit": "score",
+      "higher_is_better": false,
+      "target": {
+        "operator": "<",
+        "value": 20
+      },
+      "ranges": {
+        "healthy": {
+          "min": 0,
+          "max": 20,
+          "color": "green"
+        },
+        "risk": {
+          "min": 20,
+          "max": 50,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 50,
+          "max": 100,
+          "color": "red"
+        }
+      }
+    },
+    "P4-KPI5": {
+      "name": "Co-selling Opportunities",
+      "pillar": "P4",
+      "weight_l1": 0.13,
+      "frequency": "monthly",
+      "unit": "count",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 3
+      },
+      "ranges": {
+        "healthy": {
+          "min": 3,
+          "max": 20,
+          "color": "green"
+        },
+        "risk": {
+          "min": 1,
+          "max": 3,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 1,
+          "color": "red"
+        }
+      }
+    },
+    "P4-KPI6": {
+      "name": "Partner NPS",
+      "pillar": "P4",
+      "weight_l1": 0.12,
+      "frequency": "quarterly",
+      "unit": "score",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 50
+      },
+      "ranges": {
+        "healthy": {
+          "min": 50,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 0,
+          "max": 50,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": -100,
+          "max": 0,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI1": {
+      "name": "Capacity Utilization Rate",
+      "pillar": "P5",
+      "weight_l1": 0.18,
+      "frequency": "daily",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 70
+      },
+      "ranges": {
+        "healthy": {
+          "min": 70,
+          "max": 90,
+          "color": "green"
+        },
+        "risk": {
+          "min": 50,
+          "max": 70,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 50,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI2": {
+      "name": "Capacity Utilization Trajectory",
+      "pillar": "P5",
+      "weight_l1": 0.18,
+      "frequency": "monthly",
+      "unit": "percentage_change",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 5
+      },
+      "ranges": {
+        "healthy": {
+          "min": 5,
+          "max": 50,
+          "color": "green"
+        },
+        "risk": {
+          "min": -5,
+          "max": 5,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": -50,
+          "max": -5,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI3": {
+      "name": "Workload Growth Velocity",
+      "pillar": "P5",
+      "weight_l1": 0.18,
+      "frequency": "monthly",
+      "unit": "percentage_change",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 10
+      },
+      "ranges": {
+        "healthy": {
+          "min": 10,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 0,
+          "max": 10,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": -50,
+          "max": 0,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI4": {
+      "name": "Compute Hour Consumption Trend",
+      "pillar": "P5",
+      "weight_l1": 0.15,
+      "frequency": "weekly",
+      "unit": "percentage_change",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 15
+      },
+      "ranges": {
+        "healthy": {
+          "min": 15,
+          "max": 200,
+          "color": "green"
+        },
+        "risk": {
+          "min": 0,
+          "max": 15,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": -100,
+          "max": 0,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI5": {
+      "name": "Budget Availability Signals",
+      "pillar": "P5",
+      "weight_l1": 0.1,
+      "frequency": "monthly",
+      "unit": "score",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 70
+      },
+      "ranges": {
+        "healthy": {
+          "min": 70,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 40,
+          "max": 70,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 40,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI6": {
+      "name": "New Use Case Adoption",
+      "pillar": "P5",
+      "weight_l1": 0.05,
+      "frequency": "monthly",
+      "unit": "count",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 2
+      },
+      "ranges": {
+        "healthy": {
+          "min": 2,
+          "max": 10,
+          "color": "green"
+        },
+        "risk": {
+          "min": 1,
+          "max": 2,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 1,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI7": {
+      "name": "Expansion Probability (90d)",
+      "pillar": "P5",
+      "weight_l1": 0.13,
+      "frequency": "weekly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 50
+      },
+      "ranges": {
+        "healthy": {
+          "min": 50,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 25,
+          "max": 50,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 25,
+          "color": "red"
+        }
+      }
+    },
+    "P5-KPI8": {
+      "name": "Technical Champion Engagement",
+      "pillar": "P5",
+      "weight_l1": 0.03,
+      "frequency": "monthly",
+      "unit": "score",
+      "higher_is_better": true,
+      "target": {
+        "operator": ">",
+        "value": 75
+      },
+      "ranges": {
+        "healthy": {
+          "min": 75,
+          "max": 100,
+          "color": "green"
+        },
+        "risk": {
+          "min": 50,
+          "max": 75,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 50,
+          "color": "red"
+        }
+      }
+    }
+  }
+}

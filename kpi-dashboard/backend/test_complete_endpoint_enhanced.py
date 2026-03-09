@@ -106,22 +106,22 @@ def test_full_request():
         "last_name": "Administrator",
         "num_accounts": 10,
         "weights": {
-            "AI": 0.10,
-            "CH": 0.30,
-            "DV": 0.30,
-            "EX": 0.05,
-            "OS": 0.25
+            "P3": 0.10,
+            "P4": 0.30,
+            "P1": 0.30,
+            "P5": 0.05,
+            "P2": 0.25
         }
     }
-    
+
     try:
         response = requests.post(API_ENDPOINT, json=payload, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {json.dumps(response.json(), indent=2)}")
-        
+
         if response.status_code == 200:
             data = response.json()
-            
+
             # Verify all fields
             checks = [
                 (data.get('success') == True, "success = true"),
@@ -135,7 +135,7 @@ def test_full_request():
                 (data.get('user', {}).get('username') == "dc2s_admin", "username matches"),
                 (data.get('user', {}).get('email') == "admin@dc2s-demo.example.com", "email matches"),
                 (data.get('user', {}).get('role') == "admin", "role = admin"),
-                (data.get('config', {}).get('weights', {}).get('AI') == 0.10, "custom weights applied"),
+                (data.get('config', {}).get('weights', {}).get('P3') == 0.10, "custom weights applied"),
                 (data.get('directory_provisioned') == True, "directory provisioned"),
                 (data.get('csv_files_generated') == True, "CSV files generated"),
             ]
@@ -168,27 +168,27 @@ def test_custom_weights():
     payload = {
         "customer_name": "Test Company Weights",
         "weights": {
-            "AI": 0.50,
-            "CH": 0.20,
-            "DV": 0.10,
-            "EX": 0.10,
-            "OS": 0.10
+            "P3": 0.50,
+            "P4": 0.20,
+            "P1": 0.10,
+            "P5": 0.10,
+            "P2": 0.10
         }
     }
-    
+
     try:
         response = requests.post(API_ENDPOINT, json=payload, timeout=30)
-        
+
         if response.status_code == 200:
             data = response.json()
             weights = data.get('config', {}).get('weights', {})
-            
+
             checks = [
-                (weights.get('AI') == 0.50, "AI weight = 0.50"),
-                (weights.get('CH') == 0.20, "CH weight = 0.20"),
-                (weights.get('DV') == 0.10, "DV weight = 0.10"),
-                (weights.get('EX') == 0.10, "EX weight = 0.10"),
-                (weights.get('OS') == 0.10, "OS weight = 0.10"),
+                (weights.get('P3') == 0.50, "P3 weight = 0.50"),
+                (weights.get('P4') == 0.20, "P4 weight = 0.20"),
+                (weights.get('P1') == 0.10, "P1 weight = 0.10"),
+                (weights.get('P5') == 0.10, "P5 weight = 0.10"),
+                (weights.get('P2') == 0.10, "P2 weight = 0.10"),
             ]
             
             all_pass = all(check[0] for check in checks)

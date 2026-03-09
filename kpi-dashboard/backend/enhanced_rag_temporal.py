@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import openai
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
+from utils.embedding_model import get_embedding_model
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
@@ -69,11 +69,9 @@ class EnhancedRAGTemporalSystem:
         return self.qdrant_client
     
     def _get_embedding_model(self):
-        """Lazy load the embedding model"""
+        """Return the shared embedding model singleton"""
         if self.embedding_model is None:
-            print("Loading SentenceTransformer model...")
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            print("✅ SentenceTransformer model loaded")
+            self.embedding_model = get_embedding_model()
         return self.embedding_model
         
     def _ensure_collection_exists(self):

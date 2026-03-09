@@ -156,6 +156,23 @@ class AgenticLoop:
         start_time = time.time()
         state = LoopState(customer_id=customer_id, account_id=account_id)
 
+        # Entitlement check — only run the loop if the customer has access
+        try:
+            from entitlements import check_entitlement
+            if not check_entitlement(customer_id, 'agent_loop'):
+                logger.warning(
+                    f"Customer {customer_id} not entitled to 'agent_loop' — "
+                    f"returning early with analyze-only result"
+                )
+                state.decision = "rejected"
+                state.decision_reason = "Agentic loop not available on current plan"
+                state.current_step = LoopStep.COMPLETE
+                state.completed_at = datetime.utcnow().isoformat()
+                state.duration_ms = int((time.time() - start_time) * 1000)
+                return state
+        except ImportError:
+            pass  # Entitlements module not available — allow by default
+
         try:
             # Step 1: ANALYZE — run the core agent
             state = self._step_analyze(state, input_data)
@@ -307,6 +324,18 @@ class AgenticLoop:
         except Exception as e:
             logger.warning(f"[ENRICH] Quarterly checkpoint failed: {e}")
 
+        # Always pull playbook outcome memories (feedback loop: past outcomes inform future analyses)
+        outcome_result = self.tool_registry.invoke(
+            "memory_recall",
+            customer_id=state.customer_id,
+            account_id=state.account_id,
+            namespace="playbook_outcome",
+            limit=5,
+        )
+        if outcome_result.success and outcome_result.result:
+            state.enrichment_data["playbook_outcomes"] = outcome_result.result
+            state.tools_called.append("playbook_outcome_recall")
+
         logger.info(f"[ENRICH] Called {len(state.tools_called)} tools")
         return state
 
@@ -450,17 +479,43 @@ class AgenticLoop:
             logger.info("[ACT] Decision=rejected — no actions taken")
             return state
 
+        # Submit actions to Approval Queue (persistent DB storage)
+        approval_svc = None
+        try:
+            from approval_queue import ApprovalQueueService
+            approval_svc = ApprovalQueueService()
+        except ImportError:
+            logger.warning("ApprovalQueueService not available — actions will be ephemeral only")
+
         if state.decision == "auto_execute":
             # Queue for auto-execution via approval system
             for action in state.enriched_actions:
-                state.actions_taken.append({
+                action_record = {
                     "action": action.get("action", "unknown"),
                     "status": "queued_for_auto_execute",
                     "dollar_impact": action.get("dollar_impact"),
                     "action_cost": action.get("action_cost"),
                     "action_roi": action.get("action_roi"),
                     "playbook_id": action.get("playbook_id"),
-                })
+                }
+                state.actions_taken.append(action_record)
+
+                # Persist to approval_requests table
+                if approval_svc:
+                    try:
+                        approval_svc.submit(
+                            customer_id=state.customer_id,
+                            account_id=str(state.account_id),
+                            action_type=action.get("playbook_id", "agent_action"),
+                            confidence=state.confidence,
+                            predicted_outcome=state.predicted_outcome,
+                            reasoning=action.get("action", ""),
+                            dollar_impact=action.get("dollar_impact"),
+                            action_payload=action,
+                            playbook_id=action.get("playbook_id"),
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to persist auto-execute action: {e}")
 
             # Publish auto-trigger event
             if self.event_publisher:
@@ -481,13 +536,30 @@ class AgenticLoop:
 
         elif state.decision == "needs_review":
             for action in state.enriched_actions:
-                state.actions_taken.append({
+                action_record = {
                     "action": action.get("action", "unknown"),
                     "status": "queued_for_review",
                     "dollar_impact": action.get("dollar_impact"),
                     "action_cost": action.get("action_cost"),
                     "action_roi": action.get("action_roi"),
-                })
+                }
+                state.actions_taken.append(action_record)
+
+                # Persist to approval_requests table
+                if approval_svc:
+                    try:
+                        approval_svc.submit(
+                            customer_id=state.customer_id,
+                            account_id=str(state.account_id),
+                            action_type="agent_recommendation",
+                            confidence=state.confidence,
+                            predicted_outcome=state.predicted_outcome,
+                            reasoning=action.get("action", ""),
+                            dollar_impact=action.get("dollar_impact"),
+                            action_payload=action,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to persist review action: {e}")
 
             # Publish approval request event
             if self.event_publisher:
