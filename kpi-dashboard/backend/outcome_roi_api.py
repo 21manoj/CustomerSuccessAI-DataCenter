@@ -112,10 +112,14 @@ def get_historical_roi():
 
         metric_actuals, data_source = _extract_historical_actuals(accounts, months)
 
+        # Determine vertical from first account
+        acct_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
         result = calculate_historical_roi(
             metric_actuals=metric_actuals,
             account_arr=total_arr,
             period_label=f"Last {months} Months",
+            vertical=acct_vertical,
         )
 
         from outcome_roi_engine import _result_to_dict
@@ -166,11 +170,15 @@ def get_forward_roi():
 
         current_values, data_source = _extract_current_values(accounts)
 
+        # Determine vertical from first account
+        fwd_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
         result = calculate_forward_roi(
             current_values=current_values,
             target_improvement_pct=improvement_pct,
             account_arr=total_arr,
             projection_months=projection_months,
+            vertical=fwd_vertical,
         )
 
         from outcome_roi_engine import _result_to_dict
@@ -225,6 +233,9 @@ def get_outcome_story():
         # Identify at-risk accounts per Power of 1 metric
         accounts_at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
 
+        # Determine vertical from first account (single-vertical portfolio)
+        acct_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
             target_improvement_pct=improvement_pct,
@@ -233,6 +244,7 @@ def get_outcome_story():
             accounts_at_risk=accounts_at_risk,
             customer_id=customer_id,
             account_ids=[a.account_id for a in accounts],
+            vertical=acct_vertical,
         )
 
         # Persist ROI snapshot for audit trail and trending

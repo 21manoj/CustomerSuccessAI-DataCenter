@@ -150,11 +150,22 @@ class PowerOf1Metric:
     primary_pillar: CSPillar
     secondary_pillars: List[CSPillar]
     linked_playbooks: List[str]
+    dc2s_linked_playbooks: List[str]
     linked_kpi_codes: List[str]
     total_hours: float
     quarters: List[str]
     impact_breakdown: Dict[ImpactType, float]
     work_packages: List[WorkPackage]
+
+    def get_playbooks(self, vertical: str = None) -> List[str]:
+        """Return playbook IDs appropriate for the vertical.
+
+        For DC2S (vertical='dc2_s'), returns PB-01 through PB-06 mappings.
+        Otherwise returns generic playbook names.
+        """
+        if vertical == "dc2_s" and self.dc2s_linked_playbooks:
+            return self.dc2s_linked_playbooks
+        return self.linked_playbooks
 
 
 # ============================================================
@@ -207,6 +218,7 @@ def _build_metrics(economics: dict) -> Dict[str, PowerOf1Metric]:
             primary_pillar=CSPillar(m["primary_pillar"]),
             secondary_pillars=secondary,
             linked_playbooks=m.get("linked_playbooks", []),
+            dc2s_linked_playbooks=m.get("dc2s_linked_playbooks", []),
             linked_kpi_codes=m.get("linked_kpi_codes", []),
             total_hours=m["total_hours"],
             quarters=m.get("quarters", []),
@@ -329,6 +341,8 @@ def calculate_power_of_1_impact(
                 metric.impact_breakdown.get(ImpactType.COST_SAVINGS, 0) * improvement_pct * arr_scale, 2
             ),
         },
+        "linked_playbooks": metric.get_playbooks(vertical),
+        "linked_kpi_codes": metric.linked_kpi_codes,
     }
 
 

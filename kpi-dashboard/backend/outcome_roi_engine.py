@@ -100,6 +100,7 @@ def calculate_historical_roi(
     period_label: str = "Last 6 Months",
     period_start: Optional[str] = None,
     period_end: Optional[str] = None,
+    vertical: Optional[str] = None,
 ) -> OutcomeROIResult:
     """
     Calculate realized ROI from actual metric movements.
@@ -188,7 +189,7 @@ def calculate_historical_roi(
             savings_portion=round(savings_portion, 2),
             category=metric.category.value,
             linked_kpis=metric.linked_kpi_codes,
-            linked_playbooks=metric.linked_playbooks,
+            linked_playbooks=metric.get_playbooks(vertical),
         ))
 
     # Scale investment with observed improvement level:
@@ -287,6 +288,7 @@ def calculate_forward_roi(
     investment_override: Optional[float] = None,
     projection_months: int = 6,
     period_label: Optional[str] = None,
+    vertical: Optional[str] = None,
 ) -> OutcomeROIResult:
     """
     Project forward ROI from current metric values to target improvement.
@@ -374,7 +376,7 @@ def calculate_forward_roi(
             savings_portion=round(savings_portion, 2),
             category=metric.category.value,
             linked_kpis=metric.linked_kpi_codes,
-            linked_playbooks=metric.linked_playbooks,
+            linked_playbooks=metric.get_playbooks(vertical),
         ))
 
     # Scale investment with target improvement %:
@@ -456,6 +458,7 @@ def calculate_outcome_story(
     accounts_at_risk: Optional[Dict[str, List]] = None,
     customer_id: Optional[int] = None,
     account_ids: Optional[List[int]] = None,
+    vertical: Optional[str] = None,
 ) -> Dict:
     """
     Build the complete outcome story: historical proof + forward projection.
@@ -469,6 +472,7 @@ def calculate_outcome_story(
         account_arr=account_arr,
         investment_override=investment_override,
         period_label=historical_period_label,
+        vertical=vertical,
     )
 
     # Extract current values from actuals for forward projection
@@ -483,6 +487,7 @@ def calculate_outcome_story(
         account_arr=account_arr,
         investment_override=investment_override,
         projection_months=projection_months,
+        vertical=vertical,
     )
 
     # Combined totals
@@ -509,6 +514,7 @@ def calculate_outcome_story(
         forward_result=forward,
         accounts_at_risk=accounts_at_risk,
         arr_scale=arr_scale,
+        vertical=vertical,
     )
 
     # Scale scenarios dynamically if ARR differs from $10M base
@@ -562,6 +568,7 @@ def _build_implementation_roadmap(
     forward_result: Optional[OutcomeROIResult] = None,
     accounts_at_risk: Optional[Dict[str, List]] = None,
     arr_scale: float = 1.0,
+    vertical: Optional[str] = None,
 ) -> Dict:
     """
     Build the 'how to get there' roadmap from Power of 1 work packages.
@@ -630,7 +637,7 @@ def _build_implementation_roadmap(
             "active_quarters": metric_quarters,
             "all_quarters": metric.quarters,
             "linked_kpis": metric.linked_kpi_codes,
-            "linked_playbooks": metric.linked_playbooks,
+            "linked_playbooks": metric.get_playbooks(vertical),
             "accounts_at_risk": metric_at_risk,
             "at_risk_revenue": round(at_risk_revenue, 0),
             "at_risk_count": len(accounts_at_risk.get(metric_id, [])) if accounts_at_risk else 0,

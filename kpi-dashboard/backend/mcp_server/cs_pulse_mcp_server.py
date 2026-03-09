@@ -475,10 +475,17 @@ def calculate_power_of_1(
             if not effective_arr:
                 effective_arr = None  # fall back to $10M baseline
 
+        # Determine vertical: all DC2S accounts share dc2_s vertical
+        po1_vertical = 'dc2_s'
+        if scope == "account":
+            # If we had an account object, we'd use its vertical attribute
+            pass
+
         result = calculate_power_of_1_impact(
             metric_id=metric_id,
             improvement_pct=improvement_pct,
             account_arr=effective_arr,
+            vertical=po1_vertical,
         )
 
         if "error" in result:
@@ -525,6 +532,9 @@ def get_outcome_roi_story(
         for mid, m in POWER_OF_1_METRICS.items():
             metric_actuals[mid] = {"current": m.baseline, "baseline": m.baseline}
 
+        # Determine vertical from account
+        acct_vertical = getattr(account, 'vertical', None)
+
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
             target_improvement_pct=target_improvement_pct,
@@ -532,6 +542,7 @@ def get_outcome_roi_story(
             projection_months=projection_months,
             customer_id=customer_id,
             account_ids=[account_id],
+            vertical=acct_vertical,
         )
 
         story["scope"] = "account"
@@ -1217,6 +1228,9 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         # Identify at-risk accounts per Power of 1 metric
         accounts_at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
 
+        # Determine vertical from first account (portfolio is single-vertical)
+        portfolio_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
             target_improvement_pct=4.0,
@@ -1225,6 +1239,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
             accounts_at_risk=accounts_at_risk,
             customer_id=customer_id,
             account_ids=account_ids,
+            vertical=portfolio_vertical,
         )
 
         return {
