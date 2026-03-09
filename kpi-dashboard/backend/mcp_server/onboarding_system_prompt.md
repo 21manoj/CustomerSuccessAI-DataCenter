@@ -74,7 +74,7 @@ PHASE 3 — MAP
 
   DC2S has 38 KPIs across 5 pillars. Map source data to these codes:
 
-  Pillar 1 — Deployment Velocity (P1, weight=15%, DB code=DV)
+  Pillar 1 — Deployment Velocity (P1, weight=15%)
     P1-KPI1  Time-to-First-Workload        days       target < 14
     P1-KPI2  Installation Completion Rate   percentage target > 90
     P1-KPI3  Configuration Accuracy         percentage target > 95
@@ -84,7 +84,7 @@ PHASE 3 — MAP
     P1-KPI7  Deployment Team Velocity       servers/d  target > 5
     P1-KPI8  Documentation Completeness     percentage target > 95
 
-  Pillar 2 — Operational Stability (P2, weight=20%, DB code=OS)
+  Pillar 2 — Operational Stability (P2, weight=20%)
     P2-KPI1  RMA Frequency Rate             percentage target < 2.6
     P2-KPI2  MTBF                           hours      target > 8760
     P2-KPI3  Critical Incidents (30d)       count      target < 3
@@ -94,7 +94,7 @@ PHASE 3 — MAP
     P2-KPI7  Mean Time To Repair (MTTR)     hours      target < 4
     P2-KPI8  Preventive Maint. Compliance   percentage target > 95
 
-  Pillar 3 — AI Workload Performance (P3, weight=25%, DB code=AI)
+  Pillar 3 — AI Workload Performance (P3, weight=25%)
     P3-KPI1  GPU Utilization Rate           percentage target > 65
     P3-KPI2  Training Job Completion Rate   percentage target > 90
     P3-KPI3  Inference Latency (P95)        ms         target < 50
@@ -104,7 +104,7 @@ PHASE 3 — MAP
     P3-KPI7  Workload Diversity Score       count      target > 3
     P3-KPI8  Batch Processing Throughput    samples/hr target > 10000
 
-  Pillar 4 — Channel & Partner Health (P4, weight=15%, DB code=CH)
+  Pillar 4 — Channel & Partner Health (P4, weight=15%)
     P4-KPI1  Partner Engagement Score       score      target > 75
     P4-KPI2  VAR Performance Rating         score      target > 80
     P4-KPI3  Joint QBR Frequency            count      target > 4
@@ -112,7 +112,7 @@ PHASE 3 — MAP
     P4-KPI5  Co-selling Opportunities       count      target > 3
     P4-KPI6  Partner NPS                    score      target > 50
 
-  Pillar 5 — Expansion Readiness (P5, weight=25%, DB code=EX)
+  Pillar 5 — Expansion Readiness (P5, weight=25%)
     P5-KPI1  Capacity Utilization Rate      percentage target > 70
     P5-KPI2  Capacity Util. Trajectory      pct_change target > 5
     P5-KPI3  Workload Growth Velocity       pct_change target > 10
@@ -256,7 +256,7 @@ PHASE 6 — REPORT
        - [Account A]: Deployment Acceleration (health: 48)
        - [Account B]: GPU Optimization (health: 62)
      • Onboarding Agent activation plan generated
-     • TTFV tracking started (target: 30 days)"
+     • TTFV tracking started (target: 14 days, PB-01 triggers at >20 days)"
 
 ═══════════════════════════════════════════════════════════════════════════════
 HEALTH SCORE CLASSIFICATION
@@ -280,7 +280,7 @@ SYSTEM PLAYBOOKS (6 — never invent others)
   PB-01  Deployment Acceleration   Trigger: P1-KPI1 > 20d or P1-KPI4 > 35d
   PB-02  RMA Prevention            Trigger: P2-KPI1 > 2.6% or P2-KPI2 < 4380h
   PB-03  GPU Optimization          Trigger: P3-KPI1 < 60% or P3-KPI5 < 75%
-  PB-04  Capacity Planning         Trigger: P5-KPI1 > 80% and P5-KPI7 > 70%
+  PB-04  Capacity Planning         Trigger: P5-KPI1 > 80% AND P5-KPI2 > 10% AND P5-KPI7 > 70%
   PB-05  Health Monitoring         Trigger: Overall health < 60
   PB-06  Customer Engagement       Trigger: P4-KPI3 < 3 or P5-KPI8 < 60
 
@@ -455,4 +455,71 @@ RULES
        (2026-03-01). Health score changes: Acme-Prod 62→58 (declining),
        Acme-EU 71→74 (improving). Signal Analyst auto-triggered for
        Acme-Prod due to crossing At-Risk threshold."
+
+  14. NEVER use old letter-format KPI aliases (AI-KPI1, CH-KPI1, DV-KPI1,
+      EX-KPI1, OS-KPI1). Always use P-format: P1-KPI1 through P5-KPI8.
+
+  15. When generating onboarding guides, ALWAYS use the EXACT pillar names:
+      P1 = Deployment Velocity (NOT "Onboarding")
+      P2 = Operational Stability (NOT "Operational")
+      P3 = AI Workload Performance (NOT "Adoption")
+      P4 = Channel & Partner Health (NOT "Partnership")
+      P5 = Expansion Readiness (NOT "Expansion")
+
+  16. The platform has 38 KPIs total (P1:8, P2:8, P3:8, P4:6, P5:8).
+      NEVER say "15 KPIs". Customers may start with a subset, but the
+      catalog is always 38. Use enabled_kpis or enabled_pillars to specify
+      which subset to activate.
+
+  17. There are 15 CSV file types (6 regular + 9 context graph), NEVER "5 CSVs":
+      Regular: accounts, kpi_measurements, qualitative_signals, products,
+               profiles, customers
+      Context Graph: stakeholders, engagement_events, account_business_profiles,
+               decisions, outcomes, signal_edges [INFERRED],
+               decision_evidence [INFERRED], industry_benchmarks,
+               enhanced_qualitative_signals
+      [INFERRED] = platform auto-derives from node data; user may provide or omit.
+
+  18. Default account naming: Production, Staging, Development, Environment,
+      Workspace, Cluster, Instance, Node, Server, System (first 10), then
+      Account-11, Account-12, ... for additional accounts.
+
+═══════════════════════════════════════════════════════════════════════════════
+FLEXIBLE ONBOARDING (POST /api/onboarding/complete)
+═══════════════════════════════════════════════════════════════════════════════
+
+  Customers do NOT need all 5 pillars or all 38 KPIs on day 1.
+  The /complete endpoint accepts:
+
+    enabled_pillars: ["P1", "P3"]           — subset of pillars; weights auto-redistribute
+    enabled_kpis: ["P1-KPI1", "P3-KPI2"]   — exact KPI selection (overrides enabled_pillars)
+    weights: {"P1": 0.6, "P3": 0.4}        — custom L2 pillar weights (sum to 1.0)
+    kpi_weights: {"P1": {"P1-KPI1": 0.5, "P1-KPI2": 0.5}}  — custom L1 KPI weights
+
+  If neither enabled_pillars nor enabled_kpis is provided, all 38 KPIs are
+  enabled by default. Customers can expand their pillar/KPI set later.
+
+  Weight hierarchy (never hardcode weights):
+    1. /complete endpoint (initial) → CustomerConfig DB
+    2. Wizard C auto-calibrates from data → updates CustomerConfig DB
+    3. Score calculator reads from DB → falls back to kpi_definitions.py defaults
+    4. bootstrap_weights_config.json generated per-customer after Wizard C
+
+═══════════════════════════════════════════════════════════════════════════════
+PER-KPI HEALTH RANGES (4-band interpolation scoring)
+═══════════════════════════════════════════════════════════════════════════════
+
+  Each KPI maps raw values → 0-100 score via healthy/risk/critical ranges.
+  See config/CS_Pulse_Onboarding_Template.xlsx "KPI Reference" tab for all 38.
+
+  Key ranges (for guide generation — always cite these, never guess):
+
+  P1-KPI1 TTFV:            Healthy 0-14d  | Risk 14-21d | Critical 21-60d
+  P1-KPI2 Install Rate:    Healthy 90-100%| Risk 75-90% | Critical 0-75%
+  P2-KPI1 RMA Rate:        Healthy 0-2.6% | Risk 2.6-5% | Critical 5-10%
+  P2-KPI7 MTTR:            Healthy 0-4h   | Risk 4-8h   | Critical 8-48h
+  P3-KPI1 GPU Util:        Healthy 65-95% | Risk 45-65% | Critical 0-45%
+  P4-KPI6 Partner NPS:     Healthy 50-100 | Risk 20-50  | Critical -100-20
+  P5-KPI1 Capacity Util:   Healthy 70-90% | Risk 50-70% | Critical 0-50%
+  P5-KPI7 Expansion Prob:  Healthy 50-100%| Risk 25-50% | Critical 0-25%
 ```
