@@ -266,7 +266,7 @@ def main():
     parser.add_argument('--industry', default='Technology', help='Industry (default: Technology)')
     parser.add_argument('--accounts', type=int, default=3, help='Number of accounts (default: 3)')
     parser.add_argument('--months', type=int, default=12, help='Months of data (default: 12)')
-    parser.add_argument('--enabled-kpis', type=int, default=15, help='Number of enabled KPIs (default: 15)')
+    parser.add_argument('--enabled-kpis', type=int, default=38, help='Number of enabled KPIs (default: 38 = all)')
     parser.add_argument('--skip-scores', action='store_true', help='Skip score calculation')
     
     args = parser.parse_args()

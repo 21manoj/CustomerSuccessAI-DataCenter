@@ -43,7 +43,8 @@ FILE_TYPES = {
     'kpis': 'kpi_measurements.csv',
     'signals': 'qualitative_signals.csv',
     'products': 'products.csv',
-    'profiles': 'profiles.csv'
+    'profiles': 'profiles.csv',
+    'customers': 'customers.csv'
 }
 
 # Context graph 9-CSV model (requires context_graph feature toggle)
@@ -123,8 +124,14 @@ def execute_script(script_path: Path, customer_id: int, timeout: int = 300,
         return (False, "", str(e))
 
 
+# Load canonical KPI/pillar definitions for defaults and validation
+from verticals.dc2_s.kpi_definitions import DC2S_KPIS, DC2S_PILLARS
+
 # Expected DC2_S pillar names for weight validation
-DC2S_PILLAR_NAMES = {'P1', 'P2', 'P3', 'P4', 'P5'}
+DC2S_PILLAR_NAMES = set(DC2S_PILLARS.keys())  # {'P1', 'P2', 'P3', 'P4', 'P5'}
+
+# All 38 KPIs as default enabled set (not 15)
+ALL_DC2S_KPI_CODES = list(DC2S_KPIS.keys())  # 38 KPIs
 
 
 def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
@@ -149,6 +156,35 @@ def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
         return (False, "at least 1 pillar weight required")
     if any(float(v) < 0 for v in weights.values()):
         return (False, "weights must be non-negative")
+    return (True, None)
+
+
+def validate_dc2s_kpi_weights(kpi_weights: dict) -> Tuple[bool, Optional[str]]:
+    """
+    Validate custom KPI-level (L1) weights for /complete request.
+    Expected format: {"P1": {"P1-KPI1": 0.20, "P1-KPI2": 0.15, ...}, "P2": {...}, ...}
+    Each pillar's KPI weights should sum to ~1.0.
+    Returns (True, None) if valid, (False, error_message) otherwise.
+    """
+    if not kpi_weights:
+        return (True, None)
+    if not isinstance(kpi_weights, dict):
+        return (False, "kpi_weights must be a dict")
+    for pillar_key, kpi_map in kpi_weights.items():
+        if pillar_key not in DC2S_PILLAR_NAMES:
+            return (False, f"unknown pillar '{pillar_key}' in kpi_weights; valid: {DC2S_PILLAR_NAMES}")
+        if not isinstance(kpi_map, dict):
+            return (False, f"kpi_weights['{pillar_key}'] must be a dict of kpi_code -> weight")
+        if not kpi_map:
+            continue
+        for kpi_code, weight in kpi_map.items():
+            if not kpi_code.startswith(pillar_key + "-KPI"):
+                return (False, f"KPI '{kpi_code}' does not belong to pillar '{pillar_key}'")
+            if float(weight) < 0:
+                return (False, f"kpi_weights['{pillar_key}']['{kpi_code}'] must be non-negative")
+        total = sum(float(v) for v in kpi_map.values())
+        if abs(total - 1.0) > 0.02:
+            return (False, f"kpi_weights['{pillar_key}'] sum to {total:.4f}, expected ~1.0")
     return (True, None)
 
 
@@ -1019,55 +1055,47 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
 def complete_onboarding():
     """
     Complete onboarding flow - ENHANCED V2
-    
+
     Creates customer, admin user, config, accounts, provisions directory, and generates CSV files.
-    
+
+    Flexible pillar/KPI selection:
+      - enabled_pillars: pick a subset of pillars (weights auto-redistribute)
+      - enabled_kpis: pick exact KPIs (overrides enabled_pillars)
+      - neither: all 38 KPIs across 5 pillars (default)
+
     Request:
         {
-            "customer_id": 19,                    // Optional: explicit ID (auto-generated if not provided)
-            "customer_name": "DC2_S Demo Enterprise",
-            "domain": "dc2s-demo.example.com",    // Optional: customer domain
-            "industry": "Data Center Infrastructure",
-            "vertical": "dc2_s",
-            "email": "admin@dc2s-demo.example.com",
-            "username": "dc2s_admin",             // Optional: admin username
-            "password": "DemoPass123!",           // Optional: admin password
-            "first_name": "Demo",                  // Optional: admin first name
-            "last_name": "Administrator",         // Optional: admin last name
-            "num_accounts": 10,                   // Optional: number of accounts (default: 3)
-            "weights": {                          // Optional: custom pillar weights
-                "P3": 0.10,
-                "P4": 0.30,
-                "P1": 0.30,
-                "P5": 0.05,
-                "P2": 0.25
-            }
+            "customer_name": "DC2_S Demo Enterprise",       // Required
+            "customer_id": 19,                              // Optional: explicit ID
+            "domain": "dc2s-demo.example.com",              // Optional
+            "industry": "Data Center Infrastructure",       // Optional (default: Technology)
+            "vertical": "dc2_s",                            // Optional (default: dc2_s)
+            "email": "admin@dc2s-demo.example.com",         // Optional
+            "username": "dc2s_admin",                       // Optional
+            "password": "DemoPass123!",                     // Optional
+            "num_accounts": 10,                             // Optional (default: 3)
+            "enabled_pillars": ["P1", "P3", "P5"],          // Optional: subset of pillars
+            "enabled_kpis": ["P1-KPI1", "P1-KPI2", ...],   // Optional: exact KPIs
+            "weights": {"P1": 0.40, "P3": 0.35, "P5": 0.25}, // Optional: L2 pillar weights (sum to 1.0)
+            "kpi_weights": {"P1": {"P1-KPI1": 0.5, ...}},  // Optional: L1 KPI weights per pillar
+            "onboarding_mode": "demo"                       // Optional: "demo" or "custom"
         }
-    
+
     Response:
         {
             "success": true,
             "customer_id": 19,
-            "customer_name": "DC2_S Demo Enterprise",
-            "domain": "dc2s-demo.example.com",
-            "accounts": 10,
-            "account_details": [...],
-            "account_id_range": "19001 - 19010",
-            "user": {
-                "user_id": 123,
-                "email": "admin@dc2s-demo.example.com",
-                "username": "dc2s_admin",
-                "role": "admin"
-            },
             "config": {
-                "enabled_kpis": 15,
-                "pillars": 5,
-                "weights": {...},
+                "enabled_kpis": ["P1-KPI1", ...],
+                "enabled_kpi_count": 24,
+                "total_available_kpis": 38,
+                "active_pillars": {"P1": "Deployment Velocity", "P3": "AI Workload Performance", "P5": "Expansion Readiness"},
+                "pillar_count": 3,
+                "weights": {"P1": 0.40, "P3": 0.35, "P5": 0.25},
+                "kpi_weights": null,
                 "vertical": "dc2_s"
             },
-            "directory_provisioned": true,
-            "csv_files_generated": true,
-            "message": "Onboarding complete! Customer, user, config, accounts, and CSV files created."
+            ...
         }
     """
     
@@ -1085,7 +1113,10 @@ def complete_onboarding():
     first_name = data.get('first_name')
     last_name = data.get('last_name')
     num_accounts = data.get('num_accounts', 3)  # Default: 3 accounts
-    custom_weights = data.get('weights')  # Optional custom pillar weights
+    custom_weights = data.get('weights')  # Optional custom L2 pillar weights
+    custom_kpi_weights = data.get('kpi_weights')  # Optional custom L1 KPI weights
+    enabled_pillars = data.get('enabled_pillars')  # Optional: list of pillar codes e.g. ["P1", "P3", "P5"]
+    enabled_kpis_input = data.get('enabled_kpis')  # Optional: list of KPI codes e.g. ["P1-KPI1", "P1-KPI2", ...]
     idempotent = data.get('idempotent', False)  # If True, return existing customer on duplicate
     onboarding_mode = data.get('onboarding_mode', 'demo')  # 'demo' (synthetic data) or 'custom' (user uploads CSVs)
     showcase_pattern_mix = data.get('showcase_pattern_mix')  # Optional: custom journey pattern distribution for demo mode
@@ -1097,8 +1128,33 @@ def complete_onboarding():
     if custom_weights:
         ok, err = validate_dc2s_pillar_weights(custom_weights)
         if not ok:
-            return jsonify({"error": f"Invalid weights: {err}"}), 400
-    
+            return jsonify({"error": f"Invalid pillar weights: {err}"}), 400
+
+    if custom_kpi_weights:
+        ok, err = validate_dc2s_kpi_weights(custom_kpi_weights)
+        if not ok:
+            return jsonify({"error": f"Invalid KPI weights: {err}"}), 400
+
+    # Validate enabled_pillars if provided
+    if enabled_pillars:
+        if not isinstance(enabled_pillars, list):
+            return jsonify({"error": "enabled_pillars must be a list of pillar codes (e.g. ['P1', 'P3', 'P5'])"}), 400
+        invalid = set(enabled_pillars) - DC2S_PILLAR_NAMES
+        if invalid:
+            return jsonify({"error": f"Unknown pillars: {invalid}; valid: {sorted(DC2S_PILLAR_NAMES)}"}), 400
+        if len(enabled_pillars) < 1:
+            return jsonify({"error": "At least 1 pillar required in enabled_pillars"}), 400
+
+    # Validate enabled_kpis if provided
+    if enabled_kpis_input:
+        if not isinstance(enabled_kpis_input, list):
+            return jsonify({"error": "enabled_kpis must be a list of KPI codes (e.g. ['P1-KPI1', 'P1-KPI2'])"}), 400
+        invalid_kpis = [k for k in enabled_kpis_input if k not in DC2S_KPIS]
+        if invalid_kpis:
+            return jsonify({"error": f"Unknown KPI codes: {invalid_kpis}; see KPI catalog for valid codes"}), 400
+        if len(enabled_kpis_input) < 1:
+            return jsonify({"error": "At least 1 KPI required in enabled_kpis"}), 400
+
     try:
         # Step 0: Provision customer directory structure (if not exists)
         customer_dir = get_customer_directory(customer_id_explicit if customer_id_explicit else 0, vertical)
@@ -1160,6 +1216,8 @@ def complete_onboarding():
                         # Already onboarded — return existing state
                         customer_dir = get_customer_directory(customer_id_explicit, vertical)
                         config = CustomerConfig.query.filter_by(customer_id=customer_id_explicit).first()
+                        existing_enabled = config.dc2s_enabled_kpis or [] if config else []
+                        existing_active_pillars = sorted(set(k.split('-')[0] for k in existing_enabled)) if existing_enabled else []
                         return jsonify({
                             "success": True,
                             "customer_id": existing.customer_id,
@@ -1170,8 +1228,13 @@ def complete_onboarding():
                             "accounts": len(existing_accounts),
                             "account_details": [{"account_id": a.account_id, "account_name": a.account_name} for a in existing_accounts],
                             "config": {
-                                "enabled_kpis": len(config.dc2s_enabled_kpis or []) if config else 0,
+                                "enabled_kpis": existing_enabled,
+                                "enabled_kpi_count": len(existing_enabled),
+                                "total_available_kpis": len(ALL_DC2S_KPI_CODES),
+                                "active_pillars": {p: DC2S_PILLARS[p]['name'] for p in existing_active_pillars if p in DC2S_PILLARS},
+                                "pillar_count": len(existing_active_pillars),
                                 "weights": (config.dc2s_pillar_weights if config else None) or custom_weights or {},
+                                "kpi_weights": (config.dc2s_kpi_weights if config else None) or custom_kpi_weights,
                                 "vertical": getattr(config, "vertical", None) or vertical
                             },
                             "directory_provisioned": customer_dir.exists() if customer_dir else False,
@@ -1310,23 +1373,41 @@ def complete_onboarding():
                 current_app.logger.info(f"ℹ️  User {username} already exists")
         
         # Step 3: Create or Update CustomerConfig with default or custom settings
-        # Default: Enable first 15 KPIs (3 per pillar)
-        default_enabled_kpis = [
-            'P1-KPI1', 'P1-KPI2', 'P1-KPI3',
-            'P2-KPI1', 'P2-KPI2', 'P2-KPI3',
-            'P3-KPI1', 'P3-KPI2', 'P3-KPI3',
-            'P4-KPI1', 'P4-KPI2', 'P4-KPI3',
-            'P5-KPI1', 'P5-KPI2', 'P5-KPI3'
-        ]
+        # Flexible KPI/Pillar selection:
+        #   - enabled_kpis: explicit list → use as-is
+        #   - enabled_pillars: select all KPIs for those pillars
+        #   - neither: all 38 KPIs (full catalog)
+        if enabled_kpis_input:
+            # User specified exact KPIs they want
+            resolved_enabled_kpis = enabled_kpis_input
+        elif enabled_pillars:
+            # User picked pillars — enable all KPIs for those pillars
+            resolved_enabled_kpis = [
+                code for code, defn in DC2S_KPIS.items()
+                if defn.get('pillar', code.split('-')[0]) in enabled_pillars
+            ]
+        else:
+            # Default: all 38 KPIs enabled (customer can narrow later)
+            resolved_enabled_kpis = list(ALL_DC2S_KPI_CODES)
 
-        # Use custom weights if provided, otherwise defaults
-        pillar_weights = custom_weights if custom_weights else {
-            'P1': 0.15,
-            'P2': 0.20,
-            'P3': 0.25,
-            'P4': 0.15,
-            'P5': 0.25
-        }
+        # Derive which pillars are active from the enabled KPIs
+        active_pillars = sorted(set(
+            kpi.split('-')[0] for kpi in resolved_enabled_kpis
+        ))
+
+        # Use custom weights if provided, otherwise derive defaults for active pillars only
+        if custom_weights:
+            pillar_weights = custom_weights
+        else:
+            # Equal-weight default across active pillars (sums to 1.0)
+            default_all = {p: DC2S_PILLARS[p].get('weight_l2', 0.20) for p in DC2S_PILLARS}
+            if set(active_pillars) == DC2S_PILLAR_NAMES:
+                pillar_weights = default_all
+            else:
+                # Redistribute weights proportionally for the active subset
+                raw = {p: default_all.get(p, 0.20) for p in active_pillars}
+                total = sum(raw.values())
+                pillar_weights = {p: round(w / total, 4) for p, w in raw.items()} if total > 0 else raw
         
         # Check if config already exists (for idempotency)
         config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
@@ -1334,16 +1415,19 @@ def complete_onboarding():
         if config:
             # Update existing config
             config.vertical = vertical
-            config.dc2s_enabled_kpis = default_enabled_kpis
+            config.dc2s_enabled_kpis = resolved_enabled_kpis
             config.dc2s_pillar_weights = pillar_weights
+            if custom_kpi_weights:
+                config.dc2s_kpi_weights = custom_kpi_weights
             current_app.logger.info(f"✅ Updated CustomerConfig for customer {customer_id}")
         else:
             # Create new config
             config = CustomerConfig(
                 customer_id=customer_id,
                 vertical=vertical,
-                dc2s_enabled_kpis=default_enabled_kpis,
-                dc2s_pillar_weights=pillar_weights
+                dc2s_enabled_kpis=resolved_enabled_kpis,
+                dc2s_pillar_weights=pillar_weights,
+                dc2s_kpi_weights=custom_kpi_weights,
             )
             db.session.add(config)
             current_app.logger.info(f"✅ Created CustomerConfig for customer {customer_id}")
@@ -1557,9 +1641,15 @@ def complete_onboarding():
             "account_details": enriched_accounts,
             "account_id_range": account_id_range,
             "config": {
-                "enabled_kpis": len(default_enabled_kpis),
-                "pillars": 5,
+                "enabled_kpis": resolved_enabled_kpis,
+                "enabled_kpi_count": len(resolved_enabled_kpis),
+                "total_available_kpis": len(ALL_DC2S_KPI_CODES),
+                "active_pillars": {
+                    p: DC2S_PILLARS[p]['name'] for p in active_pillars
+                },
+                "pillar_count": len(active_pillars),
                 "weights": pillar_weights,
+                "kpi_weights": custom_kpi_weights,
                 "vertical": vertical
             },
             "directory_provisioned": directory_provisioned,

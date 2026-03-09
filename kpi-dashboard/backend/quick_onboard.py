@@ -29,7 +29,7 @@ from verticals.dc2_s.vertical_loader import DC2SVertical
 DEFAULT_COMPANY = f"Demo Company {int(datetime.now().timestamp())}"
 DEFAULT_NUM_ACCOUNTS = 3
 DEFAULT_NUM_MONTHS = 12
-DEFAULT_NUM_KPIS = 15
+DEFAULT_NUM_KPIS = 38  # All KPIs (customer can narrow via enabled_kpis later)
 
 def onboard(company_name=None, num_kpis=DEFAULT_NUM_KPIS):
     """Simple onboarding - returns customer_id"""
