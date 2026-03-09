@@ -1,0 +1,27 @@
+# ================================================================
+# Load Driver on EC2 — use with docker-compose.ec2-registry.yml
+# Same network so load driver reaches http://cspulse-platform:5059
+#
+# Run: docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml up -d
+# Or:  docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml pull load-driver && ... up -d load-driver
+# ================================================================
+
+services:
+  load-driver:
+    image: ${REGISTRY}/cspulse-load-driver:${LOAD_DRIVER_TAG:-latest}
+    container_name: cspulse-load-driver
+    environment:
+      CS_PULSE_BASE_URL: http://cspulse-platform:5059
+      CS_PULSE_ADMIN_EMAIL: dc2s_super@test.com
+      CS_PULSE_ADMIN_PASSWORD: DC2_Super_2024!
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - loaddriver-results:/app/results
+    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "1,2,3", "--base-url", "http://cspulse-platform:5059", "--results-dir", "/app/results"]
+    networks:
+      - cspulse-net
+    restart: "no"
+
+volumes:
+  loaddriver-results:
