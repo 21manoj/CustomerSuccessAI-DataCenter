@@ -230,9 +230,14 @@ def traverse_2hop(
         ContextNode.account_id == account_id,
     ).all()
 
+    # Revenue at risk: only negative-impact SIGNAL nodes (consistent with
+    # get_revenue_at_risk — avoids double-counting decisions/outcomes).
     total_revenue = sum(
-        float(n.revenue_impact) for n in all_nodes
-        if n.revenue_impact and n.revenue_impact_type == 'at_risk'
+        abs(float(n.revenue_impact) * float(n.confidence or 1.0))
+        for n in all_nodes
+        if n.node_type == 'SIGNAL'
+        and n.revenue_impact is not None
+        and float(n.revenue_impact) < 0
     )
 
     return {
@@ -257,19 +262,64 @@ def _get_all_edges_for_node(node_id: int, edge_types: Optional[List[str]] = None
 
 # ─── Revenue / ROI Aggregations ─────────────────────────────────────────────
 
+def _deduplicate_outcome_amounts(amounts: List[float], threshold: float = 0.20) -> float:
+    """
+    Cluster outcome amounts that are within *threshold* of each other —
+    these likely represent the same economic event counted from different
+    perspectives (e.g. "Expansion Deal Closed" vs "ARR Growth" vs "ROI").
+
+    Returns the sum of the **largest** amount from each cluster.
+    """
+    if not amounts:
+        return 0.0
+
+    sorted_amounts = sorted(amounts, reverse=True)
+    used: set = set()
+    total = 0.0
+
+    for i, a in enumerate(sorted_amounts):
+        if i in used:
+            continue
+        used.add(i)
+        # Absorb any later amounts that are within threshold of *a*
+        for j in range(i + 1, len(sorted_amounts)):
+            if j in used:
+                continue
+            b = sorted_amounts[j]
+            if a > 0 and abs(a - b) / a < threshold:
+                used.add(j)                 # same event — skip the smaller
+        total += a                          # keep the largest per cluster
+
+    return total
+
+
 def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     """
     Aggregate revenue impact across all active nodes for an account.
     This is the primary CRO/CFO metric.
 
+    Revenue-counting rules (prevents double-counting across the causal chain):
+      - **at_risk**:   Only SIGNAL nodes whose revenue_impact < 0 (active threats).
+      - **protected**: Only OUTCOME nodes with revenue_impact_type='protected'.
+      - **expansion**: Only OUTCOME nodes with revenue_impact_type='expansion'.
+      - **lost**:      Only OUTCOME nodes with revenue_impact_type='lost'.
+      - DECISION nodes are *excluded* — they are intermediate steps whose
+        value is realised through downstream OUTCOME nodes.
+      - Positive-impact SIGNAL nodes are *excluded* — they describe the same
+        upside that OUTCOME nodes already capture.
+
+    Outcome de-duplication:
+      Within each bucket, outcome amounts that are within 20 % of each other
+      are treated as the same economic event; only the largest is kept.
+
     Returns:
         {
-            'at_risk': total ARR at risk,
+            'at_risk': total ARR currently at risk,
             'protected': total ARR protected by interventions,
-            'expansion': expansion pipeline $,
+            'expansion': expansion revenue (de-duplicated),
             'lost': confirmed lost ARR,
             'net_impact': protected + expansion - lost,
-            'node_count': number of revenue-tagged nodes
+            'node_count': number of revenue-contributing nodes
         }
     """
     now = datetime.utcnow()
@@ -282,17 +332,43 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         )
     ).all()
 
-    buckets = {'at_risk': 0, 'protected': 0, 'expansion': 0, 'lost': 0}
-    for n in nodes:
+    # ── Split by node type ──
+    outcome_nodes = [n for n in nodes if n.node_type == 'OUTCOME']
+    signal_nodes  = [n for n in nodes if n.node_type == 'SIGNAL']
+
+    # ── at_risk: only negative-impact SIGNAL nodes (active threats) ──
+    at_risk = 0.0
+    at_risk_count = 0
+    for n in signal_nodes:
         impact = float(n.revenue_impact) * float(n.confidence or 1.0)
-        bucket = n.revenue_impact_type or 'at_risk'
-        if bucket in buckets:
-            buckets[bucket] += impact
+        if impact < 0:
+            at_risk += abs(impact)
+            at_risk_count += 1
+
+    # ── protected / expansion / lost: only OUTCOME nodes ──
+    outcome_buckets: Dict[str, List[float]] = {
+        'protected': [], 'expansion': [], 'lost': [],
+    }
+    for n in outcome_nodes:
+        impact = abs(float(n.revenue_impact) * float(n.confidence or 1.0))
+        bucket = n.revenue_impact_type or 'expansion'
+        if bucket in outcome_buckets:
+            outcome_buckets[bucket].append(impact)
+
+    # De-duplicate within each bucket (same economic event → keep largest)
+    protected  = _deduplicate_outcome_amounts(outcome_buckets['protected'])
+    expansion  = _deduplicate_outcome_amounts(outcome_buckets['expansion'])
+    lost       = _deduplicate_outcome_amounts(outcome_buckets['lost'])
+
+    node_count = at_risk_count + sum(len(v) for v in outcome_buckets.values())
 
     return {
-        **buckets,
-        'net_impact': buckets['protected'] + buckets['expansion'] - buckets['lost'],
-        'node_count': len(nodes),
+        'at_risk':    round(at_risk, 2),
+        'protected':  round(protected, 2),
+        'expansion':  round(expansion, 2),
+        'lost':       round(lost, 2),
+        'net_impact': round(protected + expansion - lost, 2),
+        'node_count': node_count,
     }
 
 

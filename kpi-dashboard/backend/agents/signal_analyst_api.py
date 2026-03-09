@@ -485,10 +485,13 @@ def analyze_account():
                             }
                         ))
 
-                    # Summary signal with revenue at risk + stakeholder context
-                    total_rev = sum(float(n.revenue_impact or 0) for n in outcomes)
-                    expansion_rev = sum(float(n.revenue_impact or 0) for n in outcomes if n.node_subtype == 'expansion')
-                    protected_rev = sum(float(n.revenue_impact or 0) for n in outcomes if n.node_subtype == 'churn_averted')
+                    # Summary signal with revenue — use deduplicated totals
+                    # (consistent with get_revenue_at_risk, avoids double-counting)
+                    from utils.context_graph import get_revenue_at_risk as _gar
+                    _rev = _gar(account_id_int)
+                    expansion_rev = _rev.get('expansion', 0)
+                    protected_rev = _rev.get('protected', 0)
+                    total_rev = expansion_rev + protected_rev
 
                     # Build stakeholder context (included here, not in qual signals)
                     stakeholder_details = []

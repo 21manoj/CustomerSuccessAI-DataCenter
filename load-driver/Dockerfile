@@ -41,4 +41,4 @@ ENV CS_PULSE_BASE_URL=https://platform.example.com
 
 # Entry point: run driver
 ENTRYPOINT ["python", "-u", "driver.py"]
-CMD ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7", "--customers", "1,2,3"]
+CMD ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "1,2,3"]

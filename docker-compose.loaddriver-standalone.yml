@@ -19,8 +19,8 @@ services:
     container_name: cspulse-load-driver-cust-1
     environment:
       CS_PULSE_BASE_URL: ${CS_PULSE_BASE_URL:?Set CS_PULSE_BASE_URL to your EC2-A URL (e.g. https://platform.example.com)}
-      CS_PULSE_ADMIN_EMAIL: admin+cust1@cspulse.test
-      CS_PULSE_ADMIN_PASSWORD: ${CS_PULSE_ADMIN_PASSWORD:-LoadDriver2026!}
+      CS_PULSE_ADMIN_EMAIL: ${CS_PULSE_ADMIN_EMAIL:-dc2s_super@test.com}
+      CS_PULSE_ADMIN_PASSWORD: ${CS_PULSE_ADMIN_PASSWORD:-DC2_Super_2024!}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       QDRANT_URL: ${QDRANT_URL:-}
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
@@ -28,7 +28,7 @@ services:
       PYTHONUNBUFFERED: 1
     volumes:
       - ./results/customer-1:/app/results
-    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6", "--customers", "1", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
+    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "1", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
     restart: "no"
 
   load-driver-customer-2:
@@ -47,7 +47,7 @@ services:
       PYTHONUNBUFFERED: 1
     volumes:
       - ./results/customer-2:/app/results
-    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6", "--customers", "2", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
+    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "2", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
     restart: "no"
 
   load-driver-customer-3:
@@ -66,5 +66,5 @@ services:
       PYTHONUNBUFFERED: 1
     volumes:
       - ./results/customer-3:/app/results
-    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6", "--customers", "3", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
+    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "3", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
     restart: "no"

@@ -107,6 +107,20 @@ def _get_account_arr(account) -> float:
     return arr
 
 
+def _validate_account_ownership(customer_id: int, account_id: int):
+    """Tenant isolation: verify account belongs to customer, return Account or raise."""
+    from models import Account
+    account = Account.query.filter_by(
+        account_id=account_id,
+        customer_id=int(customer_id),
+    ).first()
+    if not account:
+        raise ToolError(
+            f"Account {account_id} not found for customer {customer_id}"
+        )
+    return account
+
+
 # ===================================================================
 # Group 1: Account Intelligence (3 tools)
 # ===================================================================
@@ -200,9 +214,7 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
         )
         import utils.health_thresholds as ht
 
-        account = Account.query.filter_by(account_id=account_id).first()
-        if not account:
-            raise ToolError(f"Account {account_id} not found")
+        account = _validate_account_ownership(customer_id, account_id)
 
         # Prefer pre-calculated scores (single source of truth)
         precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account_id)
@@ -330,13 +342,12 @@ def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
     with app.app_context():
         _check_context_graph(customer_id)
         from utils.context_graph import get_revenue_at_risk as _get_rev
-        from models import Account
 
-        account = Account.query.filter_by(account_id=account_id).first()
+        account = _validate_account_ownership(customer_id, account_id)
         result = _get_rev(account_id)
         result["scope"] = "account"
         result["account_id"] = account_id
-        result["account_name"] = account.account_name if account else "Unknown"
+        result["account_name"] = account.account_name
         return result
 
 
@@ -360,6 +371,12 @@ def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream"
         start_node = db.session.get(ContextNode, node_id)
         if not start_node:
             raise ToolError(f"Node {node_id} not found")
+
+        # Tenant isolation: verify node belongs to this customer
+        if start_node.customer_id != int(customer_id):
+            raise ToolError(
+                f"Node {node_id} not found for customer {customer_id}"
+            )
 
         chain = _get_chain(node_id, direction=direction, max_depth=5)
 
@@ -386,6 +403,8 @@ def get_graph_summary(customer_id: int, account_id: int) -> dict:
     with app.app_context():
         _check_context_graph(customer_id)
         from utils.context_graph import get_account_graph_summary
+
+        _validate_account_ownership(customer_id, account_id)
         result = get_account_graph_summary(account_id)
         result["scope"] = "account"
         return result
@@ -415,6 +434,7 @@ def search_signals(
         _check_context_graph(customer_id)
         from utils.context_graph import get_nodes
 
+        _validate_account_ownership(customer_id, account_id)
         nodes = get_nodes(
             account_id=account_id,
             node_type=node_type,
@@ -517,11 +537,8 @@ def get_outcome_roi_story(
     with app.app_context():
         from outcome_roi_engine import calculate_outcome_story
         from power_of_1_model import POWER_OF_1_METRICS
-        from models import Account
 
-        account = Account.query.filter_by(account_id=account_id).first()
-        if not account:
-            raise ToolError(f"Account {account_id} not found")
+        account = _validate_account_ownership(customer_id, account_id)
 
         arr = _get_account_arr(account)
 
@@ -568,6 +585,7 @@ def get_playbook_recommendations(
     app = _get_flask_app()
 
     with app.app_context():
+        _validate_account_ownership(customer_id, account_id)
         _ensure_registry()
         from agent_tool_registry import get_tool_registry
         from verticals.dc2_s.api_routes import (
@@ -686,7 +704,6 @@ def get_crm_account_data(customer_id: int, account_id: int) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
-        from models import Account
         from verticals.dc2_s.api_routes import (
             calculate_kpi_health, _get_trailing_kpi_values,
             get_precalculated_scores,
@@ -694,9 +711,7 @@ def get_crm_account_data(customer_id: int, account_id: int) -> dict:
         import utils.health_thresholds as ht
         from datetime import datetime, date
 
-        account = Account.query.filter_by(account_id=account_id).first()
-        if not account:
-            raise ToolError(f"Account {account_id} not found")
+        account = _validate_account_ownership(customer_id, account_id)
 
         profile = _get_account_profile(account)
         arr = _get_account_arr(account)
@@ -782,13 +797,11 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
-        from models import Account, QualitativeSignal
+        from models import QualitativeSignal
         from verticals.dc2_s.api_routes import _get_trailing_kpi_values
         import math
 
-        account = Account.query.filter_by(account_id=account_id).first()
-        if not account:
-            raise ToolError(f"Account {account_id} not found")
+        account = _validate_account_ownership(customer_id, account_id)
 
         kpi_values = _get_trailing_kpi_values(account_id)
 
@@ -868,16 +881,14 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
-        from models import Account, QualitativeSignal
+        from models import QualitativeSignal
         from verticals.dc2_s.api_routes import (
             calculate_kpi_health, _get_trailing_kpi_values,
             get_precalculated_scores,
         )
         import utils.health_thresholds as ht
 
-        account = Account.query.filter_by(account_id=account_id).first()
-        if not account:
-            raise ToolError(f"Account {account_id} not found")
+        account = _validate_account_ownership(customer_id, account_id)
 
         kpi_values = _get_trailing_kpi_values(account_id)  # still needed for KPI values
 
@@ -1251,6 +1262,230 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
             "account_count": len(accounts),
             "data_source": data_source,
             "story": story,
+        }
+
+
+# ===================================================================
+# Group 7: Portfolio / CEO View (2 tools)
+# ===================================================================
+
+@mcp.tool
+def list_portfolio_customers(portfolio_id: int) -> dict:
+    """List all customers in a PE portfolio with health and ARR summary.
+
+    Args:
+        portfolio_id: The portfolio (PE fund / holding company) ID
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Portfolio, PortfolioMembership, Customer, Account
+        from verticals.dc2_s.api_routes import (
+            calculate_kpi_health, _get_trailing_kpi_values,
+            get_precalculated_scores,
+        )
+        import utils.health_thresholds as ht
+
+        portfolio = Portfolio.query.filter_by(
+            portfolio_id=portfolio_id, enabled=True,
+        ).first()
+        if not portfolio:
+            raise ToolError(f"Portfolio {portfolio_id} not found or disabled")
+
+        memberships = PortfolioMembership.query.filter_by(
+            portfolio_id=portfolio_id,
+        ).all()
+
+        if not memberships:
+            return {
+                "scope": "portfolio",
+                "portfolio_id": portfolio_id,
+                "portfolio_name": portfolio.portfolio_name,
+                "customers": [],
+                "summary": {"total_customers": 0, "total_arr": 0, "avg_health": 0},
+            }
+
+        customer_summaries = []
+        for mem in memberships:
+            customer = Customer.query.filter_by(
+                customer_id=mem.customer_id,
+            ).first()
+            if not customer:
+                continue
+
+            accounts = Account.query.filter(
+                Account.customer_id == mem.customer_id,
+                Account.vertical == 'dc2_s',
+            ).all()
+
+            total_arr = sum(_get_account_arr(a) for a in accounts)
+            health_scores = []
+            at_risk_count = 0
+
+            for acct in accounts:
+                ph, ps, _ = get_precalculated_scores(acct.account_id)
+                if ph is not None:
+                    health_scores.append(ph)
+                    if ps in ('at_risk', 'critical'):
+                        at_risk_count += 1
+                else:
+                    kv = _get_trailing_kpi_values(acct.account_id)
+                    h, _ = calculate_kpi_health(kv, mem.customer_id)
+                    health_scores.append(h)
+                    if ht.classify(h) in ('at_risk', 'critical'):
+                        at_risk_count += 1
+
+            avg_health = round(
+                sum(health_scores) / len(health_scores), 1
+            ) if health_scores else 0
+
+            customer_summaries.append({
+                "customer_id": mem.customer_id,
+                "customer_name": customer.company_name,
+                "vertical": mem.vertical or 'dc2_s',
+                "status": mem.status,
+                "total_accounts": len(accounts),
+                "total_arr": round(total_arr, 2),
+                "avg_health_score": avg_health,
+                "at_risk_accounts": at_risk_count,
+                "synergies_realized": mem.synergies_realized,
+                "synergy_value": float(mem.synergy_value or 0),
+            })
+
+        customer_summaries.sort(key=lambda x: x["avg_health_score"])
+
+        total_arr = sum(c["total_arr"] for c in customer_summaries)
+        total_accounts = sum(c["total_accounts"] for c in customer_summaries)
+        avg_health = round(
+            sum(c["avg_health_score"] * c["total_accounts"] for c in customer_summaries)
+            / total_accounts, 1
+        ) if total_accounts else 0
+
+        return {
+            "scope": "portfolio",
+            "portfolio_id": portfolio_id,
+            "portfolio_name": portfolio.portfolio_name,
+            "total_aum": float(portfolio.total_aum) if portfolio.total_aum else None,
+            "customers": customer_summaries,
+            "summary": {
+                "total_customers": len(customer_summaries),
+                "total_accounts": total_accounts,
+                "total_arr": round(total_arr, 2),
+                "avg_health_score": avg_health,
+                "total_at_risk": sum(c["at_risk_accounts"] for c in customer_summaries),
+            },
+        }
+
+
+@mcp.tool
+def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
+    """Compare all customers in a portfolio side-by-side: health, ARR, risk, expansion. CEO-level view.
+
+    Args:
+        portfolio_id: The portfolio (PE fund / holding company) ID
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Portfolio, PortfolioMembership, Customer, Account
+        from verticals.dc2_s.api_routes import (
+            calculate_kpi_health, _get_trailing_kpi_values,
+            get_precalculated_scores,
+        )
+        import utils.health_thresholds as ht
+
+        portfolio = Portfolio.query.filter_by(
+            portfolio_id=portfolio_id, enabled=True,
+        ).first()
+        if not portfolio:
+            raise ToolError(f"Portfolio {portfolio_id} not found or disabled")
+
+        memberships = PortfolioMembership.query.filter_by(
+            portfolio_id=portfolio_id,
+        ).all()
+
+        comparisons = []
+        for mem in memberships:
+            customer = Customer.query.filter_by(
+                customer_id=mem.customer_id,
+            ).first()
+            if not customer:
+                continue
+
+            accounts = Account.query.filter(
+                Account.customer_id == mem.customer_id,
+                Account.vertical == 'dc2_s',
+            ).all()
+
+            total_arr = sum(_get_account_arr(a) for a in accounts)
+            pillar_totals = {}
+            health_scores = []
+            statuses = {'healthy': 0, 'at_risk': 0, 'critical': 0}
+
+            for acct in accounts:
+                ph, ps, pp = get_precalculated_scores(acct.account_id)
+                if ph is not None:
+                    health_scores.append(ph)
+                    statuses[ps] = statuses.get(ps, 0) + 1
+                    if pp:
+                        for k, v in pp.items():
+                            pillar_totals.setdefault(k, []).append(v)
+                else:
+                    kv = _get_trailing_kpi_values(acct.account_id)
+                    h, pillars = calculate_kpi_health(kv, mem.customer_id)
+                    health_scores.append(h)
+                    cls = ht.classify(h)
+                    statuses[cls] = statuses.get(cls, 0) + 1
+                    for k, v in pillars.items():
+                        pillar_totals.setdefault(k, []).append(v)
+
+            avg_health = round(
+                sum(health_scores) / len(health_scores), 1
+            ) if health_scores else 0
+
+            avg_pillars = {
+                k: round(sum(v) / len(v), 1) for k, v in pillar_totals.items()
+            } if pillar_totals else {}
+
+            weakest_pillar = min(avg_pillars, key=avg_pillars.get) if avg_pillars else None
+
+            # Context graph revenue (if enabled)
+            revenue_data = None
+            try:
+                from feature_toggles import is_context_graph_enabled
+                if is_context_graph_enabled(mem.customer_id):
+                    from utils.context_graph import get_revenue_at_risk as _gar
+                    total_rev = {'at_risk': 0, 'protected': 0, 'expansion': 0, 'net_impact': 0}
+                    for acct in accounts:
+                        rev = _gar(acct.account_id)
+                        if rev.get('node_count', 0) > 0:
+                            for k in total_rev:
+                                total_rev[k] += rev.get(k, 0)
+                    revenue_data = {k: round(v, 2) for k, v in total_rev.items()}
+            except Exception:
+                pass
+
+            comparisons.append({
+                "customer_id": mem.customer_id,
+                "customer_name": customer.company_name,
+                "total_arr": round(total_arr, 2),
+                "avg_health_score": avg_health,
+                "account_distribution": statuses,
+                "total_accounts": len(accounts),
+                "avg_pillar_scores": avg_pillars,
+                "weakest_pillar": weakest_pillar,
+                "revenue_intelligence": revenue_data,
+            })
+
+        comparisons.sort(key=lambda x: x["avg_health_score"])
+
+        return {
+            "scope": "portfolio",
+            "portfolio_id": portfolio_id,
+            "portfolio_name": portfolio.portfolio_name,
+            "comparisons": comparisons,
         }
 
 

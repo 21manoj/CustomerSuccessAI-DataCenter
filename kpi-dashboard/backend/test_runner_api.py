@@ -46,6 +46,9 @@ SCENARIO_META = {
     '4':  {'name': 'Customer Cleanup',     'group': 'Admin',    'description': 'FK-safe 24-table delete + filesystem cleanup', 'est_minutes': 2},
     '5':  {'name': 'ROI Power-of-1',       'group': 'Analytics', 'description': 'Historical/forward ROI at 1%/4%/6% improvement', 'est_minutes': 3},
     '6':  {'name': 'N8N Workflow',         'group': 'Integration', 'description': 'Playbook-to-n8n handoff simulation', 'est_minutes': 10},
+    '7':  {'name': 'Data Ingestion',       'group': 'Integration', 'description': 'Ring 3: Google Sheets + n8n pipeline simulator', 'est_minutes': 5},
+    '8':  {'name': 'Context Graph',        'group': 'Analytics', 'description': 'Story arc → 9 CSVs → context nodes/edges', 'est_minutes': 8},
+    '9':  {'name': 'ROI Simulation',       'group': 'Analytics', 'description': 'Weight-aware improvement → ROI pipeline validation', 'est_minutes': 5},
 }
 
 # ---------------------------------------------------------------------------

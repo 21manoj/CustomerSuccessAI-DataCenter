@@ -38,7 +38,7 @@ services:
       - ./load-driver:/app
     command: >
       python -u driver.py
-      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7
+      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9
       --customers 1
       --base-url http://cspulse-platform:5059
       --results-dir /app/results
@@ -73,7 +73,7 @@ services:
       - ./load-driver:/app
     command: >
       python -u driver.py
-      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7
+      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9
       --customers 2
       --base-url http://cspulse-platform:5059
       --results-dir /app/results
@@ -108,7 +108,7 @@ services:
       - ./load-driver:/app
     command: >
       python -u driver.py
-      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7
+      --scenarios 1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9
       --customers 3
       --base-url http://cspulse-platform:5059
       --results-dir /app/results
