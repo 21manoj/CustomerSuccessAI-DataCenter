@@ -1,6 +1,0 @@
-account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
-35001,E2E Complete Test Corporation - Datacenter East,Tom Johnson,88,advocacy,1560250.5516298912,420,Cloud,Enterprise
-35002,E2E Complete Test Corporation - Cloud Ops,Sarah Chen,60,onboarding,3344488.655423098,436,Hybrid,Small
-35003,E2E Complete Test Corporation - AI Lab,Michael Rodriguez,92,advocacy,4183070.559269322,52,Hybrid,Small
-35004,E2E Complete Test Corporation - Production,Michael Rodriguez,72,value_realization,3593560.401133355,202,On-Premise,Enterprise
-35005,E2E Complete Test Corporation - Development,Emily Watson,75,value_realization,4186640.676759502,299,On-Premise,Enterprise

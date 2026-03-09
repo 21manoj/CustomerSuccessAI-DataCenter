@@ -1,6 +1,0 @@
-account_id,account_name,csm_name,health_score,lifecycle_stage,arr,num_licenses,deployment_type,data_center_size
-32001,E2E Complete Test Corporation - Datacenter East,Lisa Anderson,88,advocacy,4104311.3182534026,446,Hybrid,Enterprise
-32002,E2E Complete Test Corporation - Cloud Ops,James Park,60,at_risk,3579742.204601581,252,Cloud,Small
-32003,E2E Complete Test Corporation - AI Lab,Rachel Martinez,92,expansion,1312229.7276792664,232,On-Premise,Medium
-32004,E2E Complete Test Corporation - Production,Sarah Chen,72,value_realization,4968211.864263904,469,Hybrid,Small
-32005,E2E Complete Test Corporation - Development,Lisa Anderson,75,value_realization,1273753.1960289045,200,Hybrid,Small

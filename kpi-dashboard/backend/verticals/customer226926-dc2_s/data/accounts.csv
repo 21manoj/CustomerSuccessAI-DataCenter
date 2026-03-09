@@ -1,4 +1,0 @@
-account_id,customer_id,account_name,industry,vertical,region,account_status
-226926001,226926,Account-1,Technology,dc2_s,us-west-2,active
-226926002,226926,Account-2,Technology,dc2_s,us-west-2,active
-226926003,226926,Account-3,Technology,dc2_s,us-west-2,active

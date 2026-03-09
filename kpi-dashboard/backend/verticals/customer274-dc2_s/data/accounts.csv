@@ -1,4 +1,0 @@
-account_id,customer_id,account_name,industry,vertical,region,account_status,created_at
-274001,274,Customer 274 - Production,Data Center Infrastructure,dc2_s,eu-west-1,active,2026-01-28
-274002,274,Customer 274 - Staging,Data Center Infrastructure,dc2_s,us-west-2,active,2026-01-28
-274003,274,Customer 274 - Development,Data Center Infrastructure,dc2_s,eu-west-1,active,2026-01-28

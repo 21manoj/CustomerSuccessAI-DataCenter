@@ -1,3 +1,0 @@
-week_number,milestone_date,milestone_type,milestone_outcome,leading_indicators,arr_impact,confidence_at_time,primary_drivers,signal_breakdown
-4,2024-01-22,churn_early_warning,at_risk,"['Low GPU utilization: 59.73%', 'Negative workload growth: 8.25%', 'Low NPS: 33.81', 'Health: 68.19']",0,0.6,"[{'driver': 'Low product adoption', 'weight': 0.4}, {'driver': 'Poor customer sentiment', 'weight': 0.35}, {'driver': 'Declining usage', 'weight': 0.25}]",
-29,2024-07-15,churn_contract_terminated,churned,"['Contract terminated', 'Customer migrated to AWS', 'Final health: 30.3']",-3800000,1.0,,

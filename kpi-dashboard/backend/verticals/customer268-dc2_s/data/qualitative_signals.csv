@@ -1,4 +1,0 @@
-account_id,signal_date,signal_type,signal_text,sentiment
-268001,2026-01-26,health_check,Signal for Account-1,positive
-268002,2026-01-26,health_check,Signal for Account-2,positive
-268003,2026-01-26,health_check,Signal for Account-3,positive
