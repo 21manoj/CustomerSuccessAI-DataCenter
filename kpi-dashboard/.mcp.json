@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cs-pulse": {
+      "command": "python",
+      "args": ["backend/mcp_server/cs_pulse_mcp_server.py"],
+      "cwd": "/Users/manojgupta/CustomerSuccessAI-DataCenter/kpi-dashboard",
+      "env": {
+        "FEATURE_MCP_SERVER": "true",
+        "FEATURE_CONTEXT_GRAPH": "true"
+      }
+    }
+  }
+}
