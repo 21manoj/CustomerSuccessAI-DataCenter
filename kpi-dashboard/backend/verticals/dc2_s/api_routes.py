@@ -7,9 +7,11 @@ Handles dict targets from YOUR Week 1 KPI definitions
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
-from models import Account, DC2SKPI, User, PlaybookExecution, PlaybookReport
-from datetime import datetime
+from models import Account, DC2SKPI, User, PlaybookExecution, PlaybookReport, CustomerConfig, HealthScore, PillarScore
+from datetime import datetime, timedelta
+from collections import defaultdict
 import logging
+import math
 import uuid
 
 # Import DC2_S vertical modules - matching YOUR file structure
@@ -21,27 +23,55 @@ from .vertical_config import (
     PHASE_CONFIG,
 )
 from .metadata_schema import calculate_days_since_deployment
+import utils.health_thresholds as ht
 
 logger = logging.getLogger(__name__)
 
 dc2s_api = Blueprint('dc2s_api', __name__)
 
-# GAP 1.3 / Issue 4: Map DB/customer KPI codes (AI-KPI1, CH-KPI1, ...) to catalog codes (P3-KPI1, P4-KPI1, ...)
-# Catalog uses P1-P5; CustomerConfig/onboarding use AI, CH, DV, EX, OS. Pillar mapping: AI→P3, CH→P4, DV→P1, EX→P5, OS→P2
-DB_PILLAR_TO_CATALOG = {"AI": "P3", "CH": "P4", "DV": "P1", "EX": "P5", "OS": "P2"}
-
-
 def _normalize_kpi_code_for_health(kpi_code):
-    """Map AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes so health calculation finds definitions."""
-    if kpi_code in DC2S_KPIS:
-        return kpi_code
-    if "-" in kpi_code:
-        parts = kpi_code.split("-", 1)
-        if len(parts) == 2 and parts[0] in DB_PILLAR_TO_CATALOG:
-            catalog_code = DB_PILLAR_TO_CATALOG[parts[0]] + "-" + parts[1]
-            if catalog_code in DC2S_KPIS:
-                return catalog_code
-    return None
+    """Validate kpi_code exists in the catalog. Returns kpi_code or None."""
+    return kpi_code if kpi_code in DC2S_KPIS else None
+
+
+def get_precalculated_scores(account_id):
+    """
+    Fetch the latest pre-calculated health score and pillar scores from the
+    HealthScore / PillarScore tables (populated by the score calculator).
+
+    Returns (health_score, health_status, pillar_dict) or (None, None, None)
+    if no pre-calculated scores exist.
+
+    This is the single source of truth — use it in preference to on-the-fly
+    calculation wherever possible.
+    """
+    try:
+        hs = HealthScore.query.filter_by(account_id=account_id) \
+            .order_by(HealthScore.measurement_month.desc()).first()
+        if not hs or hs.health_score is None:
+            return None, None, None
+
+        health = float(hs.health_score)
+        status = hs.health_status or ht.classify(health)
+
+        # Pillar scores — prefer contributing_pillars JSON on HealthScore,
+        # fall back to latest PillarScore rows
+        pillars = {}
+        if hs.contributing_pillars:
+            pillars = {k: float(v) for k, v in hs.contributing_pillars.items()}
+        else:
+            ps_rows = PillarScore.query.filter_by(
+                account_id=account_id,
+                measurement_month=hs.measurement_month,
+            ).all()
+            for ps in ps_rows:
+                if ps.pillar_score is not None:
+                    pillars[ps.pillar_code] = float(ps.pillar_score)
+
+        return health, status, pillars
+    except Exception as e:
+        logger.debug(f"Could not fetch pre-calculated scores for account {account_id}: {e}")
+        return None, None, None
 
 
 def _sync_journey_phase(account):
@@ -70,16 +100,203 @@ def _sync_journey_phase(account):
         db.session.rollback()
 
 
+def _score_kpi_value(value, kpi_def):
+    """
+    Score a single KPI value using 4-band interpolation aligned to health thresholds.
+
+    Bands (higher_is_better example):
+      critical.min  → 0
+      risk boundary → at_risk_min (50)
+      target        → healthy_min (70)
+      healthy.max   → 100
+
+    This produces meaningful score differentiation instead of flat 100 for all
+    values that merely meet their target.
+    """
+    target_raw = kpi_def.get('target', 100)
+    if isinstance(target_raw, dict):
+        target = target_raw.get('value', 100)
+        operator = target_raw.get('operator', '>')
+    else:
+        target = target_raw
+        operator = '>'
+
+    ranges = kpi_def.get('ranges', {})
+    higher_is_better = kpi_def.get('higher_is_better', operator in ('>', '>='))
+
+    # Health threshold anchor points
+    SCORE_AT_TARGET = ht.healthy_min()    # 70
+    SCORE_AT_RISK   = ht.at_risk_min()    # 50
+
+    if ranges and target:
+        healthy_range = ranges.get('healthy', {})
+        critical_range = ranges.get('critical', {})
+        risk_range = ranges.get('risk', {})
+
+        if higher_is_better:
+            # Higher is better: critical low, healthy high
+            floor = critical_range.get('min', 0)
+            risk_boundary = risk_range.get('min', critical_range.get('max', floor))
+            healthy_max = healthy_range.get('max', target * 1.2 if target else 100)
+
+            if value <= floor:
+                score = 0.0
+            elif value < risk_boundary:
+                # Critical zone: 0 → SCORE_AT_RISK
+                span = risk_boundary - floor
+                score = (SCORE_AT_RISK * (value - floor) / span) if span > 0 else 0.0
+            elif value < target:
+                # Risk zone: SCORE_AT_RISK → SCORE_AT_TARGET
+                span = target - risk_boundary
+                score = SCORE_AT_RISK + ((SCORE_AT_TARGET - SCORE_AT_RISK) * (value - risk_boundary) / span) if span > 0 else SCORE_AT_RISK
+            elif value >= healthy_max:
+                score = 100.0
+            else:
+                # Healthy zone: SCORE_AT_TARGET → 100
+                span = healthy_max - target
+                score = SCORE_AT_TARGET + ((100.0 - SCORE_AT_TARGET) * (value - target) / span) if span > 0 else 100.0
+        else:
+            # Lower is better: critical high, healthy low
+            ceiling = critical_range.get('max', target * 4 if target else 100)
+            risk_boundary = risk_range.get('max', critical_range.get('min', ceiling))
+            healthy_min_val = healthy_range.get('min', 0)
+
+            if value >= ceiling:
+                score = 0.0
+            elif value > risk_boundary:
+                # Critical zone: 0 → SCORE_AT_RISK
+                span = ceiling - risk_boundary
+                score = (SCORE_AT_RISK * (ceiling - value) / span) if span > 0 else 0.0
+            elif value > target:
+                # Risk zone: SCORE_AT_RISK → SCORE_AT_TARGET
+                span = risk_boundary - target
+                score = SCORE_AT_RISK + ((SCORE_AT_TARGET - SCORE_AT_RISK) * (risk_boundary - value) / span) if span > 0 else SCORE_AT_RISK
+            elif value <= healthy_min_val:
+                score = 100.0
+            else:
+                # Healthy zone: SCORE_AT_TARGET → 100
+                span = target - healthy_min_val
+                score = SCORE_AT_TARGET + ((100.0 - SCORE_AT_TARGET) * (target - value) / span) if span > 0 else 100.0
+    elif target and target > 0:
+        # Fallback: simple ratio scoring (no range info)
+        if operator in ('<', '<='):
+            score = min(100, (target / max(value, 0.01)) * 100)
+        else:
+            score = min(100, (value / target) * 100)
+    else:
+        score = value
+
+    return max(0.0, min(100.0, score))
+
+
+# ============================================================
+# TRAILING WEIGHTED AVERAGE — L1 KPI STABILIZER
+# ============================================================
+
+def _get_trailing_kpi_values(account_id, days=30):
+    """
+    Compute a trailing time-weighted average of KPI values for an account.
+
+    Instead of using only the single most recent measurement, this queries
+    the last ``days`` worth of data from dc2s_kpis and applies exponential
+    time-decay weighting: more recent measurements count more.
+
+    If the data is monthly (gaps > 20 days), it automatically expands the
+    window to cover the last 3 measurement periods so there's enough data
+    to average.
+
+    Weight formula (exponential decay with half-life = ``days / 2``):
+        w_i = exp(-ln(2) * age_days / half_life)
+
+    Returns:
+        dict[str, float]: {kpi_code: weighted_average_value}
+    """
+    now = datetime.utcnow()
+    cutoff = now - timedelta(days=days)
+
+    kpis = DC2SKPI.query.filter(
+        DC2SKPI.account_id == account_id,
+        DC2SKPI.measured_at >= cutoff,
+    ).order_by(DC2SKPI.measured_at.desc()).all()
+
+    # If fewer than 2 distinct timestamps in the window, widen it
+    # (handles monthly data where a 30-day window may only catch 1 point)
+    if kpis:
+        distinct_times = set(k.measured_at for k in kpis)
+        if len(distinct_times) < 2:
+            # Expand to last 3 measurement periods (all data, take last 3 distinct)
+            all_kpis = DC2SKPI.query.filter(
+                DC2SKPI.account_id == account_id,
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+
+            all_times = sorted(set(k.measured_at for k in all_kpis), reverse=True)
+            if len(all_times) >= 2:
+                third_time = all_times[min(2, len(all_times) - 1)]
+                kpis = [k for k in all_kpis if k.measured_at >= third_time]
+                # Recalculate cutoff for weight computation
+                cutoff = third_time
+    else:
+        # No data in window — fall back to latest available
+        kpis = DC2SKPI.query.filter(
+            DC2SKPI.account_id == account_id,
+        ).order_by(DC2SKPI.measured_at.desc()).all()
+        if kpis:
+            latest_time = kpis[0].measured_at
+            return {k.kpi_code: float(k.value) for k in kpis if k.measured_at == latest_time}
+        return {}
+
+    if not kpis:
+        return {}
+
+    # Find the most recent timestamp for age calculation
+    most_recent = max(k.measured_at for k in kpis)
+    half_life = max(days / 2.0, 7.0)  # minimum 7-day half-life
+
+    # Group by kpi_code and compute time-weighted average
+    kpi_groups = defaultdict(list)
+    for k in kpis:
+        kpi_groups[k.kpi_code].append(k)
+
+    trailing_values = {}
+    for kpi_code, measurements in kpi_groups.items():
+        weighted_sum = 0.0
+        weight_sum = 0.0
+        for m in measurements:
+            age_days = (most_recent - m.measured_at).total_seconds() / 86400.0
+            weight = math.exp(-math.log(2) * age_days / half_life)
+            weighted_sum += float(m.value) * weight
+            weight_sum += weight
+
+        if weight_sum > 0:
+            trailing_values[kpi_code] = weighted_sum / weight_sum
+        else:
+            trailing_values[kpi_code] = float(measurements[0].value)
+
+    return trailing_values
+
+
 def calculate_kpi_health(kpi_values, customer_id=None):
     """
     Calculate health score from KPI values using config-aware weights when possible.
     When customer_id is provided and CustomerConfig (dc2_s) exists, uses DB pillar weights;
     otherwise falls back to code default weights (logged explicitly).
     Normalizes AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes (GAP 1.3).
+    Only includes pillars that have non-zero weight in customer config (enabled pillars).
     """
     # Config-aware: use CustomerConfig.dc2s_pillar_weights when customer_id provided
     weights = get_weights_for_customer(customer_id) if customer_id is not None else get_current_weights()
-    
+
+    # Determine enabled pillars from customer config (pillars with explicit weight > 0)
+    enabled_pillars = None
+    if customer_id is not None:
+        try:
+            from models import CustomerConfig as CC
+            cc = CC.query.filter_by(customer_id=int(customer_id)).first()
+            if cc and cc.dc2s_pillar_weights:
+                enabled_pillars = set(cc.dc2s_pillar_weights.keys())
+        except Exception:
+            pass
+
     # Normalize kpi codes (AI-KPI1 → P3-KPI1 etc.) so catalog lookup works
     kpi_values_for_calc = {}
     for kpi_code, value in kpi_values.items():
@@ -87,64 +304,61 @@ def calculate_kpi_health(kpi_values, customer_id=None):
         if lookup_code:
             kpi_values_for_calc[lookup_code] = value
     kpi_values = kpi_values_for_calc
-    
-    # Group KPIs by pillar
+
+    # Group KPIs by pillar using L1 weighted average (not simple average)
     pillar_scores = {}
-    
+
     for kpi_code, value in kpi_values.items():
         if kpi_code not in DC2S_KPIS:
             continue
-            
+
         kpi_def = DC2S_KPIS[kpi_code]
         pillar = kpi_def.get('pillar', kpi_def.get('l1_category'))
-        
+
+        # Skip KPIs from disabled pillars
+        if enabled_pillars is not None and pillar not in enabled_pillars:
+            continue
+
         if pillar not in pillar_scores:
-            pillar_scores[pillar] = {'total': 0, 'count': 0}
-        
-        # Extract target - handle dict or simple number
-        target_raw = kpi_def.get('target', 100)
-        if isinstance(target_raw, dict):
-            target = target_raw.get('value', 100)
-            operator = target_raw.get('operator', '>')
-        else:
-            target = target_raw
-            operator = '>'
-        
-        # Simple scoring: closer to target = higher score
-        if target and target > 0:
-            if operator == '<':
-                # Lower is better
-                score = min(100, (target / max(value, 0.01)) * 100)
-            else:
-                # Higher is better (default)
-                score = min(100, (value / target) * 100)
-        else:
-            score = value
-        
-        pillar_scores[pillar]['total'] += score
-        pillar_scores[pillar]['count'] += 1
-    
-    # Calculate pillar averages
+            pillar_scores[pillar] = {'weighted_sum': 0, 'total_weight': 0}
+
+        # 4-band scoring: critical→0, risk→50, target→70, healthy_max→100
+        score = _score_kpi_value(value, kpi_def)
+
+        # Use L1 weight from KPI definition (fall back to equal weight)
+        l1_weight = kpi_def.get('weight_l1', 0)
+        if not l1_weight or l1_weight <= 0:
+            l1_weight = 1.0  # equal weight fallback
+
+        pillar_scores[pillar]['weighted_sum'] += score * l1_weight
+        pillar_scores[pillar]['total_weight'] += l1_weight
+
+    # Calculate pillar weighted averages (clamped to 0-100)
     pillar_averages = {}
     for pillar, data in pillar_scores.items():
-        if data['count'] > 0:
-            pillar_averages[pillar] = data['total'] / data['count']
+        if data['total_weight'] > 0:
+            avg = data['weighted_sum'] / data['total_weight']
         else:
-            pillar_averages[pillar] = 0
-    
-    # Calculate overall weighted health
+            avg = 0
+        pillar_averages[pillar] = max(0.0, min(100.0, avg))
+
+    # Calculate overall weighted health (only enabled pillars)
     overall_health = 0
     total_weight = 0
-    
+
     for pillar, score in pillar_averages.items():
-        # Get weight from your L2 weights structure
-        weight = weights.get(pillar, {}).get('weight', 0.2)  # Default 0.2 if not found
+        # Get weight from CustomerConfig L2 weights, fallback to catalog weight_l2
+        pillar_data = weights.get(pillar, {})
+        weight = pillar_data.get('weight', DC2S_PILLARS.get(pillar, {}).get('weight_l2', 0.2))
         overall_health += score * weight
         total_weight += weight
-    
+
     if total_weight > 0:
         overall_health = overall_health / total_weight
-    
+
+    # Clamp final health score to 0-100
+    overall_health = max(0.0, min(100.0, overall_health))
+
     return overall_health, pillar_averages
 
 
@@ -173,37 +387,41 @@ def get_dc2s_accounts():
         if accounts:
             logger.info(f"[DEBUG /api/dc2s/accounts] Account IDs: {[a.account_id for a in accounts[:5]]}")
         
+        # Determine enabled pillars from customer config (once per request)
+        enabled_pillar_codes = list(DC2S_PILLARS.keys())  # default: all
+        try:
+            cc = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+            if cc and cc.dc2s_pillar_weights:
+                enabled_pillar_codes = list(cc.dc2s_pillar_weights.keys())
+        except Exception:
+            pass
+
         results = []
         for account in accounts:
-            # Get latest KPIs
-            kpis = DC2SKPI.query.filter_by(
+            # Prefer pre-calculated scores from HealthScore/PillarScore tables
+            # (single source of truth, populated by the score calculator).
+            # Fall back to on-the-fly calculation only when no scores exist.
+            precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account.account_id)
+
+            if precalc_health is not None and precalc_pillars:
+                overall_health = precalc_health
+                pillar_scores = precalc_pillars
+                status = precalc_status
+            else:
+                # Fallback: on-the-fly calculation from trailing KPI values
+                trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
+                overall_health, pillar_scores = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
+                status = ht.classify(overall_health)
+
+            # Also get latest timestamp for metadata
+            latest_row = DC2SKPI.query.filter_by(
                 account_id=account.account_id
-            ).order_by(DC2SKPI.measured_at.desc()).all()
-            
-            # Get latest measurement time
-            latest_kpis = {}
-            if kpis:
-                latest_time = kpis[0].measured_at
-                latest_kpis = {
-                    kpi.kpi_code: float(kpi.value) 
-                    for kpi in kpis 
-                    if kpi.measured_at == latest_time
-                }
-            
-            # Calculate health scores (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
-            overall_health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
+            ).order_by(DC2SKPI.measured_at.desc()).first()
+            latest_time = latest_row.measured_at if latest_row else None
 
             # Phase 0.2: persist journey_phase on every health recalculation
             _sync_journey_phase(account)
 
-            # Determine status
-            if overall_health >= 80:
-                status = 'healthy'
-            elif overall_health >= 60:
-                status = 'risk'
-            else:
-                status = 'critical'
-            
             results.append({
                 'account_id': account.account_id,
                 'account_name': account.account_name,
@@ -212,14 +430,16 @@ def get_dc2s_accounts():
                 'overall_health': round(overall_health, 1),
                 'status': status,
                 'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
+                'enabled_pillars': enabled_pillar_codes,
                 'metadata': account.profile_metadata or {},
-                'kpi_count': len(latest_kpis),
-                'last_measured': latest_time.isoformat() if kpis else None
+                'kpi_count': len(pillar_scores) * 3 if precalc_health is not None else 15,  # approximate
+                'last_measured': latest_time.isoformat() if latest_time else None
             })
-        
+
         return jsonify({
             'accounts': results,
-            'total': len(results)
+            'total': len(results),
+            'enabled_pillars': enabled_pillar_codes
         })
         
     except Exception as e:
@@ -249,52 +469,45 @@ def get_dc2s_account_detail(account_id):
         if not account:
             return jsonify({'error': 'Account not found'}), 404
         
-        # Get all KPIs for this account
-        kpis = DC2SKPI.query.filter_by(
+        # Trailing 30-day weighted average for stable health scores
+        trailing_kpis = _get_trailing_kpi_values(account_id, days=30)
+
+        # Also get latest timestamp for metadata
+        latest_row = DC2SKPI.query.filter_by(
             account_id=account_id
-        ).order_by(DC2SKPI.measured_at.desc()).all()
-        
-        # Get latest KPIs
-        latest_kpis = {}
-        if kpis:
-            latest_time = kpis[0].measured_at
-            latest_kpis = {
-                kpi.kpi_code: float(kpi.value) 
-                for kpi in kpis 
-                if kpi.measured_at == latest_time
-            }
-        
+        ).order_by(DC2SKPI.measured_at.desc()).first()
+
         # Calculate health (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
-        overall_health, pillar_scores = calculate_kpi_health(latest_kpis, customer_id=customer_id)
+        overall_health, pillar_scores = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
 
         # Phase 0.2: persist journey_phase on every health recalculation
         _sync_journey_phase(account)
 
-        # Group KPIs by pillar
+        # Group KPIs by pillar (use trailing averaged values)
         kpis_by_pillar = {}
-        for kpi_code, value in latest_kpis.items():
+        for kpi_code, value in trailing_kpis.items():
             if kpi_code in DC2S_KPIS:
                 kpi_def = DC2S_KPIS[kpi_code]
                 pillar = kpi_def.get('pillar', kpi_def.get('l1_category', 'Unknown'))
-                
+
                 if pillar not in kpis_by_pillar:
                     kpis_by_pillar[pillar] = []
-                
+
                 # Extract target value
                 target_raw = kpi_def.get('target')
                 if isinstance(target_raw, dict):
                     target_value = target_raw.get('value')
                 else:
                     target_value = target_raw
-                
+
                 kpis_by_pillar[pillar].append({
                     'code': kpi_code,
                     'name': kpi_def.get('name', kpi_def.get('kpi_name', kpi_code)),
-                    'value': value,
+                    'value': round(value, 2),
                     'target': target_value,
                     'unit': kpi_def.get('unit', ''),
                 })
-        
+
         return jsonify({
             'account_id': account.account_id,
             'account_name': account.account_name,
@@ -305,8 +518,8 @@ def get_dc2s_account_detail(account_id):
             'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
             'kpis_by_pillar': kpis_by_pillar,
             'metadata': account.profile_metadata or {},
-            'total_kpis': len(latest_kpis),
-            'last_measured': kpis[0].measured_at.isoformat() if kpis else None
+            'total_kpis': len(trailing_kpis),
+            'last_measured': latest_row.measured_at.isoformat() if latest_row else None
         })
         
     except Exception as e:
@@ -486,9 +699,10 @@ def get_all_dc2s_kpis():
             account = account_dict.get(account_id)
             if not account:
                 continue
-            
-            # Get KPI definition
-            kpi_def = DC2S_KPIS.get(kpi_code, {})
+
+            # Get KPI definition — normalize code (AI-KPI1 → P3-KPI1) for catalog lookup
+            lookup_code = _normalize_kpi_code_for_health(kpi_code) or kpi_code
+            kpi_def = DC2S_KPIS.get(lookup_code, {})
             kpi_name = kpi_def.get('name', kpi_def.get('kpi_name', kpi_code))
             pillar = kpi_def.get('pillar', kpi_def.get('l1_category', 'Uncategorized'))
             
@@ -534,6 +748,153 @@ def get_all_dc2s_kpis():
     except Exception as e:
         logger.error(f"Error fetching all DC2_S KPIs: {e}", exc_info=True)
         return jsonify({'error': 'Failed to fetch KPIs'}), 500
+
+
+@dc2s_api.route('/accounts/<int:account_id>/kpis/timeseries', methods=['GET'])
+def get_dc2s_kpi_timeseries(account_id):
+    """
+    Get KPI time-series data for a specific account.
+    Returns KPI values aggregated by week for charting.
+    GET /api/dc2s/accounts/123/kpis/timeseries?range=30d&kpi_code=AI-KPI1
+
+    Query params:
+        range: '7d', '30d', '90d', '180d' (default: '30d')
+        kpi_code: Optional specific KPI code to filter (default: all)
+        granularity: 'daily', 'weekly', 'monthly' (default: 'weekly')
+    """
+    try:
+        customer_id = get_current_customer_id()
+
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        # Verify account belongs to customer
+        account = Account.query.filter_by(
+            account_id=account_id,
+            customer_id=int(customer_id),
+            vertical='dc2_s'
+        ).first()
+
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+
+        from sqlalchemy import func, extract
+        from datetime import datetime, timedelta
+
+        # Parse range
+        range_param = request.args.get('range', '30d')
+        range_days = {'7d': 7, '30d': 30, '90d': 90, '180d': 180}.get(range_param, 30)
+        kpi_code_filter = request.args.get('kpi_code')
+        granularity = request.args.get('granularity', 'weekly')
+
+        cutoff_date = datetime.utcnow() - timedelta(days=range_days * 365)  # Sim dates may be in past
+        # For simulated data, find the actual date range in db
+        date_range_q = db.session.query(
+            func.min(DC2SKPI.measured_at),
+            func.max(DC2SKPI.measured_at)
+        ).filter(DC2SKPI.account_id == account_id)
+        if kpi_code_filter:
+            date_range_q = date_range_q.filter(DC2SKPI.kpi_code == kpi_code_filter)
+        date_range = date_range_q.first()
+
+        if not date_range or not date_range[0]:
+            return jsonify({'account_id': account_id, 'timeseries': [], 'total': 0})
+
+        min_date, max_date = date_range
+        # Use actual date range from data, limited by range_days
+        actual_cutoff = max_date - timedelta(days=range_days)
+        if actual_cutoff < min_date:
+            actual_cutoff = min_date
+
+        # Build the query
+        query = DC2SKPI.query.filter(
+            DC2SKPI.account_id == account_id,
+            DC2SKPI.measured_at >= actual_cutoff
+        )
+        if kpi_code_filter:
+            query = query.filter(DC2SKPI.kpi_code == kpi_code_filter)
+
+        all_kpis = query.order_by(DC2SKPI.measured_at.asc()).all()
+
+        if granularity == 'daily':
+            # Group by date
+            grouped = defaultdict(lambda: defaultdict(list))
+            for kpi in all_kpis:
+                day_key = kpi.measured_at.strftime('%Y-%m-%d')
+                grouped[day_key][kpi.kpi_code].append(float(kpi.value))
+        elif granularity == 'monthly':
+            # Group by month
+            grouped = defaultdict(lambda: defaultdict(list))
+            for kpi in all_kpis:
+                month_key = kpi.measured_at.strftime('%Y-%m')
+                grouped[month_key][kpi.kpi_code].append(float(kpi.value))
+        else:
+            # Weekly (default) — group by ISO week
+            grouped = defaultdict(lambda: defaultdict(list))
+            for kpi in all_kpis:
+                week_key = kpi.measured_at.strftime('%Y-W%W')
+                grouped[week_key][kpi.kpi_code].append(float(kpi.value))
+
+        # Build timeseries result
+        timeseries = []
+        for period_key in sorted(grouped.keys()):
+            period_data = {'period': period_key}
+            for kpi_code, values in grouped[period_key].items():
+                avg_val = sum(values) / len(values)
+                # Normalize code for name lookup
+                lookup_code = _normalize_kpi_code_for_health(kpi_code) or kpi_code
+                kpi_def = DC2S_KPIS.get(lookup_code, {})
+                target_raw = kpi_def.get('target')
+                if isinstance(target_raw, dict):
+                    target_value = target_raw.get('value')
+                else:
+                    target_value = target_raw
+
+                period_data[kpi_code] = {
+                    'value': round(avg_val, 2),
+                    'count': len(values),
+                    'min': round(min(values), 2),
+                    'max': round(max(values), 2),
+                    'target': float(target_value) if target_value else None,
+                    'name': kpi_def.get('name', kpi_code),
+                    'pillar': kpi_def.get('pillar', 'Unknown'),
+                }
+            timeseries.append(period_data)
+
+        # Also return KPI summary for chart legend
+        kpi_summary = {}
+        for kpi_code in set(k.kpi_code for k in all_kpis):
+            lookup_code = _normalize_kpi_code_for_health(kpi_code) or kpi_code
+            kpi_def = DC2S_KPIS.get(lookup_code, {})
+            target_raw = kpi_def.get('target')
+            if isinstance(target_raw, dict):
+                target_value = target_raw.get('value')
+            else:
+                target_value = target_raw
+            kpi_summary[kpi_code] = {
+                'name': kpi_def.get('name', kpi_code),
+                'pillar': kpi_def.get('pillar', 'Unknown'),
+                'unit': kpi_def.get('unit', ''),
+                'target': float(target_value) if target_value else None,
+            }
+
+        return jsonify({
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'range': range_param,
+            'granularity': granularity,
+            'date_range': {
+                'from': actual_cutoff.isoformat(),
+                'to': max_date.isoformat(),
+            },
+            'kpi_summary': kpi_summary,
+            'timeseries': timeseries,
+            'total': len(timeseries),
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching DC2_S KPI timeseries: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch KPI timeseries'}), 500
 
 
 @dc2s_api.route('/alerts/<int:account_id>', methods=['GET'])
@@ -707,13 +1068,12 @@ def get_dc2s_recommendations(account_id):
                             f"(threshold {condition['operator']} {condition['value']})"
                         )
 
-                # Assign priority: critical if overall health < 50 or
-                # if the playbook has human_approval_required (high-value)
+                # Assign priority: critical (0-50), at-risk/high (50-80), healthy/medium (80-100)
                 if overall_health < 50:
                     priority = "critical"
                 elif pb_cfg.get("human_approval_required"):
                     priority = "high"
-                elif overall_health < 70:
+                elif overall_health < 80:
                     priority = "high"
                 else:
                     priority = "medium"
@@ -795,13 +1155,7 @@ def get_dc2s_health_score(account_id):
         # Phase 0.2: persist journey_phase on every health recalculation
         _sync_journey_phase(account)
 
-        # Determine health status based on overall score
-        if overall_health >= 70:
-            health_status = 'healthy'
-        elif overall_health >= 50:
-            health_status = 'at_risk'
-        else:
-            health_status = 'critical'
+        health_status = ht.classify(overall_health)
         
         # Format category scores for frontend
         category_scores = {}
@@ -846,43 +1200,41 @@ def get_dc2s_health_summary():
             Account.vertical == 'dc2_s'
         ).all()
         
-        health_scores = []
+        account_health = []  # list of (health_score, revenue)
         healthy_count = 0
         risk_count = 0
         critical_count = 0
-        
+
         for account in accounts:
-            # Get latest KPIs
-            kpis = DC2SKPI.query.filter_by(
-                account_id=account.account_id
-            ).order_by(DC2SKPI.measured_at.desc()).all()
-            
-            if kpis:
-                latest_time = kpis[0].measured_at
-                latest_kpis = {
-                    kpi.kpi_code: float(kpi.value) 
-                    for kpi in kpis 
-                    if kpi.measured_at == latest_time
-                }
-                
-                health, _ = calculate_kpi_health(latest_kpis, customer_id=customer_id)
-                health_scores.append(health)
-                
-                if health >= 80:
+            # Trailing 30-day weighted average for stable health scores
+            trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
+
+            if trailing_kpis:
+                health, _ = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
+                revenue = float(account.revenue) if account.revenue else 0
+                account_health.append((health, revenue))
+
+                if health >= ht.healthy_min():
                     healthy_count += 1
-                elif health >= 60:
+                elif health >= ht.at_risk_min():
                     risk_count += 1
                 else:
                     critical_count += 1
-        
-        avg_health = sum(health_scores) / len(health_scores) if health_scores else 0
-        
+
+        # L4: Revenue-weighted average of L3 account health scores
+        total_revenue = sum(rev for _, rev in account_health)
+        if total_revenue > 0:
+            avg_health = sum(h * r for h, r in account_health) / total_revenue
+        else:
+            avg_health = sum(h for h, _ in account_health) / len(account_health) if account_health else 0
+
         return jsonify({
             'total_accounts': len(accounts),
             'average_health': round(avg_health, 1),
             'healthy_accounts': healthy_count,
             'risk_accounts': risk_count,
             'critical_accounts': critical_count,
+            'total_arr': round(total_revenue),
             'health_distribution': {
                 'healthy': healthy_count,
                 'risk': risk_count,
@@ -1506,9 +1858,10 @@ def _compute_impact_score(health_score, churn_prob, expansion_prob, pillar_avera
     churn_component = min(churn_prob, 100) * 0.4
 
     # Health trend proxy (30%): lower health = more impact
-    if health_score < 50:
+    h_cls = ht.classify(health_score)
+    if h_cls == 'critical':
         trend_component = 30
-    elif health_score < 70:
+    elif h_cls == 'at_risk':
         trend_component = 20
     else:
         trend_component = 5
@@ -1518,9 +1871,10 @@ def _compute_impact_score(health_score, churn_prob, expansion_prob, pillar_avera
 
     # Weakest pillar severity (10%)
     weakest = min(pillar_averages.values()) if pillar_averages else 50
-    if weakest < 50:
+    w_cls = ht.classify(weakest)
+    if w_cls == 'critical':
         pillar_component = 10
-    elif weakest < 70:
+    elif w_cls == 'at_risk':
         pillar_component = 5
     else:
         pillar_component = 0
@@ -1550,14 +1904,73 @@ def _compute_effort_score(playbook_cfg):
 
 
 def _determine_urgency(health_score, churn_prob, expansion_prob):
-    """Classify urgency: critical / high / opportunity / medium."""
-    if churn_prob > 70 or health_score < 40:
+    """Classify urgency based on centralized health thresholds."""
+    h_cls = ht.classify(health_score)
+    if churn_prob > 70 or h_cls == 'critical':
         return 'critical'
-    if health_score < 70:
+    if h_cls == 'at_risk':
         return 'high'
-    if expansion_prob > 75 and health_score > 80:
+    if expansion_prob > 75 and h_cls == 'healthy':
         return 'opportunity'
     return 'medium'
+
+
+# ──────────────────────────────────────────────────────────────
+# CSM Action ↔ ROI Roadmap Correlation
+# Maps playbooks and ad-hoc actions to Power of 1 metrics
+# ──────────────────────────────────────────────────────────────
+
+# Playbook → Power of 1 metric mapping
+_PLAYBOOK_ROI_MAP = {
+    'PB-01': {'metric_id': 'TTFV',  'metric_name': 'Time to First Value',  'impact_type': 'foundation'},
+    'PB-02': {'metric_id': 'ticket_resolution_time', 'metric_name': 'Ticket Resolution Time', 'impact_type': 'efficiency'},
+    'PB-03': {'metric_id': 'product_adoption', 'metric_name': 'Product Adoption', 'impact_type': 'growth'},
+    'PB-04': {'metric_id': 'expansion_rate', 'metric_name': 'Expansion Rate', 'impact_type': 'revenue'},
+    'PB-05': {'metric_id': 'GRR',   'metric_name': 'Gross Revenue Retention', 'impact_type': 'retention'},
+    'PB-06': {'metric_id': 'expansion_rate', 'metric_name': 'Expansion Rate', 'impact_type': 'revenue'},
+}
+
+# Non-playbook action types → Power of 1 metric mapping
+_ACTION_ROI_MAP = {
+    'follow_up':  {'metric_id': 'GRR',   'metric_name': 'Gross Revenue Retention', 'impact_type': 'retention'},
+    'qbr':        {'metric_id': 'NRR',   'metric_name': 'Net Revenue Retention',   'impact_type': 'retention'},
+    'expansion':  {'metric_id': 'expansion_rate', 'metric_name': 'Expansion Rate', 'impact_type': 'revenue'},
+}
+
+
+def _get_roi_context(action_type, playbook_id, account_revenue=0):
+    """
+    Return ROI roadmap context for a CSM action.
+    Includes which Power of 1 metric this action impacts and estimated dollar value.
+    """
+    roi = None
+    if playbook_id and playbook_id in _PLAYBOOK_ROI_MAP:
+        roi = _PLAYBOOK_ROI_MAP[playbook_id].copy()
+    elif action_type in _ACTION_ROI_MAP:
+        roi = _ACTION_ROI_MAP[action_type].copy()
+
+    if not roi:
+        return {'roi_metric_id': None, 'roi_metric_name': None, 'roi_projected_impact': 0}
+
+    # Estimate dollar impact: use Power of 1 annual_impact_per_pct scaled to account ARR
+    try:
+        from power_of_1_model import POWER_OF_1_METRICS
+        metric = POWER_OF_1_METRICS.get(roi['metric_id'])
+        if metric:
+            # Scale to account's ARR relative to $10M base
+            arr_scale = max(account_revenue, 100_000) / 10_000_000
+            projected = round(metric.annual_impact_per_pct * 2.0 * arr_scale)  # Assume 2% target improvement
+        else:
+            projected = 0
+    except Exception:
+        projected = 0
+
+    return {
+        'roi_metric_id': roi['metric_id'],
+        'roi_metric_name': roi['metric_name'],
+        'roi_projected_impact': projected,
+        'roi_impact_type': roi['impact_type'],
+    }
 
 
 @dc2s_api.route('/daily-actions', methods=['GET'])
@@ -1566,6 +1979,7 @@ def get_csm_daily_actions():
     CSM Daily Action List — returns top-10 prioritised actions.
     GET /api/dc2s/daily-actions
     Scoring: Priority Index = (impact * 0.6 * arr_weight) - (effort * 0.4)
+    Each action is correlated to a Power of 1 ROI metric with projected dollar impact.
     """
     try:
         customer_id = get_current_customer_id()
@@ -1594,26 +2008,15 @@ def get_csm_daily_actions():
         all_actions = []
 
         for account in accounts:
-            # 2. Get latest KPIs
-            kpis = DC2SKPI.query.filter_by(
-                account_id=account.account_id
-            ).order_by(DC2SKPI.measured_at.desc()).all()
-
-            latest_kpis = {}
-            if kpis:
-                latest_time = kpis[0].measured_at
-                latest_kpis = {
-                    kpi.kpi_code: float(kpi.value)
-                    for kpi in kpis
-                    if kpi.measured_at == latest_time
-                }
+            # 2. Trailing 30-day weighted average for stable health scores
+            trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
 
             # Calculate health
-            overall_health, pillar_averages = calculate_kpi_health(latest_kpis, customer_id=customer_id)
+            overall_health, pillar_averages = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
 
             # Normalize KPI codes for playbook trigger evaluation
             normalized_kpis = {}
-            for code, val in latest_kpis.items():
+            for code, val in trailing_kpis.items():
                 norm = _normalize_kpi_code_for_health(code)
                 if norm:
                     normalized_kpis[norm] = val
@@ -1622,6 +2025,8 @@ def get_csm_daily_actions():
 
             # ARR weight (0.5-1.5): boost high-value accounts
             arr = (account.profile_metadata or {}).get('arr', 0) or (account.profile_metadata or {}).get('revenue', 0) or 0
+            if not arr:
+                arr = float(account.revenue) if account.revenue else 0
             if arr > 10_000_000:
                 arr_weight = 1.5
             elif arr > 5_000_000:
@@ -1633,9 +2038,10 @@ def get_csm_daily_actions():
             else:
                 arr_weight = 0.8  # Unknown ARR — slight penalty
 
-            # Churn / expansion estimates from health
-            churn_prob = 80 if overall_health < 50 else (40 if overall_health < 70 else 15)
-            expansion_prob_val = 75 if overall_health > 80 else (30 if overall_health > 60 else 5)
+            # Churn / expansion estimates from health using centralized thresholds
+            h_cls = ht.classify(overall_health)
+            churn_prob = 80 if h_cls == 'critical' else (40 if h_cls == 'at_risk' else 15)
+            expansion_prob_val = 75 if h_cls == 'healthy' else (30 if h_cls == 'at_risk' else 5)
 
             # Check expansion KPI if available
             exp_kpi = normalized_kpis.get('P5-KPI7')
@@ -1662,6 +2068,7 @@ def get_csm_daily_actions():
 
                     description = '; '.join(trigger_details) if trigger_details else pb_cfg.get('estimated_impact', '')
 
+                    roi_ctx = _get_roi_context('playbook', pb_id, arr)
                     all_actions.append({
                         'account_id': account.account_id,
                         'account_name': account.account_name,
@@ -1676,15 +2083,17 @@ def get_csm_daily_actions():
                         'account_health': round(overall_health, 1),
                         'estimated_hours': total_hours,
                         'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                        **roi_ctx,
                     })
 
             # 4. Non-playbook actions
 
-            # Health check follow-up (accounts with health < 60)
-            if overall_health < 60:
+            # Health check follow-up for critical and at-risk accounts (health < 80)
+            if overall_health < 80:
                 impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
                 effort = 20  # Low effort: just a review call
                 priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                roi_ctx = _get_roi_context('follow_up', None, arr)
                 all_actions.append({
                     'account_id': account.account_id,
                     'account_name': account.account_name,
@@ -1699,6 +2108,7 @@ def get_csm_daily_actions():
                     'account_health': round(overall_health, 1),
                     'estimated_hours': 2,
                     'estimated_duration_display': '1 day',
+                    **roi_ctx,
                 })
 
             # QBR scheduling (P4-KPI3 < target 3)
@@ -1707,6 +2117,7 @@ def get_csm_daily_actions():
                 impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
                 effort = 25
                 priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                roi_ctx = _get_roi_context('qbr', None, arr)
                 all_actions.append({
                     'account_id': account.account_id,
                     'account_name': account.account_name,
@@ -1721,6 +2132,7 @@ def get_csm_daily_actions():
                     'account_health': round(overall_health, 1),
                     'estimated_hours': 4,
                     'estimated_duration_display': '1-2 days',
+                    **roi_ctx,
                 })
 
             # Expansion call (P5-KPI7 > 70%)
@@ -1728,6 +2140,7 @@ def get_csm_daily_actions():
                 impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
                 effort = 30
                 priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                roi_ctx = _get_roi_context('expansion', None, arr)
                 all_actions.append({
                     'account_id': account.account_id,
                     'account_name': account.account_name,
@@ -1742,6 +2155,7 @@ def get_csm_daily_actions():
                     'account_health': round(overall_health, 1),
                     'estimated_hours': 3,
                     'estimated_duration_display': '1 day',
+                    **roi_ctx,
                 })
 
         # 5. Sort by priority_index DESC, take top 10
@@ -1760,6 +2174,10 @@ def get_csm_daily_actions():
             urgency_counts[a.get('urgency', 'medium')] = urgency_counts.get(a.get('urgency', 'medium'), 0) + 1
             total_hours += a.get('estimated_hours', 0)
 
+        # ROI summary: total projected impact across all top actions
+        total_roi_impact = sum(a.get('roi_projected_impact', 0) for a in top_actions)
+        roi_metrics_involved = list({a['roi_metric_name'] for a in top_actions if a.get('roi_metric_name')})
+
         return jsonify({
             'date': datetime.utcnow().strftime('%Y-%m-%d'),
             'actions': top_actions,
@@ -1768,7 +2186,9 @@ def get_csm_daily_actions():
                 'critical_count': urgency_counts.get('critical', 0),
                 'high_count': urgency_counts.get('high', 0),
                 'opportunity_count': urgency_counts.get('opportunity', 0),
-                'total_estimated_hours': total_hours
+                'total_estimated_hours': total_hours,
+                'total_roi_projected_impact': total_roi_impact,
+                'roi_metrics_involved': roi_metrics_involved,
             }
         })
 
