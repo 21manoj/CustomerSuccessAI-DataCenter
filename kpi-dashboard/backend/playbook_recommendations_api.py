@@ -1,7 +1,11 @@
 """
 Playbook Recommendations API
 
-Analyzes which accounts need which playbooks based on their current KPI data and metrics
+Analyzes which accounts need which playbooks based on their current KPI data and metrics.
+
+Vertical-aware: For DC2S customers, evaluates PB-01 through PB-06 from
+verticals/dc2_s/vertical_config.py using actual KPI values against canonical
+trigger conditions. For non-DC2S customers, falls back to generic evaluators.
 """
 
 from flask import Blueprint, request, jsonify
@@ -18,16 +22,128 @@ logger = logging.getLogger(__name__)
 playbook_recommendations_api = Blueprint('playbook_recommendations_api', __name__)
 
 
-def get_recommendations_for_account(account_id, customer_id, health_score=None):
+# ── DC2S Vertical-Specific Playbook Evaluation ──────────────────────────
+
+
+def _evaluate_dc2s_playbooks(kpi_values, health_score=None):
+    """Evaluate DC2S-specific playbooks (PB-01 through PB-06).
+
+    Uses OR logic for most playbooks: if ANY trigger condition is met, the
+    playbook is recommended. PB-04 (Capacity Planning) uses AND logic because
+    expansion requires all three conditions (capacity >80%, growth >10%,
+    expansion probability >70%).
+
+    Args:
+        kpi_values: Dict of KPI code → current value (e.g., {"P1-KPI1": 25.0})
+        health_score: Account-level health score (0-100) for PB-05
+
+    Returns:
+        List of recommendation dicts sorted by urgency (highest first)
+    """
+    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
+
+    # PB-04 uses AND logic (all conditions must be met for expansion)
+    AND_LOGIC_PLAYBOOKS = {"PB-04"}
+
+    recommendations = []
+
+    for pb_id, config in PLAYBOOK_CONFIG.items():
+        conditions = config.get("trigger_conditions", {})
+        if not conditions:
+            continue
+
+        fired_reasons = []
+        all_met = True
+        any_met = False
+        urgency_score = 0
+
+        for kpi_code, condition in conditions.items():
+            operator = condition.get("operator")
+            threshold = condition.get("value")
+
+            # PB-05 uses OVERALL_HEALTH (account-level score, not a KPI)
+            if kpi_code == "OVERALL_HEALTH":
+                if health_score is None:
+                    all_met = False
+                    continue
+                value = health_score
+            else:
+                if kpi_code not in kpi_values:
+                    all_met = False
+                    continue
+                value = kpi_values[kpi_code]
+
+            triggered = False
+            if operator == ">" and value > threshold:
+                triggered = True
+            elif operator == "<" and value < threshold:
+                triggered = True
+            elif operator == "==" and value == threshold:
+                triggered = True
+
+            if triggered:
+                any_met = True
+                fired_reasons.append(
+                    f"{kpi_code} = {value:.1f} ({operator} {threshold} threshold breached)"
+                )
+                # Urgency contribution: how far past threshold
+                if operator == ">":
+                    overshoot_pct = (value - threshold) / max(threshold, 1) * 100
+                elif operator == "<":
+                    overshoot_pct = (threshold - value) / max(threshold, 1) * 100
+                else:
+                    overshoot_pct = 50
+                urgency_score += min(50, 20 + overshoot_pct * 0.3)
+            else:
+                all_met = False
+
+        # Determine if playbook should be recommended
+        use_and = pb_id in AND_LOGIC_PLAYBOOKS
+        needed = all_met if use_and else any_met
+
+        if needed and fired_reasons:
+            urgency_level = (
+                'Critical' if urgency_score >= 60
+                else ('High' if urgency_score >= 30 else 'Medium')
+            )
+            recommendations.append({
+                'playbook_id': pb_id,
+                'playbook_name': config.get('name', pb_id),
+                'urgency_score': round(urgency_score, 1),
+                'urgency_level': urgency_level,
+                'reasons': fired_reasons,
+                'health_score': health_score,
+                'estimated_impact': config.get('estimated_impact', ''),
+                'estimated_duration': config.get('estimated_duration_display', ''),
+                'trigger_logic': 'AND' if use_and else 'OR',
+                'sub_components': [
+                    {'id': sc['id'], 'name': sc['name'], 'hours': sc['estimated_hours']}
+                    for sc in config.get('sub_components', [])
+                ],
+            })
+
+    recommendations.sort(key=lambda r: r['urgency_score'], reverse=True)
+    return recommendations
+
+
+def get_recommendations_for_account(account_id, customer_id, health_score=None,
+                                    kpi_values=None):
     """Get ranked playbook recommendations for a specific account.
 
-    Evaluates all playbook types against the account and returns
-    those that are needed, ranked by urgency.
+    Vertical-aware: when kpi_values are provided (DC2S path), evaluates
+    PB-01 through PB-06 from verticals/dc2_s/vertical_config.py using
+    canonical trigger conditions and actual KPI data.
+
+    When kpi_values are not provided, falls back to generic evaluators
+    (voc-sprint, activation-blitz, sla-stabilizer, renewal-safeguard,
+    expansion-timing).
 
     Args:
         account_id: Account identifier
         customer_id: Customer/tenant ID
         health_score: Optional pre-calculated health score (0-100)
+        kpi_values: Optional dict of KPI code → value for DC2S evaluation.
+                    When provided, activates the DC2S vertical path.
 
     Returns:
         dict with ranked recommendations list
@@ -41,6 +157,20 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None):
         return {"account_id": account_id, "recommendations": [],
                 "error": f"Account {account_id} not found"}
 
+    # ── DC2S Vertical Path: PB-01 through PB-06 ──
+    if kpi_values is not None:
+        recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score)
+        return {
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'health_score': health_score,
+            'vertical': 'dc2_s',
+            'playbook_source': 'vertical_config (PB-01 through PB-06)',
+            'total_recommendations': len(recommendations),
+            'recommendations': recommendations,
+        }
+
+    # ── Generic Path (non-DC2S / legacy) ──
     playbooks = {
         'voc-sprint': ('VoC Sprint', evaluate_account_for_voc_sprint),
         'activation-blitz': ('Activation Blitz', evaluate_account_for_activation_blitz),
@@ -466,15 +596,106 @@ def test_health_score(account_id):
 
 @playbook_recommendations_api.route('/api/playbooks/recommendations/<playbook_id>', methods=['POST'])
 def get_playbook_recommendations(playbook_id):
-    """Get account recommendations for a specific playbook"""
+    """Get account recommendations for a specific playbook.
+
+    Supports both generic playbook IDs (voc-sprint, activation-blitz, etc.)
+    and DC2S vertical IDs (PB-01 through PB-06). DC2S playbooks evaluate
+    against actual KPI values using trigger conditions from vertical_config.
+    """
     try:
         customer_id = get_current_customer_id()
         data = request.json or {}
         triggers = data.get('triggers', {})
-        
+
+        # Get all accounts for customer
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+
+        # ── DC2S Vertical Path: PB-01 through PB-06 ──
+        if playbook_id.startswith('PB-'):
+            from verticals.dc2_s.vertical_config import (
+                PLAYBOOK_CONFIG, should_trigger_playbook,
+            )
+            from verticals.dc2_s.api_routes import (
+                _get_trailing_kpi_values, get_precalculated_scores,
+                calculate_kpi_health,
+            )
+
+            config = PLAYBOOK_CONFIG.get(playbook_id)
+            if not config:
+                return jsonify({
+                    'status': 'error',
+                    'message': f"Unknown DC2S playbook: {playbook_id}. "
+                               f"Valid: {', '.join(sorted(PLAYBOOK_CONFIG.keys()))}"
+                }), 404
+
+            recommendations = []
+            for account in accounts:
+                kpi_values = _get_trailing_kpi_values(account.account_id)
+
+                precalc_health, _, _ = get_precalculated_scores(account.account_id)
+                if precalc_health is not None:
+                    health = precalc_health
+                else:
+                    health, _ = calculate_kpi_health(kpi_values, customer_id)
+
+                # For PB-05 inject OVERALL_HEALTH
+                eval_values = dict(kpi_values)
+                eval_values['OVERALL_HEALTH'] = health
+
+                triggered = should_trigger_playbook(playbook_id, eval_values)
+
+                # Build per-condition reasons
+                reasons = []
+                conditions = config.get('trigger_conditions', {})
+                for kpi_code, condition in conditions.items():
+                    val = eval_values.get(kpi_code)
+                    if val is None:
+                        continue
+                    op = condition['operator']
+                    thresh = condition['value']
+                    if (op == '>' and val > thresh) or (op == '<' and val < thresh):
+                        reasons.append(
+                            f"{kpi_code} = {val:.1f} ({op} {thresh} threshold breached)"
+                        )
+
+                recommendations.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'industry': account.industry,
+                    'region': account.region,
+                    'revenue': float(account.revenue) if account.revenue else 0,
+                    'account_status': account.account_status,
+                    'needed': triggered,
+                    'urgency_score': len(reasons) * 30 if triggered else 0,
+                    'urgency_level': 'Critical' if len(reasons) >= 2 else (
+                        'High' if triggered else 'Low'),
+                    'reasons': reasons,
+                    'metrics': {'health_score': round(health, 1)},
+                })
+
+            recommendations.sort(key=lambda x: x['urgency_score'], reverse=True)
+            urgency_counts = {
+                'Critical': len([r for r in recommendations if r['urgency_level'] == 'Critical']),
+                'High': len([r for r in recommendations if r['urgency_level'] == 'High']),
+                'Medium': len([r for r in recommendations if r['urgency_level'] == 'Medium']),
+                'Low': len([r for r in recommendations if not r['needed']]),
+            }
+
+            return jsonify({
+                'status': 'success',
+                'playbook_id': playbook_id,
+                'playbook_name': config.get('name', playbook_id),
+                'vertical': 'dc2_s',
+                'total_accounts': len(accounts),
+                'accounts_needing_playbook': len([r for r in recommendations if r['needed']]),
+                'urgency_breakdown': urgency_counts,
+                'recommendations': recommendations,
+            })
+
+        # ── Generic Path (non-DC2S) ──
         # Always try to fetch from database first, then use provided triggers as fallback
         from models import PlaybookTrigger
-        
+
         # Map API playbook_id to database playbook_type
         playbook_type_mapping = {
             'voc-sprint': 'voc',
@@ -484,22 +705,19 @@ def get_playbook_recommendations(playbook_id):
             'expansion-timing': 'expansion'
         }
         db_playbook_type = playbook_type_mapping.get(playbook_id, playbook_id)
-        
+
         trigger_config = PlaybookTrigger.query.filter_by(
             customer_id=customer_id,
             playbook_type=db_playbook_type
         ).first()
-        
+
         if trigger_config and trigger_config.trigger_config:
             db_triggers = json.loads(trigger_config.trigger_config)
             # Merge provided triggers with database triggers (database takes precedence now)
             triggers = {**triggers, **db_triggers}
-        
-        # Get all accounts for customer
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
-        
+
         recommendations = []
-        
+
         for account in accounts:
             # Evaluate based on playbook type
             if playbook_id == 'voc-sprint':
@@ -513,14 +731,14 @@ def get_playbook_recommendations(playbook_id):
             elif playbook_id == 'expansion-timing':
                 evaluation = evaluate_account_for_expansion_timing(account, triggers)
             else:
-                # Generic evaluation
+                # Unknown generic playbook
                 evaluation = {
                     'needed': False,
                     'urgency_score': 0,
                     'urgency_level': 'Low',
                     'reasons': []
                 }
-            
+
             recommendations.append({
                 'account_id': account.account_id,
                 'account_name': account.account_name,
@@ -533,14 +751,14 @@ def get_playbook_recommendations(playbook_id):
                 'urgency_level': evaluation['urgency_level'],
                 'reasons': evaluation['reasons'],
                 'metrics': {
-                    k: v for k, v in evaluation.items() 
+                    k: v for k, v in evaluation.items()
                     if k not in ['needed', 'urgency_score', 'urgency_level', 'reasons']
                 }
             })
-        
+
         # Sort by urgency score (highest first)
         recommendations.sort(key=lambda x: x['urgency_score'], reverse=True)
-        
+
         # Count by urgency level
         urgency_counts = {
             'Critical': len([r for r in recommendations if r['urgency_level'] == 'Critical']),
@@ -548,7 +766,7 @@ def get_playbook_recommendations(playbook_id):
             'Medium': len([r for r in recommendations if r['urgency_level'] == 'Medium']),
             'Low': len([r for r in recommendations if not r['needed']])
         }
-        
+
         return jsonify({
             'status': 'success',
             'playbook_id': playbook_id,
@@ -557,7 +775,7 @@ def get_playbook_recommendations(playbook_id):
             'urgency_breakdown': urgency_counts,
             'recommendations': recommendations
         })
-    
+
     except Exception as e:
         logger.error(f"Error getting playbook recommendations for {playbook_id}: {str(e)}", exc_info=True)
         return jsonify({

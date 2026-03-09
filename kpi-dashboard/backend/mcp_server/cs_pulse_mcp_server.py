@@ -564,12 +564,14 @@ def get_playbook_recommendations(
             get_precalculated_scores,
         )
 
+        # Always fetch KPI values — needed for DC2S playbook evaluation
+        kpi_values = _get_trailing_kpi_values(account_id)
+
         # Prefer pre-calculated scores (single source of truth)
         precalc_health, _, _ = get_precalculated_scores(account_id)
         if precalc_health is not None:
             health = precalc_health
         else:
-            kpi_values = _get_trailing_kpi_values(account_id)
             health, _ = calculate_kpi_health(kpi_values, customer_id)
 
         registry = get_tool_registry()
@@ -578,6 +580,7 @@ def get_playbook_recommendations(
             account_id=account_id,
             customer_id=customer_id,
             health_score=round(health, 1),
+            kpi_values=kpi_values,
         )
 
         if not result.success:

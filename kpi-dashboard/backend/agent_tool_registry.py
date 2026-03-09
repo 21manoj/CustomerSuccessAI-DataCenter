@@ -317,11 +317,18 @@ def register_all_tools(registry: Optional[AgentToolRegistry] = None) -> AgentToo
     ))
 
     def _playbook_recommend(account_id: str, customer_id: int,
-                            health_score: Optional[float] = None) -> Dict:
-        """Get playbook recommendations for an account."""
+                            health_score: Optional[float] = None,
+                            kpi_values: Optional[Dict] = None) -> Dict:
+        """Get playbook recommendations for an account.
+
+        When kpi_values are provided (DC2S vertical), evaluates PB-01 through
+        PB-06 from vertical_config.py. Otherwise falls back to generic playbooks.
+        """
         try:
             from playbook_recommendations_api import get_recommendations_for_account
-            return get_recommendations_for_account(account_id, customer_id, health_score)
+            return get_recommendations_for_account(
+                account_id, customer_id, health_score, kpi_values=kpi_values
+            )
         except (ImportError, Exception) as e:
             return {"error": str(e), "recommendations": []}
 
@@ -334,6 +341,7 @@ def register_all_tools(registry: Optional[AgentToolRegistry] = None) -> AgentToo
             "account_id": "Account identifier",
             "customer_id": "Customer/tenant ID",
             "health_score": "Optional current health score (0-100)",
+            "kpi_values": "Optional dict of KPI code → value for DC2S vertical evaluation",
         },
         output_description="Dict with ranked playbook recommendations and scores",
         requires_customer_id=True,
