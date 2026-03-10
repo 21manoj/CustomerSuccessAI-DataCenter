@@ -15,13 +15,17 @@ logger = logging.getLogger(__name__)
 
 dc2s_config_api = Blueprint('dc2s_config_api', __name__, url_prefix='/api/dc2s/config')
 
-# Map bootstrap pillar keys (P1_deployment_velocity, etc.) to P-format codes (P1..P5)
+# Map bootstrap pillar keys to P-format codes.
+# Supports both old format (P1_deployment_velocity) and new P-format (P1).
 BOOTSTRAP_PILLAR_TO_CODE = {
+    # Old format (backward compat for pre-2026 bootstrap files)
     'P1_deployment_velocity': 'P1',
     'P2_operational_stability': 'P2',
     'P3_ai_workload_performance': 'P3',
     'P4_channel_partner_health': 'P4',
     'P5_expansion_readiness': 'P5',
+    # New P-format (pass-through, used since config_version 2.0.0)
+    'P1': 'P1', 'P2': 'P2', 'P3': 'P3', 'P4': 'P4', 'P5': 'P5',
 }
 
 # Load canonical pillar weights from kpi_definitions (single source of truth)

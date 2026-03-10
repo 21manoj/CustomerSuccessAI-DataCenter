@@ -122,6 +122,81 @@ KPI_CATEGORIES = {
 }
 
 # ============================================================================
+# DC2S -> P-FORMAT TRANSLATION
+# ============================================================================
+# The canonical KPI system uses P-format codes (P1-KPI1 through P5-KPI8).
+# Wizard C internally uses DC2S_* codes for calibration. This mapping bridges
+# the two systems so calibrated weights can be saved in canonical format.
+
+DC2S_TO_P_FORMAT = {
+    # Performance & Utilization -> P1 (Deployment Velocity) + P3 (AI Workload)
+    'DC2S_PERF_CPU_UTIL': 'P1-KPI3',        # Configuration Accuracy (CPU config)
+    'DC2S_PERF_GPU_UTIL': 'P3-KPI1',        # GPU Utilization Rate
+    'DC2S_PERF_MEM_UTIL': 'P3-KPI5',        # GPU Memory Efficiency
+    'DC2S_PERF_STORAGE_UTIL': 'P3-KPI6',    # Distributed Training Efficiency
+    'DC2S_PERF_NETWORK_UTIL': 'P1-KPI6',    # Network Readiness Score
+    'DC2S_PERF_THROUGHPUT': 'P3-KPI8',      # Batch Processing Throughput
+    'DC2S_PERF_LATENCY': 'P3-KPI3',         # Inference Latency (P95)
+    'DC2S_PERF_IOPS': 'P3-KPI4',            # Model Training Time
+    # Cost Efficiency -> P2 (Operational Stability)
+    'DC2S_COST_TOTAL_MONTHLY': 'P2-KPI4',   # System Uptime Percentage
+    'DC2S_COST_PER_WORKLOAD': 'P2-KPI6',    # Power Efficiency (PUE)
+    'DC2S_COST_POWER_EFFICIENCY': 'P2-KPI6',  # Power Efficiency (PUE)
+    'DC2S_COST_COOLING_EFFICIENCY': 'P2-KPI5',  # Thermal Management Score
+    'DC2S_COST_OPTIMIZATION_SCORE': 'P2-KPI8',  # Preventive Maintenance Compliance
+    'DC2S_COST_CAPEX_UTILIZATION': 'P5-KPI5',   # Budget Availability Signals
+    'DC2S_COST_OPEX_RATIO': 'P2-KPI7',      # Mean Time To Repair (MTTR)
+    # Scalability & Growth -> P5 (Expansion Readiness)
+    'DC2S_SCALE_CAPACITY_HEADROOM': 'P5-KPI1',  # Capacity Utilization Rate
+    'DC2S_SCALE_WORKLOAD_GROWTH': 'P5-KPI3',    # Workload Growth Velocity
+    'DC2S_SCALE_CLUSTER_EXPANSION': 'P5-KPI4',  # Compute Hour Consumption Trend
+    'DC2S_SCALE_STORAGE_GROWTH': 'P5-KPI2',     # Capacity Utilization Trajectory
+    'DC2S_SCALE_DEPLOYMENT_VELOCITY': 'P1-KPI4', # Deployment Cycle Time
+    'DC2S_SCALE_AUTO_SCALING_SCORE': 'P5-KPI7',  # Expansion Probability (90d)
+    'DC2S_SCALE_ELASTICITY_SCORE': 'P5-KPI6',   # New Use Case Adoption
+    # Support & Reliability -> P2 (Operational Stability)
+    'DC2S_SUP_UPTIME_PCT': 'P2-KPI4',       # System Uptime Percentage
+    'DC2S_SUP_MTBF': 'P2-KPI2',             # MTBF
+    'DC2S_SUP_MTTR': 'P2-KPI7',             # Mean Time To Repair
+    'DC2S_SUP_TICKET_RESOLUTION_TIME': 'P2-KPI3',  # Critical Incidents (30d)
+    'DC2S_SUP_CUSTOMER_SATISFACTION': 'P4-KPI6',    # Partner NPS
+    'DC2S_SUP_SLA_COMPLIANCE': 'P2-KPI1',   # RMA Frequency Rate
+    # Business Value -> P4 (Channel & Partner) + P5 (Expansion)
+    'DC2S_BIZ_ROI': 'P5-KPI5',              # Budget Availability Signals
+    'DC2S_BIZ_TIME_TO_VALUE': 'P1-KPI1',    # Time-to-First-Workload
+    'DC2S_BIZ_FEATURE_ADOPTION': 'P5-KPI6', # New Use Case Adoption
+    'DC2S_BIZ_INNOVATION_SCORE': 'P3-KPI7', # Workload Diversity Score
+    'DC2S_BIZ_COMPETITIVE_ADVANTAGE': 'P4-KPI4',  # Channel Conflict Score
+    'DC2S_BIZ_REVENUE_IMPACT': 'P4-KPI5',   # Co-selling Opportunities
+    'DC2S_BIZ_STRATEGIC_ALIGNMENT': 'P4-KPI1',  # Partner Engagement Score
+}
+
+DC2S_CATEGORY_TO_PILLAR = {
+    'Performance & Utilization': 'P3',   # AI Workload Performance
+    'Cost Efficiency': 'P2',             # Operational Stability
+    'Scalability & Growth': 'P5',        # Expansion Readiness
+    'Support & Reliability': 'P2',       # Operational Stability
+    'Business Value': 'P4',              # Channel & Partner Health
+}
+
+
+def translate_to_p_format(dc2s_weights: Dict) -> Dict:
+    """
+    Translate DC2S_* keyed weights to P-format keyed weights.
+
+    If a DC2S code maps to a P-format KPI that already has a weight
+    (from a previous mapping), the weights are averaged.
+    """
+    p_weights = defaultdict(list)
+    for dc2s_code, weight in dc2s_weights.items():
+        p_code = DC2S_TO_P_FORMAT.get(dc2s_code)
+        if p_code:
+            p_weights[p_code].append(weight)
+    # Average if multiple DC2S codes map to same P-format code
+    return {code: statistics.mean(weights) for code, weights in p_weights.items()}
+
+
+# ============================================================================
 # WEIGHT CALIBRATOR CLASS
 # ============================================================================
 
@@ -578,61 +653,54 @@ def main():
     # Save to CustomerConfig if requested
     if args.save_to_config:
         print()
-        print("💾 Saving weights to CustomerConfig...")
-        
-        # Use calibrated category weights mapped to pillars
+        print("Saving weights to CustomerConfig...")
+
+        # Translate DC2S_* KPI codes to P-format before saving
+        p_format_kpi_weights = translate_to_p_format(calibration['kpi_weights'])
+        print(f"  Translated {len(calibration['kpi_weights'])} DC2S codes -> {len(p_format_kpi_weights)} P-format codes")
+
+        # Use calibrated category weights mapped to pillars (P-format)
         cat_weights = calibration.get('category_weights', {})
-        pillar_weights = {
-            'P3': cat_weights.get('Performance & Utilization', 0.25),
-            'P4': cat_weights.get('Support & Reliability', 0.20),
-            'P1': cat_weights.get('Scalability & Growth', 0.15),
-            'P5': cat_weights.get('Business Value', 0.20),
-            'P2': cat_weights.get('Cost Efficiency', 0.20),
-        }
+        pillar_weights = {}
+        for category, pillar in DC2S_CATEGORY_TO_PILLAR.items():
+            cat_w = cat_weights.get(category, 0)
+            # Categories may map to same pillar (e.g. Cost + Support -> P2), accumulate
+            pillar_weights[pillar] = pillar_weights.get(pillar, 0) + cat_w
+        # Ensure all 5 pillars present
+        for p in ('P1', 'P2', 'P3', 'P4', 'P5'):
+            if p not in pillar_weights:
+                pillar_weights[p] = 0.20
         # Normalize so they sum to 1.0
         total = sum(pillar_weights.values())
         if total > 0:
             pillar_weights = {k: v / total for k, v in pillar_weights.items()}
 
-        # Group KPI weights by pillar
-        kpi_weights_by_pillar = {
-            'P3': {},
-            'P4': {},
-            'P1': {},
-            'P5': {},
-            'P2': {}
-        }
-
-        # Map KPI codes to pillars - handles both DC2S_ prefixed and short codes
-        for kpi_code, weight in calibration['kpi_weights'].items():
-            if 'PERF' in kpi_code or kpi_code.startswith('P'):
-                pillar = 'P3'  # Performance -> AI Workload Performance
-            elif 'COST' in kpi_code or kpi_code.startswith('C'):
-                pillar = 'P2'  # Cost -> Operational Stability
-            elif 'SCALE' in kpi_code or kpi_code.startswith('S'):
-                pillar = 'P1'  # Scalability -> Deployment Velocity
-            elif 'SUP' in kpi_code or kpi_code.startswith('R'):
-                pillar = 'P4'  # Support/Reliability -> Customer Health
-            elif 'BIZ' in kpi_code or kpi_code.startswith('B'):
-                pillar = 'P5'  # Business -> Expansion
-            else:
-                pillar = 'P1'  # Default fallback
-
+        # Group P-format KPI weights by pillar
+        kpi_weights_by_pillar = {'P1': {}, 'P2': {}, 'P3': {}, 'P4': {}, 'P5': {}}
+        for kpi_code, weight in p_format_kpi_weights.items():
+            pillar = kpi_code.split('-')[0]  # "P3-KPI1" -> "P3"
             if pillar in kpi_weights_by_pillar:
                 kpi_weights_by_pillar[pillar][kpi_code] = weight
-        
+
+        # Normalize KPI weights within each pillar to sum to 1.0
+        for pillar, kpis in kpi_weights_by_pillar.items():
+            if kpis:
+                total_w = sum(kpis.values())
+                if total_w > 0:
+                    kpi_weights_by_pillar[pillar] = {k: v / total_w for k, v in kpis.items()}
+
         success = save_optimized_weights_to_config(
             customer_id=args.customer_id,
-            optimized_weights=calibration['kpi_weights'],
+            optimized_weights=p_format_kpi_weights,
             pillar_weights=pillar_weights,
             kpi_weights=kpi_weights_by_pillar
         )
-        
+
         if success:
-            print("✅ Weights saved to customer configuration")
+            print("Weights saved to customer configuration (P-format)")
             print("   These weights will be used for future calculations")
         else:
-            print("⚠️  Failed to save weights to config")
+            print("Failed to save weights to config")
         print()
 
 if __name__ == "__main__":

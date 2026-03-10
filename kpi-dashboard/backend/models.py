@@ -956,7 +956,7 @@ class PillarScore(db.Model):
     measurement_month = db.Column(db.Date, nullable=False, index=True)
     
     # Pillar Information
-    pillar_code = db.Column(db.String(10), nullable=False, index=True)  # AI, CH, DV, EX, OS
+    pillar_code = db.Column(db.String(10), nullable=False, index=True)  # P1, P2, P3, P4, P5
     pillar_score = db.Column(db.Numeric(5, 2))      # 0-100 weighted average
     pillar_status = db.Column(db.String(20))        # excellent, good, warning, critical
     

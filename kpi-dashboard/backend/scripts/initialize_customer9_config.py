@@ -127,13 +127,13 @@ def initialize_customer9_config():
             for kpi in unmapped_kpis:
                 print(f"   - {kpi}")
         
-        # Calculate weights
+        # Calculate weights (canonical from kpi_definitions.py)
         pillar_weights = {
-            'P3': 0.25,
-            'P4': 0.20,
             'P1': 0.15,
-            'P5': 0.20,
-            'P2': 0.20
+            'P2': 0.20,
+            'P3': 0.25,
+            'P4': 0.15,
+            'P5': 0.25
         }
         
         kpi_weights = {}

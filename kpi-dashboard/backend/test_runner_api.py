@@ -5,6 +5,7 @@ Spawns load-driver scenarios as subprocesses, tracks their status,
 and returns results to the frontend for display.
 """
 
+import glob as globmod
 import json
 import logging
 import os
@@ -129,6 +130,14 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
                 cmd.extend(['--showcase-pattern-mix', json.dumps(options['showcase_pattern_mix'])])
             if options.get('weights'):
                 cmd.extend(['--weights', json.dumps(options['weights'])])
+            # Scenario 8: Context Graph options
+            if options.get('arc_id'):
+                cmd.extend(['--arc-id', str(options['arc_id'])])
+            # Scenario 9: ROI Simulation options
+            if options.get('months'):
+                cmd.extend(['--months', str(int(options['months']))])
+            if options.get('improvement'):
+                cmd.extend(['--improvement', str(float(options['improvement']))])
 
         logger.info(f"[{run_id}] Starting scenario {scenario_id}: {' '.join(cmd)}")
 
@@ -396,3 +405,216 @@ def delete_run(run_id):
             return jsonify({'deleted': run_id})
 
     return jsonify({'error': f'Run {run_id} not found'}), 404
+
+
+# ---------------------------------------------------------------------------
+# Platform State Endpoint (Tab 2)
+# ---------------------------------------------------------------------------
+
+@test_runner_api.route('/api/test-runner/platform-state', methods=['GET'])
+def get_platform_state():
+    """
+    Return live platform state for a customer: accounts, health scores, ARR,
+    pillar breakdowns, and context graph node counts.
+
+    Query params: customer_id (required)
+    """
+    customer_id = request.args.get('customer_id')
+    if not customer_id:
+        return jsonify({'error': 'customer_id query param is required'}), 400
+
+    try:
+        customer_id = int(customer_id)
+    except ValueError:
+        return jsonify({'error': 'customer_id must be an integer'}), 400
+
+    try:
+        from models import db, Customer, Account, PrecalculatedScore, ContextNode
+        import utils.health_thresholds as ht
+    except ImportError as e:
+        return jsonify({'error': f'Import error: {e}'}), 500
+
+    customer = Customer.query.get(customer_id)
+    if not customer:
+        return jsonify({'error': f'Customer {customer_id} not found'}), 404
+
+    accounts = Account.query.filter_by(customer_id=customer_id, is_active=True).all()
+
+    account_list = []
+    total_arr = 0
+    health_scores = []
+    healthy = at_risk = critical = 0
+    total_cg_nodes = 0
+
+    for acct in accounts:
+        # Get latest precalculated score
+        latest_score = (
+            PrecalculatedScore.query
+            .filter_by(account_id=acct.id, customer_id=customer_id)
+            .order_by(PrecalculatedScore.calculated_at.desc())
+            .first()
+        )
+
+        health_score = latest_score.overall_score if latest_score else None
+        pillar_scores = {}
+        if latest_score and latest_score.pillar_scores:
+            pillar_scores = latest_score.pillar_scores
+
+        # Count context graph nodes for this account
+        cg_count = (
+            ContextNode.query
+            .filter_by(account_id=acct.id, customer_id=customer_id)
+            .count()
+        )
+        total_cg_nodes += cg_count
+
+        arr = float(acct.arr or 0)
+        total_arr += arr
+
+        if health_score is not None:
+            health_scores.append(health_score)
+            status = ht.classify(health_score)
+            if status == 'critical':
+                critical += 1
+            elif status == 'at_risk':
+                at_risk += 1
+            else:
+                healthy += 1
+        else:
+            status = 'unknown'
+
+        # Find latest KPI date
+        latest_kpi_date = None
+        if latest_score and latest_score.calculated_at:
+            latest_kpi_date = latest_score.calculated_at.isoformat()
+
+        account_list.append({
+            'account_id': acct.id,
+            'account_name': acct.name,
+            'health_score': round(health_score, 1) if health_score else None,
+            'status': status,
+            'arr': arr,
+            'pillar_scores': pillar_scores,
+            'context_graph_nodes': cg_count,
+            'latest_kpi_date': latest_kpi_date,
+        })
+
+    # Sort worst-first
+    account_list.sort(key=lambda a: a['health_score'] if a['health_score'] is not None else 999)
+
+    # Check if context graph feature is enabled
+    cg_enabled = False
+    try:
+        from feature_toggles import is_feature_enabled
+        cg_enabled = is_feature_enabled('CONTEXT_GRAPH', customer_id)
+    except Exception:
+        cg_enabled = total_cg_nodes > 0
+
+    avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else None
+
+    return jsonify({
+        'customer_id': customer_id,
+        'customer_name': customer.name,
+        'accounts': account_list,
+        'summary': {
+            'total_accounts': len(account_list),
+            'avg_health': avg_health,
+            'total_arr': total_arr,
+            'healthy': healthy,
+            'at_risk': at_risk,
+            'critical': critical,
+            'context_graph_enabled': cg_enabled,
+            'total_cg_nodes': total_cg_nodes,
+        },
+    })
+
+
+# ---------------------------------------------------------------------------
+# Story Arcs Endpoint (for Scenario 8 dropdown)
+# ---------------------------------------------------------------------------
+
+@test_runner_api.route('/api/test-runner/story-arcs', methods=['GET'])
+def list_story_arcs():
+    """
+    List available story arc manifests from config/story_arcs/.
+    Returns arc_id, arc_name, description, target_audience, arr_start, arr_end.
+    """
+    config_dir = _BACKEND_DIR / 'config' / 'story_arcs'
+    arcs = []
+
+    if not config_dir.exists():
+        return jsonify({'arcs': arcs})
+
+    for arc_file in sorted(config_dir.glob('arc_*.json')):
+        try:
+            with open(arc_file, 'r') as f:
+                manifest = json.load(f)
+            meta = manifest.get('metadata', manifest)
+            arcs.append({
+                'arc_id': meta.get('arc_id', arc_file.stem.replace('arc_', '')),
+                'arc_name': meta.get('arc_name', arc_file.stem),
+                'description': meta.get('description', ''),
+                'target_audience': meta.get('target_audience', ''),
+                'arr_start': meta.get('arr_start', meta.get('arr_range', {}).get('start', 0)),
+                'arr_end': meta.get('arr_end', meta.get('arr_range', {}).get('end', 0)),
+            })
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Skipping {arc_file}: {e}")
+
+    return jsonify({'arcs': arcs})
+
+
+# ---------------------------------------------------------------------------
+# Power-of-1 Endpoint (for Analytics tab)
+# ---------------------------------------------------------------------------
+
+@test_runner_api.route('/api/test-runner/power-of-1', methods=['GET'])
+def calculate_power_of_1():
+    """
+    Calculate Power-of-1 revenue impact.
+
+    Query params:
+      - customer_id (required)
+      - metric_id (required): NRR, GRR, product_adoption, expansion_rate, ticket_resolution_time, TTFV
+      - improvement_pct (optional, default 1.0)
+      - account_arr (optional, overrides portfolio total)
+    """
+    customer_id = request.args.get('customer_id')
+    metric_id = request.args.get('metric_id')
+    improvement_pct = float(request.args.get('improvement_pct', 1.0))
+    account_arr = request.args.get('account_arr')
+
+    if not customer_id:
+        return jsonify({'error': 'customer_id is required'}), 400
+    if not metric_id:
+        return jsonify({'error': 'metric_id is required'}), 400
+
+    try:
+        customer_id = int(customer_id)
+    except ValueError:
+        return jsonify({'error': 'customer_id must be an integer'}), 400
+
+    try:
+        from power_of_1_model import calculate_power_of_1_impact
+        result = calculate_power_of_1_impact(
+            customer_id=customer_id,
+            metric_id=metric_id,
+            improvement_pct=improvement_pct,
+            account_arr=float(account_arr) if account_arr else None,
+        )
+        return jsonify(result)
+    except ImportError:
+        # Fallback: simple estimation
+        arr_basis = float(account_arr) if account_arr else 10_000_000
+        annual_impact = arr_basis * (improvement_pct / 100)
+        return jsonify({
+            'metric_id': metric_id,
+            'improvement_pct': improvement_pct,
+            'arr_basis': arr_basis,
+            'annual_impact': round(annual_impact, 2),
+            'monthly_impact': round(annual_impact / 12, 2),
+            'description': f'{improvement_pct}% improvement in {metric_id}',
+            'source': 'fallback_estimate',
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

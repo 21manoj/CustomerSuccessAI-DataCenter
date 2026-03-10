@@ -38,19 +38,47 @@ class ScoreCalculator:
         self.validator = ConfigValidator()
     
     def _load_config(self) -> Dict:
-        """Load customer configuration from database"""
+        """
+        Load customer configuration with 3-tier weight priority:
+          Tier 1: CustomerConfig DB (Wizard C calibrated)
+          Tier 2: bootstrap_weights_config.json (per-customer file)
+          Tier 3: kpi_definitions.py defaults (fallback)
+        """
+        import logging
+        log = logging.getLogger(__name__)
+
         config = CustomerConfig.query.filter_by(customer_id=self.customer_id).first()
 
         if not config or config.vertical != 'dc2_s':
             raise ValueError(f"No DC2_S config found for customer {self.customer_id}")
 
-        # Use DB weights or fall back to bootstrap defaults
+        # Tier 1: DB weights (Wizard C calibrated)
         pillar_weights = config.dc2s_pillar_weights or {}
+        kpi_weights = config.dc2s_kpi_weights or {}
+
+        # Tier 2: Bootstrap weights file (if DB is empty)
+        if not pillar_weights or not kpi_weights:
+            try:
+                from dc2s_config_api import _load_bootstrap_full
+                bootstrap = _load_bootstrap_full(self.customer_id)
+                if not pillar_weights and bootstrap.get('pillar_weights'):
+                    pillar_weights = bootstrap['pillar_weights']
+                    log.info("ScoreCalculator: Loaded pillar weights from bootstrap file for customer %s",
+                             self.customer_id)
+                if not kpi_weights and bootstrap.get('kpi_weights'):
+                    kpi_weights = bootstrap['kpi_weights']
+                    log.info("ScoreCalculator: Loaded KPI weights from bootstrap file for customer %s",
+                             self.customer_id)
+            except Exception as e:
+                log.debug("ScoreCalculator: Bootstrap file not available for customer %s: %s",
+                          self.customer_id, e)
+
+        # Tier 3: kpi_definitions.py defaults
         if not pillar_weights:
             pillar_weights = DEFAULT_PILLAR_WEIGHTS.copy()
+            log.info("ScoreCalculator: Using kpi_definitions defaults for customer %s", self.customer_id)
 
-        # Load KPI weights from DB; if empty, will be populated from kpi_definitions at L2 calc time
-        kpi_weights = config.dc2s_kpi_weights or {}
+        # kpi_weights left empty -> populated from kpi_definitions at L2 calc time (existing behavior)
 
         return {
             'pillar_weights': pillar_weights,

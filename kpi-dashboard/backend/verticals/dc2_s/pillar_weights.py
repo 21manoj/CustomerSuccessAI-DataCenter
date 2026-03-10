@@ -377,9 +377,10 @@ PILLAR_LONG_TO_SHORT = {
     "P4_channel_partner_health": "P4",
     "P5_expansion_readiness": "P5",
 }
-# DB config (CustomerConfig.dc2s_pillar_weights) uses AI, CH, DV, EX, OS
-PILLAR_SHORT_TO_DB = {"P1": "DV", "P2": "OS", "P3": "AI", "P4": "CH", "P5": "EX"}
-PILLAR_DB_TO_SHORT = {v: k for k, v in PILLAR_SHORT_TO_DB.items()}
+# DB config (CustomerConfig.dc2s_pillar_weights) uses P1, P2, P3, P4, P5 keys
+# NOTE: Old letter-format aliases (AI, CH, DV, EX, OS) were fully removed March 2026.
+# The DB has always stored P-format keys. The old PILLAR_SHORT_TO_DB mapping was a bug
+# that caused get_weights_for_customer() to silently ignore all customer-specific weights.
 
 
 def get_current_weights() -> Dict[str, Any]:
@@ -418,17 +419,24 @@ def get_weights_for_customer(customer_id: Optional[int]) -> Dict[str, Any]:
                 customer_id
             )
             return get_current_weights()
-        # Map DB keys (AI, CH, DV, EX, OS) to short (P1-P5) for calculate_kpi_health
+        # DB stores P-format keys directly: {"P1": 0.15, "P2": 0.20, ...}
         out = {}
-        for short, db_key in PILLAR_SHORT_TO_DB.items():
-            w = db_weights.get(db_key)
+        for pillar in PILLAR_SHORT:
+            w = db_weights.get(pillar)
             if w is not None:
-                out[short] = {"weight": float(w)}
+                out[pillar] = {"weight": float(w)}
             else:
-                out[short] = {"weight": 0.2}
+                # Pillar missing from DB — use bootstrap default for that pillar
+                fallback_key = next((k for k, v in PILLAR_LONG_TO_SHORT.items() if v == pillar), "")
+                fallback = BOOTSTRAP_L2_WEIGHTS.get(fallback_key, 0.2)
+                out[pillar] = {"weight": fallback}
+                log.warning(
+                    "Pillar %s missing from DB weights for customer_id=%s, using bootstrap default %.2f",
+                    pillar, customer_id, fallback
+                )
         log.info(
-            "Config-aware: Using CustomerConfig.dc2s_pillar_weights for customer_id=%s (L2 weights from DB)",
-            customer_id
+            "Config-aware: Using CustomerConfig.dc2s_pillar_weights for customer_id=%s — %s",
+            customer_id, {k: v['weight'] for k, v in out.items()}
         )
         return out
     except Exception as e:
