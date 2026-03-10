@@ -36,7 +36,12 @@ Every tool response includes a `scope` field:
 
 ---
 
-## AVAILABLE TOOLS (20 total, 8 groups)
+## AVAILABLE TOOLS (21 total, 8 groups + 1 setup tool)
+
+### Tool 0: Platform Setup (call FIRST)
+| Tool | When to Use |
+|------|------------|
+| `get_platform_instructions()` | **Call this FIRST** at the start of every conversation. No parameters needed. Returns the complete platform context (this document) including tenant model, orchestration patterns, revenue rules, and health thresholds. Without it, you may misinterpret tool responses. |
 
 ### Group 1: Account Intelligence (3 tools)
 Start here for any account health or portfolio overview question.

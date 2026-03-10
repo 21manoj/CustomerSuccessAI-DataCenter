@@ -188,12 +188,46 @@ def get_system_prompt() -> str:
 
 
 # ===================================================================
+# Tool 0: Platform Instructions (call FIRST before any other tool)
+# ===================================================================
+
+@mcp.tool
+def get_platform_instructions() -> dict:
+    """IMPORTANT: Call this tool FIRST before using any other CS Pulse tools.
+
+    Returns the complete platform context including tenant model (customer_id vs account_id),
+    health score thresholds, tool orchestration patterns, revenue double-counting rules,
+    and response guidelines. Without these instructions you may misinterpret tool responses
+    or produce inaccurate analysis.
+
+    This tool requires no parameters. Call it once at the start of each conversation.
+    """
+    content = _load_system_prompt()
+    return {
+        "instructions": content,
+        "status": "loaded",
+        "tool_count": 20,
+        "note": (
+            "These instructions are now in your context. Follow them for all subsequent "
+            "tool calls. Key rules: (1) customer_id is the tenant, account_id is one of "
+            "their accounts. (2) Never manually sum revenue from nodes — use "
+            "get_revenue_at_risk() only. (3) Health thresholds: critical <50, at_risk 50-69, "
+            "healthy >=70."
+        ),
+    }
+
+
+# ===================================================================
 # Group 1: Account Intelligence (3 tools)
 # ===================================================================
 
 @mcp.tool
 def list_accounts(customer_id: int) -> dict:
     """List all accounts with health scores for a customer.
+
+    TENANT MODEL: customer_id is the CS Pulse tenant (the company using the platform),
+    NOT the end-user. Each tenant has multiple accounts (their end-customers).
+    Health thresholds: critical <50, at_risk 50-69, healthy >=70.
 
     Args:
         customer_id: The customer (tenant) ID
@@ -264,6 +298,10 @@ def list_accounts(customer_id: int) -> dict:
 @mcp.tool
 def get_account_health(customer_id: int, account_id: int) -> dict:
     """Get detailed health score and pillar breakdown for a specific account.
+
+    Health is computed from 5 pillars (P1-P5): AI/ML Performance, Infrastructure Reliability,
+    Cloud & DevOps, Customer Engagement, Commercial & Expansion.
+    Thresholds: critical <50, at_risk 50-69, healthy >=70.
 
     Args:
         customer_id: The customer (tenant) ID
@@ -397,6 +435,10 @@ def _check_context_graph(customer_id: int):
 @mcp.tool
 def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
     """Get revenue breakdown from context graph: at-risk, protected, expansion, lost.
+
+    IMPORTANT: This is the ONLY authoritative source for revenue figures. Never manually
+    sum revenue_impact values from individual context graph nodes — that causes double-counting.
+    Individual SIGNAL nodes have revenue_impact=null; only OUTCOME nodes carry revenue.
 
     Args:
         customer_id: The customer (tenant) ID
@@ -1048,12 +1090,13 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
 
 @mcp.tool
 def get_csm_daily_actions(customer_id: int) -> dict:
-    """Get top-10 prioritized CSM actions across all accounts. Each action includes the linked playbook, urgency level, estimated effort hours, and projected dollar impact via Power-of-1 ROI metric correlation.
+    """Get top-10 prioritized CSM actions across all accounts (portfolio-level). Each action includes the linked playbook, urgency level, estimated effort hours, and projected dollar impact via Power-of-1 ROI metric correlation.
 
+    Use for "What should I do today?" or "Morning briefing" questions.
     Priority formula: (impact × 0.6 × arr_weight) - (effort × 0.4)
 
     Args:
-        customer_id: The customer (tenant) ID
+        customer_id: The customer (tenant) ID — actions span ALL accounts for this tenant
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -1339,6 +1382,9 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
 def list_portfolio_customers(portfolio_id: int) -> dict:
     """List all customers in a PE portfolio with health and ARR summary.
 
+    NOTE: This tool uses portfolio_id (not customer_id). A portfolio is a PE fund or
+    holding company that owns multiple customers. Each customer has its own accounts.
+
     Args:
         portfolio_id: The portfolio (PE fund / holding company) ID
     """
@@ -1447,6 +1493,9 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
 @mcp.tool
 def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
     """Compare all customers in a portfolio side-by-side: health, ARR, risk, expansion. CEO-level view.
+
+    NOTE: Uses portfolio_id (not customer_id). Includes context graph revenue intelligence
+    when enabled. Use for board-level cross-company benchmarking.
 
     Args:
         portfolio_id: The portfolio (PE fund / holding company) ID
@@ -1593,6 +1642,9 @@ def get_account_journey_timeline(
 
     Returns signals, decisions, outcomes, and stakeholder events in date order
     with a pre-computed revenue summary. Replaces multiple search_signals calls.
+    The revenue_summary field uses get_revenue_at_risk internally (deduplicated).
+
+    PREFERRED over calling search_signals multiple times — one call replaces 3+ search_signals calls.
 
     Args:
         customer_id: The customer (tenant) ID
