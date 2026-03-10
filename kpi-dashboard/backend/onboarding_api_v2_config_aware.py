@@ -952,12 +952,32 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'created_by': row.get('created_by', 'csv_import'),
                     })
 
+                    edge_type = row.get('edge_type', 'CORRELATES_WITH')
+
                     # Edges are arc-level (not per-account), so replicate for each account
                     for acct_id in sorted(all_account_ids):
                         from_nid = _resolve_ref(from_ref, acct_id)
                         to_nid = _resolve_ref(to_ref, acct_id)
 
                         if from_nid and to_nid:
+                            # ── Temporal guard: LED_TO edges must flow forward in time ──
+                            if edge_type == 'LED_TO':
+                                from_row = conn.execute(text(
+                                    "SELECT occurred_at FROM context_nodes WHERE node_id = :nid"
+                                ), {'nid': from_nid}).fetchone()
+                                to_row = conn.execute(text(
+                                    "SELECT occurred_at FROM context_nodes WHERE node_id = :nid"
+                                ), {'nid': to_nid}).fetchone()
+                                if (from_row and to_row
+                                        and from_row[0] is not None and to_row[0] is not None
+                                        and from_row[0] > to_row[0]):
+                                    current_app.logger.warning(
+                                        f"signal_edges: skipping reverse LED_TO edge "
+                                        f"node {from_nid} ({from_row[0]}) → node {to_nid} ({to_row[0]})"
+                                    )
+                                    unresolved += 1
+                                    continue
+
                             conn.execute(text("""
                                 INSERT INTO context_edges
                                     (customer_id, from_node_id, to_node_id,
@@ -971,7 +991,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                                 'cid': customer_id,
                                 'from_nid': from_nid,
                                 'to_nid': to_nid,
-                                'etype': row.get('edge_type', 'CORRELATES_WITH'),
+                                'etype': edge_type,
                                 'weight': float(row.get('weight', 0.5)),
                                 'conf': float(row.get('confidence', 0.5)),
                                 'lag': int(row.get('lag_days', 0)),

@@ -24,7 +24,7 @@ from flask import Blueprint, request, jsonify
 
 from auth_middleware import get_current_customer_id
 from feature_toggles import is_context_graph_enabled
-from models import Account, ContextNode
+from models import Account, ContextNode, ContextEdge
 from extensions import db
 from utils.context_graph import (
     get_nodes,
@@ -212,6 +212,69 @@ def graph_edges(node_id: int):
 
     except Exception as e:
         logger.error(f"Error in graph_edges: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ─── 3b. Bulk Edges by Account ────────────────────────────────────────────────
+
+@context_graph_api.route('/api/context-graph/account-edges', methods=['GET'])
+def graph_account_edges():
+    """
+    Get ALL edges between nodes belonging to an account.  Single round-trip
+    replacement for N per-node edge queries.
+
+    Query params:
+        account_id  (required)
+        limit       — max edges (default 500, max 2000)
+    """
+    try:
+        customer_id = get_current_customer_id()
+        account_id, err = _require_account_id()
+        if err:
+            return err
+
+        fail = _guard(customer_id, account_id)
+        if fail[0] is not None:
+            return fail
+
+        limit = min(request.args.get('limit', 500, type=int), 2000)
+
+        # Get all node IDs for this account
+        node_ids = [
+            r[0] for r in
+            db.session.query(ContextNode.node_id)
+            .filter(ContextNode.account_id == account_id)
+            .all()
+        ]
+
+        if not node_ids:
+            return jsonify({
+                'status': 'success',
+                'account_id': account_id,
+                'count': 0,
+                'edges': [],
+            })
+
+        # Edges where BOTH endpoints belong to this account's nodes
+        edges = (
+            ContextEdge.query
+            .filter(
+                ContextEdge.from_node_id.in_(node_ids),
+                ContextEdge.to_node_id.in_(node_ids),
+            )
+            .limit(limit)
+            .all()
+        )
+
+        return jsonify({
+            'status': 'success',
+            'account_id': account_id,
+            'count': len(edges),
+            'edges': [e.to_dict() for e in edges],
+        })
+
+    except Exception as e:
+        logger.error(f"Error in graph_account_edges: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 

@@ -976,7 +976,7 @@
     {
       "decision_id": "dec_expansion_budget",
       "phase_id": 2,
-      "week": 18,
+      "week": 21,
       "title": "Request Capacity Expansion Budget from CTO",
       "decision_maker_role": "champion",
       "options": [

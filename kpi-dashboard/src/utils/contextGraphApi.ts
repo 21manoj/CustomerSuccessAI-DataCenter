@@ -62,6 +62,17 @@ export async function fetchGraphEdges(
   return res.json();
 }
 
+// ── Bulk Edges by Account ──
+
+export async function fetchAccountEdges(
+  accountId: number,
+  limit: number = 500,
+): Promise<{ status: string; account_id: number; count: number; edges: ContextEdgeDTO[] }> {
+  const res = await apiCall(`/api/context-graph/account-edges?account_id=${accountId}&limit=${limit}`);
+  if (!res.ok) throw new Error(`Account edges failed: ${res.status}`);
+  return res.json();
+}
+
 // ── Causal Chain ──
 
 export async function fetchCausalChain(

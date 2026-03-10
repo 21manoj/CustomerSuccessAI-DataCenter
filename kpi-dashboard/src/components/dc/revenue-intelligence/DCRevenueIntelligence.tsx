@@ -190,9 +190,9 @@ const DCRevenueIntelligence: React.FC = () => {
         {activeTab === 'graph' && selectedAccountId && (
           <GraphOverview accountId={selectedAccountId} />
         )}
-        {activeTab === 'explorer' && (
+        {activeTab === 'explorer' && selectedAccountId && (
           <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: '80vh' }}>
-            <ContextGraphExplorer />
+            <ContextGraphExplorer accountId={selectedAccountId} />
           </div>
         )}
         {activeTab === 'stakeholders' && selectedAccountId && (
