@@ -15,6 +15,7 @@ import GraphOverview from './GraphOverview';
 import StakeholderMap from './StakeholderMap';
 import StoryArcsView from './StoryArcsView';
 import BenchmarksView from './BenchmarksView';
+import ContextGraphExplorer from './ContextGraphExplorer';
 
 interface Account {
   account_id: number;
@@ -23,7 +24,7 @@ interface Account {
   revenue?: number;
 }
 
-type SubTab = 'graph' | 'stakeholders' | 'arcs' | 'benchmarks';
+type SubTab = 'graph' | 'explorer' | 'stakeholders' | 'arcs' | 'benchmarks';
 
 const DCRevenueIntelligence: React.FC = () => {
   const { session } = useSession();
@@ -69,6 +70,7 @@ const DCRevenueIntelligence: React.FC = () => {
   const visibleTabs = useMemo(() => {
     const tabs: { key: SubTab; label: string }[] = [
       { key: 'graph', label: 'Graph Overview' },
+      { key: 'explorer', label: 'Graph Explorer' },
     ];
     if (subToggles.stakeholder_tracking) {
       tabs.push({ key: 'stakeholders', label: 'Stakeholder Map' });
@@ -187,6 +189,11 @@ const DCRevenueIntelligence: React.FC = () => {
       <div className="min-h-[400px]">
         {activeTab === 'graph' && selectedAccountId && (
           <GraphOverview accountId={selectedAccountId} />
+        )}
+        {activeTab === 'explorer' && (
+          <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: '80vh' }}>
+            <ContextGraphExplorer />
+          </div>
         )}
         {activeTab === 'stakeholders' && selectedAccountId && (
           <StakeholderMap accountId={selectedAccountId} />
