@@ -50,6 +50,7 @@ services:
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       FEATURE_MCP_SERVER: ${FEATURE_MCP_SERVER:-true}
+      LOAD_DRIVER_DIR: /app/load-driver
     volumes:
       - uploads:/app/backend/uploads
       - verticals:/app/backend/verticals

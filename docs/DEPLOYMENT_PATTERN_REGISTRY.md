@@ -30,9 +30,10 @@ No building on EC2 and no S3 tarballs for images. The registry is the single sou
 3. **Build for linux/amd64** (required if your laptop is Apple Silicon; EC2 is amd64):
 
    ```bash
-   cd kpi-dashboard
-   docker buildx build --platform linux/amd64 -f Dockerfile.cspulse -t YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cspulse-platform:latest --load .
-   docker buildx build --platform linux/amd64 -f docker/postgres/Dockerfile -t YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cspulse-postgres:latest --load ./docker/postgres
+   # Build from project root (includes load-driver in image)
+   cd CustomerSuccessAI-DataCenter
+   docker buildx build --platform linux/amd64 -f kpi-dashboard/Dockerfile.cspulse -t YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cspulse-platform:latest --load .
+   docker buildx build --platform linux/amd64 -f kpi-dashboard/docker/postgres/Dockerfile -t YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cspulse-postgres:latest --load kpi-dashboard/docker/postgres
    ```
 
    On x86_64 you can use plain `docker build` and tag as above.
@@ -51,9 +52,10 @@ No building on EC2 and no S3 tarballs for images. The registry is the single sou
 2. **Build and tag** (use your Docker Hub username):
 
    ```bash
-   cd kpi-dashboard
-   docker buildx build --platform linux/amd64 -f Dockerfile.cspulse -t YOUR_DOCKERHUB_USER/cspulse-platform:latest --load .
-   docker buildx build --platform linux/amd64 -f docker/postgres/Dockerfile -t YOUR_DOCKERHUB_USER/cspulse-postgres:latest --load ./docker/postgres
+   # Build from project root (includes load-driver in image)
+   cd CustomerSuccessAI-DataCenter
+   docker buildx build --platform linux/amd64 -f kpi-dashboard/Dockerfile.cspulse -t YOUR_DOCKERHUB_USER/cspulse-platform:latest --load .
+   docker buildx build --platform linux/amd64 -f kpi-dashboard/docker/postgres/Dockerfile -t YOUR_DOCKERHUB_USER/cspulse-postgres:latest --load kpi-dashboard/docker/postgres
    ```
 
 3. **Push:**

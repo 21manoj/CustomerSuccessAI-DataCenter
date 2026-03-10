@@ -1,0 +1,128 @@
+# CS Pulse Docker Build Exclusions (Project Root Context)
+# Build context is the project root so both kpi-dashboard/ and load-driver/ are included.
+# This file filters the build context for Dockerfile.cspulse.
+
+# ── Secrets (never bake into image; provide at runtime only) ──
+.env
+.env.*
+**/.env
+**/.env.*
+
+# ── Version control ──
+.git
+.gitignore
+
+# ── Node modules (rebuilt in Docker) ──
+**/node_modules/
+
+# ── Pre-built frontend (rebuilt in Docker) ──
+kpi-dashboard/build/
+
+# ── Python caches ──
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.egg-info/
+**/*.egg
+**/.eggs/
+
+# ── Virtual environments ──
+**/venv/
+**/.venv/
+**/env/
+
+# ── IDE ──
+.vscode/
+.idea/
+**/*.swp
+**/*.swo
+
+# ── OS files ──
+**/.DS_Store
+**/Thumbs.db
+
+# ── Logs and temp files ──
+**/*.log
+**/*.log.*
+**/*.out
+**/*.pid
+
+# ── Backup and deprecated files ──
+**/*.backup
+**/*.bak
+**/*.old
+**/*.archived
+**/*.tar.gz
+**/*.zip
+
+# ── SQL dumps ──
+kpi-dashboard/backend/backup_*.sql
+kpi-dashboard/backend/backups/
+cs_pulse_backup_*.sql
+
+# ── Qdrant local storage ──
+kpi-dashboard/backend/qdrant_storage*/
+kpi-dashboard/backend/qdrant_historical_storage/
+kpi-dashboard/backend/qdrant_temporal_storage*/
+
+# ── Generated customer vertical data (volume-mounted at runtime) ──
+kpi-dashboard/backend/verticals/customer*-dc2_s/
+
+# ── Test files (not for production, except test_runner_api.py) ──
+kpi-dashboard/backend/test_*.py
+!kpi-dashboard/backend/test_runner_api.py
+kpi-dashboard/backend/tests/
+kpi-dashboard/backend/test_data/
+kpi-dashboard/backend/test_csv_files/
+
+# ── Report/documentation files at backend root ──
+kpi-dashboard/backend/*.md
+!kpi-dashboard/backend/README.md
+
+# ── Instance/upload data (volume-mounted at runtime) ──
+kpi-dashboard/backend/instance/
+kpi-dashboard/backend/uploads/
+
+# ── Separate project directories NOT needed in image ──
+ejouurnal/
+new-app/
+client/
+
+# ── Load driver: include source, exclude artifacts ──
+load-driver/results/
+load-driver/*-test_results.md
+load-driver/.dockerignore
+load-driver/Dockerfile
+
+# ── Old Dockerfiles and compose files ──
+kpi-dashboard/Dockerfile
+kpi-dashboard/Dockerfile.production
+kpi-dashboard/Dockerfile.nginx*
+kpi-dashboard/docker-compose*.yml
+!kpi-dashboard/docker-compose.cspulse.yml
+!kpi-dashboard/docker-compose.production.yml
+
+# ── Misc generated files ──
+kpi-dashboard/backend/cookies.txt
+kpi-dashboard/backend/docker_e2e_test_results_*.json
+kpi-dashboard/backend/product_rag_test_results_*.json
+kpi-dashboard/backend/e2e_test_report_*.md
+kpi-dashboard/backend/platform_e2e_report_*.md
+kpi-dashboard/backend/rag_test_results*.txt
+kpi-dashboard/backend/analyst.out
+kpi-dashboard/backend/company_kpi_files/
+kpi-dashboard/backend/customer17_data/
+kpi-dashboard/backend/customer19_synthetic_data/
+kpi-dashboard/backend/outputs/
+kpi-dashboard/backend/kpi_dashboard.db
+kpi-dashboard/kpi_dashboard.db
+kpi-dashboard/kpi-dashboard-v3*.tar.gz
+
+# ── Docs (not needed in image) ──
+docs/
+scripts/
+
+# ── Claude plans ──
+.claude/
+**/.claude/

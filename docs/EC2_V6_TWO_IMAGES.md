@@ -89,7 +89,7 @@ See **[DEPLOYMENT_PATTERN_REGISTRY.md](DEPLOYMENT_PATTERN_REGISTRY.md)** for ful
 
 This creates a distribution with origin `http://ec2-3-81-222-159.compute-1.amazonaws.com` (override with `ORIGIN_HOST`), viewer redirect HTTP→HTTPS, and forwards cookies/headers so the app works. Use **https://&lt;distribution-domain&gt;.cloudfront.net** once the distribution is deployed (5–10 min).
 
-**Current distribution (if already created):** `https://d2oqfugrb2ltg9.cloudfront.net` (Id: E2I8B0C6RDAOGT). Origins point to EC2 public DNS (e.g. `ec2-13-221-8-144.compute-1.amazonaws.com`); if the instance gets a new IP after stop/start, update the distribution origins to the new EC2 public DNS. After enabling HTTPS, set `SESSION_COOKIE_SECURE=true` on EC2 (remove `SESSION_COOKIE_SECURE=false` from `~/cspulse/.env`).
+**Current distribution (if already created):** `https://d2oqfugrb2ltg9.cloudfront.net` (Id: E2I8B0C6RDAOGT). Origins point to EC2 public DNS. If the instance gets a new IP after stop/start, run `./scripts/update-cloudfront-origin.sh [INSTANCE_ID]` (or set `ORIGIN_HOST=ec2-xx-xx-xx-xx.compute-1.amazonaws.com`) to update both origins. Rehydration script updates CloudFront automatically unless `SKIP_CLOUDFRONT_UPDATE=1`. After enabling HTTPS, set `SESSION_COOKIE_SECURE=true` on EC2 (remove `SESSION_COOKIE_SECURE=false` from `~/cspulse/.env`).
 
 **MCP server over HTTPS:** The same distribution has a second origin (EC2 port 8001) and a path-based behavior for `/mcp*`. Use **https://d2oqfugrb2ltg9.cloudfront.net/mcp** for the MCP server (streamable-http). Direct EC2 remains **http://&lt;EC2_IP&gt;:8001/mcp** if needed.
 

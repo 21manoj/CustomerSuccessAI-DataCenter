@@ -28,20 +28,36 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
 # ---------------------------------------------------------------------------
+# Load system prompt from file (ships with the server)
+# ---------------------------------------------------------------------------
+_PROMPT_FILE = os.path.join(_backend_dir, 'config', 'mcp_system_prompt.md')
+
+def _load_system_prompt() -> str:
+    """Load MCP system prompt from config/mcp_system_prompt.md.
+
+    Falls back to a compact version if the file is missing.
+    """
+    try:
+        with open(_PROMPT_FILE, 'r') as f:
+            return f.read()
+    except FileNotFoundError:
+        return (
+            "AI-native Customer Success platform — health scoring, "
+            "signal detection, context graph intelligence, revenue analytics. "
+            "SCOPE CONVENTION: Every tool response includes a 'scope' field. "
+            "'account' = data for one account, 'portfolio' = aggregated across all accounts, "
+            "'node_traversal' = context graph path. "
+            "DOLLAR AMOUNTS: All financial figures include 'arr_basis' (explicit or baseline_10m) "
+            "and 'arr_basis_value' so you know the ARR used for scaling. "
+            "Never mix account-level and portfolio-level dollar figures without labeling scope."
+        )
+
+# ---------------------------------------------------------------------------
 # Server instance
 # ---------------------------------------------------------------------------
 mcp = FastMCP(
     "CS Pulse",
-    instructions=(
-        "AI-native Customer Success platform — health scoring, "
-        "signal detection, context graph intelligence, revenue analytics. "
-        "SCOPE CONVENTION: Every tool response includes a 'scope' field. "
-        "'account' = data for one account, 'portfolio' = aggregated across all accounts, "
-        "'node_traversal' = context graph path. "
-        "DOLLAR AMOUNTS: All financial figures include 'arr_basis' (explicit or baseline_10m) "
-        "and 'arr_basis_value' so you know the ARR used for scaling. "
-        "Never mix account-level and portfolio-level dollar figures without labeling scope."
-    ),
+    instructions=_load_system_prompt(),
 )
 
 
@@ -119,6 +135,56 @@ def _validate_account_ownership(customer_id: int, account_id: int):
             f"Account {account_id} not found for customer {customer_id}"
         )
     return account
+
+
+def _load_system_prompt_content() -> str:
+    """Load CS Pulse MCP system prompt for Claude. Used by cspulse://system-prompt resource.
+
+    Search order:
+      1) CSPULSE_MCP_SYSTEM_PROMPT_PATH env var (explicit override)
+      2) backend/config/mcp_system_prompt.md  (works in Docker: /app/backend/config/...)
+      3) Repo root CS_PULSE_MCP_SYSTEM_PROMPT.md  (works in local dev)
+      4) mcp_server/cs_pulse_mcp_system_prompt.md  (co-located fallback)
+    """
+    # 1) Explicit path (e.g. in production)
+    env_path = os.environ.get("CSPULSE_MCP_SYSTEM_PROMPT_PATH")
+    if env_path and os.path.isfile(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            return f.read()
+    # 2) Search standard locations
+    _dir = os.path.dirname(os.path.abspath(__file__))
+    for candidate in [
+        # Docker & local: backend/config/mcp_system_prompt.md
+        os.path.join(_dir, "..", "config", "mcp_system_prompt.md"),
+        # Local dev: repo root CS_PULSE_MCP_SYSTEM_PROMPT.md
+        os.path.join(_dir, "..", "..", "..", "CS_PULSE_MCP_SYSTEM_PROMPT.md"),
+        # Co-located fallback
+        os.path.join(_dir, "cs_pulse_mcp_system_prompt.md"),
+    ]:
+        abs_path = os.path.abspath(candidate)
+        if os.path.isfile(abs_path):
+            with open(abs_path, "r", encoding="utf-8") as f:
+                return f.read()
+    return (
+        "# CS Pulse MCP — System Prompt\n\n"
+        "System prompt file not found. Set CSPULSE_MCP_SYSTEM_PROMPT_PATH or place "
+        "mcp_system_prompt.md in backend/config/.\n\n"
+        "See docs/MCP_SYSTEM_PROMPT_FOR_END_USERS.md for how to use this with Claude."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Resource: system prompt for Claude (end users fetch this via MCP)
+# ---------------------------------------------------------------------------
+@mcp.resource(
+    "cspulse://system-prompt",
+    name="CS Pulse MCP system prompt",
+    description="System prompt for Claude (and other LLMs) when using the CS Pulse MCP server. Copy or use as project instructions.",
+    mime_type="text/markdown",
+)
+def get_system_prompt() -> str:
+    """Returns the full system prompt text for CS Pulse MCP. Use as Claude project/custom instructions."""
+    return _load_system_prompt_content()
 
 
 # ===================================================================

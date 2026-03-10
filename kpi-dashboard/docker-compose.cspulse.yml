@@ -1,14 +1,14 @@
 # ================================================================
 # CS Pulse Platform — Docker Compose (Development / Local)
 #
-# Usage:
+# Usage (from kpi-dashboard/ directory):
 #   docker compose -f docker-compose.cspulse.yml up -d --build
 #   docker compose -f docker-compose.cspulse.yml down
 #   docker compose -f docker-compose.cspulse.yml logs -f
 #
 # Prerequisites:
 #   - .env file with OPENAI_API_KEY, ANTHROPIC_API_KEY
-#   - Dockerfile.cspulse in this directory
+#   - Build context is parent dir (..) so load-driver is included
 # ================================================================
 
 services:
@@ -40,11 +40,12 @@ services:
 
   # ──────────────────────────────────────────────
   # CS Pulse Platform (Flask + React + Nginx)
+  # Build context is project root (..) to include load-driver
   # ──────────────────────────────────────────────
   cs-pulse:
     build:
-      context: .
-      dockerfile: Dockerfile.cspulse
+      context: ..
+      dockerfile: kpi-dashboard/Dockerfile.cspulse
     container_name: cspulse-platform
     ports:
       - "80:80"       # Nginx (React + API proxy)
@@ -66,6 +67,9 @@ services:
       # Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+
+      # Load driver (bundled in image at /app/load-driver)
+      LOAD_DRIVER_DIR: /app/load-driver
     volumes:
       # Persistent uploads
       - uploads:/app/backend/uploads

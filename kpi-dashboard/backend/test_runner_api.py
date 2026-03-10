@@ -22,11 +22,32 @@ logger = logging.getLogger(__name__)
 test_runner_api = Blueprint('test_runner_api', __name__)
 
 # ---------------------------------------------------------------------------
-# Path to load-driver directory (sibling of kpi-dashboard)
+# Path to load-driver directory
 # ---------------------------------------------------------------------------
+# Priority: 1) LOAD_DRIVER_DIR env var  2) /app/load-driver (Docker)
+#           3) sibling of kpi-dashboard (local dev)
 _BACKEND_DIR = Path(__file__).resolve().parent
-_PROJECT_ROOT = _BACKEND_DIR.parent.parent  # CustomerSuccessAI-DataCenter
-LOAD_DRIVER_DIR = _PROJECT_ROOT / 'load-driver'
+
+def _resolve_load_driver_dir() -> Path:
+    """Find load-driver directory across local-dev and Docker environments."""
+    # 1) Explicit env var (highest priority)
+    env_dir = os.environ.get('LOAD_DRIVER_DIR')
+    if env_dir:
+        p = Path(env_dir)
+        if p.exists():
+            return p
+
+    # 2) Docker container path (/app/load-driver)
+    docker_path = Path('/app/load-driver')
+    if docker_path.exists():
+        return docker_path
+
+    # 3) Local dev: sibling of kpi-dashboard
+    project_root = _BACKEND_DIR.parent.parent  # CustomerSuccessAI-DataCenter
+    local_path = project_root / 'load-driver'
+    return local_path  # may not exist, checked at runtime
+
+LOAD_DRIVER_DIR = _resolve_load_driver_dir()
 RUN_SCENARIO_SCRIPT = LOAD_DRIVER_DIR / 'run_scenario.py'
 
 # Directory for run results (inside load-driver/results/)

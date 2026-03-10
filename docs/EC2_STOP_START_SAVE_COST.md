@@ -23,6 +23,10 @@ Or: `aws ec2 stop-instances --instance-ids i-xxxxx`
 Instance state → **Start instance**.  
 Or: `aws ec2 start-instances --instance-ids i-xxxxx`
 
+**Rehydrate from ECR (start instance + pull images + run all containers):**  
+`./scripts/rehydrate-ec2-ecr.sh [INSTANCE_ID]`  
+Uses ECR only (no S3). Starts the instance if stopped, copies compose files, logs in to ECR (using your local AWS CLI), pulls platform + postgres + load-driver, and runs them. Optional: set `CSPULSE_EC2_INSTANCE_ID` or pass the instance ID; otherwise the script finds one by tag `Name=cspulse-v6`.
+
 - Same instance, same disk, same Postgres data.
 - **Caveat:** Public IP changes after start. If you use **CloudFront**, update the distribution’s **origin** to the new EC2 public DNS (e.g. `ec2-<new-ip>.compute-1.amazonaws.com`). If you use **Elastic IP** and reattach it after start, IP stays the same and CloudFront needs no change.
 
