@@ -24,15 +24,19 @@ from .base import BaseScenario
 
 logger = logging.getLogger(__name__)
 
-# Try to import the context graph generator from the backend
-# The load-driver Dockerfile copies the backend code, so this should work
-# in both local dev and Docker.
+# Try to import the context graph generator from the backend.
+# Multiple search paths for different deployment modes:
+#   1) Docker platform container: /app/backend
+#   2) Local dev: sibling of load-driver → ../kpi-dashboard/backend
 _generator_available = False
+_backend_search_paths = [
+    '/app/backend',  # Docker container
+    str(Path(__file__).resolve().parent.parent.parent / 'kpi-dashboard' / 'backend'),  # local dev
+]
+for _bp in _backend_search_paths:
+    if Path(_bp).exists() and _bp not in sys.path:
+        sys.path.insert(0, _bp)
 try:
-    # When running from load-driver directory, backend is a sibling
-    _backend_dir = str(Path(__file__).resolve().parent.parent.parent / 'kpi-dashboard' / 'backend')
-    if _backend_dir not in sys.path:
-        sys.path.insert(0, _backend_dir)
     from scripts.generate_context_graph_data import ContextGraphGenerator
     _generator_available = True
 except ImportError:
@@ -84,44 +88,50 @@ class ScenarioContextGraph(BaseScenario):
             return self.failure("customer_id required", api_calls=0)
 
         arc_id = getattr(self.args, 'arc_id', None) or 'arc_expansion_champion'
-        num_accounts = getattr(self.args, 'num_accounts', None) or 10
         seed = getattr(self.args, 'seed', None) or 42
 
         results['customer_id'] = customer_id
         results['arc_id'] = arc_id
-        results['num_accounts'] = num_accounts
 
         try:
             # ================================================================
-            # Step 1: Verify customer exists (lightweight health check)
+            # Step 1: Fetch real accounts for this customer
             # ================================================================
-            logger.info(f"  Step 1: Verifying server is up (customer {customer_id} assumed from Scenario 1)")
-            # /api/onboarding/status requires auth — just do a health check
-            # and trust that customer exists (created by Scenario 1)
-            health_ok = self.client.health_check()
+            logger.info(f"  Step 1: Fetching accounts for customer {customer_id}")
+            accounts = self.client.get_accounts()
             api_calls += 1
-            if not health_ok:
+
+            if not accounts:
                 return self.failure(
-                    "Server health check failed — cannot proceed",
+                    f"No accounts found for customer {customer_id}",
                     api_calls=api_calls, details=results
                 )
-            results['existing_accounts'] = num_accounts  # trust the CLI arg
-            logger.info(f"    OK: Server healthy, proceeding with customer {customer_id}")
+
+            real_account_ids = [acc.get('account_id') for acc in accounts]
+            num_accounts = len(real_account_ids)
+            results['existing_accounts'] = num_accounts
+            results['num_accounts'] = num_accounts
+            results['account_ids'] = real_account_ids
+            logger.info(f"    OK: Found {num_accounts} accounts: {real_account_ids}")
 
             # ================================================================
-            # Step 2: Generate 9 context graph CSVs
+            # Step 2: Generate 9 context graph CSVs using real account IDs
             # ================================================================
-            logger.info(f"  Step 2: Generating context graph CSVs (arc={arc_id})")
+            logger.info(f"  Step 2: Generating context graph CSVs (arc={arc_id}, {num_accounts} real accounts)")
             gen_start = time.time()
 
             csv_contents = {}  # file_type → csv string
 
             if _generator_available:
                 try:
+                    # Build account_arc_map from real account IDs
+                    # All accounts get the same arc (single-arc mode)
+                    account_arc_map = {aid: arc_id for aid in real_account_ids}
+
                     gen = ContextGraphGenerator(
                         customer_id=customer_id,
                         arc_id=arc_id,
-                        num_accounts=num_accounts,
+                        account_arc_map=account_arc_map,
                         seed=seed,
                     )
                     # Generate each CSV as a string

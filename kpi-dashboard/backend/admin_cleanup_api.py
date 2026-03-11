@@ -16,6 +16,7 @@ from models import QualitativeSignal, HealthTrend, KPIUpload
 from models import PlaybookTrigger, PlaybookExecution, PlaybookReport
 from models import Product, ActivityLog, CustomerConfig
 from models import CustomerWorkflowConfig, FeatureToggle
+from models import ContextNode, ContextEdge
 from auth_middleware import get_current_customer_id
 from sqlalchemy import and_, or_, func, text
 import logging
@@ -135,6 +136,12 @@ def cleanup_customer(customer_id):
                 ('dc2s_kpis', lambda: DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids))),
                 ('kpis', lambda: KPI.query.filter(KPI.account_id.in_(account_ids))),
             ])
+
+        # Context graph: edges FK to nodes, nodes FK to accounts — delete before accounts
+        deletions.extend([
+            ('context_edges', lambda: ContextEdge.query.filter_by(customer_id=customer_id)),
+            ('context_nodes', lambda: ContextNode.query.filter_by(customer_id=customer_id)),
+        ])
 
         deletions.extend([
             ('health_trends', lambda: HealthTrend.query.filter_by(customer_id=customer_id)),
@@ -327,6 +334,21 @@ def delete_account(account_id):
         # Delete all account data in FK order
         deletion_count = {}
 
+        # Context graph: edges don't have account_id, so delete via node IDs
+        node_ids = db.session.query(ContextNode.node_id).filter_by(account_id=account_id).all()
+        node_id_list = [n[0] for n in node_ids]
+        if node_id_list:
+            edge_count = ContextEdge.query.filter(
+                or_(ContextEdge.from_node_id.in_(node_id_list),
+                    ContextEdge.to_node_id.in_(node_id_list))
+            ).delete(synchronize_session='fetch')
+            if edge_count:
+                deletion_count['context_edges'] = edge_count
+        node_count = ContextNode.query.filter_by(account_id=account_id).delete()
+        if node_count:
+            deletion_count['context_nodes'] = node_count
+
+        # Standard tables in FK order
         tables_to_delete = [
             ('kpi_scores', KPIScore),
             ('pillar_scores', PillarScore),

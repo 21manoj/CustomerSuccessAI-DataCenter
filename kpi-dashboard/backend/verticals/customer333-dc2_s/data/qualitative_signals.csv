@@ -1,0 +1,445 @@
+signal_id,account_id,signal_date,signal_type,content,sentiment,sentiment_score
+sig_333001_0001,333001,2024-01-20,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.35
+sig_333001_0002,333001,2024-01-20,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.06
+sig_333001_0003,333001,2024-02-25,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.17
+sig_333001_0004,333001,2024-02-25,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.5
+sig_333001_0005,333001,2024-03-22,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.19
+sig_333001_0006,333001,2024-03-22,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.13
+sig_333001_0007,333001,2024-04-13,customer_feedback,NPS survey: Score steady at 9/10. Customer values reliability.,neutral,0.28
+sig_333001_0008,333001,2024-04-13,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.3
+sig_333001_0009,333001,2024-04-13,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.09
+sig_333001_0010,333001,2024-05-24,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.54
+sig_333001_0011,333001,2024-05-24,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.35
+sig_333001_0012,333001,2024-06-20,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.23
+sig_333001_0013,333001,2024-06-20,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.45
+sig_333001_0014,333001,2024-07-12,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.18
+sig_333001_0015,333001,2024-07-12,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.04
+sig_333001_0016,333001,2024-07-12,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.05
+sig_333001_0017,333001,2024-08-04,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.44
+sig_333001_0018,333001,2024-08-04,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.26
+sig_333001_0019,333001,2024-09-08,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.31
+sig_333001_0020,333001,2024-09-08,customer_feedback,NPS survey: Score steady at 6/10. Customer values reliability.,neutral,0.21
+sig_333001_0021,333001,2024-10-17,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.08
+sig_333001_0022,333001,2024-10-17,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.05
+sig_333001_0023,333001,2024-11-02,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.11
+sig_333001_0024,333001,2024-11-02,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.12
+sig_333001_0025,333001,2024-11-02,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.0
+sig_333001_0026,333001,2024-12-22,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.01
+sig_333001_0027,333001,2024-12-22,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.05
+sig_333002_0028,333002,2024-01-04,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.38
+sig_333002_0029,333002,2024-01-04,customer_feedback,NPS score dropped from 4 to 2. Customer cited repeated provisioning delays.,negative,-0.77
+sig_333002_0030,333002,2024-02-18,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.65
+sig_333002_0031,333002,2024-02-18,incident,SLA breach: network latency exceeded threshold for 2h. Root cause under investigation.,negative,-0.7
+sig_333002_0032,333002,2024-02-18,customer_feedback,NPS score dropped from 5 to 5. Customer cited repeated provisioning delays.,negative,-0.33
+sig_333002_0033,333002,2024-03-12,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.3
+sig_333002_0034,333002,2024-03-12,incident,Critical: GPU cluster outage lasted 8h. Customer escalated to VP level.,negative,-0.42
+sig_333002_0035,333002,2024-04-09,incident,Critical: GPU cluster outage lasted 3h. Customer escalated to VP level.,negative,-0.63
+sig_333002_0036,333002,2024-04-09,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.32
+sig_333002_0037,333002,2024-04-09,incident,SLA breach: network latency exceeded threshold for 7h. Root cause under investigation.,negative,-0.77
+sig_333002_0038,333002,2024-05-09,customer_feedback,NPS score dropped from 4 to 4. Customer cited repeated provisioning delays.,negative,-0.31
+sig_333002_0039,333002,2024-05-09,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.25
+sig_333002_0040,333002,2024-05-09,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.51
+sig_333002_0041,333002,2024-06-03,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.61
+sig_333002_0042,333002,2024-06-03,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.44
+sig_333002_0043,333002,2024-07-24,incident,Critical: GPU cluster outage lasted 4h. Customer escalated to VP level.,negative,-0.78
+sig_333002_0044,333002,2024-07-24,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.31
+sig_333002_0045,333002,2024-08-11,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.48
+sig_333002_0046,333002,2024-08-11,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.45
+sig_333002_0047,333002,2024-08-11,customer_feedback,NPS score dropped from 4 to 4. Customer cited repeated provisioning delays.,negative,-0.7
+sig_333002_0048,333002,2024-09-15,customer_feedback,NPS score dropped from 4 to 3. Customer cited repeated provisioning delays.,negative,-0.35
+sig_333002_0049,333002,2024-09-15,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.51
+sig_333002_0050,333002,2024-09-15,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.49
+sig_333002_0051,333002,2024-10-27,incident,Critical: GPU cluster outage lasted 6h. Customer escalated to VP level.,negative,-0.58
+sig_333002_0052,333002,2024-10-27,incident,SLA breach: network latency exceeded threshold for 6h. Root cause under investigation.,negative,-0.54
+sig_333002_0053,333002,2024-11-24,customer_feedback,NPS score dropped from 7 to 3. Customer cited repeated provisioning delays.,negative,-0.54
+sig_333002_0054,333002,2024-11-24,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.68
+sig_333002_0055,333002,2024-11-24,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.54
+sig_333002_0056,333002,2024-12-28,incident,Critical: GPU cluster outage lasted 2h. Customer escalated to VP level.,negative,-0.71
+sig_333002_0057,333002,2024-12-28,customer_feedback,NPS score dropped from 5 to 2. Customer cited repeated provisioning delays.,negative,-0.59
+sig_333002_0058,333002,2024-12-28,customer_feedback,NPS score dropped from 4 to 2. Customer cited repeated provisioning delays.,negative,-0.53
+sig_333003_0059,333003,2024-01-11,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.67
+sig_333003_0060,333003,2024-01-11,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.44
+sig_333003_0061,333003,2024-01-11,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.45
+sig_333003_0062,333003,2024-02-01,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.33
+sig_333003_0063,333003,2024-02-01,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.64
+sig_333003_0064,333003,2024-02-01,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.47
+sig_333003_0065,333003,2024-03-27,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.76
+sig_333003_0066,333003,2024-03-27,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.83
+sig_333003_0067,333003,2024-03-27,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.13
+sig_333003_0068,333003,2024-04-02,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,-0.04
+sig_333003_0069,333003,2024-04-02,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.71
+sig_333003_0070,333003,2024-04-02,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.73
+sig_333003_0071,333003,2024-05-17,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.59
+sig_333003_0072,333003,2024-05-17,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.68
+sig_333003_0073,333003,2024-06-11,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.07
+sig_333003_0074,333003,2024-06-11,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.73
+sig_333003_0075,333003,2024-07-26,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.43
+sig_333003_0076,333003,2024-07-26,customer_feedback,NPS survey response: Score improved from 5 to 5. Customer praised faster GPU provisioning.,positive,0.63
+sig_333003_0077,333003,2024-08-01,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.13
+sig_333003_0078,333003,2024-08-01,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.65
+sig_333003_0079,333003,2024-08-01,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.51
+sig_333003_0080,333003,2024-09-01,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.71
+sig_333003_0081,333003,2024-09-01,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.77
+sig_333003_0082,333003,2024-10-06,meeting,Expansion discussion: customer evaluating additional rack capacity for Q4 growth.,positive,0.72
+sig_333003_0083,333003,2024-10-06,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.46
+sig_333003_0084,333003,2024-11-20,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.07
+sig_333003_0085,333003,2024-11-20,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.74
+sig_333003_0086,333003,2024-11-20,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.54
+sig_333003_0087,333003,2024-12-03,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.88
+sig_333003_0088,333003,2024-12-03,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.86
+sig_333003_0089,333003,2024-12-03,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.78
+sig_333004_0090,333004,2024-01-22,customer_feedback,NPS survey: Score steady at 6/10. Customer values reliability.,neutral,0.38
+sig_333004_0091,333004,2024-01-22,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.21
+sig_333004_0092,333004,2024-01-22,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.2
+sig_333004_0093,333004,2024-02-23,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.2
+sig_333004_0094,333004,2024-02-23,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.04
+sig_333004_0095,333004,2024-02-23,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.19
+sig_333004_0096,333004,2024-03-15,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.22
+sig_333004_0097,333004,2024-03-15,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.19
+sig_333004_0098,333004,2024-04-09,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.01
+sig_333004_0099,333004,2024-04-09,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.11
+sig_333004_0100,333004,2024-05-14,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.51
+sig_333004_0101,333004,2024-05-14,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.36
+sig_333004_0102,333004,2024-05-14,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.28
+sig_333004_0103,333004,2024-06-22,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.17
+sig_333004_0104,333004,2024-06-22,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.16
+sig_333004_0105,333004,2024-07-23,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.14
+sig_333004_0106,333004,2024-07-23,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.38
+sig_333004_0107,333004,2024-08-07,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.18
+sig_333004_0108,333004,2024-08-07,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.35
+sig_333004_0109,333004,2024-08-07,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.08
+sig_333004_0110,333004,2024-09-16,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.14
+sig_333004_0111,333004,2024-09-16,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.02
+sig_333004_0112,333004,2024-10-27,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.25
+sig_333004_0113,333004,2024-10-27,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.08
+sig_333004_0114,333004,2024-11-20,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.14
+sig_333004_0115,333004,2024-11-20,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.34
+sig_333004_0116,333004,2024-12-01,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.08
+sig_333004_0117,333004,2024-12-01,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.37
+sig_333004_0118,333004,2024-12-01,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.13
+sig_333005_0119,333005,2024-01-08,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.58
+sig_333005_0120,333005,2024-01-08,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.45
+sig_333005_0121,333005,2024-01-08,incident,Critical: GPU cluster outage lasted 6h. Customer escalated to VP level.,negative,-0.66
+sig_333005_0122,333005,2024-02-21,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.56
+sig_333005_0123,333005,2024-02-21,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.34
+sig_333005_0124,333005,2024-02-21,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.39
+sig_333005_0125,333005,2024-03-15,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.55
+sig_333005_0126,333005,2024-03-15,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.86
+sig_333005_0127,333005,2024-04-24,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.48
+sig_333005_0128,333005,2024-04-24,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.33
+sig_333005_0129,333005,2024-04-24,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.78
+sig_333005_0130,333005,2024-05-14,incident,Critical: GPU cluster outage lasted 3h. Customer escalated to VP level.,negative,-0.42
+sig_333005_0131,333005,2024-05-14,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.41
+sig_333005_0132,333005,2024-06-10,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.52
+sig_333005_0133,333005,2024-06-10,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.36
+sig_333005_0134,333005,2024-06-10,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.64
+sig_333005_0135,333005,2024-07-10,customer_feedback,NPS score dropped from 6 to 4. Customer cited repeated provisioning delays.,negative,-0.41
+sig_333005_0136,333005,2024-07-10,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.79
+sig_333005_0137,333005,2024-08-27,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.57
+sig_333005_0138,333005,2024-08-27,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.58
+sig_333005_0139,333005,2024-08-27,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.24
+sig_333005_0140,333005,2024-09-27,incident,Critical: GPU cluster outage lasted 6h. Customer escalated to VP level.,negative,-0.47
+sig_333005_0141,333005,2024-09-27,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.64
+sig_333005_0142,333005,2024-09-27,incident,SLA breach: network latency exceeded threshold for 8h. Root cause under investigation.,negative,-0.72
+sig_333005_0143,333005,2024-10-07,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.43
+sig_333005_0144,333005,2024-10-07,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.23
+sig_333005_0145,333005,2024-11-25,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.21
+sig_333005_0146,333005,2024-11-25,customer_feedback,NPS score dropped from 4 to 2. Customer cited repeated provisioning delays.,negative,-0.37
+sig_333005_0147,333005,2024-11-25,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.53
+sig_333005_0148,333005,2024-12-26,customer_feedback,Champion Sarah Johnson expressed frustration with batch throughput degradation.,negative,-0.68
+sig_333005_0149,333005,2024-12-26,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.23
+sig_333006_0150,333006,2024-01-13,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.78
+sig_333006_0151,333006,2024-01-13,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.53
+sig_333006_0152,333006,2024-01-13,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.54
+sig_333006_0153,333006,2024-02-03,customer_feedback,NPS survey response: Score improved from 4 to 5. Customer praised faster GPU provisioning.,positive,0.73
+sig_333006_0154,333006,2024-02-03,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.57
+sig_333006_0155,333006,2024-02-03,customer_feedback,Champion Lisa Wang confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.72
+sig_333006_0156,333006,2024-03-15,meeting,Expansion discussion: customer evaluating additional rack capacity for Q1 growth.,positive,0.77
+sig_333006_0157,333006,2024-03-15,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.08
+sig_333006_0158,333006,2024-03-15,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.56
+sig_333006_0159,333006,2024-04-10,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.79
+sig_333006_0160,333006,2024-04-10,customer_feedback,Champion Lisa Wang confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.7
+sig_333006_0161,333006,2024-04-10,customer_feedback,Champion Lisa Wang confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.71
+sig_333006_0162,333006,2024-05-16,customer_feedback,Champion Lisa Wang confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.62
+sig_333006_0163,333006,2024-05-16,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.88
+sig_333006_0164,333006,2024-05-16,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.62
+sig_333006_0165,333006,2024-06-28,customer_feedback,NPS survey response: Score improved from 4 to 9. Customer praised faster GPU provisioning.,positive,0.61
+sig_333006_0166,333006,2024-06-28,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,-0.02
+sig_333006_0167,333006,2024-06-28,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.59
+sig_333006_0168,333006,2024-07-06,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.46
+sig_333006_0169,333006,2024-07-06,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.14
+sig_333006_0170,333006,2024-07-06,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.66
+sig_333006_0171,333006,2024-08-22,customer_feedback,Champion Lisa Wang confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.74
+sig_333006_0172,333006,2024-08-22,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.15
+sig_333006_0173,333006,2024-08-22,meeting,Expansion discussion: customer evaluating additional rack capacity for Q3 growth.,positive,0.6
+sig_333006_0174,333006,2024-09-27,customer_feedback,Champion Lisa Wang confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.94
+sig_333006_0175,333006,2024-09-27,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.69
+sig_333006_0176,333006,2024-09-27,customer_feedback,NPS survey response: Score improved from 5 to 6. Customer praised faster GPU provisioning.,positive,0.85
+sig_333006_0177,333006,2024-10-02,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.58
+sig_333006_0178,333006,2024-10-02,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.01
+sig_333006_0179,333006,2024-11-18,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.8
+sig_333006_0180,333006,2024-11-18,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.46
+sig_333006_0181,333006,2024-11-18,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.95
+sig_333006_0182,333006,2024-12-26,customer_feedback,NPS survey response: Score improved from 6 to 6. Customer praised faster GPU provisioning.,positive,0.53
+sig_333006_0183,333006,2024-12-26,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.07
+sig_333007_0184,333007,2024-01-05,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.26
+sig_333007_0185,333007,2024-01-05,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.1
+sig_333007_0186,333007,2024-01-05,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.23
+sig_333007_0187,333007,2024-02-22,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.01
+sig_333007_0188,333007,2024-02-22,customer_feedback,NPS survey: Score steady at 6/10. Customer values reliability.,neutral,0.23
+sig_333007_0189,333007,2024-03-01,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.19
+sig_333007_0190,333007,2024-03-01,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.09
+sig_333007_0191,333007,2024-04-09,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.42
+sig_333007_0192,333007,2024-04-09,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.08
+sig_333007_0193,333007,2024-05-05,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.1
+sig_333007_0194,333007,2024-05-05,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.37
+sig_333007_0195,333007,2024-05-05,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.05
+sig_333007_0196,333007,2024-06-10,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.05
+sig_333007_0197,333007,2024-06-10,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.11
+sig_333007_0198,333007,2024-06-10,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.01
+sig_333007_0199,333007,2024-07-03,customer_feedback,NPS survey: Score steady at 8/10. Customer values reliability.,neutral,0.16
+sig_333007_0200,333007,2024-07-03,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.18
+sig_333007_0201,333007,2024-08-06,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.29
+sig_333007_0202,333007,2024-08-06,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.17
+sig_333007_0203,333007,2024-09-25,customer_feedback,NPS survey: Score steady at 5/10. Customer values reliability.,neutral,0.27
+sig_333007_0204,333007,2024-09-25,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.22
+sig_333007_0205,333007,2024-10-12,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.33
+sig_333007_0206,333007,2024-10-12,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.04
+sig_333007_0207,333007,2024-11-19,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.01
+sig_333007_0208,333007,2024-11-19,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.06
+sig_333007_0209,333007,2024-12-22,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.29
+sig_333007_0210,333007,2024-12-22,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.0
+sig_333008_0211,333008,2024-01-02,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.55
+sig_333008_0212,333008,2024-01-02,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.62
+sig_333008_0213,333008,2024-02-07,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.49
+sig_333008_0214,333008,2024-02-07,incident,SLA breach: network latency exceeded threshold for 2h. Root cause under investigation.,negative,-0.63
+sig_333008_0215,333008,2024-03-20,customer_feedback,NPS score dropped from 5 to 5. Customer cited repeated provisioning delays.,negative,-0.78
+sig_333008_0216,333008,2024-03-20,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.62
+sig_333008_0217,333008,2024-04-12,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.46
+sig_333008_0218,333008,2024-04-12,incident,Critical: GPU cluster outage lasted 3h. Customer escalated to VP level.,negative,-0.7
+sig_333008_0219,333008,2024-05-12,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.44
+sig_333008_0220,333008,2024-05-12,incident,Critical: GPU cluster outage lasted 7h. Customer escalated to VP level.,negative,-0.54
+sig_333008_0221,333008,2024-06-23,incident,SLA breach: network latency exceeded threshold for 5h. Root cause under investigation.,negative,-0.76
+sig_333008_0222,333008,2024-06-23,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.49
+sig_333008_0223,333008,2024-06-23,customer_feedback,NPS score dropped from 5 to 3. Customer cited repeated provisioning delays.,negative,-0.36
+sig_333008_0224,333008,2024-07-07,incident,SLA breach: network latency exceeded threshold for 5h. Root cause under investigation.,negative,-0.68
+sig_333008_0225,333008,2024-07-07,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.4
+sig_333008_0226,333008,2024-08-11,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.67
+sig_333008_0227,333008,2024-08-11,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.57
+sig_333008_0228,333008,2024-09-27,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.37
+sig_333008_0229,333008,2024-09-27,incident,SLA breach: network latency exceeded threshold for 4h. Root cause under investigation.,negative,-0.65
+sig_333008_0230,333008,2024-10-09,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.66
+sig_333008_0231,333008,2024-10-09,customer_feedback,NPS score dropped from 5 to 2. Customer cited repeated provisioning delays.,negative,-0.6
+sig_333008_0232,333008,2024-10-09,incident,Critical: GPU cluster outage lasted 2h. Customer escalated to VP level.,negative,-0.55
+sig_333008_0233,333008,2024-11-12,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.78
+sig_333008_0234,333008,2024-11-12,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.69
+sig_333008_0235,333008,2024-11-12,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.72
+sig_333008_0236,333008,2024-12-27,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.56
+sig_333008_0237,333008,2024-12-27,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.66
+sig_333009_0238,333009,2024-01-27,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.73
+sig_333009_0239,333009,2024-01-27,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,-0.03
+sig_333009_0240,333009,2024-01-27,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.61
+sig_333009_0241,333009,2024-02-07,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.57
+sig_333009_0242,333009,2024-02-07,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.74
+sig_333009_0243,333009,2024-02-07,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.62
+sig_333009_0244,333009,2024-03-23,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.79
+sig_333009_0245,333009,2024-03-23,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.67
+sig_333009_0246,333009,2024-04-05,customer_feedback,NPS survey response: Score improved from 7 to 6. Customer praised faster GPU provisioning.,positive,0.84
+sig_333009_0247,333009,2024-04-05,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.92
+sig_333009_0248,333009,2024-04-05,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.83
+sig_333009_0249,333009,2024-05-03,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.54
+sig_333009_0250,333009,2024-05-03,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.56
+sig_333009_0251,333009,2024-06-06,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.63
+sig_333009_0252,333009,2024-06-06,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.77
+sig_333009_0253,333009,2024-07-20,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.55
+sig_333009_0254,333009,2024-07-20,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.66
+sig_333009_0255,333009,2024-08-21,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.72
+sig_333009_0256,333009,2024-08-21,meeting,Expansion discussion: customer evaluating additional rack capacity for Q3 growth.,positive,0.6
+sig_333009_0257,333009,2024-09-04,meeting,Expansion discussion: customer evaluating additional rack capacity for Q3 growth.,positive,0.57
+sig_333009_0258,333009,2024-09-04,customer_feedback,NPS survey response: Score improved from 5 to 5. Customer praised faster GPU provisioning.,positive,0.55
+sig_333009_0259,333009,2024-09-04,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.76
+sig_333009_0260,333009,2024-10-22,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.71
+sig_333009_0261,333009,2024-10-22,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.53
+sig_333009_0262,333009,2024-11-06,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.89
+sig_333009_0263,333009,2024-11-06,customer_feedback,Champion Sarah Johnson confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.93
+sig_333009_0264,333009,2024-11-06,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.4
+sig_333009_0265,333009,2024-12-02,meeting,Expansion discussion: customer evaluating additional rack capacity for Q4 growth.,positive,0.61
+sig_333009_0266,333009,2024-12-02,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.1
+sig_333009_0267,333009,2024-12-02,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.62
+sig_333010_0268,333010,2024-01-15,customer_feedback,NPS survey: Score steady at 9/10. Customer values reliability.,neutral,0.11
+sig_333010_0269,333010,2024-01-15,customer_feedback,NPS survey: Score steady at 6/10. Customer values reliability.,neutral,0.13
+sig_333010_0270,333010,2024-01-15,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.15
+sig_333010_0271,333010,2024-02-08,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.0
+sig_333010_0272,333010,2024-02-08,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.19
+sig_333010_0273,333010,2024-03-25,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.2
+sig_333010_0274,333010,2024-03-25,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.18
+sig_333010_0275,333010,2024-04-13,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.36
+sig_333010_0276,333010,2024-04-13,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.02
+sig_333010_0277,333010,2024-05-09,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.09
+sig_333010_0278,333010,2024-05-09,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.08
+sig_333010_0279,333010,2024-06-07,customer_feedback,NPS survey: Score steady at 9/10. Customer values reliability.,neutral,0.19
+sig_333010_0280,333010,2024-06-07,customer_feedback,NPS survey: Score steady at 9/10. Customer values reliability.,neutral,0.25
+sig_333010_0281,333010,2024-07-02,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.21
+sig_333010_0282,333010,2024-07-02,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.28
+sig_333010_0283,333010,2024-07-02,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.55
+sig_333010_0284,333010,2024-08-22,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.05
+sig_333010_0285,333010,2024-08-22,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.08
+sig_333010_0286,333010,2024-08-22,customer_feedback,NPS survey: Score steady at 7/10. Customer values reliability.,neutral,0.39
+sig_333010_0287,333010,2024-09-24,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.29
+sig_333010_0288,333010,2024-09-24,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.22
+sig_333010_0289,333010,2024-10-28,customer_feedback,NPS survey: Score steady at 7/10. Customer values reliability.,neutral,0.32
+sig_333010_0290,333010,2024-10-28,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.38
+sig_333010_0291,333010,2024-11-11,customer_feedback,NPS survey: Score steady at 6/10. Customer values reliability.,neutral,0.35
+sig_333010_0292,333010,2024-11-11,customer_feedback,NPS survey: Score steady at 5/10. Customer values reliability.,neutral,0.23
+sig_333010_0293,333010,2024-12-04,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.14
+sig_333010_0294,333010,2024-12-04,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.17
+sig_333010_0295,333010,2024-12-04,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.26
+sig_333011_0296,333011,2024-01-08,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.53
+sig_333011_0297,333011,2024-01-08,incident,SLA breach: network latency exceeded threshold for 8h. Root cause under investigation.,negative,-0.53
+sig_333011_0298,333011,2024-01-08,incident,SLA breach: network latency exceeded threshold for 8h. Root cause under investigation.,negative,-0.55
+sig_333011_0299,333011,2024-02-18,incident,SLA breach: network latency exceeded threshold for 6h. Root cause under investigation.,negative,-0.5
+sig_333011_0300,333011,2024-02-18,incident,Critical: GPU cluster outage lasted 3h. Customer escalated to VP level.,negative,-0.8
+sig_333011_0301,333011,2024-02-18,incident,Critical: GPU cluster outage lasted 7h. Customer escalated to VP level.,negative,-0.63
+sig_333011_0302,333011,2024-03-06,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.67
+sig_333011_0303,333011,2024-03-06,incident,Critical: GPU cluster outage lasted 7h. Customer escalated to VP level.,negative,-0.84
+sig_333011_0304,333011,2024-03-06,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.58
+sig_333011_0305,333011,2024-04-28,incident,SLA breach: network latency exceeded threshold for 5h. Root cause under investigation.,negative,-0.64
+sig_333011_0306,333011,2024-04-28,incident,Critical: GPU cluster outage lasted 5h. Customer escalated to VP level.,negative,-0.5
+sig_333011_0307,333011,2024-04-28,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.82
+sig_333011_0308,333011,2024-05-11,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.66
+sig_333011_0309,333011,2024-05-11,customer_feedback,NPS score dropped from 7 to 5. Customer cited repeated provisioning delays.,negative,-0.64
+sig_333011_0310,333011,2024-06-02,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.39
+sig_333011_0311,333011,2024-06-02,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.5
+sig_333011_0312,333011,2024-07-07,incident,SLA breach: network latency exceeded threshold for 5h. Root cause under investigation.,negative,-0.73
+sig_333011_0313,333011,2024-07-07,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.43
+sig_333011_0314,333011,2024-08-26,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.56
+sig_333011_0315,333011,2024-08-26,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.34
+sig_333011_0316,333011,2024-09-20,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.55
+sig_333011_0317,333011,2024-09-20,customer_feedback,NPS score dropped from 4 to 2. Customer cited repeated provisioning delays.,negative,-0.39
+sig_333011_0318,333011,2024-10-14,customer_feedback,NPS score dropped from 4 to 4. Customer cited repeated provisioning delays.,negative,-0.48
+sig_333011_0319,333011,2024-10-14,customer_feedback,Champion David Kumar expressed frustration with batch throughput degradation.,negative,-0.7
+sig_333011_0320,333011,2024-11-24,customer_feedback,NPS score dropped from 6 to 5. Customer cited repeated provisioning delays.,negative,-0.59
+sig_333011_0321,333011,2024-11-24,incident,Critical: GPU cluster outage lasted 4h. Customer escalated to VP level.,negative,-0.87
+sig_333011_0322,333011,2024-11-24,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.6
+sig_333011_0323,333011,2024-12-15,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.43
+sig_333011_0324,333011,2024-12-15,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.48
+sig_333011_0325,333011,2024-12-15,customer_feedback,NPS score dropped from 7 to 5. Customer cited repeated provisioning delays.,negative,-0.73
+sig_333012_0326,333012,2024-01-28,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.66
+sig_333012_0327,333012,2024-01-28,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.61
+sig_333012_0328,333012,2024-01-28,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.03
+sig_333012_0329,333012,2024-02-19,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.33
+sig_333012_0330,333012,2024-02-19,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.6
+sig_333012_0331,333012,2024-02-19,customer_feedback,NPS survey response: Score improved from 6 to 6. Customer praised faster GPU provisioning.,positive,0.88
+sig_333012_0332,333012,2024-03-09,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.78
+sig_333012_0333,333012,2024-03-09,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.37
+sig_333012_0334,333012,2024-04-23,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.68
+sig_333012_0335,333012,2024-04-23,customer_feedback,NPS survey response: Score improved from 5 to 8. Customer praised faster GPU provisioning.,positive,0.7
+sig_333012_0336,333012,2024-05-09,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.87
+sig_333012_0337,333012,2024-05-09,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.8
+sig_333012_0338,333012,2024-05-09,customer_feedback,NPS survey response: Score improved from 4 to 5. Customer praised faster GPU provisioning.,positive,0.85
+sig_333012_0339,333012,2024-06-22,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.56
+sig_333012_0340,333012,2024-06-22,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.61
+sig_333012_0341,333012,2024-06-22,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.55
+sig_333012_0342,333012,2024-07-09,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.73
+sig_333012_0343,333012,2024-07-09,meeting,Expansion discussion: customer evaluating additional rack capacity for Q3 growth.,positive,0.78
+sig_333012_0344,333012,2024-08-17,customer_feedback,Champion David Kumar confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.94
+sig_333012_0345,333012,2024-08-17,customer_feedback,NPS survey response: Score improved from 4 to 8. Customer praised faster GPU provisioning.,positive,0.61
+sig_333012_0346,333012,2024-09-09,customer_feedback,NPS survey response: Score improved from 6 to 5. Customer praised faster GPU provisioning.,positive,0.4
+sig_333012_0347,333012,2024-09-09,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.46
+sig_333012_0348,333012,2024-10-09,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.05
+sig_333012_0349,333012,2024-10-09,meeting,Expansion discussion: customer evaluating additional rack capacity for Q4 growth.,positive,0.7
+sig_333012_0350,333012,2024-11-04,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.46
+sig_333012_0351,333012,2024-11-04,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.71
+sig_333012_0352,333012,2024-12-09,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.6
+sig_333012_0353,333012,2024-12-09,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.03
+sig_333013_0354,333013,2024-01-08,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.3
+sig_333013_0355,333013,2024-01-08,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.04
+sig_333013_0356,333013,2024-02-17,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.04
+sig_333013_0357,333013,2024-02-17,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.3
+sig_333013_0358,333013,2024-02-17,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.13
+sig_333013_0359,333013,2024-03-11,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.03
+sig_333013_0360,333013,2024-03-11,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,-0.03
+sig_333013_0361,333013,2024-03-11,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.27
+sig_333013_0362,333013,2024-04-27,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.04
+sig_333013_0363,333013,2024-04-27,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.22
+sig_333013_0364,333013,2024-05-18,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.16
+sig_333013_0365,333013,2024-05-18,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.48
+sig_333013_0366,333013,2024-06-01,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.22
+sig_333013_0367,333013,2024-06-01,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.11
+sig_333013_0368,333013,2024-06-01,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.18
+sig_333013_0369,333013,2024-07-14,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.32
+sig_333013_0370,333013,2024-07-14,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.14
+sig_333013_0371,333013,2024-07-14,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.08
+sig_333013_0372,333013,2024-08-14,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.15
+sig_333013_0373,333013,2024-08-14,incident,Scheduled maintenance window completed successfully. All systems nominal.,neutral,0.05
+sig_333013_0374,333013,2024-09-19,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.19
+sig_333013_0375,333013,2024-09-19,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.16
+sig_333013_0376,333013,2024-10-05,meeting,Monthly sync — customer satisfied with current service levels. No escalations.,neutral,0.26
+sig_333013_0377,333013,2024-10-05,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.02
+sig_333013_0378,333013,2024-10-05,milestone,Contract renewal processed — 12-month extension at current terms.,positive,0.35
+sig_333013_0379,333013,2024-11-21,health_check,"Quarterly review: GPU utilization stable at ~75%, power efficiency on target.",neutral,0.22
+sig_333013_0380,333013,2024-11-21,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.31
+sig_333013_0381,333013,2024-11-21,meeting,Stakeholder check-in: no open issues. Discussed roadmap for next quarter.,neutral,0.34
+sig_333013_0382,333013,2024-12-05,customer_feedback,NPS survey: Score steady at 7/10. Customer values reliability.,neutral,0.29
+sig_333013_0383,333013,2024-12-05,customer_feedback,"Feedback form: ""Service meets expectations. Would like more proactive reporting.""",neutral,0.22
+sig_333013_0384,333013,2024-12-05,health_check,Routine health check: all KPIs within healthy ranges. No action required.,neutral,0.01
+sig_333014_0385,333014,2024-01-08,incident,Critical: GPU cluster outage lasted 5h. Customer escalated to VP level.,negative,-0.73
+sig_333014_0386,333014,2024-01-08,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.59
+sig_333014_0387,333014,2024-01-08,customer_feedback,NPS score dropped from 6 to 5. Customer cited repeated provisioning delays.,negative,-0.61
+sig_333014_0388,333014,2024-02-08,incident,Critical: GPU cluster outage lasted 6h. Customer escalated to VP level.,negative,-0.74
+sig_333014_0389,333014,2024-02-08,customer_feedback,NPS score dropped from 4 to 5. Customer cited repeated provisioning delays.,negative,-0.64
+sig_333014_0390,333014,2024-02-08,customer_feedback,NPS score dropped from 5 to 5. Customer cited repeated provisioning delays.,negative,-0.7
+sig_333014_0391,333014,2024-03-10,incident,SLA breach: network latency exceeded threshold for 8h. Root cause under investigation.,negative,-0.78
+sig_333014_0392,333014,2024-03-10,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.66
+sig_333014_0393,333014,2024-04-26,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.48
+sig_333014_0394,333014,2024-04-26,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.48
+sig_333014_0395,333014,2024-05-06,customer_feedback,Champion Lisa Wang expressed frustration with batch throughput degradation.,negative,-0.62
+sig_333014_0396,333014,2024-05-06,health_check,Health review flagged declining PUE and rising support ticket volume.,negative,-0.55
+sig_333014_0397,333014,2024-05-06,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.76
+sig_333014_0398,333014,2024-06-03,incident,Critical: GPU cluster outage lasted 5h. Customer escalated to VP level.,negative,-0.59
+sig_333014_0399,333014,2024-06-03,incident,SLA breach: network latency exceeded threshold for 7h. Root cause under investigation.,negative,-0.71
+sig_333014_0400,333014,2024-06-03,incident,Critical: GPU cluster outage lasted 2h. Customer escalated to VP level.,negative,-0.9
+sig_333014_0401,333014,2024-07-28,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.64
+sig_333014_0402,333014,2024-07-28,incident,Critical: GPU cluster outage lasted 4h. Customer escalated to VP level.,negative,-0.83
+sig_333014_0403,333014,2024-07-28,incident,SLA breach: network latency exceeded threshold for 6h. Root cause under investigation.,negative,-0.72
+sig_333014_0404,333014,2024-08-12,meeting,Emergency call: customer threatened to evaluate competitors due to ongoing RMA issues.,negative,-0.55
+sig_333014_0405,333014,2024-08-12,incident,SLA breach: network latency exceeded threshold for 2h. Root cause under investigation.,negative,-0.78
+sig_333014_0406,333014,2024-08-12,customer_feedback,NPS score dropped from 4 to 3. Customer cited repeated provisioning delays.,negative,-0.72
+sig_333014_0407,333014,2024-09-14,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.42
+sig_333014_0408,333014,2024-09-14,incident,SLA breach: network latency exceeded threshold for 6h. Root cause under investigation.,negative,-0.7
+sig_333014_0409,333014,2024-10-05,incident,Critical: GPU cluster outage lasted 7h. Customer escalated to VP level.,negative,-0.5
+sig_333014_0410,333014,2024-10-05,customer_feedback,Champion Lisa Wang expressed frustration with batch throughput degradation.,negative,-0.45
+sig_333014_0411,333014,2024-11-03,customer_feedback,NPS score dropped from 6 to 3. Customer cited repeated provisioning delays.,negative,-0.35
+sig_333014_0412,333014,2024-11-03,customer_feedback,Support satisfaction: 2.1/5. Customer requests executive-level engagement.,negative,-0.8
+sig_333014_0413,333014,2024-11-03,incident,Critical: GPU cluster outage lasted 3h. Customer escalated to VP level.,negative,-0.85
+sig_333014_0414,333014,2024-12-24,customer_feedback,NPS score dropped from 5 to 3. Customer cited repeated provisioning delays.,negative,-0.65
+sig_333014_0415,333014,2024-12-24,meeting,"QBR cancelled by customer — cited ""lack of visible improvement"" in service quality.",negative,-0.4
+sig_333015_0416,333015,2024-01-10,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.04
+sig_333015_0417,333015,2024-01-10,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.79
+sig_333015_0418,333015,2024-02-08,customer_feedback,Champion Mike Thompson confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.83
+sig_333015_0419,333015,2024-02-08,customer_feedback,Champion Mike Thompson confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.9
+sig_333015_0420,333015,2024-03-27,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.64
+sig_333015_0421,333015,2024-03-27,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,-0.1
+sig_333015_0422,333015,2024-04-18,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.74
+sig_333015_0423,333015,2024-04-18,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.86
+sig_333015_0424,333015,2024-04-18,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.67
+sig_333015_0425,333015,2024-05-08,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.0
+sig_333015_0426,333015,2024-05-08,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.08
+sig_333015_0427,333015,2024-06-16,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.35
+sig_333015_0428,333015,2024-06-16,meeting,Expansion discussion: customer evaluating additional rack capacity for Q2 growth.,positive,0.68
+sig_333015_0429,333015,2024-06-16,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.73
+sig_333015_0430,333015,2024-07-11,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.57
+sig_333015_0431,333015,2024-07-11,meeting,Expansion discussion: customer evaluating additional rack capacity for Q3 growth.,positive,0.54
+sig_333015_0432,333015,2024-07-11,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.65
+sig_333015_0433,333015,2024-08-11,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.53
+sig_333015_0434,333015,2024-08-11,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.51
+sig_333015_0435,333015,2024-08-11,customer_feedback,Champion Mike Thompson confirmed renewal intent and requested pricing for GPU cluster expansion.,positive,0.68
+sig_333015_0436,333015,2024-09-18,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,-0.1
+sig_333015_0437,333015,2024-09-18,milestone,Customer achieved 99.9% uptime target for the first time this quarter.,positive,0.7
+sig_333015_0438,333015,2024-10-08,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.67
+sig_333015_0439,333015,2024-10-08,health_check,"Proactive health review: RMA rates declining, PUE improving toward target.",positive,0.64
+sig_333015_0440,333015,2024-10-08,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.61
+sig_333015_0441,333015,2024-11-25,meeting,Expansion discussion: customer evaluating additional rack capacity for Q4 growth.,positive,0.62
+sig_333015_0442,333015,2024-11-25,meeting,QBR held — customer reported improved deployment times and wants to expand AI workloads.,positive,0.71
+sig_333015_0443,333015,2024-12-08,customer_feedback,Support ticket satisfaction: 4.5/5 — team resolved batch processing issue within SLA.,positive,0.52
+sig_333015_0444,333015,2024-12-08,incident,Minor network latency spike detected; auto-resolved within 15 minutes. No customer impact.,neutral,0.13

@@ -14,11 +14,23 @@ from datetime import datetime, timedelta, date
 
 def get_customer_from_account(account_id):
     """
-    Extract customer ID from account ID
-    Account ID format: CUSTOMERID * 1000 + 001-999
-    E.g., 113001 → customer 113, 17001 → customer 17
+    Look up customer ID for an account from the database.
+    Falls back to legacy formula (account_id // 1000) if DB query fails.
     """
     account_id_int = int(account_id) if isinstance(account_id, str) else account_id
+    try:
+        from models import Account
+        account = Account.query.filter_by(account_id=account_id_int).first()
+        if account:
+            return account.customer_id
+    except Exception:
+        pass
+    # Legacy fallback — logged so we can track remaining usage
+    import logging
+    logging.getLogger(__name__).debug(
+        f"get_customer_from_account: DB lookup missed for {account_id_int}, "
+        f"falling back to formula"
+    )
     return account_id_int // 1000
 
 def find_journey_file(customer_id, account_id):

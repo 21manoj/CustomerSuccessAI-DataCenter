@@ -424,6 +424,7 @@ def get_dc2s_accounts():
 
             results.append({
                 'account_id': account.account_id,
+                'customer_id': account.customer_id,
                 'account_name': account.account_name,
                 'industry': account.industry,
                 'region': account.region,

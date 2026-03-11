@@ -45,11 +45,20 @@ DC2S_PILLAR_METRIC_MAP = {
 # ============================================================
 
 def _is_revenue_intelligence_enabled(customer_id):
+    # Check per-customer DB toggle first
     toggle = FeatureToggleModel.query.filter_by(
         customer_id=customer_id,
         feature_name='revenue_intelligence'
     ).first()
-    return toggle and toggle.enabled
+    if toggle:
+        return toggle.enabled
+
+    # Fallback: if no per-customer toggle, check global feature toggle
+    try:
+        from feature_toggles import feature_toggles, FeatureToggle
+        return feature_toggles.is_enabled(FeatureToggle.REVENUE_INTELLIGENCE)
+    except Exception:
+        return False
 
 
 # ============================================================

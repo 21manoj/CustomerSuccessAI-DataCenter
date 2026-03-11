@@ -62,6 +62,7 @@ class CSPulseClient:
         self.password = password
         self.customer_id = customer_id
         self.customer_uuid = None  # Populated after login from response
+        self.auth_customer_id = None  # Populated after login: authenticated user's actual customer
         self.timeout = timeout
         self.session = requests.Session()
 
@@ -156,7 +157,7 @@ class CSPulseClient:
                         logger.debug(f"Set manual Cookie header (Secure flag workaround)")
                         break
 
-                # Capture UUID from login response (prefer for X-Customer-ID header)
+                # Capture UUID from login response
                 # UUID may be at top level or nested under 'user'
                 customer_uuid = response.get('customer_uuid')
                 if not customer_uuid:
@@ -165,10 +166,27 @@ class CSPulseClient:
 
                 if customer_uuid:
                     self.customer_uuid = customer_uuid
+
+                # Set X-Customer-ID header: use target customer_id (from CLI)
+                # if provided, otherwise fall back to login user's UUID/ID.
+                # This allows admin users to act on behalf of target customers.
+                if self.customer_id:
+                    self.session.headers.update({'X-Customer-ID': str(self.customer_id)})
+                    logger.info(f"✅ Logged in as {self.email} (target customer: {self.customer_id})")
+                elif customer_uuid:
                     self.session.headers.update({'X-Customer-ID': customer_uuid})
                     logger.info(f"✅ Logged in as {self.email} (UUID: {customer_uuid})")
                 else:
-                    logger.info(f"✅ Logged in as {self.email} (no UUID — using integer ID)")
+                    logger.info(f"✅ Logged in as {self.email} (no UUID — using session only)")
+
+                # Capture the authenticated user's integer customer_id
+                # This may differ from self.customer_id (CLI arg) when admin
+                # users belong to a different customer than the target.
+                resp_cid = response.get('customer_id')
+                if not resp_cid:
+                    user_data = response.get('user', {})
+                    resp_cid = user_data.get('customer_id')
+                self.auth_customer_id = resp_cid  # authenticated user's customer
 
                 return True
             else:

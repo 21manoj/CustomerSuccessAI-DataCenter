@@ -18,6 +18,8 @@ import {
   Terminal,
   AlertTriangle,
   Loader2,
+  FolderOpen,
+  FileText,
 } from 'lucide-react';
 
 import type { RunStatus } from '../types';
@@ -32,17 +34,24 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const logEndRef = useRef<HTMLPreElement>(null);
 
+  // Defensive: ensure scenarios is always an array (guards against malformed API responses)
+  const scenarios = Array.isArray(activeRun.scenarios) ? activeRun.scenarios : [];
+
   const isRunning = activeRun.status === 'running';
   const completedCount =
-    activeRun.scenarios.filter(s => s.status === 'pass' || s.status === 'fail').length;
-  const totalCount = activeRun.scenarios.length;
+    scenarios.filter(s => s.status === 'pass' || s.status === 'fail').length;
+  const totalCount = scenarios.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Stable dependency strings (avoids inline .map().join() in dep arrays)
+  const scenarioStatusKey = scenarios.map(s => `${s.id}:${s.status}`).join(',');
+  const scenarioStdoutKey = scenarios.map(s => s.stdout?.length || 0).join(',');
 
   // Auto-expand failed scenarios and the currently running one
   useEffect(() => {
     const newExpanded = new Set(expanded);
     let changed = false;
-    for (const s of activeRun.scenarios) {
+    for (const s of scenarios) {
       if (s.status === 'fail' && !newExpanded.has(s.id)) {
         newExpanded.add(s.id);
         changed = true;
@@ -53,14 +62,15 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
       }
     }
     if (changed) setExpanded(newExpanded);
-  }, [activeRun.scenarios.map(s => `${s.id}:${s.status}`).join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioStatusKey]);
 
   // Auto-scroll log to bottom when new output arrives
   useEffect(() => {
     if (logEndRef.current) {
       logEndRef.current.scrollTop = logEndRef.current.scrollHeight;
     }
-  }, [activeRun.scenarios.map(s => s.stdout?.length || 0).join(',')]);
+  }, [scenarioStdoutKey]);
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -126,7 +136,7 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
 
       {/* Per-scenario rows */}
       <div className="divide-y divide-gray-100">
-        {activeRun.scenarios.map(s => (
+        {scenarios.map(s => (
           <div key={s.id}>
             {/* Row header */}
             <div
@@ -265,6 +275,64 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
                           <li key={i}>{err}</li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* Generated Artifacts (CSVs, logs) */}
+                  {s.result?.artifacts && (
+                    <div>
+                      <p className="font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        Generated Artifacts:
+                      </p>
+                      <div className="bg-white rounded border border-gray-200 text-xs">
+                        <table className="w-full">
+                          <tbody>
+                            {s.result.artifacts.run_dir && (
+                              <tr className="border-b border-gray-100">
+                                <td className="px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">
+                                  <FileText className="w-3 h-3 inline mr-1" />Test Logs
+                                </td>
+                                <td className="px-3 py-1.5 text-gray-800 font-mono break-all">{s.result.artifacts.run_dir}/</td>
+                              </tr>
+                            )}
+                            {s.result.artifacts.csv_dir && (
+                              <tr className="border-b border-gray-100">
+                                <td className="px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">
+                                  <FolderOpen className="w-3 h-3 inline mr-1" />CSVs ({(s.result.artifacts.csv_files || []).length} files)
+                                </td>
+                                <td className="px-3 py-1.5 text-gray-800 font-mono break-all">
+                                  {s.result.artifacts.csv_dir}/
+                                  <span className="text-gray-400 ml-1">
+                                    [{(s.result.artifacts.csv_files || []).join(', ')}]
+                                  </span>
+                                </td>
+                              </tr>
+                            )}
+                            {s.result.artifacts.context_graph_dir && (
+                              <tr className="border-b border-gray-100">
+                                <td className="px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">
+                                  <FolderOpen className="w-3 h-3 inline mr-1" />Context Graph ({(s.result.artifacts.context_graph_files || []).length} files)
+                                </td>
+                                <td className="px-3 py-1.5 text-gray-800 font-mono break-all">
+                                  {s.result.artifacts.context_graph_dir}/
+                                  <span className="text-gray-400 ml-1">
+                                    [{(s.result.artifacts.context_graph_files || []).join(', ')}]
+                                  </span>
+                                </td>
+                              </tr>
+                            )}
+                            {s.result.artifacts.test_results_md && (
+                              <tr className="border-b border-gray-100 last:border-0">
+                                <td className="px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">
+                                  <FileText className="w-3 h-3 inline mr-1" />Results MD
+                                </td>
+                                <td className="px-3 py-1.5 text-gray-800 font-mono break-all">{s.result.artifacts.test_results_md}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
 

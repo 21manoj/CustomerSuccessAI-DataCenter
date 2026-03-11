@@ -86,11 +86,11 @@ class FeatureToggleManager:
                 environment_required="production"
             ),
             FeatureToggle.REVENUE_INTELLIGENCE: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Power of 1 revenue intelligence: action economics, ROI tracking, capacity planning",
                 version="1.0.0",
                 dependencies=[],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.CONTEXT_GRAPH: FeatureConfig(
                 enabled=True,

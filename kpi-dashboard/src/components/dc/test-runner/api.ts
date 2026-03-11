@@ -69,6 +69,10 @@ export const testRunnerApi = {
         onboarding_mode: options.onboardingMode,
         showcase_pattern_mix: options.showcasePatternMix,
         weights: options.weights,
+        // KPI Configuration — only include when not default (all 38)
+        ...(options.kpiPreset !== 'default' && options.enabledKpis?.length > 0
+          ? { enabled_kpis: options.enabledKpis, enabled_pillars: options.enabledPillars }
+          : {}),
         // Scenario 8: Context Graph
         ...(options.arcId ? { arc_id: options.arcId } : {}),
         // Scenario 9: ROI Simulation
@@ -92,7 +96,15 @@ export const testRunnerApi = {
 
   async getStatus(runId: string): Promise<RunStatus> {
     const res = await fetch(`/api/test-runner/status/${runId}`, { credentials: 'include' });
-    return res.json();
+    if (!res.ok) {
+      throw new Error(`Status poll failed (${res.status})`);
+    }
+    const data = await res.json();
+    // Defensive: ensure scenarios is always an array
+    if (!Array.isArray(data.scenarios)) {
+      data.scenarios = [];
+    }
+    return data;
   },
 
   async getRuns(): Promise<RunSummary[]> {

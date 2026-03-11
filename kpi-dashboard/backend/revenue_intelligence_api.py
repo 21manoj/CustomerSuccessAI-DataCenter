@@ -72,7 +72,17 @@ def require_revenue_intelligence(f):
             feature_name='revenue_intelligence'
         ).first()
 
-        if not toggle or not toggle.enabled:
+        # Check per-customer toggle first, then fall back to global toggle
+        if toggle:
+            enabled = toggle.enabled
+        else:
+            try:
+                from feature_toggles import feature_toggles, FeatureToggle
+                enabled = feature_toggles.is_enabled(FeatureToggle.REVENUE_INTELLIGENCE)
+            except Exception:
+                enabled = False
+
+        if not enabled:
             return jsonify({
                 'error': 'Revenue Intelligence is not enabled for this customer',
                 'feature': 'revenue_intelligence',

@@ -27,6 +27,7 @@ import type {
   PatternMix,
   PillarWeights,
   SimulationStatus,
+  KpiPresetId,
 } from '../types';
 import {
   PRESETS,
@@ -36,6 +37,12 @@ import {
   INDUSTRIES,
   PILLAR_LABELS,
   DRIFT_PROFILES,
+  KPI_CATALOG,
+  KPI_PRESETS,
+  ALL_KPI_CODES,
+  ALL_PILLAR_CODES,
+  derivePillars,
+  kpisByPillar,
 } from '../types';
 import { testRunnerApi, platformApi, simulationApi, formatDuration } from '../api';
 import RunMonitor from '../components/RunMonitor';
@@ -44,12 +51,14 @@ import RunHistory from '../components/RunHistory';
 interface ScenariosTabProps {
   customerId: string;
   entitlements: Record<string, boolean>;
+  flags?: Record<string, boolean>;
   onRunComplete?: () => void;
 }
 
 const ScenariosTab: React.FC<ScenariosTabProps> = ({
   customerId,
   entitlements,
+  flags = {},
   onRunComplete,
 }) => {
   // Scenario list
@@ -82,7 +91,10 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
   const [simError, setSimError] = useState<string | null>(null);
   const simPollRef = useRef<NodeJS.Timeout | null>(null);
 
-  const hasAdvancedEntitlement = entitlements['test_runner_advanced'] ?? false;
+  // For "New Customer (auto)" (customerId=''), always allow Advanced Options
+  // since the backend skips entitlement checks for auto customers anyway.
+  const isNewCustomer = !customerId;
+  const hasAdvancedEntitlement = isNewCustomer || (entitlements['test_runner_advanced'] ?? false);
 
   // ------- Load scenarios + history + story arcs on mount -------
   useEffect(() => {
@@ -222,6 +234,10 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
         setError(`Pillar weights must sum to 1.0 (currently ${weightsTotal.toFixed(2)})`);
         return;
       }
+      if (flags.kpi_configuration && options.enabledKpis.length === 0) {
+        setError('At least 1 KPI must be enabled to run');
+        return;
+      }
     }
 
     setError(null);
@@ -229,7 +245,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
 
     try {
       const orderedIds = scenarios.map(s => s.id).filter(id => selected.has(id));
-      const { run_id } = await testRunnerApi.startRun(orderedIds, cid || '500', showAdvanced ? options : undefined);
+      const { run_id } = await testRunnerApi.startRun(orderedIds, cid || 'auto', showAdvanced ? options : undefined);
       startPolling(run_id);
     } catch (e: any) {
       setError(e.message || 'Failed to start');
@@ -539,11 +555,17 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
                   <input
                     type="number"
                     value={options.numAccounts}
-                    onChange={e => setOption('numAccounts', Math.max(1, parseInt(e.target.value, 10) || 3))}
+                    onChange={e => setOption('numAccounts', Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 3)))}
                     min={1}
-                    max={200}
+                    max={20}
                     className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  {options.numAccounts > 10 && (
+                    <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      &gt;10 accounts may be slow
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -641,31 +663,168 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
                       </span>
                     </div>
                     <div className="grid grid-cols-5 gap-3">
-                      {(Object.keys(DEFAULT_WEIGHTS) as Array<keyof PillarWeights>).map(key => (
-                        <div key={key}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-xs font-bold text-gray-600" title={PILLAR_LABELS[key]}>{key}</span>
-                            <span className="text-xs font-mono text-gray-500">
-                              {(options.weights[key] * 100).toFixed(0)}%
-                            </span>
+                      {(Object.keys(DEFAULT_WEIGHTS) as Array<keyof PillarWeights>).map(key => {
+                        const pillarKpis = options.enabledKpis.filter(k => KPI_CATALOG[k]?.pillar === key);
+                        const pillarDisabled = options.kpiPreset === 'custom' && pillarKpis.length === 0;
+                        return (
+                          <div key={key} className={pillarDisabled ? 'opacity-40' : ''}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-xs font-bold text-gray-600" title={PILLAR_LABELS[key]}>{key}</span>
+                              <span className="text-xs font-mono text-gray-500">
+                                {pillarDisabled ? 'N/A' : `${(options.weights[key] * 100).toFixed(0)}%`}
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={options.weights[key] * 100}
+                              onChange={e => {
+                                const newW = { ...options.weights };
+                                newW[key] = parseInt(e.target.value, 10) / 100;
+                                setOption('weights', newW);
+                              }}
+                              disabled={pillarDisabled}
+                              className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer accent-blue-600 disabled:cursor-not-allowed"
+                            />
+                            {pillarDisabled && (
+                              <span className="text-[10px] text-gray-400">No KPIs</span>
+                            )}
                           </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={5}
-                            value={options.weights[key] * 100}
-                            onChange={e => {
-                              const newW = { ...options.weights };
-                              newW[key] = parseInt(e.target.value, 10) / 100;
-                              setOption('weights', newW);
-                            }}
-                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
-                          />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
+
+                  {/* KPI Configuration (gated by feature flag) */}
+                  {flags.kpi_configuration && <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-medium text-gray-500">KPI Configuration</label>
+                      <span className="text-xs text-gray-400">
+                        {options.enabledKpis.length} KPIs selected
+                        {options.numAccounts > 0 && ` · Est. ${(options.enabledKpis.length * options.numAccounts * 12).toLocaleString()} data points`}
+                      </span>
+                    </div>
+
+                    {/* Preset buttons */}
+                    <div className="flex gap-2 flex-wrap mb-3">
+                      {KPI_PRESETS.map(preset => (
+                        <button
+                          key={preset.id}
+                          onClick={() => {
+                            if (preset.id === 'custom') {
+                              setOption('kpiPreset', 'custom');
+                            } else {
+                              setOptions(prev => ({
+                                ...prev,
+                                kpiPreset: preset.id,
+                                enabledKpis: [...preset.enabledKpis],
+                                enabledPillars: [...preset.enabledPillars],
+                              }));
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                            options.kpiPreset === preset.id
+                              ? 'border-blue-400 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
+                          }`}
+                          title={preset.description}
+                        >
+                          {preset.label} ({preset.id === 'custom' ? options.enabledKpis.length : preset.kpiCount})
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Minimal preset ROI callout */}
+                    {options.kpiPreset === 'minimal' && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 mb-3 text-xs text-green-800 flex items-start gap-2">
+                        <TrendingUp className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-600" />
+                        <span>
+                          <strong>ROI / Power-of-1 compliant</strong> — These 12 KPIs map to all 6 revenue metrics
+                          (NRR, GRR, TTFV, Product Adoption, Expansion Rate, Ticket Resolution Time).
+                          Downstream modules (ROI engine, Signal Analysis) will use this configuration.
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Custom mode: per-pillar KPI checkboxes */}
+                    {options.kpiPreset === 'custom' && (
+                      <div className="space-y-2 border border-gray-200 rounded-lg p-3">
+                        {ALL_PILLAR_CODES.map(pillar => {
+                          const pillarAllKpis = ALL_KPI_CODES.filter(k => KPI_CATALOG[k]?.pillar === pillar);
+                          const pillarEnabledKpis = pillarAllKpis.filter(k => options.enabledKpis.includes(k));
+                          const allChecked = pillarEnabledKpis.length === pillarAllKpis.length;
+                          const noneChecked = pillarEnabledKpis.length === 0;
+                          const isIndeterminate = !allChecked && !noneChecked;
+
+                          return (
+                            <div key={pillar}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <input
+                                  type="checkbox"
+                                  ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                                  checked={allChecked}
+                                  onChange={() => {
+                                    const newKpis = allChecked
+                                      ? options.enabledKpis.filter(k => !pillarAllKpis.includes(k))
+                                      : Array.from(new Set([...options.enabledKpis, ...pillarAllKpis]));
+                                    setOptions(prev => ({
+                                      ...prev,
+                                      enabledKpis: newKpis,
+                                      enabledPillars: derivePillars(newKpis),
+                                    }));
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-xs font-bold text-gray-700">
+                                  {pillar}: {PILLAR_LABELS[pillar as keyof typeof PILLAR_LABELS]}
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  ({pillarEnabledKpis.length}/{pillarAllKpis.length})
+                                </span>
+                              </div>
+                              <div className="ml-5 grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-0.5">
+                                {pillarAllKpis.map(code => (
+                                  <label
+                                    key={code}
+                                    className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5"
+                                    title={KPI_CATALOG[code]?.name}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={options.enabledKpis.includes(code)}
+                                      onChange={() => {
+                                        const newKpis = options.enabledKpis.includes(code)
+                                          ? options.enabledKpis.filter(k => k !== code)
+                                          : [...options.enabledKpis, code];
+                                        setOptions(prev => ({
+                                          ...prev,
+                                          enabledKpis: newKpis,
+                                          enabledPillars: derivePillars(newKpis),
+                                        }));
+                                      }}
+                                      className="h-3 w-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="font-mono text-gray-600">{code}</span>
+                                    <span className="text-gray-400 truncate">{KPI_CATALOG[code]?.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Validation: at least 1 KPI */}
+                    {options.enabledKpis.length === 0 && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        At least 1 KPI must be enabled to run
+                      </p>
+                    )}
+                  </div>}
                 </div>
               )}
 

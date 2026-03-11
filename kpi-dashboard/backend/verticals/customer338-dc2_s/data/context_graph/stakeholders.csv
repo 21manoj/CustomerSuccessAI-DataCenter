@@ -1,0 +1,61 @@
+account_id,stakeholder_name,title,role,influence_score,email,engagement_frequency,sentiment,department,is_active,source_platform,first_observed_at
+338001,Allison Hill,VP Engineering,champion,0.9,donaldgarcia@example.net,weekly,positive,Engineering,true,csv_import,2025-06-25
+338001,Angie Henderson,CTO,exec_sponsor,0.95,davisjesse@example.net,monthly,positive,IT,true,csv_import,2025-06-27
+338001,Cristian Santos,Infrastructure Director,decision_maker,0.8,lrobinson@example.com,biweekly,positive,IT,true,csv_import,2025-06-26
+338001,Abigail Shaffer,CSM (Ours),technical_lead,0.7,jpeterson@example.org,weekly,positive,Data Science,true,csv_import,2025-06-25
+338002,Gabrielle Davis,VP Engineering,champion,0.9,howardmaurice@example.com,weekly,positive,Engineering,true,csv_import,2025-06-29
+338002,Monica Herrera,CTO,exec_sponsor,0.95,smiller@example.net,monthly,positive,Executive,true,csv_import,2025-06-29
+338002,Shannon Ray,Infrastructure Director,decision_maker,0.8,williamsjeremy@example.com,biweekly,positive,Engineering,true,csv_import,2025-06-25
+338002,Dr. Sharon James,CSM (Ours),technical_lead,0.7,xreid@example.org,weekly,positive,IT,true,csv_import,2025-06-25
+338003,Daniel Adams,VP Engineering,champion,0.9,lynchgeorge@example.net,weekly,positive,Finance,true,csv_import,2025-06-26
+338003,Joel Nelson,CTO,exec_sponsor,0.95,gabriellecameron@example.org,monthly,positive,Engineering,true,csv_import,2025-06-29
+338003,Andrew Stewart,Infrastructure Director,decision_maker,0.8,carl95@example.org,biweekly,positive,IT,true,csv_import,2025-06-29
+338003,Jennifer Rocha,CSM (Ours),technical_lead,0.7,ithomas@example.org,weekly,positive,Executive,true,csv_import,2025-06-29
+338004,Kimberly Burgess,VP Engineering,champion,0.9,zhurst@example.com,weekly,positive,Executive,true,csv_import,2025-06-26
+338004,Zachary Hicks,CTO,exec_sponsor,0.95,camposmichelle@example.org,monthly,positive,Operations,true,csv_import,2025-06-29
+338004,Rebecca Henderson,Infrastructure Director,decision_maker,0.8,cruzcaitlin@example.com,biweekly,positive,IT,true,csv_import,2025-06-25
+338004,Tricia Valencia,CSM (Ours),technical_lead,0.7,frazierdanny@example.net,weekly,positive,Operations,true,csv_import,2025-06-28
+338005,Patricia Peterson,VP Engineering,champion,0.9,ryan70@example.net,weekly,positive,IT,true,csv_import,2025-06-27
+338005,Deborah Mason,CTO,exec_sponsor,0.95,williamrodriguez@example.net,monthly,positive,Operations,true,csv_import,2025-06-26
+338005,Mark Lynch,Infrastructure Director,decision_maker,0.8,nathanielmartin@example.net,biweekly,positive,Engineering,true,csv_import,2025-06-25
+338005,Linda Burns,CSM (Ours),technical_lead,0.7,hickmannatasha@example.com,weekly,positive,Engineering,true,csv_import,2025-06-28
+338006,David Bradley,VP Engineering,champion,0.9,millertodd@example.org,weekly,positive,Operations,true,csv_import,2025-06-27
+338006,Kim Martinez,CTO,exec_sponsor,0.95,karroyo@example.com,monthly,positive,Operations,true,csv_import,2025-06-29
+338006,Lisa Brandt,Infrastructure Director,decision_maker,0.8,jenniferross@example.net,biweekly,positive,Data Science,true,csv_import,2025-06-25
+338006,Jessica Holmes,CSM (Ours),technical_lead,0.7,wrightcaleb@example.org,weekly,positive,Finance,true,csv_import,2025-06-28
+338007,Crystal Robinson,VP Engineering,champion,0.9,zimmermanbrian@example.org,weekly,positive,Executive,true,csv_import,2025-06-25
+338007,Shannon Jones,CTO,exec_sponsor,0.95,joshuawashington@example.net,monthly,positive,Finance,true,csv_import,2025-06-25
+338007,Timothy Duncan,Infrastructure Director,decision_maker,0.8,esanchez@example.com,biweekly,positive,Data Science,true,csv_import,2025-06-27
+338007,Brent Jordan,CSM (Ours),technical_lead,0.7,ujenkins@example.org,weekly,positive,Operations,true,csv_import,2025-06-29
+338008,Victoria Garcia,VP Engineering,champion,0.9,zchandler@example.org,weekly,positive,IT,true,csv_import,2025-06-29
+338008,Connor West,CTO,exec_sponsor,0.95,dwhite@example.org,monthly,positive,Engineering,true,csv_import,2025-06-25
+338008,Angela Morton,Infrastructure Director,decision_maker,0.8,williamsyvette@example.org,biweekly,positive,Operations,true,csv_import,2025-06-26
+338008,Tammy Allison,CSM (Ours),technical_lead,0.7,richardolson@example.com,weekly,positive,IT,true,csv_import,2025-06-25
+338009,Carmen Smith,VP Engineering,champion,0.9,ybaker@example.com,weekly,positive,Executive,true,csv_import,2025-06-25
+338009,Michael Cross,CTO,exec_sponsor,0.95,smoore@example.org,monthly,positive,Executive,true,csv_import,2025-06-27
+338009,Lauren Daniels,Infrastructure Director,decision_maker,0.8,brian97@example.net,biweekly,positive,IT,true,csv_import,2025-06-27
+338009,Kim Brown,CSM (Ours),technical_lead,0.7,yorkcasey@example.org,weekly,positive,Operations,true,csv_import,2025-06-27
+338010,Cynthia Wilson,VP Engineering,champion,0.9,bethwilliams@example.org,weekly,positive,Data Science,true,csv_import,2025-06-26
+338010,Kevin Mills,CTO,exec_sponsor,0.95,james53@example.com,monthly,positive,Data Science,true,csv_import,2025-06-27
+338010,Michael Evans,Infrastructure Director,decision_maker,0.8,sarah10@example.com,biweekly,positive,Finance,true,csv_import,2025-06-25
+338010,Kristine Garcia,CSM (Ours),technical_lead,0.7,williamanderson@example.com,weekly,positive,Finance,true,csv_import,2025-06-26
+338011,Sherry Wood,VP Engineering,champion,0.9,samueldaniels@example.com,weekly,positive,IT,true,csv_import,2025-06-26
+338011,Victoria Valdez,CTO,exec_sponsor,0.95,contrerasangela@example.net,monthly,positive,Executive,true,csv_import,2025-06-28
+338011,Shawn Baker,Infrastructure Director,decision_maker,0.8,newtoneric@example.com,biweekly,positive,Data Science,true,csv_import,2025-06-27
+338011,Michelle Harris,CSM (Ours),technical_lead,0.7,william40@example.org,weekly,positive,IT,true,csv_import,2025-06-29
+338012,Sandra Williams,VP Engineering,champion,0.9,kellie42@example.net,weekly,positive,Engineering,true,csv_import,2025-06-27
+338012,Michael Hoffman,CTO,exec_sponsor,0.95,jonesnicole@example.org,monthly,positive,Engineering,true,csv_import,2025-06-26
+338012,Sandra Aguilar,Infrastructure Director,decision_maker,0.8,russellwilliams@example.com,biweekly,positive,Executive,true,csv_import,2025-06-27
+338012,Rebecca Valencia,CSM (Ours),technical_lead,0.7,jason31@example.com,weekly,positive,Engineering,true,csv_import,2025-06-27
+338013,Stacey Russell,VP Engineering,champion,0.9,sarayoung@example.org,weekly,positive,Finance,true,csv_import,2025-06-26
+338013,Rita Keith,CTO,exec_sponsor,0.95,whitesandra@example.com,monthly,positive,IT,true,csv_import,2025-06-27
+338013,Sharon Cochran,Infrastructure Director,decision_maker,0.8,erik16@example.org,biweekly,positive,Executive,true,csv_import,2025-06-28
+338013,Courtney Velasquez,CSM (Ours),technical_lead,0.7,ybailey@example.org,weekly,positive,IT,true,csv_import,2025-06-28
+338014,Matthew Ross,VP Engineering,champion,0.9,michelle45@example.net,weekly,positive,IT,true,csv_import,2025-06-27
+338014,Meghan Anthony,CTO,exec_sponsor,0.95,sheila14@example.org,monthly,positive,Data Science,true,csv_import,2025-06-26
+338014,Victoria Johnson,Infrastructure Director,decision_maker,0.8,yreed@example.com,biweekly,positive,Finance,true,csv_import,2025-06-29
+338014,William Wilson,CSM (Ours),technical_lead,0.7,jonathanfletcher@example.org,weekly,positive,Data Science,true,csv_import,2025-06-27
+338015,Renee Mcdaniel,VP Engineering,champion,0.9,michaeljones@example.net,weekly,positive,Executive,true,csv_import,2025-06-29
+338015,Lisa Alvarado,CTO,exec_sponsor,0.95,cortezkevin@example.com,monthly,positive,Executive,true,csv_import,2025-06-29
+338015,Erika Terry,Infrastructure Director,decision_maker,0.8,jamesortega@example.com,biweekly,positive,IT,true,csv_import,2025-06-27
+338015,Stephanie Gilbert,CSM (Ours),technical_lead,0.7,richard04@example.com,weekly,positive,Finance,true,csv_import,2025-06-26

@@ -9,7 +9,7 @@
  *  4. Data Ops    — Push KPIs, push signals, recalculate scores
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FlaskConical,
   Database,
@@ -17,6 +17,7 @@ import {
   Upload,
   ChevronDown,
   Users,
+  Settings,
 } from 'lucide-react';
 
 import type { CustomerInfo } from './types';
@@ -25,12 +26,13 @@ import ScenariosTab from './tabs/ScenariosTab';
 import PlatformStateTab from './tabs/PlatformStateTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import DataOpsTab from './tabs/DataOpsTab';
+import SettingsTab, { TEST_RUNNER_FLAGS, getFlagValue, setFlagValue } from './tabs/SettingsTab';
 
 // ---------------------------------------------------------------------------
 // Tab definition
 // ---------------------------------------------------------------------------
 
-type TabId = 'scenarios' | 'platform' | 'analytics' | 'dataops';
+type TabId = 'scenarios' | 'platform' | 'analytics' | 'dataops' | 'settings';
 
 interface TabDef {
   id: TabId;
@@ -43,9 +45,11 @@ const TABS: TabDef[] = [
   { id: 'platform', label: 'Platform State', icon: <Database className="w-4 h-4" /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
   { id: 'dataops', label: 'Data Ops', icon: <Upload className="w-4 h-4" /> },
+  { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
 ];
 
-const NEW_CUSTOMER_VALUE = '__new__';
+// When customerId is '' (empty), it means "New Customer (auto)".
+// ScenariosTab sends 'auto' to the backend, which auto-generates a customer_id for Scenario 1.
 
 // ---------------------------------------------------------------------------
 // Main Component (Tabbed Shell)
@@ -61,6 +65,20 @@ const DCTestRunner: React.FC = () => {
   // Entitlements — controls feature visibility across tabs
   const [entitlements, setEntitlements] = useState<Record<string, boolean>>({});
   const [customerTier, setCustomerTier] = useState<string>('starter');
+
+  // Feature flags (persisted in localStorage)
+  const [flags, setFlags] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const f of TEST_RUNNER_FLAGS) {
+      init[f.key] = getFlagValue(f.key);
+    }
+    return init;
+  });
+
+  const handleFlagChange = useCallback((key: string, value: boolean) => {
+    setFlagValue(key, value);
+    setFlags(prev => ({ ...prev, [key]: value }));
+  }, []);
 
   // Refresh trigger for Platform State tab (incremented after scenario run / data push)
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -107,6 +125,22 @@ const DCTestRunner: React.FC = () => {
     setRefreshTrigger(prev => prev + 1);
   }, []);
 
+  // Dropdown positioning ref (to avoid overflow-hidden clipping)
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Recompute dropdown position when opened
+  useEffect(() => {
+    if (dropdownOpen && dropdownTriggerRef.current) {
+      const rect = dropdownTriggerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 4, // 4px gap
+        left: rect.right - 380, // right-aligned, 380px wide
+        width: 380,
+      });
+    }
+  }, [dropdownOpen]);
+
   // Determine the selected customer info for display
   const selectedCustomer = customers.find(c => String(c.customer_id) === customerId);
   const isNewCustomer = !customerId;
@@ -127,6 +161,7 @@ const DCTestRunner: React.FC = () => {
           <div className="relative">
             <label className="block text-xs font-medium text-gray-500 mb-0.5">Customer</label>
             <button
+              ref={dropdownTriggerRef}
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[280px] text-left"
             >
@@ -147,12 +182,15 @@ const DCTestRunner: React.FC = () => {
               <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </button>
 
-            {dropdownOpen && (
+            {dropdownOpen && dropdownPos && (
               <>
                 {/* Click-away backdrop */}
                 <div className="fixed inset-0 z-30" onClick={() => setDropdownOpen(false)} />
 
-                <div className="absolute right-0 mt-1 w-[380px] bg-white border border-gray-200 rounded-lg shadow-lg z-40 max-h-80 overflow-auto">
+                <div
+                  className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-40 max-h-80 overflow-auto"
+                  style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+                >
                   {/* New Customer option */}
                   <button
                     onClick={() => {
@@ -238,6 +276,7 @@ const DCTestRunner: React.FC = () => {
         <ScenariosTab
           customerId={effectiveCustomerId}
           entitlements={entitlements}
+          flags={flags}
           onRunComplete={handleRunComplete}
         />
       )}
@@ -261,6 +300,13 @@ const DCTestRunner: React.FC = () => {
           customerId={effectiveCustomerId}
           entitlements={entitlements}
           onDataPushed={handleDataPushed}
+        />
+      )}
+
+      {activeTab === 'settings' && (
+        <SettingsTab
+          flags={flags}
+          onFlagChange={handleFlagChange}
         />
       )}
     </div>

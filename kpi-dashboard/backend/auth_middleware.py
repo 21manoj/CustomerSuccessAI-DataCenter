@@ -184,51 +184,85 @@ def is_public_endpoint(path):
     return False
 
 
+def _is_admin_user():
+    """Check if the current authenticated user has admin role."""
+    try:
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            return getattr(current_user, 'role', None) == 'admin'
+    except (AttributeError, RuntimeError):
+        pass
+    return False
+
+
 def get_current_customer_id():
     """
-    Get customer ID (always integer) from authenticated user session or header fallback.
+    Get customer ID (always integer) from authenticated user session,
+    with admin-only X-Customer-ID header override.
 
-    SECURITY: Prefers Flask-Login session, falls back to X-Customer-ID header.
+    Priority:
+      1. If user is authenticated AND has admin role AND X-Customer-ID header is set:
+         use the header value (allows admin/service accounts to act on behalf of
+         target customers — used by load driver, API clients).
+      2. If user is authenticated (any role): use session customer_id.
+      3. If not authenticated but X-Customer-ID header present: use header
+         (fallback for unauthenticated contexts like onboarding).
+
+    SECURITY: Non-admin users CANNOT override their customer scope via the header.
+    This prevents tenant isolation breaches where user A spoofs X-Customer-ID
+    to access customer B's data.
+
     If the header contains a UUID, resolves it to the integer customer_id.
 
     Returns:
         int: customer_id (always integer for internal use)
         None: if not authenticated and no header provided
     """
-    # First try Flask-Login session (preferred — always returns integer)
+    # Resolve header value once (used in both admin-override and unauthenticated paths)
+    customer_id_header = request.headers.get('X-Customer-ID')
+    header_customer_id = None
+    if customer_id_header:
+        header_val = customer_id_header.strip()
+        if header_val:
+            # Try integer first
+            try:
+                header_customer_id = int(header_val)
+            except (ValueError, TypeError):
+                # UUID string — resolve to integer customer_id
+                try:
+                    from uuid_utils import resolve_customer
+                    customer = resolve_customer(header_val, allow_none=True)
+                    if customer:
+                        header_customer_id = customer.customer_id
+                    else:
+                        logger.warning(f"UUID in X-Customer-ID header did not resolve: {header_val}")
+                except Exception as e:
+                    logger.warning(f"Failed to resolve X-Customer-ID UUID: {e}")
+
+    # 1. Authenticated user path
     try:
         if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            # Admin users may override customer scope via header
+            if header_customer_id is not None and _is_admin_user():
+                if header_customer_id != current_user.customer_id:
+                    logger.info(
+                        f"Admin {current_user.email} overriding customer scope: "
+                        f"{current_user.customer_id} → {header_customer_id}"
+                    )
+                return header_customer_id
+
+            # Non-admin users (or no header): always use session customer_id
             return current_user.customer_id
     except (AttributeError, RuntimeError):
         # Flask-Login not initialized or not in request context
         pass
 
-    # Fallback to header for compatibility (when Flask-Login not set up)
-    customer_id_header = request.headers.get('X-Customer-ID')
-    if customer_id_header:
-        header_val = customer_id_header.strip()
-        if not header_val:
-            return None
+    # 2. Unauthenticated fallback: use header if present
+    #    (for public endpoints like onboarding, or when Flask-Login not set up)
+    if header_customer_id is not None:
+        logger.debug(f"get_current_customer_id: unauthenticated, using header = {header_customer_id}")
+        return header_customer_id
 
-        # Try integer first
-        try:
-            return int(header_val)
-        except (ValueError, TypeError):
-            pass
-
-        # UUID string — resolve to integer customer_id
-        try:
-            from uuid_utils import resolve_customer
-            customer = resolve_customer(header_val, allow_none=True)
-            if customer:
-                return customer.customer_id
-            logger.warning(f"UUID in X-Customer-ID header did not resolve: {header_val}")
-            return None
-        except Exception as e:
-            logger.warning(f"Failed to resolve X-Customer-ID UUID: {e}")
-            return None
-
-    logger.warning("get_current_customer_id() called but user not authenticated and no X-Customer-ID header")
+    logger.warning("get_current_customer_id() called but no X-Customer-ID header and user not authenticated")
     return None
 
 

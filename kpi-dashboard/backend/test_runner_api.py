@@ -74,14 +74,118 @@ SCENARIO_META = {
 }
 
 # ---------------------------------------------------------------------------
-# In-memory run tracker
+# Scenario → required feature toggles mapping
 # ---------------------------------------------------------------------------
-_runs: Dict[str, Dict[str, Any]] = {}
+SCENARIO_FEATURE_TOGGLES = {
+    '5':  ['revenue_intelligence'],
+    '8':  ['context_graph'],
+    '9':  ['revenue_intelligence'],
+}
+
+
+def _ensure_feature_toggles(customer_id: int, scenario_ids: list):
+    """Auto-enable per-customer feature toggles required by the selected scenarios."""
+    toggles_needed = set()
+    for sid in scenario_ids:
+        toggles_needed.update(SCENARIO_FEATURE_TOGGLES.get(sid, []))
+    if not toggles_needed:
+        return
+
+    try:
+        from models import db
+        from models import FeatureToggle as FTModel
+        from models import CustomerConfig
+
+        for toggle_name in toggles_needed:
+            existing = FTModel.query.filter_by(
+                customer_id=customer_id,
+                feature_name=toggle_name
+            ).first()
+            if existing:
+                if not existing.enabled:
+                    existing.enabled = True
+                    logger.info(f"Auto-enabled feature toggle '{toggle_name}' for customer {customer_id}")
+            else:
+                db.session.add(FTModel(
+                    customer_id=customer_id,
+                    feature_name=toggle_name,
+                    enabled=True,
+                    description=f'Auto-enabled by test runner for scenarios {scenario_ids}',
+                ))
+                logger.info(f"Created feature toggle '{toggle_name}' for customer {customer_id}")
+
+        # Ensure customer tier is at least 'professional' for entitlement checks
+        cc = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        if cc:
+            if cc.tier in (None, 'starter'):
+                cc.tier = 'professional'
+                logger.info(f"Upgraded customer {customer_id} tier to 'professional' for test scenarios")
+        else:
+            db.session.add(CustomerConfig(
+                customer_id=customer_id,
+                tier='professional',
+            ))
+            logger.info(f"Created CustomerConfig with tier 'professional' for customer {customer_id}")
+
+        db.session.commit()
+    except Exception as e:
+        logger.warning(f"Failed to auto-enable feature toggles: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Disk-backed run tracker (survives multi-worker / restarts)
+# ---------------------------------------------------------------------------
+# Each run is stored as a JSON file in RESULTS_BASE_DIR/<run_id>/run_state.json
+# This ensures all gunicorn workers see the same state.
 _runs_lock = threading.Lock()
+
+# In-memory cache (per-worker) — used for the background thread writing state.
+# Reads always go to disk first; the cache is only for the thread that owns the run.
+_runs_cache: Dict[str, Dict[str, Any]] = {}
 
 
 def _generate_run_id() -> str:
     return datetime.now().strftime('run_%Y%m%d_%H%M%S')
+
+
+def _run_state_path(run_id: str) -> Path:
+    return RESULTS_BASE_DIR / run_id / 'run_state.json'
+
+
+def _save_run(run_id: str, run: Dict[str, Any]) -> None:
+    """Persist run state to disk (called from background thread)."""
+    state_file = _run_state_path(run_id)
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        state_file.write_text(json.dumps(run, indent=2, default=str))
+    except Exception as e:
+        logger.warning(f"Failed to persist run state for {run_id}: {e}")
+
+
+def _load_run(run_id: str) -> Optional[Dict[str, Any]]:
+    """Load run state from disk."""
+    state_file = _run_state_path(run_id)
+    if not state_file.exists():
+        return None
+    try:
+        return json.loads(state_file.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"Failed to read run state for {run_id}: {e}")
+        return None
+
+
+def _list_all_runs() -> list:
+    """List all run state files from disk."""
+    runs = []
+    if not RESULTS_BASE_DIR.exists():
+        return runs
+    for state_file in RESULTS_BASE_DIR.glob('run_*/run_state.json'):
+        try:
+            run = json.loads(state_file.read_text())
+            runs.append(run)
+        except (json.JSONDecodeError, OSError):
+            continue
+    return runs
 
 
 def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, base_url: str, options: Dict[str, Any] = None):
@@ -97,11 +201,13 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
 
     # Update status to running
     with _runs_lock:
-        for s in _runs[run_id]['scenarios']:
+        run = _runs_cache.get(run_id, {})
+        for s in run.get('scenarios', []):
             if s['id'] == scenario_id:
                 s['status'] = 'running'
                 s['start_time'] = datetime.now().isoformat()
                 break
+        _save_run(run_id, run)
 
     try:
         cmd = [
@@ -130,6 +236,11 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
                 cmd.extend(['--showcase-pattern-mix', json.dumps(options['showcase_pattern_mix'])])
             if options.get('weights'):
                 cmd.extend(['--weights', json.dumps(options['weights'])])
+            # KPI Configuration (Scenario 1: Onboarding)
+            if options.get('enabled_pillars'):
+                cmd.extend(['--enabled-pillars', json.dumps(options['enabled_pillars'])])
+            if options.get('enabled_kpis'):
+                cmd.extend(['--enabled-kpis', json.dumps(options['enabled_kpis'])])
             # Scenario 8: Context Graph options
             if options.get('arc_id'):
                 cmd.extend(['--arc-id', str(options['arc_id'])])
@@ -166,12 +277,48 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
                 'details': {},
             }
 
+        # Collect artifact paths for this run
+        artifacts = {
+            'test_results_md': str(md_file) if md_file.exists() else None,
+            'result_json': str(json_result_file),
+            'run_dir': str(output_dir),
+        }
+
+        # For Scenario 1 (Onboarding): include CSV directory
+        if scenario_id == '1' and result_data.get('details', {}).get('customer_id'):
+            cid = result_data['details']['customer_id']
+            csv_dir = Path(__file__).parent / 'verticals' / f'customer{cid}-dc2_s' / 'data'
+            if csv_dir.exists():
+                csv_files = sorted([f.name for f in csv_dir.glob('*.csv')])
+                artifacts['csv_dir'] = str(csv_dir)
+                artifacts['csv_files'] = csv_files
+                # Context graph CSVs (subdirectory)
+                cg_dir = csv_dir / 'context_graph'
+                if cg_dir.exists():
+                    cg_files = sorted([f.name for f in cg_dir.glob('*.csv')])
+                    if cg_files:
+                        artifacts['context_graph_dir'] = str(cg_dir)
+                        artifacts['context_graph_files'] = cg_files
+
+        # For Scenario 8 (Context Graph): include context graph CSV directory
+        if scenario_id == '8' and result_data.get('details', {}).get('customer_id'):
+            cid = result_data['details'].get('customer_id', customer_id)
+            cg_dir = Path(__file__).parent / 'verticals' / f'customer{cid}-dc2_s' / 'data' / 'context_graph'
+            if cg_dir.exists():
+                cg_files = sorted([f.name for f in cg_dir.glob('*.csv')])
+                if cg_files:
+                    artifacts['context_graph_dir'] = str(cg_dir)
+                    artifacts['context_graph_files'] = cg_files
+
+        result_data['artifacts'] = artifacts
+
         # Save JSON result
         json_result_file.write_text(json.dumps(result_data, indent=2, default=str))
 
         # Update run state
         with _runs_lock:
-            for s in _runs[run_id]['scenarios']:
+            run = _runs_cache.get(run_id, {})
+            for s in run.get('scenarios', []):
                 if s['id'] == scenario_id:
                     s['status'] = 'pass' if result_data.get('status') == 'success' else 'fail'
                     s['end_time'] = datetime.now().isoformat()
@@ -183,27 +330,32 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
                     if stderr:
                         s['stderr'] = stderr[-1500:]  # last 1500 chars
                     break
+            _save_run(run_id, run)
 
         logger.info(f"[{run_id}] Scenario {scenario_id} finished: {result_data.get('status')}")
 
     except subprocess.TimeoutExpired:
         with _runs_lock:
-            for s in _runs[run_id]['scenarios']:
+            run = _runs_cache.get(run_id, {})
+            for s in run.get('scenarios', []):
                 if s['id'] == scenario_id:
                     s['status'] = 'fail'
                     s['end_time'] = datetime.now().isoformat()
                     s['result'] = {'status': 'failure', 'message': 'Timeout (10 minutes)', 'duration_seconds': 600}
                     break
+            _save_run(run_id, run)
         logger.error(f"[{run_id}] Scenario {scenario_id} timed out")
 
     except Exception as e:
         with _runs_lock:
-            for s in _runs[run_id]['scenarios']:
+            run = _runs_cache.get(run_id, {})
+            for s in run.get('scenarios', []):
                 if s['id'] == scenario_id:
                     s['status'] = 'fail'
                     s['end_time'] = datetime.now().isoformat()
                     s['result'] = {'status': 'failure', 'message': str(e), 'duration_seconds': 0}
                     break
+            _save_run(run_id, run)
         logger.error(f"[{run_id}] Scenario {scenario_id} error: {e}")
 
 
@@ -214,12 +366,12 @@ def _run_all_scenarios(run_id: str, scenario_ids: list, customer_id: int, base_u
 
     # Mark run as completed
     with _runs_lock:
-        run = _runs[run_id]
+        run = _runs_cache.get(run_id, {})
         run['status'] = 'completed'
         run['end_time'] = datetime.now().isoformat()
 
         # Calculate summary
-        scenarios = run['scenarios']
+        scenarios = run.get('scenarios', [])
         passed = sum(1 for s in scenarios if s['status'] == 'pass')
         failed = sum(1 for s in scenarios if s['status'] == 'fail')
         total_duration = sum(
@@ -232,6 +384,7 @@ def _run_all_scenarios(run_id: str, scenario_ids: list, customer_id: int, base_u
             'failed': failed,
             'duration_seconds': round(total_duration, 2),
         }
+        _save_run(run_id, run)
 
     logger.info(f"[{run_id}] All scenarios complete: {passed}/{len(scenarios)} passed")
 
@@ -283,6 +436,7 @@ def start_run():
     Start a test run with selected scenarios.
 
     Body: { scenario_ids: ["1", "4"], customer_id: 500 }
+           For Scenario 1 (Onboarding) with new customer: customer_id can be "auto" or 0.
     """
     data = request.get_json() or {}
     scenario_ids = data.get('scenario_ids', [])
@@ -290,13 +444,24 @@ def start_run():
 
     if not scenario_ids:
         return jsonify({'error': 'No scenarios selected'}), 400
-    if not customer_id:
-        return jsonify({'error': 'customer_id is required'}), 400
 
     # Validate scenario IDs
     invalid = [s for s in scenario_ids if s not in SCENARIO_META]
     if invalid:
         return jsonify({'error': f'Unknown scenarios: {invalid}'}), 400
+
+    # New Customer (auto) mode: for Scenario 1, customer_id is optional.
+    # The onboarding API auto-generates a new customer_id.
+    is_new_customer = not customer_id or str(customer_id) in ('0', 'auto', '')
+    if is_new_customer:
+        if scenario_ids == ['1']:
+            # Scenario 1 = Onboarding: auto-generate customer_id.
+            # Use a high random ID as the CLI still requires --customer-id for auth context.
+            import random
+            customer_id = random.randint(800000, 999999)
+            logger.info(f"New Customer (auto) mode: generated temp customer_id={customer_id} for onboarding")
+        else:
+            return jsonify({'error': 'customer_id is required (use "auto" only for Scenario 1 onboarding)'}), 400
 
     # Check load-driver exists
     if not RUN_SCENARIO_SCRIPT.exists():
@@ -309,14 +474,22 @@ def start_run():
     options = data.get('options', {})
 
     # Entitlement check: filter advanced options based on customer tier
+    # (skip for new/auto customers — no entitlements yet)
     stripped_options = []
-    try:
-        from entitlements import filter_test_runner_options
-        options, stripped_options = filter_test_runner_options(int(customer_id), options)
-        if stripped_options:
-            logger.info(f"Entitlement gate: stripped advanced options {stripped_options} for customer {customer_id}")
-    except ImportError:
-        pass  # entitlements module not available — allow all options
+    if not is_new_customer:
+        try:
+            from entitlements import filter_test_runner_options
+            options, stripped_options = filter_test_runner_options(int(customer_id), options)
+            if stripped_options:
+                logger.info(f"Entitlement gate: stripped advanced options {stripped_options} for customer {customer_id}")
+        except ImportError:
+            pass  # entitlements module not available — allow all options
+
+    # Auto-enable required feature toggles for test runner scenarios.
+    # Scenarios 5/8/9 need revenue_intelligence and context_graph enabled.
+    # (skip for new/auto customers — toggles will be set after onboarding)
+    if not is_new_customer:
+        _ensure_feature_toggles(int(customer_id), scenario_ids)
 
     run_id = _generate_run_id()
 
@@ -343,7 +516,8 @@ def start_run():
     }
 
     with _runs_lock:
-        _runs[run_id] = run_entry
+        _runs_cache[run_id] = run_entry
+        _save_run(run_id, run_entry)
 
     # Spawn background thread
     t = threading.Thread(
@@ -364,8 +538,13 @@ def start_run():
 @test_runner_api.route('/api/test-runner/status/<run_id>', methods=['GET'])
 def get_run_status(run_id):
     """Poll run status — returns current state of all scenarios."""
+    # Try in-memory cache first (same worker that created the run)
     with _runs_lock:
-        run = _runs.get(run_id)
+        run = _runs_cache.get(run_id)
+
+    # Fall back to disk (different worker or after restart)
+    if not run:
+        run = _load_run(run_id)
 
     if not run:
         return jsonify({'error': f'Run {run_id} not found'}), 404
@@ -376,23 +555,20 @@ def get_run_status(run_id):
 @test_runner_api.route('/api/test-runner/runs', methods=['GET'])
 def list_runs():
     """List all runs (most recent first)."""
-    with _runs_lock:
-        runs_list = sorted(
-            _runs.values(),
-            key=lambda r: r['start_time'],
-            reverse=True
-        )
+    # Load from disk (works across workers)
+    all_runs = _list_all_runs()
+    runs_list = sorted(all_runs, key=lambda r: r.get('start_time', ''), reverse=True)
 
     # Return summary view (without full result details to keep response small)
     summaries = []
     for run in runs_list:
         summaries.append({
-            'run_id': run['run_id'],
-            'status': run['status'],
-            'customer_id': run['customer_id'],
-            'start_time': run['start_time'],
-            'end_time': run['end_time'],
-            'scenario_count': len(run['scenarios']),
+            'run_id': run.get('run_id', ''),
+            'status': run.get('status', 'unknown'),
+            'customer_id': run.get('customer_id', ''),
+            'start_time': run.get('start_time', ''),
+            'end_time': run.get('end_time'),
+            'scenario_count': len(run.get('scenarios', [])),
             'summary': run.get('summary'),
         })
 
@@ -402,11 +578,24 @@ def list_runs():
 @test_runner_api.route('/api/test-runner/runs/<run_id>', methods=['DELETE'])
 def delete_run(run_id):
     """Remove a run from history."""
-    with _runs_lock:
-        if run_id in _runs:
-            del _runs[run_id]
-            return jsonify({'deleted': run_id})
+    deleted = False
 
+    with _runs_lock:
+        if run_id in _runs_cache:
+            del _runs_cache[run_id]
+            deleted = True
+
+    # Also remove from disk
+    state_file = _run_state_path(run_id)
+    if state_file.exists():
+        try:
+            state_file.unlink()
+            deleted = True
+        except OSError:
+            pass
+
+    if deleted:
+        return jsonify({'deleted': run_id})
     return jsonify({'error': f'Run {run_id} not found'}), 404
 
 

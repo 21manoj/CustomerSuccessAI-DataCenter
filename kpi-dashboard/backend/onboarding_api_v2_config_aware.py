@@ -1272,6 +1272,7 @@ def complete_onboarding():
 
         if not reused_customer:
             customer = Customer(customer_name=customer_name)
+            customer.vertical = vertical  # Set vertical on Customer (dc2_s, saas, msp)
             if domain:
                 customer.domain = domain
             if email:

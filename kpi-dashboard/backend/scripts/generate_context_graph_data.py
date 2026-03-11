@@ -114,8 +114,8 @@ def build_health_arc_map(
     """Build per-account arc assignment based on health scores.
 
     Args:
-        customer_id: Customer ID (accounts are customer_id*1000+1 through +num_accounts)
-        num_accounts: Number of accounts
+        customer_id: Customer ID
+        num_accounts: Number of accounts (used only as fallback hint for DB query)
         health_scores: Optional dict of {account_id: health_score}. If not provided,
                        queries from DB using Flask app context.
         seed: Random seed for reproducible arc selection within each pool.
@@ -124,16 +124,19 @@ def build_health_arc_map(
         Dict mapping account_id -> arc_id
     """
     rng = random.Random(seed)
-    account_base = customer_id * 1000 + 1
     assignments = {}
 
     # If health_scores not provided, try to query from DB
     if health_scores is None:
         health_scores = _query_health_scores(customer_id, num_accounts)
 
-    for i in range(num_accounts):
-        account_id = account_base + i
-        health = health_scores.get(account_id, 65.0)  # default to at-risk
+    if not health_scores:
+        logger.warning(f"No health scores available for customer {customer_id}")
+        return assignments
+
+    # Iterate over real account IDs from health_scores (not fabricated formula)
+    for account_id in sorted(health_scores.keys()):
+        health = health_scores[account_id]
         classification = classify_health(health)
         pool = HEALTH_ARC_POOLS[classification]
         arc_id = rng.choice(pool)
@@ -143,6 +146,26 @@ def build_health_arc_map(
         )
 
     return assignments
+
+
+def _query_account_ids(customer_id: int) -> list:
+    """Query real account IDs from database.
+
+    Returns sorted list of account IDs, or empty list if DB unavailable.
+    """
+    try:
+        from models import Account
+        accounts = Account.query.filter_by(
+            customer_id=customer_id,
+            vertical='dc2_s',
+        ).all()
+        ids = sorted([a.account_id for a in accounts])
+        if ids:
+            logger.info(f"Found {len(ids)} accounts in DB for customer {customer_id}")
+        return ids
+    except Exception as e:
+        logger.debug(f"Could not query account IDs for customer {customer_id}: {e}")
+        return []
 
 
 def _query_health_scores(customer_id: int, num_accounts: int = 10) -> Dict[int, float]:
@@ -207,7 +230,6 @@ class ContextGraphGenerator:
         self.customer_id = customer_id
         self.arc_id = arc_id
         self.num_accounts = num_accounts
-        self.account_base = customer_id * 1000 + 1
 
         if seed is not None:
             random.seed(seed)
@@ -238,7 +260,7 @@ class ContextGraphGenerator:
             self.account_ids = sorted(account_arc_map.keys())
             self.num_accounts = len(self.account_ids)
         else:
-            # Single-arc mode (backward compatible)
+            # Single-arc mode — try DB for real account IDs first
             self.arc = load_arc(arc_id)
             if not self.arc:
                 raise ValueError(f"Story arc '{arc_id}' not found")
@@ -246,7 +268,20 @@ class ContextGraphGenerator:
             if errors:
                 logger.warning(f"Arc {arc_id} has validation issues: {errors}")
             self._arc_cache = {arc_id: self.arc}
-            self.account_ids = [self.account_base + i for i in range(num_accounts)]
+
+            real_ids = _query_account_ids(customer_id)
+            if real_ids:
+                self.account_ids = real_ids[:num_accounts] if num_accounts < len(real_ids) else real_ids
+                self.num_accounts = len(self.account_ids)
+                logger.info(f"Using {self.num_accounts} real account IDs from DB")
+            else:
+                # Fallback to formula when DB is not available (e.g., no Flask context)
+                account_base = customer_id * 1000 + 1
+                self.account_ids = [account_base + i for i in range(num_accounts)]
+                logger.warning(
+                    f"No accounts in DB for customer {customer_id}, "
+                    f"falling back to formula-based IDs"
+                )
 
         # ── Pre-compute timing per arc ────────────────────────────────
         now = datetime.utcnow()

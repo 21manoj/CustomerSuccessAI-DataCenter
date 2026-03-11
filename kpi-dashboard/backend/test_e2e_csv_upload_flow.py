@@ -501,11 +501,12 @@ def create_test_csvs(customer_id: int, data_dir: Path):
         log(f"   Config has {len(enabled_kpis)} enabled KPIs")
         log(f"   Loader should filter {len(all_kpis) - len(enabled_kpis)} KPIs")
         
-        # Generate accounts
+        # Generate accounts — use canonical formula: customer_id * 1000 + 1..N
+        account_base = customer_id * 1000 + 1
         accounts = []
         for i in range(3):
             accounts.append({
-                'account_id': 10000 + i + (customer_id * 1000),
+                'account_id': account_base + i,
                 'customer_id': customer_id,
                 'account_name': f'Account-{i+1}',
                 'industry': 'Technology',

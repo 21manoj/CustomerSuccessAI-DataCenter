@@ -17,10 +17,11 @@ import random
 
 def generate_accounts(customer_id, num_accounts=10):
     """Generate accounts DataFrame"""
+    account_base = customer_id * 1000 + 1
     accounts = []
-    
+
     for i in range(num_accounts):
-        account_id = 10000 + i
+        account_id = account_base + i
         accounts.append({
             'account_id': account_id,
             'customer_id': customer_id,
@@ -30,7 +31,7 @@ def generate_accounts(customer_id, num_accounts=10):
             'region': random.choice(['us-west-2', 'us-east-1', 'eu-west-1']),
             'account_status': 'active'
         })
-    
+
     return pd.DataFrame(accounts)
 
 def generate_kpi_measurements(accounts, customer_id=None, num_months=12):

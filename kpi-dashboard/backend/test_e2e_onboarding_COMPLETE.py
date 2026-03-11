@@ -101,11 +101,12 @@ def generate_config_aware_csvs(customer_id: int):
         log(f"   Enabled KPIs: {len(enabled_kpis)}")
         log(f"   Sample: {enabled_kpis[:5]}")
         
-        # Generate accounts
+        # Generate accounts — use canonical formula: customer_id * 1000 + 1..N
+        account_base = customer_id * 1000 + 1
         accounts = []
         for i in range(3):
             accounts.append({
-                'account_id': 10000 + i + (customer_id * 1000),
+                'account_id': account_base + i,
                 'customer_id': customer_id,
                 'account_name': f'{TEST_COMPANY}-Acc{i+1}',
                 'industry': 'Technology',

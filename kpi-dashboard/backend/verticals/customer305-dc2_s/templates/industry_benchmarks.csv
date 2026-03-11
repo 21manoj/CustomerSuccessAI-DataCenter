@@ -1,0 +1,3 @@
+kpi_code,benchmark_source,industry_p50,industry_p25,industry_p75,account_percentile,sample_size,benchmark_date
+P3-KPI1,Industry Report 2025,78.0,65.0,88.0,82,150,2025-06-01
+P1-KPI1,Industry Report 2025,14,21,7,65,120,2025-06-01

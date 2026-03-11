@@ -15,8 +15,15 @@ import json
 from pathlib import Path
 
 def get_customer_from_account(account_id):
-    """Extract customer ID from account ID"""
-    return int(account_id) // 1000
+    """Look up customer ID for an account from the database."""
+    account_id_int = int(account_id)
+    try:
+        account = Account.query.filter_by(account_id=account_id_int).first()
+        if account:
+            return account.customer_id
+    except Exception:
+        pass
+    return account_id_int // 1000
 
 def find_journey_file(customer_id, account_id):
     """Find journey JSON file for account"""

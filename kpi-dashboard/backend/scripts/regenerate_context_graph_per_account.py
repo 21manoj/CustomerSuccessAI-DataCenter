@@ -81,10 +81,26 @@ def regenerate_for_customer(
         print(f"  WARNING: DB query failed ({e}), using default (at-risk)")
         health_scores = {}
 
-    account_base = customer_id * 1000 + 1
     if not health_scores:
-        print("  No health scores from DB. Using defaults (65.0 = at-risk)")
-        health_scores = {account_base + i: 65.0 for i in range(num_accounts)}
+        # No health scores — try to at least get real account IDs from DB
+        print("  No health scores from DB. Querying real account IDs...")
+        try:
+            from app_v3_minimal import app
+            with app.app_context():
+                from models import Account
+                accounts = Account.query.filter_by(
+                    customer_id=customer_id, vertical='dc2_s'
+                ).all()
+                if accounts:
+                    health_scores = {a.account_id: 65.0 for a in accounts}
+                    print(f"  Found {len(accounts)} real accounts, defaulting health to 65.0 (at-risk)")
+        except Exception as e2:
+            print(f"  WARNING: Account query also failed ({e2})")
+
+        if not health_scores:
+            print(f"  ERROR: No accounts found in DB for customer {customer_id}.")
+            print(f"  Run onboarding first (Scenario 1), then retry.")
+            return {'error': f'No accounts found for customer {customer_id}'}
 
     # Print health summary
     print(f"\n  {'Account':<8} {'Name':<25} {'Health':>7} {'Class':>10}")

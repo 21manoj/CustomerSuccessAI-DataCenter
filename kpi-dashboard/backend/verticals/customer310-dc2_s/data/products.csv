@@ -1,0 +1,3 @@
+customer_id,product_id,product_name,category,license_type
+310,3100001,DC2_S Platform,Infrastructure,Enterprise
+310,3100002,Monitoring Suite,Operations,Professional

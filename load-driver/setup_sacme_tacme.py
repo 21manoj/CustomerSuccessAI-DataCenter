@@ -583,6 +583,16 @@ def setup_customer(client: CSPulseClient, config: dict) -> dict:
     else:
         logger.info(f"    OK: Logged in")
 
+    # Fetch real account IDs (created by onboarding in Step 1)
+    real_account_ids = None
+    try:
+        accounts_list = cust_client.get_accounts()
+        if accounts_list:
+            real_account_ids = [acc.get('account_id') for acc in accounts_list]
+            logger.info(f"    Fetched {len(real_account_ids)} real account IDs from API")
+    except Exception as e:
+        logger.warning(f"    Could not fetch account IDs: {e}")
+
     # ── Step 3: Upload custom CSVs with controlled ARR ──
     logger.info(f"  Step 3: Generating & uploading CSVs with ${total_arr:,.0f} ARR...")
 
@@ -624,12 +634,22 @@ def setup_customer(client: CSPulseClient, config: dict) -> dict:
     try:
         from scripts.generate_context_graph_data import ContextGraphGenerator
 
-        gen = ContextGraphGenerator(
-            customer_id=customer_id,
-            arc_id=arc_id,
-            num_accounts=num_accounts,
-            seed=hash(name) % 10000,
-        )
+        cg_seed = hash(name) % 10000
+        if real_account_ids:
+            account_arc_map = {aid: arc_id for aid in real_account_ids}
+            gen = ContextGraphGenerator(
+                customer_id=customer_id,
+                arc_id=arc_id,
+                account_arc_map=account_arc_map,
+                seed=cg_seed,
+            )
+        else:
+            gen = ContextGraphGenerator(
+                customer_id=customer_id,
+                arc_id=arc_id,
+                num_accounts=num_accounts,
+                seed=cg_seed,
+            )
 
         cg_csvs = {
             'stakeholders': gen.generate_stakeholders_csv(),

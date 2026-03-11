@@ -1,0 +1,2 @@
+account_id,customer_id,account_name,account_nickname,industry,account_tier,initial_arr,final_arr,contract_start_date,contract_end_date,partner_id,csm_assigned,executive_sponsor,journey_type,outcome
+10001,1,Acme Corporation - Datacenter East,Acme DC East,Technology,Enterprise,2000000,2500000,2024-01-01,2025-12-31,PARTNER-001,John Smith,Jane Executive,expansion,success

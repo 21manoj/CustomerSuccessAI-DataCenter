@@ -463,14 +463,19 @@ class ScoreCalculator:
             end_date = date(measurement_month.year + 1, 1, 1)
         else:
             end_date = date(measurement_month.year, measurement_month.month + 1, 1)
-        
+
+        # Convert date→datetime for reliable comparison with DateTime columns
+        from datetime import datetime as _dt
+        start_dt = _dt(start_date.year, start_date.month, start_date.day)
+        end_dt = _dt(end_date.year, end_date.month, end_date.day)
+
         kpis = db.session.query(
             DC2SKPI.kpi_code,
             func.avg(DC2SKPI.value).label('avg_value')
         ).filter(
             DC2SKPI.account_id == account_id,
-            DC2SKPI.measured_at >= start_date,
-            DC2SKPI.measured_at < end_date
+            DC2SKPI.measured_at >= start_dt,
+            DC2SKPI.measured_at < end_dt
         ).group_by(
             DC2SKPI.kpi_code
         ).all()

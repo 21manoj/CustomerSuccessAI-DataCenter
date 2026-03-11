@@ -106,6 +106,26 @@ class ScenarioOnboarding(BaseScenario):
                 except (ValueError, TypeError) as e:
                     logger.warning(f"    Could not parse weights: {e}")
 
+            # Allow --enabled-pillars (restrict which pillars are active)
+            if self.args and getattr(self.args, 'enabled_pillars', None):
+                import json as _json
+                try:
+                    pillars = _json.loads(self.args.enabled_pillars) if isinstance(self.args.enabled_pillars, str) else self.args.enabled_pillars
+                    onboarding_payload['enabled_pillars'] = pillars
+                    logger.info(f"    Enabled pillars: {pillars}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"    Could not parse enabled_pillars: {e}")
+
+            # Allow --enabled-kpis (restrict which KPIs are active)
+            if self.args and getattr(self.args, 'enabled_kpis', None):
+                import json as _json
+                try:
+                    kpis = _json.loads(self.args.enabled_kpis) if isinstance(self.args.enabled_kpis, str) else self.args.enabled_kpis
+                    onboarding_payload['enabled_kpis'] = kpis
+                    logger.info(f"    Enabled KPIs ({len(kpis)}): {kpis[:5]}{'...' if len(kpis) > 5 else ''}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"    Could not parse enabled_kpis: {e}")
+
             complete_response = self.client.post(
                 '/api/onboarding/complete',
                 onboarding_payload,
@@ -188,7 +208,7 @@ class ScenarioOnboarding(BaseScenario):
                 admin_name=admin_name,
                 email=email,
                 password=password,
-                vertical="dc"
+                vertical="dc2_s"
             )
             api_calls += 1
 
