@@ -1,15 +1,23 @@
 /**
  * RunMonitor — Active run progress display with expandable per-scenario results
  *
- * Extracted from DCTestRunner.tsx lines 772-953.
+ * Features:
+ * - Progress bar for overall run
+ * - Per-scenario status rows (expandable)
+ * - Auto-expand failed scenarios
+ * - Live stdout/stderr log panel for running/completed scenarios
+ * - Error banner for failed scenarios even when collapsed
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CheckCircle2,
   XCircle,
   ChevronDown,
   ChevronRight,
+  Terminal,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
 import type { RunStatus } from '../types';
@@ -22,12 +30,37 @@ interface RunMonitorProps {
 
 const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const logEndRef = useRef<HTMLPreElement>(null);
 
   const isRunning = activeRun.status === 'running';
   const completedCount =
     activeRun.scenarios.filter(s => s.status === 'pass' || s.status === 'fail').length;
   const totalCount = activeRun.scenarios.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Auto-expand failed scenarios and the currently running one
+  useEffect(() => {
+    const newExpanded = new Set(expanded);
+    let changed = false;
+    for (const s of activeRun.scenarios) {
+      if (s.status === 'fail' && !newExpanded.has(s.id)) {
+        newExpanded.add(s.id);
+        changed = true;
+      }
+      if (s.status === 'running' && !newExpanded.has(s.id)) {
+        newExpanded.add(s.id);
+        changed = true;
+      }
+    }
+    if (changed) setExpanded(newExpanded);
+  }, [activeRun.scenarios.map(s => `${s.id}:${s.status}`).join(',')]);
+
+  // Auto-scroll log to bottom when new output arrives
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollTop = logEndRef.current.scrollHeight;
+    }
+  }, [activeRun.scenarios.map(s => s.stdout?.length || 0).join(',')]);
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -97,22 +130,34 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
           <div key={s.id}>
             {/* Row header */}
             <div
-              className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => s.result && toggleExpanded(s.id)}
+              className={`px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                s.status === 'fail' ? 'bg-red-50/40' : ''
+              }`}
+              onClick={() => toggleExpanded(s.id)}
             >
-              {s.result ? (
-                expanded.has(s.id)
-                  ? <ChevronDown className="w-4 h-4 text-gray-400" />
-                  : <ChevronRight className="w-4 h-4 text-gray-400" />
-              ) : (
-                <div className="w-4 h-4" />
-              )}
+              {expanded.has(s.id)
+                ? <ChevronDown className="w-4 h-4 text-gray-400" />
+                : <ChevronRight className="w-4 h-4 text-gray-400" />
+              }
 
               <StatusBadge status={s.status} />
 
               <span className="font-medium text-sm text-gray-800">
                 {s.id}. {s.name}
               </span>
+
+              {/* Running indicator */}
+              {s.status === 'running' && (
+                <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+              )}
+
+              {/* Quick error preview (even when collapsed) */}
+              {s.status === 'fail' && s.result && !expanded.has(s.id) && (
+                <span className="ml-2 text-xs text-red-600 truncate max-w-xs flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  {s.result.message?.slice(0, 80)}
+                </span>
+              )}
 
               <span className="ml-auto text-xs text-gray-500">
                 {s.result
@@ -125,18 +170,34 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
             </div>
 
             {/* Expanded detail */}
-            {expanded.has(s.id) && s.result && (
+            {expanded.has(s.id) && (
               <div className="px-6 pb-4 pl-16">
-                <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2">
-                  <p><span className="font-medium text-gray-700">Message:</span> {s.result.message}</p>
+                <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-3">
+                  {/* Running status */}
+                  {s.status === 'running' && !s.result && (
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Executing scenario...</span>
+                    </div>
+                  )}
 
-                  {s.result.api_calls != null && (
+                  {/* Result message */}
+                  {s.result && (
+                    <p>
+                      <span className="font-medium text-gray-700">Message:</span>{' '}
+                      <span className={s.result.status === 'failure' ? 'text-red-700' : 'text-gray-800'}>
+                        {s.result.message}
+                      </span>
+                    </p>
+                  )}
+
+                  {s.result?.api_calls != null && (
                     <p><span className="font-medium text-gray-700">API Calls:</span> {s.result.api_calls}</p>
                   )}
 
                   {/* Details table */}
-                  {s.result.details && Object.keys(s.result.details).length > 0 && (
-                    <div className="mt-2">
+                  {s.result?.details && Object.keys(s.result.details).length > 0 && (
+                    <div>
                       <p className="font-medium text-gray-700 mb-1">Details:</p>
                       <div className="bg-white rounded border border-gray-200 overflow-hidden">
                         <table className="w-full text-xs">
@@ -148,7 +209,7 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
                                   <td className="px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">{key}</td>
                                   <td className="px-3 py-1.5 text-gray-800 break-all">
                                     {typeof value === 'object'
-                                      ? JSON.stringify(value).slice(0, 120)
+                                      ? JSON.stringify(value).slice(0, 200)
                                       : String(value)
                                     }
                                   </td>
@@ -162,8 +223,8 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
                   )}
 
                   {/* Individual test results (for tenant isolation etc.) */}
-                  {s.result.details?.test_results && (
-                    <div className="mt-2">
+                  {s.result?.details?.test_results && (
+                    <div>
                       <p className="font-medium text-gray-700 mb-1">Individual Tests:</p>
                       <div className="bg-white rounded border border-gray-200 overflow-hidden">
                         <table className="w-full text-xs">
@@ -196,8 +257,8 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
                   )}
 
                   {/* Errors */}
-                  {s.result.errors && s.result.errors.length > 0 && (
-                    <div className="mt-2">
+                  {s.result?.errors && s.result.errors.length > 0 && (
+                    <div>
                       <p className="font-medium text-red-700 mb-1">Errors:</p>
                       <ul className="list-disc list-inside text-red-600 text-xs space-y-0.5">
                         {s.result.errors.map((err, i) => (
@@ -207,10 +268,32 @@ const RunMonitor: React.FC<RunMonitorProps> = ({ activeRun }) => {
                     </div>
                   )}
 
+                  {/* Stdout Log Panel */}
+                  {s.stdout && (
+                    <div>
+                      <p className="font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                        <Terminal className="w-3.5 h-3.5" />
+                        Output Log:
+                      </p>
+                      <pre
+                        ref={logEndRef}
+                        className="bg-gray-900 text-green-400 text-xs p-3 rounded-lg overflow-auto max-h-64 font-mono leading-relaxed"
+                      >
+                        {s.stdout}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Stderr */}
                   {s.stderr && (
-                    <div className="mt-2">
-                      <p className="font-medium text-red-700 mb-1">Stderr:</p>
-                      <pre className="bg-red-50 text-red-800 text-xs p-2 rounded overflow-x-auto">{s.stderr}</pre>
+                    <div>
+                      <p className="font-medium text-red-700 mb-1 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Stderr:
+                      </p>
+                      <pre className="bg-red-50 text-red-800 text-xs p-3 rounded-lg overflow-auto max-h-48 font-mono">
+                        {s.stderr}
+                      </pre>
                     </div>
                   )}
                 </div>

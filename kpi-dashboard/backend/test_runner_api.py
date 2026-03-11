@@ -177,8 +177,11 @@ def _run_scenario_subprocess(run_id: str, scenario_id: str, customer_id: int, ba
                     s['end_time'] = datetime.now().isoformat()
                     s['result'] = result_data
                     s['exit_code'] = exit_code
-                    if stderr and exit_code != 0:
-                        s['stderr'] = stderr[-500:]  # last 500 chars
+                    # Always capture stdout/stderr for visibility in UI
+                    if stdout:
+                        s['stdout'] = stdout[-3000:]  # last 3000 chars
+                    if stderr:
+                        s['stderr'] = stderr[-1500:]  # last 1500 chars
                     break
 
         logger.info(f"[{run_id}] Scenario {scenario_id} finished: {result_data.get('status')}")
@@ -618,3 +621,361 @@ def calculate_power_of_1():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Customer List Endpoint (for dropdown)
+# ---------------------------------------------------------------------------
+
+@test_runner_api.route('/api/test-runner/customers', methods=['GET'])
+def list_customers_for_dropdown():
+    """List existing customers for the Test Runner dropdown."""
+    try:
+        from models import db, Customer, Account
+    except ImportError as e:
+        return jsonify({'error': f'Import error: {e}'}), 500
+
+    customers = Customer.query.order_by(Customer.customer_id.desc()).all()
+    result = []
+    for c in customers:
+        acct_count = Account.query.filter_by(customer_id=c.customer_id).count()
+        result.append({
+            'customer_id': c.customer_id,
+            'customer_name': c.customer_name or f'Customer {c.customer_id}',
+            'vertical': c.vertical or 'dc2_s',
+            'account_count': acct_count,
+        })
+
+    return jsonify({'customers': result})
+
+
+# ---------------------------------------------------------------------------
+# Simulation Endpoints (continuous KPI injection)
+# ---------------------------------------------------------------------------
+
+_simulations: Dict[str, Dict[str, Any]] = {}
+_sim_lock = threading.Lock()
+
+
+def _generate_kpi_value(base_value: float, target: float, day: int, total_days: int, profile: str) -> float:
+    """Generate a KPI value with drift based on profile.
+
+    Profiles:
+      - stable:    small noise around base
+      - expansion: gradual improvement toward target
+      - churn:     gradual degradation away from target
+      - crisis:    sharp degradation
+      - mixed:     random per-account blend
+    """
+    import random
+    import math
+
+    noise = random.gauss(0, 0.02)  # 2% noise
+    progress = day / max(total_days, 1)
+
+    if profile == 'stable':
+        value = base_value * (1 + noise)
+    elif profile == 'expansion':
+        value = base_value + (target - base_value) * progress * 0.8 + base_value * noise
+    elif profile == 'churn':
+        decay = 1 - progress * 0.4  # drop up to 40%
+        value = base_value * decay + base_value * noise
+    elif profile == 'crisis':
+        decay = 1 - progress * 0.7  # drop up to 70%
+        value = base_value * max(decay, 0.3) + base_value * noise
+    else:  # mixed
+        r = random.random()
+        if r < 0.5:
+            value = base_value * (1 + noise)
+        elif r < 0.75:
+            value = base_value + (target - base_value) * progress * 0.6 + base_value * noise
+        else:
+            decay = 1 - progress * 0.3
+            value = base_value * decay + base_value * noise
+
+    return max(0, round(value, 2))
+
+
+def _simulation_thread(customer_id: int, interval_seconds: int, num_days: int, drift_profile: str, base_url: str):
+    """Background thread: inject KPI data for each simulated day."""
+    import time as _time
+    from datetime import date, timedelta
+
+    sim_key = str(customer_id)
+    logger.info(f"[SIM-{customer_id}] Starting simulation: {num_days} days, {interval_seconds}s interval, profile={drift_profile}")
+
+    try:
+        # Load account + KPI info
+        from models import db, Account, CustomerConfig
+        from flask import current_app
+
+        with current_app.app_context():
+            config = CustomerConfig.query.filter_by(customer_id=customer_id, vertical='dc2_s').first()
+            if not config:
+                with _sim_lock:
+                    _simulations[sim_key]['status'] = 'error'
+                    _simulations[sim_key]['error'] = f'No DC2_S config for customer {customer_id}'
+                return
+
+            enabled_kpis = config.dc2s_enabled_kpis or []
+            if not enabled_kpis:
+                # Fall back to all 38 KPIs
+                try:
+                    from verticals.dc2_s.kpi_definitions import get_all_kpis
+                    all_kpis = get_all_kpis()
+                    enabled_kpis = list(all_kpis.keys())
+                except Exception:
+                    enabled_kpis = [f'P{p}-KPI{k}' for p in range(1, 6) for k in range(1, 9)]
+
+            accounts = Account.query.filter_by(customer_id=customer_id, is_active=True).all()
+            if not accounts:
+                with _sim_lock:
+                    _simulations[sim_key]['status'] = 'error'
+                    _simulations[sim_key]['error'] = f'No active accounts for customer {customer_id}'
+                return
+
+            account_ids = [a.id for a in accounts]
+
+            # Load KPI definitions for targets
+            kpi_targets = {}
+            try:
+                from verticals.dc2_s.kpi_definitions import get_all_kpis
+                all_kpi_defs = get_all_kpis()
+                for code, kdef in all_kpi_defs.items():
+                    kpi_targets[code] = kdef.get('target', 80)
+            except Exception:
+                pass
+
+        # Initialize base values (random starting point 60-90% of target)
+        import random
+        random.seed(customer_id)
+        base_values: Dict[str, Dict[str, float]] = {}  # {account_id: {kpi_code: base_value}}
+        for aid in account_ids:
+            base_values[str(aid)] = {}
+            for kpi in enabled_kpis:
+                target = kpi_targets.get(kpi, 80)
+                base_values[str(aid)][kpi] = target * random.uniform(0.60, 0.95)
+
+        # Per-account drift profiles (for "mixed" mode)
+        account_profiles = {}
+        profiles_pool = ['stable', 'expansion', 'churn', 'crisis', 'stable', 'stable', 'expansion']
+        for i, aid in enumerate(account_ids):
+            if drift_profile == 'mixed':
+                account_profiles[aid] = profiles_pool[i % len(profiles_pool)]
+            else:
+                account_profiles[aid] = drift_profile
+
+        start_date = date.today() - timedelta(days=num_days)
+        sim_start_time = _time.time()
+
+        for day_num in range(1, num_days + 1):
+            # Check if stopped
+            with _sim_lock:
+                if _simulations.get(sim_key, {}).get('stop_requested'):
+                    _simulations[sim_key]['status'] = 'stopped'
+                    logger.info(f"[SIM-{customer_id}] Stopped at day {day_num}")
+                    return
+
+            current_date = start_date + timedelta(days=day_num)
+            date_str = current_date.isoformat()
+
+            # Generate KPI data for all accounts
+            kpi_rows = []
+            for aid in account_ids:
+                prof = account_profiles[aid]
+                for kpi_code in enabled_kpis:
+                    target = kpi_targets.get(kpi_code, 80)
+                    base = base_values[str(aid)].get(kpi_code, target * 0.75)
+                    value = _generate_kpi_value(base, target, day_num, num_days, prof)
+                    kpi_rows.append({
+                        'account_id': aid,
+                        'kpi_code': kpi_code,
+                        'measured_at': date_str,
+                        'value': value,
+                        'target': target,
+                    })
+                    # Update base for next day (running average)
+                    base_values[str(aid)][kpi_code] = base * 0.7 + value * 0.3
+
+            # Inject via data-ingestion API (internal call)
+            try:
+                with current_app.app_context():
+                    with current_app.test_client() as tc:
+                        resp = tc.post(
+                            '/api/data-ingestion/kpis',
+                            json={'kpis': kpi_rows},
+                            headers={'X-Customer-ID': str(customer_id), 'Content-Type': 'application/json'},
+                        )
+                        injected_ok = resp.status_code == 200
+            except Exception as e:
+                logger.warning(f"[SIM-{customer_id}] Day {day_num} injection error: {e}")
+                injected_ok = False
+
+            # Recalculate scores every 30 simulated days
+            recalc_msg = ''
+            if day_num % 30 == 0 or day_num == num_days:
+                try:
+                    with current_app.app_context():
+                        with current_app.test_client() as tc:
+                            resp = tc.post(
+                                '/api/dc2s/scores/calculate',
+                                json={'customer_id': customer_id},
+                                headers={'X-Customer-ID': str(customer_id), 'Content-Type': 'application/json'},
+                            )
+                            if resp.status_code == 200:
+                                recalc_msg = f' | scores recalculated'
+                except Exception as e:
+                    recalc_msg = f' | score recalc error: {e}'
+
+            # Update progress
+            elapsed = _time.time() - sim_start_time
+            with _sim_lock:
+                _simulations[sim_key].update({
+                    'current_day': day_num,
+                    'current_date': date_str,
+                    'kpis_injected': day_num * len(kpi_rows) // max(day_num, 1) * day_num,
+                    'last_inject_ok': injected_ok,
+                    'elapsed_seconds': round(elapsed, 1),
+                })
+
+            if day_num % 10 == 0 or day_num == 1:
+                logger.info(f"[SIM-{customer_id}] Day {day_num}/{num_days} ({date_str}) — {len(kpi_rows)} KPIs{recalc_msg}")
+
+            # Wait for next interval
+            _time.sleep(interval_seconds)
+
+        # Completed
+        with _sim_lock:
+            _simulations[sim_key]['status'] = 'completed'
+            _simulations[sim_key]['elapsed_seconds'] = round(_time.time() - sim_start_time, 1)
+
+        logger.info(f"[SIM-{customer_id}] Simulation complete: {num_days} days in {_simulations[sim_key]['elapsed_seconds']}s")
+
+    except Exception as e:
+        logger.error(f"[SIM-{customer_id}] Simulation error: {e}")
+        with _sim_lock:
+            _simulations[sim_key]['status'] = 'error'
+            _simulations[sim_key]['error'] = str(e)
+
+
+@test_runner_api.route('/api/test-runner/simulate/start', methods=['POST'])
+def start_simulation():
+    """
+    Start continuous KPI injection simulation for a customer.
+
+    Body: { customer_id, interval_seconds: 10, num_days: 90, drift_profile: "mixed" }
+    """
+    data = request.get_json() or {}
+    customer_id = data.get('customer_id')
+    if not customer_id:
+        return jsonify({'error': 'customer_id is required'}), 400
+
+    try:
+        customer_id = int(customer_id)
+    except ValueError:
+        return jsonify({'error': 'customer_id must be an integer'}), 400
+
+    interval_seconds = int(data.get('interval_seconds', 10))
+    num_days = int(data.get('num_days', 90))
+    drift_profile = data.get('drift_profile', 'mixed')
+    base_url = data.get('base_url', 'http://localhost:5059')
+
+    sim_key = str(customer_id)
+
+    # Check if already running
+    with _sim_lock:
+        existing = _simulations.get(sim_key)
+        if existing and existing.get('status') == 'running':
+            return jsonify({'error': f'Simulation already running for customer {customer_id}', 'current_day': existing.get('current_day', 0)}), 409
+
+    sim_entry = {
+        'customer_id': customer_id,
+        'status': 'running',
+        'interval_seconds': interval_seconds,
+        'num_days': num_days,
+        'drift_profile': drift_profile,
+        'current_day': 0,
+        'current_date': None,
+        'kpis_injected': 0,
+        'last_inject_ok': True,
+        'elapsed_seconds': 0,
+        'stop_requested': False,
+        'error': None,
+        'start_time': datetime.now().isoformat(),
+    }
+
+    with _sim_lock:
+        _simulations[sim_key] = sim_entry
+
+    t = threading.Thread(
+        target=_simulation_thread,
+        args=(customer_id, interval_seconds, num_days, drift_profile, base_url),
+        daemon=True,
+        name=f'sim-{customer_id}'
+    )
+    t.start()
+
+    return jsonify({
+        'status': 'started',
+        'customer_id': customer_id,
+        'interval_seconds': interval_seconds,
+        'num_days': num_days,
+        'drift_profile': drift_profile,
+    })
+
+
+@test_runner_api.route('/api/test-runner/simulate/stop', methods=['POST'])
+def stop_simulation():
+    """Stop running simulation for a customer."""
+    data = request.get_json() or {}
+    customer_id = data.get('customer_id')
+    if not customer_id:
+        return jsonify({'error': 'customer_id is required'}), 400
+
+    sim_key = str(customer_id)
+
+    with _sim_lock:
+        sim = _simulations.get(sim_key)
+        if not sim:
+            return jsonify({'error': f'No simulation found for customer {customer_id}'}), 404
+        if sim.get('status') != 'running':
+            return jsonify({'error': f'Simulation not running (status: {sim.get("status")})'}), 400
+        sim['stop_requested'] = True
+
+    return jsonify({'status': 'stop_requested', 'customer_id': int(customer_id)})
+
+
+@test_runner_api.route('/api/test-runner/simulate/status', methods=['GET'])
+def simulation_status():
+    """Get simulation progress for a customer."""
+    customer_id = request.args.get('customer_id')
+    if not customer_id:
+        return jsonify({'error': 'customer_id query param is required'}), 400
+
+    sim_key = str(customer_id)
+
+    with _sim_lock:
+        sim = _simulations.get(sim_key)
+
+    if not sim:
+        return jsonify({
+            'is_running': False,
+            'status': 'idle',
+            'customer_id': int(customer_id),
+        })
+
+    return jsonify({
+        'is_running': sim.get('status') == 'running',
+        'status': sim.get('status', 'idle'),
+        'customer_id': int(customer_id),
+        'current_day': sim.get('current_day', 0),
+        'num_days': sim.get('num_days', 0),
+        'current_date': sim.get('current_date'),
+        'interval_seconds': sim.get('interval_seconds', 10),
+        'drift_profile': sim.get('drift_profile', 'mixed'),
+        'kpis_injected': sim.get('kpis_injected', 0),
+        'last_inject_ok': sim.get('last_inject_ok', True),
+        'elapsed_seconds': sim.get('elapsed_seconds', 0),
+        'error': sim.get('error'),
+        'start_time': sim.get('start_time'),
+    })

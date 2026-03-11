@@ -1,7 +1,6 @@
 /**
- * ScenariosTab — Scenario selection, advanced options, run controls, monitor, and history
- *
- * Extracted from DCTestRunner.tsx monolith + enhanced with Scenario 8/9 option panels.
+ * ScenariosTab — Scenario selection, advanced options, run controls, monitor, history,
+ * and continuous simulation mode.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -13,6 +12,10 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   Lock,
+  Activity,
+  Square,
+  Timer,
+  TrendingUp,
 } from 'lucide-react';
 
 import type {
@@ -23,6 +26,7 @@ import type {
   StoryArc,
   PatternMix,
   PillarWeights,
+  SimulationStatus,
 } from '../types';
 import {
   PRESETS,
@@ -31,8 +35,9 @@ import {
   DEFAULT_OPTIONS,
   INDUSTRIES,
   PILLAR_LABELS,
+  DRIFT_PROFILES,
 } from '../types';
-import { testRunnerApi, platformApi } from '../api';
+import { testRunnerApi, platformApi, simulationApi, formatDuration } from '../api';
 import RunMonitor from '../components/RunMonitor';
 import RunHistory from '../components/RunHistory';
 
@@ -67,6 +72,16 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
   // History
   const [history, setHistory] = useState<RunSummary[]>([]);
 
+  // Simulation mode
+  const [showSimulation, setShowSimulation] = useState(false);
+  const [simInterval, setSimInterval] = useState(10);
+  const [simDays, setSimDays] = useState(90);
+  const [simProfile, setSimProfile] = useState('mixed');
+  const [simStatus, setSimStatus] = useState<SimulationStatus | null>(null);
+  const [simStarting, setSimStarting] = useState(false);
+  const [simError, setSimError] = useState<string | null>(null);
+  const simPollRef = useRef<NodeJS.Timeout | null>(null);
+
   const hasAdvancedEntitlement = entitlements['test_runner_advanced'] ?? false;
 
   // ------- Load scenarios + history + story arcs on mount -------
@@ -76,7 +91,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
     platformApi.getStoryArcs().then(setStoryArcs).catch(() => {});
   }, []);
 
-  // ------- Polling -------
+  // ------- Polling (scenario runs) -------
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
       clearInterval(pollRef.current);
@@ -106,6 +121,46 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
+
+  // ------- Simulation polling -------
+  const stopSimPolling = useCallback(() => {
+    if (simPollRef.current) {
+      clearInterval(simPollRef.current);
+      simPollRef.current = null;
+    }
+  }, []);
+
+  const startSimPolling = useCallback(() => {
+    stopSimPolling();
+    const poll = async () => {
+      if (!customerId) return;
+      try {
+        const st = await simulationApi.status(customerId);
+        setSimStatus(st);
+        if (st.status !== 'running') {
+          stopSimPolling();
+          onRunComplete?.(); // Refresh platform state
+        }
+      } catch {
+        // Ignore
+      }
+    };
+    poll();
+    simPollRef.current = setInterval(poll, 2000);
+  }, [customerId, stopSimPolling, onRunComplete]);
+
+  // Check simulation status on mount / customer change
+  useEffect(() => {
+    if (customerId) {
+      simulationApi.status(customerId).then(st => {
+        setSimStatus(st);
+        if (st.is_running) {
+          startSimPolling();
+        }
+      }).catch(() => {});
+    }
+    return () => stopSimPolling();
+  }, [customerId, stopSimPolling]);
 
   // ------- Actions -------
   const toggleScenario = (id: string) => {
@@ -152,10 +207,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
 
   const handleStart = async () => {
     const cid = customerId?.trim();
-    if (!cid) {
-      setError('Enter a valid customer ID');
-      return;
-    }
+    // For new customer, the backend auto-generates; for existing, must have a value
     if (selected.size === 0) {
       setError('Select at least one scenario');
       return;
@@ -177,7 +229,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
 
     try {
       const orderedIds = scenarios.map(s => s.id).filter(id => selected.has(id));
-      const { run_id } = await testRunnerApi.startRun(orderedIds, cid, showAdvanced ? options : undefined);
+      const { run_id } = await testRunnerApi.startRun(orderedIds, cid || '500', showAdvanced ? options : undefined);
       startPolling(run_id);
     } catch (e: any) {
       setError(e.message || 'Failed to start');
@@ -186,11 +238,202 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({
     }
   };
 
+  // ------- Simulation actions -------
+  const handleSimStart = async () => {
+    if (!customerId) {
+      setSimError('Select an existing customer first (simulation injects data into existing accounts)');
+      return;
+    }
+    setSimError(null);
+    setSimStarting(true);
+    try {
+      await simulationApi.start(customerId, simInterval, simDays, simProfile);
+      startSimPolling();
+    } catch (e: any) {
+      setSimError(e.message || 'Failed to start simulation');
+    } finally {
+      setSimStarting(false);
+    }
+  };
+
+  const handleSimStop = async () => {
+    if (!customerId) return;
+    try {
+      await simulationApi.stop(customerId);
+    } catch (e: any) {
+      setSimError(e.message || 'Failed to stop simulation');
+    }
+  };
+
   // ------- Derived state -------
   const isRunning = activeRun?.status === 'running';
+  const isSimRunning = simStatus?.is_running ?? false;
 
   return (
     <div className="space-y-6">
+      {/* ── Simulation Mode Panel ── */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <button
+          onClick={() => setShowSimulation(!showSimulation)}
+          className="w-full px-6 py-4 flex items-center justify-between text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-600" />
+            <span className="font-semibold">Simulation Mode</span>
+            <span className="text-xs text-gray-400 font-normal">— Continuous KPI injection at configurable intervals</span>
+            {isSimRunning && (
+              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full animate-pulse">
+                <Activity className="w-3 h-3" />
+                Day {simStatus?.current_day}/{simStatus?.num_days}
+              </span>
+            )}
+          </span>
+          {showSimulation
+            ? <ChevronDown className="w-4 h-4 text-gray-400" />
+            : <ChevronRight className="w-4 h-4 text-gray-400" />
+          }
+        </button>
+
+        {showSimulation && (
+          <div className="px-6 pb-5 border-t border-gray-100 pt-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              {/* Interval */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                  <Timer className="w-3 h-3" />
+                  Interval (seconds)
+                </label>
+                <input
+                  type="number"
+                  value={simInterval}
+                  onChange={e => setSimInterval(Math.max(1, parseInt(e.target.value, 10) || 10))}
+                  min={1}
+                  max={300}
+                  disabled={isSimRunning}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100"
+                />
+                <p className="text-xs text-gray-400 mt-0.5">1 interval = 1 simulated day</p>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Duration (days)
+                </label>
+                <input
+                  type="number"
+                  value={simDays}
+                  onChange={e => setSimDays(Math.max(1, Math.min(365, parseInt(e.target.value, 10) || 90)))}
+                  min={1}
+                  max={365}
+                  disabled={isSimRunning}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100"
+                />
+                <p className="text-xs text-gray-400 mt-0.5">Total: ~{formatDuration(simInterval * simDays)} wall-clock</p>
+              </div>
+
+              {/* Drift Profile */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  Drift Profile
+                </label>
+                <select
+                  value={simProfile}
+                  onChange={e => setSimProfile(e.target.value)}
+                  disabled={isSimRunning}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white disabled:bg-gray-100"
+                >
+                  {DRIFT_PROFILES.map(p => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {DRIFT_PROFILES.find(p => p.id === simProfile)?.description}
+                </p>
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-col justify-end">
+                {!isSimRunning ? (
+                  <button
+                    onClick={handleSimStart}
+                    disabled={simStarting || !customerId}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+                  >
+                    {simStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    {simStarting ? 'Starting...' : 'Start Simulation'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSimStop}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition-colors"
+                  >
+                    <Square className="w-4 h-4" />
+                    Stop
+                  </button>
+                )}
+                {!customerId && (
+                  <p className="text-xs text-amber-600 mt-1">Select an existing customer first</p>
+                )}
+              </div>
+            </div>
+
+            {/* Simulation Progress */}
+            {simStatus && simStatus.status !== 'idle' && (
+              <div className={`rounded-lg p-3 text-sm ${
+                isSimRunning ? 'bg-emerald-50 border border-emerald-200' :
+                simStatus.status === 'completed' ? 'bg-green-50 border border-green-200' :
+                simStatus.status === 'error' ? 'bg-red-50 border border-red-200' :
+                'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">
+                    {isSimRunning && '🔄 Running'}
+                    {simStatus.status === 'completed' && '✅ Completed'}
+                    {simStatus.status === 'stopped' && '⏹ Stopped'}
+                    {simStatus.status === 'error' && '❌ Error'}
+                  </span>
+                  <span className="text-gray-500">
+                    Day {simStatus.current_day} of {simStatus.num_days}
+                    {simStatus.current_date && ` (${simStatus.current_date})`}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div
+                    className={`rounded-full h-2 transition-all duration-500 ${
+                      isSimRunning ? 'bg-emerald-500' :
+                      simStatus.status === 'completed' ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                    style={{ width: `${simStatus.num_days > 0 ? Math.round((simStatus.current_day / simStatus.num_days) * 100) : 0}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span>Elapsed: {formatDuration(simStatus.elapsed_seconds)}</span>
+                  {simStatus.kpis_injected != null && <span>KPIs injected: {simStatus.kpis_injected?.toLocaleString()}</span>}
+                  <span>Interval: {simStatus.interval_seconds}s</span>
+                  <span>Profile: {simStatus.drift_profile}</span>
+                </div>
+
+                {simStatus.error && (
+                  <p className="mt-2 text-xs text-red-600">{simStatus.error}</p>
+                )}
+              </div>
+            )}
+
+            {simError && (
+              <div className="mt-2 flex items-center gap-1 text-sm text-red-600">
+                <AlertTriangle className="w-4 h-4" />
+                {simError}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Scenario Selector ── */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">

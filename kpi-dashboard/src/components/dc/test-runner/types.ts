@@ -32,6 +32,7 @@ export interface ScenarioRun {
     api_calls?: number;
   } | null;
   exit_code?: number;
+  stdout?: string;
   stderr?: string;
 }
 
@@ -74,11 +75,11 @@ export interface PatternMix {
 }
 
 export interface PillarWeights {
-  AI: number;
-  CH: number;
-  DV: number;
-  EX: number;
-  OS: number;
+  P1: number;
+  P2: number;
+  P3: number;
+  P4: number;
+  P5: number;
 }
 
 export interface AdvancedOptions {
@@ -168,7 +169,7 @@ export const PRESETS: RunPreset[] = [
 ];
 
 export const DEFAULT_PATTERN_MIX: PatternMix = { crisis: 0.15, churn: 0.15, stable: 0.50, expansion: 0.20 };
-export const DEFAULT_WEIGHTS: PillarWeights = { AI: 0.10, CH: 0.30, DV: 0.30, EX: 0.05, OS: 0.25 };
+export const DEFAULT_WEIGHTS: PillarWeights = { P1: 0.15, P2: 0.20, P3: 0.25, P4: 0.15, P5: 0.25 };
 
 export const DEFAULT_OPTIONS: AdvancedOptions = {
   numAccounts: 3,
@@ -187,8 +188,8 @@ export const INDUSTRIES = [
 ];
 
 export const PILLAR_LABELS: Record<keyof PillarWeights, string> = {
-  AI: 'AI Intelligence', CH: 'Customer Health', DV: 'Data Value',
-  EX: 'Experience', OS: 'Operational Scale',
+  P1: 'Deployment Velocity', P2: 'Operational Stability', P3: 'AI Workload Performance',
+  P4: 'Channel Partner Health', P5: 'Expansion Readiness',
 };
 
 export const POWER_OF_1_METRICS = [
@@ -198,4 +199,43 @@ export const POWER_OF_1_METRICS = [
   { id: 'expansion_rate', label: 'Expansion Rate' },
   { id: 'ticket_resolution_time', label: 'Ticket Resolution Time' },
   { id: 'TTFV', label: 'Time to First Value' },
+];
+
+// ---------------------------------------------------------------------------
+// Customer Info (for dropdown)
+// ---------------------------------------------------------------------------
+
+export interface CustomerInfo {
+  customer_id: number;
+  customer_name: string;
+  vertical: string;
+  account_count: number;
+}
+
+// ---------------------------------------------------------------------------
+// Simulation Types
+// ---------------------------------------------------------------------------
+
+export interface SimulationStatus {
+  is_running: boolean;
+  status: 'idle' | 'running' | 'completed' | 'stopped' | 'error';
+  customer_id: number;
+  current_day: number;
+  num_days: number;
+  current_date?: string;
+  interval_seconds?: number;
+  drift_profile?: string;
+  kpis_injected?: number;
+  last_inject_ok?: boolean;
+  elapsed_seconds: number;
+  error?: string | null;
+  start_time?: string;
+}
+
+export const DRIFT_PROFILES = [
+  { id: 'mixed', label: 'Mixed (default)', description: 'Blend of stable, expansion, churn, crisis' },
+  { id: 'stable', label: 'Stable', description: 'Small noise around baseline' },
+  { id: 'expansion', label: 'Expansion', description: 'Gradual improvement toward targets' },
+  { id: 'churn', label: 'Churn', description: 'Gradual degradation (up to 40% drop)' },
+  { id: 'crisis', label: 'Crisis', description: 'Sharp degradation (up to 70% drop)' },
 ];

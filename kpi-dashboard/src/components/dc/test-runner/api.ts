@@ -13,6 +13,8 @@ import type {
   PlatformState,
   StoryArc,
   PowerOf1Result,
+  CustomerInfo,
+  SimulationStatus,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -101,6 +103,13 @@ export const testRunnerApi = {
 
   async deleteRun(runId: string): Promise<void> {
     await fetch(`/api/test-runner/runs/${runId}`, { method: 'DELETE', credentials: 'include' });
+  },
+
+  async getCustomers(): Promise<CustomerInfo[]> {
+    const res = await fetch('/api/test-runner/customers', { credentials: 'include' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.customers || [];
   },
 };
 
@@ -249,6 +258,60 @@ export const dataOpsApi = {
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('Failed to recalculate scores');
+    return res.json();
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Simulation API (continuous KPI injection)
+// ---------------------------------------------------------------------------
+
+export const simulationApi = {
+  async start(
+    customerId: string | number,
+    intervalSeconds: number = 10,
+    numDays: number = 90,
+    driftProfile: string = 'mixed',
+  ): Promise<any> {
+    const res = await fetch('/api/test-runner/simulate/start', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: customerId,
+        interval_seconds: intervalSeconds,
+        num_days: numDays,
+        drift_profile: driftProfile,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to start simulation' }));
+      throw new Error(err.error || 'Failed to start simulation');
+    }
+    return res.json();
+  },
+
+  async stop(customerId: string | number): Promise<any> {
+    const res = await fetch('/api/test-runner/simulate/stop', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: customerId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to stop simulation' }));
+      throw new Error(err.error || 'Failed to stop simulation');
+    }
+    return res.json();
+  },
+
+  async status(customerId: string | number): Promise<SimulationStatus> {
+    const res = await fetch(`/api/test-runner/simulate/status?customer_id=${customerId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      return { is_running: false, status: 'idle', customer_id: Number(customerId), current_day: 0, num_days: 0, elapsed_seconds: 0 };
+    }
     return res.json();
   },
 };
