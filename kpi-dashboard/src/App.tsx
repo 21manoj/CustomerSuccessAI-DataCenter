@@ -12,6 +12,7 @@ import JourneyVisualizer from './components/wizard/JourneyVisualizer';
 import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboardV3';
 import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
+import AuctusAIWebsite from './components/AuctusAIWebsite';
 
 // Normalize vertical: dc2_s, dc2-s, etc. -> datacenter for routing
 const normalizeVertical = (v: string | undefined): 'datacenter' | 'saas' => {
@@ -338,6 +339,9 @@ const AppRoutes: React.FC = () => {
           }
         />
         
+        {/* Public marketing website */}
+        <Route path="/website" element={<AuctusAIWebsite />} />
+
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
