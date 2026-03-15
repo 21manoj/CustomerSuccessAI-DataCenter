@@ -115,7 +115,7 @@ const TABS: Tab[] = [
   { id: 'admin-insights',        label: 'Admin Insights',             starterLabel: 'Insights',           icon: Activity,      route: '/dc-dashboard/admin-insights' },
   { id: 'playbooks',             label: 'Playbooks',                  icon: Zap,           route: '/dc-dashboard/playbooks',                requiredFeature: 'playbook_triggers' },
   { id: 'approvals',             label: 'Approval Queue',             icon: ShieldCheck,   route: '/dc-dashboard/approvals',                requiredFeature: 'approval_queue' },
-  { id: 'test-runner',           label: 'Test Runner',                icon: FlaskConical,  route: '/test-runner',                           requiredFeature: 'test_runner_advanced' },
+  { id: 'test-runner',           label: 'Test Runner',                icon: FlaskConical,  route: '/dc-dashboard/test-runner',              requiredFeature: 'test_runner_advanced' },
   { id: 'outcome-roi',           label: 'Outcome ROI',                starterLabel: 'ROI Analysis',       icon: DollarSign,    route: '/outcome-roi',                           requiredFeature: 'power_of_1' },
   { id: 'portco',                label: 'Power of 1 (Portfolio CEO)', starterLabel: 'Portfolio Synergy',  icon: Layers,        route: '/portco-dashboard',                      requiredFeature: 'portfolio_synergy' },
   { id: 'revenue-intelligence',  label: 'Revenue Intelligence',       icon: GitBranch,     route: '/dc-dashboard/revenue-intelligence',     requiredFeature: 'revenue_intelligence' },
@@ -514,6 +514,8 @@ const DCPlatform: React.FC = () => {
           {activeTab === 'playbooks' && <DCPlaybooks />}
 
           {activeTab === 'approvals' && <DCApprovalQueue />}
+
+          {activeTab === 'test-runner' && <DCTestRunner />}
 
           {activeTab === 'revenue-intelligence' && <DCRevenueIntelligence />}
 
