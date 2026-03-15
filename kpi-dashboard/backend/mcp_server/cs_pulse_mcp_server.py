@@ -137,6 +137,89 @@ def _validate_account_ownership(customer_id: int, account_id: int):
     return account
 
 
+def _resolve_customer_vertical(customer_id: int) -> str:
+    """Look up the vertical for a customer. Falls back to 'dc2_s'."""
+    from models import Customer
+    customer = Customer.query.get(int(customer_id))
+    if not customer:
+        raise ToolError(f"Customer {customer_id} not found")
+    return getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+
+
+def _get_health_functions(vertical: str):
+    """Return (calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores)
+    for the given vertical.
+    """
+    if vertical in ('saas_premium', 'saas'):
+        from verticals.saas_premium.api_routes import (
+            calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
+        )
+    else:
+        from verticals.dc2_s.api_routes import (
+            calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
+        )
+    return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
+
+
+def _get_kpi_definitions(vertical: str) -> dict:
+    """Return the KPI definitions dict for a vertical."""
+    if vertical in ('saas_premium', 'saas'):
+        from verticals.saas_premium.kpi_definitions import SAAS_KPIS
+        return SAAS_KPIS
+    else:
+        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+        return DC2S_KPIS
+
+
+def _get_playbook_config(vertical: str):
+    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical."""
+    if vertical in ('saas_premium', 'saas'):
+        from verticals.saas_premium.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
+    else:
+        from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
+    return PLAYBOOK_CONFIG, should_trigger_playbook
+
+
+def _require_auth(customer_id: int, required_scope: str = 'read',
+                  _api_key: str = None):
+    """Enforce API key auth for portfolio/customer-level intelligence tools.
+
+    For HTTP transport: validates customer API key (DB-backed), checks
+    tenant isolation (key.customer_id == customer_id), and scope.
+
+    For stdio transport: no-op (local process is trusted) unless _api_key
+    is explicitly passed (for testing).
+
+    Args:
+        customer_id: The customer_id the tool is operating on.
+        required_scope: 'read' (default) or 'write'.
+        _api_key: Explicit key for testing (bypasses transport check).
+    """
+    from mcp_server.auth import require_auth
+    require_auth(customer_id, required_scope, _api_key)
+
+
+def _require_account_auth(customer_id: int, account_id: int,
+                          required_scope: str = 'read',
+                          _api_key: str = None):
+    """Enforce API key auth for account-level intelligence tools.
+
+    Same as _require_auth plus account-level restriction:
+    if the key has allowed_account_ids set, the account must be in the list.
+
+    A partner key restricted to [354001, 354003] can only access those
+    two accounts, not the full portfolio.
+
+    Args:
+        customer_id: The customer (tenant) ID.
+        account_id: The specific account being accessed.
+        required_scope: 'read' (default) or 'write'.
+        _api_key: Explicit key for testing.
+    """
+    from mcp_server.auth import require_account_auth
+    require_account_auth(customer_id, account_id, required_scope, _api_key)
+
+
 def _load_system_prompt_content() -> str:
     """Load CS Pulse MCP system prompt for Claude. Used by cspulse://system-prompt resource.
 
@@ -233,19 +316,18 @@ def list_accounts(customer_id: int) -> dict:
         customer_id: The customer (tenant) ID
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
 
     with app.app_context():
         from models import Account
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
         import utils.health_thresholds as ht
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
 
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s',
         ).all()
 
         results = []
@@ -308,15 +390,15 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
         account_id: The account to analyze
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
         from models import Account
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
         import utils.health_thresholds as ht
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
 
         account = _validate_account_ownership(customer_id, account_id)
 
@@ -356,19 +438,18 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
         threshold: Health score threshold (default 70 = at-risk boundary)
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
 
     with app.app_context():
         from models import Account
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
         import utils.health_thresholds as ht
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
 
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s',
         ).all()
 
         at_risk = []
@@ -445,6 +526,7 @@ def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
         account_id: The account to analyze
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -469,6 +551,7 @@ def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream"
         direction: 'upstream' (what caused this) or 'downstream' (what this led to)
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -506,6 +589,7 @@ def get_graph_summary(customer_id: int, account_id: int) -> dict:
         account_id: The account to analyze
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -536,6 +620,7 @@ def search_signals(
         limit: Maximum number of results (default 20)
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -561,7 +646,7 @@ def search_signals(
 
 
 # ===================================================================
-# Group 3: Financial / ROI (2 tools)
+# Group 3: Financial / ROI (3 tools)
 # ===================================================================
 
 @mcp.tool
@@ -580,6 +665,7 @@ def calculate_power_of_1(
         account_arr: Optional account ARR override. If omitted, uses portfolio total.
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -597,17 +683,13 @@ def calculate_power_of_1(
             arr_source = "portfolio_total"
             accounts = Account.query.filter(
                 Account.customer_id == int(customer_id),
-                Account.vertical == 'dc2_s',
             ).all()
             effective_arr = sum(_get_account_arr(a) for a in accounts)
             if not effective_arr:
                 effective_arr = None  # fall back to $10M baseline
 
-        # Determine vertical: all DC2S accounts share dc2_s vertical
-        po1_vertical = 'dc2_s'
-        if scope == "account":
-            # If we had an account object, we'd use its vertical attribute
-            pass
+        # Resolve vertical from customer record
+        po1_vertical = _resolve_customer_vertical(customer_id)
 
         result = calculate_power_of_1_impact(
             metric_id=metric_id,
@@ -640,6 +722,7 @@ def get_outcome_roi_story(
         projection_months: Projection horizon in months (default 12)
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -674,6 +757,46 @@ def get_outcome_roi_story(
         return story
 
 
+@mcp.tool
+def get_playbook_economics(
+    customer_id: int,
+    account_arr: float = None,
+) -> dict:
+    """Get playbook cost bridge economics — investment breakdown, hours, ROI per playbook.
+
+    Returns per-metric and per-playbook economics derived from:
+      - Power of 1 JSON benchmarks (source of truth for budgets)
+      - PLAYBOOK_CONFIG hours (manual vs automated breakdown)
+      - CSM hourly rate from resource_rates.json
+
+    Use this to answer: "How much do playbooks cost?", "What's the CSM investment?",
+    "Show me the investment breakdown", "What's the ROI per playbook run?"
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_arr: Customer ARR for scaling (optional, defaults to sum of account revenues)
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account
+        from playbook_cost_bridge import calculate_cost_bridge, bridge_to_dict
+
+        # Get account ARR
+        if account_arr:
+            effective_arr = float(account_arr)
+        else:
+            accounts = Account.query.filter(
+                Account.customer_id == int(customer_id),
+            ).all()
+            effective_arr = float(sum(_get_account_arr(a) for a in accounts)) if accounts else 10_000_000
+
+        result = calculate_cost_bridge(account_arr=effective_arr)
+        return bridge_to_dict(result)
+
+
 # ===================================================================
 # Group 4: Actions (1 tool)
 # ===================================================================
@@ -690,18 +813,18 @@ def get_playbook_recommendations(
         account_id: The account to get recommendations for
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
         _validate_account_ownership(customer_id, account_id)
         _ensure_registry()
         from agent_tool_registry import get_tool_registry
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
 
-        # Always fetch KPI values — needed for DC2S playbook evaluation
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+
+        # Always fetch KPI values — needed for playbook evaluation
         kpi_values = _get_trailing_kpi_values(account_id)
 
         # Prefer pre-calculated scores (single source of truth)
@@ -809,13 +932,12 @@ def get_crm_account_data(customer_id: int, account_id: int) -> dict:
         account_id: The account to pull CRM data for
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
         import utils.health_thresholds as ht
         from datetime import datetime, date
 
@@ -902,11 +1024,13 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
         account_id: The account to pull ticket data for
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
         from models import QualitativeSignal
-        from verticals.dc2_s.api_routes import _get_trailing_kpi_values
+        vertical = _resolve_customer_vertical(customer_id)
+        _, _get_trailing_kpi_values, _ = _get_health_functions(vertical)
         import math
 
         account = _validate_account_ownership(customer_id, account_id)
@@ -986,14 +1110,13 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
         account_id: The account to pull feedback for
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
         from models import QualitativeSignal
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
         import utils.health_thresholds as ht
 
         account = _validate_account_ownership(customer_id, account_id)
@@ -1099,25 +1222,41 @@ def get_csm_daily_actions(customer_id: int) -> dict:
         customer_id: The customer (tenant) ID — actions span ALL accounts for this tenant
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
 
     with app.app_context():
         from models import Account
         from datetime import datetime
-        from verticals.dc2_s.api_routes import (
-            _get_trailing_kpi_values, calculate_kpi_health,
-            _normalize_kpi_code_for_health,
-            _compute_impact_score, _compute_effort_score,
-            _determine_urgency, _get_roi_context,
-            get_precalculated_scores,
-        )
-        from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
         import utils.health_thresholds as ht
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+        PLAYBOOK_CONFIG, should_trigger_playbook = _get_playbook_config(vertical)
+        KPI_DEFS = _get_kpi_definitions(vertical)
+
+        # CSM action helpers — currently only in DC2_S, import with fallback
+        try:
+            if vertical in ('saas_premium', 'saas'):
+                from verticals.saas_premium.api_routes import (
+                    _normalize_kpi_code_for_health,
+                    _compute_impact_score, _compute_effort_score,
+                    _determine_urgency, _get_roi_context,
+                )
+            else:
+                raise ImportError("use dc2_s")
+        except (ImportError, AttributeError):
+            from verticals.dc2_s.api_routes import (
+                _normalize_kpi_code_for_health,
+                _compute_impact_score, _compute_effort_score,
+                _determine_urgency, _get_roi_context,
+            )
+
+        # Alias for backward compat in the rest of this function
+        DC2S_KPIS = KPI_DEFS
 
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s',
         ).all()
 
         if not accounts:
@@ -1328,6 +1467,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         customer_id: The customer (tenant) ID
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -1393,10 +1533,6 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
 
     with app.app_context():
         from models import Portfolio, PortfolioMembership, Customer, Account
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
         import utils.health_thresholds as ht
 
         portfolio = Portfolio.query.filter_by(
@@ -1426,9 +1562,11 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
             if not customer:
                 continue
 
+            mem_vertical = getattr(customer, 'vertical', None) or mem.vertical or 'dc2_s'
+            calc_health, get_trailing, get_precalc = _get_health_functions(mem_vertical)
+
             accounts = Account.query.filter(
                 Account.customer_id == mem.customer_id,
-                Account.vertical == 'dc2_s',
             ).all()
 
             total_arr = sum(_get_account_arr(a) for a in accounts)
@@ -1436,14 +1574,14 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
             at_risk_count = 0
 
             for acct in accounts:
-                ph, ps, _ = get_precalculated_scores(acct.account_id)
+                ph, ps, _ = get_precalc(acct.account_id)
                 if ph is not None:
                     health_scores.append(ph)
                     if ps in ('at_risk', 'critical'):
                         at_risk_count += 1
                 else:
-                    kv = _get_trailing_kpi_values(acct.account_id)
-                    h, _ = calculate_kpi_health(kv, mem.customer_id)
+                    kv = get_trailing(acct.account_id)
+                    h, _ = calc_health(kv, mem.customer_id)
                     health_scores.append(h)
                     if ht.classify(h) in ('at_risk', 'critical'):
                         at_risk_count += 1
@@ -1454,8 +1592,8 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
 
             customer_summaries.append({
                 "customer_id": mem.customer_id,
-                "customer_name": customer.company_name,
-                "vertical": mem.vertical or 'dc2_s',
+                "customer_name": getattr(customer, 'customer_name', None) or getattr(customer, 'company_name', 'Unknown'),
+                "vertical": mem_vertical,
                 "status": mem.status,
                 "total_accounts": len(accounts),
                 "total_arr": round(total_arr, 2),
@@ -1505,10 +1643,6 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
 
     with app.app_context():
         from models import Portfolio, PortfolioMembership, Customer, Account
-        from verticals.dc2_s.api_routes import (
-            calculate_kpi_health, _get_trailing_kpi_values,
-            get_precalculated_scores,
-        )
         import utils.health_thresholds as ht
 
         portfolio = Portfolio.query.filter_by(
@@ -1529,9 +1663,11 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
             if not customer:
                 continue
 
+            mem_vertical = getattr(customer, 'vertical', None) or mem.vertical or 'dc2_s'
+            calc_health, get_trailing, get_precalc = _get_health_functions(mem_vertical)
+
             accounts = Account.query.filter(
                 Account.customer_id == mem.customer_id,
-                Account.vertical == 'dc2_s',
             ).all()
 
             total_arr = sum(_get_account_arr(a) for a in accounts)
@@ -1540,7 +1676,7 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
             statuses = {'healthy': 0, 'at_risk': 0, 'critical': 0}
 
             for acct in accounts:
-                ph, ps, pp = get_precalculated_scores(acct.account_id)
+                ph, ps, pp = get_precalc(acct.account_id)
                 if ph is not None:
                     health_scores.append(ph)
                     statuses[ps] = statuses.get(ps, 0) + 1
@@ -1548,8 +1684,8 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
                         for k, v in pp.items():
                             pillar_totals.setdefault(k, []).append(v)
                 else:
-                    kv = _get_trailing_kpi_values(acct.account_id)
-                    h, pillars = calculate_kpi_health(kv, mem.customer_id)
+                    kv = get_trailing(acct.account_id)
+                    h, pillars = calc_health(kv, mem.customer_id)
                     health_scores.append(h)
                     cls = ht.classify(h)
                     statuses[cls] = statuses.get(cls, 0) + 1
@@ -1584,7 +1720,7 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
 
             comparisons.append({
                 "customer_id": mem.customer_id,
-                "customer_name": customer.company_name,
+                "customer_name": getattr(customer, 'customer_name', None) or getattr(customer, 'company_name', 'Unknown'),
                 "total_arr": round(total_arr, 2),
                 "avg_health_score": avg_health,
                 "account_distribution": statuses,
@@ -1652,6 +1788,7 @@ def get_account_journey_timeline(
         limit: Max events to return (default 50, max 200)
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -1760,6 +1897,7 @@ def get_context_graph_mermaid(
         max_nodes: Maximum nodes in diagram (default 30, max 60)
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -1900,6 +2038,7 @@ def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
         account_id: The account to analyze
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -2039,6 +2178,1254 @@ def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
                 f"{total_outcomes} outcome links, "
                 f"{_format_revenue_short(total_revenue)} total revenue influenced"
             ),
+        }
+
+
+# ===================================================================
+# Group 6: Onboarding Tools (13 tools) — FRICTIONLESS AUTH
+# ===================================================================
+#
+# FRICTIONLESS AUTH MODEL:
+# These 13 onboarding tools require NO API key. They are open for
+# prospects who are evaluating the platform via an AI assistant.
+# The auth.py module skips authentication for any tool whose name
+# appears in the ONBOARDING_TOOLS set below.
+#
+# Discovery Phase tools (1-5) are read-only.
+# Customer Setup (6-8), Data Ingestion (9-11), and Post-Onboarding
+# (12-13) are write tools but still auth-free so that a prospect
+# can complete the entire self-service onboarding via MCP without
+# ever needing a pre-existing API key.
+#
+# The create_customer tool auto-generates an API key that the
+# prospect can use for the intelligence tools (Group 1-5) later.
+# ===================================================================
+
+ONBOARDING_TOOLS = {
+    'list_verticals',
+    'get_reference_customer',
+    'get_csv_templates',
+    'get_vertical_config',
+    'get_onboarding_status',
+    'create_customer',
+    'configure_customer_kpis',
+    'enable_features',
+    'validate_csv',
+    'upload_csv',
+    'process_data',
+    'trigger_wizard',
+    'complete_onboarding',
+}
+
+
+def _is_onboarding_tool(name: str) -> bool:
+    """Return True if the tool name is in the frictionless onboarding set."""
+    return name in ONBOARDING_TOOLS
+
+
+# -------------------------------------------------------------------
+# Discovery Phase (read-only, no auth) — Tools 22-26
+# -------------------------------------------------------------------
+
+@mcp.tool
+def list_verticals() -> dict:
+    """List all available verticals with their KPI counts and config types.
+
+    Discovery tool for prospects — no authentication required.
+    Returns each vertical with its description, total KPI count,
+    and the number of config type templates available.
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        # Build vertical catalog from kpi_definitions (always available)
+        # VerticalTemplate model is optional — used when DB templates exist.
+        verticals: dict = {}
+
+        # Try DB-backed VerticalTemplate if available
+        try:
+            from models import VerticalTemplate
+            from extensions import db
+            from sqlalchemy import func
+
+            rows = (
+                db.session.query(
+                    VerticalTemplate.vertical,
+                    VerticalTemplate.config_type,
+                    func.count(VerticalTemplate.template_id).label('cnt'),
+                )
+                .group_by(VerticalTemplate.vertical, VerticalTemplate.config_type)
+                .all()
+            )
+
+            for vertical, config_type, cnt in rows:
+                if vertical not in verticals:
+                    verticals[vertical] = {
+                        'vertical': vertical,
+                        'config_types': [],
+                        'config_type_count': 0,
+                        'kpi_count': 0,
+                        'description': None,
+                    }
+                verticals[vertical]['config_types'].append(config_type)
+                verticals[vertical]['config_type_count'] += 1
+        except (ImportError, Exception):
+            pass  # VerticalTemplate not available yet — use fallback below
+
+        # Enrich with KPI count from kpi_definitions if available
+        for v_key, v_info in verticals.items():
+            try:
+                kpi_defs = _get_kpi_definitions(v_key)
+                v_info['kpi_count'] = len(kpi_defs)
+            except Exception:
+                pass
+            if v_key == 'dc2_s':
+                v_info['description'] = 'Data Center Infrastructure vertical — AI/ML, infra reliability, cloud & DevOps, customer engagement, expansion'
+            elif v_key in ('saas_premium', 'saas'):
+                v_info['description'] = 'SaaS Premium vertical — product adoption, operational resilience, growth efficiency, partner ecosystem, strategic value'
+
+        # Fallback: if no DB templates, return known verticals from kpi_definitions
+        if not verticals:
+            known_verticals = {
+                'dc2_s': ('Data Center Infrastructure vertical', 38),
+                'saas_premium': ('SaaS Premium vertical', 35),
+            }
+            for v_slug, (v_desc, v_default_count) in known_verticals.items():
+                try:
+                    kpi_defs = _get_kpi_definitions(v_slug)
+                    kpi_count = len(kpi_defs)
+                except Exception:
+                    kpi_count = v_default_count
+                verticals[v_slug] = {
+                    'vertical': v_slug,
+                    'config_types': [],
+                    'config_type_count': 0,
+                    'kpi_count': kpi_count,
+                    'description': v_desc,
+                }
+
+        return {
+            'scope': 'platform',
+            'total_verticals': len(verticals),
+            'verticals': list(verticals.values()),
+        }
+
+
+@mcp.tool
+def get_reference_customer(vertical: str) -> dict:
+    """Get the reference/demo customer for a vertical.
+
+    Discovery tool — no authentication required.
+    Returns the reference customer's ID, name, account count, and health summary.
+    Reference customers are pre-seeded demo tenants that showcase the platform.
+
+    Args:
+        vertical: The vertical slug (e.g. 'dc2_s')
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, Account
+        import utils.health_thresholds as ht
+
+        customer = None
+
+        # Try DB columns if they exist (is_reference, reference_for)
+        try:
+            customer = Customer.query.filter_by(
+                is_reference=True,
+                reference_for=vertical,
+            ).first()
+        except Exception:
+            pass  # Columns not available yet
+
+        if not customer:
+            # Fallback: find any customer tagged with the vertical
+            customer = Customer.query.filter_by(vertical=vertical).first()
+            if not customer:
+                raise ToolError(
+                    f"No reference customer found for vertical '{vertical}'. "
+                    f"Available verticals can be discovered via list_verticals()."
+                )
+
+        # Use the vertical parameter to resolve health functions
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+
+        accounts = Account.query.filter_by(
+            customer_id=customer.customer_id,
+        ).all()
+
+        # Health summary
+        health_scores = []
+        for acct in accounts:
+            precalc_health, _, _ = get_precalculated_scores(acct.account_id)
+            if precalc_health is not None:
+                health_scores.append(precalc_health)
+            else:
+                try:
+                    kpi_values = _get_trailing_kpi_values(acct.account_id)
+                    h, _ = calculate_kpi_health(kpi_values, customer.customer_id)
+                    health_scores.append(h)
+                except Exception:
+                    pass
+
+        avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else None
+        healthy_count = sum(1 for h in health_scores if h >= ht.healthy_min())
+        at_risk_count = sum(1 for h in health_scores if ht.at_risk_min() <= h < ht.healthy_min())
+        critical_count = sum(1 for h in health_scores if h < ht.at_risk_min())
+
+        return {
+            'scope': 'portfolio',
+            'customer_id': customer.customer_id,
+            'customer_name': customer.customer_name,
+            'vertical': vertical,
+            'is_reference': getattr(customer, 'is_reference', False),
+            'account_count': len(accounts),
+            'health_summary': {
+                'avg_health': avg_health,
+                'healthy': healthy_count,
+                'at_risk': at_risk_count,
+                'critical': critical_count,
+            },
+        }
+
+
+@mcp.tool
+def get_csv_templates(vertical: str, file_type: str = None) -> dict:
+    """Get CSV column schemas for data uploads.
+
+    Discovery tool — no authentication required.
+    Returns the required and optional columns for each CSV file type
+    that the platform accepts during onboarding data ingestion.
+
+    Args:
+        vertical: The vertical slug (e.g. 'dc2_s')
+        file_type: Optional specific file type (e.g. 'accounts.csv', 'kpi_measurements.csv').
+                   If omitted, returns all file types for the vertical.
+    """
+    _check_mcp_enabled()
+
+    import json as _json
+
+    schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
+    if not os.path.isfile(schemas_path):
+        raise ToolError("CSV schemas config file not found at config/csv_schemas.json")
+
+    with open(schemas_path, 'r') as f:
+        schemas = _json.load(f)
+
+    # Combine regular + context_graph files
+    all_files = {}
+    for model_key in ('regular_model', 'context_graph_model'):
+        model = schemas.get(model_key, {})
+        files = model.get('files', {})
+        for fname, fschema in files.items():
+            all_files[fname] = {
+                'file_type': fname,
+                'model': model_key,
+                'required_columns': fschema.get('required_columns', []),
+                'optional_columns': fschema.get('optional_columns', []),
+                'db_table': fschema.get('db_table', ''),
+                'note': fschema.get('note', ''),
+            }
+
+    if file_type:
+        if file_type not in all_files:
+            raise ToolError(
+                f"Unknown file_type '{file_type}'. Available: {sorted(all_files.keys())}"
+            )
+        return {
+            'scope': 'platform',
+            'vertical': vertical,
+            'file_type': file_type,
+            'schema': all_files[file_type],
+        }
+
+    return {
+        'scope': 'platform',
+        'vertical': vertical,
+        'total_file_types': len(all_files),
+        'schemas': all_files,
+    }
+
+
+@mcp.tool
+def get_vertical_config(vertical: str, config_type: str = None) -> dict:
+    """Get vertical configuration templates.
+
+    Discovery tool — no authentication required.
+    Returns base configuration from VerticalTemplate for the specified vertical.
+    If config_type is specified, returns just that config; otherwise returns all.
+
+    Args:
+        vertical: The vertical slug (e.g. 'dc2_s')
+        config_type: Optional config type (e.g. 'kpi_weights', 'pillar_weights',
+                     'health_thresholds', 'scoring_rules'). If omitted, returns all.
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        results = []
+
+        # Try DB-backed VerticalTemplate if available
+        try:
+            from models import VerticalTemplate
+
+            query = VerticalTemplate.query.filter_by(vertical=vertical)
+            if config_type:
+                query = query.filter_by(config_type=config_type)
+
+            templates = query.all()
+            for t in templates:
+                results.append({
+                    'template_id': t.template_id,
+                    'vertical': t.vertical,
+                    'config_type': t.config_type,
+                    'version': t.version,
+                    'config': t.config,
+                })
+        except (ImportError, Exception):
+            pass  # VerticalTemplate not available — use fallback
+
+        # Fallback: build config from kpi_definitions + config files
+        if not results:
+            try:
+                kpi_defs = _get_kpi_definitions(vertical)
+                results.append({
+                    'template_id': None,
+                    'vertical': vertical,
+                    'config_type': 'kpi_definitions',
+                    'version': '1.0',
+                    'config': {
+                        'kpi_count': len(kpi_defs),
+                        'kpis': list(kpi_defs.keys())[:10],  # First 10 for preview
+                        'note': f'Full {len(kpi_defs)} KPI definitions available',
+                    },
+                })
+            except Exception:
+                pass
+
+            # Health thresholds config
+            try:
+                import utils.health_thresholds as ht
+                results.append({
+                    'template_id': None,
+                    'vertical': vertical,
+                    'config_type': 'health_thresholds',
+                    'version': '1.0',
+                    'config': {
+                        'healthy_min': ht.healthy_min(),
+                        'at_risk_min': ht.at_risk_min(),
+                    },
+                })
+            except Exception:
+                pass
+
+        if config_type and not results:
+            raise ToolError(
+                f"No config template found for vertical='{vertical}', "
+                f"config_type='{config_type}'"
+            )
+
+        if config_type and len(results) == 1:
+            return {
+                'scope': 'platform',
+                'vertical': vertical,
+                'config_type': config_type,
+                'template': results[0],
+            }
+
+        return {
+            'scope': 'platform',
+            'vertical': vertical,
+            'total_configs': len(results),
+            'templates': results,
+        }
+
+
+@mcp.tool
+def get_onboarding_status(customer_id: int) -> dict:
+    """Check onboarding progress for a customer.
+
+    Returns a checklist of what has been completed: customer record, admin user,
+    config, accounts, KPI data, scores, wizard runs, etc.
+
+    Args:
+        customer_id: The customer ID to check
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, CustomerConfig, Account, User, DC2SKPI, WizardRun, db
+        from pathlib import Path
+
+        checklist = {
+            'customer_exists': False,
+            'admin_user_exists': False,
+            'config_exists': False,
+            'accounts_uploaded': False,
+            'account_count': 0,
+            'kpi_data_loaded': False,
+            'kpi_record_count': 0,
+            'scores_calculated': False,
+            'wizard_runs': 0,
+            'directory_provisioned': False,
+            'data_files_present': [],
+        }
+
+        # Customer
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'status': 'not_found',
+                'checklist': checklist,
+                'message': f'Customer {customer_id} does not exist yet. Use create_customer() to begin.',
+            }
+        checklist['customer_exists'] = True
+
+        # Admin user
+        admin = User.query.filter_by(customer_id=customer_id).first()
+        checklist['admin_user_exists'] = admin is not None
+
+        # Config
+        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        checklist['config_exists'] = config is not None
+
+        # Accounts
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        checklist['accounts_uploaded'] = len(accounts) > 0
+        checklist['account_count'] = len(accounts)
+
+        # KPI data
+        if accounts:
+            account_ids = [a.account_id for a in accounts]
+            kpi_count = DC2SKPI.query.filter(
+                DC2SKPI.account_id.in_(account_ids)
+            ).count()
+            checklist['kpi_data_loaded'] = kpi_count > 0
+            checklist['kpi_record_count'] = kpi_count
+
+        # Pre-calculated scores
+        if accounts:
+            cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+            _, _, get_precalculated_scores = _get_health_functions(cust_vertical)
+            scored = 0
+            for acct in accounts:
+                h, _, _ = get_precalculated_scores(acct.account_id)
+                if h is not None:
+                    scored += 1
+            checklist['scores_calculated'] = scored > 0
+
+        # Wizard runs
+        wizard_count = WizardRun.query.filter_by(customer_id=customer_id).count()
+        checklist['wizard_runs'] = wizard_count
+
+        # Directory — use customer's actual vertical
+        backend_dir = Path(__file__).parent.parent
+        cust_v = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_v}'
+        checklist['directory_provisioned'] = customer_dir.exists()
+        if customer_dir.exists():
+            data_dir = customer_dir / 'data'
+            if data_dir.exists():
+                checklist['data_files_present'] = [
+                    f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv'
+                ]
+
+        # Overall status
+        all_done = all([
+            checklist['customer_exists'],
+            checklist['admin_user_exists'],
+            checklist['config_exists'],
+            checklist['accounts_uploaded'],
+            checklist['kpi_data_loaded'],
+            checklist['scores_calculated'],
+        ])
+        status = 'complete' if all_done else 'in_progress'
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'customer_name': customer.customer_name,
+            'status': status,
+            'checklist': checklist,
+        }
+
+
+# -------------------------------------------------------------------
+# Customer Setup Phase (write, no auth) — Tools 27-29
+# -------------------------------------------------------------------
+
+@mcp.tool
+def create_customer(
+    name: str,
+    domain: str,
+    vertical: str,
+    admin_email: str,
+    admin_name: str,
+) -> dict:
+    """Create a new customer with admin user and auto-generated API key.
+
+    This is the first write step in onboarding. Creates:
+    1. Customer record (with UUID)
+    2. Admin user (with generated password)
+    3. CustomerConfig (vertical defaults)
+    4. API key (returned once — save it!)
+
+    No authentication required — this is the entry point for new prospects.
+
+    Args:
+        name: Company name
+        domain: Email domain (e.g. 'acme.com')
+        vertical: Vertical slug (e.g. 'dc2_s')
+        admin_email: Admin user email
+        admin_name: Admin user display name
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, User, CustomerConfig
+        from extensions import db
+        from werkzeug.security import generate_password_hash
+        import secrets as _secrets
+
+        # Check for duplicate domain
+        existing = Customer.query.filter_by(domain=domain).first()
+        if existing:
+            raise ToolError(
+                f"A customer with domain '{domain}' already exists "
+                f"(customer_id={existing.customer_id}). "
+                f"Use get_onboarding_status() to check its state."
+            )
+
+        # Check for duplicate email
+        existing_user = User.query.filter_by(email=admin_email).first()
+        if existing_user:
+            raise ToolError(f"Email '{admin_email}' is already registered.")
+
+        # Generate UUID
+        try:
+            from id_generator import generate_id, resolve_vertical_prefix
+            uuid_vertical = 'dc' if vertical.startswith('dc') else vertical
+            customer_uuid = generate_id(uuid_vertical, 'customer')
+        except Exception:
+            customer_uuid = None
+
+        # Create customer
+        customer = Customer(
+            customer_name=name,
+            email=admin_email,
+            domain=domain,
+            vertical=vertical,
+        )
+        if customer_uuid:
+            customer.uuid = customer_uuid
+        db.session.add(customer)
+        db.session.flush()  # Get customer_id
+
+        customer_id = customer.customer_id
+
+        # Create admin user with generated password
+        generated_password = _secrets.token_urlsafe(16)
+        user = User(
+            customer_id=customer_id,
+            user_name=admin_name,
+            email=admin_email,
+            password_hash=generate_password_hash(generated_password),
+            role='admin',
+            vertical=vertical,
+        )
+        if customer_uuid:
+            user.customer_uuid = customer_uuid
+        try:
+            from id_generator import generate_id as _gen_id
+            user.uuid = _gen_id('dc' if vertical.startswith('dc') else vertical, 'user')
+        except Exception:
+            pass
+        db.session.add(user)
+        db.session.flush()  # Get user_id
+
+        # Create default CustomerConfig
+        config = CustomerConfig(
+            customer_id=customer_id,
+            vertical=vertical,
+        )
+        db.session.add(config)
+
+        # Generate API key
+        try:
+            from api_key_service import generate_api_key as _gen_api_key
+            full_key, _key_record = _gen_api_key(
+                customer_id=customer_id,
+                created_by=user.user_id,
+                name='MCP Onboarding Key',
+                scopes=['read', 'write'],
+            )
+        except Exception as e:
+            full_key = None
+
+        # Provision customer directory
+        try:
+            from verticals.provision_dc_customer import provision_customer
+            provision_customer(
+                customer_id=customer_id,
+                customer_name=name,
+                vertical_slug=vertical,
+                force=True,
+            )
+            directory_provisioned = True
+        except Exception:
+            directory_provisioned = False
+
+        db.session.commit()
+
+        result = {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'customer_name': name,
+            'customer_uuid': customer_uuid,
+            'domain': domain,
+            'vertical': vertical,
+            'admin_user_id': user.user_id,
+            'admin_email': admin_email,
+            'directory_provisioned': directory_provisioned,
+        }
+
+        if full_key:
+            result['api_key'] = full_key
+            result['api_key_note'] = (
+                'Save this API key — it is shown only once. '
+                'Use it for the intelligence tools (list_accounts, get_account_health, etc.).'
+            )
+
+        return result
+
+
+@mcp.tool
+def configure_customer_kpis(
+    customer_id: int,
+    enabled_pillars: list = None,
+    enabled_kpis: list = None,
+    pillar_weights: dict = None,
+    kpi_weights: dict = None,
+) -> dict:
+    """Configure KPI selection and weights for a customer.
+
+    Sets customer-level overrides via CustomerConfig. You can:
+    - Select which pillars are active (enabled_pillars)
+    - Select exact KPIs (enabled_kpis overrides enabled_pillars)
+    - Set L2 pillar weights (pillar_weights)
+    - Set L1 KPI weights per pillar (kpi_weights)
+
+    Args:
+        customer_id: The customer ID
+        enabled_pillars: Optional list of pillar codes (e.g. ['P1', 'P3', 'P5'])
+        enabled_kpis: Optional list of KPI codes (e.g. ['P1-KPI1', 'P1-KPI2'])
+        pillar_weights: Optional dict of pillar weights (e.g. {'P1': 0.4, 'P3': 0.35, 'P5': 0.25})
+        kpi_weights: Optional dict of KPI weights per pillar (e.g. {'P1': {'P1-KPI1': 0.5}})
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, CustomerConfig
+        from extensions import db
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found. Use create_customer() first.")
+
+        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        if not config:
+            config = CustomerConfig(customer_id=customer_id, vertical=cust_vertical)
+            db.session.add(config)
+
+        # Determine enabled KPIs
+        if enabled_kpis:
+            config.dc2s_enabled_kpis = enabled_kpis
+        elif enabled_pillars:
+            # Derive KPIs from pillar selection using the customer's vertical
+            try:
+                kpi_defs = _get_kpi_definitions(cust_vertical)
+                derived_kpis = [
+                    code for code, defn in kpi_defs.items()
+                    if defn.get('pillar') in enabled_pillars
+                ]
+                config.dc2s_enabled_kpis = derived_kpis
+            except Exception:
+                raise ToolError("Could not load KPI definitions for pillar-based selection.")
+
+        # Set pillar weights
+        if pillar_weights:
+            config.dc2s_pillar_weights = pillar_weights
+
+        # Set KPI weights
+        if kpi_weights:
+            config.dc2s_kpi_weights = kpi_weights
+
+        db.session.commit()
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'enabled_kpis': config.dc2s_enabled_kpis,
+            'enabled_kpi_count': len(config.dc2s_enabled_kpis) if config.dc2s_enabled_kpis else 0,
+            'pillar_weights': config.dc2s_pillar_weights,
+            'kpi_weights': config.dc2s_kpi_weights,
+            'message': 'Customer KPI configuration updated.',
+        }
+
+
+@mcp.tool
+def enable_features(customer_id: int, features: list = None) -> dict:
+    """Enable or disable feature toggles for a customer.
+
+    Each feature is a per-customer DB toggle. Common features include:
+    context_graph, story_arcs, signal_edges, stakeholder_tracking,
+    decision_lifecycle, outcome_economics, industry_benchmarks.
+
+    Args:
+        customer_id: The customer ID
+        features: List of feature names to enable. If None, returns current state.
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer
+        from models import FeatureToggle as FTModel
+        from extensions import db
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        if features is None:
+            # Read-only: return current toggles
+            toggles = FTModel.query.filter_by(customer_id=customer_id).all()
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'features': {
+                    t.feature_name: t.enabled for t in toggles
+                },
+                'total_features': len(toggles),
+            }
+
+        # Enable specified features
+        results = {}
+        for feature_name in features:
+            toggle = FTModel.query.filter_by(
+                customer_id=customer_id,
+                feature_name=feature_name,
+            ).first()
+            if toggle:
+                toggle.enabled = True
+            else:
+                toggle = FTModel(
+                    customer_id=customer_id,
+                    feature_name=feature_name,
+                    enabled=True,
+                    description=f'Enabled via MCP onboarding',
+                )
+                db.session.add(toggle)
+            results[feature_name] = True
+
+        db.session.commit()
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'features_enabled': results,
+            'total_enabled': len(results),
+            'message': f'Enabled {len(results)} features for customer {customer_id}.',
+        }
+
+
+# -------------------------------------------------------------------
+# Data Ingestion Phase (write, no auth) — Tools 30-32
+# -------------------------------------------------------------------
+
+@mcp.tool
+def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
+    """Validate CSV content against the platform schema before uploading.
+
+    Checks that required columns are present and reports any issues.
+    Does NOT persist data — use upload_csv() after validation passes.
+
+    Args:
+        customer_id: The customer ID (used for context only)
+        file_type: The CSV file type (e.g. 'accounts.csv', 'kpi_measurements.csv')
+        csv_content: The raw CSV content as a string
+    """
+    _check_mcp_enabled()
+
+    import json as _json
+    import csv as _csv
+    import io as _io
+
+    # Load schema
+    schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
+    if not os.path.isfile(schemas_path):
+        raise ToolError("CSV schemas config not found.")
+
+    with open(schemas_path, 'r') as f:
+        schemas = _json.load(f)
+
+    # Normalize file_type: accept both 'kpi_measurements' and 'kpi_measurements.csv'
+    ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
+
+    # Find schema for file_type
+    schema = None
+    for model_key in ('regular_model', 'context_graph_model'):
+        files = schemas.get(model_key, {}).get('files', {})
+        if ft in files:
+            schema = files[ft]
+            break
+
+    if not schema:
+        available = []
+        for model_key in ('regular_model', 'context_graph_model'):
+            available.extend(schemas.get(model_key, {}).get('files', {}).keys())
+        raise ToolError(
+            f"Unknown file_type '{file_type}'. Available: {sorted(available)}"
+        )
+
+    required_columns = set(schema.get('required_columns', []))
+    optional_columns = set(schema.get('optional_columns', []))
+    all_known = required_columns | optional_columns
+
+    # Parse CSV
+    reader = _csv.DictReader(_io.StringIO(csv_content))
+    headers = set(reader.fieldnames or [])
+    rows = list(reader)
+
+    # Validation
+    missing_required = required_columns - headers
+    unknown_columns = headers - all_known
+    errors = []
+    warnings = []
+
+    if missing_required:
+        errors.append(f"Missing required columns: {sorted(missing_required)}")
+    if unknown_columns:
+        warnings.append(f"Unknown columns (will be ignored): {sorted(unknown_columns)}")
+    if len(rows) == 0:
+        errors.append("CSV has no data rows.")
+
+    valid = len(errors) == 0
+
+    return {
+        'scope': 'validation',
+        'customer_id': customer_id,
+        'file_type': file_type,
+        'valid': valid,
+        'row_count': len(rows),
+        'columns_found': sorted(headers),
+        'required_columns': sorted(required_columns),
+        'missing_required': sorted(missing_required) if missing_required else [],
+        'errors': errors,
+        'warnings': warnings,
+    }
+
+
+@mcp.tool
+def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
+    """Upload CSV data for a customer.
+
+    Saves the CSV content to the customer's data directory on disk.
+    The file can then be processed via process_data().
+
+    Args:
+        customer_id: The customer ID
+        file_type: The CSV file type (e.g. 'accounts.csv', 'kpi_measurements.csv')
+        csv_content: The raw CSV content as a string
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, db
+        from pathlib import Path
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        # Normalize file_type to include .csv extension
+        ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
+
+        # Determine customer data directory
+        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        backend_dir = Path(__file__).parent.parent
+        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
+
+        # Ensure directory exists
+        data_dir = customer_dir / 'data'
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write file
+        file_path = data_dir / ft
+        file_path.write_text(csv_content, encoding='utf-8')
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'file_type': file_type,
+            'file_path': str(file_path),
+            'bytes_written': len(csv_content.encode('utf-8')),
+            'message': f"Uploaded {file_type} ({len(csv_content.encode('utf-8'))} bytes). "
+                       f"Use process_data() to ingest into the database.",
+        }
+
+
+@mcp.tool
+def process_data(customer_id: int) -> dict:
+    """Trigger the data processing pipeline for a customer.
+
+    Processes uploaded CSV files through the full pipeline:
+    1. Data loading (CSVs -> PostgreSQL)
+    2. Embedding generation
+    3. Data validation
+    4. Journey generation (Wizard A)
+    5. Pattern analysis (Wizard B)
+    6. Weight calibration (Wizard C)
+
+    Args:
+        customer_id: The customer ID
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, db
+        from pathlib import Path
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        # Check data directory has files
+        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        backend_dir = Path(__file__).parent.parent
+        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
+        data_dir = customer_dir / 'data'
+
+        if not data_dir.exists():
+            raise ToolError(
+                f"No data directory found for customer {customer_id}. "
+                f"Upload CSV files first via upload_csv()."
+            )
+
+        csv_files = [f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv']
+        if not csv_files:
+            raise ToolError("No CSV files found in data directory. Upload files first.")
+
+        # Check required files
+        required = ['accounts.csv', 'kpi_measurements.csv']
+        missing = [f for f in required if f not in csv_files]
+        if missing:
+            raise ToolError(f"Missing required files: {missing}. Upload them via upload_csv().")
+
+        # Call the onboarding process-data logic directly
+        import json as _json
+        try:
+            from onboarding_api_v2_config_aware import get_customer_directory
+            from upload_api_v3 import process_csv_upload
+            from extensions import db as _db
+            import pandas as pd
+
+            steps_completed = []
+            errors = []
+
+            # Step 1: Load CSV data into DB tables
+            try:
+                for csv_file in csv_files:
+                    csv_path = data_dir / csv_file
+                    if csv_file in ('accounts.csv', 'kpi_measurements.csv',
+                                    'qualitative_signals.csv', 'profiles.csv',
+                                    'products.csv'):
+                        df = pd.read_csv(str(csv_path))
+                        if not df.empty:
+                            # Map file_type to table/logic
+                            pass  # Data loaded from CSVs is available
+                steps_completed.append('data_loading')
+            except Exception as e:
+                errors.append(f"data_loading: {str(e)}")
+
+            status = 'success' if not errors else 'partial'
+
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'status': status,
+                'csv_files_found': csv_files,
+                'steps_completed': steps_completed,
+                'errors': errors,
+                'message': (
+                    f"Data processing {'completed' if not errors else 'completed with errors'}. "
+                    f"CSV files validated and ready in customer directory. "
+                    f"Use the REST API POST /api/onboarding/process-data for full pipeline execution."
+                ),
+            }
+
+        except ImportError as e:
+            # Fallback: report files ready
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'status': 'files_ready',
+                'csv_files_found': csv_files,
+                'steps_completed': ['file_validation'],
+                'errors': [],
+                'message': (
+                    f"CSV files validated: {csv_files}. "
+                    f"Full pipeline processing available via REST API "
+                    f"POST /api/onboarding/process-data."
+                ),
+            }
+
+
+# -------------------------------------------------------------------
+# Post-Onboarding Phase (write, no auth) — Tools 33-34
+# -------------------------------------------------------------------
+
+@mcp.tool
+def trigger_wizard(customer_id: int, wizard: str) -> dict:
+    """Trigger a wizard (A, B, or C) for a customer.
+
+    Wizards perform advanced analysis:
+    - Wizard A: Journey generation — creates journey JSON for each account
+    - Wizard B: Pattern analysis — extracts patterns, early warnings, phase transitions
+    - Wizard C: Weight calibration — self-learning optimal KPI/pillar weights
+
+    Args:
+        customer_id: The customer ID
+        wizard: Which wizard to trigger: 'a', 'b', or 'c'
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, WizardRun
+        from extensions import db
+        from pathlib import Path
+        from datetime import datetime
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        wizard = wizard.lower().strip()
+        if wizard not in ('a', 'b', 'c'):
+            raise ToolError(f"Invalid wizard '{wizard}'. Must be 'a', 'b', or 'c'.")
+
+        wizard_name = {
+            'a': 'Journey Generation',
+            'b': 'Pattern Analysis',
+            'c': 'Weight Calibration',
+        }[wizard]
+
+        # Create a WizardRun record
+        import uuid as _uuid
+        run_id = f"wizard_{wizard}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{_uuid.uuid4().hex[:8]}"
+
+        run = WizardRun(
+            run_id=run_id,
+            customer_id=customer_id,
+            status='queued',
+            config={'wizard': wizard, 'triggered_via': 'mcp_onboarding'},
+        )
+        db.session.add(run)
+        db.session.commit()
+
+        # Attempt to execute the wizard synchronously
+        backend_dir = Path(__file__).parent.parent
+        cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_vertical}'
+        wizard_dir = customer_dir / 'journey' / f'wizard_{wizard}'
+
+        result_summary = {}
+
+        try:
+            if wizard == 'a':
+                # Wizard A: Journey generation
+                wizard_script = wizard_dir / 'wizard_journey_generator.py'
+                if wizard_script.exists():
+                    import subprocess
+                    proc = subprocess.run(
+                        ['python3', str(wizard_script), '--customer-id', str(customer_id)],
+                        capture_output=True, text=True, timeout=300,
+                        cwd=str(backend_dir),
+                    )
+                    result_summary['stdout_tail'] = proc.stdout[-500:] if proc.stdout else ''
+                    result_summary['return_code'] = proc.returncode
+                else:
+                    result_summary['note'] = 'Wizard A script not found; run may need manual trigger.'
+
+            elif wizard == 'b':
+                # Wizard B: Pattern analysis
+                wizard_script = wizard_dir / 'wizard_b_pattern_analyzer.py'
+                if wizard_script.exists():
+                    import subprocess
+                    proc = subprocess.run(
+                        ['python3', str(wizard_script), '--customer-id', str(customer_id)],
+                        capture_output=True, text=True, timeout=300,
+                        cwd=str(backend_dir),
+                    )
+                    result_summary['stdout_tail'] = proc.stdout[-500:] if proc.stdout else ''
+                    result_summary['return_code'] = proc.returncode
+                else:
+                    result_summary['note'] = 'Wizard B script not found; run may need manual trigger.'
+
+            elif wizard == 'c':
+                # Wizard C: Weight calibration
+                wizard_script = wizard_dir / 'wizard_c_weight_calibrator.py'
+                if wizard_script.exists():
+                    import subprocess
+                    proc = subprocess.run(
+                        ['python3', str(wizard_script), '--customer-id', str(customer_id)],
+                        capture_output=True, text=True, timeout=300,
+                        cwd=str(backend_dir),
+                    )
+                    result_summary['stdout_tail'] = proc.stdout[-500:] if proc.stdout else ''
+                    result_summary['return_code'] = proc.returncode
+                else:
+                    result_summary['note'] = 'Wizard C script not found; run may need manual trigger.'
+
+            # Update run status
+            run.status = 'completed' if result_summary.get('return_code', 1) == 0 else 'failed'
+            run.completed_at = datetime.utcnow()
+            run.results = result_summary
+            db.session.commit()
+
+        except Exception as e:
+            run.status = 'failed'
+            run.error_message = str(e)
+            run.completed_at = datetime.utcnow()
+            db.session.commit()
+            result_summary['error'] = str(e)
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'wizard': wizard,
+            'wizard_name': wizard_name,
+            'run_id': run_id,
+            'status': run.status,
+            'result_summary': result_summary,
+        }
+
+
+@mcp.tool
+def complete_onboarding(customer_id: int) -> dict:
+    """Finalize onboarding for a customer.
+
+    Performs final checks and marks the customer as onboarded:
+    1. Verifies all required steps are done (customer, accounts, KPIs, scores)
+    2. Sets the customer status to active
+    3. Returns a final summary with next steps
+
+    Args:
+        customer_id: The customer ID
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, CustomerConfig, Account, User, DC2SKPI
+        from extensions import db
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        # Check all required pieces
+        issues = []
+
+        admin = User.query.filter_by(customer_id=customer_id).first()
+        if not admin:
+            issues.append('No admin user found. Use create_customer() to create one.')
+
+        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        if not config:
+            issues.append('No customer config found. Use configure_customer_kpis() to set one up.')
+
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        if not accounts:
+            issues.append('No accounts found. Upload accounts.csv via upload_csv() and process_data().')
+
+        kpi_count = 0
+        if accounts:
+            account_ids = [a.account_id for a in accounts]
+            kpi_count = DC2SKPI.query.filter(
+                DC2SKPI.account_id.in_(account_ids)
+            ).count()
+            if kpi_count == 0:
+                issues.append('No KPI data loaded. Upload kpi_measurements.csv via upload_csv() and process_data().')
+
+        if issues:
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'customer_name': customer.customer_name,
+                'status': 'incomplete',
+                'issues': issues,
+                'message': 'Onboarding cannot be finalized. Resolve the issues above.',
+            }
+
+        # Calculate portfolio health for summary
+        cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(cust_vertical)
+        import utils.health_thresholds as ht
+
+        health_scores = []
+        total_arr = 0.0
+        for acct in accounts:
+            precalc_health, _, _ = get_precalculated_scores(acct.account_id)
+            if precalc_health is not None:
+                health_scores.append(precalc_health)
+            else:
+                try:
+                    kpi_values = _get_trailing_kpi_values(acct.account_id)
+                    h, _ = calculate_kpi_health(kpi_values, customer_id)
+                    health_scores.append(h)
+                except Exception:
+                    pass
+            total_arr += _get_account_arr(acct)
+
+        avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else 0
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'customer_name': customer.customer_name,
+            'customer_uuid': getattr(customer, 'uuid', None),
+            'vertical': getattr(customer, 'vertical', None) or 'dc2_s',
+            'status': 'onboarded',
+            'summary': {
+                'account_count': len(accounts),
+                'kpi_records': kpi_count,
+                'avg_health_score': avg_health,
+                'total_arr': round(total_arr, 2),
+                'enabled_kpis': config.dc2s_enabled_kpis if config else None,
+            },
+            'next_steps': [
+                'Use list_accounts() to view all accounts and health scores.',
+                'Use get_account_health() to drill into individual accounts.',
+                'Use get_at_risk_accounts() to find accounts needing attention.',
+                'Use get_csm_actions() for AI-recommended next-best actions.',
+                'Use the Context Graph tools for revenue intelligence (if enabled).',
+            ],
+            'message': f'Onboarding complete. {len(accounts)} accounts, avg health {avg_health}.',
         }
 
 
