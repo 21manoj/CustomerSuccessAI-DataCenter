@@ -34,12 +34,13 @@ import { KPIRangesTab } from './KPIRangesTab';
 import { SystemEventsAndLogManagement } from './SystemEventsAndLogManagement';
 import DataQualitySection from './DataQualitySection';
 import EntitlementsAdmin from './EntitlementsAdmin';
+import SecurityKeysPanel from './SecurityKeysPanel';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements';
+type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements' | 'security';
 
 interface PillarWeight {
   pillar: string;
@@ -183,6 +184,9 @@ const DCSettings: React.FC = () => {
             { id: 'entitlements' as SubTab, label: 'Entitlements', icon: Shield },
             { id: 'integrations' as SubTab, label: 'Integrations', icon: Key },
             { id: 'users' as SubTab, label: 'User Management', icon: Users },
+            ...(session?.role === 'super_admin' || session?.role === 'admin' ? [
+              { id: 'security' as SubTab, label: 'Security & Keys', icon: Shield },
+            ] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -309,6 +313,11 @@ const DCSettings: React.FC = () => {
                 </p>
               </div>
             </div>
+          )}
+
+          {/* Security & Keys */}
+          {activeSubTab === 'security' && (
+            <SecurityKeysPanel />
           )}
         </div>
       </div>

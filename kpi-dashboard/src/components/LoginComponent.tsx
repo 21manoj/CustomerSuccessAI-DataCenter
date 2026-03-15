@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (session: {
@@ -9,13 +9,17 @@ interface LoginProps {
     user_name: string;
     email: string;
     vertical?: string;
+    role?: string;
     customer_uuid?: string;
     user_uuid?: string;
+    tier?: 'starter' | 'professional' | 'enterprise';
+    entitlements?: Record<string, boolean>;
+    allowed_account_ids?: number[] | null;
+    allowed_customer_ids?: number[] | null;
   }) => void;
 }
 
 const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
-  const [vertical, setVertical] = useState('saas'); // Default to SaaS
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,8 +38,8 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email, password, vertical })
-    });
+        body: JSON.stringify({ email, password }),
+      });
 
       // Check content type before parsing
       const contentType = response.headers.get('content-type');
@@ -49,36 +53,43 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
       }
 
       const data = await response.json();
-      
-      // Get vertical from response or use the one selected
-      // Map backend vertical values to frontend values
-      let sessionVertical = data.vertical || vertical;
-      
+
+      // Backend auto-resolves vertical from user's DB record
+      let sessionVertical = data.vertical || 'datacenter';
+
       // Safety net: Map dc2_s/dc2-s/DC2_S to datacenter for frontend routing
       if (sessionVertical && (sessionVertical.toLowerCase() === 'dc2_s' || sessionVertical.toLowerCase() === 'dc2-s')) {
         sessionVertical = 'datacenter';
       }
-      
-      // Ensure valid vertical values
+
+      // Ensure valid vertical values — default to datacenter
       if (sessionVertical !== 'datacenter' && sessionVertical !== 'saas') {
-        // Default to datacenter if user selected datacenter, otherwise saas
-        sessionVertical = vertical === 'datacenter' ? 'datacenter' : 'saas';
+        sessionVertical = 'datacenter';
       }
-      
+
       const session = {
         customer_id: data.user?.customer_id || data.customer_id || 1,
         user_id: data.user?.user_id?.toString() || data.user_id?.toString() || '1',
         user_name: data.user?.customer_name || data.user_name || 'User',
         email: data.user?.email || data.email || '',
-        vertical: sessionVertical, // Use frontend-mapped value (datacenter/saas), not raw db (dc2_s)
+        vertical: sessionVertical,
+        role: data.user?.role || undefined,
         // UUID migration: store UUIDs from login response
         customer_uuid: data.user?.customer_uuid || undefined,
         user_uuid: data.user?.user_uuid || undefined,
-    };
+        // Tier-based entitlements
+        tier: data.user?.tier || undefined,
+        entitlements: data.user?.entitlements || undefined,
+        // Onboarding state
+        onboarding_state: data.user?.onboarding_state || undefined,
+        // RBAC fields
+        allowed_account_ids: data.user?.allowed_account_ids || null,
+        allowed_customer_ids: data.user?.allowed_customer_ids || null,
+      };
 
       // Store vertical in localStorage
       localStorage.setItem('vertical', sessionVertical);
-      
+
       onLogin(session);
     } catch (err) {
       if (err instanceof Error && err.message.includes('JSON')) {
@@ -106,24 +117,6 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
-
-            {/* Vertical Selector */}
-            <div>
-              <label htmlFor="vertical" className="block text-sm font-medium text-gray-700 mb-2">
-                Customer Type
-              </label>
-              <select
-                id="vertical"
-                name="vertical"
-                value={vertical}
-                onChange={(e) => setVertical(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="saas">SaaS Customer Success</option>
-                <option value="datacenter">Data Center</option>
-              </select>
-            </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -178,7 +171,7 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
                 disabled={isLoading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Signing in...' : `Login to ${vertical === 'datacenter' ? 'Data Center' : 'SaaS'} Portal`}
+                {isLoading ? 'Signing in...' : 'Sign In'}
               </button>
             </div>
           </form>
@@ -196,8 +189,8 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-gray-700 text-center">
               For demo credentials, please email{' '}
-              <a 
-                href="mailto:support@cspulsegrowth.com" 
+              <a
+                href="mailto:support@cspulsegrowth.com"
                 className="text-blue-600 hover:text-blue-800 font-medium underline"
               >
                 support@cspulsegrowth.com

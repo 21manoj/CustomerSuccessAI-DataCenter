@@ -638,8 +638,17 @@ def login():
         if user.active is False:
             return jsonify({
                 'status': 'error',
-                'message': 'Account is inactive. Contact support.'
+                'message': 'Account is inactive. Contact your administrator.'
             }), 403
+
+        # Check if user access has expired (contractors/testers with time-limited access)
+        if hasattr(user, 'expires_at') and user.expires_at is not None:
+            import datetime as dt_mod
+            if dt_mod.datetime.utcnow() > user.expires_at:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Your access has expired. Contact your administrator to renew.'
+                }), 403
         
         # Get customer info
         try:
@@ -666,9 +675,9 @@ def login():
                 # Default to datacenter if it looks like a DC vertical variant
                 frontend_vertical = 'datacenter' if 'dc' in user_vertical_normalized or 'datacenter' in user_vertical_normalized else 'saas'
         else:
-            # If no vertical set, check the selected vertical from request
-            selected_vertical = data.get('vertical', 'saas')
-            frontend_vertical = 'datacenter' if selected_vertical == 'datacenter' else 'saas'
+            # If no vertical set in DB, default to datacenter
+            # (vertical dropdown removed from login screen — backend auto-resolves)
+            frontend_vertical = 'datacenter'
         
         # Debug logging
         print(f"🔍 Login vertical mapping: DB='{user_vertical}' -> Frontend='{frontend_vertical}'")
@@ -701,7 +710,17 @@ def login():
         
         # Refresh user from database to ensure we have latest data
         db.session.refresh(user)
-        
+
+        # Tier & entitlements (safe defaults — full tier system on starter-ux branch)
+        customer_tier = getattr(customer, 'tier', None) if customer else None
+        customer_entitlements = {}
+        onboarding_state = getattr(customer, 'onboarding_state', None) if customer else None
+        try:
+            from entitlements import get_customer_entitlements
+            customer_entitlements = get_customer_entitlements(user.customer_id) or {}
+        except Exception:
+            pass
+
         return jsonify({
             'status': 'success',
             'message': 'Login successful',
@@ -715,6 +734,15 @@ def login():
                 'customer_uuid': getattr(customer, 'uuid', None) if customer else None,
                 'user_uuid': getattr(user, 'uuid', None),
                 'vertical': getattr(customer, 'vertical', None) if customer else None,
+                'role': getattr(user, 'role', None),
+                'tier': customer_tier,
+                'entitlements': customer_entitlements,
+                'onboarding_state': onboarding_state,
+                # RBAC fields for contractors/testers
+                'allowed_account_ids': getattr(user, 'allowed_account_ids', None),
+                'allowed_customer_ids': getattr(user, 'allowed_customer_ids', None),
+                'is_contractor': getattr(user, 'is_contractor', False),
+                'expires_at': user.expires_at.isoformat() if hasattr(user, 'expires_at') and user.expires_at else None,
             },
             'vertical': frontend_vertical,  # Return mapped vertical
             'session_expires': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat() if not remember else None
@@ -970,6 +998,18 @@ try:
     print("✅ Registered Admin API: /api/admin/*")
 except ImportError as e:
     print(f"⚠️  Warning: Admin API not available: {e}")
+
+# Admin UI API (Super Admin key management, contractor access, security)
+try:
+    from admin_ui_api import admin_ui_api
+    app.register_blueprint(admin_ui_api)
+    print("✅ Registered Admin UI API: /api/admin-ui/*")
+except (ImportError, Exception) as e:
+    print(f"⚠️  Admin UI API not fully available ({e}), registering contractor-access endpoints inline")
+    # Register contractor-access endpoints inline for branches without full admin_ui_api
+    from contractor_access_api import contractor_access_bp
+    app.register_blueprint(contractor_access_bp)
+    print("✅ Registered Contractor Access API: /api/admin-ui/contractor-access/*")
 
 # Action Interface API (Phases 4, 5, 7 — bindings, credentials, callbacks)
 try:

@@ -16,11 +16,30 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 
 logger = logging.getLogger(__name__)
 
+# Import ActivityLogger for audit logging
+try:
+    from activity_logging import ActivityLogger
+    _ACTIVITY_LOGGER_AVAILABLE = True
+except ImportError:
+    _ACTIVITY_LOGGER_AVAILABLE = False
+
 test_runner_api = Blueprint('test_runner_api', __name__)
+
+
+def _check_customer_access(customer_id):
+    """Validate current test runner user can access this customer."""
+    role = session.get('tr_role')
+    if role == 'super_admin':
+        return True
+    allowed = session.get('tr_allowed_customer_ids')
+    if allowed is None:
+        return True
+    return int(customer_id) in allowed
+
 
 # ---------------------------------------------------------------------------
 # Path to load-driver directory
@@ -463,6 +482,10 @@ def start_run():
         else:
             return jsonify({'error': 'customer_id is required (use "auto" only for Scenario 1 onboarding)'}), 400
 
+    # RBAC: check customer access for non-auto customers
+    if not is_new_customer and not _check_customer_access(customer_id):
+        return jsonify({'error': f'Access denied: not authorized for customer {customer_id}'}), 403
+
     # Check load-driver exists
     if not RUN_SCENARIO_SCRIPT.exists():
         return jsonify({'error': f'Load driver not found at {RUN_SCENARIO_SCRIPT}'}), 500
@@ -526,6 +549,22 @@ def start_run():
         daemon=True
     )
     t.start()
+
+    # Audit logging
+    if _ACTIVITY_LOGGER_AVAILABLE:
+        try:
+            ActivityLogger.log_activity(
+                customer_id=int(customer_id),
+                action_type='test_runner_scenario_start',
+                action_description=f'Test Runner started scenarios {scenario_ids} for customer {customer_id}',
+                user_id=session.get('tr_user_id'),
+                resource_type='test_runner',
+                resource_id=run_id,
+                details={'scenario_ids': scenario_ids, 'options': options},
+                status='success',
+            )
+        except Exception:
+            pass
 
     return jsonify({
         'run_id': run_id,
@@ -619,6 +658,10 @@ def get_platform_state():
         customer_id = int(customer_id)
     except ValueError:
         return jsonify({'error': 'customer_id must be an integer'}), 400
+
+    # RBAC: check customer access
+    if not _check_customer_access(customer_id):
+        return jsonify({'error': f'Access denied: not authorized for customer {customer_id}'}), 403
 
     try:
         from models import db, Customer, Account, PrecalculatedScore, ContextNode
@@ -825,6 +868,13 @@ def list_customers_for_dropdown():
         return jsonify({'error': f'Import error: {e}'}), 500
 
     customers = Customer.query.order_by(Customer.customer_id.desc()).all()
+
+    # Filter by user's allowed_customer_ids
+    allowed_customer_ids = session.get('tr_allowed_customer_ids')
+    if allowed_customer_ids:
+        allowed_set = set(allowed_customer_ids)
+        customers = [c for c in customers if c.customer_id in allowed_set]
+
     result = []
     for c in customers:
         acct_count = Account.query.filter_by(customer_id=c.customer_id).count()
@@ -1064,6 +1114,10 @@ def start_simulation():
     except ValueError:
         return jsonify({'error': 'customer_id must be an integer'}), 400
 
+    # RBAC: check customer access
+    if not _check_customer_access(customer_id):
+        return jsonify({'error': f'Access denied: not authorized for customer {customer_id}'}), 403
+
     interval_seconds = int(data.get('interval_seconds', 10))
     num_days = int(data.get('num_days', 90))
     drift_profile = data.get('drift_profile', 'mixed')
@@ -1103,6 +1157,21 @@ def start_simulation():
         name=f'sim-{customer_id}'
     )
     t.start()
+
+    # Audit logging
+    if _ACTIVITY_LOGGER_AVAILABLE:
+        try:
+            ActivityLogger.log_activity(
+                customer_id=int(customer_id),
+                action_type='test_runner_simulate',
+                action_description=f'Simulation started for customer {customer_id}: {num_days} days, profile={drift_profile}',
+                user_id=session.get('tr_user_id'),
+                resource_type='test_runner',
+                details={'num_days': num_days, 'drift_profile': drift_profile, 'interval_seconds': interval_seconds},
+                status='success',
+            )
+        except Exception:
+            pass
 
     return jsonify({
         'status': 'started',

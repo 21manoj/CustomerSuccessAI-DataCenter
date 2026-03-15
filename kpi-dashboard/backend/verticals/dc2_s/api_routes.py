@@ -29,6 +29,26 @@ logger = logging.getLogger(__name__)
 
 dc2s_api = Blueprint('dc2s_api', __name__)
 
+
+def _filter_user_accounts(accounts_data, key='account_id'):
+    """Filter account data by current user's allowed_account_ids.
+    Works with both list-of-dicts and list-of-Account-objects.
+    """
+    try:
+        from flask_login import current_user
+        user_restrictions = getattr(current_user, 'allowed_account_ids', None)
+        if user_restrictions is None:
+            return accounts_data
+        allowed = set(user_restrictions)
+        result = []
+        for item in accounts_data:
+            acct_id = item.get(key) if isinstance(item, dict) else getattr(item, key, None)
+            if acct_id is not None and int(acct_id) in allowed:
+                result.append(item)
+        return result
+    except Exception:
+        return accounts_data
+
 def _normalize_kpi_code_for_health(kpi_code):
     """Validate kpi_code exists in the catalog. Returns kpi_code or None."""
     return kpi_code if kpi_code in DC2S_KPIS else None
@@ -437,12 +457,15 @@ def get_dc2s_accounts():
                 'last_measured': latest_time.isoformat() if latest_time else None
             })
 
+        # Apply user-level account filtering (contractors/restricted users)
+        results = _filter_user_accounts(results, key='account_id')
+
         return jsonify({
             'accounts': results,
             'total': len(results),
             'enabled_pillars': enabled_pillar_codes
         })
-        
+
     except Exception as e:
         logger.error(f"Error fetching DC2_S accounts: {e}", exc_info=True)
         return jsonify({'error': 'Failed to fetch accounts'}), 500
@@ -1200,7 +1223,10 @@ def get_dc2s_health_summary():
             Account.customer_id == int(customer_id),
             Account.vertical == 'dc2_s'
         ).all()
-        
+
+        # Apply user-level account filtering (contractors/restricted users)
+        accounts = _filter_user_accounts(accounts, key='account_id')
+
         account_health = []  # list of (health_score, revenue)
         healthy_count = 0
         risk_count = 0

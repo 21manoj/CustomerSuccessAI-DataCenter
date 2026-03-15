@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
+export type Tier = 'starter' | 'professional' | 'enterprise';
+
 type Session = {
   customer_id: number;
   user_id: string;
@@ -9,6 +11,13 @@ type Session = {
   // UUID migration: UUIDs alongside integer IDs
   customer_uuid?: string;
   user_uuid?: string;
+  // Security & access control fields
+  role?: string;
+  tier?: Tier;
+  entitlements?: Record<string, boolean>;
+  allowed_account_ids?: number[] | null;
+  allowed_customer_ids?: number[] | null;
+  is_contractor?: boolean;
 };
 
 const SessionContext = createContext<{

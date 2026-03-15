@@ -59,6 +59,9 @@ FEATURE_CATALOG = {
     'copilot_integration':     {'description': 'Microsoft Copilot / Teams integration',           'tier': 'enterprise'},
     'multi_provider':          {'description': 'Multi-LLM provider (OpenAI + Claude + Azure)',    'tier': 'enterprise'},
     'agent_memory_shared':     {'description': 'Cross-agent shared memory and intelligence',      'tier': 'enterprise'},
+
+    # ── Add-on (disabled by default, enabled via per-customer override) ───
+    'api_key_self_service':    {'description': 'Allow customers to create their own API keys',     'tier': 'addon'},
 }
 
 
