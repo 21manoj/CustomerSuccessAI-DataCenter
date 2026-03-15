@@ -123,8 +123,16 @@ def _get_account_arr(account) -> float:
     return arr
 
 
-def _validate_account_ownership(customer_id: int, account_id: int):
-    """Tenant isolation: verify account belongs to customer, return Account or raise."""
+def _validate_account_ownership(customer_id: int, account_id: int, user_id: int = None):
+    """Tenant isolation + user-level RBAC: verify account belongs to customer
+    and (optionally) that the user has access to the specific account.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: The account to validate
+        user_id: Optional user ID for RBAC filtering. If provided, checks
+                 the user's allowed_account_ids and expiry status.
+    """
     from models import Account
     account = Account.query.filter_by(
         account_id=account_id,
@@ -134,7 +142,54 @@ def _validate_account_ownership(customer_id: int, account_id: int):
         raise ToolError(
             f"Account {account_id} not found for customer {customer_id}"
         )
+
+    # User-level RBAC (contractor/tester restrictions)
+    if user_id:
+        from models import User
+        user = User.query.get(user_id)
+        if user:
+            # Check if user account has expired
+            if hasattr(user, 'is_expired') and user.is_expired:
+                raise ToolError("User access has expired")
+            # Check account-level restriction
+            if hasattr(user, 'has_account_access') and not user.has_account_access(account_id):
+                raise ToolError(
+                    f"Access denied: user {user_id} is not authorized for account {account_id}"
+                )
     return account
+
+
+def _filter_accounts_by_user(accounts: list, user_id: int = None) -> list:
+    """Filter account list by user's RBAC restrictions (allowed_account_ids).
+
+    If user_id is None or the user has no restrictions, returns all accounts.
+    If the user has allowed_account_ids set, only returns accounts in that list.
+    If the user has expired, returns an empty list.
+
+    Args:
+        accounts: List of Account model instances
+        user_id: Optional user ID for RBAC filtering
+    Returns:
+        Filtered list of Account instances
+    """
+    if not user_id:
+        return accounts
+
+    from models import User
+    user = User.query.get(user_id)
+    if not user:
+        return accounts
+
+    # Expired users see nothing
+    if hasattr(user, 'is_expired') and user.is_expired:
+        return []
+
+    # No restriction = all accounts
+    if not hasattr(user, 'allowed_account_ids') or user.allowed_account_ids is None:
+        return accounts
+
+    allowed = set(user.allowed_account_ids)
+    return [a for a in accounts if a.account_id in allowed]
 
 
 def _load_system_prompt_content() -> str:
@@ -222,7 +277,7 @@ def get_platform_instructions() -> dict:
 # ===================================================================
 
 @mcp.tool
-def list_accounts(customer_id: int) -> dict:
+def list_accounts(customer_id: int, user_id: int = None) -> dict:
     """List all accounts with health scores for a customer.
 
     TENANT MODEL: customer_id is the CS Pulse tenant (the company using the platform),
@@ -231,6 +286,7 @@ def list_accounts(customer_id: int) -> dict:
 
     Args:
         customer_id: The customer (tenant) ID
+        user_id: Optional user ID for RBAC filtering. Contractors only see allowed accounts.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -247,6 +303,9 @@ def list_accounts(customer_id: int) -> dict:
             Account.customer_id == int(customer_id),
             Account.vertical == 'dc2_s',
         ).all()
+
+        # RBAC: filter accounts by user's allowed_account_ids
+        accounts = _filter_accounts_by_user(accounts, user_id)
 
         results = []
         for acct in accounts:
@@ -296,7 +355,7 @@ def list_accounts(customer_id: int) -> dict:
 
 
 @mcp.tool
-def get_account_health(customer_id: int, account_id: int) -> dict:
+def get_account_health(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Get detailed health score and pillar breakdown for a specific account.
 
     Health is computed from 5 pillars (P1-P5): AI/ML Performance, Infrastructure Reliability,
@@ -306,6 +365,7 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to analyze
+        user_id: Optional user ID for RBAC check. Contractors can only access allowed accounts.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -318,7 +378,7 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
         )
         import utils.health_thresholds as ht
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
 
         # Prefer pre-calculated scores (single source of truth)
         precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account_id)
@@ -348,12 +408,13 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
 
 
 @mcp.tool
-def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
+def get_at_risk_accounts(customer_id: int, threshold: float = 70.0, user_id: int = None) -> dict:
     """List accounts with health scores below a threshold.
 
     Args:
         customer_id: The customer (tenant) ID
         threshold: Health score threshold (default 70 = at-risk boundary)
+        user_id: Optional user ID for RBAC filtering. Contractors only see allowed accounts.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -370,6 +431,9 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
             Account.customer_id == int(customer_id),
             Account.vertical == 'dc2_s',
         ).all()
+
+        # RBAC: filter accounts by user's allowed_account_ids
+        accounts = _filter_accounts_by_user(accounts, user_id)
 
         at_risk = []
         total_arr_at_risk = 0.0
@@ -433,7 +497,7 @@ def _check_context_graph(customer_id: int):
 
 
 @mcp.tool
-def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
+def get_revenue_at_risk(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Get revenue breakdown from context graph: at-risk, protected, expansion, lost.
 
     IMPORTANT: This is the ONLY authoritative source for revenue figures. Never manually
@@ -443,6 +507,7 @@ def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to analyze
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -451,7 +516,7 @@ def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
         _check_context_graph(customer_id)
         from utils.context_graph import get_revenue_at_risk as _get_rev
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
         result = _get_rev(account_id)
         result["scope"] = "account"
         result["account_id"] = account_id
@@ -498,12 +563,13 @@ def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream"
 
 
 @mcp.tool
-def get_graph_summary(customer_id: int, account_id: int) -> dict:
+def get_graph_summary(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Get context graph summary: node/edge counts and revenue breakdown.
 
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to analyze
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -512,7 +578,7 @@ def get_graph_summary(customer_id: int, account_id: int) -> dict:
         _check_context_graph(customer_id)
         from utils.context_graph import get_account_graph_summary
 
-        _validate_account_ownership(customer_id, account_id)
+        _validate_account_ownership(customer_id, account_id, user_id=user_id)
         result = get_account_graph_summary(account_id)
         result["scope"] = "account"
         return result
@@ -525,6 +591,7 @@ def search_signals(
     node_type: str = "SIGNAL",
     node_subtype: str = None,
     limit: int = 20,
+    user_id: int = None,
 ) -> dict:
     """Search for context graph nodes (signals, decisions, outcomes) for an account.
 
@@ -534,6 +601,7 @@ def search_signals(
         node_type: Node type filter: SIGNAL, DECISION, OUTCOME, STAKEHOLDER, EXTERNAL_CONTEXT
         node_subtype: Optional subtype filter (e.g. kpi_change, ticket, champion_loss)
         limit: Maximum number of results (default 20)
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -542,7 +610,7 @@ def search_signals(
         _check_context_graph(customer_id)
         from utils.context_graph import get_nodes
 
-        _validate_account_ownership(customer_id, account_id)
+        _validate_account_ownership(customer_id, account_id, user_id=user_id)
         nodes = get_nodes(
             account_id=account_id,
             node_type=node_type,
@@ -570,6 +638,7 @@ def calculate_power_of_1(
     metric_id: str,
     improvement_pct: float = 1.0,
     account_arr: float = None,
+    user_id: int = None,
 ) -> dict:
     """Calculate the revenue impact of a 1% improvement in a business metric (Power-of-1).
 
@@ -578,6 +647,7 @@ def calculate_power_of_1(
         metric_id: Metric to improve (e.g. NRR, GRR, product_adoption, expansion_rate, ticket_resolution_time, TTFV)
         improvement_pct: Percentage improvement (default 1.0 = 1%)
         account_arr: Optional account ARR override. If omitted, uses portfolio total.
+        user_id: Optional user ID for RBAC filtering in portfolio mode. Contractors see restricted ARR.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -599,6 +669,8 @@ def calculate_power_of_1(
                 Account.customer_id == int(customer_id),
                 Account.vertical == 'dc2_s',
             ).all()
+            # RBAC: filter accounts by user's allowed_account_ids
+            accounts = _filter_accounts_by_user(accounts, user_id)
             effective_arr = sum(_get_account_arr(a) for a in accounts)
             if not effective_arr:
                 effective_arr = None  # fall back to $10M baseline
@@ -630,6 +702,7 @@ def get_outcome_roi_story(
     account_id: int,
     target_improvement_pct: float = 10.0,
     projection_months: int = 12,
+    user_id: int = None,
 ) -> dict:
     """Generate a full ROI narrative with proof points, projections, and context graph insights.
 
@@ -638,6 +711,7 @@ def get_outcome_roi_story(
         account_id: The account to analyze
         target_improvement_pct: Target improvement percentage (default 10%)
         projection_months: Projection horizon in months (default 12)
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -646,7 +720,7 @@ def get_outcome_roi_story(
         from outcome_roi_engine import calculate_outcome_story
         from power_of_1_model import POWER_OF_1_METRICS
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
 
         arr = _get_account_arr(account)
 
@@ -682,18 +756,20 @@ def get_outcome_roi_story(
 def get_playbook_recommendations(
     customer_id: int,
     account_id: int,
+    user_id: int = None,
 ) -> dict:
     """Get recommended playbooks for an account based on health score and signals.
 
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to get recommendations for
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
 
     with app.app_context():
-        _validate_account_ownership(customer_id, account_id)
+        _validate_account_ownership(customer_id, account_id, user_id=user_id)
         _ensure_registry()
         from agent_tool_registry import get_tool_registry
         from verticals.dc2_s.api_routes import (
@@ -801,12 +877,13 @@ def _derive_nps_from_signals(signals) -> dict:
 # ===================================================================
 
 @mcp.tool
-def get_crm_account_data(customer_id: int, account_id: int) -> dict:
+def get_crm_account_data(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Pull CRM data for an account — contract details, renewal opportunity, champion contacts, usage metrics. Simulates Salesforce integration; reads from CS Pulse platform data.
 
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to pull CRM data for
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -819,7 +896,7 @@ def get_crm_account_data(customer_id: int, account_id: int) -> dict:
         import utils.health_thresholds as ht
         from datetime import datetime, date
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
 
         profile = _get_account_profile(account)
         arr = _get_account_arr(account)
@@ -894,12 +971,13 @@ def get_crm_account_data(customer_id: int, account_id: int) -> dict:
 
 
 @mcp.tool
-def get_support_tickets(customer_id: int, account_id: int) -> dict:
+def get_support_tickets(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Pull support ticket summary for an account — open tickets, SLA compliance, escalations, risk indicators. Simulates ServiceNow integration; derives ticket data from operational KPIs and qualitative signals.
 
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to pull ticket data for
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -909,7 +987,7 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
         from verticals.dc2_s.api_routes import _get_trailing_kpi_values
         import math
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
 
         kpi_values = _get_trailing_kpi_values(account_id)
 
@@ -978,12 +1056,13 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
 
 
 @mcp.tool
-def get_customer_feedback(customer_id: int, account_id: int) -> dict:
+def get_customer_feedback(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Pull customer feedback for an account — NPS trend, CSAT indicators, VoC summaries, CSM relationship assessment. Simulates survey system integration; derives sentiment from qualitative signals and health data.
 
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to pull feedback for
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -996,7 +1075,7 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
         )
         import utils.health_thresholds as ht
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
 
         kpi_values = _get_trailing_kpi_values(account_id)  # still needed for KPI values
 
@@ -1089,7 +1168,7 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
 # ===================================================================
 
 @mcp.tool
-def get_csm_daily_actions(customer_id: int) -> dict:
+def get_csm_daily_actions(customer_id: int, user_id: int = None) -> dict:
     """Get top-10 prioritized CSM actions across all accounts (portfolio-level). Each action includes the linked playbook, urgency level, estimated effort hours, and projected dollar impact via Power-of-1 ROI metric correlation.
 
     Use for "What should I do today?" or "Morning briefing" questions.
@@ -1097,6 +1176,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
 
     Args:
         customer_id: The customer (tenant) ID — actions span ALL accounts for this tenant
+        user_id: Optional user ID for RBAC filtering. Contractors only see actions for allowed accounts.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -1119,6 +1199,9 @@ def get_csm_daily_actions(customer_id: int) -> dict:
             Account.customer_id == int(customer_id),
             Account.vertical == 'dc2_s',
         ).all()
+
+        # RBAC: filter accounts by user's allowed_account_ids
+        accounts = _filter_accounts_by_user(accounts, user_id)
 
         if not accounts:
             return {
@@ -1321,11 +1404,12 @@ def get_csm_daily_actions(customer_id: int) -> dict:
 
 
 @mcp.tool
-def get_portfolio_roi_summary(customer_id: int) -> dict:
+def get_portfolio_roi_summary(customer_id: int, user_id: int = None) -> dict:
     """Get the complete ROI story for a customer portfolio — historical proof (what we delivered) + forward projection (what we will deliver) + bridging narrative + trajectory assessment. Covers all accounts.
 
     Args:
         customer_id: The customer (tenant) ID
+        user_id: Optional user ID for RBAC filtering. Contractors see ROI for allowed accounts only.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -1336,6 +1420,8 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         from outcome_roi_api import _extract_historical_actuals, _extract_accounts_at_risk
 
         accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        # RBAC: filter accounts by user's allowed_account_ids
+        accounts = _filter_accounts_by_user(accounts, user_id)
         if not accounts:
             raise ToolError(f"No accounts found for customer {customer_id}")
 
@@ -1637,6 +1723,7 @@ def get_account_journey_timeline(
     customer_id: int,
     account_id: int,
     limit: int = 50,
+    user_id: int = None,
 ) -> dict:
     """Get a chronological timeline of ALL context graph events for an account.
 
@@ -1650,6 +1737,7 @@ def get_account_journey_timeline(
         customer_id: The customer (tenant) ID
         account_id: The account to analyze
         limit: Max events to return (default 50, max 200)
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -1660,7 +1748,7 @@ def get_account_journey_timeline(
         from utils.context_graph import get_revenue_at_risk
         from datetime import datetime
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
         arr = _get_account_arr(account)
 
         limit = min(max(limit, 1), 200)
@@ -1747,6 +1835,7 @@ def get_context_graph_mermaid(
     customer_id: int,
     account_id: int,
     max_nodes: int = 30,
+    user_id: int = None,
 ) -> dict:
     """Generate a Mermaid flowchart of the context graph for an account.
 
@@ -1758,6 +1847,7 @@ def get_context_graph_mermaid(
         customer_id: The customer (tenant) ID
         account_id: The account to visualize
         max_nodes: Maximum nodes in diagram (default 30, max 60)
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -1767,7 +1857,7 @@ def get_context_graph_mermaid(
         from models import ContextNode, ContextEdge, db
         from datetime import datetime
 
-        _validate_account_ownership(customer_id, account_id)
+        _validate_account_ownership(customer_id, account_id, user_id=user_id)
 
         max_nodes = min(max(max_nodes, 5), 60)
         now = datetime.utcnow()
@@ -1888,7 +1978,7 @@ def get_context_graph_mermaid(
 
 
 @mcp.tool
-def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
+def get_stakeholder_map(customer_id: int, account_id: int, user_id: int = None) -> dict:
     """Get the stakeholder network for an account — who influenced which decisions and outcomes.
 
     Returns each stakeholder with their role, engagement details, and the
@@ -1898,6 +1988,7 @@ def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to analyze
+        user_id: Optional user ID for RBAC check.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -1907,7 +1998,7 @@ def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
         from models import ContextNode, ContextEdge, db
         from datetime import datetime
 
-        account = _validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id, user_id=user_id)
         now = datetime.utcnow()
 
         # ── Stakeholder nodes ──
