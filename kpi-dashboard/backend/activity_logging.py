@@ -35,6 +35,10 @@ class ActivityLogger:
         'playbook': ['playbook_execute', 'playbook_start', 'playbook_complete', 'playbook_cancel'],
         'system': ['rag_rebuild', 'data_migration', 'backup', 'restore'],
         'query': ['rag_query', 'direct_query'],  # RAG queries are logged separately but can be cross-referenced
+        'security': ['api_key_create', 'api_key_revoke', 'api_key_list', 'api_key_view',
+                     'contractor_access_create', 'contractor_access_revoke',
+                     'test_runner_login', 'test_runner_scenario_start', 'test_runner_simulate',
+                     'unauthorized_access_attempt'],
     }
     
     @staticmethod

@@ -17,6 +17,10 @@ type Session = {
   entitlements?: Record<string, boolean>;
   // Onboarding state: fresh (no accounts), data_uploaded (accounts but no scores), active (has real scores)
   onboarding_state?: 'fresh' | 'data_uploaded' | 'active';
+  // Security & access control fields (RBAC)
+  allowed_account_ids?: number[] | null;
+  allowed_customer_ids?: number[] | null;
+  is_contractor?: boolean;
 };
 
 const SessionContext = createContext<{

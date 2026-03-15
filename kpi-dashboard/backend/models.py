@@ -118,27 +118,56 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     vertical = db.Column(db.String(50))
-    role = db.Column(db.String(50))    
+    role = db.Column(db.String(50))
+    # RBAC fields for contractor/tester access management
+    allowed_account_ids = db.Column(db.JSON, nullable=True)    # NULL = all accounts; [1,2,3] = restricted (within customer)
+    allowed_customer_ids = db.Column(db.JSON, nullable=True)   # NULL = own customer only; [9,12] = Test Runner multi-customer access
+    expires_at = db.Column(db.DateTime, nullable=True)         # NULL = never expires; set for contractors/testers
+    is_contractor = db.Column(db.Boolean, default=False)       # Flag for contractor vs regular user
     # Ensure username is unique within each customer domain
     # Email must be unique globally
     __table_args__ = (
         db.UniqueConstraint('customer_id', 'user_name', name='unique_customer_username'),
         db.UniqueConstraint('email', name='unique_user_email'),
     )
-    
+
+    def has_account_access(self, account_id: int) -> bool:
+        """Check if user can access a specific account.
+        NULL allowed_account_ids = unrestricted (all accounts).
+        """
+        if self.allowed_account_ids is None:
+            return True
+        return int(account_id) in self.allowed_account_ids
+
+    def has_customer_access(self, customer_id: int) -> bool:
+        """Check if user can access a specific customer (Test Runner testers).
+        NULL allowed_customer_ids = unrestricted.
+        """
+        if self.allowed_customer_ids is None:
+            return True
+        return int(customer_id) in self.allowed_customer_ids
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if user access has expired (contractors/testers)."""
+        if self.expires_at is None:
+            return False
+        from datetime import datetime
+        return datetime.utcnow() > self.expires_at
+
     # Flask-Login required methods
     def is_authenticated(self):
         """User is authenticated if they have a valid session"""
         return True
-    
+
     def is_active(self):
         """Check if user account is active"""
         return self.active
-    
+
     def is_anonymous(self):
         """User is not anonymous"""
         return False
-    
+
     def get_id(self):
         """Return user ID as string (Flask-Login requirement)"""
         return str(self.user_id)

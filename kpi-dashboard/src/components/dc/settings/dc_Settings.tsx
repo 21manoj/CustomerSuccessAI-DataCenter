@@ -36,12 +36,13 @@ import { KPIRangesTab } from './KPIRangesTab';
 import { SystemEventsAndLogManagement } from './SystemEventsAndLogManagement';
 import DataQualitySection from './DataQualitySection';
 import EntitlementsAdmin from './EntitlementsAdmin';
+import SecurityKeysPanel from './SecurityKeysPanel';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements';
+type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements' | 'security';
 
 interface PillarWeight {
   pillar: string;
@@ -305,6 +306,7 @@ const DCSettings: React.FC = () => {
             { id: 'entitlements' as SubTab, label: 'Entitlements', icon: Shield, requiredFeature: undefined as string | undefined, adminOnly: true },
             { id: 'integrations' as SubTab, label: 'Integrations', icon: Key, requiredFeature: 'mcp_connectors' as string | undefined, adminOnly: false },
             { id: 'users' as SubTab, label: 'Users', icon: Users, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'security' as SubTab, label: 'Security & Keys', icon: Shield, requiredFeature: undefined as string | undefined, adminOnly: true },
           ]).map(tab => {
             const featureGated = tab.requiredFeature ? !checkEntitlement(tab.requiredFeature) : false;
             const adminGated = tab.adminOnly && session?.role !== 'super_admin' && session?.role !== 'admin';
@@ -442,6 +444,11 @@ const DCSettings: React.FC = () => {
                 </p>
               </div>
             </div>
+          )}
+
+          {/* Security & Keys */}
+          {activeSubTab === 'security' && (
+            <SecurityKeysPanel />
           )}
         </div>
       </div>
