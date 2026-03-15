@@ -9,8 +9,11 @@ interface LoginProps {
     user_name: string;
     email: string;
     vertical?: string;
+    role?: string;
     customer_uuid?: string;
     user_uuid?: string;
+    tier?: 'starter' | 'professional' | 'enterprise';
+    entitlements?: Record<string, boolean>;
   }) => void;
 }
 
@@ -71,9 +74,15 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         user_name: data.user?.customer_name || data.user_name || 'User',
         email: data.user?.email || data.email || '',
         vertical: sessionVertical, // Use frontend-mapped value (datacenter/saas), not raw db (dc2_s)
+        role: data.user?.role || undefined,
         // UUID migration: store UUIDs from login response
         customer_uuid: data.user?.customer_uuid || undefined,
         user_uuid: data.user?.user_uuid || undefined,
+        // Tier-based entitlements
+        tier: data.user?.tier || undefined,
+        entitlements: data.user?.entitlements || undefined,
+        // Onboarding state
+        onboarding_state: data.user?.onboarding_state || undefined,
     };
 
       // Store vertical in localStorage

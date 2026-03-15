@@ -202,7 +202,9 @@ const OnboardingWizard: React.FC = () => {
         navigate('/dashboard');
         break;
       case 'tour':
-        console.log('Starting product tour');
+        // Clear tour completion flag so it auto-launches in DCPlatform
+        localStorage.removeItem('tour_completed');
+        navigate('/dc-dashboard');
         break;
     }
   };

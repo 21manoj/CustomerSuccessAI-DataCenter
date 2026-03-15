@@ -1,14 +1,22 @@
 import React, { createContext, useContext, useState } from 'react';
 
+export type Tier = 'starter' | 'professional' | 'enterprise';
+
 type Session = {
   customer_id: number;
   user_id: string;
   user_name: string;
   email: string;
   vertical?: string;
+  role?: string;  // 'super_admin' | 'admin' | 'user'
   // UUID migration: UUIDs alongside integer IDs
   customer_uuid?: string;
   user_uuid?: string;
+  // Tier-based entitlements
+  tier?: Tier;
+  entitlements?: Record<string, boolean>;
+  // Onboarding state: fresh (no accounts), data_uploaded (accounts but no scores), active (has real scores)
+  onboarding_state?: 'fresh' | 'data_uploaded' | 'active';
 };
 
 const SessionContext = createContext<{

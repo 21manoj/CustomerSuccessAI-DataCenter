@@ -165,7 +165,7 @@ except Exception as e:
 
 import models
 import models_action_interface  # Phase 1 — Action Interface tables
-from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig
+from models import Customer, User, Account, KPIUpload, KPI, CustomerConfig, HealthScore
 
 # Register only essential APIs (legacy upload_api may be absent; V2/V3 used when available)
 try:
@@ -369,13 +369,10 @@ try:
 except ImportError as e:
     print(f"⚠️  data_ingestion_api not available: {e}")
 
-# Test Runner API (drives load-driver scenarios from UI)
-try:
-    from test_runner_api import test_runner_api
-    app.register_blueprint(test_runner_api)
-    print("✅ Registered test_runner_api: /api/test-runner/*")
-except ImportError as e:
-    print(f"⚠️  test_runner_api not available: {e}")
+# Test Runner API — NOW runs as a separate server on port 5099
+# See backend/test_runner_server.py (own auth, own session, own credentials)
+# Proxy: setupProxy.js routes /api/test-runner/* → port 5099
+# Removed from main app to enforce complete isolation.
 
 # Product Analytics API
 if PRODUCT_ANALYTICS_AVAILABLE:
@@ -702,6 +699,34 @@ def login():
         # Refresh user from database to ensure we have latest data
         db.session.refresh(user)
         
+        # Resolve tier + entitlements for the customer
+        try:
+            from entitlements import get_customer_tier, get_customer_entitlements
+            customer_tier = get_customer_tier(user.customer_id)
+            customer_entitlements = get_customer_entitlements(user.customer_id)
+        except Exception as tier_err:
+            print(f"Warning: Could not resolve tier/entitlements: {tier_err}")
+            customer_tier = 'enterprise'  # default
+            customer_entitlements = {}
+
+        # Detect onboarding state: fresh / data_uploaded / active
+        # 'fresh' = 0 accounts; 'data_uploaded' = has accounts but no health scores;
+        # 'active' = has accounts with real health scores in health_scores table
+        onboarding_state = 'fresh'
+        try:
+            account_count = Account.query.filter_by(customer_id=user.customer_id).count()
+            if account_count > 0:
+                # Check if any health score record exists for this customer's accounts
+                has_real_scores = db.session.query(HealthScore).join(
+                    Account, HealthScore.account_id == Account.account_id
+                ).filter(
+                    Account.customer_id == user.customer_id,
+                    HealthScore.health_score.isnot(None)
+                ).first() is not None
+                onboarding_state = 'active' if has_real_scores else 'data_uploaded'
+        except Exception as ob_err:
+            print(f"Warning: Could not detect onboarding state: {ob_err}")
+
         return jsonify({
             'status': 'success',
             'message': 'Login successful',
@@ -715,6 +740,10 @@ def login():
                 'customer_uuid': getattr(customer, 'uuid', None) if customer else None,
                 'user_uuid': getattr(user, 'uuid', None),
                 'vertical': getattr(customer, 'vertical', None) if customer else None,
+                'role': getattr(user, 'role', None),
+                'tier': customer_tier,
+                'entitlements': customer_entitlements,
+                'onboarding_state': onboarding_state,
             },
             'vertical': frontend_vertical,  # Return mapped vertical
             'session_expires': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat() if not remember else None
@@ -1050,6 +1079,26 @@ try:
     print("✅ Registered Report Generation API: /api/reports/*")
 except ImportError as e:
     print(f"⚠️  Warning: Report Generation API not available: {e}")
+
+# ====================================================================
+# SaaS Premium Vertical API
+# ====================================================================
+try:
+    from verticals.saas_premium.api_routes import saas_premium_api
+    app.register_blueprint(saas_premium_api, url_prefix='/api/saas')
+    print("✅ Registered SaaS Premium API: /api/saas/*")
+except ImportError as e:
+    print(f"⚠️  Warning: SaaS Premium API not available: {e}")
+
+# ====================================================================
+# Admin UI API (Super-Admin only)
+# ====================================================================
+try:
+    from admin_ui_api import admin_ui_api
+    app.register_blueprint(admin_ui_api)
+    print("✅ Registered Admin UI API: /api/admin-ui/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Admin UI API not available: {e}")
 
 # MCP Server status (inbound — external LLMs call into CS Pulse)
 try:

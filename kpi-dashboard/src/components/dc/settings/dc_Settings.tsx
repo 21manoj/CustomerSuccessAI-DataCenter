@@ -26,8 +26,10 @@ import {
   BarChart2,
   Clock,
   User,
-  Shield
+  Shield,
+  Lock,
 } from 'lucide-react';
+import { useEntitlements, getRequiredTier, tierLabel } from '../../../hooks/useEntitlement';
 import { KPIConfigurationSettings } from '../../settings/dc2s/KPIConfigurationSettings';
 import { PillarAndKPIWeightManagement } from './PillarAndKPIWeightManagement';
 import { KPIRangesTab } from './KPIRangesTab';
@@ -53,11 +55,15 @@ interface PillarWeight {
 
 const DCSettings: React.FC = () => {
   const { session } = useSession();
+  const { check: checkEntitlement, tier } = useEntitlements();
+  const isStarter = tier === 'starter';
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('weights');
   const [pillarWeights, setPillarWeights] = useState<PillarWeight[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Quick Setup vs Advanced view toggle (Starter only)
+  const [advancedView, setAdvancedView] = useState(false);
 
   useEffect(() => {
     if (activeSubTab === 'general') {
@@ -161,42 +167,169 @@ const DCSettings: React.FC = () => {
     }
   };
 
+  // Starter-friendly sub-tab labels
+  const subTabLabels: Record<string, string> = isStarter ? {
+    'weights': 'Score Weights',
+    'kpi-ranges': 'Score Boundaries',
+    'system-events': 'System Events',
+    'general': 'KPI Definitions',
+    'data': 'Data & Upload',
+    'entitlements': 'Entitlements',
+    'integrations': 'Integrations',
+    'users': 'Users',
+  } : {};
+
+  const getSubTabLabel = (id: string, defaultLabel: string) =>
+    isStarter ? (subTabLabels[id] || defaultLabel) : defaultLabel;
+
+  // ── Starter Quick Setup Card View ──
+  if (isStarter && !advancedView) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+            <p className="text-sm text-gray-500 mt-1">Quick setup for your CS Pulse configuration</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Score Boundaries Card */}
+          <button
+            onClick={() => { setActiveSubTab('kpi-ranges'); setAdvancedView(true); }}
+            className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:shadow-md hover:border-blue-200 transition-all group"
+          >
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="bg-blue-50 rounded-lg p-2 group-hover:bg-blue-100 transition-colors">
+                <Target className="h-5 w-5 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">Score Boundaries</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">Set what counts as healthy, at-risk, or critical</p>
+            <span className="inline-flex items-center text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+              <CheckCircle className="h-3 w-3 mr-1" /> Using defaults
+            </span>
+          </button>
+
+          {/* Score Weights Card */}
+          <button
+            onClick={() => { setActiveSubTab('weights'); setAdvancedView(true); }}
+            className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:shadow-md hover:border-blue-200 transition-all group"
+          >
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="bg-purple-50 rounded-lg p-2 group-hover:bg-purple-100 transition-colors">
+                <Sliders className="h-5 w-5 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">Score Weights</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">Control how much each area affects health scores</p>
+            <span className="inline-flex items-center text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+              <CheckCircle className="h-3 w-3 mr-1" /> Using defaults
+            </span>
+          </button>
+
+          {/* KPI Definitions Card */}
+          <button
+            onClick={() => { setActiveSubTab('general'); setAdvancedView(true); }}
+            className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:shadow-md hover:border-blue-200 transition-all group"
+          >
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="bg-amber-50 rounded-lg p-2 group-hover:bg-amber-100 transition-colors">
+                <Settings className="h-5 w-5 text-amber-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">KPI Definitions</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">View and manage your 10 active KPIs</p>
+            <span className="inline-flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              10 KPIs active
+            </span>
+          </button>
+
+          {/* User Management Card */}
+          <button
+            onClick={() => { setActiveSubTab('users'); setAdvancedView(true); }}
+            className="bg-white rounded-xl border border-gray-200 p-6 text-left hover:shadow-md hover:border-blue-200 transition-all group"
+          >
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="bg-teal-50 rounded-lg p-2 group-hover:bg-teal-100 transition-colors">
+                <Users className="h-5 w-5 text-teal-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">User Management</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">Manage team access and permissions</p>
+            <span className="inline-flex items-center text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+              1 user
+            </span>
+          </button>
+        </div>
+
+        <button
+          onClick={() => setAdvancedView(true)}
+          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          Switch to Advanced View →
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Configure platform settings and preferences
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Configure platform settings and preferences
+          </p>
+        </div>
+        {isStarter && advancedView && (
+          <button
+            onClick={() => setAdvancedView(false)}
+            className="text-sm text-blue-600 hover:text-blue-700"
+          >
+            ← Back to Quick Setup
+          </button>
+        )}
       </div>
 
       {/* Sub-tabs */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <nav className="flex space-x-8 px-6 border-b border-gray-200">
-          {[
-            { id: 'weights' as SubTab, label: 'Pillar and KPI Weight Management', icon: Sliders },
-            { id: 'kpi-ranges' as SubTab, label: 'KPI Ranges', icon: Target },
-            { id: 'system-events' as SubTab, label: 'System Events and Log Management', icon: Activity },
-            { id: 'general' as SubTab, label: 'General Configuration', icon: Settings },
-            { id: 'data' as SubTab, label: 'Data Management', icon: Database },
-            { id: 'entitlements' as SubTab, label: 'Entitlements', icon: Shield },
-            { id: 'integrations' as SubTab, label: 'Integrations', icon: Key },
-            { id: 'users' as SubTab, label: 'User Management', icon: Users },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                activeSubTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          ))}
+        <nav className="flex space-x-8 px-6 border-b border-gray-200 overflow-x-auto">
+          {([
+            { id: 'weights' as SubTab, label: 'Weights', icon: Sliders, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'kpi-ranges' as SubTab, label: 'KPI Ranges', icon: Target, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'system-events' as SubTab, label: 'System Events', icon: Activity, requiredFeature: 'signal_analyst' as string | undefined, adminOnly: false },
+            { id: 'general' as SubTab, label: 'General Config', icon: Settings, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'data' as SubTab, label: 'Data Management', icon: Database, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'entitlements' as SubTab, label: 'Entitlements', icon: Shield, requiredFeature: undefined as string | undefined, adminOnly: true },
+            { id: 'integrations' as SubTab, label: 'Integrations', icon: Key, requiredFeature: 'mcp_connectors' as string | undefined, adminOnly: false },
+            { id: 'users' as SubTab, label: 'Users', icon: Users, requiredFeature: undefined as string | undefined, adminOnly: false },
+          ]).map(tab => {
+            const featureGated = tab.requiredFeature ? !checkEntitlement(tab.requiredFeature) : false;
+            const adminGated = tab.adminOnly && session?.role !== 'super_admin' && session?.role !== 'admin';
+            const locked = featureGated || !!adminGated;
+            const requiredTierKey = tab.requiredFeature ? getRequiredTier(tab.requiredFeature) : null;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => !locked && setActiveSubTab(tab.id)}
+                disabled={locked}
+                title={locked && requiredTierKey ? `Upgrade to ${tierLabel(requiredTierKey)}` : undefined}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 whitespace-nowrap ${
+                  locked
+                    ? 'border-transparent text-gray-300 cursor-not-allowed'
+                    : activeSubTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span>{getSubTabLabel(tab.id, tab.label)}</span>
+                {locked && <Lock className="w-3 h-3" />}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Sub-tab Content */}

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  Settings, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  TrendingUp,
+  Settings,
+  AlertTriangle,
+  CheckCircle,
   Activity,
   BarChart3,
   RefreshCw,
@@ -12,6 +12,7 @@ import {
   Scale,
   Eye
 } from 'lucide-react';
+import { useEntitlements } from '../../hooks/useEntitlement';
 import WizardBInsights from './WizardBInsights';
 import WizardCWeights from './WizardCWeights';
 
@@ -38,6 +39,8 @@ interface AdminSummary {
 // ============================================================
 
 const AdminDashboard: React.FC = () => {
+  const { tier } = useEntitlements();
+  const isStarter = tier === 'starter';
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'wizard-b' | 'wizard-c'>('overview');
@@ -119,8 +122,8 @@ const AdminDashboard: React.FC = () => {
           <div className="flex items-center space-x-3">
             <Brain className="w-8 h-8 text-purple-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Insights</h1>
-              <p className="text-sm text-gray-500">Platform Intelligence & Calibration</p>
+              <h1 className="text-2xl font-bold text-gray-900">{isStarter ? 'Insights' : 'Admin Insights'}</h1>
+              <p className="text-sm text-gray-500">{isStarter ? 'Data quality and score calibration' : 'Platform Intelligence & Calibration'}</p>
             </div>
           </div>
           <button
@@ -156,10 +159,12 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            <span>Pattern Analysis</span>
-            <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full">
-              Wizard B
-            </span>
+            <span>{isStarter ? 'Data Quality Check' : 'Pattern Analysis'}</span>
+            {!isStarter && (
+              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full">
+                Wizard B
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('wizard-c')}
@@ -170,10 +175,12 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             <Scale className="w-4 h-4" />
-            <span>Weight Calibration</span>
-            <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full">
-              Wizard C
-            </span>
+            <span>{isStarter ? 'Score Calibration' : 'Weight Calibration'}</span>
+            {!isStarter && (
+              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full">
+                Wizard C
+              </span>
+            )}
           </button>
         </nav>
       </div>
