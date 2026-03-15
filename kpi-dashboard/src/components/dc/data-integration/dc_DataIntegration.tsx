@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../../../contexts/SessionContext';
+import { useEntitlements } from '../../../hooks/useEntitlement';
 import {
   Upload,
   FileText,
@@ -21,7 +22,11 @@ import {
   Calendar,
   X,
   Play,
-  Eye
+  Eye,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  HelpCircle,
 } from 'lucide-react';
 
 // ============================================================
@@ -47,8 +52,30 @@ interface UploadHistoryItem {
 // MAIN COMPONENT
 // ============================================================
 
+/** Auto-detect file type from CSV headers */
+function detectFileType(headers: string[]): FileType | null {
+  const headerSet = new Set(headers.map(h => h.toLowerCase().trim()));
+  if (headerSet.has('account_id') && (headerSet.has('arr') || headerSet.has('account_name'))) return 'accounts';
+  if (headerSet.has('kpi_code') && (headerSet.has('raw_value') || headerSet.has('kpi_id'))) return 'kpis';
+  if ((headerSet.has('signal_type') || headerSet.has('signal_category')) && headerSet.has('description')) return 'signals';
+  if (headerSet.has('product_id') || headerSet.has('product_name')) return 'products';
+  if (headerSet.has('industry') && headerSet.has('employee_count')) return 'profiles';
+  if (headerSet.has('stakeholder_id') || headerSet.has('stakeholder_name')) return 'stakeholders';
+  if (headerSet.has('engagement_type') || headerSet.has('event_type')) return 'engagement_events';
+  return null;
+}
+
+/** Starter-friendly file type labels */
+const STARTER_FILE_LABELS: Record<string, { label: string; description: string }> = {
+  accounts: { label: 'Account List', description: 'Your customer/account list with names and revenue' },
+  kpis: { label: 'KPI Measurements', description: 'Health metric values for each account' },
+  signals: { label: 'Notes & Signals', description: 'Qualitative notes, meeting summaries, risk flags' },
+};
+
 const DCDataIntegration: React.FC = () => {
   const { session } = useSession();
+  const { tier } = useEntitlements();
+  const isStarter = tier === 'starter';
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('upload');
   const [uploadMode, setUploadMode] = useState<UploadMode>('incremental');
   const [selectedFileType, setSelectedFileType] = useState<FileType | ''>('');
@@ -60,6 +87,10 @@ const DCDataIntegration: React.FC = () => {
   const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [viewModal, setViewModal] = useState<{ filename: string; content: string } | null>(null);
+  // Starter: show advanced file types toggle
+  const [showAdvancedTypes, setShowAdvancedTypes] = useState(false);
+  // Auto-detected file type
+  const [autoDetectedType, setAutoDetectedType] = useState<FileType | null>(null);
 
   useEffect(() => {
     if (activeSubTab === 'history') {
@@ -77,19 +108,45 @@ const DCDataIntegration: React.FC = () => {
     }
   };
 
+  /** Try to auto-detect file type from a CSV file's headers */
+  const tryAutoDetect = (file: File) => {
+    if (!file.name.endsWith('.csv')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (!text) return;
+      const firstLine = text.split('\n')[0];
+      if (!firstLine) return;
+      const headers = firstLine.split(',');
+      const detected = detectFileType(headers);
+      if (detected) {
+        setAutoDetectedType(detected);
+        if (!selectedFileType) {
+          setSelectedFileType(detected);
+        }
+      }
+    };
+    reader.readAsText(file.slice(0, 2048)); // Read only first 2KB
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setSelectedFiles(Array.from(e.dataTransfer.files));
+      const files = Array.from(e.dataTransfer.files);
+      setSelectedFiles(files);
+      // Auto-detect from first file
+      if (files[0]) tryAutoDetect(files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+      if (files[0]) tryAutoDetect(files[0]);
     }
   };
 
@@ -225,9 +282,9 @@ const DCDataIntegration: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Data Integration</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{isStarter ? 'Upload Data' : 'Data Integration'}</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Upload and manage your data files
+          {isStarter ? 'Upload your CSV files to populate health scores' : 'Upload and manage your data files'}
         </p>
       </div>
 
@@ -260,37 +317,81 @@ const DCDataIntegration: React.FC = () => {
             <div className="space-y-6">
               {/* File Type Selector */}
               <div className="bg-white border border-gray-200 rounded-lg p-4">
+                {/* Auto-detect banner */}
+                {autoDetectedType && selectedFileType === autoDetectedType && (
+                  <div className="mb-3 flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    <Sparkles className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm text-blue-700">
+                      We detected this as <strong>{STARTER_FILE_LABELS[autoDetectedType]?.label || autoDetectedType}</strong>.
+                    </span>
+                    <button
+                      onClick={() => { setAutoDetectedType(null); setSelectedFileType(''); }}
+                      className="text-xs text-blue-500 hover:text-blue-700 underline ml-auto"
+                    >
+                      Change
+                    </button>
+                  </div>
+                )}
+
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select File Type <span className="text-red-500">*</span>
+                  {isStarter ? 'What are you uploading?' : 'Select File Type'} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={selectedFileType}
-                  onChange={(e) => setSelectedFileType(e.target.value as FileType)}
+                  onChange={(e) => { setSelectedFileType(e.target.value as FileType); setAutoDetectedType(null); }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">-- Select file type --</option>
-                  <optgroup label="Core Data">
-                    <option value="accounts">Accounts (accounts.csv)</option>
-                    <option value="kpis">KPIs (kpi_measurements.csv)</option>
-                    <option value="signals">Signals (qualitative_signals.csv)</option>
-                    <option value="products">Products (products.csv)</option>
-                    <option value="profiles">Profiles (account_profiles.csv)</option>
-                    <option value="customers">Customers (customers.csv)</option>
-                  </optgroup>
-                  <optgroup label="Context Graph">
-                    <option value="stakeholders">Stakeholders (stakeholders.csv)</option>
-                    <option value="engagement_events">Engagement Events (engagement_events.csv)</option>
-                    <option value="account_business_profiles">Business Profiles (account_business_profiles.csv)</option>
-                    <option value="decisions">Decisions (decisions.csv)</option>
-                    <option value="outcomes">Outcomes (outcomes.csv)</option>
-                    <option value="signal_edges">Signal Edges (signal_edges.csv)</option>
-                    <option value="decision_evidence">Decision Evidence (decision_evidence.csv)</option>
-                    <option value="industry_benchmarks">Industry Benchmarks (industry_benchmarks.csv)</option>
-                    <option value="enhanced_signals">Enhanced Signals (enhanced_qualitative_signals.csv)</option>
-                  </optgroup>
+                  {isStarter && !showAdvancedTypes ? (
+                    <>
+                      <option value="accounts">Account List (accounts.csv)</option>
+                      <option value="kpis">KPI Measurements (kpi_measurements.csv)</option>
+                      <option value="signals">Notes & Signals (qualitative_signals.csv)</option>
+                    </>
+                  ) : (
+                    <>
+                      <optgroup label="Core Data">
+                        <option value="accounts">{isStarter ? 'Account List' : 'Accounts'} (accounts.csv)</option>
+                        <option value="kpis">{isStarter ? 'KPI Measurements' : 'KPIs'} (kpi_measurements.csv)</option>
+                        <option value="signals">{isStarter ? 'Notes & Signals' : 'Signals'} (qualitative_signals.csv)</option>
+                        <option value="products">Products (products.csv)</option>
+                        <option value="profiles">Profiles (account_profiles.csv)</option>
+                        <option value="customers">Customers (customers.csv)</option>
+                      </optgroup>
+                      <optgroup label="Context Graph">
+                        <option value="stakeholders">Stakeholders (stakeholders.csv)</option>
+                        <option value="engagement_events">Engagement Events (engagement_events.csv)</option>
+                        <option value="account_business_profiles">Business Profiles (account_business_profiles.csv)</option>
+                        <option value="decisions">Decisions (decisions.csv)</option>
+                        <option value="outcomes">Outcomes (outcomes.csv)</option>
+                        <option value="signal_edges">Signal Edges (signal_edges.csv)</option>
+                        <option value="decision_evidence">Decision Evidence (decision_evidence.csv)</option>
+                        <option value="industry_benchmarks">Industry Benchmarks (industry_benchmarks.csv)</option>
+                        <option value="enhanced_signals">Enhanced Signals (enhanced_qualitative_signals.csv)</option>
+                      </optgroup>
+                    </>
+                  )}
                 </select>
+                {isStarter && !showAdvancedTypes && (
+                  <button
+                    onClick={() => setShowAdvancedTypes(true)}
+                    className="flex items-center text-xs text-gray-400 hover:text-gray-600 mt-2 transition-colors"
+                  >
+                    <ChevronRight className="h-3 w-3 mr-1" /> Show Advanced Types
+                  </button>
+                )}
+                {isStarter && showAdvancedTypes && (
+                  <button
+                    onClick={() => setShowAdvancedTypes(false)}
+                    className="flex items-center text-xs text-gray-400 hover:text-gray-600 mt-2 transition-colors"
+                  >
+                    <ChevronDown className="h-3 w-3 mr-1" /> Show Fewer Types
+                  </button>
+                )}
                 <p className="text-xs text-gray-500 mt-2">
-                  Choose the type of data file you're uploading
+                  {isStarter
+                    ? "Not sure which to pick? Start with Account List \u2014 it's the foundation for everything else."
+                    : 'Choose the type of data file you\'re uploading'}
                 </p>
               </div>
 
@@ -433,11 +534,13 @@ const DCDataIntegration: React.FC = () => {
                       <p className={`font-medium ${
                         uploadResult.success ? 'text-green-900' : 'text-red-900'
                       }`}>
-                        {uploadResult.message}
+                        {uploadResult.success && isStarter
+                          ? `Data uploaded! Your health scores will appear in ${isStarter ? 'Accounts' : 'Tenants'}.`
+                          : uploadResult.message}
                       </p>
                       {uploadResult.success && uploadResult.accounts !== undefined && (
                         <p className="text-sm text-green-700 mt-1">
-                          Accounts: {uploadResult.accounts} • KPIs: {uploadResult.kpis}
+                          Accounts: {uploadResult.accounts} {uploadResult.kpis ? `\u2022 KPIs: ${uploadResult.kpis}` : ''}
                         </p>
                       )}
                     </div>

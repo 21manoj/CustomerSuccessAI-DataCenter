@@ -15,7 +15,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classify, classifyColor, classifyBadgeClass, classifyLabel, thresholdValues, getThresholds } from '../../utils/healthThresholds';
 import { useSession } from '../../contexts/SessionContext';
+import { useEntitlements } from '../../hooks/useEntitlement';
 import { getCustomerIdentifier } from '../../utils/api';
+import InfoTooltip from '../shared/InfoTooltip';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -26,7 +28,8 @@ import {
   Users, DollarSign, Activity, Target, ChevronRight,
   Calendar, Clock, Shield, Zap, Server, CheckCircle,
   XCircle, AlertCircle, Play, Eye, RefreshCw,
-  ListChecks, ArrowRight, BarChart2
+  ListChecks, ArrowRight, BarChart2, Upload, X as XIcon,
+  Sparkles, Rocket
 } from 'lucide-react';
 
 // ============================================================================
@@ -85,6 +88,14 @@ interface DailyAction {
   roi_metric_name?: string;
   roi_projected_impact?: number;
   roi_impact_type?: string;
+  // Cost bridge fields (optional — present for playbook actions)
+  manual_hours?: number;
+  automated_hours?: number;
+  automation_pct?: number;
+  manual_cost?: number;
+  cost_without_platform?: number;
+  platform_savings_per_run?: number;
+  roi_per_run?: number;
 }
 
 interface DailyActionsSummary {
@@ -273,13 +284,18 @@ const PortfolioOverview: React.FC<{ summary: PortfolioSummary }> = ({ summary })
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500">Total Accounts</p>
+            <p className="text-sm text-gray-500 flex items-center">
+              Total Accounts
+            </p>
             <p className="text-2xl font-bold">{summary.total_accounts}</p>
           </div>
           <Users className="w-10 h-10 text-blue-500 opacity-50" />
         </div>
         <div className="mt-2 flex items-center text-sm">
-          <span className="text-green-600">Avg Health: {summary.avg_health_score}</span>
+          <span className="text-green-600 flex items-center">
+            Avg Health: {summary.avg_health_score}
+            <InfoTooltip text="Overall health from 0-100. Green (70+) is healthy, yellow (50-69) needs attention, red (below 50) is critical." position="right" />
+          </span>
           <TrendIndicator trend="improving" value={summary.health_trend} />
         </div>
       </div>
@@ -307,7 +323,10 @@ const PortfolioOverview: React.FC<{ summary: PortfolioSummary }> = ({ summary })
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500">ARR at Risk</p>
+            <p className="text-sm text-gray-500 flex items-center">
+              ARR at Risk
+              <InfoTooltip text="Annual Recurring Revenue from accounts scoring below 50. This is your churn exposure." />
+            </p>
             <p className="text-2xl font-bold text-red-600">
               ${(summary.arr_at_risk / 1000).toFixed(0)}K
             </p>
@@ -786,9 +805,22 @@ const DailyActionsPanel: React.FC<{
                   </div>
                 </div>
 
-                {/* Duration + action button */}
+                {/* Duration + cost context + action button */}
                 <div className="flex-shrink-0 text-right space-y-1">
-                  <p className="text-[10px] text-gray-500">{action.estimated_hours}h &middot; {action.estimated_duration_display}</p>
+                  {action.manual_hours != null && action.automated_hours != null ? (
+                    <>
+                      <p className="text-[10px] text-gray-500">
+                        {action.manual_hours}h manual + {action.automated_hours}h auto &middot; {action.estimated_duration_display}
+                      </p>
+                      {action.manual_cost != null && action.roi_per_run != null && (
+                        <p className="text-[10px] text-indigo-500 font-medium">
+                          ${action.manual_cost.toLocaleString()}/run &middot; {action.roi_per_run.toFixed(2)}x ROI
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-gray-500">{action.estimated_hours}h &middot; {action.estimated_duration_display}</p>
+                  )}
                   <button
                     onClick={() => onStartPlaybook(action)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
@@ -820,7 +852,19 @@ const DailyActionsPanel: React.FC<{
 const ExecutiveDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { session } = useSession();
-  
+  const { tier } = useEntitlements();
+  const isStarter = tier === 'starter';
+
+  // Welcome banner dismissed state (persisted in localStorage)
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() =>
+    localStorage.getItem('starter_welcome_dismissed') === 'true'
+  );
+
+  const dismissWelcome = () => {
+    setWelcomeDismissed(true);
+    localStorage.setItem('starter_welcome_dismissed', 'true');
+  };
+
   // State - Initialize with empty arrays instead of mock data
   const [portfolio, setPortfolio] = useState<PortfolioSummary>({
     total_accounts: 0,
@@ -1188,11 +1232,60 @@ const ExecutiveDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Welcome Banner (Starter, first visit only) */}
+        {isStarter && !welcomeDismissed && (
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 relative">
+            <button
+              onClick={dismissWelcome}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              aria-label="Dismiss"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+            <div className="flex items-start space-x-4">
+              <div className="bg-blue-100 rounded-full p-3">
+                <Rocket className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  Welcome, {session?.user_name?.split(' ')[0] || 'there'}! Here's your quick start:
+                </h3>
+                <ol className="text-sm text-gray-600 space-y-1 mb-4">
+                  <li className="flex items-center">
+                    <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">1</span>
+                    Upload your data
+                    <button onClick={() => navigate('/dc-dashboard/data-integration')} className="ml-2 text-blue-600 hover:text-blue-700 text-xs font-medium underline">Upload Now</button>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">2</span>
+                    Review your accounts
+                    <button onClick={() => navigate('/dc-dashboard/tenants')} className="ml-2 text-blue-600 hover:text-blue-700 text-xs font-medium underline">View Accounts</button>
+                  </li>
+                  <li className="flex items-center">
+                    <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2">3</span>
+                    Check your daily actions (shown below)
+                  </li>
+                </ol>
+                <button
+                  onClick={dismissWelcome}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">CS Pulse Dashboard</h1>
-            <p className="text-gray-600">Portfolio Health & Intelligence</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isStarter ? 'Portfolio Overview' : 'CS Pulse Dashboard'}
+            </h1>
+            <p className="text-gray-600">
+              {isStarter ? 'Your accounts at a glance' : 'Portfolio Health & Intelligence'}
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">
@@ -1210,7 +1303,9 @@ const ExecutiveDashboard: React.FC = () => {
         </div>
 
         {/* Portfolio Overview */}
-        <PortfolioOverview summary={portfolio} />
+        <div data-tour="health-scores">
+          <PortfolioOverview summary={portfolio} />
+        </div>
 
         {/* Data quality: all placeholder scores = no KPI/health-trend data */}
         {accounts.length > 0 && accounts.every(a => a.isPlaceholderScore) && (
@@ -1222,6 +1317,7 @@ const ExecutiveDashboard: React.FC = () => {
         )}
 
         {/* CSM Daily Actions — prioritised morning TODO */}
+        <div data-tour="smart-actions">
         <DailyActionsPanel
           actions={dailyActions}
           summary={dailySummary}
@@ -1231,6 +1327,7 @@ const ExecutiveDashboard: React.FC = () => {
           onStartPlaybook={handleDailyActionStart}
           onViewAccount={handleViewDailyAccount}
         />
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
