@@ -117,7 +117,8 @@ const ProductTour: React.FC<ProductTourProps> = ({
 
     const rect = target.getBoundingClientRect();
     const tooltipWidth = 360;
-    const tooltipHeight = 160;
+    // Use actual tooltip height if available, otherwise estimate
+    const tooltipHeight = tooltipRef.current?.offsetHeight || 200;
     const gap = 16;
 
     let top = 0;
@@ -143,8 +144,9 @@ const ProductTour: React.FC<ProductTourProps> = ({
         break;
     }
 
-    // Clamp to viewport
-    top = Math.max(16, Math.min(window.innerHeight - tooltipHeight - 16, top));
+    // Clamp to viewport with generous padding to ensure buttons are visible
+    const bottomPadding = 24;
+    top = Math.max(16, Math.min(window.innerHeight - tooltipHeight - bottomPadding, top));
     left = Math.max(16, Math.min(window.innerWidth - tooltipWidth - 16, left));
 
     setTooltipStyle({
@@ -159,9 +161,16 @@ const ProductTour: React.FC<ProductTourProps> = ({
 
   useEffect(() => {
     positionTooltip();
+    // Re-position after a short delay so the tooltip has rendered and we can measure its actual height
+    const rafId = requestAnimationFrame(() => {
+      positionTooltip();
+    });
     const handleResize = () => positionTooltip();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [positionTooltip]);
 
   const handleNext = () => {

@@ -62,13 +62,25 @@ const KPIGlossaryDrawer: React.FC<KPIGlossaryDrawerProps> = ({ isOpen, onClose }
   const fetchKPIs = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/dc2s/config/kpi-definitions', {
+      const response = await fetch('/api/dc2s/kpis', {
         credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
-        // Handle both array and object response formats
-        const kpiList = Array.isArray(data) ? data : (data.kpis || data.definitions || []);
+        // Backend returns { kpis: { "P1-KPI1": {...}, ... }, pillars: { "P1": {...}, ... } }
+        // Transform from object format to array format for display
+        const kpisObj = data.kpis || {};
+        const pillarsObj = data.pillars || {};
+        const kpiList: KPIDefinition[] = Object.entries(kpisObj).map(([code, defn]: [string, any]) => ({
+          kpi_code: code,
+          kpi_name: defn.name || code,
+          pillar: defn.pillar || code.split('-')[0],
+          pillar_name: pillarsObj[defn.pillar]?.name || defn.pillar || '',
+          description: defn.description || `${defn.unit ? `Measured in ${defn.unit}.` : ''} ${defn.higher_is_better ? 'Higher is better.' : 'Lower is better.'}`.trim(),
+          weight_l1: defn.weight_l1 || 0,
+        }));
+        // Sort by pillar then KPI code
+        kpiList.sort((a, b) => a.kpi_code.localeCompare(b.kpi_code));
         setKpis(kpiList);
       }
     } catch (err) {
