@@ -3151,7 +3151,7 @@ def process_data(customer_id: int) -> dict:
                 for csv_file in csv_files:
                     csv_path = data_dir / csv_file
                     if csv_file in ('accounts.csv', 'kpi_measurements.csv',
-                                    'qualitative_signals.csv', 'profiles.csv',
+                                    'enhanced_qualitative_signals.csv',
                                     'products.csv'):
                         df = pd.read_csv(str(csv_path))
                         if not df.empty:

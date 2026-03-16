@@ -221,9 +221,10 @@ def generate_kpi_csv(customer_id: int, num_accounts: int, months: int = 12) -> s
     return output.getvalue()
 
 
-def generate_qualitative_signals_csv(customer_id: int, num_accounts: int,
-                                      months: int = 12) -> str:
-    """Generate qualitative_signals.csv with scenario-aware signals."""
+def generate_enhanced_qualitative_signals_csv(customer_id: int, num_accounts: int,
+                                               months: int = 12) -> str:
+    """Generate enhanced_qualitative_signals.csv with scenario-aware signals
+    and optional graph metadata columns."""
     import csv
     import io
 
@@ -231,7 +232,8 @@ def generate_qualitative_signals_csv(customer_id: int, num_accounts: int,
     writer = csv.writer(output)
     writer.writerow([
         'signal_id', 'account_id', 'signal_date', 'signal_type',
-        'content', 'sentiment', 'sentiment_score'
+        'content', 'sentiment', 'sentiment_score',
+        'arc_id', 'story_phase', 'linked_node_id'
     ])
 
     signal_types = ['customer_feedback', 'meeting', 'milestone', 'health_check', 'incident']
@@ -294,57 +296,11 @@ def generate_qualitative_signals_csv(customer_id: int, num_accounts: int,
                     account_id,
                     signal_date.strftime('%Y-%m-%d'),
                     random.choice(signal_types),
-                    content, sentiment, score
+                    content, sentiment, score,
+                    '',   # arc_id — populated by context graph pipeline
+                    '',   # story_phase — populated by context graph pipeline
+                    '',   # linked_node_id — populated by context graph pipeline
                 ])
-
-    return output.getvalue()
-
-
-def generate_profiles_csv(customer_id: int, num_accounts: int,
-                          customer_name: str, arr_values: list) -> str:
-    """Generate profiles.csv with account profile/champion data."""
-    import csv
-    import io
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow([
-        'account_id', 'customer_id', 'account_name', 'assigned_csm',
-        'csm_manager', 'executive_sponsor', 'arr', 'mrr',
-        'primary_champion_name', 'primary_champion_title',
-        'primary_champion_email', 'primary_champion_engagement_score',
-        'last_updated'
-    ])
-
-    envs = ['Production', 'Staging', 'Development', 'Analytics', 'AI-Training',
-            'Edge-Compute', 'DR-Backup', 'Testing', 'Research', 'Integration']
-    csm_names = ['Sarah Chen', 'Mike Johnson', 'Lisa Park', 'David Kim', 'Emma Wilson']
-    champion_titles = ['VP Engineering', 'CTO', 'Director of AI', 'Head of Infrastructure',
-                       'VP Data Science', 'Director of IT Operations', 'Chief Data Officer']
-    champion_names = ['Alex Rivera', 'Jordan Blake', 'Taylor Morgan', 'Casey Wu',
-                      'Riley Anderson', 'Quinn Harris', 'Avery Scott', 'Morgan Lee',
-                      'Jamie Torres', 'Drew Campbell']
-    exec_sponsors = ['Chris Martinez', 'Pat Richardson', 'Sam Nakamura']
-    csm_managers = ['Sam Rivera', 'Alex Chen', 'Jordan Blake']
-
-    account_base = customer_id * 1000 + 1
-
-    for i in range(num_accounts):
-        arr = arr_values[i]
-        champion = champion_names[i % len(champion_names)]
-        writer.writerow([
-            account_base + i, customer_id,
-            f"{customer_name}-{envs[i]}",
-            random.choice(csm_names),
-            random.choice(csm_managers),
-            random.choice(exec_sponsors),
-            int(arr), round(arr / 12, 0),
-            champion,
-            random.choice(champion_titles),
-            f"{champion.lower().replace(' ', '.')}@{customer_name.lower()}.com",
-            round(random.uniform(55, 95), 1),
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        ])
 
     return output.getvalue()
 
@@ -599,12 +555,11 @@ def setup_customer(client: CSPulseClient, config: dict) -> dict:
     arr_values = distribute_arr(total_arr, num_accounts, seed=hash(name) % 10000)
     logger.info(f"    ARR distribution: {[f'${v:,.0f}' for v in arr_values]}")
 
-    # Generate all 6 CSVs
+    # Generate 5 base CSVs (profiles.csv removed — merged into account_business_profiles)
     csvs = {
         'accounts': generate_accounts_csv(customer_id, name, num_accounts, arr_values),
         'kpi_measurements': generate_kpi_csv(customer_id, num_accounts, HISTORICAL_MONTHS),
-        'qualitative_signals': generate_qualitative_signals_csv(customer_id, num_accounts, HISTORICAL_MONTHS),
-        'profiles': generate_profiles_csv(customer_id, num_accounts, name, arr_values),
+        'enhanced_qualitative_signals': generate_enhanced_qualitative_signals_csv(customer_id, num_accounts, HISTORICAL_MONTHS),
         'products': generate_products_csv(customer_id, num_accounts),
         'contacts': generate_contacts_csv(customer_id, num_accounts, name),
     }
@@ -651,6 +606,7 @@ def setup_customer(client: CSPulseClient, config: dict) -> dict:
                 seed=cg_seed,
             )
 
+        # 8 context graph CSVs (decision_evidence consolidated into decisions)
         cg_csvs = {
             'stakeholders': gen.generate_stakeholders_csv(),
             'engagement_events': gen.generate_engagement_events_csv(),
@@ -658,7 +614,6 @@ def setup_customer(client: CSPulseClient, config: dict) -> dict:
             'decisions': gen.generate_decisions_csv(),
             'outcomes': gen.generate_outcomes_csv(),
             'signal_edges': gen.generate_signal_edges_csv(),
-            'decision_evidence': gen.generate_decision_evidence_csv(),
             'industry_benchmarks': gen.generate_industry_benchmarks_csv(),
             'enhanced_signals': gen.generate_enhanced_signals_csv(),
         }
@@ -677,7 +632,7 @@ def setup_customer(client: CSPulseClient, config: dict) -> dict:
             else:
                 logger.warning(f"    {file_type}: FAILED ({resp})")
 
-        logger.info(f"    Uploaded {cg_ok}/9 context graph CSVs")
+        logger.info(f"    Uploaded {cg_ok}/8 context graph CSVs")
         result['context_graph_files'] = cg_ok
 
     except ImportError as e:

@@ -5,24 +5,20 @@ Create Template CSV Files for Onboarding
 
 Creates downloadable template CSV files for all file types:
 
-Core (6):
+Core (4):
 1. accounts.csv
-2. kpi_measurements.csv (kpis.csv)
-3. qualitative_signals.csv (signals.csv)
+2. kpi_measurements.csv
+3. enhanced_qualitative_signals.csv
 4. products.csv
-5. account_profiles.csv (profiles.csv)
-6. customers.csv
 
-Context Graph (9):
-7. stakeholders.csv
-8. engagement_events.csv
-9. account_business_profiles.csv
-10. decisions.csv
-11. outcomes.csv
-12. signal_edges.csv
-13. decision_evidence.csv
-14. industry_benchmarks.csv
-15. enhanced_qualitative_signals.csv
+Context Graph (7):
+5. stakeholders.csv
+6. engagement_events.csv
+7. account_business_profiles.csv
+8. decisions.csv
+9. outcomes.csv
+10. signal_edges.csv
+11. industry_benchmarks.csv
 
 These templates are used by users to understand the expected structure
 and format of data files for onboarding.
@@ -108,47 +104,6 @@ def create_kpi_measurements_template():
     print(f"✅ Created: {filepath}")
     return filepath
 
-def create_qualitative_signals_template():
-    """Create qualitative_signals.csv template"""
-    filepath = TEMPLATE_DIR / "qualitative_signals.csv"
-    
-    with open(filepath, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            'signal_id', 'account_id', 'signal_date', 'signal_type',
-            'sentiment', 'content'
-        ])
-        writer.writeheader()
-        
-        # Sample rows (3 examples)
-        base_date = datetime.now() - timedelta(days=7)
-        writer.writerow({
-            'signal_id': '1',
-            'account_id': '10001',
-            'signal_date': base_date.strftime('%Y-%m-%d'),
-            'signal_type': 'email',
-            'sentiment': 'positive',
-            'content': 'Customer expressed satisfaction with recent deployment'
-        })
-        writer.writerow({
-            'signal_id': '2',
-            'account_id': '10001',
-            'signal_date': (base_date - timedelta(days=3)).strftime('%Y-%m-%d'),
-            'signal_type': 'meeting',
-            'sentiment': 'neutral',
-            'content': 'QBR meeting scheduled for next month'
-        })
-        writer.writerow({
-            'signal_id': '3',
-            'account_id': '10001',
-            'signal_date': (base_date - timedelta(days=1)).strftime('%Y-%m-%d'),
-            'signal_type': 'escalation',
-            'sentiment': 'negative',
-            'content': 'Performance issue reported, resolved within 2 hours'
-        })
-    
-    print(f"✅ Created: {filepath}")
-    return filepath
-
 def create_products_template():
     """Create products.csv template"""
     filepath = TEMPLATE_DIR / "products.csv"
@@ -180,68 +135,8 @@ def create_products_template():
     print(f"✅ Created: {filepath}")
     return filepath
 
-def create_account_profiles_template():
-    """Create account_profiles.csv template (profiles.csv)"""
-    filepath = TEMPLATE_DIR / "account_profiles.csv"
-    
-    # Note: account_profiles has 100+ columns, we'll include key ones
-    key_columns = [
-        'account_id', 'customer_id', 'account_name', 'account_nickname',
-        'industry', 'account_tier', 'initial_arr', 'final_arr',
-        'contract_start_date', 'contract_end_date', 'partner_id',
-        'csm_assigned', 'executive_sponsor', 'journey_type', 'outcome'
-    ]
-    
-    with open(filepath, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=key_columns)
-        writer.writeheader()
-        
-        # Sample row
-        writer.writerow({
-            'account_id': '10001',
-            'customer_id': '1',
-            'account_name': 'Acme Corporation - Datacenter East',
-            'account_nickname': 'Acme DC East',
-            'industry': 'Technology',
-            'account_tier': 'Enterprise',
-            'initial_arr': '2000000',
-            'final_arr': '2500000',
-            'contract_start_date': '2024-01-01',
-            'contract_end_date': '2025-12-31',
-            'partner_id': 'PARTNER-001',
-            'csm_assigned': 'John Smith',
-            'executive_sponsor': 'Jane Executive',
-            'journey_type': 'expansion',
-            'outcome': 'success'
-        })
-    
-    print(f"✅ Created: {filepath}")
-    return filepath
-
-def create_customers_template():
-    """Create customers.csv template"""
-    filepath = TEMPLATE_DIR / "customers.csv"
-    
-    with open(filepath, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            'customer_id', 'customer_name', 'domain', 'industry_vertical', 'created_at'
-        ])
-        writer.writeheader()
-        
-        # Sample row
-        writer.writerow({
-            'customer_id': '1',
-            'customer_name': 'Acme Corporation',
-            'domain': 'acme-corporation.com',
-            'industry_vertical': 'Technology - dc2_s',
-            'created_at': datetime.now().strftime('%Y-%m-%d')
-        })
-    
-    print(f"✅ Created: {filepath}")
-    return filepath
-
 # ============================================================================
-# Context Graph Templates (9 additional CSVs)
+# Context Graph Templates (7 additional CSVs)
 # ============================================================================
 
 def create_stakeholders_template():
@@ -301,13 +196,22 @@ def create_engagement_events_template():
 
 
 def create_account_business_profiles_template():
-    """Create account_business_profiles.csv template"""
+    """Create account_business_profiles.csv template.
+
+    Now includes optional CSM/champion columns (absorbed from removed
+    profiles.csv and customers.csv).
+    """
     filepath = TEMPLATE_DIR / "account_business_profiles.csv"
     with open(filepath, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
             'account_id', 'arr', 'industry', 'employee_count',
             'fiscal_year_end', 'tech_stack', 'cloud_provider',
-            'competitive_landscape', 'strategic_initiatives'
+            'competitive_landscape', 'strategic_initiatives',
+            # Optional CSM / champion columns (consolidated from profiles.csv)
+            'assigned_csm', 'csm_manager', 'executive_sponsor', 'mrr',
+            'primary_champion_name', 'primary_champion_title',
+            'primary_champion_email', 'primary_champion_engagement_score',
+            'last_updated'
         ])
         writer.writeheader()
         writer.writerow({
@@ -315,7 +219,14 @@ def create_account_business_profiles_template():
             'employee_count': '5000', 'fiscal_year_end': 'December',
             'tech_stack': 'NVIDIA DGX, VMware, Kubernetes',
             'cloud_provider': 'hybrid', 'competitive_landscape': 'CoreWeave, Lambda Labs',
-            'strategic_initiatives': 'AI training expansion, multi-cloud migration'
+            'strategic_initiatives': 'AI training expansion, multi-cloud migration',
+            'assigned_csm': 'Jordan Lee', 'csm_manager': 'Sam Rivera',
+            'executive_sponsor': 'Jane Chen, CTO', 'mrr': '208333',
+            'primary_champion_name': 'Chris Martinez',
+            'primary_champion_title': 'VP Infrastructure',
+            'primary_champion_email': 'chris.martinez@acme.com',
+            'primary_champion_engagement_score': '85',
+            'last_updated': '2026-03-01'
         })
     print(f"  Created: {filepath}")
     return filepath
@@ -376,12 +287,19 @@ def create_outcomes_template():
 
 
 def create_signal_edges_template():
-    """Create signal_edges.csv template"""
+    """Create signal_edges.csv template.
+
+    Includes a SOURCED_FROM sample row that carries decision-evidence
+    columns (consolidated from removed decision_evidence.csv).
+    """
     filepath = TEMPLATE_DIR / "signal_edges.csv"
     with open(filepath, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
             'from_signal_ref', 'to_signal_ref', 'edge_type', 'weight',
-            'confidence', 'lag_days', 'revenue_impact', 'evidence'
+            'confidence', 'lag_days', 'revenue_impact', 'evidence',
+            # Optional columns for SOURCED_FROM edges (absorbed from decision_evidence.csv)
+            'evidence_type', 'evidence_description', 'kpi_code', 'kpi_value',
+            'decision_ref'
         ])
         writer.writeheader()
         writer.writerow({
@@ -389,41 +307,30 @@ def create_signal_edges_template():
             'edge_type': 'caused_by', 'weight': '0.8',
             'confidence': '0.75', 'lag_days': '7',
             'revenue_impact': '250000',
-            'evidence': 'Performance issue led to escalation'
+            'evidence': 'Performance issue led to escalation',
+            'evidence_type': '', 'evidence_description': '',
+            'kpi_code': '', 'kpi_value': '', 'decision_ref': ''
         })
         writer.writerow({
             'from_signal_ref': 'SIG-003', 'to_signal_ref': 'DEC-001',
             'edge_type': 'influenced', 'weight': '0.9',
             'confidence': '0.85', 'lag_days': '14',
             'revenue_impact': '500000',
-            'evidence': 'Positive QBR feedback influenced expansion decision'
+            'evidence': 'Positive QBR feedback influenced expansion decision',
+            'evidence_type': '', 'evidence_description': '',
+            'kpi_code': '', 'kpi_value': '', 'decision_ref': ''
         })
-    print(f"  Created: {filepath}")
-    return filepath
-
-
-def create_decision_evidence_template():
-    """Create decision_evidence.csv template"""
-    filepath = TEMPLATE_DIR / "decision_evidence.csv"
-    with open(filepath, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            'decision_ref', 'evidence_type', 'evidence_description',
-            'kpi_code', 'kpi_value', 'signal_ref', 'timestamp', 'confidence'
-        ])
-        writer.writeheader()
+        # SOURCED_FROM edge — carries decision-evidence metadata
         writer.writerow({
-            'decision_ref': 'DEC-001', 'evidence_type': 'kpi_improvement',
-            'evidence_description': 'GPU utilization improved 15% after optimization',
-            'kpi_code': 'P3-KPI1', 'kpi_value': '92.5',
-            'signal_ref': '', 'timestamp': datetime.now().strftime('%Y-%m-%d'),
-            'confidence': '0.9'
-        })
-        writer.writerow({
-            'decision_ref': 'DEC-001', 'evidence_type': 'stakeholder_feedback',
-            'evidence_description': 'VP Infrastructure confirmed value in QBR',
-            'kpi_code': '', 'kpi_value': '',
-            'signal_ref': 'SIG-003', 'timestamp': datetime.now().strftime('%Y-%m-%d'),
-            'confidence': '0.85'
+            'from_signal_ref': 'SIG-001', 'to_signal_ref': 'DEC-001',
+            'edge_type': 'SOURCED_FROM', 'weight': '0.85',
+            'confidence': '0.9', 'lag_days': '30',
+            'revenue_impact': '480000',
+            'evidence': 'GPU utilization trend supported expansion decision',
+            'evidence_type': 'kpi_trend',
+            'evidence_description': 'GPU utilization rose from 55% to 78% over 3 months',
+            'kpi_code': 'P3-KPI1', 'kpi_value': '78.0',
+            'decision_ref': 'DEC-001'
         })
     print(f"  Created: {filepath}")
     return filepath
@@ -456,35 +363,44 @@ def create_industry_benchmarks_template():
 
 
 def create_enhanced_signals_template():
-    """Create enhanced_qualitative_signals.csv template"""
+    """Create enhanced_qualitative_signals.csv template.
+
+    This is the consolidated signals file (replaces qualitative_signals.csv).
+    Core columns: account_id, signal_date, signal_type, content, sentiment.
+    Optional columns add context-graph metadata when the feature is enabled.
+    """
     filepath = TEMPLATE_DIR / "enhanced_qualitative_signals.csv"
     base_date = datetime.now() - timedelta(days=7)
     with open(filepath, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
             'account_id', 'signal_date', 'signal_type', 'content',
-            'sentiment', 'sentiment_score', 'stakeholder_name',
+            'sentiment',
+            # Optional context-graph columns
+            'signal_ref', 'sentiment_score', 'stakeholder_name',
             'stakeholder_title', 'causal_chain_ref', 'revenue_impact',
-            'confidence'
+            'confidence', 'source_platform'
         ])
         writer.writeheader()
         writer.writerow({
             'account_id': '10001', 'signal_date': base_date.strftime('%Y-%m-%d'),
             'signal_type': 'champion_signal',
             'content': 'VP Infrastructure advocates for expanded deployment in leadership meeting',
-            'sentiment': 'positive', 'sentiment_score': '0.9',
+            'sentiment': 'positive', 'signal_ref': 'SIG-001',
+            'sentiment_score': '0.9',
             'stakeholder_name': 'Sarah Chen', 'stakeholder_title': 'VP Infrastructure',
-            'causal_chain_ref': 'SIG-001→SIG-003', 'revenue_impact': '500000',
-            'confidence': '0.85'
+            'causal_chain_ref': 'SIG-001->SIG-003', 'revenue_impact': '500000',
+            'confidence': '0.85', 'source_platform': 'salesforce'
         })
         writer.writerow({
             'account_id': '10001',
             'signal_date': (base_date + timedelta(days=3)).strftime('%Y-%m-%d'),
             'signal_type': 'risk_signal',
             'content': 'Competitor demo scheduled with procurement team',
-            'sentiment': 'negative', 'sentiment_score': '-0.6',
+            'sentiment': 'negative', 'signal_ref': 'SIG-002',
+            'sentiment_score': '-0.6',
             'stakeholder_name': 'James Park', 'stakeholder_title': 'CTO',
             'causal_chain_ref': '', 'revenue_impact': '-2500000',
-            'confidence': '0.7'
+            'confidence': '0.7', 'source_platform': 'gong'
         })
     print(f"  Created: {filepath}")
     return filepath
@@ -493,19 +409,17 @@ def create_enhanced_signals_template():
 def main():
     """Create all template files (core + context graph)"""
     print("=" * 70)
-    print("Creating Template CSV Files for Onboarding")
+    print("Creating Template CSV Files for Onboarding (11 total: 4 core + 7 context graph)")
     print("=" * 70)
     print()
 
-    # Core templates (6)
+    # Core templates (4)
     print("Core Data Templates:")
     core_templates = {
         'accounts': create_accounts_template,
         'kpi_measurements': create_kpi_measurements_template,
-        'qualitative_signals': create_qualitative_signals_template,
+        'enhanced_signals': create_enhanced_signals_template,
         'products': create_products_template,
-        'account_profiles': create_account_profiles_template,
-        'customers': create_customers_template
     }
 
     created = []
@@ -516,7 +430,7 @@ def main():
         except Exception as e:
             print(f"  Failed to create {name} template: {e}")
 
-    # Context graph templates (9)
+    # Context graph templates (7)
     print()
     print("Context Graph Templates:")
     context_graph_templates = {
@@ -526,9 +440,7 @@ def main():
         'decisions': create_decisions_template,
         'outcomes': create_outcomes_template,
         'signal_edges': create_signal_edges_template,
-        'decision_evidence': create_decision_evidence_template,
         'industry_benchmarks': create_industry_benchmarks_template,
-        'enhanced_signals': create_enhanced_signals_template,
     }
 
     for name, func in context_graph_templates.items():

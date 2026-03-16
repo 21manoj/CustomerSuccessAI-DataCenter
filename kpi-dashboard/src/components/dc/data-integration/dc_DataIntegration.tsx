@@ -35,9 +35,9 @@ import {
 
 type UploadMode = 'full_refresh' | 'incremental' | 'upsert' | 'merge';
 type SubTab = 'upload' | 'history' | 'templates';
-type FileType = 'accounts' | 'kpis' | 'signals' | 'products' | 'profiles' | 'customers'
-  | 'stakeholders' | 'engagement_events' | 'account_business_profiles' | 'decisions'
-  | 'outcomes' | 'signal_edges' | 'decision_evidence' | 'industry_benchmarks' | 'enhanced_signals';
+type FileType = 'accounts' | 'kpis' | 'enhanced_signals' | 'products'
+  | 'stakeholders' | 'engagement_events' | 'account_business_profiles'
+  | 'outcomes' | 'decisions' | 'signal_edges' | 'industry_benchmarks';
 
 interface UploadHistoryItem {
   upload_id: number;
@@ -346,28 +346,26 @@ const DCDataIntegration: React.FC = () => {
                     <>
                       <option value="accounts">Account List (accounts.csv)</option>
                       <option value="kpis">KPI Measurements (kpi_measurements.csv)</option>
-                      <option value="signals">Notes & Signals (qualitative_signals.csv)</option>
+                      <option value="enhanced_signals">Signals (enhanced_qualitative_signals.csv)</option>
                     </>
                   ) : (
                     <>
-                      <optgroup label="Core Data">
+                      <optgroup label="Core Data (4 files)">
                         <option value="accounts">{isStarter ? 'Account List' : 'Accounts'} (accounts.csv)</option>
                         <option value="kpis">{isStarter ? 'KPI Measurements' : 'KPIs'} (kpi_measurements.csv)</option>
-                        <option value="signals">{isStarter ? 'Notes & Signals' : 'Signals'} (qualitative_signals.csv)</option>
+                        <option value="enhanced_signals">Signals (enhanced_qualitative_signals.csv)</option>
                         <option value="products">Products (products.csv)</option>
-                        <option value="profiles">Profiles (account_profiles.csv)</option>
-                        <option value="customers">Customers (customers.csv)</option>
                       </optgroup>
-                      <optgroup label="Context Graph">
+                      <optgroup label="Context Graph — Customer Provided (4 files)">
                         <option value="stakeholders">Stakeholders (stakeholders.csv)</option>
                         <option value="engagement_events">Engagement Events (engagement_events.csv)</option>
-                        <option value="account_business_profiles">Business Profiles (account_business_profiles.csv)</option>
-                        <option value="decisions">Decisions (decisions.csv)</option>
+                        <option value="account_business_profiles">Business Profiles &amp; CSM Info (account_business_profiles.csv)</option>
                         <option value="outcomes">Outcomes (outcomes.csv)</option>
+                      </optgroup>
+                      <optgroup label="Context Graph — Auto-generated (3 files)">
+                        <option value="decisions">Decisions (decisions.csv)</option>
                         <option value="signal_edges">Signal Edges (signal_edges.csv)</option>
-                        <option value="decision_evidence">Decision Evidence (decision_evidence.csv)</option>
                         <option value="industry_benchmarks">Industry Benchmarks (industry_benchmarks.csv)</option>
-                        <option value="enhanced_signals">Enhanced Signals (enhanced_qualitative_signals.csv)</option>
                       </optgroup>
                     </>
                   )}
@@ -417,7 +415,7 @@ const DCDataIntegration: React.FC = () => {
                   or click to browse
                 </p>
                 <p className="text-xs text-gray-400 mb-4">
-                  Supported: accounts.csv, kpis.csv, signals.csv, products.csv, profiles.csv, customers.csv
+                  Core: accounts.csv, kpi_measurements.csv, enhanced_qualitative_signals.csv, products.csv
                 </p>
                 {selectedFileType && (
                   <p className="text-xs text-blue-600 mb-4 font-medium">
@@ -662,10 +660,8 @@ const DCDataIntegration: React.FC = () => {
                   {[
                     { type: 'accounts', name: 'accounts.csv', desc: 'Account information template' },
                     { type: 'kpis', name: 'kpi_measurements.csv', desc: 'KPI measurements template' },
-                    { type: 'signals', name: 'qualitative_signals.csv', desc: 'Qualitative signals template' },
+                    { type: 'enhanced_signals', name: 'enhanced_qualitative_signals.csv', desc: 'Qualitative signals template' },
                     { type: 'products', name: 'products.csv', desc: 'Product catalog template' },
-                    { type: 'profiles', name: 'account_profiles.csv', desc: 'Account profiles template' },
-                    { type: 'customers', name: 'customers.csv', desc: 'Customer/tenant data template' },
                   ].map((template) => {
                   const handleDownload = async () => {
                     try {
@@ -749,13 +745,8 @@ const DCDataIntegration: React.FC = () => {
                   {[
                     { type: 'stakeholders', name: 'stakeholders.csv', desc: 'Stakeholder nodes — name, title, role, influence' },
                     { type: 'engagement_events', name: 'engagement_events.csv', desc: 'Engagement signals — meetings, calls, escalations' },
-                    { type: 'account_business_profiles', name: 'account_business_profiles.csv', desc: 'Account context — ARR, industry, employee count' },
-                    { type: 'decisions', name: 'decisions.csv', desc: 'Decision nodes — title, maker, chosen option' },
-                    { type: 'outcomes', name: 'outcomes.csv', desc: 'Outcome nodes — type, revenue value, status' },
-                    { type: 'signal_edges', name: 'signal_edges.csv', desc: 'Signal relationships — edge type and weight' },
-                    { type: 'decision_evidence', name: 'decision_evidence.csv', desc: 'Decision evidence links — type and description' },
-                    { type: 'industry_benchmarks', name: 'industry_benchmarks.csv', desc: 'Industry benchmarks — KPI percentiles by industry' },
-                    { type: 'enhanced_signals', name: 'enhanced_qualitative_signals.csv', desc: 'Enhanced signals with graph metadata' },
+                    { type: 'account_business_profiles', name: 'account_business_profiles.csv', desc: 'Account context, CSM assignments, champion info' },
+                    { type: 'outcomes', name: 'outcomes.csv', desc: 'Revenue outcomes — type, value, status' },
                   ].map((template) => {
                     const handleDownload = async () => {
                       try {

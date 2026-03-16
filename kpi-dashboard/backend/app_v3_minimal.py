@@ -1014,17 +1014,20 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Admin API not available: {e}")
 
-# Admin UI API (Super Admin key management, contractor access, security)
+# Admin UI API (Super Admin Console) + Contractor Access API (api-keys, contractors, activity-log)
 try:
     from admin_ui_api import admin_ui_api
     app.register_blueprint(admin_ui_api)
-    print("✅ Registered Admin UI API: /api/admin-ui/*")
+    print("✅ Registered Admin UI API: /api/admin-ui/* (Super Admin Console)")
 except (ImportError, Exception) as e:
-    print(f"⚠️  Admin UI API not fully available ({e}), registering contractor-access endpoints inline")
-    # Register contractor-access endpoints inline for branches without full admin_ui_api
+    print(f"⚠️  Admin UI API not fully available ({e})")
+
+try:
     from contractor_access_api import contractor_access_bp
     app.register_blueprint(contractor_access_bp)
-    print("✅ Registered Contractor Access API: /api/admin-ui/contractor-access/*")
+    print("✅ Registered Contractor Access API: /api/admin-ui/ (api-keys, contractors, activity-log)")
+except (ImportError, Exception) as e:
+    print(f"⚠️  Contractor Access API not available ({e})")
 
 # Action Interface API (Phases 4, 5, 7 — bindings, credentials, callbacks)
 try:
@@ -1117,14 +1120,8 @@ except ImportError as e:
     print(f"⚠️  Warning: SaaS Premium API not available: {e}")
 
 # ====================================================================
-# Admin UI API (Super-Admin only)
+# Admin UI API (Super-Admin only) — already registered above (line ~1017)
 # ====================================================================
-try:
-    from admin_ui_api import admin_ui_api
-    app.register_blueprint(admin_ui_api)
-    print("✅ Registered Admin UI API: /api/admin-ui/*")
-except ImportError as e:
-    print(f"⚠️  Warning: Admin UI API not available: {e}")
 
 # MCP Server status (inbound — external LLMs call into CS Pulse)
 try:

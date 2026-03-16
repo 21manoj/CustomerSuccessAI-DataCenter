@@ -30,28 +30,26 @@ PILLAR NAME RULES (use EXACT names — NEVER abbreviate):
   ✅ "Channel & Partner Health"   ❌ "Partnership", "Partner"
   ✅ "Expansion Readiness"        ❌ "Expansion", "Growth"
 
-CSV FILES: 15 total (NEVER say "5 CSVs")
-  Regular (6 — required for all customers):
-    1. accounts.csv              — Account master data
-    2. kpi_measurements.csv      — KPI metric values (all 38 KPIs)
-    3. qualitative_signals.csv   — Customer signals and feedback
-    4. products.csv              — Product usage data
-    5. profiles.csv              — Stakeholder and CRM profile data
-    6. customers.csv             — Customer master record
+CSV FILES: 11 total (8 customer-provided + 3 auto-generated)
+  Customer-provided — Regular (4):
+    1. accounts.csv                    — Account master data
+    2. kpi_measurements.csv            — KPI metric values (all 38 KPIs)
+    3. enhanced_qualitative_signals.csv — Enriched signals with graph metadata
+    4. products.csv                    — Product usage data
 
-  Context Graph (9 — when context_graph feature is enabled):
-    7. stakeholders.csv               — Key contacts and champions
-    8. engagement_events.csv          — Meetings, calls, QBRs
-    9. account_business_profiles.csv  — Business context
-   10. decisions.csv                  — Strategic decisions
-   11. outcomes.csv                   — Business outcomes (expansion, churn_averted)
-   12. signal_edges.csv               [INFERRED] Platform auto-generates causal edges
-   13. decision_evidence.csv          [INFERRED] Platform auto-generates evidence links
-   14. industry_benchmarks.csv        — External benchmarks
-   15. enhanced_qualitative_signals.csv — Enriched signals with graph metadata
+  Customer-provided — Context Graph (4, when context_graph feature is enabled):
+    5. stakeholders.csv               — Key contacts and champions
+    6. engagement_events.csv          — Meetings, calls, QBRs
+    7. account_business_profiles.csv  — Business context (includes CSM/champion fields)
+    8. outcomes.csv                   — Business outcomes (expansion, churn_averted)
 
-  [INFERRED] = Platform derives these from node data. Customer may provide
-  them or leave blank — the platform will auto-generate the edges.
+  Auto-generated (3 — platform derives these from node data):
+    9. decisions.csv                  — Strategic decisions (inferred from signals + outcomes)
+   10. signal_edges.csv               — Causal edges between signals
+   11. industry_benchmarks.csv        — External benchmarks
+
+  Note: account_business_profiles.csv now includes CSM and champion fields
+  previously in the deprecated profiles.csv.
 
 HEALTH SCORE BANDS (from config/health_thresholds.json):
   Critical : score < 50    (immediate intervention)
@@ -166,15 +164,17 @@ KPI CODE FORMAT: P-format ONLY (P1-KPI1 through P5-KPI8). NEVER use old
 4. ONBOARDING SEQUENCE (4-week recommended)
 ═══════════════════════════════════════════════════════════════════════════════
 
-  Week 1: accounts.csv, customers.csv, products.csv (foundational data)
-  Week 2: kpi_measurements.csv, qualitative_signals.csv, profiles.csv
+  Week 1: accounts.csv, products.csv (foundational data)
+  Week 2: kpi_measurements.csv, enhanced_qualitative_signals.csv
           → Health scores calculate immediately on sync
-  Week 3: Context graph CSVs — stakeholders, engagement_events, decisions, outcomes
-  Week 4: industry_benchmarks, enhanced_signals; run /process-data; verify scores
+  Week 3: Context graph CSVs — stakeholders, engagement_events,
+          account_business_profiles, outcomes
+  Week 4: Auto-generated files (decisions, signal_edges, industry_benchmarks)
+          created by platform; run /process-data; verify scores
 
   API flow:
     POST /api/onboarding/complete  → Create customer + accounts + config
-    POST /api/onboarding/upload    → Upload CSV files (6 regular + 9 context graph)
+    POST /api/onboarding/upload    → Upload CSV files (8 customer-provided)
     POST /api/onboarding/process-data → Run 7-step pipeline (Wizard A/B/C)
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -201,7 +201,7 @@ When generating a guide for a new customer:
 
   d) For the new customer's guide, structure it as:
      I.   Reference customer structure (from live MCP data)
-     II.  Data preparation (15 CSVs with exact column headers)
+     II.  Data preparation (11 CSVs: 8 customer-provided + 3 auto-generated)
      III. Post-onboarding auto-triggers (health scores, playbooks, context graph)
      IV.  Onboarding sequence (4-week plan)
      V.   Lessons learned from reference customer

@@ -6,7 +6,7 @@ Creates a multi-tab workbook with:
   - README (corrected onboarding guide)
   - KPI Reference (38 KPIs with health ranges)
   - Weights (L1/L2 defaults + customization)
-  - 15 CSV data-entry tabs (6 regular + 9 context graph)
+  - 11 CSV data-entry tabs (4 regular + 7 context graph)
 
 All data is read programmatically from source-of-truth files:
   - config/csv_schemas.json
@@ -58,36 +58,32 @@ HEALTHY_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="
 RISK_FILL = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
 CRITICAL_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 
-INFERRED_CSVS = {"signal_edges.csv", "decision_evidence.csv"}
+INFERRED_CSVS = {"signal_edges.csv"}
 
 SHEET_NAME_MAP = {
     "accounts.csv": "accounts",
     "kpi_measurements.csv": "kpi_measurements",
-    "qualitative_signals.csv": "qualitative_signals",
+    "enhanced_qualitative_signals.csv": "enhanced_signals",
     "products.csv": "products",
-    "profiles.csv": "profiles",
-    "customers.csv": "customers",
     "stakeholders.csv": "CG-stakeholders",
     "engagement_events.csv": "CG-engagement_events",
     "account_business_profiles.csv": "CG-account_biz_profiles",
     "decisions.csv": "CG-decisions",
     "outcomes.csv": "CG-outcomes",
     "signal_edges.csv": "CG-signal_edges INFER",
-    "decision_evidence.csv": "CG-decision_evid INFER",
     "industry_benchmarks.csv": "CG-industry_benchmarks",
-    "enhanced_qualitative_signals.csv": "CG-enhanced_signals",
 }
 
-# Regular CSV tab order
+# Regular CSV tab order (4 customer-provided files)
 REGULAR_CSV_ORDER = [
-    "accounts.csv", "kpi_measurements.csv", "qualitative_signals.csv",
-    "products.csv", "profiles.csv", "customers.csv",
+    "accounts.csv", "kpi_measurements.csv", "enhanced_qualitative_signals.csv",
+    "products.csv",
 ]
-# Context graph CSV tab order
+# Context graph CSV tab order (7 files: 4 customer-provided + 3 auto-generated)
 CG_CSV_ORDER = [
     "stakeholders.csv", "engagement_events.csv", "account_business_profiles.csv",
-    "decisions.csv", "outcomes.csv", "signal_edges.csv", "decision_evidence.csv",
-    "industry_benchmarks.csv", "enhanced_qualitative_signals.csv",
+    "decisions.csv", "outcomes.csv", "signal_edges.csv",
+    "industry_benchmarks.csv",
 ]
 
 # Sample values for example rows (all dates YYYY-MM-DD)
@@ -120,7 +116,7 @@ SAMPLE_VALUES = {
     "weight": 0.20,
     "unit": "days",
     "status": "healthy",
-    # -- qualitative_signals --
+    # -- enhanced_qualitative_signals --
     "signal_id": "SIG-001",
     "signal_date": "2026-03-01",
     "content": "Deployment proceeding ahead of schedule with all racks commissioned.",
@@ -130,13 +126,14 @@ SAMPLE_VALUES = {
     "stakeholder_level": "executive",
     "stakeholder_title": "VP Infrastructure",
     "keywords": "deployment,on-schedule,commissioned",
+    "source_platform": "salesforce",
     # -- products --
     "product_name": "DC2_S Platform",
     "product_category": "Infrastructure",
     "quantity": 1,
     "unit_price": 1250000,
     "deployment_date": "2025-01-15",
-    # -- profiles --
+    # -- account_business_profiles (CSM/champion columns, consolidated from profiles) --
     "assigned_csm": "Jordan Lee",
     "csm_manager": "Sam Rivera",
     "executive_sponsor": "Jane Chen, CTO",
@@ -145,12 +142,6 @@ SAMPLE_VALUES = {
     "primary_champion_email": "chris.martinez@nexuscloud.com",
     "primary_champion_engagement_score": 85,
     "last_updated": "2026-03-01",
-    # -- customers --
-    "customer_name": "Nexus Cloud",
-    "created_at": "2025-01-15",
-    "email": "admin@nexuscloud.com",
-    "phone": "+1-555-0100",
-    "domain": "nexuscloud.com",
     # -- stakeholders (CG) --
     "stakeholder_name": "Chris Martinez",
     "title": "VP Infrastructure",
@@ -196,12 +187,11 @@ SAMPLE_VALUES = {
     "outcome_id": "OUT-001",
     "evidence": "GPU utilization exceeded 80% for 3 months",
     "related_decision_id": "DEC-001",
-    # -- signal_edges (CG) --
+    # -- signal_edges (CG) — also carries SOURCED_FROM decision-evidence columns --
     "from_signal_ref": "SIG-001",
     "to_signal_ref": "DEC-001",
     "edge_type": "CAUSED_BY",
     "lag_days": 30,
-    # -- decision_evidence (CG) --
     "decision_ref": "DEC-001",
     "evidence_type": "kpi_trend",
     "evidence_description": "GPU utilization rose from 55% to 78% over 3 months",
@@ -293,7 +283,7 @@ def create_readme_tab(wb, kpi_defs, pillars, schemas, thresholds, playbooks):
     add("CS Pulse DataCenter — Onboarding Template", TITLE_FONT)
     add("")
     add("PLATFORM OVERVIEW", SECTION_FONT)
-    add(f"  38 KPIs across 5 pillars, 15 CSV file types (6 regular + 9 context graph)")
+    add(f"  38 KPIs across 5 pillars, 11 CSV file types (4 regular + 7 context graph)")
     add("")
 
     # Pillars
@@ -317,25 +307,21 @@ def create_readme_tab(wb, kpi_defs, pillars, schemas, thresholds, playbooks):
     add("  See 'KPI Reference' tab for per-KPI health ranges.")
     add("")
 
-    add("CSV FILES (15 total)", SECTION_FONT)
-    add("  REGULAR MODEL (6 CSVs) — Required for all customers:")
-    add("    1. accounts.csv        — Account master data (REQUIRED)")
-    add("    2. kpi_measurements.csv — KPI metric values (REQUIRED)")
-    add("    3. qualitative_signals.csv — Customer signals/feedback")
-    add("    4. products.csv        — Product usage")
-    add("    5. profiles.csv        — Stakeholder & CRM profile data")
-    add("    6. customers.csv       — Customer master record")
+    add("CSV FILES (11 total)", SECTION_FONT)
+    add("  REGULAR MODEL (4 CSVs) — Required for all customers:")
+    add("    1. accounts.csv                    — Account master data (REQUIRED)")
+    add("    2. kpi_measurements.csv            — KPI metric values (REQUIRED)")
+    add("    3. enhanced_qualitative_signals.csv — Customer signals/feedback (optional graph columns)")
+    add("    4. products.csv                    — Product usage")
     add("")
-    add("  CONTEXT GRAPH MODEL (9 additional CSVs) — When context graph feature is enabled:")
-    add("    7. stakeholders.csv              — Key contacts & champions")
-    add("    8. engagement_events.csv          — Meetings, calls, QBRs")
-    add("    9. account_business_profiles.csv  — Business context")
-    add("   10. decisions.csv                  — Strategic decisions")
-    add("   11. outcomes.csv                   — Business outcomes (expansion, churn_averted)")
-    add("   12. signal_edges.csv               [INFERRED] Platform auto-generates causal edges")
-    add("   13. decision_evidence.csv          [INFERRED] Platform auto-generates evidence links")
-    add("   14. industry_benchmarks.csv        — External benchmarks")
-    add("   15. enhanced_qualitative_signals.csv — Enriched signals with graph metadata")
+    add("  CONTEXT GRAPH MODEL (7 additional CSVs) — When context graph feature is enabled:")
+    add("    5. stakeholders.csv              — Key contacts & champions")
+    add("    6. engagement_events.csv          — Meetings, calls, QBRs")
+    add("    7. account_business_profiles.csv  — Business context + CSM/champion data")
+    add("    8. decisions.csv                  — Strategic decisions")
+    add("    9. outcomes.csv                   — Business outcomes (expansion, churn_averted)")
+    add("   10. signal_edges.csv               [INFERRED] Causal edges + SOURCED_FROM evidence")
+    add("   11. industry_benchmarks.csv        — External benchmarks")
     add("")
     add("  [INFERRED] = Platform derives these from node data. You may provide them, or leave blank.")
     add("")
@@ -376,10 +362,10 @@ def create_readme_tab(wb, kpi_defs, pillars, schemas, thresholds, playbooks):
     add("")
 
     add("4-WEEK ONBOARDING SEQUENCE", SECTION_FONT)
-    add("  Week 1: accounts.csv, customers.csv, products.csv (foundational data)")
-    add("  Week 2: kpi_measurements.csv, qualitative_signals.csv, profiles.csv (health scores activate)")
-    add("  Week 3: Context graph CSVs — stakeholders, engagement_events, decisions, outcomes")
-    add("  Week 4: industry_benchmarks, enhanced_signals; run /process-data; verify health scores")
+    add("  Week 1: accounts.csv, products.csv (foundational data)")
+    add("  Week 2: kpi_measurements.csv, enhanced_qualitative_signals.csv (health scores activate)")
+    add("  Week 3: Context graph CSVs — stakeholders, engagement_events, account_business_profiles, decisions, outcomes")
+    add("  Week 4: industry_benchmarks; run /process-data; verify health scores")
     add("")
 
     add("ACCOUNT NAMING CONVENTION (from Kacme template)", SECTION_FONT)
@@ -390,7 +376,7 @@ def create_readme_tab(wb, kpi_defs, pillars, schemas, thresholds, playbooks):
     add("API ENDPOINTS FOR ONBOARDING", SECTION_FONT)
     add("  POST /api/onboarding/complete    — Create customer, accounts, config")
     add("       Accepts: enabled_pillars, enabled_kpis, weights (L2), kpi_weights (L1)")
-    add("  POST /api/onboarding/upload      — Upload CSV files (6 regular + 9 context graph)")
+    add("  POST /api/onboarding/upload      — Upload CSV files (4 regular + 7 context graph)")
     add("  POST /api/onboarding/process-data — Run data ingestion + Wizard A/B/C")
 
     # Write rows
@@ -578,7 +564,7 @@ def create_weights_tab(wb, kpi_defs, pillars):
 
 
 # ---------------------------------------------------------------------------
-# Tabs 4-18: CSV data-entry tabs
+# Tabs 4-14: CSV data-entry tabs
 # ---------------------------------------------------------------------------
 
 def create_csv_data_tab(wb, csv_filename, csv_schema, is_context_graph=False, is_inferred=False):
@@ -663,13 +649,13 @@ def build_workbook(output_path: str):
     # Tab 3: Weights
     create_weights_tab(wb, kpi_defs, pillars)
 
-    # Tabs 4-9: Regular CSVs
+    # Tabs 4-7: Regular CSVs
     regular_files = schemas.get("regular_model", {}).get("files", {})
     for csv_name in REGULAR_CSV_ORDER:
         if csv_name in regular_files:
             create_csv_data_tab(wb, csv_name, regular_files[csv_name])
 
-    # Tabs 10-18: Context Graph CSVs
+    # Tabs 8-14: Context Graph CSVs
     cg_files = schemas.get("context_graph_model", {}).get("files", {})
     for csv_name in CG_CSV_ORDER:
         if csv_name in cg_files:
@@ -688,9 +674,9 @@ def build_workbook(output_path: str):
 CS Pulse Onboarding Template Generated
 =======================================
 Output: {output_path}
-Tabs:   18 (README + KPI Reference + Weights + {len(REGULAR_CSV_ORDER)} Regular CSVs + {len(CG_CSV_ORDER)} Context Graph CSVs)
+Tabs:   14 (README + KPI Reference + Weights + {len(REGULAR_CSV_ORDER)} Regular CSVs + {len(CG_CSV_ORDER)} Context Graph CSVs)
 KPIs:   {total_kpis} across {total_pillars} pillars
-CSVs:   15 total (6 regular + 9 context graph, 2 inferred)
+CSVs:   11 total (4 regular + 7 context graph, 1 inferred)
 """)
 
 

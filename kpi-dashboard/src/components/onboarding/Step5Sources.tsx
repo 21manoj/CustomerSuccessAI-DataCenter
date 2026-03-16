@@ -38,23 +38,17 @@ const CSV_FORMATS = {
     optional_columns: ['target', 'operator', 'unit'],
     description: 'Historical KPI measurements over time for trend analysis'
   },
-  signals: {
-    filename: 'qualitative_signals.csv',
-    required_columns: ['account_id', 'account_name', 'date', 'signal_type', 'summary', 'sentiment'],
-    optional_columns: ['from_contact', 'to_contact', 'subject', 'keywords'],
-    description: 'Qualitative signals from emails, meetings, support tickets, etc.'
+  enhanced_signals: {
+    filename: 'enhanced_qualitative_signals.csv',
+    required_columns: ['account_id', 'signal_date', 'signal_type', 'content', 'sentiment'],
+    optional_columns: ['signal_ref', 'sentiment_score', 'stakeholder_name', 'stakeholder_title', 'causal_chain_ref', 'revenue_impact', 'confidence', 'source_platform'],
+    description: 'Qualitative signals from emails, meetings, support tickets, NPS, etc.'
   },
   products: {
     filename: 'products.csv',
-    required_columns: ['id', 'name', 'category'],
-    optional_columns: ['description', 'pricing_tier', 'features'],
-    description: 'Product catalog with product IDs, names, and categories'
-  },
-  profiles: {
-    filename: 'profiles.csv',
-    required_columns: ['account_id', 'account_name', 'health_score', 'lifecycle_stage'],
-    optional_columns: ['csm_name', 'arr', 'num_licenses', 'deployment_type', 'data_center_size', 'industry', 'use_case', 'primary_product'],
-    description: 'Comprehensive account profiles with health scores, lifecycle stage, and business metrics'
+    required_columns: ['account_id', 'product_name'],
+    optional_columns: ['product_category', 'quantity', 'unit_price', 'deployment_date', 'status'],
+    description: 'Product catalog and adoption data'
   }
 };
 
@@ -266,7 +260,7 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
   const getCSVFormat = (sourceId: string) => {
     if (sourceId === 'accounts') return CSV_FORMATS.accounts;
     if (sourceId === 'kpis') return CSV_FORMATS.kpis;
-    if (sourceId === 'signals' || sourceId === 'qualitative_signals') return CSV_FORMATS.signals;
+    if (sourceId === 'signals' || sourceId === 'qualitative_signals' || sourceId === 'enhanced_signals') return CSV_FORMATS.enhanced_signals;
     if (sourceId === 'products') return CSV_FORMATS.products;
     if (sourceId === 'profiles') return CSV_FORMATS.profiles;
     return null;
@@ -509,7 +503,7 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
                                     onClick={() => {
                                       if (source.id === 'accounts') handleDownloadTemplate('accounts');
                                       else if (source.id === 'kpis') handleDownloadTemplate('kpis');
-                                      else if (source.id === 'signals' || source.id === 'qualitative_signals') handleDownloadTemplate('signals');
+                                      else if (source.id === 'signals' || source.id === 'qualitative_signals' || source.id === 'enhanced_signals') handleDownloadTemplate('enhanced_signals');
                                       else if (source.id === 'products') handleDownloadTemplate('products');
                                       else if (source.id === 'profiles') handleDownloadTemplate('profiles');
                                     }}

@@ -105,9 +105,8 @@ export const getDefaultSources = (vertical: VerticalType): DataSource[] => {
   } else if (vertical === 'datacenter') {
     return [
       ...baseSources,
-      { id: 'qualitative_signals', name: 'Qualitative Signals', type: 'file', status: 'pending' },
+      { id: 'enhanced_signals', name: 'Signals (NPS, Emails, Meetings)', type: 'file', status: 'pending' },
       { id: 'products', name: 'Products Catalog', type: 'file', status: 'pending' },
-      { id: 'profiles', name: 'Account Profiles', type: 'file', status: 'pending' },
       { id: 'monitoring_metrics', name: 'Monitoring Metrics', type: 'api', status: 'pending' },
       { id: 'zendesk', name: 'Zendesk', type: 'api', status: 'pending' }
     ];

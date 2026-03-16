@@ -2,9 +2,11 @@
 """
 Scenario 8: Context Graph
 
-Generates 9 context graph CSVs from a story arc manifest, uploads them
+Generates 8 context graph CSVs from a story arc manifest, uploads them
 to the onboarding API, triggers process-data (which ingests into
 context_nodes/context_edges), and verifies the graph was persisted.
+
+Note: decision_evidence has been removed (consolidated into decisions.csv).
 
 Prerequisites:
   - Customer must already exist (run Scenario 1 first)
@@ -43,7 +45,8 @@ except ImportError:
     logger.warning("ContextGraphGenerator not available — scenario will use pre-generated CSVs")
 
 
-# The 9 context graph file types matching CONTEXT_GRAPH_FILE_TYPES in onboarding API
+# The 8 context graph file types matching CONTEXT_GRAPH_FILE_TYPES in onboarding API
+# Note: decision_evidence removed (consolidated into decisions.csv)
 CONTEXT_GRAPH_FILES = {
     'stakeholders': 'stakeholders.csv',
     'engagement_events': 'engagement_events.csv',
@@ -51,7 +54,6 @@ CONTEXT_GRAPH_FILES = {
     'decisions': 'decisions.csv',
     'outcomes': 'outcomes.csv',
     'signal_edges': 'signal_edges.csv',
-    'decision_evidence': 'decision_evidence.csv',
     'industry_benchmarks': 'industry_benchmarks.csv',
     'enhanced_signals': 'enhanced_qualitative_signals.csv',
 }
@@ -115,7 +117,7 @@ class ScenarioContextGraph(BaseScenario):
             logger.info(f"    OK: Found {num_accounts} accounts: {real_account_ids}")
 
             # ================================================================
-            # Step 2: Generate 9 context graph CSVs using real account IDs
+            # Step 2: Generate 8 context graph CSVs using real account IDs
             # ================================================================
             logger.info(f"  Step 2: Generating context graph CSVs (arc={arc_id}, {num_accounts} real accounts)")
             gen_start = time.time()
@@ -134,7 +136,7 @@ class ScenarioContextGraph(BaseScenario):
                         account_arc_map=account_arc_map,
                         seed=seed,
                     )
-                    # Generate each CSV as a string
+                    # Generate each CSV as a string (8 files; decision_evidence consolidated into decisions)
                     csv_contents = {
                         'stakeholders': gen.generate_stakeholders_csv(),
                         'engagement_events': gen.generate_engagement_events_csv(),
@@ -142,7 +144,6 @@ class ScenarioContextGraph(BaseScenario):
                         'decisions': gen.generate_decisions_csv(),
                         'outcomes': gen.generate_outcomes_csv(),
                         'signal_edges': gen.generate_signal_edges_csv(),
-                        'decision_evidence': gen.generate_decision_evidence_csv(),
                         'industry_benchmarks': gen.generate_industry_benchmarks_csv(),
                         'enhanced_signals': gen.generate_enhanced_signals_csv(),
                     }
@@ -172,7 +173,7 @@ class ScenarioContextGraph(BaseScenario):
             results['files_generated'] = list(csv_contents.keys())
 
             # ================================================================
-            # Step 3: Upload 9 context graph CSVs
+            # Step 3: Upload 8 context graph CSVs
             # ================================================================
             logger.info("  Step 3: Uploading context graph CSVs")
             upload_start = time.time()

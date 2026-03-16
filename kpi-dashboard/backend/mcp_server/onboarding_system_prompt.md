@@ -130,9 +130,10 @@ PHASE 3 — MAP
     HubSpot NPS score                             → P4-KPI6 (Partner NPS)
     SFDC Opportunity (pipeline amount)            → P5-KPI7 (Expansion Probability)
 
-  ── qualitative_signals (recommended) ────────────────────────────────────
+  ── enhanced_qualitative_signals (recommended) ──────────────────────────
   Fields: signal_id, account_id, signal_date, content, sentiment
-  Optional: signal_type, sentiment_score, stakeholder_level, keywords
+  Optional: signal_type, sentiment_score, stakeholder_level, keywords,
+            graph_node_id, related_kpi_codes
 
   sentiment must be: positive | negative | neutral
 
@@ -147,18 +148,11 @@ PHASE 3 — MAP
   Fields: account_id, product_name
   Optional: product_category, quantity, status, deployment_date
 
-  ── profiles (recommended) ───────────────────────────────────────────────
-  Fields: account_id, customer_id, account_name
-  Optional: assigned_csm, executive_sponsor, arr, primary_champion_name,
-            primary_champion_title, primary_champion_email
+  ── Context Graph CSVs (customer-provided: 4 files, auto-generated: 3) ──
+  Only gather the customer-provided files if Context Graph is wanted.
+  The 3 auto-generated files are created by the platform during processing.
 
-  Source mappings:
-    SFDC Account.Owner          → assigned_csm
-    SFDC Contact (role=Champion) → primary_champion_name/title/email
-    HubSpot Contact (lifecycle=customer, lead_score=high) → champion
-
-  ── Context Graph CSVs (optional, 9 files) ───────────────────────────────
-  Only gather these if the user confirms Context Graph is wanted.
+  CUSTOMER-PROVIDED:
 
   stakeholders: account_id, stakeholder_name, title, role, influence_score
     Source: SFDC Contacts + HubSpot Contacts with roles
@@ -166,19 +160,30 @@ PHASE 3 — MAP
   engagement_events: account_id, event_date, event_type, description
     Source: SFDC Tasks/Events + HubSpot timeline activities
 
-  decisions: account_id, decision_date, title, decision_maker_role,
-             chosen_option
-    Optional: revenue_impact, confidence
-    Source: SFDC Opportunity stage changes, closed-won/lost reasons
+  account_business_profiles: account_id, customer_id, account_name
+    Optional: assigned_csm, executive_sponsor, arr, primary_champion_name,
+              primary_champion_title, primary_champion_email, industry,
+              region, business_context
+    Note: Includes CSM/champion fields (merged from deprecated profiles.csv)
+    Source: SFDC Account.Owner → assigned_csm
+            SFDC Contact (role=Champion) → primary_champion_name/title/email
+            HubSpot Contact (lifecycle=customer, lead_score=high) → champion
 
   outcomes: account_id, outcome_date, title, outcome_type, revenue_value
     Source: SFDC Opportunity (closed-won), renewal records
 
-  signal_edges: from_signal_ref, to_signal_ref, edge_type, weight
-    Derive by linking related signals (e.g., ticket escalation → exec meeting)
+  AUTO-GENERATED (platform derives these during process_data):
 
-  Enhanced signals, decision evidence, industry benchmarks, business profiles
-  can be derived or left empty for the Onboarding Agent to fill later.
+  decisions: account_id, decision_date, title, decision_maker_role,
+             chosen_option
+    Optional: revenue_impact, confidence
+    Derived from: SFDC Opportunity stage changes, signals, outcomes
+
+  signal_edges: from_signal_ref, to_signal_ref, edge_type, weight
+    Derived by linking related signals (e.g., ticket escalation → exec meeting)
+
+  industry_benchmarks: industry, kpi_code, benchmark_value, percentile
+    Derived from: cross-customer aggregation + external data sources
 
 PHASE 4 — VALIDATE
   Before loading, verify:
@@ -471,14 +476,16 @@ RULES
       catalog is always 38. Use enabled_kpis or enabled_pillars to specify
       which subset to activate.
 
-  17. There are 15 CSV file types (6 regular + 9 context graph), NEVER "5 CSVs":
-      Regular: accounts, kpi_measurements, qualitative_signals, products,
-               profiles, customers
-      Context Graph: stakeholders, engagement_events, account_business_profiles,
-               decisions, outcomes, signal_edges [INFERRED],
-               decision_evidence [INFERRED], industry_benchmarks,
-               enhanced_qualitative_signals
-      [INFERRED] = platform auto-derives from node data; user may provide or omit.
+  17. There are 11 CSV file types (8 customer-provided + 3 auto-generated):
+      Customer-provided — Regular (4):
+        accounts, kpi_measurements, enhanced_qualitative_signals, products
+      Customer-provided — Context Graph (4):
+        stakeholders, engagement_events, account_business_profiles, outcomes
+      Auto-generated (3 — platform creates during process_data):
+        decisions, signal_edges, industry_benchmarks
+      Note: account_business_profiles includes CSM/champion fields (merged
+      from deprecated profiles.csv). customers.csv, qualitative_signals.csv,
+      profiles.csv, and decision_evidence.csv are no longer used.
 
   18. Default account naming: Production, Staging, Development, Environment,
       Workspace, Cluster, Instance, Node, Server, System (first 10), then

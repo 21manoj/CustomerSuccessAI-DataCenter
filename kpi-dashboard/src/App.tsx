@@ -13,6 +13,14 @@ import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboard
 import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
 import AuctusAIWebsite from './components/AuctusAIWebsite';
+import SuperAdminConsole from './components/SuperAdminConsole';
+import AdminLayout from './components/admin-ui/AdminLayout';
+import AdminDashboardPage from './components/admin-ui/AdminDashboardPage';
+import CustomerListPage from './components/admin-ui/CustomerListPage';
+import CustomerDetailPage from './components/admin-ui/CustomerDetailPage';
+import VerticalListPage from './components/admin-ui/VerticalListPage';
+import LicenseManagerPage from './components/admin-ui/LicenseManagerPage';
+import ActivityLogPage from './components/admin-ui/ActivityLogPage';
 
 // Normalize vertical: dc2_s, dc2-s, etc. -> datacenter for routing
 const normalizeVertical = (v: string | undefined): 'datacenter' | 'saas' => {
@@ -339,6 +347,33 @@ const AppRoutes: React.FC = () => {
           }
         />
         
+        {/* Super Admin Console — standalone platform management UI */}
+        <Route
+          path="/super-admin"
+          element={
+            <PrivateRoute>
+              <SuperAdminConsole />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Admin Console — full management UI with sidebar layout */}
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminLayout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="customers" element={<CustomerListPage />} />
+          <Route path="customers/:id" element={<CustomerDetailPage />} />
+          <Route path="verticals" element={<VerticalListPage />} />
+          <Route path="licenses" element={<LicenseManagerPage />} />
+          <Route path="activity" element={<ActivityLogPage />} />
+        </Route>
+
         {/* Public marketing website */}
         <Route path="/website" element={<AuctusAIWebsite />} />
 

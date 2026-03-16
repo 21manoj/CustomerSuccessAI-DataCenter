@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """
-Context Graph 9-CSV Generator
+Context Graph 8-CSV Generator
 
-Reads story arc manifests and generates the 9 additional CSVs needed for
+Reads story arc manifests and generates the 8 additional CSVs needed for
 context graph mode. This is SEPARATE from generate_synthetic_customer_data.py
 (regular model, 6 CSVs).
 
-The 9 CSVs generated:
+The 8 CSVs generated:
   1. stakeholders.csv
   2. engagement_events.csv
-  3. account_business_profiles.csv
+  3. account_business_profiles.csv  (includes CSM/champion fields from old profiles.csv)
   4. decisions.csv
   5. outcomes.csv
-  6. signal_edges.csv
-  7. decision_evidence.csv
-  8. industry_benchmarks.csv
-  9. enhanced_qualitative_signals.csv
+  6. signal_edges.csv               (includes SOURCED_FROM edges from old decision_evidence.csv)
+  7. industry_benchmarks.csv
+  8. enhanced_qualitative_signals.csv
 
 Column names follow config/csv_schemas.json (shared with load driver).
 
@@ -208,11 +207,16 @@ def _query_health_scores(customer_id: int, num_accounts: int = 10) -> Dict[int, 
 
 class ContextGraphGenerator:
     """
-    Generates 9 context graph CSVs from story arc manifests.
+    Generates 8 context graph CSVs from story arc manifests.
 
     Each account in the customer gets assigned a story arc, and the generator
     produces CSV rows driven by the arc's phases, plot points, cast, decisions,
     outcomes, causal chains, and benchmarks.
+
+    Decision-evidence data is now emitted as SOURCED_FROM edges inside
+    signal_edges.csv (consolidated from the former decision_evidence.csv).
+    CSM/champion fields are included in account_business_profiles.csv
+    (consolidated from the former profiles.csv).
 
     Supports two modes:
     - Single-arc mode (backward compatible): All accounts share one arc.
@@ -367,7 +371,7 @@ class ContextGraphGenerator:
         return float(self.arc.get('revenue_narrative', {}).get('arr_start', 2400000))
 
     def generate_all(self, output_dir: str) -> Dict[str, str]:
-        """Generate all 9 context graph CSVs to the specified directory."""
+        """Generate all 8 context graph CSVs to the specified directory."""
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -378,7 +382,6 @@ class ContextGraphGenerator:
             ('decisions.csv', self.generate_decisions_csv),
             ('outcomes.csv', self.generate_outcomes_csv),
             ('signal_edges.csv', self.generate_signal_edges_csv),
-            ('decision_evidence.csv', self.generate_decision_evidence_csv),
             ('industry_benchmarks.csv', self.generate_industry_benchmarks_csv),
             ('enhanced_qualitative_signals.csv', self.generate_enhanced_signals_csv),
         ]
@@ -489,18 +492,34 @@ class ContextGraphGenerator:
     # ─── 3. Account Business Profiles ────────────────────────────────────
 
     def generate_account_business_profiles_csv(self) -> str:
-        """Generate account_business_profiles.csv with business context."""
+        """Generate account_business_profiles.csv with business context.
+
+        Includes CSM/champion fields consolidated from the former profiles.csv:
+        assigned_csm, csm_manager, executive_sponsor, mrr,
+        primary_champion_name/title/email/engagement_score.
+        """
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
             'account_id', 'arr', 'industry', 'employee_count',
             'fiscal_year_end', 'tech_stack', 'cloud_provider',
             'competitive_landscape', 'strategic_initiatives', 'budget_cycle',
-            'profile_date'
+            'profile_date',
+            # CSM / champion fields (merged from old profiles.csv)
+            'assigned_csm', 'csm_manager', 'executive_sponsor', 'mrr',
+            'primary_champion_name', 'primary_champion_title',
+            'primary_champion_email', 'primary_champion_engagement_score',
         ])
 
         industries = ['Technology', 'Financial Services', 'Healthcare',
                       'Manufacturing', 'Retail', 'Energy', 'Media']
+
+        csm_titles = ['Senior CSM', 'CSM', 'Strategic CSM', 'Enterprise CSM']
+        champion_titles = [
+            'VP of Infrastructure', 'Director of IT', 'CTO',
+            'Head of Data Center Ops', 'VP of Engineering',
+            'Director of Cloud Services', 'SVP of Technology',
+        ]
 
         for account_id in self.account_ids:
             self._set_arc_context(account_id)
@@ -508,9 +527,19 @@ class ContextGraphGenerator:
             arr_start = rn.get('arr_start', 2000000)
             # Vary ARR slightly per account
             arr = round(arr_start * random.uniform(0.7, 1.3), 2)
+            mrr = round(arr / 12, 2)
 
             # Profile date = arc start (week 1)
             profile_date = self._week_to_date(1)
+
+            # Generate CSM / champion data
+            csm_name = self._make_name('CSM')
+            csm_manager_name = self._make_name('Manager')
+            exec_sponsor_name = self._make_name('Exec')
+            champion_name = self._make_name('Champion')
+            champion_title = random.choice(champion_titles)
+            champion_email = self._make_email(champion_name)
+            champion_engagement = round(random.uniform(0.4, 1.0), 2)
 
             writer.writerow([
                 account_id,
@@ -524,6 +553,15 @@ class ContextGraphGenerator:
                 json.dumps(random.sample(STRATEGIC_INITIATIVES, k=random.randint(2, 4))),
                 random.choice(['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)']),
                 profile_date.strftime('%Y-%m-%d'),
+                # CSM / champion fields
+                csm_name,
+                csm_manager_name,
+                exec_sponsor_name,
+                mrr,
+                champion_name,
+                champion_title,
+                champion_email,
+                champion_engagement,
             ])
 
         return output.getvalue()
@@ -621,7 +659,12 @@ class ContextGraphGenerator:
     # ─── 6. Signal Edges ─────────────────────────────────────────────────
 
     def generate_signal_edges_csv(self) -> str:
-        """Generate signal_edges.csv from arc causal chains and edges_template.
+        """Generate signal_edges.csv from arc causal chains, edges_template,
+        and decision evidence (SOURCED_FROM edges).
+
+        Decision-evidence rows that formerly lived in decision_evidence.csv are
+        now emitted here as SOURCED_FROM edges linking each decision to its
+        supporting evidence signals / KPI metrics.
 
         In per-account mode, aggregates edges from all unique arcs in use.
         """
@@ -682,79 +725,61 @@ class ContextGraphGenerator:
                     'story_arc_generator',
                 ])
 
-        return output.getvalue()
-
-    # ─── 7. Decision Evidence ────────────────────────────────────────────
-
-    def generate_decision_evidence_csv(self) -> str:
-        """Generate decision_evidence.csv linking decisions to supporting signals/KPIs.
-
-        In per-account mode, aggregates evidence from all unique arcs.
-        """
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow([
-            'decision_ref', 'evidence_type', 'evidence_description',
-            'kpi_code', 'kpi_value', 'signal_ref', 'timestamp', 'confidence'
-        ])
-
-        seen_decisions = set()
-
-        for arc_id, arc in self._unique_arcs().items():
-            # Use this arc's timing
+            # ── SOURCED_FROM edges (consolidated from old decision_evidence.csv) ──
+            # Link each decision to its supporting evidence refs and KPI impacts.
             phase_starts = self._arc_phase_starts.get(arc_id, self.phase_starts)
-            base_date = self._arc_base_dates.get(arc_id, self.base_date)
 
             for decision in arc.get('decisions', []):
                 decision_id = decision.get('decision_id', '')
-                if decision_id in seen_decisions:
-                    continue
-                seen_decisions.add(decision_id)
 
-                week = decision.get('week', 1)
-                evidence_date = base_date + timedelta(weeks=week - 1, days=random.randint(0, 4))
-
-                # Generate evidence from evidence_refs
+                # Evidence refs listed on the decision
                 for ref in decision.get('evidence_refs', []):
-                    # Determine evidence type from ref pattern
-                    if 'kpi' in ref.lower() or 'gpu' in ref.lower() or 'utilization' in ref.lower():
-                        evidence_type = 'kpi_metric'
-                    elif 'signal' in ref.lower() or 'alert' in ref.lower():
-                        evidence_type = 'signal'
-                    else:
-                        evidence_type = 'observation'
+                    edge_key = (ref, decision_id, 'SOURCED_FROM')
+                    if edge_key in seen_edges:
+                        continue
+                    seen_edges.add(edge_key)
 
                     writer.writerow([
-                        decision_id,
-                        evidence_type,
-                        ref,
-                        '',  # kpi_code filled if evidence_type is kpi_metric
-                        '',
-                        '',
-                        evidence_date.strftime('%Y-%m-%d'),
+                        ref,                          # from: evidence signal
+                        decision_id,                  # to: decision
+                        'SOURCED_FROM',
+                        round(random.uniform(0.7, 0.9), 2),
                         round(random.uniform(0.7, 0.95), 2),
+                        0,
+                        0,
+                        f"Evidence for decision {decision_id}",
+                        'csv_import',
+                        'story_arc_generator',
                     ])
 
-                # Also generate KPI-based evidence from the phase's plot points
+                # KPI-impact evidence from plot points in the decision's phase
                 phase_id = decision.get('phase_id', 0)
                 if phase_id < len(arc.get('phases', [])):
                     phase = arc['phases'][phase_id]
                     for pp in phase.get('plot_points', []):
                         for impact in pp.get('kpi_impacts', []):
+                            kpi_ref = impact['kpi_code']
+                            edge_key = (kpi_ref, decision_id, 'SOURCED_FROM')
+                            if edge_key in seen_edges:
+                                continue
+                            seen_edges.add(edge_key)
+
                             writer.writerow([
+                                kpi_ref,
                                 decision_id,
-                                'kpi_metric',
-                                f"{impact['kpi_code']} {impact['direction']} ({impact['magnitude']})",
-                                impact['kpi_code'],
-                                '',  # actual value generated by regular KPI generator
-                                '',
-                                evidence_date.strftime('%Y-%m-%d'),
+                                'SOURCED_FROM',
+                                round(random.uniform(0.7, 0.9), 2),
                                 round(random.uniform(0.75, 0.95), 2),
+                                0,
+                                0,
+                                f"{kpi_ref} {impact['direction']} ({impact['magnitude']})",
+                                'csv_import',
+                                'story_arc_generator',
                             ])
 
         return output.getvalue()
 
-    # ─── 8. Industry Benchmarks ──────────────────────────────────────────
+    # ─── 7. Industry Benchmarks ──────────────────────────────────────────
 
     def generate_industry_benchmarks_csv(self) -> str:
         """Generate industry_benchmarks.csv from arc benchmark data.
@@ -792,7 +817,7 @@ class ContextGraphGenerator:
 
         return output.getvalue()
 
-    # ─── 9. Enhanced Qualitative Signals ─────────────────────────────────
+    # ─── 8. Enhanced Qualitative Signals ─────────────────────────────────
 
     def generate_enhanced_signals_csv(self) -> str:
         """Generate enhanced_qualitative_signals.csv from arc plot points.
@@ -884,7 +909,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     parser = argparse.ArgumentParser(
-        description='Generate context graph 9-CSV data from story arc manifests'
+        description='Generate context graph 8-CSV data from story arc manifests'
     )
     parser.add_argument('--customer-id', type=int, default=9,
                         help='Customer ID (default: 9)')

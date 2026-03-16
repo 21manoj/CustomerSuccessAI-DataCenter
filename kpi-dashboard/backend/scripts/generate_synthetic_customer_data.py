@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app_v3_minimal import app
 from utils.config_loader import ConfigLoader
-from id_generator import generate_customer_id, generate_account_id
+from id_generator import generate_account_id
 import pandas as pd
 from datetime import datetime, timedelta
 import random
@@ -352,16 +352,8 @@ def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
         return pd.DataFrame(measurements)
 
 
-def generate_customers_csv(customer_id, company_name):
-    """Generate customers.csv with prefixed UUID v7"""
-
-    return pd.DataFrame([{
-        'customer_id': customer_id,  # Integer PK (legacy, kept for FK compatibility)
-        'uuid': generate_customer_id('dc'),  # Prefixed UUID v7 (e.g. dc_cust_019...)
-        'customer_name': company_name,
-        'vertical': 'dc2_s',
-        'created_at': datetime.now().strftime('%Y-%m-%d')
-    }])
+# NOTE: generate_customers_csv removed — customer record is now created by
+# the onboarding API, not via CSV upload.
 
 
 def generate_qualitative_signals_csv(customer_id, accounts_df, num_months=12):
@@ -452,7 +444,13 @@ def generate_qualitative_signals_csv(customer_id, accounts_df, num_months=12):
                     'signal_type': sig_type,
                     'content': content,
                     'sentiment': sentiment,
-                    'sentiment_score': round(random.uniform(score_lo, score_hi), 2)
+                    'sentiment_score': round(random.uniform(score_lo, score_hi), 2),
+                    # Graph metadata columns (empty/default — populated by context graph pipeline)
+                    'signal_ref': '',
+                    'causal_chain_ref': '',
+                    'revenue_impact': '',
+                    'confidence': '',
+                    'source_platform': '',
                 })
 
     return pd.DataFrame(signals)
@@ -480,24 +478,9 @@ def generate_products_csv(customer_id):
     ])
 
 
-# Profile/champion columns for profiles.csv (one row per account; process-data loads into account_profiles or accounts.profile_metadata)
-PROFILES_CSV_COLUMNS = [
-    'account_id', 'customer_id', 'account_name',
-    'assigned_csm', 'csm_manager', 'executive_sponsor', 'arr', 'mrr', 'last_updated',
-    'primary_champion_name', 'champion_title', 'champion_email', 'champion_status',
-    'champion_tenure_months', 'champion_influence_level', 'economic_buyer_name',
-    'economic_buyer_title', 'executive_sponsor_name', 'executive_sponsor_title',
-    'technical_champion_name', 'number_active_champions',
-]
-
-
-def generate_profiles_csv(accounts_df):
-    """
-    Generate profiles.csv from accounts DataFrame (one row per account).
-    Matches onboarding file_type 'profiles'; process-data loads into account_profiles or accounts.profile_metadata.
-    """
-    cols = [c for c in PROFILES_CSV_COLUMNS if c in accounts_df.columns]
-    return accounts_df[cols].copy()
+# NOTE: generate_profiles_csv / PROFILES_CSV_COLUMNS removed — profile data is
+# now merged into account_business_profiles.csv (generated elsewhere or via
+# the accounts.csv which already contains all profile + champion columns).
 
 
 def save_csvs(customer_id, customer_dir, company_name, num_accounts=10, num_months=12, journey_patterns=None):
@@ -528,18 +511,11 @@ def save_csvs(customer_id, customer_dir, company_name, num_accounts=10, num_mont
     files_created.append(f"kpi_measurements.csv ({kpi_file.stat().st_size} bytes)")
     print(f"   ✅ {kpi_file.name} ({len(kpi_df)} measurements)")
     
-    # Generate customers
-    customers_df = generate_customers_csv(customer_id, company_name)
-    customers_file = customer_dir / 'customers.csv'
-    customers_df.to_csv(customers_file, index=False)
-    files_created.append(f"customers.csv ({customers_file.stat().st_size} bytes)")
-    print(f"   ✅ {customers_file.name}")
-    
-    # Generate qualitative signals
+    # Generate enhanced qualitative signals (with graph metadata columns)
     signals_df = generate_qualitative_signals_csv(customer_id, accounts_df, num_months)
-    signals_file = customer_dir / 'qualitative_signals.csv'
+    signals_file = customer_dir / 'enhanced_qualitative_signals.csv'
     signals_df.to_csv(signals_file, index=False)
-    files_created.append(f"qualitative_signals.csv ({signals_file.stat().st_size} bytes)")
+    files_created.append(f"enhanced_qualitative_signals.csv ({signals_file.stat().st_size} bytes)")
     print(f"   ✅ {signals_file.name} ({len(signals_df)} signals)")
     
     # Generate products
@@ -548,13 +524,6 @@ def save_csvs(customer_id, customer_dir, company_name, num_accounts=10, num_mont
     products_df.to_csv(products_file, index=False)
     files_created.append(f"products.csv ({products_file.stat().st_size} bytes)")
     print(f"   ✅ {products_file.name}")
-    
-    # Generate profiles (one row per account; process-data loads into account_profiles or accounts.profile_metadata)
-    profiles_df = generate_profiles_csv(accounts_df)
-    profiles_file = customer_dir / 'profiles.csv'
-    profiles_df.to_csv(profiles_file, index=False)
-    files_created.append(f"profiles.csv ({profiles_file.stat().st_size} bytes)")
-    print(f"   ✅ {profiles_file.name} ({len(profiles_df)} profiles)")
     
     # Generate DEMO_MANIFEST if requested
     if journey_patterns == 'DEMO_MANIFEST':
@@ -594,14 +563,12 @@ This customer uses **DEMO_MANIFEST** journey patterns.
         
         print(f"   ✅ DEMO_MANIFEST.md ({manifest_file.stat().st_size} bytes)")
     
-    print(f"\n🎉 Data generation complete! 6 CSVs: accounts, kpi_measurements, customers, qualitative_signals, products, profiles.")
+    print(f"\n🎉 Data generation complete! 4 CSVs: accounts, kpi_measurements, enhanced_qualitative_signals, products.")
     return {
         'accounts': accounts_file,
         'kpi_measurements': kpi_file,
-        'customers': customers_file,
-        'qualitative_signals': signals_file,
+        'enhanced_qualitative_signals': signals_file,
         'products': products_file,
-        'profiles': profiles_file,
     }
 
 
