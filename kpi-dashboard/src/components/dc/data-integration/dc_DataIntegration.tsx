@@ -362,9 +362,11 @@ const DCDataIntegration: React.FC = () => {
                         <option value="account_business_profiles">Business Profiles &amp; CSM Info (account_business_profiles.csv)</option>
                         <option value="outcomes">Outcomes (outcomes.csv)</option>
                       </optgroup>
-                      <optgroup label="Context Graph — Auto-generated (3 files)">
+                      <optgroup label="Context Graph — Auto-generated (2 files)">
                         <option value="decisions">Decisions (decisions.csv)</option>
                         <option value="signal_edges">Signal Edges (signal_edges.csv)</option>
+                      </optgroup>
+                      <optgroup label="Context Graph — Platform-curated (1 file)">
                         <option value="industry_benchmarks">Industry Benchmarks (industry_benchmarks.csv)</option>
                       </optgroup>
                     </>
