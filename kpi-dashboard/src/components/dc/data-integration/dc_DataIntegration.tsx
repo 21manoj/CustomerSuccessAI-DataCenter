@@ -57,9 +57,8 @@ function detectFileType(headers: string[]): FileType | null {
   const headerSet = new Set(headers.map(h => h.toLowerCase().trim()));
   if (headerSet.has('account_id') && (headerSet.has('arr') || headerSet.has('account_name'))) return 'accounts';
   if (headerSet.has('kpi_code') && (headerSet.has('raw_value') || headerSet.has('kpi_id'))) return 'kpis';
-  if ((headerSet.has('signal_type') || headerSet.has('signal_category')) && headerSet.has('description')) return 'signals';
+  if ((headerSet.has('signal_type') || headerSet.has('signal_category')) && headerSet.has('description')) return 'enhanced_signals';
   if (headerSet.has('product_id') || headerSet.has('product_name')) return 'products';
-  if (headerSet.has('industry') && headerSet.has('employee_count')) return 'profiles';
   if (headerSet.has('stakeholder_id') || headerSet.has('stakeholder_name')) return 'stakeholders';
   if (headerSet.has('engagement_type') || headerSet.has('event_type')) return 'engagement_events';
   return null;
@@ -69,7 +68,7 @@ function detectFileType(headers: string[]): FileType | null {
 const STARTER_FILE_LABELS: Record<string, { label: string; description: string }> = {
   accounts: { label: 'Account List', description: 'Your customer/account list with names and revenue' },
   kpis: { label: 'KPI Measurements', description: 'Health metric values for each account' },
-  signals: { label: 'Notes & Signals', description: 'Qualitative notes, meeting summaries, risk flags' },
+  enhanced_signals: { label: 'Notes & Signals', description: 'Qualitative notes, meeting summaries, risk flags' },
 };
 
 const DCDataIntegration: React.FC = () => {

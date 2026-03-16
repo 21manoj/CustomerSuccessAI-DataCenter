@@ -222,7 +222,7 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
     onChange(newData);
   };
 
-  const handleDownloadTemplate = (fileType: 'accounts' | 'kpis' | 'signals' | 'products' | 'profiles') => {
+  const handleDownloadTemplate = (fileType: 'accounts' | 'kpis' | 'enhanced_signals' | 'products') => {
     const format = CSV_FORMATS[fileType];
     const headers = [...format.required_columns, ...format.optional_columns].join(',');
     const exampleRows = getExampleRows(fileType);
@@ -239,17 +239,15 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
     window.URL.revokeObjectURL(url);
   };
 
-  const getExampleRows = (fileType: 'accounts' | 'kpis' | 'signals' | 'products' | 'profiles'): string => {
+  const getExampleRows = (fileType: 'accounts' | 'kpis' | 'enhanced_signals' | 'products'): string => {
     if (fileType === 'accounts') {
       return '10001,1,Example Account 1,500000,Technology,US-West,active,EXT-10001,"{""assigned_csm"": ""John Doe"", ""account_tier"": ""Enterprise""}"';
     } else if (fileType === 'kpis') {
       return '10001,Example Account 1,2024-01-01,P1-KPI1,System Uptime,P1,99.5,99.9,>,%';
-    } else if (fileType === 'signals') {
+    } else if (fileType === 'enhanced_signals') {
       return '10001,Example Account 1,2024-01-15,email,customer@example.com,csm@example.com,Monthly check-in,positive';
-    } else if (fileType === 'products') {
-      return 'DC-GPU-H100,DGX H100 Systems,Compute\nDC-COOL-LQ,Liquid Cooling Solutions,Infrastructure';
     } else {
-      return '10001,Example Account 1,Emily Watson,88,expansion,1900198.60,159,On-Premise,Small';
+      return 'DC-GPU-H100,DGX H100 Systems,Compute\nDC-COOL-LQ,Liquid Cooling Solutions,Infrastructure';
     }
   };
 
@@ -262,7 +260,6 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
     if (sourceId === 'kpis') return CSV_FORMATS.kpis;
     if (sourceId === 'signals' || sourceId === 'qualitative_signals' || sourceId === 'enhanced_signals') return CSV_FORMATS.enhanced_signals;
     if (sourceId === 'products') return CSV_FORMATS.products;
-    if (sourceId === 'profiles') return CSV_FORMATS.profiles;
     return null;
   };
 
@@ -505,7 +502,6 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
                                       else if (source.id === 'kpis') handleDownloadTemplate('kpis');
                                       else if (source.id === 'signals' || source.id === 'qualitative_signals' || source.id === 'enhanced_signals') handleDownloadTemplate('enhanced_signals');
                                       else if (source.id === 'products') handleDownloadTemplate('products');
-                                      else if (source.id === 'profiles') handleDownloadTemplate('profiles');
                                     }}
                                     className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                                   >
