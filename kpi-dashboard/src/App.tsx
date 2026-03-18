@@ -12,6 +12,8 @@ import JourneyVisualizer from './components/wizard/JourneyVisualizer';
 import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboardV3';
 import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
+import CRODashboard from './components/dashboard/CRODashboard';
+import CFODashboard from './components/dashboard/CFODashboard';
 import AuctusAIWebsite from './components/AuctusAIWebsite';
 import SuperAdminConsole from './components/SuperAdminConsole';
 import AdminLayout from './components/admin-ui/AdminLayout';
@@ -221,6 +223,22 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="/dc-dashboard/cro"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <CRODashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/cfo"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <CFODashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/dc-dashboard/data-integration"
           element={
             <PrivateRoute vertical="datacenter">
@@ -283,6 +301,26 @@ const AppRoutes: React.FC = () => {
           element={
             <PrivateRoute>
               <ExecutiveDashboard />
+            </PrivateRoute>
+          }
+        />
+
+        {/* CRO Dashboard - Revenue Intelligence view */}
+        <Route
+          path="/cro-dashboard"
+          element={
+            <PrivateRoute>
+              <CRODashboard />
+            </PrivateRoute>
+          }
+        />
+
+        {/* CFO Dashboard - Investment Intelligence view */}
+        <Route
+          path="/cfo-dashboard"
+          element={
+            <PrivateRoute>
+              <CFODashboard />
             </PrivateRoute>
           }
         />

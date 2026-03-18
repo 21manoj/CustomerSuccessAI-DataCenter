@@ -80,6 +80,35 @@ def get_kpi_list_for_load_driver() -> list:
             'unit': kpi.get('unit', ''),
             'target': kpi.get('target') if not isinstance(kpi.get('target'), dict) else kpi['target'].get('value', 85),
             'higher_is_better': kpi.get('higher_is_better', True),
+            'frequency': kpi.get('frequency', 'monthly'),
             'ranges': kpi.get('ranges', {}),
         })
     return result
+
+
+# ── Frequency constants (mirror kpi_definitions.py) ──
+FREQ_DAYS = {
+    'realtime': 1,    # streamed as daily aggregates
+    'daily': 1,
+    'weekly': 7,
+    'monthly': 30,
+    'quarterly': 90,
+}
+
+
+def get_kpi_frequency(kpi_code: str) -> str:
+    """Get frequency for a KPI code."""
+    catalog = get_kpis()
+    if kpi_code in catalog:
+        return catalog[kpi_code].get('frequency', 'monthly')
+    return 'monthly'
+
+
+def get_kpis_by_frequency() -> dict:
+    """Group KPIs by frequency: {daily: [kpi_list], weekly: [...], ...}"""
+    catalog = get_kpis()
+    by_freq = {}
+    for kpi_code, kpi in catalog.items():
+        freq = kpi.get('frequency', 'monthly')
+        by_freq.setdefault(freq, []).append(kpi_code)
+    return by_freq
