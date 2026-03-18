@@ -4004,11 +4004,15 @@ def clone_customer(
             )
 
         result['next_steps'] = (
-            'Clone is complete and ready to use immediately. '
+            'OPTION 1 — Use as-is: Clone is ready immediately. '
             'All data (accounts, KPIs, health scores, context graph, '
-            'signals, playbooks, ROI) has been deep-copied. '
-            'No need to run Wizards A/B/C or process_data — '
-            'the cloned data is already calculated.'
+            'signals, playbooks, ROI) has been deep-copied with '
+            'pre-calculated scores. No Wizards or process_data needed. '
+            'OPTION 2 — Customize: Use export_customer_csvs() to download '
+            'the 8 CSVs, modify them (change account names, KPI values, etc.), '
+            'then upload_csv() + process_data() to recalculate scores '
+            'with your changes. Wizards A/B/C only needed if you want '
+            'to regenerate journeys or recalibrate weights.'
         )
 
         return result
