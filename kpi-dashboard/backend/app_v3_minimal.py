@@ -424,6 +424,14 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Outcome ROI API not available: {e}")
 
+# Register Executive Dashboard API (CRO + CFO aggregated views)
+try:
+    from executive_dashboard_api import executive_dashboard_api
+    app.register_blueprint(executive_dashboard_api)
+    print("✅ Registered Executive Dashboard API: /api/executive/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Executive Dashboard API not available: {e}")
+
 # Register Context Graph API (graph traversal + revenue intelligence)
 try:
     from context_graph_api import context_graph_api

@@ -34,6 +34,307 @@ from power_of_1_model import (
 
 
 # ============================================================
+# LEARNED INVESTMENT MODEL
+# ============================================================
+# Instead of using static config-driven costs, learn from actual
+# playbook executions and their measured outcomes.
+#
+# Fallback chain:
+#   1. ActionEconomics actuals (real cost data from executed playbooks)
+#   2. PlaybookExecution count × per-metric benchmark cost (real count, benchmark cost)
+#   3. power_of_1_economics.json per-metric investment (static fallback)
+
+@dataclass
+class LearnedInvestment:
+    """Empirical investment data learned from historical actuals."""
+    total_investment: float
+    cs_initiative_cost: float
+    platform_cost: float
+    per_metric: Dict[str, Dict]  # metric_id → {cost, improvement_pct, cost_per_point, playbook_runs}
+    source: str  # 'action_economics', 'playbook_executions', 'benchmark_fallback'
+    playbook_runs: int
+    observation_months: int
+
+
+def learn_investment_from_actuals(
+    customer_id: int,
+    account_ids: List[int],
+    months: int = 6,
+) -> LearnedInvestment:
+    """
+    Learn the investment model from actual execution history.
+
+    Queries ActionEconomics and PlaybookExecution tables to build an
+    empirical cost-per-improvement-point model per metric.
+
+    Falls back to Power of 1 economics benchmarks only when no history exists.
+    """
+    from extensions import db
+    from models import ActionEconomics, PlaybookExecution
+    from datetime import datetime, timedelta
+
+    cutoff = datetime.utcnow() - timedelta(days=months * 30)
+
+    # ── Path 1: ActionEconomics (best — has real cost + real KPI deltas) ──
+    action_records = ActionEconomics.query.filter(
+        ActionEconomics.customer_id == customer_id,
+        ActionEconomics.account_id.in_(account_ids),
+        ActionEconomics.measured_at >= cutoff,
+    ).all()
+
+    if action_records and len(action_records) >= 2:
+        return _build_learned_from_action_economics(action_records, months)
+
+    # ── Path 2: PlaybookExecution count × benchmark cost ──
+    executions = PlaybookExecution.query.filter(
+        PlaybookExecution.customer_id == customer_id,
+        PlaybookExecution.status == 'completed',
+        PlaybookExecution.started_at >= cutoff,
+    ).all()
+
+    if executions:
+        return _build_learned_from_playbook_executions(executions, months)
+
+    # ── Path 3: Static fallback — Power of 1 economics benchmarks ──
+    return _build_benchmark_fallback(months)
+
+
+def _build_learned_from_action_economics(
+    records: list,
+    months: int,
+) -> LearnedInvestment:
+    """Build learned investment from ActionEconomics records (actual costs + deltas)."""
+    per_metric = {}
+    total_cost = 0
+    total_cs = 0
+    total_plat = 0
+    total_runs = 0
+
+    # Group by Power of 1 metric
+    from collections import defaultdict
+    metric_groups = defaultdict(list)
+    for rec in records:
+        metric_id = rec.power_of_1_metric
+        if metric_id:
+            metric_groups[metric_id].append(rec)
+
+    for metric_id, recs in metric_groups.items():
+        metric_cost = sum(float(r.total_action_cost or 0) for r in recs)
+        metric_cs = sum(float(r.cs_initiative_cost or 0) for r in recs)
+        metric_plat = sum(float(r.platform_cost or 0) for r in recs)
+        metric_improvement = sum(float(r.improvement_pct or 0) for r in recs)
+        runs = len(recs)
+
+        cost_per_point = (metric_cost / metric_improvement) if metric_improvement > 0 else 0
+
+        per_metric[metric_id] = {
+            'cost': round(metric_cost, 2),
+            'cs_cost': round(metric_cs, 2),
+            'platform_cost': round(metric_plat, 2),
+            'improvement_pct': round(metric_improvement, 2),
+            'cost_per_point': round(cost_per_point, 2),
+            'playbook_runs': runs,
+        }
+
+        total_cost += metric_cost
+        total_cs += metric_cs
+        total_plat += metric_plat
+        total_runs += runs
+
+    return LearnedInvestment(
+        total_investment=round(total_cost, 2),
+        cs_initiative_cost=round(total_cs, 2),
+        platform_cost=round(total_plat, 2),
+        per_metric=per_metric,
+        source='action_economics',
+        playbook_runs=total_runs,
+        observation_months=months,
+    )
+
+
+def _build_learned_from_playbook_executions(
+    executions: list,
+    months: int,
+) -> LearnedInvestment:
+    """Build learned investment from PlaybookExecution count × per-metric benchmark cost."""
+    from collections import Counter
+
+    # Map playbook_id → primary Power of 1 metric
+    PB_METRIC_MAP = {
+        'PB-01': 'TTFV',
+        'PB-02': 'ticket_resolution_time',
+        'PB-03': 'product_adoption',
+        'PB-04': 'expansion_rate',
+        'PB-05': 'GRR',
+        'PB-06': 'NRR',
+        # Generic names
+        'activation-blitz': 'TTFV',
+        'sla-stabilizer': 'ticket_resolution_time',
+        'renewal-safeguard': 'GRR',
+        'expansion-accelerator': 'expansion_rate',
+        'voc-sprint': 'NRR',
+    }
+
+    # Count executions per metric
+    metric_runs = Counter()
+    total_runs = 0
+    for ex in executions:
+        metric_id = PB_METRIC_MAP.get(ex.playbook_id)
+        if metric_id:
+            metric_runs[metric_id] += 1
+            total_runs += 1
+
+    # Cost per run = per-metric benchmark investment / expected runs per period
+    # (benchmark assumes ~1 full deployment = all work packages for 1% improvement)
+    per_metric = {}
+    total_cost = 0
+    total_cs = 0
+    total_plat = 0
+
+    for metric_id, runs in metric_runs.items():
+        metric = POWER_OF_1_METRICS.get(metric_id)
+        if not metric:
+            continue
+
+        # Each playbook run ≈ fraction of the full 1% work package
+        # Benchmark: full work package = metric.total_investment for 1% improvement
+        # Typical deployment has ~4 work packages, each run covers ~1 work package
+        num_work_packages = len(metric.work_packages) or 1
+        cost_per_run = metric.total_investment / num_work_packages
+        metric_cost = cost_per_run * runs
+
+        cs_ratio = metric.cs_initiative_cost / metric.total_investment if metric.total_investment > 0 else 0.8
+        plat_ratio = 1 - cs_ratio
+
+        per_metric[metric_id] = {
+            'cost': round(metric_cost, 2),
+            'cs_cost': round(metric_cost * cs_ratio, 2),
+            'platform_cost': round(metric_cost * plat_ratio, 2),
+            'improvement_pct': 0,  # Unknown — will be learned from health trends
+            'cost_per_point': 0,
+            'playbook_runs': runs,
+        }
+
+        total_cost += metric_cost
+        total_cs += metric_cost * cs_ratio
+        total_plat += metric_cost * plat_ratio
+
+    return LearnedInvestment(
+        total_investment=round(total_cost, 2),
+        cs_initiative_cost=round(total_cs, 2),
+        platform_cost=round(total_plat, 2),
+        per_metric=per_metric,
+        source='playbook_executions',
+        playbook_runs=total_runs,
+        observation_months=months,
+    )
+
+
+def _build_benchmark_fallback(months: int) -> LearnedInvestment:
+    """Static fallback: use Power of 1 economics.json benchmarks, prorated by period."""
+    per_metric = {}
+    total_cost = 0
+    total_cs = 0
+    total_plat = 0
+
+    # Prorate annual benchmarks to the observation period
+    period_fraction = months / 12.0
+
+    for metric_id, metric in POWER_OF_1_METRICS.items():
+        metric_cost = metric.total_investment * period_fraction
+        per_metric[metric_id] = {
+            'cost': round(metric_cost, 2),
+            'cs_cost': round(metric.cs_initiative_cost * period_fraction, 2),
+            'platform_cost': round(metric.platform_cost * period_fraction, 2),
+            'improvement_pct': 0,
+            'cost_per_point': round(metric.total_investment, 2),  # Full cost per 1% at annual rate
+            'playbook_runs': 0,
+        }
+        total_cost += metric_cost
+        total_cs += metric.cs_initiative_cost * period_fraction
+        total_plat += metric.platform_cost * period_fraction
+
+    return LearnedInvestment(
+        total_investment=round(total_cost, 2),
+        cs_initiative_cost=round(total_cs, 2),
+        platform_cost=round(total_plat, 2),
+        per_metric=per_metric,
+        source='benchmark_fallback',
+        playbook_runs=0,
+        observation_months=months,
+    )
+
+
+def extrapolate_forward_investment(
+    learned: LearnedInvestment,
+    per_metric_pcts: Dict[str, float],
+    projection_months: int = 6,
+) -> Dict:
+    """
+    Extrapolate forward investment from learned empirical model.
+
+    Uses the learned cost-per-improvement-point to estimate what
+    the projected improvement will cost. If cost_per_point is unknown,
+    falls back to economics.json benchmark for that metric.
+
+    Returns:
+        Dict with total_investment, cs_cost, platform_cost, per_metric breakdown, source
+    """
+    per_metric = {}
+    total_cost = 0
+    total_cs = 0
+    total_plat = 0
+
+    for metric_id, projected_pct in per_metric_pcts.items():
+        if projected_pct <= 0:
+            continue
+
+        metric = POWER_OF_1_METRICS.get(metric_id)
+        if not metric:
+            continue
+
+        learned_data = learned.per_metric.get(metric_id, {})
+        cost_per_point = learned_data.get('cost_per_point', 0)
+
+        if cost_per_point > 0 and learned.source != 'benchmark_fallback':
+            # Empirical: use the learned cost curve
+            metric_cost = cost_per_point * projected_pct
+            source = 'learned'
+        else:
+            # Fallback: use economics.json benchmark, prorated
+            # At 1%, cost = total_investment. Scale sub-linearly for higher %
+            # (diminishing marginal cost — first % is most expensive)
+            cost_scale = max(1.0, 1.0 + 0.5 * (projected_pct - 1.0))
+            metric_cost = metric.total_investment * cost_scale * (projection_months / 12.0)
+            source = 'benchmark'
+
+        cs_ratio = metric.cs_initiative_cost / metric.total_investment if metric.total_investment > 0 else 0.8
+        plat_ratio = 1 - cs_ratio
+
+        per_metric[metric_id] = {
+            'cost': round(metric_cost, 2),
+            'cs_cost': round(metric_cost * cs_ratio, 2),
+            'platform_cost': round(metric_cost * plat_ratio, 2),
+            'projected_pct': round(projected_pct, 2),
+            'cost_per_point': round(cost_per_point, 2),
+            'source': source,
+        }
+
+        total_cost += metric_cost
+        total_cs += metric_cost * cs_ratio
+        total_plat += metric_cost * plat_ratio
+
+    return {
+        'total_investment': round(total_cost, 2),
+        'cs_initiative_cost': round(total_cs, 2),
+        'platform_cost': round(total_plat, 2),
+        'per_metric': per_metric,
+        'learned_source': learned.source,
+        'playbook_runs_observed': learned.playbook_runs,
+    }
+
+
+# ============================================================
 # DATA CLASSES
 # ============================================================
 
@@ -101,23 +402,20 @@ def calculate_historical_roi(
     period_start: Optional[str] = None,
     period_end: Optional[str] = None,
     vertical: Optional[str] = None,
+    learned_investment: Optional[LearnedInvestment] = None,
 ) -> OutcomeROIResult:
     """
     Calculate realized ROI from actual metric movements.
 
-    Args:
-        metric_actuals: Dict of metric_id → {
-            "baseline": float,   # Where it started
-            "current": float,    # Where it is now
-        }
-        account_arr: Total ARR for scaling
-        investment_override: Override the default $247K investment
-        period_label: Display label for the period
-        period_start: ISO date string for period start
-        period_end: ISO date string for period end
+    Investment is determined from the learned model (empirical actuals from
+    ActionEconomics/PlaybookExecution), falling back to Power of 1 benchmarks.
 
-    Returns:
-        OutcomeROIResult with realized outcomes
+    Args:
+        metric_actuals: Dict of metric_id → {"baseline": float, "current": float}
+        account_arr: Total ARR for scaling
+        investment_override: Override the learned/default investment
+        period_label: Display label for the period
+        learned_investment: Empirical investment data from learn_investment_from_actuals()
     """
     arr_scale = 1.0
     if account_arr is not None:
@@ -125,15 +423,11 @@ def calculate_historical_roi(
 
     now = datetime.now()
 
-    # Compute real per-metric investment costs from resource rates (JSON config)
-    from resource_capacity_model import calculate_metric_action_cost
-
     metric_outcomes = []
     total_revenue_protected = 0
     total_revenue_expanded = 0
     total_cost_savings = 0
     total_direct_impact = 0
-    total_real_investment = 0  # Summed from per-metric resource costs
     improvement_pcts = []
 
     for metric_id, metric in POWER_OF_1_METRICS.items():
@@ -153,11 +447,6 @@ def calculate_historical_roi(
 
         # Dollar impact via Power of 1
         direct_impact = metric.annual_impact_per_pct * improvement_pct * arr_scale
-
-        # Real cost for this metric (from resource rates JSON)
-        if improvement_pct > 0:
-            metric_cost = calculate_metric_action_cost(metric_id)
-            total_real_investment += metric_cost.get("total_cost", 0)
 
         # Split into revenue vs savings
         rev_ratio = metric.impact_breakdown.get(
@@ -192,14 +481,36 @@ def calculate_historical_roi(
             linked_playbooks=metric.get_playbooks(vertical),
         ))
 
-    # Scale investment with observed improvement level:
-    # Lower actual improvement means fewer work packages were deployed.
-    raw_investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
-    # Investment scales with ARR — larger customers need proportionally larger CS programs
-    raw_investment *= arr_scale
-    avg_improvement = sum(improvement_pcts) / len(improvement_pcts) if improvement_pcts else 1.0
-    utilization = min(1.0, 0.30 + 0.70 * (avg_improvement / 6.0))
-    investment = raw_investment * utilization
+    # ── Investment: use learned model or fallback ──
+    if investment_override:
+        investment = investment_override
+        cs_pct = 0.80
+        plat_pct = 0.20
+    elif learned_investment and learned_investment.source != 'benchmark_fallback':
+        # Use empirical data directly — no ARR scaling on investment
+        # (work packages cost what they cost, regardless of customer ARR)
+        investment = learned_investment.total_investment
+        total_inv = learned_investment.cs_initiative_cost + learned_investment.platform_cost
+        cs_pct = learned_investment.cs_initiative_cost / total_inv if total_inv > 0 else 0.80
+        plat_pct = 1 - cs_pct
+    else:
+        # Benchmark fallback: prorate by observed improvement per metric
+        investment = 0
+        total_cs = 0
+        total_plat = 0
+        for i, (metric_id, metric) in enumerate(POWER_OF_1_METRICS.items()):
+            imp = improvement_pcts[i]
+            if imp > 0:
+                # Cost scales with improvement: 1%→1x, 2%→1.5x, 4%→2.5x
+                cost_scale = max(1.0, 1.0 + 0.5 * (imp - 1.0))
+                # Prorate to observation period (6mo = half of annual benchmark)
+                period_fraction = (learned_investment.observation_months / 12.0) if learned_investment else 0.5
+                metric_cost = metric.total_investment * cost_scale * period_fraction
+                investment += metric_cost
+                total_cs += metric.cs_initiative_cost * cost_scale * period_fraction
+                total_plat += metric.platform_cost * cost_scale * period_fraction
+        cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
+        plat_pct = 1 - cs_pct
 
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
@@ -208,6 +519,7 @@ def calculate_historical_roi(
     # ROI
     roi_pct = ((total_impact - investment) / investment * 100) if investment > 0 else 0
     payback_months = (investment / (total_impact / 12)) if total_impact > 0 else float('inf')
+    avg_improvement = sum(improvement_pcts) / len(improvement_pcts) if improvement_pcts else 0
 
     # Sort by dollar impact for top outcomes
     sorted_outcomes = sorted(metric_outcomes, key=lambda m: m.dollar_impact, reverse=True)
@@ -221,33 +533,6 @@ def calculate_historical_roi(
         }
         for m in sorted_outcomes[:3]
     ]
-
-    # Compute real CS vs platform split from resource data
-    cs_pct = 0
-    plat_pct = 0
-    if total_real_investment > 0:
-        # Use actual split from metric costs
-        total_cs = 0
-        total_plat = 0
-        for metric_id in POWER_OF_1_METRICS:
-            actuals = metric_actuals.get(metric_id, {})
-            baseline = actuals.get("baseline", POWER_OF_1_METRICS[metric_id].baseline)
-            current = actuals.get("current", POWER_OF_1_METRICS[metric_id].baseline)
-            m = POWER_OF_1_METRICS[metric_id]
-            if m.direction == "lower_is_better":
-                imp = baseline - current
-            else:
-                imp = current - baseline
-            imp_pct = (imp / m.one_pct_move) if m.one_pct_move else 0
-            if imp_pct > 0:
-                mc = calculate_metric_action_cost(metric_id)
-                total_cs += mc.get("cs_initiative_cost", 0)
-                total_plat += mc.get("platform_cost", 0)
-        cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
-        plat_pct = 1 - cs_pct
-    else:
-        cs_pct = 0.80
-        plat_pct = 0.20
 
     summary = ROISummary(
         total_investment=round(investment, 2),
@@ -289,20 +574,25 @@ def calculate_forward_roi(
     projection_months: int = 6,
     period_label: Optional[str] = None,
     vertical: Optional[str] = None,
+    per_metric_pcts: Optional[Dict[str, float]] = None,
+    learned_investment: Optional[LearnedInvestment] = None,
 ) -> OutcomeROIResult:
     """
     Project forward ROI from current metric values to target improvement.
 
+    Investment is extrapolated from the learned empirical model when available.
+    The learned cost-per-improvement-point from historical actuals is used to
+    predict what the projected improvement will cost. Falls back to Power of 1
+    benchmarks when no execution history exists.
+
     Args:
         current_values: Dict of metric_id → current value
-        target_improvement_pct: Target % improvement (1-6%)
-        account_arr: Total ARR for scaling
-        investment_override: Override default investment
+        target_improvement_pct: Target % improvement (1-6%), used when per_metric_pcts is None
+        account_arr: Total ARR for scaling IMPACT (not investment)
+        investment_override: Override learned/default investment
         projection_months: How far forward to project
-        period_label: Display label
-
-    Returns:
-        OutcomeROIResult with projected outcomes
+        per_metric_pcts: Per-metric improvement rates from velocity model
+        learned_investment: Empirical investment data from learn_investment_from_actuals()
     """
     arr_scale = 1.0
     if account_arr is not None:
@@ -310,42 +600,33 @@ def calculate_forward_roi(
 
     now = datetime.now()
 
-    # Compute real per-metric investment costs from resource rates (JSON config)
-    from resource_capacity_model import calculate_metric_action_cost
-
     metric_outcomes = []
     total_revenue_protected = 0
     total_revenue_expanded = 0
     total_cost_savings = 0
     total_direct_impact = 0
-    total_real_investment = 0
-    total_cs = 0
-    total_plat = 0
-    improvement_pcts = []
+    improvement_pcts_map = {}  # metric_id → improvement_pct
 
     for metric_id, metric in POWER_OF_1_METRICS.items():
         current = current_values.get(metric_id, metric.baseline)
 
+        # Use per-metric rate if available, otherwise fall back to flat rate
+        metric_improvement = (per_metric_pcts or {}).get(metric_id, target_improvement_pct or 4.0)
+
         # Project ADDITIONAL improvement from current value
-        additional_move = metric.one_pct_move * target_improvement_pct
+        additional_move = metric.one_pct_move * metric_improvement
         if metric.direction == "lower_is_better":
             projected_value = current - additional_move
         else:
             projected_value = current + additional_move
         projected_value = round(projected_value, 2)
 
-        improvement_pct = target_improvement_pct
-        improvement_pcts.append(improvement_pct)
+        improvement_pcts_map[metric_id] = metric_improvement
 
         # Dollar impact — annualized, then scaled to projection period
-        annual_impact = metric.annual_impact_per_pct * improvement_pct * arr_scale
+        # Impact DOES scale with ARR (bigger customer = bigger dollar outcome)
+        annual_impact = metric.annual_impact_per_pct * metric_improvement * arr_scale
         period_impact = annual_impact * (projection_months / 12.0)
-
-        # Real cost for this metric (from resource rates JSON)
-        metric_cost = calculate_metric_action_cost(metric_id)
-        total_real_investment += metric_cost.get("total_cost", 0)
-        total_cs += metric_cost.get("cs_initiative_cost", 0)
-        total_plat += metric_cost.get("platform_cost", 0)
 
         # Split
         rev_ratio = metric.impact_breakdown.get(
@@ -368,7 +649,7 @@ def calculate_forward_roi(
             display_name=metric.display_name,
             baseline_value=current,
             current_value=projected_value,
-            improvement_pct=round(improvement_pct, 2),
+            improvement_pct=round(metric_improvement, 2),
             unit=metric.unit,
             direction=metric.direction,
             dollar_impact=round(period_impact, 2),
@@ -379,15 +660,38 @@ def calculate_forward_roi(
             linked_playbooks=metric.get_playbooks(vertical),
         ))
 
-    # Scale investment with target improvement %:
-    # At low targets (1%), only foundation work packages are deployed (~40% utilization).
-    # At the target scenario (4%), most work packages are active (~77%).
-    # At stretch goals (6%), all work packages are fully deployed (100%).
-    raw_investment = investment_override or total_real_investment or INVESTMENT_SUMMARY["total_investment"]
-    # Investment scales with ARR — larger customers need proportionally larger CS programs
-    raw_investment *= arr_scale
-    utilization = min(1.0, 0.30 + 0.70 * (target_improvement_pct / 6.0))
-    investment = raw_investment * utilization
+    # ── Investment: extrapolate from learned model ──
+    # Investment does NOT scale with ARR — work packages cost what they cost
+    if investment_override:
+        investment = investment_override
+        cs_pct = 0.80
+        plat_pct = 0.20
+    elif learned_investment:
+        fwd_inv = extrapolate_forward_investment(
+            learned=learned_investment,
+            per_metric_pcts=improvement_pcts_map,
+            projection_months=projection_months,
+        )
+        investment = fwd_inv['total_investment']
+        total_cs = fwd_inv['cs_initiative_cost']
+        total_plat = fwd_inv['platform_cost']
+        cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
+        plat_pct = 1 - cs_pct
+    else:
+        # No learned data, no override → benchmark fallback per metric
+        investment = 0
+        total_cs = 0
+        total_plat = 0
+        for metric_id, metric in POWER_OF_1_METRICS.items():
+            imp = improvement_pcts_map.get(metric_id, 0)
+            if imp > 0:
+                cost_scale = max(1.0, 1.0 + 0.5 * (imp - 1.0))
+                period_fraction = projection_months / 12.0
+                investment += metric.total_investment * cost_scale * period_fraction
+                total_cs += metric.cs_initiative_cost * cost_scale * period_fraction
+                total_plat += metric.platform_cost * cost_scale * period_fraction
+        cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
+        plat_pct = 1 - cs_pct
 
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
@@ -396,7 +700,8 @@ def calculate_forward_roi(
     # ROI
     roi_pct = ((total_impact - investment) / investment * 100) if investment > 0 else 0
     payback_months = (investment / (total_impact / (projection_months))) if total_impact > 0 else float('inf')
-    avg_improvement = sum(improvement_pcts) / len(improvement_pcts) if improvement_pcts else 0
+    all_pcts = list(improvement_pcts_map.values())
+    avg_improvement = sum(all_pcts) / len(all_pcts) if all_pcts else 0
 
     # Top outcomes
     sorted_outcomes = sorted(metric_outcomes, key=lambda m: m.dollar_impact, reverse=True)
@@ -410,10 +715,6 @@ def calculate_forward_roi(
         }
         for m in sorted_outcomes[:3]
     ]
-
-    # Real CS vs platform split
-    cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
-    plat_pct = 1 - cs_pct
 
     label = period_label or f"Next {projection_months} Months"
     summary = ROISummary(
@@ -459,20 +760,26 @@ def calculate_outcome_story(
     customer_id: Optional[int] = None,
     account_ids: Optional[List[int]] = None,
     vertical: Optional[str] = None,
+    per_metric_pcts: Optional[Dict[str, float]] = None,
+    learned_investment: Optional[LearnedInvestment] = None,
 ) -> Dict:
     """
     Build the complete outcome story: historical proof + forward projection.
 
     Returns both sides with a bridging narrative showing continuity.
     When context graph is enabled, includes graph-based causal evidence.
+
+    The learned_investment parameter feeds the empirical cost model into both
+    the historical and forward ROI calculations.
     """
-    # Historical ROI
+    # Historical ROI — uses learned investment for actual cost
     historical = calculate_historical_roi(
         metric_actuals=metric_actuals,
         account_arr=account_arr,
         investment_override=investment_override,
         period_label=historical_period_label,
         vertical=vertical,
+        learned_investment=learned_investment,
     )
 
     # Extract current values from actuals for forward projection
@@ -480,7 +787,7 @@ def calculate_outcome_story(
     for metric_id, actuals in metric_actuals.items():
         current_values[metric_id] = actuals.get("current", POWER_OF_1_METRICS[metric_id].baseline)
 
-    # Forward ROI
+    # Forward ROI — extrapolates investment from learned cost curve
     forward = calculate_forward_roi(
         current_values=current_values,
         target_improvement_pct=target_improvement_pct,
@@ -488,6 +795,8 @@ def calculate_outcome_story(
         investment_override=investment_override,
         projection_months=projection_months,
         vertical=vertical,
+        per_metric_pcts=per_metric_pcts,
+        learned_investment=learned_investment,
     )
 
     # Combined totals

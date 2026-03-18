@@ -3135,63 +3135,142 @@ def process_data(customer_id: int) -> dict:
         if missing:
             raise ToolError(f"Missing required files: {missing}. Upload them via upload_csv().")
 
-        # Call the onboarding process-data logic directly
+        # Call the onboarding process-data endpoint internally
         import json as _json
+        import requests as _requests
+
+        steps_completed = []
+        errors = []
+
+        # Call the REST API process-data endpoint (which does the real work)
         try:
-            from onboarding_api_v2_config_aware import get_customer_directory
-            from upload_api_v3 import process_csv_upload
-            from extensions import db as _db
+            base_url = os.environ.get('CS_PULSE_BASE_URL', 'http://localhost:5001')
+            resp = _requests.post(
+                f'{base_url}/api/onboarding/process-data',
+                json={'customer_id': customer_id},
+                timeout=120,
+            )
+            if resp.status_code == 200:
+                result_data = resp.json()
+                steps_completed = result_data.get('steps_completed', ['full_pipeline'])
+                return {
+                    'scope': 'customer',
+                    'customer_id': customer_id,
+                    'status': 'success',
+                    'csv_files_found': csv_files,
+                    'steps_completed': steps_completed,
+                    'errors': [],
+                    'message': (
+                        f"Data processing completed successfully. "
+                        f"{len(csv_files)} CSV files processed through full pipeline."
+                    ),
+                }
+            else:
+                error_msg = resp.text[:500] if resp.text else f'HTTP {resp.status_code}'
+                errors.append(f"pipeline: {error_msg}")
+        except _requests.exceptions.ConnectionError:
+            errors.append(
+                "Cannot connect to CS Pulse backend API. "
+                "Ensure the backend is running on the configured base URL."
+            )
+        except Exception as e:
+            errors.append(f"pipeline: {str(e)}")
+
+        # Fallback: try direct CSV loading if REST call failed
+        try:
             import pandas as pd
+            from extensions import db as _db
+            from models import Account, DC2SKPI, QualitativeSignal
 
-            steps_completed = []
-            errors = []
+            for csv_file in csv_files:
+                csv_path = data_dir / csv_file
+                df = pd.read_csv(str(csv_path))
+                if df.empty:
+                    continue
 
-            # Step 1: Load CSV data into DB tables
+                if csv_file == 'accounts.csv':
+                    for _, row in df.iterrows():
+                        existing = Account.query.filter_by(
+                            customer_id=customer_id,
+                            account_name=row.get('account_name', row.get('name', ''))
+                        ).first()
+                        if not existing:
+                            acct = Account(
+                                customer_id=customer_id,
+                                account_name=row.get('account_name', row.get('name', '')),
+                                arr=row.get('arr', row.get('annual_revenue', 0)),
+                                vertical=vertical,
+                            )
+                            _db.session.add(acct)
+                    _db.session.flush()
+                    steps_completed.append('accounts_loaded')
+
+                elif csv_file == 'kpi_measurements.csv':
+                    # Get account mapping
+                    accounts = {a.account_name: a.account_id
+                                for a in Account.query.filter_by(customer_id=customer_id).all()}
+                    for _, row in df.iterrows():
+                        acct_name = row.get('account_name', row.get('account', ''))
+                        acct_id = accounts.get(acct_name)
+                        if acct_id:
+                            kpi = DC2SKPI(
+                                account_id=acct_id,
+                                kpi_code=row.get('kpi_code', row.get('kpi_id', '')),
+                                value=float(row.get('value', 0)),
+                                target=float(row.get('target', 100)),
+                                measured_at=row.get('measured_at', row.get('date')),
+                            )
+                            _db.session.add(kpi)
+                    steps_completed.append('kpis_loaded')
+
+                elif csv_file == 'enhanced_qualitative_signals.csv':
+                    accounts = {a.account_name: a.account_id
+                                for a in Account.query.filter_by(customer_id=customer_id).all()}
+                    for _, row in df.iterrows():
+                        acct_name = row.get('account_name', row.get('account', ''))
+                        acct_id = accounts.get(acct_name)
+                        if acct_id:
+                            sig = QualitativeSignal(
+                                account_id=acct_id,
+                                signal_type=row.get('signal_type', 'nps'),
+                                content=row.get('content', row.get('signal_text', '')),
+                                sentiment=row.get('sentiment', 'neutral'),
+                                sentiment_score=float(row.get('sentiment_score', 0.5)),
+                                signal_date=row.get('signal_date', row.get('date')),
+                            )
+                            _db.session.add(sig)
+                    steps_completed.append('signals_loaded')
+
+            _db.session.commit()
+
+            # Trigger health score calculation via event system
             try:
-                for csv_file in csv_files:
-                    csv_path = data_dir / csv_file
-                    if csv_file in ('accounts.csv', 'kpi_measurements.csv',
-                                    'enhanced_qualitative_signals.csv',
-                                    'products.csv'):
-                        df = pd.read_csv(str(csv_path))
-                        if not df.empty:
-                            # Map file_type to table/logic
-                            pass  # Data loaded from CSVs is available
-                steps_completed.append('data_loading')
-            except Exception as e:
-                errors.append(f"data_loading: {str(e)}")
+                from event_system import publish_event
+                publish_event('kpi_data_uploaded', {
+                    'customer_id': customer_id,
+                    'source': 'mcp_process_data',
+                })
+                steps_completed.append('health_score_calculation_triggered')
+            except Exception:
+                pass
 
-            status = 'success' if not errors else 'partial'
+        except Exception as e:
+            errors.append(f"direct_loading: {str(e)}")
 
-            return {
-                'scope': 'customer',
-                'customer_id': customer_id,
-                'status': status,
-                'csv_files_found': csv_files,
-                'steps_completed': steps_completed,
-                'errors': errors,
-                'message': (
-                    f"Data processing {'completed' if not errors else 'completed with errors'}. "
-                    f"CSV files validated and ready in customer directory. "
-                    f"Use the REST API POST /api/onboarding/process-data for full pipeline execution."
-                ),
-            }
+        status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
-        except ImportError as e:
-            # Fallback: report files ready
-            return {
-                'scope': 'customer',
-                'customer_id': customer_id,
-                'status': 'files_ready',
-                'csv_files_found': csv_files,
-                'steps_completed': ['file_validation'],
-                'errors': [],
-                'message': (
-                    f"CSV files validated: {csv_files}. "
-                    f"Full pipeline processing available via REST API "
-                    f"POST /api/onboarding/process-data."
-                ),
-            }
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'status': status,
+            'csv_files_found': csv_files,
+            'steps_completed': steps_completed,
+            'errors': errors,
+            'message': (
+                f"Data processing {'completed' if status == 'success' else 'completed with issues'}. "
+                f"Steps: {', '.join(steps_completed) if steps_completed else 'none'}."
+            ),
+        }
 
 
 # -------------------------------------------------------------------

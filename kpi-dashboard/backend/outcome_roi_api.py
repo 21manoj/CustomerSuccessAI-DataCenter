@@ -110,7 +110,7 @@ def get_historical_roi():
         return jsonify({'error': 'Revenue Intelligence not enabled'}), 403
 
     try:
-        from outcome_roi_engine import calculate_historical_roi
+        from outcome_roi_engine import calculate_historical_roi, learn_investment_from_actuals
 
         period = request.args.get('period', '6m')
         months = {'3m': 3, '6m': 6, '12m': 12}.get(period, 6)
@@ -118,8 +118,12 @@ def get_historical_roi():
         # Get actual metric values from health trends
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
+        account_ids = [a.account_id for a in accounts]
 
         metric_actuals, data_source = _extract_historical_actuals(accounts, months)
+
+        # Learn investment model from execution history
+        learned_investment = learn_investment_from_actuals(customer_id, account_ids, months)
 
         # Determine vertical from first account
         acct_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
@@ -129,6 +133,7 @@ def get_historical_roi():
             account_arr=total_arr,
             period_label=f"Last {months} Months",
             vertical=acct_vertical,
+            learned_investment=learned_investment,
         )
 
         from outcome_roi_engine import _result_to_dict
@@ -153,11 +158,23 @@ def get_historical_roi():
 @outcome_roi_api.route('/api/outcome-roi/forward', methods=['GET'])
 def get_forward_roi():
     """
-    Forward outcome ROI: what the CS investment will deliver.
+    Forward outcome ROI: velocity-based projection with optional pillar boost.
+
+    Uses per-pillar historical velocity (pts/month) with diminishing returns,
+    instead of a flat improvement assumption. CEOs can boost specific pillars
+    to model increased investment scenarios.
 
     Query params:
-        improvement_pct: Target improvement % (default: 4.0)
         months: Projection months (default: 6)
+        mode: 'velocity' (default, data-driven) or 'flat' (legacy flat %)
+        improvement_pct: Flat improvement % when mode=flat (default: 4.0)
+
+    JSON body (POST) or query params for pillar_boost:
+        pillar_boost: {"P2": 1.5, "P3": 2.0}  — multipliers on velocity
+            1.0 = maintain current trajectory
+            1.5 = 50% more investment → 50% faster improvement
+            2.0 = double investment → double the velocity
+            0.5 = reduce investment → half the velocity
     """
     customer_id = get_current_customer_id()
     if not customer_id:
@@ -169,35 +186,120 @@ def get_forward_roi():
         return jsonify({'error': 'Revenue Intelligence not enabled'}), 403
 
     try:
-        from outcome_roi_engine import calculate_forward_roi
+        from outcome_roi_engine import calculate_forward_roi, learn_investment_from_actuals
 
-        improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
         projection_months = request.args.get('months', 6, type=int)
+        mode = request.args.get('mode', 'velocity')
+
+        # Parse pillar_boost from POST body or query param
+        pillar_boost = {}
+        fwd_body = request.get_json(silent=True) or {}
+        if fwd_body.get('pillar_boost'):
+            pillar_boost = fwd_body['pillar_boost']
+        elif request.args.get('pillar_boost'):
+            import json
+            try:
+                pillar_boost = json.loads(request.args.get('pillar_boost', '{}'))
+            except (json.JSONDecodeError, TypeError):
+                pass
 
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
-
+        account_ids = [a.account_id for a in accounts]
         current_values, data_source = _extract_current_values(accounts)
-
-        # Determine vertical from first account
         fwd_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
 
-        result = calculate_forward_roi(
-            current_values=current_values,
-            target_improvement_pct=improvement_pct,
-            account_arr=total_arr,
-            projection_months=projection_months,
-            vertical=fwd_vertical,
-        )
+        # Learn investment model from execution history
+        learned_investment = learn_investment_from_actuals(customer_id, account_ids, projection_months)
+
+        if mode == 'velocity':
+            # Velocity-based: per-pillar rates from historical data
+            velocities, vel_source = _extract_pillar_velocities(accounts, months=projection_months)
+
+            if velocities:
+                # Build per-metric improvement rates from velocity
+                per_metric_pcts = {}
+                velocity_detail = {}
+                for metric_id, vel in velocities.items():
+                    pillar_code = vel['pillar_code']
+                    boost = float(pillar_boost.get(pillar_code, 1.0))
+                    boosted_pct = vel['projected_pct'] * boost
+
+                    per_metric_pcts[metric_id] = boosted_pct
+
+                    # Industry benchmark gap
+                    industry_target = 4.0
+                    base_pct = vel['projected_pct']
+                    gap = max(0, industry_target - boosted_pct)
+                    boost_needed = round(industry_target / base_pct, 1) if base_pct > 0 else 99.0
+
+                    velocity_detail[pillar_code] = {
+                        'pillar_name': vel['pillar_name'],
+                        'metric_id': metric_id,
+                        'velocity_per_month': vel['velocity_per_month'],
+                        'headroom': vel['headroom'],
+                        'decel_factor': vel['decel_factor'],
+                        'base_projected_pct': vel['projected_pct'],
+                        'boost_multiplier': boost,
+                        'boosted_projected_pct': round(boosted_pct, 2),
+                        'earliest_score': vel['earliest_score'],
+                        'latest_score': vel['latest_score'],
+                        'industry_target_pct': industry_target,
+                        'gap_to_target_pct': round(gap, 2),
+                        'boost_needed_for_target': min(boost_needed, 10.0),
+                        'at_or_above_target': boosted_pct >= industry_target,
+                    }
+
+                result = calculate_forward_roi(
+                    current_values=current_values,
+                    target_improvement_pct=None,  # ignored when per_metric_pcts provided
+                    per_metric_pcts=per_metric_pcts,
+                    account_arr=total_arr,
+                    projection_months=projection_months,
+                    vertical=fwd_vertical,
+                    learned_investment=learned_investment,
+                )
+                data_source = vel_source
+            else:
+                # Fallback to flat if no velocity data
+                improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
+                result = calculate_forward_roi(
+                    current_values=current_values,
+                    target_improvement_pct=improvement_pct,
+                    account_arr=total_arr,
+                    projection_months=projection_months,
+                    vertical=fwd_vertical,
+                    learned_investment=learned_investment,
+                )
+                velocity_detail = {}
+        else:
+            # Legacy flat mode
+            improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
+            result = calculate_forward_roi(
+                current_values=current_values,
+                target_improvement_pct=improvement_pct,
+                account_arr=total_arr,
+                projection_months=projection_months,
+                vertical=fwd_vertical,
+                learned_investment=learned_investment,
+            )
+            velocity_detail = {}
 
         from outcome_roi_engine import _result_to_dict
-        return jsonify({
+        response = {
             'customer_id': customer_id,
             'model': 'outcome_roi',
+            'mode': mode,
             'data_source': data_source,
             'result': _result_to_dict(result),
             'last_updated': datetime.now().isoformat(),
-        })
+        }
+        if velocity_detail:
+            response['velocity_detail'] = velocity_detail
+        if pillar_boost:
+            response['pillar_boost_applied'] = pillar_boost
+
+        return jsonify(response)
 
     except Exception as e:
         import traceback
@@ -209,15 +311,18 @@ def get_forward_roi():
 # STORY ENDPOINT — Combined for demo
 # ============================================================
 
-@outcome_roi_api.route('/api/outcome-roi/story', methods=['GET'])
+@outcome_roi_api.route('/api/outcome-roi/story', methods=['GET', 'POST'])
 def get_outcome_story():
     """
     Combined outcome story: historical proof + forward projection.
-    The demo endpoint — shows both sides with bridging narrative.
 
     Query params:
-        improvement_pct: Forward target (default: 4.0)
+        improvement_pct: Forward target (default: 4.0, used when mode=flat)
         months: Forward projection months (default: 6)
+        mode: 'velocity' (default, data-driven) or 'flat' (legacy)
+
+    POST body (optional, for velocity mode):
+        pillar_boost: {"P2": 1.5, "P3": 2.0} — multipliers on velocity
     """
     customer_id = get_current_customer_id()
     if not customer_id:
@@ -233,17 +338,77 @@ def get_outcome_story():
 
         improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
         projection_months = request.args.get('months', 6, type=int)
+        mode = request.args.get('mode', 'velocity')
+
+        # Parse pillar_boost from POST body or query param
+        pillar_boost = {}
+        body = request.get_json(silent=True) or {}
+        if body.get('pillar_boost'):
+            pillar_boost = body['pillar_boost']
+        elif request.args.get('pillar_boost'):
+            import json as _json
+            try:
+                pillar_boost = _json.loads(request.args.get('pillar_boost', '{}'))
+            except (ValueError, TypeError):
+                pass
 
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
+        account_ids = [a.account_id for a in accounts]
 
         metric_actuals, data_source = _extract_historical_actuals(accounts, 6)
+
+        # ── Learn investment model from actual execution history ──
+        from outcome_roi_engine import learn_investment_from_actuals
+        learned_investment = learn_investment_from_actuals(
+            customer_id=customer_id,
+            account_ids=account_ids,
+            months=projection_months,
+        )
 
         # Identify at-risk accounts per Power of 1 metric
         accounts_at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
 
         # Determine vertical from first account (single-vertical portfolio)
         acct_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
+        # Velocity mode: extract per-pillar rates from historical data
+        per_metric_pcts = None
+        velocity_detail = {}
+        if mode == 'velocity':
+            velocities, vel_source = _extract_pillar_velocities(accounts, months=projection_months)
+            if velocities:
+                per_metric_pcts = {}
+                for metric_id, vel in velocities.items():
+                    pillar_code = vel['pillar_code']
+                    boost = float(pillar_boost.get(pillar_code, 1.0))
+                    boosted_pct = vel['projected_pct'] * boost
+                    per_metric_pcts[metric_id] = boosted_pct
+
+                    # Industry benchmark: 4% = "Target (Industry Leading)" scenario
+                    industry_target = 4.0
+                    base_pct = vel['projected_pct']
+                    gap = max(0, industry_target - boosted_pct)
+                    boost_needed = round(industry_target / base_pct, 1) if base_pct > 0 else 99.0
+
+                    velocity_detail[pillar_code] = {
+                        'pillar_name': vel['pillar_name'],
+                        'metric_id': metric_id,
+                        'velocity_per_month': vel['velocity_per_month'],
+                        'headroom': vel['headroom'],
+                        'decel_factor': vel['decel_factor'],
+                        'base_projected_pct': vel['projected_pct'],
+                        'boost_multiplier': boost,
+                        'boosted_projected_pct': round(boosted_pct, 2),
+                        'earliest_score': vel['earliest_score'],
+                        'latest_score': vel['latest_score'],
+                        # Gap to industry benchmark
+                        'industry_target_pct': industry_target,
+                        'gap_to_target_pct': round(gap, 2),
+                        'boost_needed_for_target': min(boost_needed, 10.0),
+                        'at_or_above_target': boosted_pct >= industry_target,
+                    }
+                data_source = vel_source
 
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
@@ -252,8 +417,10 @@ def get_outcome_story():
             projection_months=projection_months,
             accounts_at_risk=accounts_at_risk,
             customer_id=customer_id,
-            account_ids=[a.account_id for a in accounts],
+            account_ids=account_ids,
             vertical=acct_vertical,
+            per_metric_pcts=per_metric_pcts,
+            learned_investment=learned_investment,
         )
 
         # Persist ROI snapshot for audit trail and trending
@@ -285,13 +452,26 @@ def get_outcome_story():
             db.session.rollback()
             print(f"ROI snapshot save failed (non-fatal): {snap_err}")
 
-        return jsonify({
+        response = {
             'customer_id': customer_id,
             'model': 'outcome_roi',
+            'mode': mode,
             'data_source': data_source,
             'story': story,
+            'investment_model': {
+                'source': learned_investment.source,
+                'playbook_runs_observed': learned_investment.playbook_runs,
+                'observation_months': learned_investment.observation_months,
+                'learned_total': learned_investment.total_investment,
+            },
             'last_updated': datetime.now().isoformat(),
-        })
+        }
+        if velocity_detail:
+            response['velocity_detail'] = velocity_detail
+        if pillar_boost:
+            response['pillar_boost_applied'] = pillar_boost
+
+        return jsonify(response)
 
     except Exception as e:
         import traceback
@@ -436,51 +616,64 @@ def _extract_historical_actuals(accounts, months):
     ).order_by(HealthTrend.year.desc(), HealthTrend.month.desc()).all()
 
     if len(trends) >= 2:
-        latest = trends[0]
-        earliest_idx = min(len(trends) - 1, months)
-        earliest = trends[earliest_idx]
+        # Aggregate by (year, month) across all accounts to get portfolio averages
+        from collections import defaultdict
+        month_buckets = defaultdict(list)
+        for t in trends:
+            month_buckets[(t.year, t.month)].append(t)
 
-        score_map = {
-            'product_usage': 'product_adoption',
-            'support': 'ticket_resolution_time',
-            'customer_sentiment': 'GRR',
-            'business_outcomes': 'NRR',
-            'relationship_strength': 'expansion_rate',
-        }
+        sorted_months = sorted(month_buckets.keys())
+        if len(sorted_months) >= 2:
+            earliest_key = sorted_months[0]
+            latest_key = sorted_months[-1]
+            earliest_trends = month_buckets[earliest_key]
+            latest_trends = month_buckets[latest_key]
 
-        metric_actuals = {}
-        for score_key, metric_id in score_map.items():
-            metric = POWER_OF_1_METRICS.get(metric_id)
-            if not metric:
-                continue
-            try:
-                latest_score = float(getattr(latest, f'{score_key}_score') or 0)
-                earliest_score = float(getattr(earliest, f'{score_key}_score') or 0)
-            except (AttributeError, TypeError):
-                continue
-
-            score_change = latest_score - earliest_score
-            pct_improvement = score_change / 10.0
-
-            if metric.direction == "lower_is_better":
-                current_value = metric.baseline - (metric.one_pct_move * pct_improvement)
-            else:
-                current_value = metric.baseline + (metric.one_pct_move * pct_improvement)
-
-            metric_actuals[metric_id] = {
-                "baseline": metric.baseline,
-                "current": round(current_value, 2),
+            score_map = {
+                'product_usage': 'product_adoption',
+                'support': 'ticket_resolution_time',
+                'customer_sentiment': 'GRR',
+                'business_outcomes': 'NRR',
+                'relationship_strength': 'expansion_rate',
             }
 
-        # Fill gaps
-        for metric_id in POWER_OF_1_METRICS:
-            if metric_id not in metric_actuals:
+            def _avg_score(trend_list, attr):
+                vals = [float(getattr(t, attr) or 0) for t in trend_list if getattr(t, attr, None) is not None]
+                return sum(vals) / len(vals) if vals else 0
+
+            metric_actuals = {}
+            for score_key, metric_id in score_map.items():
+                metric = POWER_OF_1_METRICS.get(metric_id)
+                if not metric:
+                    continue
+                try:
+                    latest_score = _avg_score(latest_trends, f'{score_key}_score')
+                    earliest_score = _avg_score(earliest_trends, f'{score_key}_score')
+                except (AttributeError, TypeError):
+                    continue
+
+                score_change = latest_score - earliest_score
+                pct_improvement = score_change / 10.0
+
+                if metric.direction == "lower_is_better":
+                    current_value = metric.baseline - (metric.one_pct_move * pct_improvement)
+                else:
+                    current_value = metric.baseline + (metric.one_pct_move * pct_improvement)
+
                 metric_actuals[metric_id] = {
-                    "baseline": POWER_OF_1_METRICS[metric_id].baseline,
-                    "current": POWER_OF_1_METRICS[metric_id].baseline,
+                    "baseline": metric.baseline,
+                    "current": round(current_value, 2),
                 }
 
-        return metric_actuals, 'health_trends'
+            # Fill gaps
+            for metric_id in POWER_OF_1_METRICS:
+                if metric_id not in metric_actuals:
+                    metric_actuals[metric_id] = {
+                        "baseline": POWER_OF_1_METRICS[metric_id].baseline,
+                        "current": POWER_OF_1_METRICS[metric_id].baseline,
+                    }
+
+            return metric_actuals, 'health_trends'
 
     # ── Path 2: PillarScore (DC2S customers) ──
     cutoff = datetime.now() - timedelta(days=months * 30)
@@ -591,6 +784,127 @@ def _extract_historical_actuals(accounts, months):
             }
 
     return metric_actuals, 'pillar_scores'
+
+
+# ── Pillar velocity map: pillar_code → ROI metric_id ──
+PILLAR_TO_METRIC = {
+    'P1': 'product_adoption',
+    'P2': 'ticket_resolution_time',
+    'P3': 'GRR',
+    'P4': 'NRR',
+    'P5': 'expansion_rate',
+}
+
+# Also map human-readable pillar names for CEO-friendly API
+PILLAR_NAMES = {
+    'P1': 'Product Usage & Adoption',
+    'P2': 'Support & Reliability',
+    'P3': 'Customer Sentiment',
+    'P4': 'Business Outcomes',
+    'P5': 'Relationship & Expansion',
+}
+
+
+def _extract_pillar_velocities(accounts, months=6):
+    """Extract per-pillar improvement velocity from health_trends.
+
+    Computes monthly velocity (pts/month), current level, headroom to 100,
+    and a deceleration-adjusted projected improvement for the next N months.
+
+    Args:
+        accounts: list of Account objects
+        months: historical lookback period
+
+    Returns:
+        tuple: (velocities dict, data_source string)
+            velocities: {metric_id: {velocity, current, headroom, projected_pct, pillar_code}}
+    """
+    import math
+    from power_of_1_model import POWER_OF_1_METRICS
+
+    if not accounts:
+        return {}, 'no_data'
+
+    account_ids = [a.account_id for a in accounts]
+
+    # Aggregate health_trends by (year, month) across all accounts
+    trends = HealthTrend.query.filter(
+        HealthTrend.account_id.in_(account_ids)
+    ).order_by(HealthTrend.year, HealthTrend.month).all()
+
+    if len(trends) < 2:
+        return {}, 'insufficient_data'
+
+    from collections import defaultdict
+    month_buckets = defaultdict(list)
+    for t in trends:
+        month_buckets[(t.year, t.month)].append(t)
+
+    sorted_months = sorted(month_buckets.keys())
+    if len(sorted_months) < 2:
+        return {}, 'insufficient_data'
+
+    earliest_key = sorted_months[0]
+    latest_key = sorted_months[-1]
+    earliest_trends = month_buckets[earliest_key]
+    latest_trends = month_buckets[latest_key]
+
+    # Number of months between earliest and latest
+    num_months = (latest_key[0] - earliest_key[0]) * 12 + (latest_key[1] - earliest_key[1])
+    if num_months < 1:
+        num_months = 1
+
+    score_keys = {
+        'product_usage': ('P1', 'product_adoption'),
+        'support': ('P2', 'ticket_resolution_time'),
+        'customer_sentiment': ('P3', 'GRR'),
+        'business_outcomes': ('P4', 'NRR'),
+        'relationship_strength': ('P5', 'expansion_rate'),
+    }
+
+    def _avg_score(trend_list, attr):
+        vals = [float(getattr(t, attr) or 0) for t in trend_list if getattr(t, attr, None) is not None]
+        return sum(vals) / len(vals) if vals else 0
+
+    velocities = {}
+    for score_key, (pillar_code, metric_id) in score_keys.items():
+        attr = f'{score_key}_score'
+        earliest_score = _avg_score(earliest_trends, attr)
+        latest_score = _avg_score(latest_trends, attr)
+
+        velocity_per_month = (latest_score - earliest_score) / num_months
+        headroom = max(0, 100.0 - latest_score)
+
+        # Deceleration: as score approaches 100, gains diminish
+        # decel_factor ranges 0→1: more headroom = more growth potential
+        decel_factor = min(1.0, headroom / 50.0)
+
+        # Projected additional score improvement over forward months
+        # Uses diminishing returns: velocity * months * decel_factor * log_decay
+        forward_months = months
+        if velocity_per_month > 0:
+            raw_gain = velocity_per_month * forward_months * decel_factor
+            # Log decay: fast early, slower later
+            log_decay = math.log1p(forward_months) / math.log1p(12)
+            projected_gain = raw_gain * log_decay
+        else:
+            projected_gain = velocity_per_month * forward_months * 0.5  # declining pillar
+
+        # Convert pillar score gain to ROI % improvement (10 pts = 1%)
+        projected_pct = projected_gain / 10.0
+
+        velocities[metric_id] = {
+            'pillar_code': pillar_code,
+            'pillar_name': PILLAR_NAMES.get(pillar_code, pillar_code),
+            'earliest_score': round(earliest_score, 1),
+            'latest_score': round(latest_score, 1),
+            'velocity_per_month': round(velocity_per_month, 2),
+            'headroom': round(headroom, 1),
+            'decel_factor': round(decel_factor, 2),
+            'projected_pct': round(projected_pct, 2),
+        }
+
+    return velocities, 'health_trends'
 
 
 def _extract_current_values(accounts):

@@ -4,7 +4,7 @@ import {
   ArrowRight, Activity, Clock, BarChart3, CheckCircle2, ChevronRight, ChevronDown,
   Loader2, AlertCircle, AlertTriangle, SlidersHorizontal, ArrowUpRight, ArrowDownRight,
   Sparkles, Eye, EyeOff, FileText, PlayCircle, Layers,
-  GitBranch, Star, Diamond, Signal, CalendarDays, Map
+  GitBranch, Star, Diamond, Signal, CalendarDays, Map, Gauge, Rocket
 } from 'lucide-react';
 import { apiCall } from '../../utils/api';
 
@@ -214,6 +214,38 @@ interface AccountEvidence {
   kpi_improvements: KPIImprovement[];
   pillar_changes: PillarChange[];
 }
+
+// ── Velocity / Pillar Boost Types ──
+
+interface PillarVelocity {
+  pillar_name: string;
+  metric_id: string;
+  velocity_per_month: number;
+  headroom: number;
+  decel_factor: number;
+  base_projected_pct: number;
+  boost_multiplier: number;
+  boosted_projected_pct: number;
+  earliest_score: number;
+  latest_score: number;
+  // Industry benchmark gap
+  industry_target_pct?: number;
+  gap_to_target_pct?: number;
+  boost_needed_for_target?: number;
+  at_or_above_target?: boolean;
+}
+
+type VelocityDetail = Record<string, PillarVelocity>; // keyed by pillar code (P1..P5)
+
+type PillarBoost = Record<string, number>; // e.g. { P2: 1.5, P3: 2.0 }
+
+const PILLAR_META: Record<string, { name: string; color: string; icon: string }> = {
+  P1: { name: 'Deployment Velocity', color: 'blue', icon: '🚀' },
+  P2: { name: 'Operational Stability', color: 'green', icon: '🛡️' },
+  P3: { name: 'AI Workload Perf', color: 'purple', icon: '🧠' },
+  P4: { name: 'Channel & Partner', color: 'amber', icon: '🤝' },
+  P5: { name: 'Expansion Readiness', color: 'rose', icon: '📈' },
+};
 
 // ────────────────────────────────────────────────────────
 // Helpers
@@ -1630,6 +1662,122 @@ const RevenueTimeline: React.FC = () => {
 
 
 // ────────────────────────────────────────────────────────
+// Pillar Boost Panel — CEO investment scenario sliders
+// ────────────────────────────────────────────────────────
+
+const PillarBoostPanel: React.FC<{
+  velocityDetail: VelocityDetail;
+  pillarBoost: PillarBoost;
+  onChange: (boost: PillarBoost) => void;
+}> = ({ velocityDetail, pillarBoost, onChange }) => {
+  const pillars = Object.entries(velocityDetail).sort(([a], [b]) => a.localeCompare(b));
+
+  if (pillars.length === 0) return null;
+
+  const handleBoostChange = (pillarCode: string, value: number) => {
+    onChange({ ...pillarBoost, [pillarCode]: value });
+  };
+
+  const boostLabel = (v: number) => {
+    if (v === 1.0) return 'Current pace';
+    if (v < 1.0) return `${Math.round(v * 100)}% effort`;
+    return `${v.toFixed(1)}x invest`;
+  };
+
+  const boostColor = (v: number) => {
+    if (v > 1.0) return 'text-emerald-600';
+    if (v < 1.0) return 'text-orange-500';
+    return 'text-gray-500';
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Rocket className="h-4 w-4 text-indigo-500" />
+        <span className="text-sm font-semibold text-gray-800">Pillar Investment Scenario</span>
+        <span className="text-xs text-gray-400 ml-2">Adjust multipliers to model increased/decreased investment per pillar</span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        {pillars.map(([code, vel]) => {
+          const boost = pillarBoost[code] ?? 1.0;
+          const meta = PILLAR_META[code] || { name: vel.pillar_name, color: 'gray', icon: '📊' };
+
+          const currentPct = vel.base_projected_pct * boost;
+          const target = vel.industry_target_pct ?? 4.0;
+          const gap = Math.max(0, target - currentPct);
+          const atTarget = currentPct >= target;
+
+          return (
+            <div key={code} className={`border rounded-lg p-3 ${atTarget ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100 bg-gray-50/50'}`}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-sm">{meta.icon}</span>
+                <span className="text-xs font-medium text-gray-700 truncate">{meta.name}</span>
+                {atTarget && <span className="text-xs text-emerald-600 font-medium ml-auto">Leader</span>}
+              </div>
+
+              {/* Velocity stats */}
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-lg font-bold text-gray-900">
+                  {vel.velocity_per_month > 0 ? '+' : ''}{vel.velocity_per_month.toFixed(1)}
+                </span>
+                <span className="text-xs text-gray-400">pts/mo</span>
+              </div>
+
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>{vel.earliest_score.toFixed(0)} → {vel.latest_score.toFixed(0)}</span>
+                <span className="text-gray-400">hdroom: {vel.headroom.toFixed(0)}</span>
+              </div>
+
+              {/* Gap to industry benchmark */}
+              <div className="mb-2">
+                <div className="flex justify-between text-xs mb-0.5">
+                  <span className="text-gray-400">Your trajectory</span>
+                  <span className="text-gray-400">Target: {target.toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 relative">
+                  <div
+                    className={`h-1.5 rounded-full ${atTarget ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                    style={{ width: `${Math.min(100, (currentPct / target) * 100)}%` }}
+                  />
+                  {/* Target marker */}
+                  <div className="absolute top-0 right-0 w-0.5 h-1.5 bg-gray-600 rounded" />
+                </div>
+                {!atTarget && (
+                  <div className="text-xs text-amber-600 mt-0.5">
+                    Gap: {gap.toFixed(1)}% — need {(vel.boost_needed_for_target ?? (target / vel.base_projected_pct)).toFixed(1)}x boost
+                  </div>
+                )}
+              </div>
+
+              {/* Boost slider */}
+              <input
+                type="range"
+                min={0.5}
+                max={3.0}
+                step={0.1}
+                value={boost}
+                onChange={(e) => handleBoostChange(code, parseFloat(e.target.value))}
+                className="w-full h-1.5 accent-indigo-600 cursor-pointer"
+              />
+              <div className="flex justify-between items-center mt-1">
+                <span className={`text-xs font-semibold ${boostColor(boost)}`}>
+                  {boostLabel(boost)}
+                </span>
+                <span className="text-xs text-gray-400">
+                  → {currentPct.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+
+// ────────────────────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────────────────────
 
@@ -1641,34 +1789,60 @@ const OutcomeROIDashboard: React.FC = () => {
   const [showEvidence, setShowEvidence] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'roadmap'>('overview');
+  const [mode, setMode] = useState<'velocity' | 'flat'>('velocity');
+  const [pillarBoost, setPillarBoost] = useState<PillarBoost>({});
+  const [velocityDetail, setVelocityDetail] = useState<VelocityDetail>({});
 
-  const fetchStory = useCallback(async (pct: number, isDemo: boolean): Promise<void> => {
+  const fetchStory = useCallback(async (
+    pct: number,
+    isDemo: boolean,
+    currentMode: 'velocity' | 'flat' = 'velocity',
+    boost: PillarBoost = {},
+  ): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
-      const endpoint = isDemo
-        ? `/api/outcome-roi/demo?improvement_pct=${pct}`
-        : `/api/outcome-roi/story?improvement_pct=${pct}`;
-      const res = await apiCall(endpoint);
+      let res: Response;
+      if (isDemo) {
+        res = await apiCall(`/api/outcome-roi/demo?improvement_pct=${pct}`);
+      } else {
+        const params = new URLSearchParams({
+          improvement_pct: String(pct),
+          mode: currentMode,
+        });
+        const hasBoost = Object.keys(boost).length > 0;
+        if (hasBoost) {
+          // POST with pillar_boost body
+          res = await apiCall(`/api/outcome-roi/story?${params}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pillar_boost: boost }),
+          });
+        } else {
+          res = await apiCall(`/api/outcome-roi/story?${params}`);
+        }
+      }
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        // If auth fails, fall back to demo
         if (res.status === 400 || res.status === 403) {
           if (!isDemo) {
             setDemoMode(true);
-            return fetchStory(pct, true);
+            return fetchStory(pct, true, currentMode, boost);
           }
         }
         throw new Error(errData.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
       setStory(data.story);
+      setDemoMode(isDemo);  // reset demo flag based on which endpoint succeeded
+      if (data.velocity_detail) {
+        setVelocityDetail(data.velocity_detail);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      // Auto-fallback to demo mode
       if (!isDemo) {
         setDemoMode(true);
-        return fetchStory(pct, true);
+        return fetchStory(pct, true, currentMode, boost);
       }
       setError(message);
     } finally {
@@ -1677,12 +1851,23 @@ const OutcomeROIDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchStory(improvementPct, demoMode);
+    fetchStory(improvementPct, demoMode, mode, pillarBoost);
   }, []);
 
   const handleSliderChange = (newPct: number) => {
     setImprovementPct(newPct);
-    fetchStory(newPct, demoMode);
+    fetchStory(newPct, demoMode, mode, pillarBoost);
+  };
+
+  const handleModeToggle = () => {
+    const newMode = mode === 'velocity' ? 'flat' : 'velocity';
+    setMode(newMode);
+    fetchStory(improvementPct, demoMode, newMode, pillarBoost);
+  };
+
+  const handleBoostChange = (newBoost: PillarBoost) => {
+    setPillarBoost(newBoost);
+    fetchStory(improvementPct, demoMode, mode, newBoost);
   };
 
   if (loading) {
@@ -1742,23 +1927,45 @@ const OutcomeROIDashboard: React.FC = () => {
                   {showEvidence ? 'Evidence On' : 'Evidence Off'}
                 </button>
 
-                {/* Improvement slider */}
-                <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2">
-                  <SlidersHorizontal className="h-4 w-4 text-gray-400" />
-                  <span className="text-xs text-gray-500">Forward target:</span>
-                  <input
-                    type="range"
-                    min={1}
-                    max={6}
-                    step={0.5}
-                    value={improvementPct}
-                    onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
-                    className="w-24 accent-indigo-600"
-                  />
-                  <span className="text-sm font-bold text-indigo-600 w-10 text-right">
-                    {improvementPct}%
-                  </span>
-                </div>
+                {/* Mode toggle: Velocity vs Flat */}
+                <button
+                  onClick={handleModeToggle}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition ${
+                    mode === 'velocity'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                  title={mode === 'velocity'
+                    ? 'Velocity mode: per-pillar rates from historical data'
+                    : 'Flat mode: uniform improvement % across all pillars'
+                  }
+                >
+                  {mode === 'velocity'
+                    ? <Gauge className="h-4 w-4" />
+                    : <SlidersHorizontal className="h-4 w-4" />
+                  }
+                  {mode === 'velocity' ? 'Velocity' : 'Flat'}
+                </button>
+
+                {/* Flat mode slider (only shown in flat mode) */}
+                {mode === 'flat' && (
+                  <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2">
+                    <SlidersHorizontal className="h-4 w-4 text-gray-400" />
+                    <span className="text-xs text-gray-500">Forward target:</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={6}
+                      step={0.5}
+                      value={improvementPct}
+                      onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
+                      className="w-24 accent-indigo-600"
+                    />
+                    <span className="text-sm font-bold text-indigo-600 w-10 text-right">
+                      {improvementPct}%
+                    </span>
+                  </div>
+                )}
               </>
             )}
 
@@ -1796,6 +2003,15 @@ const OutcomeROIDashboard: React.FC = () => {
         <>
           {/* Combined hero stats */}
           <CombinedHero combined={story.combined} />
+
+          {/* Pillar Boost Panel (velocity mode only) */}
+          {mode === 'velocity' && Object.keys(velocityDetail).length > 0 && (
+            <PillarBoostPanel
+              velocityDetail={velocityDetail}
+              pillarBoost={pillarBoost}
+              onChange={handleBoostChange}
+            />
+          )}
 
           {/* Bridge narrative */}
           <BridgeSection bridge={story.bridge} />

@@ -1766,7 +1766,7 @@ def complete_onboarding():
         if onboarding_mode == 'custom':
             current_app.logger.info(f"Custom mode: skipping CSV generation. User will upload CSVs via /api/onboarding/upload.")
             # Ensure data directory exists for later uploads
-            data_dir = get_customer_directory(customer_id) / 'data'
+            data_dir = get_customer_directory(customer_id, vertical) / 'data'
             data_dir.mkdir(parents=True, exist_ok=True)
 
         # Try generate_synthetic_customer_data.py first (preferred)
@@ -1971,8 +1971,12 @@ def process_data():
                 "message": f"Customer {customer_id} not found in database"
             }), 404
         
-        # Get customer directory
-        customer_dir = get_customer_directory(customer_id)
+        # Get customer directory (detect vertical from customer record)
+        vertical = getattr(customer, 'vertical', None) or 'dc2_s'
+        customer_dir = get_customer_directory(customer_id, vertical)
+        if not customer_dir.exists():
+            # Fallback: try dc2_s if vertical-specific dir not found
+            customer_dir = get_customer_directory(customer_id, 'dc2_s')
         if not customer_dir.exists():
             return jsonify({
                 "status": "error",
@@ -2153,7 +2157,107 @@ def process_data():
                         chunksize=1000
                     )
                 current_app.logger.info(f"✅ Loaded {len(df_kpis)} KPI records into dc2s_kpis")
-            
+
+                # -----------------------------------------------------------------
+                # STEP 1b: Compute pillar_scores + health_trends from loaded KPIs
+                # This enables ROI endpoints to use real actuals instead of demo_fallback
+                # -----------------------------------------------------------------
+                try:
+                    # Use vertical-appropriate health calculator
+                    customer_vertical = vertical or 'dc2_s'
+                    if customer_vertical == 'saas_premium':
+                        from verticals.saas_premium.api_routes import calculate_kpi_health
+                    else:
+                        from verticals.dc2_s.api_routes import calculate_kpi_health
+
+                    # Group by account_id × measurement_month
+                    if 'measured_at' in df_kpis.columns:
+                        date_col = 'measured_at'
+                    elif 'measurement_month' in df_kpis.columns:
+                        date_col = 'measurement_month'
+                    else:
+                        date_col = None
+
+                    if date_col:
+                        months_processed = 0
+                        pillar_rows = []
+                        health_rows = []
+
+                        # Pillar-to-health_trends column mapping
+                        pillar_to_ht = {
+                            'P1': 'product_usage_score',       # Deployment Velocity
+                            'P2': 'support_score',             # Operational Stability
+                            'P3': 'customer_sentiment_score',  # AI Workload Performance
+                            'P4': 'business_outcomes_score',   # Channel & Partner Health
+                            'P5': 'relationship_strength_score', # Expansion Readiness
+                        }
+
+                        for (aid, mdate), group in df_kpis.groupby(['account_id', date_col]):
+                            kpi_dict = dict(zip(group['kpi_code'], group['value']))
+                            overall, pillar_avgs = calculate_kpi_health(kpi_dict, customer_id)
+
+                            # Parse month/year from measurement date
+                            mdate_parsed = pd.to_datetime(str(mdate))
+                            m_month = mdate_parsed.month
+                            m_year = mdate_parsed.year
+
+                            # Build pillar_scores rows
+                            for pcode, pscore in pillar_avgs.items():
+                                kpi_codes_in_pillar = {r['kpi_code']: float(r['value']) for _, r in group.iterrows() if r['kpi_code'].startswith(pcode)}
+                                pillar_rows.append({
+                                    'account_id': int(aid),
+                                    'measurement_month': mdate_parsed.strftime('%Y-%m-01'),
+                                    'pillar_code': pcode,
+                                    'pillar_score': round(pscore, 2),
+                                    'pillar_status': 'healthy' if pscore >= 70 else ('at_risk' if pscore >= 50 else 'critical'),
+                                    'contributing_kpis': json.dumps(list(kpi_codes_in_pillar.keys())),
+                                    'kpi_weights': json.dumps(kpi_codes_in_pillar),
+                                    'calculated_at': datetime.utcnow().isoformat() if hasattr(datetime, 'utcnow') else datetime.now().isoformat(),
+                                })
+
+                            # Build health_trends row
+                            ht_row = {
+                                'account_id': int(aid),
+                                'customer_id': customer_id,
+                                'month': m_month,
+                                'year': m_year,
+                                'overall_health_score': round(overall, 2),
+                                'total_kpis': len(kpi_dict),
+                                'valid_kpis': len(kpi_dict),
+                            }
+                            for pcode, col_name in pillar_to_ht.items():
+                                ht_row[col_name] = round(pillar_avgs.get(pcode, 0), 2)
+                            health_rows.append(ht_row)
+                            months_processed += 1
+
+                        if pillar_rows:
+                            df_ps = pd.DataFrame(pillar_rows)
+                            with engine.begin() as conn:
+                                conn.execute(text("""
+                                    DELETE FROM pillar_scores WHERE account_id IN
+                                    (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                                """), {"cid": customer_id})
+                                df_ps.to_sql('pillar_scores', conn, if_exists='append', index=False, method='multi', chunksize=1000)
+                            current_app.logger.info(f"✅ Computed {len(pillar_rows)} pillar_scores rows ({months_processed} account-months)")
+
+                        if health_rows:
+                            df_ht = pd.DataFrame(health_rows)
+                            with engine.begin() as conn:
+                                conn.execute(text("""
+                                    DELETE FROM health_trends WHERE account_id IN
+                                    (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                                """), {"cid": customer_id})
+                                df_ht.to_sql('health_trends', conn, if_exists='append', index=False, method='multi', chunksize=1000)
+                            current_app.logger.info(f"✅ Computed {len(health_rows)} health_trends rows")
+
+                        execution_state['steps_completed'].append('health_score_rollup')
+                    else:
+                        current_app.logger.warning("⚠️  No date column in KPI data; skipping health trend computation")
+                except Exception as e:
+                    current_app.logger.warning(f"⚠️  Health trend computation failed (non-fatal): {e}")
+                    import traceback
+                    current_app.logger.debug(traceback.format_exc())
+
             # Load qualitative signals (prefer enhanced_qualitative_signals.csv, fall back to old qualitative_signals.csv)
             signals_file = data_dir / 'enhanced_qualitative_signals.csv'
             if not signals_file.exists():
@@ -2942,11 +3046,20 @@ def upload_onboarding_csv():
             return jsonify({'status': 'error', 'message': 'Empty filename'}), 400
         
         customer_id = int(customer_id)
-        
-        # Get customer directory
-        customer_dir = get_customer_directory(customer_id)
+
+        # Get customer directory (detect vertical from customer record)
+        upload_vertical = 'dc2_s'
+        try:
+            cust = db.session.get(Customer, customer_id)
+            if cust and getattr(cust, 'vertical', None):
+                upload_vertical = cust.vertical
+        except Exception:
+            pass
+        customer_dir = get_customer_directory(customer_id, upload_vertical)
+        if not customer_dir.exists():
+            customer_dir = get_customer_directory(customer_id, 'dc2_s')
         data_dir = customer_dir / "data"
-        
+
         # Check if customer directory exists
         if not customer_dir.exists():
             return jsonify({
