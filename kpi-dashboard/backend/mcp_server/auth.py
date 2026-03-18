@@ -32,6 +32,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 MCP_SERVER_API_KEY = os.environ.get("MCP_SERVER_API_KEY", "")
 
+# ---------------------------------------------------------------------------
+# Auth toggle — set MCP_AUTH_REQUIRED=true to enforce API key auth.
+# Default: false (open access, no key needed for any tool).
+# ---------------------------------------------------------------------------
+MCP_AUTH_REQUIRED = os.environ.get("MCP_AUTH_REQUIRED", "false").lower() in ("true", "1", "yes")
+
 
 # ---------------------------------------------------------------------------
 # Onboarding tools — frictionless auth (no API key required)
@@ -229,6 +235,10 @@ def _resolve_key(customer_id: int, required_scope: str, _api_key=None):
     """
     from fastmcp.exceptions import ToolError
 
+    # Auth toggle: if disabled, skip all auth
+    if not MCP_AUTH_REQUIRED:
+        return None
+
     # Determine the raw key
     if _api_key is not None:
         raw_key = _api_key
@@ -345,6 +355,10 @@ def require_api_key(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # Auth toggle: if disabled, skip all auth
+        if not MCP_AUTH_REQUIRED:
+            return func(*args, **kwargs)
+
         # In stdio mode, this decorator is a no-op
         transport = os.environ.get("MCP_TRANSPORT", "stdio")
         if transport == "stdio":
