@@ -3901,7 +3901,40 @@ def clone_customer(
         summary['journey_data_cloned'] = journey_count
 
         # ----------------------------------------------------------
-        # 12. Generate API key for the new customer
+        # 12. Create admin user for the new customer
+        # ----------------------------------------------------------
+        admin_user = None
+        try:
+            from models import User
+            import secrets as _secrets
+            admin_email = f"admin@{new_domain}"
+            admin_password = _secrets.token_urlsafe(16)
+            new_user = User(
+                email=admin_email,
+                name=f"Admin ({new_name})",
+                customer_id=new_cid,
+                role='admin',
+            )
+            new_user.set_password(admin_password)
+            try:
+                new_user.uuid = generate_id(uuid_vertical, 'user')
+            except Exception:
+                new_user.uuid = f"clone_user_{_uuid_mod.uuid4().hex[:12]}"
+            db.session.add(new_user)
+            db.session.flush()
+            admin_user = {
+                'user_id': new_user.user_id,
+                'email': admin_email,
+                'password': admin_password,
+                'role': 'admin',
+            }
+            summary['admin_user_created'] = True
+        except Exception as e:
+            summary['admin_user_created'] = False
+            summary['admin_user_error'] = str(e)
+
+        # ----------------------------------------------------------
+        # 13. Generate API key for the new customer
         # ----------------------------------------------------------
         api_key = None
         try:
@@ -3963,6 +3996,20 @@ def clone_customer(
                 'Save this API key — it is shown only once. '
                 'Use it for the intelligence tools.'
             )
+
+        if admin_user:
+            result['admin_user'] = admin_user
+            result['admin_user_note'] = (
+                'Admin user auto-created. Use these credentials to log in.'
+            )
+
+        result['next_steps'] = (
+            'Clone is complete and ready to use immediately. '
+            'All data (accounts, KPIs, health scores, context graph, '
+            'signals, playbooks, ROI) has been deep-copied. '
+            'No need to run Wizards A/B/C or process_data — '
+            'the cloned data is already calculated.'
+        )
 
         return result
 
