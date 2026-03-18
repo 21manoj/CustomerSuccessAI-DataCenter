@@ -3906,6 +3906,7 @@ def clone_customer(
         admin_user = None
         try:
             from models import User
+            from werkzeug.security import generate_password_hash
             import secrets as _secrets
             admin_email = f"admin@{new_domain}"
             admin_password = _secrets.token_urlsafe(16)
@@ -3914,8 +3915,10 @@ def clone_customer(
                 user_name=f"Admin ({new_name})",
                 customer_id=new_cid,
                 role='admin',
+                password_hash=generate_password_hash(admin_password),
+                vertical=source.vertical,
             )
-            new_user.set_password(admin_password)
+            new_user.customer_uuid = new_customer.uuid
             try:
                 new_user.uuid = generate_id(uuid_vertical, 'user')
             except Exception:
