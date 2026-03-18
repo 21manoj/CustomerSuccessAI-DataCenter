@@ -26,13 +26,13 @@ import {
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
+import AskAnythingDialog from './AskAnythingDialog';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
 const ContextGraphView = React.lazy(() => import('./views/ContextGraphView'));
 const ROIEngineView = React.lazy(() => import('./views/ROIEngineView'));
 const AccountsView = React.lazy(() => import('./views/AccountsView'));
-import AskAnythingDialog from './AskAnythingDialog';
 
 type ViewId = 'cro-overview' | 'signal-timeline' | 'context-graph' | 'roi-engine' | 'accounts' | 'playbooks' | 'approvals';
 
