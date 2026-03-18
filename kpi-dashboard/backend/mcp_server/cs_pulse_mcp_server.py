@@ -3911,7 +3911,7 @@ def clone_customer(
             admin_password = _secrets.token_urlsafe(16)
             new_user = User(
                 email=admin_email,
-                name=f"Admin ({new_name})",
+                user_name=f"Admin ({new_name})",
                 customer_id=new_cid,
                 role='admin',
             )
