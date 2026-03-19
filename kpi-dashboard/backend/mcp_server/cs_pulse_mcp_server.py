@@ -3351,8 +3351,10 @@ def process_data(customer_id: int) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
-        from models import Customer, Account, DC2SKPI, HealthScore
+        from models import Customer, Account, DC2SKPI, HealthScore, QualitativeSignal
         from extensions import db
+        from pathlib import Path
+        import uuid as _uuid
 
         customer = db.session.get(Customer, int(customer_id))
         if not customer:
@@ -3362,17 +3364,142 @@ def process_data(customer_id: int) -> dict:
         steps_completed = []
         errors = []
 
-        # DB-first: check what data exists in PostgreSQL
+        # Step 1: Check if data exists in DB already
         accounts = Account.query.filter_by(customer_id=customer_id).all()
+        acct_ids = [a.account_id for a in accounts] if accounts else []
+        kpi_count = DC2SKPI.query.filter(DC2SKPI.account_id.in_(acct_ids)).count() if acct_ids else 0
+
+        # Step 2: If no data in DB, try loading from CSV files (fresh customer)
+        if not accounts or kpi_count == 0:
+            backend_dir = Path(__file__).parent.parent
+            customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
+            data_dir = customer_dir / 'data'
+
+            if data_dir.exists():
+                import pandas as pd
+                csv_files = [f.name for f in data_dir.iterdir()
+                             if f.is_file() and f.suffix == '.csv']
+
+                # Load accounts.csv
+                if not accounts and 'accounts.csv' in csv_files:
+                    try:
+                        df = pd.read_csv(str(data_dir / 'accounts.csv'))
+                        for _, row in df.iterrows():
+                            existing = Account.query.filter_by(
+                                customer_id=customer_id,
+                                account_name=row.get('account_name', row.get('name', ''))
+                            ).first()
+                            if not existing:
+                                acct = Account(
+                                    customer_id=customer_id,
+                                    account_name=row.get('account_name', row.get('name', '')),
+                                    revenue=row.get('arr', row.get('annual_revenue',
+                                            row.get('revenue', 0))),
+                                    vertical=vertical,
+                                )
+                                db.session.add(acct)
+                        db.session.flush()
+                        accounts = Account.query.filter_by(customer_id=customer_id).all()
+                        acct_ids = [a.account_id for a in accounts]
+                        steps_completed.append(f'accounts_loaded_from_csv_{len(accounts)}')
+                    except Exception as e:
+                        errors.append(f"csv_accounts: {str(e)}")
+
+                # Build CSV→DB account ID mapping by account_name
+                csv_to_db_aid = {}
+                if accounts and 'accounts.csv' in csv_files:
+                    try:
+                        adf = pd.read_csv(str(data_dir / 'accounts.csv'))
+                        db_map = {a.account_name: a.account_id for a in accounts}
+                        for _, row in adf.iterrows():
+                            csv_aid = row.get('account_id', '')
+                            aname = row.get('account_name', row.get('name', ''))
+                            if aname in db_map:
+                                csv_to_db_aid[str(csv_aid)] = db_map[aname]
+                    except Exception:
+                        pass
+
+                # Load kpi_measurements.csv
+                if kpi_count == 0 and 'kpi_measurements.csv' in csv_files:
+                    try:
+                        df = pd.read_csv(str(data_dir / 'kpi_measurements.csv'))
+                        loaded = 0
+                        for _, row in df.iterrows():
+                            csv_aid = str(row.get('account_id', ''))
+                            acct_id = csv_to_db_aid.get(csv_aid)
+                            if not acct_id:
+                                # Try direct match
+                                try:
+                                    acct_id = int(csv_aid)
+                                    if acct_id not in acct_ids:
+                                        acct_id = None
+                                except (ValueError, TypeError):
+                                    acct_id = None
+                            if acct_id:
+                                kpi = DC2SKPI(
+                                    account_id=acct_id,
+                                    kpi_code=row.get('kpi_code', row.get('kpi_id', '')),
+                                    value=float(row.get('value', 0)),
+                                    target=float(row.get('target', 100)),
+                                    measured_at=row.get('measured_at', row.get('date')),
+                                    pillar=row.get('pillar', ''),
+                                    weight=float(row.get('weight', 0)),
+                                    status=row.get('status', 'active'),
+                                )
+                                db.session.add(kpi)
+                                loaded += 1
+                        db.session.flush()
+                        kpi_count = loaded
+                        steps_completed.append(f'kpis_loaded_from_csv_{loaded}')
+                    except Exception as e:
+                        errors.append(f"csv_kpis: {str(e)}")
+
+                # Load enhanced_qualitative_signals.csv
+                signals_csv = 'enhanced_qualitative_signals.csv'
+                if signals_csv in csv_files:
+                    try:
+                        df = pd.read_csv(str(data_dir / signals_csv))
+                        loaded = 0
+                        for _, row in df.iterrows():
+                            csv_aid = str(row.get('account_id', ''))
+                            acct_id = csv_to_db_aid.get(csv_aid)
+                            if not acct_id:
+                                try:
+                                    acct_id = int(csv_aid)
+                                    if acct_id not in acct_ids:
+                                        acct_id = None
+                                except (ValueError, TypeError):
+                                    acct_id = None
+                            if acct_id:
+                                sig = QualitativeSignal(
+                                    signal_id=f"sig_{_uuid.uuid4().hex[:12]}",
+                                    account_id=acct_id,
+                                    signal_type=row.get('signal_type', 'nps'),
+                                    content=row.get('content', row.get('signal_text', '')),
+                                    sentiment=row.get('sentiment', 'neutral'),
+                                    sentiment_score=float(row.get('sentiment_score', 0.5)),
+                                    signal_date=row.get('signal_date', row.get('date')),
+                                )
+                                db.session.add(sig)
+                                loaded += 1
+                        db.session.flush()
+                        steps_completed.append(f'signals_loaded_from_csv_{loaded}')
+                    except Exception as e:
+                        errors.append(f"csv_signals: {str(e)}")
+
+                db.session.commit()
+
+        # Re-check after CSV loading
+        if not accounts:
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
+            acct_ids = [a.account_id for a in accounts]
         if not accounts:
             raise ToolError(
                 f"No accounts found for customer {customer_id}. "
-                f"Upload accounts.csv first via upload_csv() + process_data()."
+                f"Upload accounts.csv first via upload_csv()."
             )
-
-        acct_ids = [a.account_id for a in accounts]
-        kpi_count = DC2SKPI.query.filter(DC2SKPI.account_id.in_(acct_ids)).count()
-
+        if kpi_count == 0:
+            kpi_count = DC2SKPI.query.filter(DC2SKPI.account_id.in_(acct_ids)).count()
         if kpi_count == 0:
             raise ToolError(
                 f"No KPI measurements found for customer {customer_id}. "
@@ -3381,7 +3508,7 @@ def process_data(customer_id: int) -> dict:
 
         steps_completed.append(f'verified_{len(accounts)}_accounts_{kpi_count}_kpis_in_db')
 
-        # Recalculate health scores from existing DB data
+        # Step 3: Recalculate health scores from DB data
         try:
             from mcp_server.common import get_health_functions
             calc_fn, _ = get_health_functions(vertical)
