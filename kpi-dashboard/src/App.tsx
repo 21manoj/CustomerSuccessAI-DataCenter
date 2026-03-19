@@ -14,6 +14,7 @@ import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
 import CRODashboard from './components/dashboard/CRODashboard';
 import CFODashboard from './components/dashboard/CFODashboard';
+import CSMDashboard from './components/csm/CSMDashboard';
 import AuctusAIWebsite from './components/AuctusAIWebsite';
 import SuperAdminConsole from './components/SuperAdminConsole';
 import AdminLayout from './components/admin-ui/AdminLayout';
@@ -219,6 +220,14 @@ const AppRoutes: React.FC = () => {
           element={
             <PrivateRoute vertical="datacenter">
               <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/csm"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <CSMDashboard />
             </PrivateRoute>
           }
         />
