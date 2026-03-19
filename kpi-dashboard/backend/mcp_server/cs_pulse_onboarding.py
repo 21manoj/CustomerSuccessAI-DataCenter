@@ -916,8 +916,7 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
         }
 
 
-@mcp.tool
-def process_data(customer_id: int) -> dict:
+def _process_data_impl(customer_id: int) -> dict:
     """Trigger the data processing pipeline for a customer.
 
     Processes uploaded CSV files through the full pipeline:
@@ -1588,6 +1587,24 @@ def process_data(customer_id: int) -> dict:
                 f"Steps: {', '.join(steps_completed) if steps_completed else 'none'}."
             ),
         }
+
+
+@mcp.tool
+def process_data(customer_id: int) -> dict:
+    """Trigger the data processing pipeline for a customer.
+
+    Processes uploaded CSV files through the full pipeline:
+    1. Data loading (CSVs -> PostgreSQL)
+    2. Embedding generation
+    3. Data validation
+    4. Journey generation (Wizard A)
+    5. Pattern analysis (Wizard B)
+    6. Weight calibration (Wizard C)
+
+    Args:
+        customer_id: The customer ID
+    """
+    return _process_data_impl(customer_id)
 
 
 # ===================================================================

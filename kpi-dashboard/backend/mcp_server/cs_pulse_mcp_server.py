@@ -3348,8 +3348,8 @@ def process_data(customer_id: int) -> dict:
         customer_id: The customer ID
     """
     # Delegate to the modular onboarding module (single source of truth)
-    from mcp_server.cs_pulse_onboarding import process_data as _process_data
-    return _process_data(customer_id)
+    from mcp_server.cs_pulse_onboarding import _process_data_impl
+    return _process_data_impl(customer_id)
 
 
 # -------------------------------------------------------------------
