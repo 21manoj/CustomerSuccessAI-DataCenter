@@ -121,12 +121,70 @@ Pre-assembled views that prevent the revenue double-counting bug. **Prefer these
 | **At-risk** | 50-69 | Proactive engagement required |
 | **Healthy** | 70-100 | On track, focus on expansion |
 
-Health is computed from 5 **pillars** (P1-P5), each containing multiple KPIs:
-- **P1 - AI/ML Workload Performance**: GPU utilization, model training time, inference latency
-- **P2 - Infrastructure Reliability**: Uptime, MTBF, MTTR, critical incidents, thermal management
-- **P3 - Cloud & DevOps Maturity**: GPU utilization efficiency, container adoption, automation
-- **P4 - Customer Engagement**: Executive sponsor engagement, QBR frequency, NPS, support satisfaction
-- **P5 - Commercial & Expansion**: Revenue growth, capacity utilization, expansion pipeline
+Health is computed from 5 **pillars** (P1-P5), each containing multiple KPIs.
+Default L2 pillar weights: P1=0.15, P2=0.20, P3=0.25, P4=0.15, P5=0.25 (customizable per customer via Wizard C).
+
+### P1 — Deployment Velocity (default L2 weight: 0.15)
+| KPI Code | KPI Name | L1 Weight |
+|----------|----------|-----------|
+| P1-KPI1 | Time-to-First-Workload | 0.20 |
+| P1-KPI2 | Installation Completion Rate | 0.15 |
+| P1-KPI3 | Configuration Accuracy | 0.12 |
+| P1-KPI4 | Deployment Cycle Time | 0.15 |
+| P1-KPI5 | Hardware Commissioning Time | 0.13 |
+| P1-KPI6 | Network Readiness Score | 0.10 |
+| P1-KPI7 | Deployment Team Velocity | 0.08 |
+| P1-KPI8 | Documentation Completeness | 0.07 |
+
+### P2 — Operational Stability (default L2 weight: 0.20)
+| KPI Code | KPI Name | L1 Weight |
+|----------|----------|-----------|
+| P2-KPI1 | RMA Frequency Rate | 0.20 |
+| P2-KPI2 | MTBF (Mean Time Between Failures) | 0.18 |
+| P2-KPI3 | Critical Incidents (30d) | 0.17 |
+| P2-KPI4 | System Uptime Percentage | 0.15 |
+| P2-KPI5 | Thermal Management Score | 0.12 |
+| P2-KPI6 | Power Efficiency (PUE) | 0.08 |
+| P2-KPI7 | Mean Time To Repair (MTTR) | 0.06 |
+| P2-KPI8 | Preventive Maintenance Compliance | 0.04 |
+
+### P3 — AI Workload Performance (default L2 weight: 0.25)
+| KPI Code | KPI Name | L1 Weight |
+|----------|----------|-----------|
+| P3-KPI1 | GPU Utilization Rate | 0.22 |
+| P3-KPI2 | Training Job Completion Rate | 0.20 |
+| P3-KPI3 | Inference Latency (P95) | 0.15 |
+| P3-KPI4 | Model Training Time | 0.14 |
+| P3-KPI5 | GPU Memory Efficiency | 0.12 |
+| P3-KPI6 | Distributed Training Efficiency | 0.09 |
+| P3-KPI7 | Workload Diversity Score | 0.05 |
+| P3-KPI8 | Batch Processing Throughput | 0.03 |
+
+### P4 — Channel & Partner Health (default L2 weight: 0.15)
+| KPI Code | KPI Name | L1 Weight |
+|----------|----------|-----------|
+| P4-KPI1 | Partner Engagement Score | 0.22 |
+| P4-KPI2 | VAR Performance Rating | 0.20 |
+| P4-KPI3 | Joint QBR Frequency | 0.18 |
+| P4-KPI4 | Channel Conflict Score | 0.15 |
+| P4-KPI5 | Co-selling Opportunities | 0.13 |
+| P4-KPI6 | Partner NPS | 0.12 |
+
+### P5 — Expansion Readiness (default L2 weight: 0.25)
+| KPI Code | KPI Name | L1 Weight |
+|----------|----------|-----------|
+| P5-KPI1 | Capacity Utilization Rate | 0.18 |
+| P5-KPI2 | Capacity Utilization Trajectory | 0.18 |
+| P5-KPI3 | Workload Growth Velocity | 0.18 |
+| P5-KPI4 | Compute Hour Consumption Trend | 0.15 |
+| P5-KPI5 | Budget Availability Signals | 0.10 |
+| P5-KPI6 | New Use Case Adoption | 0.05 |
+| P5-KPI7 | Expansion Probability (90d) | 0.13 |
+| P5-KPI8 | Technical Champion Engagement | 0.03 |
+
+**Weight Rollup**: L1 (KPI scores × weight_l1) → L2 (pillar scores × pillar_weight) → L3 (account health) → L4 (customer health = revenue-weighted avg of L3 across accounts).
+
+**IMPORTANT**: Always use these exact pillar names and KPI names when displaying data. Never substitute or abbreviate.
 
 ---
 

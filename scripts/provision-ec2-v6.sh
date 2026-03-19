@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
-# Provision a t3.large EC2 instance for CS Pulse V6 (platform + postgres only).
-# Load driver runs from your laptop. SSL can be added with CloudFront (see docs).
+# Provision t3.large EC2 instance(s) for CS Pulse V6 (platform + postgres only).
+# Uses Spot instances by default (~50-66% cheaper). Load driver runs from your laptop.
+# SSL can be added with CloudFront (see docs).
 #
 # Prerequisites: AWS CLI configured (aws configure).
-# Usage: ./scripts/provision-ec2-v6.sh [region]
-# Optional env: CSPULSE_S3_BUCKET (for IAM role to pull images); KEY_NAME (SSH key).
+# Usage: ./scripts/provision-ec2-v6.sh [region] [count]
+#   region: default us-east-1
+#   count:  default 1; use 2+ to launch multiple Spot instances for load testing (named cspulse-v6-1, cspulse-v6-2, ...)
+# Optional env: CSPULSE_S3_BUCKET, KEY_NAME, CSPULSE_USE_SPOT=false (to use on-demand instead of Spot).
 
 set -e
 AWS_REGION="${1:-us-east-1}"
+LAUNCH_COUNT="${2:-1}"
 INSTANCE_TYPE="t3.large"
 KEY_NAME="${KEY_NAME:-cspulse-v6-key}"
 SG_NAME="cspulse-v6-sg"
-INSTANCE_NAME="cspulse-v6"
+INSTANCE_NAME_BASE="cspulse-v6"
 S3_BUCKET="${CSPULSE_S3_BUCKET:-cspulse-container-artifacts-$(aws sts get-caller-identity --query Account --output text 2>/dev/null)}"
+USE_SPOT="${CSPULSE_USE_SPOT:-true}"
 
-echo "=== Provisioning EC2 for CS Pulse V6 (platform + postgres only) ==="
+echo "=== Provisioning EC2 for CS Pulse V6 (platform + postgres) ==="
 echo "  Region:       $AWS_REGION"
 echo "  Instance:     $INSTANCE_TYPE (8 GB RAM)"
+echo "  Market:       $([ "$USE_SPOT" = "true" ] && echo 'Spot (cheaper)' || echo 'On-demand')"
+echo "  Count:        $LAUNCH_COUNT"
 echo "  Security:     $SG_NAME"
 echo "  Key:          $KEY_NAME"
 echo "  S3 bucket:    $S3_BUCKET (for IAM role)"
@@ -109,7 +116,7 @@ fi
 
 mkdir -p /home/ec2-user/cspulse
 echo 'POSTGRES_PASSWORD=change-me-min-32-chars' > /home/ec2-user/cspulse/.env.example
-echo 'SECRET_KEY=change-me-min-32-chars' >> /home/ec2-user/cspulse/.env.example
+echo 'SECRET_KEY=cspulse-dev-secret-key-min-32-chars-replace-in-prod' >> /home/ec2-user/cspulse/.env.example
 chown -R ec2-user:ec2-user /home/ec2-user/cspulse
 USERDATA
 )
@@ -117,42 +124,72 @@ USERDATA
 USER_DATA="${USER_DATA//CSPULSE_S3_BUCKET_PLACEHOLDER/$S3_BUCKET}"
 USER_DATA_B64=$(echo "$USER_DATA" | base64 -w 0 2>/dev/null || echo "$USER_DATA" | base64)
 
-# 5) Launch instance
-EXISTING=$(aws ec2 describe-instances \
-  --filters "Name=tag:Name,Values=$INSTANCE_NAME" "Name=instance-state-name,Values=running,pending" \
-  --query 'Reservations[*].Instances[*].InstanceId' --output text --region "$AWS_REGION")
-if [[ -n "$EXISTING" ]]; then
-  echo "Instance already running: $EXISTING"
-  INSTANCE_ID="$EXISTING"
-else
-  INSTANCE_ID=$(aws ec2 run-instances \
-    --image-id "$AMI_ID" \
-    --instance-type "$INSTANCE_TYPE" \
-    --key-name "$KEY_NAME" \
-    --security-group-ids "$SG_ID" \
-    $INSTANCE_PROFILE \
-    --user-data "$USER_DATA_B64" \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_NAME}]" \
-    --block-device-mappings 'DeviceName=/dev/xvda,Ebs={VolumeSize=30,VolumeType=gp3}' \
-    --query 'Instances[0].InstanceId' --output text --region "$AWS_REGION")
-  echo "Launched instance: $INSTANCE_ID"
-fi
+# 5) Launch instance(s)
+# Spot options: one-time = do not restart after stop; omit MaxPrice to pay current spot price
+INSTANCE_IDS=()
+for ((i=1; i<=LAUNCH_COUNT; i++)); do
+  if [[ "$LAUNCH_COUNT" -eq 1 ]]; then
+    INSTANCE_NAME="$INSTANCE_NAME_BASE"
+    EXISTING=$(aws ec2 describe-instances \
+      --filters "Name=tag:Name,Values=$INSTANCE_NAME" "Name=instance-state-name,Values=running,pending" \
+      --query 'Reservations[*].Instances[*].InstanceId' --output text --region "$AWS_REGION" 2>/dev/null)
+    if [[ -n "$EXISTING" ]]; then
+      echo "Instance already running: $EXISTING"
+      INSTANCE_IDS+=("$EXISTING")
+      break
+    fi
+  else
+    INSTANCE_NAME="${INSTANCE_NAME_BASE}-${i}"
+  fi
 
-echo "Waiting for instance to be running..."
-aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$AWS_REGION"
+  echo "Launching $INSTANCE_NAME..."
+  TAG_SPEC="[{\"ResourceType\":\"instance\",\"Tags\":[{\"Key\":\"Name\",\"Value\":\"$INSTANCE_NAME\"}]}]"
+  BDM='[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":30,"VolumeType":"gp3"}}]'
+  if [[ "$USE_SPOT" = "true" ]]; then
+    ID=$(aws ec2 run-instances \
+      --image-id "$AMI_ID" \
+      --instance-type "$INSTANCE_TYPE" \
+      --key-name "$KEY_NAME" \
+      --security-group-ids "$SG_ID" \
+      $INSTANCE_PROFILE \
+      --user-data "$USER_DATA_B64" \
+      --tag-specifications "$TAG_SPEC" \
+      --block-device-mappings "$BDM" \
+      --instance-market-options '{"MarketType":"spot","SpotOptions":{"SpotInstanceType":"one-time"}}' \
+      --query 'Instances[0].InstanceId' --output text --region "$AWS_REGION")
+  else
+    ID=$(aws ec2 run-instances \
+      --image-id "$AMI_ID" \
+      --instance-type "$INSTANCE_TYPE" \
+      --key-name "$KEY_NAME" \
+      --security-group-ids "$SG_ID" \
+      $INSTANCE_PROFILE \
+      --user-data "$USER_DATA_B64" \
+      --tag-specifications "$TAG_SPEC" \
+      --block-device-mappings "$BDM" \
+      --query 'Instances[0].InstanceId' --output text --region "$AWS_REGION")
+  fi
+  INSTANCE_IDS+=("$ID")
+  echo "  Launched: $ID"
+done
 
-PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$AWS_REGION" \
-  --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+echo "Waiting for instance(s) to be running..."
+aws ec2 wait instance-running --instance-ids "${INSTANCE_IDS[@]}" --region "$AWS_REGION"
 
 echo ""
 echo "=== EC2 ready ==="
-echo "  Instance ID:  $INSTANCE_ID"
-echo "  Public IP:    $PUBLIC_IP"
-echo "  SSH:          ssh -i $KEY_FILE ec2-user@$PUBLIC_IP"
+for INSTANCE_ID in "${INSTANCE_IDS[@]}"; do
+  NAME_TAG=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$AWS_REGION" \
+    --query 'Reservations[0].Instances[0].Tags[?Key==`Name`].Value' --output text)
+  PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$AWS_REGION" \
+    --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+  echo "  $NAME_TAG: $INSTANCE_ID  ->  $PUBLIC_IP"
+  echo "    SSH: ssh -i $KEY_FILE ec2-user@$PUBLIC_IP"
+done
 echo ""
 echo "Next steps:"
-echo "  1) Copy kpi-dashboard/.env to EC2 and upload docker-compose.production.yml (or use images from S3)."
-echo "  2) On EC2: cd cspulse && copy .env from repo, then run the two containers (see docs/EC2_V6_TWO_IMAGES.md)."
-echo "  3) For SSL at no extra cost: put CloudFront in front (origin http://$PUBLIC_IP:80). See docs/V6_DEPLOYMENT_CONFIRMATIONS.md."
-echo "  4) Run load driver from your laptop: CS_PULSE_BASE_URL=http://$PUBLIC_IP (or https://your-domain after CloudFront)."
+echo "  1) Copy kpi-dashboard/.env to EC2 and upload docker-compose (or use images from S3/ECR)."
+echo "  2) On each EC2: cd cspulse && copy .env from repo, then run containers (see docs/EC2_V6_TWO_IMAGES.md)."
+echo "  3) For SSL: put CloudFront in front (origin http://<IP>:80). See docs/V6_DEPLOYMENT_CONFIRMATIONS.md."
+echo "  4) Load test: point load driver at each IP, or use rehydrate for primary instance (tag Name=cspulse-v6)."
 echo ""

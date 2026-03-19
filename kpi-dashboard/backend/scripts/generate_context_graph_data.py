@@ -403,7 +403,7 @@ class ContextGraphGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            'account_id', 'stakeholder_name', 'title', 'role',
+            'source_account_id', 'stakeholder_name', 'title', 'role',
             'influence_score', 'email', 'engagement_frequency',
             'sentiment', 'department', 'is_active', 'source_platform',
             'first_observed_at'
@@ -449,7 +449,7 @@ class ContextGraphGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            'account_id', 'event_date', 'event_type', 'description',
+            'source_account_id', 'event_date', 'event_type', 'description',
             'stakeholder_name', 'sentiment_shift', 'channel',
             'duration_minutes', 'outcome', 'source_platform'
         ])
@@ -501,7 +501,7 @@ class ContextGraphGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            'account_id', 'arr', 'industry', 'employee_count',
+            'source_account_id', 'arr', 'industry', 'employee_count',
             'fiscal_year_end', 'tech_stack', 'cloud_provider',
             'competitive_landscape', 'strategic_initiatives', 'budget_cycle',
             'profile_date',
@@ -573,7 +573,7 @@ class ContextGraphGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            'account_id', 'decision_id', 'decision_date', 'title', 'decision_maker_role',
+            'source_account_id', 'decision_id', 'decision_date', 'title', 'decision_maker_role',
             'chosen_option', 'options_considered', 'revenue_impact',
             'risk_level', 'evidence_refs', 'outcome_description', 'confidence'
         ])
@@ -622,7 +622,7 @@ class ContextGraphGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            'account_id', 'outcome_id', 'outcome_date', 'title', 'outcome_type',
+            'source_account_id', 'outcome_id', 'outcome_date', 'title', 'outcome_type',
             'revenue_value', 'evidence', 'confidence',
             'related_decision_id', 'source_platform'
         ])
@@ -828,7 +828,7 @@ class ContextGraphGenerator:
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            'account_id', 'signal_ref', 'signal_date', 'signal_type', 'content', 'sentiment',
+            'source_account_id', 'signal_ref', 'signal_date', 'signal_type', 'content', 'sentiment',
             'sentiment_score', 'stakeholder_name', 'stakeholder_title',
             'causal_chain_ref', 'revenue_impact', 'confidence', 'source_platform'
         ])

@@ -13,7 +13,7 @@ CS Pulse currently supports a single vertical (`dc2_s` — Data Center Infrastru
 
 | Vertical | Slug | Buyer | Pillar Count | KPI Count |
 |----------|------|-------|-------------|-----------|
-| **SaaSPremium** | `saas_premium` | VP CS / CRO | 5 pillars | ~30 KPIs |
+| **SaaSPremium** | `saas_premium` | VP CS / CRO | 5 pillars | 35 KPIs |
 | **MSPPremium** | `msp_premium` | MSP Practice Lead / CRO | 5 pillars | ~28 KPIs |
 
 ### Design Principle
@@ -93,8 +93,8 @@ config/verticals/{vertical_slug}/
   "version": "1.0.0",
   "description": "Enterprise SaaS Customer Success with deep adoption & expansion analytics",
   "target_buyer": "VP Customer Success / CRO",
-  "pillar_count": 4,
-  "kpi_count": 24,
+  "pillar_count": 5,
+  "kpi_count": 35,
   "supported_features": {
     "context_graph": true,
     "power_of_1": true,
@@ -257,102 +257,113 @@ For MSPPremium, this would use MSP-specific language:
 | **Health model** | Product-led with expansion focus |
 | **Key differentiator** | Deep adoption analytics, NRR-driven |
 
-### 4.2 Pillar Structure (5 Pillars, 30 KPIs)
+### 4.2 Pillar Structure (5 Pillars, 35 KPIs)
 
-> **Alignment Note**: This 5-pillar structure aligns with the existing SaaS vertical
-> already coded in `vertical_config.py:build_saas_config()` which defines 5 health score
-> category weights and 5 pillar weights: usage_onboarding (0.30), business_outcomes (0.20),
-> support_engagement (0.15), sentiment (0.20), relationship (0.15).
+> **Canonical Source**: `config/verticals/saas_premium/kpi_definitions.json`
+> (loaded by `verticals/saas_premium/kpi_definitions.py`).
+> Aligned with `scripts/seed_tier_templates.py:SAAS_KPIS` — the production template
+> used for tier-based onboarding.
 
-#### P1: Product Adoption & Usage (Weight L2: 0.25)
+#### P1: Product Adoption & Usage (Weight L2: 0.20)
 
 | Code | KPI Name | Weight L1 | Unit | Target | Direction |
 |------|----------|-----------|------|--------|-----------|
-| P1-KPI1 | Daily Active Users (DAU) | 0.15 | % of licensed | > 80% | higher |
-| P1-KPI2 | Feature Adoption Breadth | 0.15 | % features used | > 60% | higher |
-| P1-KPI3 | Login Frequency | 0.12 | sessions/user/week | > 3 | higher |
-| P1-KPI4 | Time-to-First-Value (TTFV) | 0.14 | days | < 14 | lower |
-| P1-KPI5 | Power User Ratio | 0.14 | % of users | > 25% | higher |
-| P1-KPI6 | API Integration Depth | 0.15 | # active integrations | > 3 | higher |
-| P1-KPI7 | Module Penetration Rate | 0.15 | % modules activated | > 70% | higher |
+| P1-KPI1 | Daily Active Users (DAU) Rate | 0.20 | % | > 60% | higher |
+| P1-KPI2 | Feature Adoption Breadth | 0.18 | % | > 45% | higher |
+| P1-KPI3 | Time-to-Value (TTV) | 0.16 | days | < 21 | lower |
+| P1-KPI4 | Login Frequency | 0.14 | sessions/user/week | > 3.5 | higher |
+| P1-KPI5 | API Integration Usage | 0.12 | % | > 30% | higher |
+| P1-KPI6 | Workflow Completion Rate | 0.10 | % | > 75% | higher |
+| P1-KPI7 | Module Activation Rate | 0.10 | % | > 70% | higher |
 
 *L1 weights sum to 1.0*
 
-#### P2: Support & Operational Health (Weight L2: 0.15)
+#### P2: Customer Engagement (Weight L2: 0.15)
 
 | Code | KPI Name | Weight L1 | Unit | Target | Direction |
 |------|----------|-----------|------|--------|-----------|
-| P2-KPI1 | Support Ticket Volume | 0.18 | tickets/month (normalized) | < 5 | lower |
-| P2-KPI2 | CSAT (Support) | 0.20 | score (1-5) | > 4.2 | higher |
-| P2-KPI3 | First Response Time | 0.18 | hours | < 4 | lower |
-| P2-KPI4 | Ticket Resolution Time | 0.17 | hours | < 36 | lower |
-| P2-KPI5 | Escalation Rate | 0.12 | % of tickets | < 5% | lower |
-| P2-KPI6 | Self-Service Ratio | 0.15 | % resolved via KB/docs | > 40% | higher |
+| P2-KPI1 | Executive Sponsor Engagement | 0.22 | score | > 70 | higher |
+| P2-KPI2 | QBR Attendance Rate | 0.18 | % | > 85% | higher |
+| P2-KPI3 | Training Completion Rate | 0.15 | % | > 60% | higher |
+| P2-KPI4 | Community Participation Score | 0.12 | score | > 40 | higher |
+| P2-KPI5 | CSM Interaction Frequency | 0.13 | interactions/month | > 4 | higher |
+| P2-KPI6 | Webinar/Event Attendance | 0.10 | % | > 25% | higher |
+| P2-KPI7 | Customer Advocacy Score | 0.10 | score | > 50 | higher |
 
-#### P3: Customer Sentiment (Weight L2: 0.20)
+*L1 weights sum to 1.0*
 
-| Code | KPI Name | Weight L1 | Unit | Target | Direction |
-|------|----------|-----------|------|--------|-----------|
-| P3-KPI1 | NPS Score | 0.25 | score (-100 to 100) | > 50 | higher |
-| P3-KPI2 | Executive Sponsor Engagement | 0.20 | monthly touchpoints | > 2 | higher |
-| P3-KPI3 | QBR Attendance Rate | 0.15 | % attended | > 90% | higher |
-| P3-KPI4 | Community Participation | 0.10 | posts/month | > 3 | higher |
-| P3-KPI5 | Training Completion Rate | 0.15 | % completed | > 75% | higher |
-| P3-KPI6 | Sentiment Trend (qualitative) | 0.15 | score (1-10) | > 7 | higher |
-
-#### P4: Business Outcomes & Revenue (Weight L2: 0.25)
+#### P3: Support & Service Quality (Weight L2: 0.15)
 
 | Code | KPI Name | Weight L1 | Unit | Target | Direction |
 |------|----------|-----------|------|--------|-----------|
-| P4-KPI1 | Net Revenue Retention (NRR) | 0.22 | % | > 110% | higher |
-| P4-KPI2 | Gross Revenue Retention (GRR) | 0.18 | % | > 95% | higher |
-| P4-KPI3 | Invoice Payment Timeliness | 0.12 | days past due | < 5 | lower |
-| P4-KPI4 | Contract Utilization Rate | 0.15 | % of entitlement used | > 80% | higher |
-| P4-KPI5 | Expansion Pipeline Value | 0.15 | $ pipeline | > 20% of ARR | higher |
-| P4-KPI6 | Discount Trend | 0.10 | % discount applied | < 15% | lower |
-| P4-KPI7 | Value Realization Score | 0.08 | score (0-100) | > 70 | higher |
+| P3-KPI1 | Ticket Resolution Time | 0.20 | hours | < 24 | lower |
+| P3-KPI2 | CSAT Score | 0.18 | score | > 85 | higher |
+| P3-KPI3 | NPS Score | 0.15 | score (-100 to 100) | > 40 | higher |
+| P3-KPI4 | Escalation Rate | 0.14 | % | < 8% | lower |
+| P3-KPI5 | First Contact Resolution Rate | 0.13 | % | > 70% | higher |
+| P3-KPI6 | Support Ticket Volume Trend | 0.10 | % MoM | < 5% | lower |
+| P3-KPI7 | SLA Compliance Rate | 0.10 | % | > 95% | higher |
 
-#### P5: Relationship & Expansion Readiness (Weight L2: 0.15)
+*L1 weights sum to 1.0*
+
+#### P4: Partner & Ecosystem Health (Weight L2: 0.20)
 
 | Code | KPI Name | Weight L1 | Unit | Target | Direction |
 |------|----------|-----------|------|--------|-----------|
-| P5-KPI1 | Seat Utilization Rate | 0.20 | % seats used | > 85% | higher |
-| P5-KPI2 | Usage Growth Velocity | 0.18 | % MoM growth | > 5% | higher |
-| P5-KPI3 | Cross-Sell Opportunity Score | 0.18 | score (0-100) | > 60 | higher |
-| P5-KPI4 | Expansion Probability (90d) | 0.24 | % probability | > 50% | higher |
-| P5-KPI5 | Champion Count | 0.10 | count | > 3 | higher |
-| P5-KPI6 | Multi-Thread Depth | 0.10 | contacts engaged | > 5 | higher |
+| P4-KPI1 | Partner-Sourced Revenue Rate | 0.20 | % | > 25% | higher |
+| P4-KPI2 | Partner Certification Level | 0.16 | score | > 60 | higher |
+| P4-KPI3 | Partner Deal Registration Rate | 0.15 | % | > 40% | higher |
+| P4-KPI4 | Channel Conflict Resolution Time | 0.13 | days | < 14 | lower |
+| P4-KPI5 | Partner Satisfaction Score | 0.14 | score | > 75 | higher |
+| P4-KPI6 | Co-Marketing Campaign ROI | 0.12 | % | > 200% | higher |
+| P4-KPI7 | Partner Technical Enablement Score | 0.10 | score | > 65 | higher |
+
+*L1 weights sum to 1.0*
+
+#### P5: Revenue & Growth (Weight L2: 0.30)
+
+| Code | KPI Name | Weight L1 | Unit | Target | Direction |
+|------|----------|-----------|------|--------|-----------|
+| P5-KPI1 | Net Revenue Retention (NRR) | 0.22 | % | > 110% | higher |
+| P5-KPI2 | Gross Revenue Retention (GRR) | 0.18 | % | > 92% | higher |
+| P5-KPI3 | Expansion Revenue Rate | 0.15 | % | > 15% | higher |
+| P5-KPI4 | Annual Contract Value (ACV) Growth | 0.12 | % | > 12% | higher |
+| P5-KPI5 | Renewal Probability (90d) | 0.15 | % | > 85% | higher |
+| P5-KPI6 | Churn Risk Score | 0.10 | % | < 20% | lower |
+| P5-KPI7 | Customer Lifetime Value Trend | 0.08 | ratio | > 2.0 | higher |
+
+*L1 weights sum to 1.0*
 
 ### 4.3 Power-of-1 Metrics (6 Levers)
 
 | Metric | Linked KPIs | Annual Impact per 1% | Category |
 |--------|-------------|---------------------|----------|
-| **NRR** | P4-KPI1, P5-KPI2 | $100,000 @ $10M ARR | revenue_multiplier |
-| **GRR** | P4-KPI2, P3-KPI1, P2-KPI1 | $95,000 @ $10M ARR | retention_shield |
-| **Product Adoption** | P1-KPI1, P1-KPI2, P1-KPI5 | $72,000 @ $10M ARR | usage_driver |
-| **Expansion Rate** | P5-KPI1, P5-KPI4, P4-KPI5 | $85,000 @ $10M ARR | growth_lever |
-| **TTFV** | P1-KPI4 | $61,250 @ $10M ARR | foundation_investment |
-| **Ticket Resolution** | P2-KPI4, P2-KPI2 | $48,000 @ $10M ARR | operational_efficiency |
+| **NRR** | P5-KPI1, P5-KPI3 | $100,000 @ $10M ARR | revenue_multiplier |
+| **GRR** | P5-KPI2, P3-KPI3, P3-KPI1 | $95,000 @ $10M ARR | retention_shield |
+| **Product Adoption** | P1-KPI1, P1-KPI2, P1-KPI6 | $72,000 @ $10M ARR | usage_driver |
+| **Expansion Rate** | P5-KPI3, P5-KPI5, P4-KPI1 | $85,000 @ $10M ARR | growth_lever |
+| **TTV** | P1-KPI3 | $61,250 @ $10M ARR | foundation_investment |
+| **Ticket Resolution** | P3-KPI1, P3-KPI2 | $48,000 @ $10M ARR | operational_efficiency |
 
 ### 4.4 Journey Phases
 
 | Phase | Duration | Focus Pillars | Entry Criteria | Exit Criteria |
 |-------|----------|--------------|----------------|---------------|
-| **Onboarding** | 0-60 days | P1 (Adoption), P2 (Support) | Contract signed | TTFV < 14 days, DAU > 50% |
-| **Adoption** | 60-180 days | P1 + P3 (Sentiment) | TTFV achieved | Feature adoption > 60%, NPS > 30 |
-| **Maturity** | 180+ days | P4 (Business) + P5 (Expansion) | Adoption stable | NRR > 105%, Expansion probability > 40% |
+| **Onboarding** | 0-60 days | P1 (Adoption), P2 (Engagement) | Contract signed | TTV < 21 days, DAU > 50% |
+| **Adoption** | 60-180 days | P1 + P3 (Support Quality) | TTV achieved | Feature adoption > 45%, NPS > 30 |
+| **Maturity** | 180+ days | P4 (Partner) + P5 (Revenue) | Adoption stable | NRR > 105%, Renewal prob > 60% |
 
-### 4.5 Playbooks (6)
+### 4.5 Playbooks (7)
 
 | ID | Name | Phase | Trigger Conditions | Actions |
 |----|------|-------|-------------------|---------|
-| PB-01 | Adoption Accelerator | Onboarding | TTFV > 21 days OR DAU < 30% (P1) | CSM outreach, training session, feature walkthrough |
-| PB-02 | Engagement Recovery | Adoption | Login frequency < 1/week AND NPS drop > 10 (P3) | Executive check-in, usage review, success plan |
-| PB-03 | Churn Prevention | Any | GRR < 90% (P4) OR NPS < 20 (P3) | Exec escalation, save call, value demonstration |
-| PB-04 | Expansion Discovery | Maturity | Seat utilization > 90% AND expansion prob > 60% (P5) | Expansion proposal, ROI case, stakeholder mapping |
+| PB-01 | Adoption Accelerator | Onboarding | TTV > 21 days OR DAU < 30% (P1) | CSM outreach, training session, feature walkthrough |
+| PB-02 | Engagement Recovery | Adoption | Login freq < 1/week AND NPS < 20 (P3) | Executive check-in, usage review, success plan |
+| PB-03 | Churn Prevention | Any | GRR < 90% (P5) OR NPS < 20 (P3) | Exec escalation, save call, value demonstration |
+| PB-04 | Expansion Discovery | Maturity | Seat util > 90% AND expansion prob > 60% (P5) | Expansion proposal, ROI case, stakeholder mapping |
 | PB-05 | Health Monitoring | Cross-phase | Health score < 70 for 2 consecutive months | Automated alert, CSM review, action plan |
-| PB-06 | Support Optimization | Adoption+ | Escalation rate > 10% (P2) AND self-service < 25% | KB improvement, training push, process review |
-| PB-07 | Champion Enablement | Maturity | Power user ratio > 30% AND champion count > 3 (P5) | Champion program invite, reference opportunity |
+| PB-06 | Support Optimization | Adoption+ | Escalation rate > 10% (P3) AND self-service < 25% | KB improvement, training push, process review |
+| PB-07 | Champion Enablement | Maturity | Power user ratio > 30% (P1) AND champion count > 3 | Champion program invite, reference opportunity |
 
 ### 4.6 Story Arcs (4 Initial)
 

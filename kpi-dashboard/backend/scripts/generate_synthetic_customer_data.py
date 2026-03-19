@@ -145,7 +145,7 @@ def _generate_kpi_value(scenario, month_idx, num_months, kpi_range):
 # Column order for accounts.csv: matches sample_account_profiles_dc2_s.xlsx
 # (Customer Profile Input sheet + Champion & Stakeholder sheet + Last updated)
 ACCOUNTS_CSV_COLUMNS = [
-    'account_id', 'customer_id', 'account_name', 'industry', 'vertical', 'region',
+    'source_account_id', 'customer_id', 'account_name', 'industry', 'vertical', 'region',
     'account_status', 'account_tier', 'assigned_csm', 'csm_manager', 'executive_sponsor',
     'strategic_account', 'products_used', 'contract_start_date', 'contract_end_date',
     'renewal_date', 'revenue', 'arr', 'mrr',
@@ -210,7 +210,7 @@ def generate_accounts_csv(customer_id, num_accounts=10, company_name=None):
         num_champions = random.randint(1, 4)
 
         rows.append({
-            'account_id': account_id,
+            'source_account_id': account_id,
             'customer_id': customer_id,
             'uuid': generate_account_id('dc'),
             'account_name': account_name,
@@ -276,7 +276,7 @@ def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
 
         # For each account
         for _, account in accounts_df.iterrows():
-            account_id = account['account_id']
+            account_id = account['source_account_id']
 
             # Determine scenario based on account
             scenario_idx = account_id % 3
@@ -325,7 +325,7 @@ def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
                     status = _get_kpi_status(value, kpi_range)
 
                     measurements.append({
-                        'account_id': account_id,
+                        'source_account_id': account_id,
                         'kpi_code': kpi_code,
                         'measured_at': measured_at.strftime('%Y-%m-%d'),
                         'value': round(value, 2),
@@ -403,7 +403,7 @@ def generate_qualitative_signals_csv(customer_id, accounts_df, num_months=12):
     signal_counter = 1
 
     for _, account in accounts_df.iterrows():
-        account_id = account['account_id']
+        account_id = account['source_account_id']
         account_name = account.get('account_name', f'Account-{account_id}')
 
         # Same scenario assignment as KPI generator
@@ -439,7 +439,7 @@ def generate_qualitative_signals_csv(customer_id, accounts_df, num_months=12):
 
                 signals.append({
                     'signal_id': signal_id,
-                    'account_id': account_id,
+                    'source_account_id': account_id,
                     'signal_date': signal_date.strftime('%Y-%m-%d'),
                     'signal_type': sig_type,
                     'content': content,
@@ -545,7 +545,7 @@ def save_csvs(customer_id, customer_dir, company_name, num_accounts=10, num_mont
 This customer uses **DEMO_MANIFEST** journey patterns.
 
 ## Accounts
-{chr(10).join(f'- **{row["account_id"]}**: {row["account_name"]}' for _, row in accounts_df.iterrows())}
+{chr(10).join(f'- **{row["source_account_id"]}**: {row["account_name"]}' for _, row in accounts_df.iterrows())}
 
 ## KPIs (Config-Aware)
 - Total measurements: {len(kpi_df)}

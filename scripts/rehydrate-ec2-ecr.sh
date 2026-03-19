@@ -96,6 +96,7 @@ scp -o StrictHostKeyChecking=no -i "$KEY_FILE" "$ECR_TOKEN_FILE" "ec2-user@${PUB
 echo "On EC2: ensuring REGISTRY in .env, docker login, pull, and starting all services..."
 ssh -o StrictHostKeyChecking=no -i "$KEY_FILE" "ec2-user@${PUBLIC_IP}" "set -e
   cd ~/cspulse
+  test -f .env || cp .env.example .env 2>/dev/null || true
   if ! grep -q '^REGISTRY=' .env 2>/dev/null; then
     echo 'REGISTRY=${REGISTRY}' >> .env
   fi

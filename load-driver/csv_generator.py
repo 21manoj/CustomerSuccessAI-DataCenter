@@ -179,7 +179,7 @@ class CSVGenerator:
         # Header — matches backend generator + onboarding API expectations
         # Includes CSM/champion columns (previously in profiles.csv, now consolidated)
         writer.writerow([
-            'account_id', 'customer_id', 'account_name', 'industry', 'region',
+            'source_account_id', 'customer_id', 'account_name', 'industry', 'region',
             'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
             'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid',
             'csm_manager', 'executive_sponsor',
@@ -275,7 +275,7 @@ class CSVGenerator:
 
         # Header — matches backend generator column names
         writer.writerow([
-            'account_id', 'kpi_code', 'kpi_name', 'pillar',
+            'source_account_id', 'kpi_code', 'kpi_name', 'pillar',
             'measured_at', 'value', 'target', 'weight', 'unit', 'status'
         ])
 
@@ -313,7 +313,7 @@ class CSVGenerator:
         writer = csv.writer(output)
 
         writer.writerow([
-            'account_id', 'product_name', 'product_category',
+            'source_account_id', 'product_name', 'product_category',
             'quantity', 'unit_price', 'deployment_date', 'status'
         ])
 
@@ -342,7 +342,7 @@ class CSVGenerator:
         writer = csv.writer(output)
 
         writer.writerow([
-            'account_id', 'contact_name', 'contact_email',
+            'source_account_id', 'contact_name', 'contact_email',
             'role', 'department', 'is_primary'
         ])
 
@@ -446,7 +446,7 @@ class CSVGenerator:
         writer = csv.writer(output)
 
         writer.writerow([
-            'signal_id', 'account_id', 'signal_date', 'signal_type',
+            'signal_id', 'source_account_id', 'signal_date', 'signal_type',
             'content', 'sentiment', 'sentiment_score',
             'arc_id', 'story_phase', 'linked_node_id'
         ])
