@@ -3092,12 +3092,28 @@ def configure_customer_kpis(
             except Exception:
                 raise ToolError("Could not load KPI definitions for pillar-based selection.")
 
-        # Set pillar weights
+        # Set pillar weights (auto-normalize to sum 1.0)
         if pillar_weights:
+            pw_total = sum(pillar_weights.values())
+            if pw_total > 0 and abs(pw_total - 1.0) > 0.0001:
+                pillar_weights = {k: round(v / pw_total, 4) for k, v in pillar_weights.items()}
+                _pw_keys = list(pillar_weights.keys())
+                _pw_diff = round(1.0 - sum(pillar_weights.values()), 4)
+                if _pw_diff != 0 and _pw_keys:
+                    pillar_weights[_pw_keys[-1]] = round(pillar_weights[_pw_keys[-1]] + _pw_diff, 4)
             config.dc2s_pillar_weights = pillar_weights
 
-        # Set KPI weights
+        # Set KPI weights (auto-normalize each pillar to sum 1.0)
         if kpi_weights:
+            for pillar, kw in kpi_weights.items():
+                kw_total = sum(kw.values())
+                if kw_total > 0 and abs(kw_total - 1.0) > 0.0001:
+                    kpi_weights[pillar] = {k: round(v / kw_total, 4) for k, v in kw.items()}
+                    _kw_keys = list(kpi_weights[pillar].keys())
+                    _kw_diff = round(1.0 - sum(kpi_weights[pillar].values()), 4)
+                    if _kw_diff != 0 and _kw_keys:
+                        kpi_weights[pillar][_kw_keys[-1]] = round(
+                            kpi_weights[pillar][_kw_keys[-1]] + _kw_diff, 4)
             config.dc2s_kpi_weights = kpi_weights
 
         db.session.commit()
