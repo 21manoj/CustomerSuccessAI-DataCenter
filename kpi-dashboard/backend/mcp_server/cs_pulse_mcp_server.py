@@ -3555,59 +3555,33 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
         db.session.add(run)
         db.session.commit()
 
-        # Attempt to execute the wizard synchronously
-        backend_dir = Path(__file__).parent.parent
-        cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_vertical}'
-        wizard_dir = customer_dir / 'journey' / f'wizard_{wizard}'
-
+        # Execute wizard using DB-native functions (no subprocess/filesystem)
         result_summary = {}
 
         try:
+            db.session.rollback()  # Clear any dirty session state
+
             if wizard == 'a':
-                # Wizard A: Journey generation
-                wizard_script = wizard_dir / 'wizard_journey_generator.py'
-                if wizard_script.exists():
-                    import subprocess
-                    proc = subprocess.run(
-                        ['python3', str(wizard_script), '--customer-id', str(customer_id)],
-                        capture_output=True, text=True, timeout=300,
-                        cwd=str(backend_dir),
-                    )
-                    result_summary['stdout_tail'] = proc.stdout[-500:] if proc.stdout else ''
-                    result_summary['return_code'] = proc.returncode
-                else:
-                    result_summary['note'] = 'Wizard A script not found; run may need manual trigger.'
+                from wizards.wizard_a_journey_db import run_wizard_a
+                wiz_result = run_wizard_a(customer_id)
+                result_summary = wiz_result
+                result_summary['return_code'] = 0
 
             elif wizard == 'b':
-                # Wizard B: Pattern analysis
-                wizard_script = wizard_dir / 'wizard_b_pattern_analyzer.py'
-                if wizard_script.exists():
-                    import subprocess
-                    proc = subprocess.run(
-                        ['python3', str(wizard_script), '--customer-id', str(customer_id)],
-                        capture_output=True, text=True, timeout=300,
-                        cwd=str(backend_dir),
-                    )
-                    result_summary['stdout_tail'] = proc.stdout[-500:] if proc.stdout else ''
-                    result_summary['return_code'] = proc.returncode
-                else:
-                    result_summary['note'] = 'Wizard B script not found; run may need manual trigger.'
+                try:
+                    from wizards.wizard_b_pattern_db import run_wizard_b
+                    wiz_result = run_wizard_b(customer_id)
+                    result_summary = wiz_result
+                    result_summary['return_code'] = 0
+                except Exception as wb_err:
+                    result_summary['error'] = str(wb_err)
+                    result_summary['return_code'] = 1
 
             elif wizard == 'c':
-                # Wizard C: Weight calibration
-                wizard_script = wizard_dir / 'wizard_c_weight_calibrator.py'
-                if wizard_script.exists():
-                    import subprocess
-                    proc = subprocess.run(
-                        ['python3', str(wizard_script), '--customer-id', str(customer_id)],
-                        capture_output=True, text=True, timeout=300,
-                        cwd=str(backend_dir),
-                    )
-                    result_summary['stdout_tail'] = proc.stdout[-500:] if proc.stdout else ''
-                    result_summary['return_code'] = proc.returncode
-                else:
-                    result_summary['note'] = 'Wizard C script not found; run may need manual trigger.'
+                from wizards.wizard_c_weight_calibrator_db import run_wizard_c
+                wiz_result = run_wizard_c(customer_id)
+                result_summary = wiz_result
+                result_summary['return_code'] = 0
 
             # Update run status
             run.status = 'completed' if result_summary.get('return_code', 1) == 0 else 'failed'

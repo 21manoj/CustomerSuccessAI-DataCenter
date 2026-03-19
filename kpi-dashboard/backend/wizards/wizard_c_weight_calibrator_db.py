@@ -31,7 +31,14 @@ def run_wizard_c(customer_id: int) -> dict:
     from models import Account, DC2SKPI, HealthScore, CustomerConfig
     from extensions import db
     from sqlalchemy import func
-    from mcp_server.common import get_kpi_definitions
+    # Import KPI definitions directly to avoid fastmcp dependency
+    try:
+        from mcp_server.common import get_kpi_definitions
+    except ImportError:
+        # Fallback: load directly from vertical module
+        def get_kpi_definitions(vertical):
+            from verticals.dc2_s.kpi_definitions import DC2S_KPIS
+            return DC2S_KPIS
 
     # ------------------------------------------------------------------
     # 0. Resolve vertical and load base weights from kpi_definitions
