@@ -60,15 +60,18 @@ services:
 
   # ──────────────────────────────────────────────
   # CS Pulse Platform (Flask + React + Nginx)
+  # Build context = repo root so Dockerfile.cspulse can COPY kpi-dashboard/* and load-driver/
+  # Run from kpi-dashboard/: docker compose -f docker-compose.production.yml up -d --build
   # ──────────────────────────────────────────────
   cs-pulse:
     build:
-      context: .
-      dockerfile: Dockerfile.cspulse
+      context: ..
+      dockerfile: kpi-dashboard/Dockerfile.cspulse
     container_name: cspulse-platform
     ports:
       - "9080:80"       # Host 9080 to avoid conflict with other server on 80
       - "9443:443"      # HTTPS (when TLS configured in nginx)
+      - "8001:8001"     # MCP HTTP/SSE transport (for Claude.ai remote access)
     environment:
       DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
 
@@ -78,6 +81,10 @@ services:
       FLASK_APP: app_v3_minimal.py
       FLASK_ENV: production
       SECRET_KEY: ${SECRET_KEY}
+
+      # MCP Server — enable HTTP transport on port 8001
+      FEATURE_MCP_SERVER: "true"
+      FEATURE_CONTEXT_GRAPH: "true"
 
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}

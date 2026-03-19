@@ -141,8 +141,8 @@ ENV GUNICORN_WORKERS=4
 ENV GUNICORN_TIMEOUT=120
 ENV LOAD_DRIVER_DIR=/app/load-driver
 
-# Expose ports
-EXPOSE 80 5059
+# Expose ports (80=Nginx, 5059=Flask, 8001=MCP HTTP/SSE)
+EXPOSE 80 5059 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \

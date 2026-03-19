@@ -48,8 +48,9 @@ services:
       dockerfile: kpi-dashboard/Dockerfile.cspulse
     container_name: cspulse-platform
     ports:
-      - "80:80"       # Nginx (React + API proxy)
+      - "80:80"       # Nginx (React + API proxy + MCP)
       - "5059:5059"   # Direct Flask API access (optional/debugging)
+      - "8001:8001"   # MCP HTTP/SSE transport (for Claude.ai remote access)
     environment:
       # Database (points to postgres container)
       DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD:-cspulse_dev}@postgres:5432/cs_pulse
@@ -63,6 +64,10 @@ services:
       FLASK_ENV: production
       # Must be at least 32 chars (set SECRET_KEY in .env for production)
       SECRET_KEY: ${SECRET_KEY:-cspulse-dev-secret-key-min-32-chars}
+
+      # MCP Server — enable HTTP transport on port 8001
+      FEATURE_MCP_SERVER: "true"
+      FEATURE_CONTEXT_GRAPH: "true"
 
       # Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
