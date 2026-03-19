@@ -180,6 +180,12 @@ def run_wizard_c(customer_id: int) -> dict:
             kpi_weights_by_pillar[pillar] = {
                 k: round(v / total, 4) for k, v in kpi_weights_by_pillar[pillar].items()
             }
+            # Force exact 1.0 sum: adjust last weight to absorb rounding error
+            _keys = list(kpi_weights_by_pillar[pillar].keys())
+            _diff = round(1.0 - sum(kpi_weights_by_pillar[pillar].values()), 4)
+            if _diff != 0 and _keys:
+                kpi_weights_by_pillar[pillar][_keys[-1]] = round(
+                    kpi_weights_by_pillar[pillar][_keys[-1]] + _diff, 4)
 
     # ------------------------------------------------------------------
     # 5. Adjust L2 pillar weights
@@ -199,6 +205,11 @@ def run_wizard_c(customer_id: int) -> dict:
     l2_total = sum(adjusted_l2.values())
     if l2_total > 0:
         adjusted_l2 = {k: round(v / l2_total, 4) for k, v in adjusted_l2.items()}
+        # Force exact 1.0 sum for L2 as well
+        _l2_keys = list(adjusted_l2.keys())
+        _l2_diff = round(1.0 - sum(adjusted_l2.values()), 4)
+        if _l2_diff != 0 and _l2_keys:
+            adjusted_l2[_l2_keys[-1]] = round(adjusted_l2[_l2_keys[-1]] + _l2_diff, 4)
 
     # ------------------------------------------------------------------
     # 6. Compute significant changes report
