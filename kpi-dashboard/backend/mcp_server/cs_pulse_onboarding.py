@@ -919,13 +919,9 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
 def _process_data_impl(customer_id: int) -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Processes uploaded CSV files through the full pipeline:
-    1. Data loading (CSVs -> PostgreSQL)
-    2. Embedding generation
-    3. Data validation
-    4. Journey generation (Wizard A)
-    5. Pattern analysis (Wizard B)
-    6. Weight calibration (Wizard C)
+    Two paths:
+    - Path 1 (DB-native): Data already in DB → recalculate health scores
+    - Path 2 (Fresh CSV): No data in DB → load CSVs into DB, then calculate
 
     Args:
         customer_id: The customer ID
@@ -934,86 +930,53 @@ def _process_data_impl(customer_id: int) -> dict:
     app = common.get_flask_app()
 
     with app.app_context():
-        from models import Customer, db
+        from models import Customer
+        from extensions import db as _db
+        from models import Account, DC2SKPI, QualitativeSignal
         from pathlib import Path
+        from datetime import datetime as _dt
+        import pandas as pd
 
-        customer = db.session.get(Customer, int(customer_id))
+        customer = _db.session.get(Customer, int(customer_id))
         if not customer:
             raise ToolError(f"Customer {customer_id} not found.")
 
-        # Check data directory has files
         vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
         backend_dir = Path(__file__).parent.parent
-        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
-        data_dir = customer_dir / 'data'
-
-        if not data_dir.exists():
-            raise ToolError(
-                f"No data directory found for customer {customer_id}. "
-                f"Upload CSV files first via upload_csv()."
-            )
-
-        csv_files = [f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv']
-        if not csv_files:
-            raise ToolError("No CSV files found in data directory. Upload files first.")
-
-        # Check required files
-        required = ['accounts.csv', 'kpi_measurements.csv']
-        missing = [f for f in required if f not in csv_files]
-        if missing:
-            raise ToolError(f"Missing required files: {missing}. Upload them via upload_csv().")
-
-        # Call the onboarding process-data endpoint internally
-        import json as _json
-        import requests as _requests
+        data_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}' / 'data'
 
         steps_completed = []
         errors = []
+        csv_files = []
 
-        # Call the REST API process-data endpoint (which does the real work)
-        try:
-            base_url = os.environ.get('CS_PULSE_BASE_URL', 'http://localhost:5001')
-            resp = _requests.post(
-                f'{base_url}/api/onboarding/process-data',
-                json={'customer_id': customer_id},
-                timeout=120,
+        # ----------------------------------------------------------
+        # Detect which path to take
+        # ----------------------------------------------------------
+        existing_accounts = Account.query.filter_by(customer_id=customer_id).all()
+        existing_acct_ids = [a.account_id for a in existing_accounts]
+        existing_kpi_count = DC2SKPI.query.filter(
+            DC2SKPI.account_id.in_(existing_acct_ids)
+        ).count() if existing_acct_ids else 0
+
+        data_in_db = len(existing_accounts) > 0 and existing_kpi_count > 0
+        has_csv_dir = data_dir.exists() and any(
+            f.suffix == '.csv' for f in data_dir.iterdir()
+        ) if data_dir.exists() else False
+
+        if not data_in_db and not has_csv_dir:
+            raise ToolError(
+                f"No data found for customer {customer_id}. "
+                f"Either upload CSV files via upload_csv() or ensure data is in the database."
             )
-            if resp.status_code == 200:
-                result_data = resp.json()
-                steps_completed = result_data.get('steps_completed', ['full_pipeline'])
-                return {
-                    'scope': 'customer',
-                    'customer_id': customer_id,
-                    'status': 'success',
-                    'csv_files_found': csv_files,
-                    'steps_completed': steps_completed,
-                    'errors': [],
-                    'message': (
-                        f"Data processing completed successfully. "
-                        f"{len(csv_files)} CSV files processed through full pipeline."
-                    ),
-                }
-            else:
-                error_msg = resp.text[:500] if resp.text else f'HTTP {resp.status_code}'
-                errors.append(f"pipeline: {error_msg}")
-        except _requests.exceptions.ConnectionError:
-            errors.append(
-                "Cannot connect to CS Pulse backend API. "
-                "Ensure the backend is running on the configured base URL."
-            )
-        except Exception as e:
-            errors.append(f"pipeline: {str(e)}")
 
-        # Fallback: try direct CSV loading if REST call failed
-        try:
-            import pandas as pd
-            from datetime import datetime as _dt
-            from extensions import db as _db
-            from models import Account, DC2SKPI, QualitativeSignal
+        # ----------------------------------------------------------
+        # Path 2 ONLY: Fresh customer — load CSVs into DB
+        # ----------------------------------------------------------
+        if not data_in_db and has_csv_dir:
+            csv_files = [f.name for f in data_dir.iterdir()
+                         if f.is_file() and f.suffix == '.csv']
 
-            # ----------------------------------------------------------
-            # Step 1: Load accounts first (need them for ID mapping)
-            # ----------------------------------------------------------
+            # Step 1: Load accounts
             accounts_csv = data_dir / 'accounts.csv'
             if accounts_csv.exists():
                 df_accts = pd.read_csv(str(accounts_csv))
@@ -1021,30 +984,27 @@ def _process_data_impl(customer_id: int) -> dict:
                     for _, row in df_accts.iterrows():
                         aname = row.get('account_name', row.get('name', ''))
                         existing = Account.query.filter_by(
-                            customer_id=customer_id,
-                            account_name=aname,
+                            customer_id=customer_id, account_name=aname,
                         ).first()
                         if not existing:
                             acct = Account(
-                                customer_id=customer_id,
-                                account_name=aname,
+                                customer_id=customer_id, account_name=aname,
                                 revenue=row.get('arr', row.get('annual_revenue', row.get('revenue', 0))),
                                 vertical=vertical,
                             )
                             _db.session.add(acct)
                     _db.session.flush()
-                    steps_completed.append('accounts_loaded')
+                    steps_completed.append('accounts_loaded_from_csv')
 
-            # ----------------------------------------------------------
-            # Step 2: Build CSV account_id → DB account_id mapping
-            # CSV uses {customer_id}001, {customer_id}002 etc.
-            # DB auto-generates sequential IDs. Map via account_name.
-            # ----------------------------------------------------------
-            db_accounts = Account.query.filter_by(customer_id=customer_id).all()
+            # Refresh account list
+            existing_accounts = Account.query.filter_by(customer_id=customer_id).all()
+            existing_acct_ids = [a.account_id for a in existing_accounts]
+
+            # Step 2: Build CSV→DB account ID mapping
+            db_accounts = existing_accounts
             accounts_by_name = {a.account_name: a.account_id for a in db_accounts}
             accounts_by_db_id = {a.account_id: a for a in db_accounts}
             csv_to_db_aid = {}
-
             if accounts_csv.exists():
                 df_accts = pd.read_csv(str(accounts_csv))
                 for _, arow in df_accts.iterrows():
@@ -1052,171 +1012,106 @@ def _process_data_impl(customer_id: int) -> dict:
                     aname = arow.get('account_name', '')
                     if csv_aid and aname and aname in accounts_by_name:
                         csv_to_db_aid[int(csv_aid)] = accounts_by_name[aname]
-            # Fallback: index-based mapping if no accounts.csv mapping
             if not csv_to_db_aid:
                 sorted_db = sorted(db_accounts, key=lambda a: a.account_id)
                 for i, a in enumerate(sorted_db, 1):
                     csv_to_db_aid[customer_id * 1000 + i] = a.account_id
 
             def _resolve_acct_id(row):
-                """Map CSV source_account_id to DB account_id."""
-                # Try account_name first
                 aname = row.get('account_name', row.get('account', ''))
                 if aname and aname in accounts_by_name:
                     return accounts_by_name[aname]
-                # Try source_account_id (new name) or account_id (backward compat)
                 raw = row.get('source_account_id', row.get('account_id'))
                 if raw is None:
                     return None
                 raw = int(raw)
-                # Direct DB ID match?
                 if raw in accounts_by_db_id:
                     return raw
-                # CSV → DB mapping
                 return csv_to_db_aid.get(raw)
 
-            # ----------------------------------------------------------
             # Step 3: Load KPIs, signals, and other CSVs
-            # ----------------------------------------------------------
-            for csv_file in csv_files:
-                if csv_file == 'accounts.csv':
-                    continue  # Already loaded above
-                csv_path = data_dir / csv_file
-                df = pd.read_csv(str(csv_path))
-                if df.empty:
-                    continue
+            try:
+                for csv_file in csv_files:
+                    if csv_file == 'accounts.csv':
+                        continue
+                    csv_path = data_dir / csv_file
+                    df = pd.read_csv(str(csv_path))
+                    if df.empty:
+                        continue
 
-                if csv_file == 'kpi_measurements.csv':
-                    for _, row in df.iterrows():
-                        acct_id = _resolve_acct_id(row)
-                        if acct_id:
-                            kpi = DC2SKPI(
-                                account_id=acct_id,
-                                kpi_code=row.get('kpi_code', row.get('kpi_id', '')),
-                                value=float(row.get('value', 0)),
-                                target=float(row.get('target', 100)),
-                                pillar=row.get('pillar', ''),
-                                weight=float(row.get('weight', 0)) if row.get('weight') else None,
-                                status=row.get('status', ''),
-                                measured_at=row.get('measured_at', row.get('date')),
-                            )
-                            _db.session.add(kpi)
-                    steps_completed.append('kpis_loaded')
-
-                elif csv_file in ('enhanced_qualitative_signals.csv', 'qualitative_signals.csv'):
-                    import uuid as _uuid
-                    for _, row in df.iterrows():
-                        acct_id = _resolve_acct_id(row)
-                        if acct_id:
-                            sig_id = row.get('signal_id') or f"sig_{_uuid.uuid4().hex[:12]}"
-                            sig = QualitativeSignal(
-                                signal_id=sig_id,
-                                account_id=acct_id,
-                                signal_type=row.get('signal_type', 'nps'),
-                                content=row.get('content', row.get('signal_text', '')),
-                                sentiment=row.get('sentiment', 'neutral'),
-                                sentiment_score=float(row.get('sentiment_score', 0.5)),
-                                signal_date=row.get('signal_date', row.get('date')),
-                            )
-                            _db.session.add(sig)
-                            # Also create ContextNode for signals with signal_ref
-                            # (context graph signals need to be in context_nodes for edge resolution)
-                            sig_ref = row.get('signal_ref')
-                            if sig_ref and str(sig_ref) != 'nan':
-                                from models import ContextNode as CN_
-                                content_text = str(row.get('content', ''))
-                                sig_node = CN_(
-                                    customer_id=customer_id,
+                    if csv_file == 'kpi_measurements.csv':
+                        for _, row in df.iterrows():
+                            acct_id = _resolve_acct_id(row)
+                            if acct_id:
+                                kpi = DC2SKPI(
                                     account_id=acct_id,
-                                    node_type='SIGNAL',
-                                    node_subtype=str(row.get('signal_type', 'signal')),
-                                    title=content_text[:200],
-                                    properties={
-                                        'signal_ref': str(sig_ref),
-                                        'sentiment': str(row.get('sentiment', '')),
-                                        'sentiment_score': str(row.get('sentiment_score', '')),
-                                    },
-                                    tier=2,
-                                    occurred_at=pd.to_datetime(row.get('signal_date')) if row.get('signal_date') else _dt.utcnow(),
-                                    source_platform=str(row.get('source_platform', 'csv_import')),
-                                    source_event_id=str(sig_ref),
+                                    kpi_code=row.get('kpi_code', row.get('kpi_id', '')),
+                                    value=float(row.get('value', 0)),
+                                    target=float(row.get('target', 100)),
+                                    pillar=row.get('pillar', ''),
+                                    weight=float(row.get('weight', 0)) if row.get('weight') else None,
+                                    status=row.get('status', ''),
+                                    measured_at=row.get('measured_at', row.get('date')),
                                 )
-                                _db.session.add(sig_node)
-                    steps_completed.append('signals_loaded')
+                                _db.session.add(kpi)
+                        steps_completed.append('kpis_loaded')
 
-            _db.session.commit()
-
-            # Calculate health scores for each account
-            try:
-                calculate_fn, get_kpi_vals, _ = common.get_health_functions(vertical)
-                from models import HealthScore, PillarScore
-                import utils.health_thresholds as ht
-                from datetime import datetime as _dt
-
-                acct_list = Account.query.filter_by(customer_id=customer_id).all()
-                month_str = _dt.utcnow().strftime('%Y-%m-01')
-                for acct in acct_list:
-                    try:
-                        kpi_vals = get_kpi_vals(acct.account_id)
-                        if not kpi_vals:
-                            continue
-                        health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
-                        status = ht.classify(health)
-                        # Upsert HealthScore
-                        hs = HealthScore.query.filter_by(
-                            account_id=acct.account_id,
-                            measurement_month=month_str,
-                        ).first()
-                        if not hs:
-                            hs = HealthScore(
-                                account_id=acct.account_id,
-                                measurement_month=month_str,
-                            )
-                            _db.session.add(hs)
-                        hs.health_score = round(health, 2)
-                        hs.health_status = status
-                        hs.contributing_pillars = {k: round(v, 2) for k, v in pillars.items()}
-                        # Upsert PillarScores
-                        for pcode, pscore in pillars.items():
-                            ps = PillarScore.query.filter_by(
-                                account_id=acct.account_id,
-                                measurement_month=month_str,
-                                pillar_code=pcode,
-                            ).first()
-                            if not ps:
-                                ps = PillarScore(
-                                    account_id=acct.account_id,
-                                    measurement_month=month_str,
-                                    pillar_code=pcode,
+                    elif csv_file in ('enhanced_qualitative_signals.csv', 'qualitative_signals.csv'):
+                        import uuid as _uuid
+                        for _, row in df.iterrows():
+                            acct_id = _resolve_acct_id(row)
+                            if acct_id:
+                                sig_id = row.get('signal_id') or f"sig_{_uuid.uuid4().hex[:12]}"
+                                sig = QualitativeSignal(
+                                    signal_id=sig_id, account_id=acct_id,
+                                    signal_type=row.get('signal_type', 'nps'),
+                                    content=row.get('content', row.get('signal_text', '')),
+                                    sentiment=row.get('sentiment', 'neutral'),
+                                    sentiment_score=float(row.get('sentiment_score', 0.5)),
+                                    signal_date=row.get('signal_date', row.get('date')),
                                 )
-                                _db.session.add(ps)
-                            ps.pillar_score = round(pscore, 2)
-                    except Exception:
-                        pass
+                                _db.session.add(sig)
+                                sig_ref = row.get('signal_ref')
+                                if sig_ref and str(sig_ref) != 'nan':
+                                    from models import ContextNode as CN_
+                                    sig_node = CN_(
+                                        customer_id=customer_id, account_id=acct_id,
+                                        node_type='SIGNAL',
+                                        node_subtype=str(row.get('signal_type', 'signal')),
+                                        title=str(row.get('content', ''))[:200],
+                                        properties={'signal_ref': str(sig_ref),
+                                                    'sentiment': str(row.get('sentiment', '')),
+                                                    'sentiment_score': str(row.get('sentiment_score', ''))},
+                                        tier=2,
+                                        occurred_at=pd.to_datetime(row.get('signal_date')) if row.get('signal_date') else _dt.utcnow(),
+                                        source_platform=str(row.get('source_platform', 'csv_import')),
+                                        source_event_id=str(sig_ref),
+                                    )
+                                    _db.session.add(sig_node)
+                        steps_completed.append('signals_loaded')
+
                 _db.session.commit()
-                steps_completed.append('health_scores_calculated')
             except Exception as e:
-                errors.append(f"health_calc: {str(e)}")
+                errors.append(f"csv_loading: {str(e)}")
+                try:
+                    _db.session.rollback()
+                except Exception:
+                    pass
 
-            # Ingest context graph CSVs if present
-            # (_resolve_acct_id is already defined above from Step 2)
+            # Steps 4-9: Context graph CSVs
             try:
-                from utils.context_graph import upsert_node, add_edge
                 from models import ContextNode, ContextEdge
 
-                cg_dir = data_dir
-
-                # Stakeholders → ContextNode (STAKEHOLDER)
-                stakeholder_path = cg_dir / 'stakeholders.csv'
+                # Stakeholders
+                stakeholder_path = data_dir / 'stakeholders.csv'
                 if stakeholder_path.exists():
                     df_s = pd.read_csv(str(stakeholder_path))
                     for _, row in df_s.iterrows():
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
                             continue
-                        node = ContextNode(
-                            customer_id=customer_id,
-                            account_id=acct_id,
+                        _db.session.add(ContextNode(
+                            customer_id=customer_id, account_id=acct_id,
                             node_type='STAKEHOLDER',
                             node_subtype=str(row.get('role', 'contact')),
                             title=str(row.get('stakeholder_name', row.get('name', ''))),
@@ -1228,16 +1123,14 @@ def _process_data_impl(customer_id: int) -> dict:
                                 'engagement_frequency': str(row.get('engagement_frequency', '')),
                                 'sentiment': str(row.get('sentiment', '')),
                             },
-                            tier=1,
-                            occurred_at=_dt.utcnow(),
+                            tier=1, occurred_at=_dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
-                        )
-                        _db.session.add(node)
+                        ))
                     _db.session.flush()
                     steps_completed.append('stakeholders_loaded')
 
-                # Outcomes → ContextNode (OUTCOME)
-                outcomes_path = cg_dir / 'outcomes.csv'
+                # Outcomes
+                outcomes_path = data_dir / 'outcomes.csv'
                 if outcomes_path.exists():
                     df_o = pd.read_csv(str(outcomes_path))
                     for _, row in df_o.iterrows():
@@ -1253,66 +1146,44 @@ def _process_data_impl(customer_id: int) -> dict:
                                     break
                             except (ValueError, TypeError):
                                 pass
-                        node = ContextNode(
-                            customer_id=customer_id,
-                            account_id=acct_id,
+                        _db.session.add(ContextNode(
+                            customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
                             node_subtype=str(row.get('outcome_type', 'revenue')),
                             title=str(row.get('title', row.get('outcome_name', ''))),
                             revenue_impact=rev_impact,
                             revenue_impact_type=str(row.get('outcome_type', 'expansion')),
-                            properties={
-                                'evidence': str(row.get('evidence', '')),
-                                'confidence': str(row.get('confidence', '')),
-                            },
-                            tier=1,
-                            occurred_at=_dt.utcnow(),
+                            properties={'evidence': str(row.get('evidence', '')),
+                                        'confidence': str(row.get('confidence', ''))},
+                            tier=1, occurred_at=_dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
-                        )
-                        _db.session.add(node)
+                        ))
                     _db.session.flush()
                     steps_completed.append('outcomes_loaded')
 
-                # Decisions → ContextNode (DECISION)
-                decisions_path = cg_dir / 'decisions.csv'
+                # Decisions
+                decisions_path = data_dir / 'decisions.csv'
                 if decisions_path.exists():
                     df_d = pd.read_csv(str(decisions_path))
                     for _, row in df_d.iterrows():
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
                             continue
-                        node = ContextNode(
-                            customer_id=customer_id,
-                            account_id=acct_id,
+                        _db.session.add(ContextNode(
+                            customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
                             node_subtype=str(row.get('decision_maker_role', 'action')),
                             title=str(row.get('title', row.get('decision_name', ''))),
-                            properties={
-                                'chosen_option': str(row.get('chosen_option', '')),
-                                'outcome_description': str(row.get('outcome_description', '')),
-                                'risk_level': str(row.get('risk_level', '')),
-                            },
-                            tier=1,
-                            occurred_at=_dt.utcnow(),
+                            properties={'chosen_option': str(row.get('chosen_option', '')),
+                                        'outcome_description': str(row.get('outcome_description', '')),
+                                        'risk_level': str(row.get('risk_level', ''))},
+                            tier=1, occurred_at=_dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
-                        )
-                        _db.session.add(node)
+                        ))
                     _db.session.flush()
                     steps_completed.append('decisions_loaded')
 
-                _db.session.commit()
-                steps_completed.append('context_graph_loaded')
-            except Exception as e:
-                errors.append(f"context_graph: {str(e)}")
-                try:
-                    _db.session.rollback()
-                except Exception:
-                    pass
-
-            # ----------------------------------------------------------
-            # Step 5: Engagement Events → ContextNode (SIGNAL/engagement)
-            # ----------------------------------------------------------
-            try:
+                # Engagement Events
                 ee_path = data_dir / 'engagement_events.csv'
                 if ee_path.exists():
                     df_ee = pd.read_csv(str(ee_path))
@@ -1321,11 +1192,9 @@ def _process_data_impl(customer_id: int) -> dict:
                         if not acct_id:
                             continue
                         evt_date = row.get('event_date')
-                        node = ContextNode(
-                            customer_id=customer_id,
-                            account_id=acct_id,
-                            node_type='SIGNAL',
-                            node_subtype='engagement',
+                        _db.session.add(ContextNode(
+                            customer_id=customer_id, account_id=acct_id,
+                            node_type='SIGNAL', node_subtype='engagement',
                             title=str(row.get('description', ''))[:200],
                             properties={
                                 'event_type': str(row.get('event_type', '')),
@@ -1338,65 +1207,44 @@ def _process_data_impl(customer_id: int) -> dict:
                             tier=2,
                             occurred_at=pd.to_datetime(evt_date) if evt_date else _dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
-                        )
-                        _db.session.add(node)
-                    _db.session.commit()
+                        ))
                     steps_completed.append('engagement_events_loaded')
-            except Exception as e:
-                errors.append(f"engagement_events: {str(e)}")
+
+                # Products
                 try:
-                    _db.session.rollback()
+                    from models import Product
+                    prod_path = data_dir / 'products.csv'
+                    if prod_path.exists():
+                        df_p = pd.read_csv(str(prod_path))
+                        for _, row in df_p.iterrows():
+                            acct_id = _resolve_acct_id(row)
+                            if not acct_id:
+                                continue
+                            pname = str(row.get('product_name', ''))
+                            if pname:
+                                existing = Product.query.filter_by(
+                                    account_id=acct_id, product_name=pname).first()
+                                if not existing:
+                                    _db.session.add(Product(
+                                        account_id=acct_id, customer_id=customer_id,
+                                        product_name=pname,
+                                        product_type=row.get('product_category', row.get('product_type', '')),
+                                        status=row.get('status', 'active'),
+                                    ))
+                        steps_completed.append('products_loaded')
                 except Exception:
                     pass
 
-            # ----------------------------------------------------------
-            # Step 6: Products → products table
-            # ----------------------------------------------------------
-            try:
-                from models import Product
-                prod_path = data_dir / 'products.csv'
-                if prod_path.exists():
-                    df_p = pd.read_csv(str(prod_path))
-                    for _, row in df_p.iterrows():
-                        acct_id = _resolve_acct_id(row)
-                        if not acct_id:
-                            continue
-                        pname = str(row.get('product_name', ''))
-                        if not pname:
-                            continue
-                        existing = Product.query.filter_by(
-                            account_id=acct_id, product_name=pname
-                        ).first()
-                        if not existing:
-                            prod = Product(
-                                account_id=acct_id,
-                                customer_id=customer_id,
-                                product_name=pname,
-                                product_type=row.get('product_category', row.get('product_type', '')),
-                                status=row.get('status', 'active'),
-                            )
-                            _db.session.add(prod)
-                    _db.session.commit()
-                    steps_completed.append('products_loaded')
-            except Exception as e:
-                errors.append(f"products: {str(e)}")
-                try:
-                    _db.session.rollback()
-                except Exception:
-                    pass
-
-            # ----------------------------------------------------------
-            # Step 7: Account Business Profiles → accounts.profile_metadata
-            # ----------------------------------------------------------
-            try:
+                # Profiles
                 bp_path = data_dir / 'account_business_profiles.csv'
                 if bp_path.exists():
+                    accounts_by_db_id_fresh = {a.account_id: a for a in existing_accounts}
                     df_bp = pd.read_csv(str(bp_path))
                     for _, row in df_bp.iterrows():
                         acct_id = _resolve_acct_id(row)
-                        if not acct_id or acct_id not in accounts_by_db_id:
+                        if not acct_id or acct_id not in accounts_by_db_id_fresh:
                             continue
-                        acct = accounts_by_db_id[acct_id]
+                        acct = accounts_by_db_id_fresh[acct_id]
                         profile = {}
                         for col in ['arr', 'employee_count', 'industry', 'fiscal_year_end',
                                     'tech_stack', 'cloud_provider', 'competitive_landscape',
@@ -1408,125 +1256,78 @@ def _process_data_impl(customer_id: int) -> dict:
                             if val is not None and str(val).strip() and str(val) != 'nan':
                                 profile[col] = str(val) if not isinstance(val, (int, float)) else val
                         acct.profile_metadata = profile
-                        # Also update revenue from profile ARR if present
                         arr_val = row.get('arr')
                         if arr_val and str(arr_val) != 'nan':
                             try:
                                 acct.revenue = float(arr_val)
                             except (ValueError, TypeError):
                                 pass
-                    _db.session.commit()
                     steps_completed.append('profiles_loaded')
-            except Exception as e:
-                errors.append(f"profiles: {str(e)}")
-                try:
-                    _db.session.rollback()
-                except Exception:
-                    pass
 
-            # ----------------------------------------------------------
-            # Step 8: Industry Benchmarks → ContextNode (EXTERNAL_CONTEXT)
-            # ----------------------------------------------------------
-            try:
+                # Benchmarks
                 bench_path = data_dir / 'industry_benchmarks.csv'
-                if bench_path.exists():
+                if bench_path.exists() and existing_accounts:
+                    first_acct_id = existing_accounts[0].account_id
                     df_bench = pd.read_csv(str(bench_path))
-                    # Benchmarks are global — use first account
-                    first_acct_id = db_accounts[0].account_id if db_accounts else None
-                    if first_acct_id:
-                        for _, row in df_bench.iterrows():
-                            kpi_code = row.get('kpi_code', '')
-                            node = ContextNode(
-                                customer_id=customer_id,
-                                account_id=first_acct_id,
-                                node_type='EXTERNAL_CONTEXT',
-                                node_subtype='industry_benchmark',
-                                title=f'Benchmark: {kpi_code}',
-                                properties={
-                                    'kpi_code': str(kpi_code),
-                                    'benchmark_source': str(row.get('benchmark_source', '')),
-                                    'industry_p50': str(row.get('industry_p50', '')),
-                                    'industry_p25': str(row.get('industry_p25', '')),
-                                    'industry_p75': str(row.get('industry_p75', '')),
-                                    'account_percentile': str(row.get('account_percentile', '')),
-                                    'sample_size': str(row.get('sample_size', '')),
-                                },
-                                tier=1,
-                                occurred_at=_dt.utcnow(),
-                                source_platform='csv_import',
-                                source_event_id=f'bench_{kpi_code}',
-                            )
-                            _db.session.add(node)
-                        _db.session.commit()
-                        steps_completed.append('benchmarks_loaded')
-            except Exception as e:
-                errors.append(f"benchmarks: {str(e)}")
-                try:
-                    _db.session.rollback()
-                except Exception:
-                    pass
+                    for _, row in df_bench.iterrows():
+                        kpi_code = row.get('kpi_code', '')
+                        _db.session.add(ContextNode(
+                            customer_id=customer_id, account_id=first_acct_id,
+                            node_type='EXTERNAL_CONTEXT', node_subtype='industry_benchmark',
+                            title=f'Benchmark: {kpi_code}',
+                            properties={
+                                'kpi_code': str(kpi_code),
+                                'benchmark_source': str(row.get('benchmark_source', '')),
+                                'industry_p50': str(row.get('industry_p50', '')),
+                                'industry_p25': str(row.get('industry_p25', '')),
+                                'industry_p75': str(row.get('industry_p75', '')),
+                                'account_percentile': str(row.get('account_percentile', '')),
+                                'sample_size': str(row.get('sample_size', '')),
+                            },
+                            tier=1, occurred_at=_dt.utcnow(),
+                            source_platform='csv_import',
+                            source_event_id=f'bench_{kpi_code}',
+                        ))
+                    steps_completed.append('benchmarks_loaded')
 
-            # ----------------------------------------------------------
-            # Step 9: Signal Edges → context_edges (MUST RUN LAST)
-            # Requires all nodes to exist so we can resolve refs.
-            # ----------------------------------------------------------
-            try:
+                _db.session.commit()
+
+                # Signal Edges (must run last — needs all nodes)
                 se_path = data_dir / 'signal_edges.csv'
                 if se_path.exists():
                     df_se = pd.read_csv(str(se_path))
-                    # Build ref→node_id maps from all nodes just created
                     all_nodes = ContextNode.query.filter_by(customer_id=customer_id).all()
-                    # Map 1: title → node_id
-                    title_to_node = {}
-                    # Map 2: signal_ref (from properties) → node_id
-                    sigref_to_node = {}
-                    # Map 3: source_event_id → node_id
-                    srcid_to_node = {}
+                    title_to_node, sigref_to_node, srcid_to_node = {}, {}, {}
                     for n in all_nodes:
                         if n.title:
                             title_to_node[n.title.strip()] = n.node_id
                             title_to_node[n.title.strip()[:60]] = n.node_id
                         if n.source_event_id:
                             srcid_to_node[n.source_event_id] = n.node_id
-                        # Extract signal_ref from properties JSON
                         if n.properties and isinstance(n.properties, dict):
                             sr = n.properties.get('signal_ref')
                             if sr:
                                 sigref_to_node[str(sr)] = n.node_id
 
                     def _resolve_edge_ref(ref_str):
-                        """Resolve signal_edges ref like 'phase0:w3 — Title text' to node_id."""
                         if not ref_str or str(ref_str) == 'nan':
                             return None
                         ref_str = str(ref_str).strip()
-                        # Extract phase_ref prefix (e.g. 'phase0:w3') and title
-                        phase_ref = None
-                        title_part = None
+                        phase_ref, title_part = None, None
                         for sep in [' — ', ' – ', ' - ']:
                             if sep in ref_str:
                                 phase_ref = ref_str.split(sep, 1)[0].strip()
                                 title_part = ref_str.split(sep, 1)[1].strip()
                                 break
-                        # Strategy 1: Match by phase_ref in signal_ref map
                         if phase_ref:
-                            nid = sigref_to_node.get(phase_ref)
+                            nid = sigref_to_node.get(phase_ref) or srcid_to_node.get(phase_ref)
                             if nid:
                                 return nid
-                            nid = srcid_to_node.get(phase_ref)
-                            if nid:
-                                return nid
-                        # Strategy 2: Match by title
                         if title_part:
-                            nid = title_to_node.get(title_part)
-                            if nid:
-                                return nid
-                            nid = title_to_node.get(title_part[:200])
-                            if nid:
-                                return nid
-                            nid = title_to_node.get(title_part[:60])
-                            if nid:
-                                return nid
-                        # Strategy 3: Try whole ref as title or source_event_id
+                            for t in [title_part, title_part[:200], title_part[:60]]:
+                                nid = title_to_node.get(t)
+                                if nid:
+                                    return nid
                         return title_to_node.get(ref_str) or srcid_to_node.get(ref_str)
 
                     edges_created = 0
@@ -1536,16 +1337,13 @@ def _process_data_impl(customer_id: int) -> dict:
                         if from_id and to_id and from_id != to_id:
                             edge = ContextEdge(
                                 customer_id=customer_id,
-                                from_node_id=from_id,
-                                to_node_id=to_id,
+                                from_node_id=from_id, to_node_id=to_id,
                                 edge_type=str(row.get('edge_type', 'LED_TO')),
                                 weight=float(row.get('weight', 1.0)),
                                 confidence=float(row.get('confidence', 1.0)) if row.get('confidence') else 1.0,
                                 source_platform=str(row.get('source_platform', 'csv_import')),
                                 created_by=str(row.get('created_by', 'process_data')),
-                                properties={
-                                    'evidence': str(row.get('evidence', '')),
-                                },
+                                properties={'evidence': str(row.get('evidence', ''))},
                             )
                             rev = row.get('revenue_impact')
                             if rev and str(rev) != 'nan':
@@ -1562,16 +1360,67 @@ def _process_data_impl(customer_id: int) -> dict:
                             _db.session.add(edge)
                             edges_created += 1
                     _db.session.commit()
-                    steps_completed.append(f'edges_loaded ({edges_created})')
+                    steps_completed.append(f'edges_loaded_{edges_created}')
+
+                steps_completed.append('context_graph_loaded')
             except Exception as e:
-                errors.append(f"signal_edges: {str(e)}")
+                errors.append(f"context_graph: {str(e)}")
                 try:
                     _db.session.rollback()
                 except Exception:
                     pass
 
+        else:
+            # Path 1: data already in DB — skip CSV loading
+            steps_completed.append(
+                f'data_already_in_db_{len(existing_accounts)}_accounts_{existing_kpi_count}_kpis'
+            )
+
+        # ----------------------------------------------------------
+        # ALWAYS: Recalculate health scores from DB data
+        # ----------------------------------------------------------
+        try:
+            calculate_fn, get_kpi_vals, _ = common.get_health_functions(vertical)
+            from models import HealthScore, PillarScore
+            import utils.health_thresholds as ht
+
+            acct_list = Account.query.filter_by(customer_id=customer_id).all()
+            month_str = _dt.utcnow().strftime('%Y-%m-01')
+            scores_updated = 0
+            for acct in acct_list:
+                try:
+                    kpi_vals = get_kpi_vals(acct.account_id)
+                    if not kpi_vals:
+                        continue
+                    health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
+                    hs = HealthScore.query.filter_by(
+                        account_id=acct.account_id, measurement_month=month_str,
+                    ).first()
+                    if not hs:
+                        hs = HealthScore(account_id=acct.account_id, measurement_month=month_str)
+                        _db.session.add(hs)
+                    hs.health_score = round(health, 2)
+                    hs.health_status = ht.classify(health)
+                    hs.contributing_pillars = {k: round(v, 2) for k, v in pillars.items()}
+                    for pcode, pscore in pillars.items():
+                        ps = PillarScore.query.filter_by(
+                            account_id=acct.account_id, measurement_month=month_str,
+                            pillar_code=pcode,
+                        ).first()
+                        if not ps:
+                            ps = PillarScore(
+                                account_id=acct.account_id, measurement_month=month_str,
+                                pillar_code=pcode,
+                            )
+                            _db.session.add(ps)
+                        ps.pillar_score = round(pscore, 2)
+                    scores_updated += 1
+                except Exception:
+                    pass
+            _db.session.commit()
+            steps_completed.append(f'health_scores_recalculated_{scores_updated}_accounts')
         except Exception as e:
-            errors.append(f"direct_loading: {str(e)}")
+            errors.append(f"health_calc: {str(e)}")
 
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
@@ -1579,7 +1428,10 @@ def _process_data_impl(customer_id: int) -> dict:
             'scope': 'customer',
             'customer_id': customer_id,
             'status': status,
-            'csv_files_found': csv_files,
+            'accounts': len(existing_accounts),
+            'kpi_measurements': existing_kpi_count or DC2SKPI.query.filter(
+                DC2SKPI.account_id.in_(existing_acct_ids)).count(),
+            'csv_files_processed': csv_files if csv_files else None,
             'steps_completed': steps_completed,
             'errors': errors,
             'message': (
