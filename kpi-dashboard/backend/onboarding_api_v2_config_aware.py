@@ -1175,7 +1175,11 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'created_by': row.get('created_by', 'csv_import'),
                     })
 
-                    edge_type = row.get('edge_type', 'CORRELATES_WITH')
+                    _raw_etype = row.get('edge_type', 'CORRELATES_WITH')
+                    if _raw_etype is None or (isinstance(_raw_etype, float) and pd.isna(_raw_etype)):
+                        edge_type = 'CORRELATES_WITH'
+                    else:
+                        edge_type = str(_raw_etype).strip()
 
                     # If row has a specific account_id, resolve for that account only.
                     # Otherwise (arc-level edges), replicate for each account.
@@ -1195,7 +1199,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         to_nid = _resolve_ref(to_ref, acct_id)
 
                         if from_nid and to_nid:
-                            # ── Temporal guard: LED_TO edges must flow forward in time ──
+                            # ── LED_TO timestamps: log inversions but still insert ──
+                            # Synthetic CSVs often have planner/phase ordering where a decision
+                            # date trails an outcome narrative date; skipping those edges produced
+                            # near-empty graphs (only a handful of intervention links survived).
                             if edge_type == 'LED_TO':
                                 from_row = conn.execute(text(
                                     "SELECT occurred_at FROM context_nodes WHERE node_id = :nid"
@@ -1207,11 +1214,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                                         and from_row[0] is not None and to_row[0] is not None
                                         and from_row[0] > to_row[0]):
                                     current_app.logger.warning(
-                                        f"signal_edges: skipping reverse LED_TO edge "
-                                        f"node {from_nid} ({from_row[0]}) → node {to_nid} ({to_row[0]})"
+                                        f"signal_edges: LED_TO has inverted occurred_at "
+                                        f"({from_row[0]} → {to_row[0]}); inserting edge anyway "
+                                        f"(from_ref={from_ref!r} to_ref={to_ref!r})"
                                     )
-                                    unresolved += 1
-                                    continue
 
                             conn.execute(text("""
                                 INSERT INTO context_edges
