@@ -55,9 +55,9 @@ else:
     )
 
 # Enable CORS with credentials support
-# Allow both common frontend ports
-default_origins = ['http://localhost:3000', 'http://localhost:8005', 'http://127.0.0.1:3000', 'http://127.0.0.1:8005']
-CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', default_origins))
+# Origins from env var (comma-separated) or fallback to common dev ports
+_cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:8005,http://127.0.0.1:3000,http://127.0.0.1:8005').split(',')
+CORS(app, supports_credentials=True, origins=app.config.get('CORS_ORIGINS', _cors_origins))
 
 # Initialize extensions
 db.init_app(app)
@@ -98,6 +98,18 @@ login_manager.login_view = 'login'
 login_manager.session_protection = 'strong'
 # Initialize structured logging FIRST
 logger = initialize_logging()
+
+# Security headers on all responses
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    # Don't add HSTS in dev (breaks localhost)
+    if not app.debug:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by ID for Flask-Login"""

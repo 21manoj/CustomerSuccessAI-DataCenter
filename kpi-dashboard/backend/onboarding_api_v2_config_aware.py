@@ -62,6 +62,9 @@ CONTEXT_GRAPH_FILE_TYPES = {
 # Auto-generated file types — process-data will generate these if not uploaded
 AUTO_GENERATED_CG_FILES = {'decisions', 'signal_edges', 'industry_benchmarks'}
 
+# Whitelist of all allowed file_type values for upload (prevents path traversal)
+ALLOWED_FILE_TYPES = set(FILE_TYPES.keys()) | set(CONTEXT_GRAPH_FILE_TYPES.keys())
+
 # Legacy file types removed March 2026:
 # 'signals' → 'enhanced_signals', 'profiles' → 'account_business_profiles',
 # 'customers' → created by /complete, 'decision_evidence' → signal_edges
@@ -70,6 +73,18 @@ onboarding_api = Blueprint('onboarding_v2', __name__)
 
 # GAP 3.8: Progress tracking for long-running process-data (in-memory; per process)
 _onboarding_progress = {}
+
+
+def _escape_csv_cell(value):
+    """Prevent CSV injection by escaping formula characters."""
+    if isinstance(value, str) and value and value[0] in ('=', '+', '-', '@', '\t', '\r'):
+        return "'" + value
+    return value
+
+
+def _escape_dataframe_for_csv(df):
+    """Apply CSV injection escaping to all string cells in a DataFrame."""
+    return df.applymap(_escape_csv_cell) if hasattr(df, 'applymap') else df.apply(lambda col: col.map(_escape_csv_cell))
 
 
 # ============================================================================
@@ -556,35 +571,6 @@ def filter_kpi_csv_by_config(df: pd.DataFrame, customer_id: int, strict_mode: bo
 # These are generated from customer-provided data if not already uploaded.
 # ============================================================================
 
-def _row_account_id_csv(row) -> int:
-    """Resolve account id from a CSV row.
-
-    Load-driver manifest CSVs use ``source_account_id``; legacy / template CSVs
-    use ``account_id``. Ingest accepts both.
-    """
-    import pandas as pd
-
-    v = row.get("account_id") if hasattr(row, "get") else None
-    if v is None or (isinstance(v, float) and pd.isna(v)):
-        v = row.get("source_account_id") if hasattr(row, "get") else None
-    if v is None or (isinstance(v, float) and pd.isna(v)):
-        raise KeyError("missing account_id and source_account_id")
-    return int(float(v))
-
-
-def _ensure_account_id_column(df):
-    """Add ``account_id`` from ``source_account_id`` when driver-style CSV omits it."""
-    import pandas as pd
-
-    if df is None or df.empty:
-        return df
-    if "account_id" not in df.columns and "source_account_id" in df.columns:
-        out = df.copy()
-        out["account_id"] = out["source_account_id"]
-        return out
-    return df
-
-
 def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data_dir: Path, engine):
     """
     Auto-generate the 3 platform-derived context graph CSVs if they were not
@@ -608,7 +594,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                 outcomes_file = data_dir / 'outcomes.csv'
 
             if outcomes_file.exists():
-                df_outcomes = _ensure_account_id_column(pd.read_csv(outcomes_file))
+                df_outcomes = pd.read_csv(outcomes_file)
                 decisions_rows = []
                 for _, row in df_outcomes.iterrows():
                     account_id = row.get('account_id')
@@ -642,7 +628,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                     })
 
                 if decisions_rows:
-                    pd.DataFrame(decisions_rows).to_csv(decisions_file, index=False)
+                    _escape_dataframe_for_csv(pd.DataFrame(decisions_rows)).to_csv(decisions_file, index=False)
                     current_app.logger.info(f"✅ Auto-generated decisions.csv ({len(decisions_rows)} rows) at {decisions_file}")
                 else:
                     current_app.logger.info("No outcomes data to derive decisions from — skipping decisions.csv auto-generation")
@@ -672,7 +658,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
             dec_file = cg_data_dir / 'decisions.csv'
             if dec_file.exists() and outcomes_file.exists():
                 df_dec = pd.read_csv(dec_file)
-                df_out = _ensure_account_id_column(pd.read_csv(outcomes_file))
+                df_out = pd.read_csv(outcomes_file)
                 for _, dec_row in df_dec.iterrows():
                     dec_ref = dec_row.get('decision_id', '')
                     dec_acct = dec_row.get('account_id')
@@ -697,7 +683,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
             if not stk_file.exists():
                 stk_file = data_dir / 'stakeholders.csv'
             if stk_file.exists() and dec_file.exists():
-                df_stk = _ensure_account_id_column(pd.read_csv(stk_file))
+                df_stk = pd.read_csv(stk_file)
                 df_dec = pd.read_csv(dec_file)
                 for _, dec_row in df_dec.iterrows():
                     dec_ref = dec_row.get('decision_id', '')
@@ -719,7 +705,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                         })
 
             if edges_rows:
-                pd.DataFrame(edges_rows).to_csv(edges_file, index=False)
+                _escape_dataframe_for_csv(pd.DataFrame(edges_rows)).to_csv(edges_file, index=False)
                 current_app.logger.info(f"✅ Auto-generated signal_edges.csv ({len(edges_rows)} rows) at {edges_file}")
             else:
                 current_app.logger.info("Insufficient data to derive signal edges — skipping signal_edges.csv auto-generation")
@@ -766,7 +752,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                             pass
 
             if benchmarks_rows:
-                pd.DataFrame(benchmarks_rows).to_csv(benchmarks_file, index=False)
+                _escape_dataframe_for_csv(pd.DataFrame(benchmarks_rows)).to_csv(benchmarks_file, index=False)
                 current_app.logger.info(f"✅ Auto-generated industry_benchmarks.csv ({len(benchmarks_rows)} rows) at {benchmarks_file}")
             else:
                 current_app.logger.info("No KPI definitions with targets found — skipping industry_benchmarks.csv auto-generation")
@@ -783,13 +769,8 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
 
 def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[str, Any]:
     """
-    Ingest context graph CSVs into context_nodes and context_edges tables.
+    Ingest 7 context graph CSVs into context_nodes and context_edges tables.
     Only called when the context_graph feature toggle is ON for this customer.
-
-    CSVs are resolved under ``data_dir`` first, then under the parent directory when
-    ``data_dir`` is ``.../data/context_graph`` — matching upload routing where graph
-    types go in ``context_graph/`` and FILE_TYPES (e.g. enhanced_signals) in ``data/``.
-    The load driver can upload both without manual file moves.
 
     Returns dict with counts and any errors encountered.
     """
@@ -865,31 +846,14 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     signal_ref_map = {}
     all_account_ids = set()
 
-    # Upload routing: CONTEXT_GRAPH types go under data/context_graph/; FILE_TYPES
-    # (e.g. enhanced_signals) go to parent data/. Ingest must find both so the load
-    # driver's uploads are sufficient — no manual copy step.
-    _cg_parent = data_dir.parent if data_dir.name == 'context_graph' else data_dir
-
-    def _cg_csv(filename: str) -> Optional[Path]:
-        p = data_dir / filename
-        if p.exists():
-            return p
-        q = _cg_parent / filename
-        if q.exists():
-            current_app.logger.info(
-                f"context_graph ingest: using {q} for {filename} (not under {data_dir})"
-            )
-            return q
-        return None
-
     # ── 1. stakeholders.csv → STAKEHOLDER nodes ──
-    stakeholders_file = _cg_csv('stakeholders.csv')
-    if stakeholders_file:
+    stakeholders_file = data_dir / 'stakeholders.csv'
+    if stakeholders_file.exists():
         try:
             df = pd.read_csv(stakeholders_file)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
-                    account_id_val = _row_account_id_csv(row)
+                    account_id_val = int(row['account_id'])
                     all_account_ids.add(account_id_val)
                     role = row.get('role', 'end_user')
                     props = {
@@ -898,13 +862,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'department': row.get('department', ''),
                         'is_active': row.get('is_active', True),
                     }
-                    sn = str(row.get('stakeholder_name', '') or '')
-                    jt = str(row.get('title', '') or '')
-                    label = f"{sn} ({jt})" if jt else (sn or 'Stakeholder')
                     nid = _insert_node(
                         conn, customer_id, account_id_val,
                         'STAKEHOLDER', role,
-                        label,
+                        f"{row['stakeholder_name']} ({row['title']})",
                         props, tier=1, source_platform=row.get('source_platform', 'csv_import'),
                         event_time=row.get('first_observed_at'),
                     )
@@ -917,13 +878,13 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading stakeholders.csv: {e}", exc_info=True)
 
     # ── 2. engagement_events.csv → SIGNAL nodes (subtype=engagement) ──
-    events_file = _cg_csv('engagement_events.csv')
-    if events_file:
+    events_file = data_dir / 'engagement_events.csv'
+    if events_file.exists():
         try:
             df = pd.read_csv(events_file)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
-                    account_id_val = _row_account_id_csv(row)
+                    account_id_val = int(row['account_id'])
                     all_account_ids.add(account_id_val)
                     props = {
                         'channel': row.get('channel', ''),
@@ -932,11 +893,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'stakeholder_name': row.get('stakeholder_name', ''),
                         'sentiment_shift': row.get('sentiment_shift', 0),
                     }
-                    _ev_desc = row.get('description') or row.get('title') or row.get('notes') or ''
                     _insert_node(
                         conn, customer_id, account_id_val,
                         'SIGNAL', 'engagement',
-                        str(_ev_desc)[:200],
+                        row.get('description', '')[:200],
                         props, tier=2,
                         event_time=row.get('event_date'),
                         source_platform=row.get('source_platform', 'csv_import'),
@@ -949,8 +909,8 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading engagement_events.csv: {e}", exc_info=True)
 
     # ── 3. account_business_profiles.csv → ACCOUNT nodes ──
-    profiles_file = _cg_csv('account_business_profiles.csv')
-    if profiles_file:
+    profiles_file = data_dir / 'account_business_profiles.csv'
+    if profiles_file.exists():
         try:
             df = pd.read_csv(profiles_file)
             with engine.begin() as conn:
@@ -965,11 +925,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'strategic_initiatives': row.get('strategic_initiatives', ''),
                         'budget_cycle': row.get('budget_cycle', ''),
                     }
-                    _aid = _row_account_id_csv(row)
                     _insert_node(
-                        conn, customer_id, _aid,
+                        conn, customer_id, row['account_id'],
                         'ACCOUNT', 'business_profile',
-                        f"Account {_aid} - {row.get('industry', '')}",
+                        f"Account {row['account_id']} - {row.get('industry', '')}",
                         props, tier=1,
                         event_time=row.get('profile_date'),
                     )
@@ -981,13 +940,13 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading account_business_profiles.csv: {e}", exc_info=True)
 
     # ── 4. decisions.csv → DECISION nodes ──
-    decisions_file = _cg_csv('decisions.csv')
-    if decisions_file:
+    decisions_file = data_dir / 'decisions.csv'
+    if decisions_file.exists():
         try:
             df = pd.read_csv(decisions_file)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
-                    account_id_val = _row_account_id_csv(row)
+                    account_id_val = int(row['account_id'])
                     all_account_ids.add(account_id_val)
                     decision_id = str(row.get('decision_id', '')).strip()
                     props = {
@@ -1024,24 +983,20 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading decisions.csv: {e}", exc_info=True)
 
     # ── 5. outcomes.csv → OUTCOME nodes ──
-    outcomes_file = _cg_csv('outcomes.csv')
-    if outcomes_file:
+    outcomes_file = data_dir / 'outcomes.csv'
+    if outcomes_file.exists():
         try:
             df = pd.read_csv(outcomes_file)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
-                    account_id_val = _row_account_id_csv(row)
+                    account_id_val = int(row['account_id'])
                     all_account_ids.add(account_id_val)
                     outcome_id = str(row.get('outcome_id', '')).strip()
                     rev_val = None
-                    for _rk in ('revenue_value', 'revenue_impact'):
-                        try:
-                            _rv = row.get(_rk)
-                            if _rv is not None and not (isinstance(_rv, float) and pd.isna(_rv)):
-                                rev_val = float(_rv)
-                                break
-                        except (ValueError, TypeError):
-                            pass
+                    try:
+                        rev_val = float(row.get('revenue_value', 0))
+                    except (ValueError, TypeError):
+                        pass
                     outcome_type = row.get('outcome_type', 'retention')
                     rev_type_map = {
                         'expansion': 'expansion', 'retention': 'protected',
@@ -1065,10 +1020,6 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     )
                     if outcome_id:
                         outcome_ref_map.setdefault(outcome_id, {})[account_id_val] = nid
-                    # signal_edges often references outcome:<outcome_type> (e.g. revenue_at_risk) with empty outcome_id in CSV
-                    ot = str(outcome_type).strip() if outcome_type is not None else ''
-                    if ot:
-                        outcome_ref_map.setdefault(ot, {})[account_id_val] = nid
                     result['nodes_inserted'] += 1
             result['files_loaded'].append('outcomes.csv')
             current_app.logger.info(f"✅ Loaded {len(df)} outcome nodes")
@@ -1077,8 +1028,8 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading outcomes.csv: {e}", exc_info=True)
 
     # ── 6. industry_benchmarks.csv → EXTERNAL_CONTEXT nodes ──
-    benchmarks_file = _cg_csv('industry_benchmarks.csv')
-    if benchmarks_file:
+    benchmarks_file = data_dir / 'industry_benchmarks.csv'
+    if benchmarks_file.exists():
         try:
             df = pd.read_csv(benchmarks_file)
             # Benchmarks are global, not per-account; use first account of customer
@@ -1113,13 +1064,13 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading industry_benchmarks.csv: {e}", exc_info=True)
 
     # ── 7. enhanced_qualitative_signals.csv → SIGNAL nodes (with graph metadata) ──
-    enhanced_file = _cg_csv('enhanced_qualitative_signals.csv')
-    if enhanced_file:
+    enhanced_file = data_dir / 'enhanced_qualitative_signals.csv'
+    if enhanced_file.exists():
         try:
             df = pd.read_csv(enhanced_file)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
-                    account_id_val = _row_account_id_csv(row)
+                    account_id_val = int(row['account_id'])
                     all_account_ids.add(account_id_val)
                     sig_ref = str(row.get('signal_ref', '')).strip()
                     props = {
@@ -1169,10 +1120,6 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
         if not ref:
             return None
 
-        # Bare signal ref from enhanced_qualitative_signals.csv (e.g. sig_414001_1)
-        if ref.startswith('sig_'):
-            return signal_ref_map.get(ref, {}).get(account_id)
-
         # stakeholder:<role>
         if ref.startswith('stakeholder:'):
             role = ref.split(':', 1)[1]
@@ -1202,16 +1149,11 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
         return None
 
     # ── 8. signal_edges.csv → context_edges (with ref resolution) ──
-    edges_file = _cg_csv('signal_edges.csv')
-    if edges_file:
+    edges_file = data_dir / 'signal_edges.csv'
+    if edges_file.exists():
         try:
             df = pd.read_csv(edges_file)
             unresolved = 0
-            _edge_acct_col = None
-            if 'account_id' in df.columns:
-                _edge_acct_col = 'account_id'
-            elif 'source_account_id' in df.columns:
-                _edge_acct_col = 'source_account_id'
             with engine.begin() as conn:
                 for _, row in df.iterrows():
                     from_ref = str(row.get('from_signal_ref', ''))
@@ -1231,20 +1173,8 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
 
                     edge_type = row.get('edge_type', 'CORRELATES_WITH')
 
-                    # Per-row account_id (load-driver / manifest signal_edges) — refs are account-scoped
-                    if _edge_acct_col is not None:
-                        raw_aid = row.get(_edge_acct_col)
-                        if raw_aid is not None and not (isinstance(raw_aid, float) and pd.isna(raw_aid)):
-                            try:
-                                row_acct_ids = [int(float(raw_aid))]
-                            except (ValueError, TypeError):
-                                row_acct_ids = sorted(all_account_ids)
-                        else:
-                            row_acct_ids = sorted(all_account_ids)
-                    else:
-                        row_acct_ids = sorted(all_account_ids)
-
-                    for acct_id in row_acct_ids:
+                    # Edges are arc-level (not per-account), so replicate for each account
+                    for acct_id in sorted(all_account_ids):
                         from_nid = _resolve_ref(from_ref, acct_id)
                         to_nid = _resolve_ref(to_ref, acct_id)
 
@@ -2211,9 +2141,12 @@ def process_data():
                 # This enables ROI endpoints to use real actuals instead of demo_fallback
                 # -----------------------------------------------------------------
                 try:
-                    # Use vertical-appropriate health calculator (centralized resolver)
-                    from utils.vertical_health import get_health_calculator
-                    calculate_kpi_health = get_health_calculator(customer_id)
+                    # Use vertical-appropriate health calculator
+                    customer_vertical = vertical or 'dc2_s'
+                    if customer_vertical == 'saas_premium':
+                        from verticals.saas_premium.api_routes import calculate_kpi_health
+                    else:
+                        from verticals.dc2_s.api_routes import calculate_kpi_health
 
                     # Group by account_id × measurement_month
                     if 'measured_at' in df_kpis.columns:
@@ -2302,6 +2235,72 @@ def process_data():
                     current_app.logger.warning(f"⚠️  Health trend computation failed (non-fatal): {e}")
                     import traceback
                     current_app.logger.debug(traceback.format_exc())
+
+            # ── Step 2c: Compute and store health_scores (cache for API / MCP) ──
+            try:
+                from verticals.dc2_s.api_routes import calculate_kpi_health
+                from models import Account
+                hs_accounts = Account.query.filter_by(customer_id=customer_id).all()
+                health_rows_written = 0
+                with engine.begin() as conn:
+                    # Clear old scores for this customer's accounts
+                    conn.execute(text("""
+                        DELETE FROM health_scores WHERE account_id IN
+                        (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                    """), {"cid": customer_id})
+
+                    for acct in hs_accounts:
+                        # Get latest KPI values for this account
+                        kpi_rows = conn.execute(text("""
+                            SELECT kpi_code, value FROM dc2s_kpis
+                            WHERE account_id = :aid
+                            ORDER BY measured_at DESC
+                        """), {"aid": acct.account_id}).fetchall()
+
+                        if not kpi_rows:
+                            continue
+
+                        # Deduplicate to latest value per KPI
+                        seen = set()
+                        kpi_values = {}
+                        for row in kpi_rows:
+                            if row[0] not in seen:
+                                seen.add(row[0])
+                                kpi_values[row[0]] = float(row[1])
+
+                        overall_health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
+
+                        # Classify using standard thresholds
+                        if overall_health >= 70:
+                            hs_status = 'healthy'
+                        elif overall_health >= 50:
+                            hs_status = 'at_risk'
+                        else:
+                            hs_status = 'critical'
+
+                        from datetime import date
+                        conn.execute(text("""
+                            INSERT INTO health_scores (account_id, measurement_month, health_score, health_status, contributing_pillars)
+                            VALUES (:aid, :month, :score, :status, :pillars)
+                            ON CONFLICT (account_id, measurement_month) DO UPDATE
+                            SET health_score = :score, health_status = :status,
+                                contributing_pillars = :pillars, calculated_at = now()
+                        """), {
+                            "aid": acct.account_id,
+                            "month": date.today().replace(day=1),
+                            "score": round(overall_health, 2),
+                            "status": hs_status,
+                            "pillars": json.dumps(pillar_scores) if pillar_scores else None,
+                        })
+                        health_rows_written += 1
+
+                current_app.logger.info(f"✅ Wrote {health_rows_written} health_scores rows")
+                execution_state['health_scores_written'] = health_rows_written
+                execution_state['steps_completed'].append('health_scores')
+            except Exception as e:
+                current_app.logger.warning(f"⚠️  Health scores write failed (non-fatal): {e}")
+                import traceback
+                current_app.logger.debug(traceback.format_exc())
 
             # Load qualitative signals from enhanced_qualitative_signals.csv
             signals_file = data_dir / 'enhanced_qualitative_signals.csv'
@@ -3067,6 +3066,14 @@ def upload_onboarding_csv():
         
         file = request.files['file']
         file_type = request.form.get('file_type', 'accounts')
+
+        # Validate file_type against whitelist (prevents path traversal)
+        if file_type not in ALLOWED_FILE_TYPES:
+            return jsonify({
+                'status': 'error',
+                'message': f'Invalid file_type: {file_type}. Allowed: {sorted(ALLOWED_FILE_TYPES)}'
+            }), 400
+
         upload_mode = request.form.get('upload_mode', 'incremental')
         strict_mode = request.form.get('strict_mode', 'false').lower() == 'true'
         
@@ -3165,7 +3172,7 @@ def upload_onboarding_csv():
                     df_filtered, config_warnings = filter_kpi_csv_by_config(df_full, customer_id, strict_mode=strict_mode)
                     upload_warnings.extend(config_warnings)
                     if len(df_filtered) < len(df_full):
-                        df_filtered.to_csv(temp_file_path, index=False)
+                        _escape_dataframe_for_csv(df_filtered).to_csv(temp_file_path, index=False)
                 except ValueError as e:
                     temp_file_path.unlink(missing_ok=True)
                     return jsonify({'status': 'error', 'message': str(e)}), 400

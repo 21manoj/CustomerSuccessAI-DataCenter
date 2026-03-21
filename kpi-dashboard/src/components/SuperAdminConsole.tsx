@@ -282,10 +282,10 @@ const SuperAdminConsole: React.FC = () => {
         {/* Sidebar */}
         <nav className="w-56 bg-gray-900 border-r border-gray-800 min-h-[calc(100vh-64px)] p-4 space-y-1">
           {([
-            ['dashboard', 'Dashboard', '&#9632;'],
-            ['customers', 'Customers', '&#128101;'],
-            ['create-customer', 'New Customer', '&#10133;'],
-            ['activity-log', 'Activity Log', '&#128196;'],
+            ['dashboard', 'Dashboard', '\u25A0'],
+            ['customers', 'Customers', '\uD83D\uDC65'],
+            ['create-customer', 'New Customer', '\u2795'],
+            ['activity-log', 'Activity Log', '\uD83D\uDCC4'],
           ] as [View, string, string][]).map(([v, label, icon]) => (
             <button
               key={v}
@@ -300,7 +300,7 @@ const SuperAdminConsole: React.FC = () => {
                 view === v ? 'bg-blue-600/20 text-blue-400 font-medium' : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
               }`}
             >
-              <span dangerouslySetInnerHTML={{ __html: icon }} />
+              <span>{icon}</span>
               {label}
             </button>
           ))}
