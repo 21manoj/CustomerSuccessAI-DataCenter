@@ -1005,6 +1005,9 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     )
                     if outcome_id:
                         outcome_ref_map.setdefault(outcome_id, {})[account_id_val] = nid
+                    # Also register by outcome_type for V3 driver refs like "outcome:revenue_at_risk"
+                    if outcome_type:
+                        outcome_ref_map.setdefault(outcome_type, {})[account_id_val] = nid
                     result['nodes_inserted'] += 1
             result['files_loaded'].append('outcomes.csv')
             current_app.logger.info(f"✅ Loaded {len(df)} outcome nodes")
@@ -1049,7 +1052,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading industry_benchmarks.csv: {e}", exc_info=True)
 
     # ── 7. enhanced_qualitative_signals.csv → SIGNAL nodes (with graph metadata) ──
+    # File may be in context_graph/ or parent data/ directory
     enhanced_file = data_dir / 'enhanced_qualitative_signals.csv'
+    if not enhanced_file.exists():
+        enhanced_file = data_dir.parent / 'enhanced_qualitative_signals.csv'
     if enhanced_file.exists():
         try:
             df = pd.read_csv(enhanced_file)
@@ -1131,6 +1137,19 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             sref = m.group(1)
             return signal_ref_map.get(sref, {}).get(account_id)
 
+        # bare sig_XXXX_N or narrative_sig_XXXX_N  (V3 driver format)
+        if ref.startswith('sig_') or ref.startswith('narrative_sig_'):
+            return signal_ref_map.get(ref, {}).get(account_id)
+
+        # bare dec_XXXX_N  (V3 driver format without decision: prefix)
+        if ref.startswith('dec_'):
+            return decision_ref_map.get(ref, {}).get(account_id)
+
+        # outcome by outcome_type fallback (e.g. "revenue_at_risk")
+        nid = outcome_ref_map.get(ref, {}).get(account_id)
+        if nid:
+            return nid
+
         return None
 
     # ── 8. signal_edges.csv → context_edges (with ref resolution) ──
@@ -1158,8 +1177,20 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
 
                     edge_type = row.get('edge_type', 'CORRELATES_WITH')
 
-                    # Edges are arc-level (not per-account), so replicate for each account
-                    for acct_id in sorted(all_account_ids):
+                    # If row has a specific account_id, resolve for that account only.
+                    # Otherwise (arc-level edges), replicate for each account.
+                    row_acct_id = None
+                    for _col in ('account_id', 'source_account_id'):
+                        _v = row.get(_col)
+                        if _v is not None and not (isinstance(_v, float) and pd.isna(_v)):
+                            try:
+                                row_acct_id = int(float(_v))
+                                break
+                            except (ValueError, TypeError):
+                                pass
+                    acct_ids_to_resolve = [row_acct_id] if row_acct_id else sorted(all_account_ids)
+
+                    for acct_id in acct_ids_to_resolve:
                         from_nid = _resolve_ref(from_ref, acct_id)
                         to_nid = _resolve_ref(to_ref, acct_id)
 
