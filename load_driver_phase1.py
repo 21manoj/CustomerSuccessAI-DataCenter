@@ -25,4 +25,8 @@
 #     --password "$CS_PULSE_PASSWORD" \
 #     --phase intervention \
 #     --seed 42
+#
+# Mount Fuji (rich manifest, same as Mount-Everest template):
+#   --manifest manifests/Mount-Fuji_dc2.json --register --phase baseline  (note customer_id)
+#   --manifest manifests/Mount-Fuji_dc2.json -c <ID> --email admin@mount-fuji-dc.com --phase intervention
 
