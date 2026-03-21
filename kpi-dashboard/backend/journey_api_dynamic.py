@@ -231,7 +231,7 @@ def enrich_weekly_data_with_dc2s_kpis(weekly_data, account_id, start_date, total
         return
     try:
         from models import DC2SKPI
-        from verticals.dc2_s.api_routes import calculate_kpi_health
+        from utils.vertical_health import get_health_calculator
         from verticals.dc2_s.kpi_definitions import DC2S_KPIS
     except ImportError as e:
         current_app.logger.debug(f"Journey KPI enrichment skip (import): {e}")
@@ -241,6 +241,7 @@ def enrich_weekly_data_with_dc2s_kpis(weekly_data, account_id, start_date, total
         customer_id = get_customer_from_account(account_id_int)
     except (ValueError, TypeError):
         return
+    calculate_kpi_health = get_health_calculator(customer_id)
     if isinstance(start_date, str):
         try:
             start_d = datetime.strptime(start_date[:10], '%Y-%m-%d').date()

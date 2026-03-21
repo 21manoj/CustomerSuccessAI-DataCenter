@@ -147,10 +147,11 @@ def get_accounts():
                 # Calculate health score on-the-fly from KPIs (kpis table)
                 health_score = calculate_health_score_proxy(a.account_id)
                 # DC2_S: If no data in kpis/health_trends, use onboarding data in dc2s_kpis
-                if user_vertical == 'dc2_s' and (health_score is None or health_score == 50.0):
+                if health_score is None or health_score == 50.0:
                     try:
                         from models import DC2SKPI
-                        from verticals.dc2_s.api_routes import calculate_kpi_health
+                        from utils.vertical_health import get_health_calculator
+                        calculate_kpi_health = get_health_calculator(customer_id)
                         dc2s_kpis = DC2SKPI.query.filter_by(account_id=a.account_id).order_by(
                             DC2SKPI.measured_at.desc()
                         ).all()
@@ -164,7 +165,7 @@ def get_accounts():
                             if latest_kpis:
                                 overall_health, _ = calculate_kpi_health(latest_kpis, customer_id=customer_id)
                                 health_score = round(overall_health, 1)
-                                logger.info(f"[DEBUG /api/accounts] Using dc2s_kpis health (config-aware) for account {a.account_id}: {health_score}")
+                                logger.info(f"[DEBUG /api/accounts] Using vertical-aware health for account {a.account_id}: {health_score}")
                     except Exception as e:
                         logger.debug(f"DC2_S health fallback skipped for account {a.account_id}: {e}")
             

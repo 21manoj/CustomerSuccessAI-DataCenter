@@ -193,10 +193,11 @@ def analyze_account():
         # DC2_S: resolve health score from the most recent source
         # Two sources: DC2SKPI (raw KPIs) and health_trends (pre-computed scores).
         # Use whichever has the more recent timestamp.
-        if vertical == 'dc2_s':
+        if vertical in ('dc2_s', 'saas_premium', 'saas'):
             try:
                 from models import DC2SKPI, HealthTrend as HT
-                from verticals.dc2_s.api_routes import calculate_kpi_health
+                from utils.vertical_health import get_health_calculator
+                calculate_kpi_health = get_health_calculator(customer_id)
 
                 # Source 1: DC2SKPI — calculate from latest raw KPIs
                 dc2s_score = None
