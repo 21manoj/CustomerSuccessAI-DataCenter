@@ -379,7 +379,7 @@ def get_platform_instructions() -> dict:
     return {
         "instructions": content,
         "status": "loaded",
-        "tool_count": 20,
+        "tool_count": 45,
         "note": (
             "These instructions are now in your context. Follow them for all subsequent "
             "tool calls. Key rules: (1) customer_id is the tenant, account_id is one of "

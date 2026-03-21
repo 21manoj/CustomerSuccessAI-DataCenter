@@ -2221,6 +2221,72 @@ def process_data():
                     import traceback
                     current_app.logger.debug(traceback.format_exc())
 
+            # ── Step 2c: Compute and store health_scores (cache for API / MCP) ──
+            try:
+                from verticals.dc2_s.api_routes import calculate_kpi_health
+                from models import Account
+                hs_accounts = Account.query.filter_by(customer_id=customer_id).all()
+                health_rows_written = 0
+                with engine.begin() as conn:
+                    # Clear old scores for this customer's accounts
+                    conn.execute(text("""
+                        DELETE FROM health_scores WHERE account_id IN
+                        (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                    """), {"cid": customer_id})
+
+                    for acct in hs_accounts:
+                        # Get latest KPI values for this account
+                        kpi_rows = conn.execute(text("""
+                            SELECT kpi_code, value FROM dc2s_kpis
+                            WHERE account_id = :aid
+                            ORDER BY measured_at DESC
+                        """), {"aid": acct.account_id}).fetchall()
+
+                        if not kpi_rows:
+                            continue
+
+                        # Deduplicate to latest value per KPI
+                        seen = set()
+                        kpi_values = {}
+                        for row in kpi_rows:
+                            if row[0] not in seen:
+                                seen.add(row[0])
+                                kpi_values[row[0]] = float(row[1])
+
+                        overall_health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
+
+                        # Classify using standard thresholds
+                        if overall_health >= 70:
+                            hs_status = 'healthy'
+                        elif overall_health >= 50:
+                            hs_status = 'at_risk'
+                        else:
+                            hs_status = 'critical'
+
+                        from datetime import date
+                        conn.execute(text("""
+                            INSERT INTO health_scores (account_id, measurement_month, health_score, health_status, contributing_pillars)
+                            VALUES (:aid, :month, :score, :status, :pillars)
+                            ON CONFLICT (account_id, measurement_month) DO UPDATE
+                            SET health_score = :score, health_status = :status,
+                                contributing_pillars = :pillars, calculated_at = now()
+                        """), {
+                            "aid": acct.account_id,
+                            "month": date.today().replace(day=1),
+                            "score": round(overall_health, 2),
+                            "status": hs_status,
+                            "pillars": json.dumps(pillar_scores) if pillar_scores else None,
+                        })
+                        health_rows_written += 1
+
+                current_app.logger.info(f"✅ Wrote {health_rows_written} health_scores rows")
+                execution_state['health_scores_written'] = health_rows_written
+                execution_state['steps_completed'].append('health_scores')
+            except Exception as e:
+                current_app.logger.warning(f"⚠️  Health scores write failed (non-fatal): {e}")
+                import traceback
+                current_app.logger.debug(traceback.format_exc())
+
             # Load qualitative signals from enhanced_qualitative_signals.csv
             signals_file = data_dir / 'enhanced_qualitative_signals.csv'
             if signals_file.exists():
