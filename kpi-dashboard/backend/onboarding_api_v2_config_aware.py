@@ -1150,6 +1150,12 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
         if nid:
             return nid
 
+        # Phased / recovery / CSM-action signal_ref keys (e.g. intervention_sig_415001_1,
+        # baseline_narrative_sig_*, intervention_recovery_*). Prior narrow checks miss these.
+        nid = signal_ref_map.get(ref, {}).get(account_id)
+        if nid:
+            return nid
+
         return None
 
     # ── 8. signal_edges.csv → context_edges (with ref resolution) ──
