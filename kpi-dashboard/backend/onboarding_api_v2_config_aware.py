@@ -1205,11 +1205,8 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         to_nid = _resolve_ref(to_ref, acct_id)
 
                         if from_nid and to_nid:
-                            # ── LED_TO timestamps: log inversions but still insert ──
-                            # Synthetic CSVs often have planner/phase ordering where a decision
-                            # date trails an outcome narrative date; skipping those edges produced
-                            # near-empty graphs (only a handful of intervention links survived).
-                            if edge_type == 'LED_TO':
+                            # ── Temporal validation: skip backward causal edges ──
+                            if edge_type in ('LED_TO', 'TRIGGERED', 'CAUSED_BY'):
                                 from_row = conn.execute(text(
                                     "SELECT occurred_at FROM context_nodes WHERE node_id = :nid"
                                 ), {'nid': from_nid}).fetchone()
@@ -1220,10 +1217,11 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                                         and from_row[0] is not None and to_row[0] is not None
                                         and from_row[0] > to_row[0]):
                                     current_app.logger.warning(
-                                        f"signal_edges: LED_TO has inverted occurred_at "
-                                        f"({from_row[0]} → {to_row[0]}); inserting edge anyway "
+                                        f"signal_edges: skipping backward {edge_type} edge "
+                                        f"({from_row[0]} → {to_row[0]}) "
                                         f"(from_ref={from_ref!r} to_ref={to_ref!r})"
                                     )
+                                    continue
 
                             conn.execute(text("""
                                 INSERT INTO context_edges
