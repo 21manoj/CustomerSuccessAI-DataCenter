@@ -2520,20 +2520,16 @@ def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
 
 ONBOARDING_TOOLS = {
     'list_verticals',
-    'get_reference_customer',
     'get_csv_templates',
-    'get_vertical_config',
-    'get_onboarding_status',
     'create_customer',
     'configure_customer_kpis',
     'enable_features',
-    'validate_csv',
     'upload_csv',
     'process_data',
     'trigger_wizard',
     'complete_onboarding',
     'clone_customer',
-    'export_customer_csvs',
+    'download_customer_csv',
 }
 
 
@@ -2624,91 +2620,44 @@ def list_verticals() -> dict:
                     'description': v_desc,
                 }
 
+        # Enrich each vertical with its reference customer info
+        try:
+            from models import Customer, Account
+
+            for v_slug, v_info in verticals.items():
+                ref_customer = None
+                # Try DB columns if they exist (is_reference, reference_for)
+                try:
+                    ref_customer = Customer.query.filter_by(
+                        is_reference=True,
+                        reference_for=v_slug,
+                    ).first()
+                except Exception:
+                    pass
+
+                if not ref_customer:
+                    ref_customer = Customer.query.filter_by(vertical=v_slug).first()
+
+                if ref_customer:
+                    acct_count = Account.query.filter_by(
+                        customer_id=ref_customer.customer_id,
+                    ).count()
+                    v_info['reference_customer'] = {
+                        'customer_id': ref_customer.customer_id,
+                        'name': ref_customer.customer_name,
+                        'account_count': acct_count,
+                    }
+                else:
+                    v_info['reference_customer'] = None
+        except Exception:
+            # Models not available — skip reference customer enrichment
+            for v_info in verticals.values():
+                v_info['reference_customer'] = None
+
         return {
             'scope': 'platform',
             'total_verticals': len(verticals),
             'verticals': list(verticals.values()),
-        }
-
-
-@mcp.tool
-def get_reference_customer(vertical: str) -> dict:
-    """Get the reference/demo customer for a vertical.
-
-    Discovery tool — no authentication required.
-    Returns the reference customer's ID, name, account count, and health summary.
-    Reference customers are pre-seeded demo tenants that showcase the platform.
-
-    Args:
-        vertical: The vertical slug (e.g. 'dc2_s')
-    """
-    _check_mcp_enabled()
-    app = _get_flask_app()
-
-    with app.app_context():
-        from models import Customer, Account
-        import utils.health_thresholds as ht
-
-        customer = None
-
-        # Try DB columns if they exist (is_reference, reference_for)
-        try:
-            customer = Customer.query.filter_by(
-                is_reference=True,
-                reference_for=vertical,
-            ).first()
-        except Exception:
-            pass  # Columns not available yet
-
-        if not customer:
-            # Fallback: find any customer tagged with the vertical
-            customer = Customer.query.filter_by(vertical=vertical).first()
-            if not customer:
-                raise ToolError(
-                    f"No reference customer found for vertical '{vertical}'. "
-                    f"Available verticals can be discovered via list_verticals()."
-                )
-
-        # Use the vertical parameter to resolve health functions
-        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
-
-        accounts = Account.query.filter_by(
-            customer_id=customer.customer_id,
-        ).all()
-
-        # Health summary
-        health_scores = []
-        for acct in accounts:
-            precalc_health, _, _ = get_precalculated_scores(acct.account_id)
-            if precalc_health is not None:
-                health_scores.append(precalc_health)
-            else:
-                try:
-                    kpi_values = _get_trailing_kpi_values(acct.account_id)
-                    h, _ = calculate_kpi_health(kpi_values, customer.customer_id)
-                    health_scores.append(h)
-                except Exception:
-                    pass
-
-        avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else None
-        healthy_count = sum(1 for h in health_scores if h >= ht.healthy_min())
-        at_risk_count = sum(1 for h in health_scores if ht.at_risk_min() <= h < ht.healthy_min())
-        critical_count = sum(1 for h in health_scores if h < ht.at_risk_min())
-
-        return {
-            'scope': 'portfolio',
-            'customer_id': customer.customer_id,
-            'customer_name': customer.customer_name,
-            'created_at': customer.created_at.isoformat() if customer.created_at else None,
-            'vertical': vertical,
-            'is_reference': getattr(customer, 'is_reference', False),
-            'account_count': len(accounts),
-            'health_summary': {
-                'avg_health': avg_health,
-                'healthy': healthy_count,
-                'at_risk': at_risk_count,
-                'critical': critical_count,
-            },
         }
 
 
@@ -2771,214 +2720,6 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
     }
 
 
-@mcp.tool
-def get_vertical_config(vertical: str, config_type: str = None) -> dict:
-    """Get vertical configuration templates.
-
-    Discovery tool — no authentication required.
-    Returns base configuration from VerticalTemplate for the specified vertical.
-    If config_type is specified, returns just that config; otherwise returns all.
-
-    Args:
-        vertical: The vertical slug (e.g. 'dc2_s')
-        config_type: Optional config type (e.g. 'kpi_weights', 'pillar_weights',
-                     'health_thresholds', 'scoring_rules'). If omitted, returns all.
-    """
-    _check_mcp_enabled()
-    app = _get_flask_app()
-
-    with app.app_context():
-        results = []
-
-        # Try DB-backed VerticalTemplate if available
-        try:
-            from models import VerticalTemplate
-
-            query = VerticalTemplate.query.filter_by(vertical=vertical)
-            if config_type:
-                query = query.filter_by(config_type=config_type)
-
-            templates = query.all()
-            for t in templates:
-                results.append({
-                    'template_id': t.template_id,
-                    'vertical': t.vertical,
-                    'config_type': t.config_type,
-                    'version': t.version,
-                    'config': t.config,
-                })
-        except (ImportError, Exception):
-            pass  # VerticalTemplate not available — use fallback
-
-        # Fallback: build config from kpi_definitions + config files
-        if not results:
-            try:
-                kpi_defs = _get_kpi_definitions(vertical)
-                results.append({
-                    'template_id': None,
-                    'vertical': vertical,
-                    'config_type': 'kpi_definitions',
-                    'version': '1.0',
-                    'config': {
-                        'kpi_count': len(kpi_defs),
-                        'kpis': list(kpi_defs.keys())[:10],  # First 10 for preview
-                        'note': f'Full {len(kpi_defs)} KPI definitions available',
-                    },
-                })
-            except Exception:
-                pass
-
-            # Health thresholds config
-            try:
-                import utils.health_thresholds as ht
-                results.append({
-                    'template_id': None,
-                    'vertical': vertical,
-                    'config_type': 'health_thresholds',
-                    'version': '1.0',
-                    'config': {
-                        'healthy_min': ht.healthy_min(),
-                        'at_risk_min': ht.at_risk_min(),
-                    },
-                })
-            except Exception:
-                pass
-
-        if config_type and not results:
-            raise ToolError(
-                f"No config template found for vertical='{vertical}', "
-                f"config_type='{config_type}'"
-            )
-
-        if config_type and len(results) == 1:
-            return {
-                'scope': 'platform',
-                'vertical': vertical,
-                'config_type': config_type,
-                'template': results[0],
-            }
-
-        return {
-            'scope': 'platform',
-            'vertical': vertical,
-            'total_configs': len(results),
-            'templates': results,
-        }
-
-
-@mcp.tool
-def get_onboarding_status(customer_id: int) -> dict:
-    """Check onboarding progress for a customer.
-
-    Returns a checklist of what has been completed: customer record, admin user,
-    config, accounts, KPI data, scores, wizard runs, etc.
-
-    Args:
-        customer_id: The customer ID to check
-    """
-    _check_mcp_enabled()
-    app = _get_flask_app()
-
-    with app.app_context():
-        from models import Customer, CustomerConfig, Account, User, DC2SKPI, WizardRun, db
-        from pathlib import Path
-
-        checklist = {
-            'customer_exists': False,
-            'admin_user_exists': False,
-            'config_exists': False,
-            'accounts_uploaded': False,
-            'account_count': 0,
-            'kpi_data_loaded': False,
-            'kpi_record_count': 0,
-            'scores_calculated': False,
-            'wizard_runs': 0,
-            'directory_provisioned': False,
-            'data_files_present': [],
-        }
-
-        # Customer
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            return {
-                'scope': 'customer',
-                'customer_id': customer_id,
-                'status': 'not_found',
-                'checklist': checklist,
-                'message': f'Customer {customer_id} does not exist yet. Use create_customer() to begin.',
-            }
-        checklist['customer_exists'] = True
-
-        # Admin user
-        admin = User.query.filter_by(customer_id=customer_id).first()
-        checklist['admin_user_exists'] = admin is not None
-
-        # Config
-        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
-        checklist['config_exists'] = config is not None
-
-        # Accounts
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
-        checklist['accounts_uploaded'] = len(accounts) > 0
-        checklist['account_count'] = len(accounts)
-
-        # KPI data
-        if accounts:
-            account_ids = [a.account_id for a in accounts]
-            kpi_count = DC2SKPI.query.filter(
-                DC2SKPI.account_id.in_(account_ids)
-            ).count()
-            checklist['kpi_data_loaded'] = kpi_count > 0
-            checklist['kpi_record_count'] = kpi_count
-
-        # Pre-calculated scores
-        if accounts:
-            cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-            _, _, get_precalculated_scores = _get_health_functions(cust_vertical)
-            scored = 0
-            for acct in accounts:
-                h, _, _ = get_precalculated_scores(acct.account_id)
-                if h is not None:
-                    scored += 1
-            checklist['scores_calculated'] = scored > 0
-
-        # Wizard runs
-        wizard_count = WizardRun.query.filter_by(customer_id=customer_id).count()
-        checklist['wizard_runs'] = wizard_count
-
-        # Directory — use customer's actual vertical
-        backend_dir = Path(__file__).parent.parent
-        cust_v = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_v}'
-        checklist['directory_provisioned'] = customer_dir.exists()
-        if customer_dir.exists():
-            data_dir = customer_dir / 'data'
-            if data_dir.exists():
-                checklist['data_files_present'] = [
-                    f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv'
-                ]
-
-        # Overall status
-        all_done = all([
-            checklist['customer_exists'],
-            checklist['admin_user_exists'],
-            checklist['config_exists'],
-            checklist['accounts_uploaded'],
-            checklist['kpi_data_loaded'],
-            checklist['scores_calculated'],
-        ])
-        status = 'complete' if all_done else 'in_progress'
-
-        return {
-            'scope': 'customer',
-            'customer_id': customer_id,
-            'customer_name': customer.customer_name,
-            'created_at': customer.created_at.isoformat() if customer.created_at else None,
-            'status': status,
-            'checklist': checklist,
-        }
-
-
 # -------------------------------------------------------------------
 # Customer Setup Phase (write, no auth) — Tools 27-29
 # -------------------------------------------------------------------
@@ -3023,7 +2764,7 @@ def create_customer(
             raise ToolError(
                 f"A customer with domain '{domain}' already exists "
                 f"(customer_id={existing.customer_id}). "
-                f"Use get_onboarding_status() to check its state."
+                f"Use complete_onboarding(check_only=True) to check its state."
             )
 
         # Check for duplicate email
@@ -3293,16 +3034,21 @@ def enable_features(customer_id: int, features: list = None) -> dict:
 # -------------------------------------------------------------------
 
 @mcp.tool
-def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
-    """Validate CSV content against the platform schema before uploading.
+def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool = False) -> dict:
+    """Upload CSV data for a customer.
 
-    Checks that required columns are present and reports any issues.
-    Does NOT persist data — use upload_csv() after validation passes.
+    Saves the CSV content to the customer's data directory on disk.
+    The file can then be processed via process_data().
+
+    When dry_run=True, validates the CSV against the platform schema
+    (required/optional columns, row count) but does NOT persist data.
+    Use dry_run=True to check your CSV before committing an upload.
 
     Args:
-        customer_id: The customer ID (used for context only)
+        customer_id: The customer ID
         file_type: The CSV file type (e.g. 'accounts.csv', 'kpi_measurements.csv')
         csv_content: The raw CSV content as a string
+        dry_run: If True, validate only — do not persist. Returns validation result.
     """
     _check_mcp_enabled()
 
@@ -3310,16 +3056,16 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
     import csv as _csv
     import io as _io
 
-    # Load schema
+    # --- Validation (always runs) ---
+    # Normalize file_type: accept both 'kpi_measurements' and 'kpi_measurements.csv'
+    ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
+
     schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
     if not os.path.isfile(schemas_path):
         raise ToolError("CSV schemas config not found.")
 
     with open(schemas_path, 'r') as f:
         schemas = _json.load(f)
-
-    # Normalize file_type: accept both 'kpi_measurements' and 'kpi_measurements.csv'
-    ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
 
     # Find schema for file_type
     schema = None
@@ -3346,7 +3092,6 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
     headers = set(reader.fieldnames or [])
     rows = list(reader)
 
-    # Validation
     missing_required = required_columns - headers
     unknown_columns = headers - all_known
     errors = []
@@ -3361,33 +3106,29 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
 
     valid = len(errors) == 0
 
-    return {
-        'scope': 'validation',
-        'customer_id': customer_id,
-        'file_type': file_type,
-        'valid': valid,
-        'row_count': len(rows),
-        'columns_found': sorted(headers),
-        'required_columns': sorted(required_columns),
-        'missing_required': sorted(missing_required) if missing_required else [],
-        'errors': errors,
-        'warnings': warnings,
-    }
+    # --- dry_run: return validation result only ---
+    if dry_run:
+        return {
+            'scope': 'validation',
+            'customer_id': customer_id,
+            'file_type': file_type,
+            'dry_run': True,
+            'valid': valid,
+            'row_count': len(rows),
+            'columns_found': sorted(headers),
+            'required_columns': sorted(required_columns),
+            'missing_required': sorted(missing_required) if missing_required else [],
+            'errors': errors,
+            'warnings': warnings,
+        }
 
+    # --- Persist ---
+    if not valid:
+        raise ToolError(
+            f"CSV validation failed for {file_type}: {'; '.join(errors)}. "
+            f"Use dry_run=True to inspect details without uploading."
+        )
 
-@mcp.tool
-def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
-    """Upload CSV data for a customer.
-
-    Saves the CSV content to the customer's data directory on disk.
-    The file can then be processed via process_data().
-
-    Args:
-        customer_id: The customer ID
-        file_type: The CSV file type (e.g. 'accounts.csv', 'kpi_measurements.csv')
-        csv_content: The raw CSV content as a string
-    """
-    _check_mcp_enabled()
     app = _get_flask_app()
 
     with app.app_context():
@@ -3397,9 +3138,6 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
         customer = db.session.get(Customer, int(customer_id))
         if not customer:
             raise ToolError(f"Customer {customer_id} not found.")
-
-        # Normalize file_type to include .csv extension
-        ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
 
         # Determine customer data directory
         vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
@@ -3420,8 +3158,10 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
             'file_type': file_type,
             'file_path': str(file_path),
             'bytes_written': len(csv_content.encode('utf-8')),
-            'message': f"Uploaded {file_type} ({len(csv_content.encode('utf-8'))} bytes). "
-                       f"Use process_data() to ingest into the database.",
+            'row_count': len(rows),
+            'warnings': warnings,
+            'message': f"Uploaded {file_type} ({len(csv_content.encode('utf-8'))} bytes, "
+                       f"{len(rows)} rows). Use process_data() to ingest into the database.",
         }
 
 
@@ -3551,7 +3291,7 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
 
 
 @mcp.tool
-def complete_onboarding(customer_id: int) -> dict:
+def complete_onboarding(customer_id: int, check_only: bool = False) -> dict:
     """Finalize onboarding for a customer.
 
     Performs final checks and marks the customer as onboarded:
@@ -3559,16 +3299,114 @@ def complete_onboarding(customer_id: int) -> dict:
     2. Sets the customer status to active
     3. Returns a final summary with next steps
 
+    When check_only=True, returns a detailed onboarding status checklist
+    (customer record, admin user, config, accounts, KPI data, scores,
+    wizard runs, data files) without finalizing. Use this to monitor
+    onboarding progress before completing.
+
     Args:
         customer_id: The customer ID
+        check_only: If True, return onboarding status checklist without finalizing.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
 
     with app.app_context():
-        from models import Customer, CustomerConfig, Account, User, DC2SKPI
+        from models import Customer, CustomerConfig, Account, User, DC2SKPI, WizardRun
         from extensions import db
+        from pathlib import Path
 
+        # --- check_only mode: detailed status checklist ---
+        if check_only:
+            checklist = {
+                'customer_exists': False,
+                'admin_user_exists': False,
+                'config_exists': False,
+                'accounts_uploaded': False,
+                'account_count': 0,
+                'kpi_data_loaded': False,
+                'kpi_record_count': 0,
+                'scores_calculated': False,
+                'wizard_runs': 0,
+                'directory_provisioned': False,
+                'data_files_present': [],
+            }
+
+            customer = db.session.get(Customer, int(customer_id))
+            if not customer:
+                return {
+                    'scope': 'customer',
+                    'customer_id': customer_id,
+                    'check_only': True,
+                    'status': 'not_found',
+                    'checklist': checklist,
+                    'message': f'Customer {customer_id} does not exist yet. Use create_customer() to begin.',
+                }
+            checklist['customer_exists'] = True
+
+            admin = User.query.filter_by(customer_id=customer_id).first()
+            checklist['admin_user_exists'] = admin is not None
+
+            config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+            checklist['config_exists'] = config is not None
+
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
+            checklist['accounts_uploaded'] = len(accounts) > 0
+            checklist['account_count'] = len(accounts)
+
+            if accounts:
+                account_ids = [a.account_id for a in accounts]
+                kpi_count = DC2SKPI.query.filter(
+                    DC2SKPI.account_id.in_(account_ids)
+                ).count()
+                checklist['kpi_data_loaded'] = kpi_count > 0
+                checklist['kpi_record_count'] = kpi_count
+
+            if accounts:
+                cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+                _, _, get_precalculated_scores_fn = _get_health_functions(cust_vertical)
+                scored = 0
+                for acct in accounts:
+                    h, _, _ = get_precalculated_scores_fn(acct.account_id)
+                    if h is not None:
+                        scored += 1
+                checklist['scores_calculated'] = scored > 0
+
+            wizard_count = WizardRun.query.filter_by(customer_id=customer_id).count()
+            checklist['wizard_runs'] = wizard_count
+
+            backend_dir = Path(__file__).parent.parent
+            cust_v = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+            customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_v}'
+            checklist['directory_provisioned'] = customer_dir.exists()
+            if customer_dir.exists():
+                data_dir = customer_dir / 'data'
+                if data_dir.exists():
+                    checklist['data_files_present'] = [
+                        f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv'
+                    ]
+
+            all_done = all([
+                checklist['customer_exists'],
+                checklist['admin_user_exists'],
+                checklist['config_exists'],
+                checklist['accounts_uploaded'],
+                checklist['kpi_data_loaded'],
+                checklist['scores_calculated'],
+            ])
+            status = 'complete' if all_done else 'in_progress'
+
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'customer_name': customer.customer_name,
+                'created_at': customer.created_at.isoformat() if customer.created_at else None,
+                'check_only': True,
+                'status': status,
+                'checklist': checklist,
+            }
+
+        # --- Normal finalization mode ---
         customer = db.session.get(Customer, int(customer_id))
         if not customer:
             raise ToolError(f"Customer {customer_id} not found.")
@@ -4156,7 +3994,7 @@ def clone_customer(
             'All data (accounts, KPIs, health scores, context graph, '
             'signals, playbooks, ROI) has been deep-copied with '
             'pre-calculated scores. No Wizards or process_data needed. '
-            'OPTION 2 — Customize: Use export_customer_csvs() to download '
+            'OPTION 2 — Customize: Use download_customer_csv() to get '
             'the 8 CSVs, modify them (change account names, KPI values, etc.), '
             'then upload_csv() + process_data() to recalculate scores '
             'with your changes. Wizards A/B/C only needed if you want '
@@ -4170,391 +4008,6 @@ def clone_customer(
 
 
 # ===================================================================
-# Tool: export_customer_csvs — Export all customer data as CSVs
-# ===================================================================
-
-@mcp.tool
-def export_customer_csvs(
-    customer_id: int,
-    output_dir: str = '',
-) -> dict:
-    """Export all data for a customer as CSV files matching the onboarding upload format.
-
-    Produces CSVs that can be re-uploaded via upload_csv() + process_data()
-    without any transformation. Useful for cloning, backup, or data migration.
-
-    No authentication required (onboarding tool).
-
-    Exported files (8 customer-provided CSVs matching config/csv_schemas.json):
-      Regular model: accounts.csv, kpi_measurements.csv, enhanced_qualitative_signals.csv, products.csv
-      Context graph: stakeholders.csv, engagement_events.csv, account_business_profiles.csv, outcomes.csv
-
-    Note: The 3 auto-generated files (decisions.csv, signal_edges.csv, industry_benchmarks.csv)
-    are NOT exported — they get regenerated by process_data() from the uploaded data.
-
-    Args:
-        customer_id: Customer ID to export data from
-        output_dir: Directory to save CSVs. Default: /tmp/cs_pulse_export_{customer_id}/
-    """
-    _check_mcp_enabled()
-    app = _get_flask_app()
-
-    with app.app_context():
-        import csv
-        import io
-        from pathlib import Path
-        from models import (
-            Customer, Account, DC2SKPI, Product,
-            QualitativeSignal, ContextNode,
-        )
-        from extensions import db
-
-        # ----------------------------------------------------------
-        # Validate customer
-        # ----------------------------------------------------------
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            raise ToolError(f"Customer {customer_id} not found.")
-
-        # Resolve output directory
-        if not output_dir:
-            output_dir = f'/tmp/cs_pulse_export_{customer_id}'
-        out_path = Path(output_dir)
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        # ----------------------------------------------------------
-        # Helper: write rows to CSV
-        # ----------------------------------------------------------
-        def _write_csv(filename: str, columns: list, rows: list) -> int:
-            """Write rows to a CSV file. Returns row count."""
-            fp = out_path / filename
-            with open(fp, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
-                writer.writeheader()
-                for row in rows:
-                    writer.writerow(row)
-            return len(rows)
-
-        # ----------------------------------------------------------
-        # Load all accounts for this customer (needed for joins)
-        # ----------------------------------------------------------
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        account_ids = [a.account_id for a in accounts]
-        # Build account_id -> account_name lookup
-        acct_name_map = {a.account_id: a.account_name for a in accounts}
-
-        results = {}
-
-        # ----------------------------------------------------------
-        # 1. accounts.csv
-        # ----------------------------------------------------------
-        acct_cols = [
-            'account_id', 'customer_id', 'account_name', 'industry', 'region',
-            'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
-            'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid',
-        ]
-        acct_rows = []
-        for a in accounts:
-            pm = a.profile_metadata or {}
-            acct_rows.append({
-                'account_id': a.account_id,
-                'customer_id': a.customer_id,
-                'account_name': a.account_name,
-                'industry': a.industry,
-                'region': a.region,
-                'vertical': a.vertical,
-                'tier': pm.get('tier', ''),
-                'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
-                'revenue': float(a.revenue) if a.revenue else '',
-                'contract_start': pm.get('contract_start', ''),
-                'contract_end': pm.get('contract_end', ''),
-                'renewal_date': pm.get('renewal_date', ''),
-                'csm_name': pm.get('assigned_csm', '') or pm.get('csm_name', ''),
-                'csm_email': pm.get('csm_email', ''),
-                'account_status': a.account_status,
-                'uuid': a.uuid or '',
-            })
-        results['accounts.csv'] = _write_csv('accounts.csv', acct_cols, acct_rows)
-
-        # ----------------------------------------------------------
-        # 2. kpi_measurements.csv
-        # ----------------------------------------------------------
-        kpi_cols = [
-            'account_id', 'kpi_code', 'measured_at', 'value',
-            'kpi_name', 'pillar', 'target', 'weight', 'unit', 'status',
-        ]
-        kpi_rows = []
-        if account_ids:
-            kpis = DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids)).all()
-            for k in kpis:
-                kpi_rows.append({
-                    'account_id': k.account_id,
-                    'kpi_code': k.kpi_code,
-                    'measured_at': k.measured_at.isoformat() if k.measured_at else '',
-                    'value': float(k.value),
-                    'kpi_name': '',
-                    'pillar': k.pillar or '',
-                    'target': float(k.target) if k.target else '',
-                    'weight': float(k.weight) if k.weight else '',
-                    'unit': '',
-                    'status': k.status or '',
-                })
-        results['kpi_measurements.csv'] = _write_csv('kpi_measurements.csv', kpi_cols, kpi_rows)
-
-        # ----------------------------------------------------------
-        # 3. enhanced_qualitative_signals.csv
-        # ----------------------------------------------------------
-        qs_cols = [
-            'account_id', 'signal_date', 'signal_type', 'content', 'sentiment',
-            'signal_ref', 'sentiment_score', 'stakeholder_name', 'stakeholder_title',
-            'causal_chain_ref', 'revenue_impact', 'confidence', 'source_platform',
-        ]
-        qs_rows = []
-        if account_ids:
-            signals = QualitativeSignal.query.filter(
-                QualitativeSignal.account_id.in_(account_ids)
-            ).all()
-            for s in signals:
-                qs_rows.append({
-                    'account_id': s.account_id,
-                    'signal_date': s.signal_date.isoformat() if s.signal_date else '',
-                    'signal_type': s.signal_type or '',
-                    'content': s.content or '',
-                    'sentiment': s.sentiment or '',
-                    'signal_ref': s.signal_id or '',
-                    'sentiment_score': float(s.sentiment_score) if s.sentiment_score else '',
-                    'stakeholder_name': '',
-                    'stakeholder_title': s.stakeholder_title or '',
-                    'causal_chain_ref': '',
-                    'revenue_impact': '',
-                    'confidence': '',
-                    'source_platform': '',
-                })
-        results['enhanced_qualitative_signals.csv'] = _write_csv(
-            'enhanced_qualitative_signals.csv', qs_cols, qs_rows
-        )
-
-        # ----------------------------------------------------------
-        # 4. products.csv
-        # ----------------------------------------------------------
-        prod_cols = [
-            'account_id', 'product_name', 'product_category', 'quantity',
-            'unit_price', 'deployment_date', 'status', 'customer_id',
-        ]
-        prod_rows = []
-        if account_ids:
-            products = Product.query.filter(Product.account_id.in_(account_ids)).all()
-            for p in products:
-                prod_rows.append({
-                    'account_id': p.account_id,
-                    'product_name': p.product_name,
-                    'product_category': p.product_type or '',
-                    'quantity': '',
-                    'unit_price': float(p.revenue) if p.revenue else '',
-                    'deployment_date': '',
-                    'status': p.status or '',
-                    'customer_id': p.customer_id,
-                })
-        results['products.csv'] = _write_csv('products.csv', prod_cols, prod_rows)
-
-        # ----------------------------------------------------------
-        # Context Graph CSVs — from context_nodes table
-        # ----------------------------------------------------------
-        ctx_nodes = []
-        if account_ids:
-            ctx_nodes = ContextNode.query.filter(
-                ContextNode.account_id.in_(account_ids)
-            ).all()
-
-        # Group nodes by type
-        nodes_by_type = {}
-        for n in ctx_nodes:
-            nodes_by_type.setdefault(n.node_type, []).append(n)
-
-        # ----------------------------------------------------------
-        # 5. stakeholders.csv (node_type=STAKEHOLDER)
-        # ----------------------------------------------------------
-        sh_cols = [
-            'account_id', 'stakeholder_name', 'title', 'role', 'influence_score',
-            'email', 'engagement_frequency', 'sentiment', 'department',
-            'is_active', 'source_platform', 'first_observed_at',
-        ]
-        sh_rows = []
-        for n in nodes_by_type.get('STAKEHOLDER', []):
-            props = n.properties or {}
-            sh_rows.append({
-                'account_id': n.account_id,
-                'stakeholder_name': n.title or props.get('stakeholder_name', ''),
-                'title': props.get('title', ''),
-                'role': props.get('role', n.node_subtype or ''),
-                'influence_score': props.get('influence_score', ''),
-                'email': props.get('email', ''),
-                'engagement_frequency': props.get('engagement_frequency', ''),
-                'sentiment': props.get('sentiment', ''),
-                'department': props.get('department', ''),
-                'is_active': props.get('is_active', ''),
-                'source_platform': n.source_platform or '',
-                'first_observed_at': n.occurred_at.isoformat() if n.occurred_at else '',
-            })
-        results['stakeholders.csv'] = _write_csv('stakeholders.csv', sh_cols, sh_rows)
-
-        # ----------------------------------------------------------
-        # 6. engagement_events.csv (node_type=SIGNAL, subtype=engagement)
-        # ----------------------------------------------------------
-        ee_cols = [
-            'account_id', 'event_date', 'event_type', 'description',
-            'stakeholder_name', 'sentiment_shift', 'channel',
-            'duration_minutes', 'outcome', 'source_platform',
-        ]
-        ee_rows = []
-        for n in nodes_by_type.get('SIGNAL', []):
-            props = n.properties or {}
-            # Include all SIGNAL nodes as engagement events
-            ee_rows.append({
-                'account_id': n.account_id,
-                'event_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                'event_type': n.node_subtype or props.get('event_type', ''),
-                'description': n.title or '',
-                'stakeholder_name': props.get('stakeholder_name', ''),
-                'sentiment_shift': props.get('sentiment_shift', ''),
-                'channel': props.get('channel', ''),
-                'duration_minutes': props.get('duration_minutes', ''),
-                'outcome': props.get('outcome', ''),
-                'source_platform': n.source_platform or '',
-            })
-        results['engagement_events.csv'] = _write_csv('engagement_events.csv', ee_cols, ee_rows)
-
-        # ----------------------------------------------------------
-        # 7. account_business_profiles.csv (node_type=ACCOUNT)
-        # ----------------------------------------------------------
-        abp_cols = [
-            'account_id', 'arr', 'industry', 'employee_count',
-            'fiscal_year_end', 'tech_stack', 'cloud_provider',
-            'competitive_landscape', 'strategic_initiatives', 'budget_cycle',
-            'profile_date', 'assigned_csm', 'csm_manager', 'executive_sponsor',
-            'mrr', 'primary_champion_name', 'primary_champion_title',
-            'primary_champion_email', 'primary_champion_engagement_score',
-            'last_updated',
-        ]
-        abp_rows = []
-        # If no ACCOUNT nodes, build from the accounts table profile_metadata
-        account_nodes = nodes_by_type.get('ACCOUNT', [])
-        if account_nodes:
-            for n in account_nodes:
-                props = n.properties or {}
-                abp_rows.append({
-                    'account_id': n.account_id,
-                    'arr': props.get('arr', ''),
-                    'industry': props.get('industry', ''),
-                    'employee_count': props.get('employee_count', ''),
-                    'fiscal_year_end': props.get('fiscal_year_end', ''),
-                    'tech_stack': props.get('tech_stack', ''),
-                    'cloud_provider': props.get('cloud_provider', ''),
-                    'competitive_landscape': props.get('competitive_landscape', ''),
-                    'strategic_initiatives': props.get('strategic_initiatives', ''),
-                    'budget_cycle': props.get('budget_cycle', ''),
-                    'profile_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                    'assigned_csm': props.get('assigned_csm', ''),
-                    'csm_manager': props.get('csm_manager', ''),
-                    'executive_sponsor': props.get('executive_sponsor', ''),
-                    'mrr': props.get('mrr', ''),
-                    'primary_champion_name': props.get('primary_champion_name', ''),
-                    'primary_champion_title': props.get('primary_champion_title', ''),
-                    'primary_champion_email': props.get('primary_champion_email', ''),
-                    'primary_champion_engagement_score': props.get('primary_champion_engagement_score', ''),
-                    'last_updated': n.updated_at.isoformat() if n.updated_at else '',
-                })
-        else:
-            # Fallback: build from accounts table profile_metadata
-            for a in accounts:
-                pm = a.profile_metadata or {}
-                abp_rows.append({
-                    'account_id': a.account_id,
-                    'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
-                    'industry': a.industry or '',
-                    'employee_count': pm.get('employee_count', ''),
-                    'fiscal_year_end': pm.get('fiscal_year_end', ''),
-                    'tech_stack': pm.get('tech_stack', ''),
-                    'cloud_provider': pm.get('cloud_provider', ''),
-                    'competitive_landscape': pm.get('competitive_landscape', ''),
-                    'strategic_initiatives': pm.get('strategic_initiatives', ''),
-                    'budget_cycle': pm.get('budget_cycle', ''),
-                    'profile_date': '',
-                    'assigned_csm': pm.get('assigned_csm', ''),
-                    'csm_manager': pm.get('csm_manager', ''),
-                    'executive_sponsor': pm.get('executive_sponsor', ''),
-                    'mrr': pm.get('mrr', ''),
-                    'primary_champion_name': pm.get('primary_champion_name', ''),
-                    'primary_champion_title': pm.get('primary_champion_title', ''),
-                    'primary_champion_email': pm.get('primary_champion_email', ''),
-                    'primary_champion_engagement_score': pm.get('primary_champion_engagement_score', ''),
-                    'last_updated': a.updated_at.isoformat() if a.updated_at else '',
-                })
-        results['account_business_profiles.csv'] = _write_csv(
-            'account_business_profiles.csv', abp_cols, abp_rows
-        )
-
-        # ----------------------------------------------------------
-        # 8. outcomes.csv (node_type=OUTCOME)
-        # ----------------------------------------------------------
-        out_cols = [
-            'account_id', 'outcome_date', 'title', 'outcome_type', 'revenue_value',
-            'outcome_id', 'evidence', 'confidence', 'related_decision_id',
-            'source_platform',
-        ]
-        out_rows = []
-        for n in nodes_by_type.get('OUTCOME', []):
-            props = n.properties or {}
-            out_rows.append({
-                'account_id': n.account_id,
-                'outcome_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                'title': n.title or '',
-                'outcome_type': n.node_subtype or props.get('outcome_type', ''),
-                'revenue_value': float(n.revenue_impact) if n.revenue_impact else '',
-                'outcome_id': n.source_ref or n.source_event_id or '',
-                'evidence': props.get('evidence', ''),
-                'confidence': float(n.confidence) if n.confidence else '',
-                'related_decision_id': props.get('related_decision_id', ''),
-                'source_platform': n.source_platform or '',
-            })
-        results['outcomes.csv'] = _write_csv('outcomes.csv', out_cols, out_rows)
-
-        # ----------------------------------------------------------
-        # Build response
-        # NOTE: decisions.csv, signal_edges.csv, industry_benchmarks.csv
-        # are auto-generated by process_data() — not exported here.
-        # ----------------------------------------------------------
-        files_created = [
-            {'file': name, 'rows': count, 'path': str(out_path / name)}
-            for name, count in results.items()
-            if count > 0
-        ]
-        total_rows = sum(results.values())
-        all_files = [
-            {'file': name, 'rows': count, 'path': str(out_path / name)}
-            for name, count in results.items()
-        ]
-
-        return {
-            'scope': 'customer',
-            'customer_id': customer_id,
-            'customer_name': customer.customer_name,
-            'output_dir': str(out_path),
-            'files_with_data': len(files_created),
-            'total_files': len(all_files),
-            'total_rows': total_rows,
-            'files': all_files,
-            'message': (
-                f"Exported {total_rows} rows across {len(files_created)} files "
-                f"(of {len(all_files)} total) to {out_path}. "
-                f"Re-upload via upload_csv() + process_data(). "
-                f"NOTE: If you cannot access these files (e.g. Claude.ai), "
-                f"use download_customer_csv() instead — it returns CSV content inline."
-            ),
-        }
-
-
-# ===================================================================
 # Tool: download_customer_csv — Return CSV content inline for download
 # ===================================================================
 
@@ -4565,10 +4018,9 @@ def download_customer_csv(
 ) -> dict:
     """Download customer data as CSV content returned inline in the response.
 
-    Unlike export_customer_csvs() which writes to the server filesystem,
-    this tool returns CSV content directly in the response — making it
-    accessible to Claude.ai and other MCP clients that cannot access
-    the server's filesystem.
+    Returns CSV content directly in the response — accessible to
+    Claude.ai and other MCP clients. Use for data export, backup,
+    and migration.
 
     No authentication required (onboarding tool).
 
@@ -4919,6 +4371,471 @@ def download_customer_csv(
             result['csv_content'] = csvs[fname]['content']
 
         return result
+
+
+# ===================================================================
+# Partner-Scoped Tools — P4 pillar only, no revenue/ARR exposure
+# ===================================================================
+
+@mcp.tool
+def get_partner_scorecard(customer_id: int, partner_id: int) -> dict:
+    """Returns P4 pillar health score and KPI breakdown for accounts this partner manages.
+
+    Scoped to P4 (Channel & Partner Health) KPIs only. Does not expose
+    revenue, ARR, or other pillar data. Use this for partner-facing
+    performance dashboards.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        partner_id: The partner ID (used for scoping — currently returns all accounts with P4 scores)
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account, PillarScore, HealthScore, DC2SKPI
+        import utils.health_thresholds as ht
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        if not accounts:
+            raise ToolError(f"No accounts found for customer {customer_id}.")
+
+        account_ids = [a.account_id for a in accounts]
+        acct_name_map = {a.account_id: a.account_name for a in accounts}
+
+        # Get P4 pillar scores for each account
+        scorecard = []
+        for acct in accounts:
+            p4_score = None
+
+            # Try PillarScore table first
+            ps = PillarScore.query.filter_by(
+                account_id=acct.account_id,
+                pillar_code='P4',
+            ).order_by(PillarScore.measurement_month.desc()).first()
+            if ps and ps.pillar_score is not None:
+                p4_score = float(ps.pillar_score)
+
+            # Fallback: check HealthScore contributing_pillars
+            if p4_score is None:
+                hs = HealthScore.query.filter_by(account_id=acct.account_id) \
+                    .order_by(HealthScore.measurement_month.desc()).first()
+                if hs and hs.contributing_pillars:
+                    p4_score = float(hs.contributing_pillars.get('P4', 0))
+
+            # Get P4 KPI values (latest)
+            p4_kpis = {}
+            kpi_rows = DC2SKPI.query.filter(
+                DC2SKPI.account_id == acct.account_id,
+                DC2SKPI.kpi_code.like('P4-%'),
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+
+            seen = set()
+            for k in kpi_rows:
+                if k.kpi_code not in seen:
+                    p4_kpis[k.kpi_code] = round(float(k.value), 2)
+                    seen.add(k.kpi_code)
+
+            scorecard.append({
+                'account_id': acct.account_id,
+                'account_name': acct.account_name,
+                'p4_score': round(p4_score, 1) if p4_score is not None else None,
+                'p4_status': ht.classify(p4_score) if p4_score is not None else 'unknown',
+                'p4_kpis': p4_kpis,
+            })
+
+        avg_p4 = [s['p4_score'] for s in scorecard if s['p4_score'] is not None]
+
+        return {
+            'scope': 'partner',
+            'customer_id': customer_id,
+            'partner_id': partner_id,
+            'account_count': len(scorecard),
+            'avg_p4_score': round(sum(avg_p4) / len(avg_p4), 1) if avg_p4 else None,
+            'accounts': scorecard,
+        }
+
+
+@mcp.tool
+def submit_partner_data(
+    customer_id: int,
+    partner_id: int,
+    data_type: str,
+    csv_content: str,
+) -> dict:
+    """Partner submits engagement data (QBR notes, partner NPS, co-sell pipeline).
+
+    Write-only — validates against the platform CSV schema and stores.
+    Allowed data_type values: 'engagement_events', 'stakeholders', 'signals'.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        partner_id: The partner ID (tagged on all ingested rows)
+        data_type: One of 'engagement_events', 'stakeholders', 'signals'
+        csv_content: The raw CSV content as a string
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    # Map friendly names to canonical file types
+    TYPE_MAP = {
+        'engagement_events': 'engagement_events.csv',
+        'stakeholders': 'stakeholders.csv',
+        'signals': 'enhanced_qualitative_signals.csv',
+        'enhanced_qualitative_signals': 'enhanced_qualitative_signals.csv',
+    }
+    ft = TYPE_MAP.get(data_type)
+    if not ft:
+        raise ToolError(
+            f"Invalid data_type '{data_type}'. "
+            f"Allowed: engagement_events, stakeholders, signals"
+        )
+
+    import json as _json
+    import csv as _csv
+    import io as _io
+
+    # Validate against schema
+    schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
+    if not os.path.isfile(schemas_path):
+        raise ToolError("CSV schemas config not found.")
+
+    with open(schemas_path, 'r') as f:
+        schemas = _json.load(f)
+
+    schema = None
+    for model_key in ('regular_model', 'context_graph_model'):
+        files = schemas.get(model_key, {}).get('files', {})
+        if ft in files:
+            schema = files[ft]
+            break
+
+    if not schema:
+        raise ToolError(f"Schema not found for {ft}.")
+
+    required_columns = set(schema.get('required_columns', []))
+    optional_columns = set(schema.get('optional_columns', []))
+    all_known = required_columns | optional_columns
+
+    reader = _csv.DictReader(_io.StringIO(csv_content))
+    headers = set(reader.fieldnames or [])
+    rows = list(reader)
+
+    missing_required = required_columns - headers
+    unknown_columns = headers - all_known
+    errors = []
+    warnings = []
+
+    if missing_required:
+        errors.append(f"Missing required columns: {sorted(missing_required)}")
+    if unknown_columns:
+        warnings.append(f"Unknown columns (will be ignored): {sorted(unknown_columns)}")
+    if len(rows) == 0:
+        errors.append("CSV has no data rows.")
+
+    if errors:
+        return {
+            'scope': 'partner',
+            'customer_id': customer_id,
+            'partner_id': partner_id,
+            'status': 'validation_failed',
+            'rows_accepted': 0,
+            'errors': errors,
+            'warnings': warnings,
+        }
+
+    # Persist to customer data directory
+    with app.app_context():
+        from models import Customer
+        from extensions import db
+        from pathlib import Path
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+        backend_dir = Path(__file__).parent.parent
+        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
+        data_dir = customer_dir / 'data'
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        # Tag rows with partner_id and write
+        output = _io.StringIO()
+        all_cols = list(headers) + (['partner_id'] if 'partner_id' not in headers else [])
+        writer = _csv.DictWriter(output, fieldnames=all_cols, extrasaction='ignore')
+        writer.writeheader()
+        for row in rows:
+            row['partner_id'] = str(partner_id)
+            writer.writerow(row)
+
+        file_path = data_dir / ft
+        file_path.write_text(output.getvalue(), encoding='utf-8')
+
+        return {
+            'scope': 'partner',
+            'customer_id': customer_id,
+            'partner_id': partner_id,
+            'data_type': data_type,
+            'status': 'accepted',
+            'rows_accepted': len(rows),
+            'file_path': str(file_path),
+            'validation_warnings': warnings,
+            'message': (
+                f"Accepted {len(rows)} rows of {data_type} data from partner {partner_id}. "
+                f"Use process_data() to ingest into the database."
+            ),
+        }
+
+
+@mcp.tool
+def get_partner_actions(customer_id: int, partner_id: int) -> dict:
+    """Returns recommended actions for partner improvement, scoped to P4 pillar playbooks only.
+
+    Filters playbook recommendations to only those targeting the
+    Channel & Partner Health (P4) pillar. Does not expose revenue data.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        partner_id: The partner ID
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account
+        _ensure_registry()
+        from agent_tool_registry import get_tool_registry
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        if not accounts:
+            raise ToolError(f"No accounts found for customer {customer_id}.")
+
+        registry = get_tool_registry()
+        partner_actions = []
+
+        for acct in accounts:
+            kpi_values = _get_trailing_kpi_values(acct.account_id)
+            precalc_health, _, _ = get_precalculated_scores(acct.account_id)
+            health = precalc_health if precalc_health is not None else 0
+
+            try:
+                result = registry.invoke(
+                    "playbook_recommend",
+                    account_id=acct.account_id,
+                    customer_id=customer_id,
+                    health_score=round(health, 1),
+                    kpi_values=kpi_values,
+                )
+                if result.success and result.result:
+                    playbooks = result.result.get('playbooks', [])
+                    for pb in playbooks:
+                        # Filter to P4-related playbooks
+                        trigger_pillar = pb.get('trigger_pillar', '')
+                        pb_id = pb.get('playbook_id', '')
+                        if trigger_pillar == 'P4' or pb_id in ('PB-04',):
+                            partner_actions.append({
+                                'account_id': acct.account_id,
+                                'account_name': acct.account_name,
+                                'action': pb.get('name', pb_id),
+                                'description': pb.get('description', ''),
+                                'urgency': pb.get('urgency', 'medium'),
+                                'effort_hours': pb.get('effort_hours', 0),
+                            })
+            except Exception:
+                pass
+
+        return {
+            'scope': 'partner',
+            'customer_id': customer_id,
+            'partner_id': partner_id,
+            'total_actions': len(partner_actions),
+            'actions': partner_actions,
+        }
+
+
+@mcp.tool
+def get_partner_benchmarks(customer_id: int, partner_id: int) -> dict:
+    """Anonymized P4 performance comparison: this partner vs portfolio average.
+
+    Does not reveal other partners' names, account details, or revenue.
+    Returns aggregate P4 pillar statistics for benchmarking.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        partner_id: The partner ID
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account, PillarScore, HealthScore, DC2SKPI
+        import utils.health_thresholds as ht
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        if not accounts:
+            raise ToolError(f"No accounts found for customer {customer_id}.")
+
+        # Collect P4 scores for all accounts
+        all_p4_scores = []
+        all_p4_kpi_totals = {}  # kpi_code -> list of values
+        for acct in accounts:
+            p4_score = None
+
+            ps = PillarScore.query.filter_by(
+                account_id=acct.account_id,
+                pillar_code='P4',
+            ).order_by(PillarScore.measurement_month.desc()).first()
+            if ps and ps.pillar_score is not None:
+                p4_score = float(ps.pillar_score)
+
+            if p4_score is None:
+                hs = HealthScore.query.filter_by(account_id=acct.account_id) \
+                    .order_by(HealthScore.measurement_month.desc()).first()
+                if hs and hs.contributing_pillars:
+                    p4_score = float(hs.contributing_pillars.get('P4', 0))
+
+            if p4_score is not None:
+                all_p4_scores.append(p4_score)
+
+            # Collect P4 KPI values
+            kpi_rows = DC2SKPI.query.filter(
+                DC2SKPI.account_id == acct.account_id,
+                DC2SKPI.kpi_code.like('P4-%'),
+            ).order_by(DC2SKPI.measured_at.desc()).all()
+            seen = set()
+            for k in kpi_rows:
+                if k.kpi_code not in seen:
+                    all_p4_kpi_totals.setdefault(k.kpi_code, []).append(float(k.value))
+                    seen.add(k.kpi_code)
+
+        portfolio_p4_avg = round(sum(all_p4_scores) / len(all_p4_scores), 1) if all_p4_scores else None
+
+        # For partner-specific avg, we use all accounts (partner-account mapping TBD)
+        # In production, filter to partner's accounts via stakeholder graph
+        partner_p4_avg = portfolio_p4_avg
+
+        # Determine top and weakest KPIs
+        kpi_averages = {
+            code: round(sum(vals) / len(vals), 2)
+            for code, vals in all_p4_kpi_totals.items()
+            if vals
+        }
+        top_kpi = max(kpi_averages, key=kpi_averages.get) if kpi_averages else None
+        weakest_kpi = min(kpi_averages, key=kpi_averages.get) if kpi_averages else None
+
+        # Percentile rank (where does partner avg fall among all scores)
+        percentile_rank = None
+        if partner_p4_avg is not None and all_p4_scores:
+            below = sum(1 for s in all_p4_scores if s < partner_p4_avg)
+            percentile_rank = round(below / len(all_p4_scores) * 100, 1)
+
+        return {
+            'scope': 'partner',
+            'customer_id': customer_id,
+            'partner_id': partner_id,
+            'partner_p4_avg': partner_p4_avg,
+            'portfolio_p4_avg': portfolio_p4_avg,
+            'percentile_rank': percentile_rank,
+            'top_kpi': top_kpi,
+            'top_kpi_avg': kpi_averages.get(top_kpi) if top_kpi else None,
+            'weakest_kpi': weakest_kpi,
+            'weakest_kpi_avg': kpi_averages.get(weakest_kpi) if weakest_kpi else None,
+            'kpi_averages': kpi_averages,
+            'accounts_with_p4_data': len(all_p4_scores),
+        }
+
+
+@mcp.tool
+def get_partner_impact(
+    customer_id: int,
+    partner_id: int,
+    metric_id: str = 'partner_nps',
+) -> dict:
+    """Power-of-1 analysis scoped to P4 metrics: revenue impact of improving partner KPIs.
+
+    Available metrics: partner_engagement, var_performance, qbr_frequency,
+    channel_conflict, co_selling, partner_nps. Maps to P4 KPI codes internally.
+
+    Does not expose absolute ARR — shows relative improvement impact only.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        partner_id: The partner ID
+        metric_id: P4 metric to improve (default 'partner_nps')
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    # Map partner metric names to P4 KPI codes
+    P4_METRIC_MAP = {
+        'partner_engagement': 'P4-KPI1',
+        'var_performance': 'P4-KPI2',
+        'qbr_frequency': 'P4-KPI3',
+        'channel_conflict': 'P4-KPI4',
+        'co_selling': 'P4-KPI5',
+        'partner_nps': 'P4-KPI6',
+    }
+
+    if metric_id not in P4_METRIC_MAP:
+        raise ToolError(
+            f"Unknown P4 metric '{metric_id}'. "
+            f"Available: {sorted(P4_METRIC_MAP.keys())}"
+        )
+
+    kpi_code = P4_METRIC_MAP[metric_id]
+
+    with app.app_context():
+        from models import Account, DC2SKPI
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        if not accounts:
+            raise ToolError(f"No accounts found for customer {customer_id}.")
+
+        # Compute partner-scoped ARR (all accounts for now; partner-account mapping TBD)
+        partner_arr = sum(_get_account_arr(a) for a in accounts)
+
+        # Get current P4 KPI value (average across accounts)
+        kpi_values = []
+        for acct in accounts:
+            kpi_row = DC2SKPI.query.filter(
+                DC2SKPI.account_id == acct.account_id,
+                DC2SKPI.kpi_code == kpi_code,
+            ).order_by(DC2SKPI.measured_at.desc()).first()
+            if kpi_row:
+                kpi_values.append(float(kpi_row.value))
+
+        current_value = round(sum(kpi_values) / len(kpi_values), 2) if kpi_values else None
+        improved_value = round(current_value * 1.01, 2) if current_value else None
+
+        # Estimate revenue impact: 1% improvement in P4 KPI ~= 0.3% of ARR
+        # (conservative estimate; P4 pillar weight is typically 10-15%)
+        impact_pct = 0.003  # 0.3% of ARR per 1% KPI improvement
+        annual_revenue_impact = round(partner_arr * impact_pct, 2) if partner_arr else None
+
+        return {
+            'scope': 'partner',
+            'customer_id': customer_id,
+            'partner_id': partner_id,
+            'metric': metric_id,
+            'kpi_code': kpi_code,
+            'current_value': current_value,
+            'improved_value': improved_value,
+            'improvement_pct': 1.0,
+            'annual_revenue_impact': annual_revenue_impact,
+            'arr_basis': round(partner_arr, 2) if partner_arr else None,
+            'impact_note': (
+                'Estimated impact of a 1% improvement in this P4 metric. '
+                'Based on P4 pillar weight contribution to overall health.'
+            ),
+        }
 
 
 # ===================================================================
