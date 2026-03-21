@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd kpi-dashboard && PORT=3001 npm start"],
+      "port": 3001
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd kpi-dashboard/backend && FEATURE_CONTEXT_GRAPH=true DATABASE_URL=${DATABASE_URL:-postgresql://dcuser:dcpass123@localhost:5432/cs_pulse_datacenter} python3 app_v3_minimal.py --port 5059"],
+      "port": 5059
+    },
+    {
+      "name": "test-runner-backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd kpi-dashboard && python3 backend/test_runner_server.py"],
+      "port": 5099
+    }
+  ]
+}

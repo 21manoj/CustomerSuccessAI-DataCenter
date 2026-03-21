@@ -542,18 +542,10 @@ class ManifestCSVGenerator:
             noise = 1.0 + random.gauss(0, 0.03)
             val = base * modifier * noise
 
-            # Clamp to valid range — uses the band-based ranges from kpi_definitions
-            # (same logic as backend's validate_kpi_values_against_ranges)
-            ranges = meta.get('ranges', {})
-            if ranges:
-                all_mins = [float(b['min']) for b in ranges.values() if isinstance(b.get('min'), (int, float))]
-                all_maxs = [float(b['max']) for b in ranges.values() if isinstance(b.get('max'), (int, float))]
-                range_min = min(all_mins) if all_mins else 0.0
-                range_max = max(all_maxs) if all_maxs else 100.0
+            if higher_is_better:
+                val = max(0, min(target_val * 1.2, val))
             else:
-                range_min = float(meta.get('range_min') or 0)
-                range_max = float(meta.get('range_max') or 100)
-            val = max(range_min, min(range_max, val))
+                val = max(target_val * 0.5, val)
 
             values.append(round(val, 2))
 
@@ -1590,6 +1582,52 @@ class ScenarioManifest(BaseScenario):
         if kpi_count_failures:
             checks['passed'] = False
             checks['errors'].append(f'KPI cardinality shortfall in sample accounts: {kpi_count_failures[:5]}')
+
+        # ── Health summary validation ──
+        try:
+            health_resp = self.client.get('/api/dc2s/health-summary')
+            if health_resp:
+                total = health_resp.get('total_accounts', 0)
+                avg_health = health_resp.get('average_health', 0)
+                checks['metrics']['health_summary'] = {
+                    'total_accounts': total,
+                    'average_health': avg_health,
+                }
+                if total == 0:
+                    checks['errors'].append('No health scores computed after process-data')
+                    checks['passed'] = False
+                elif avg_health == 0:
+                    checks['errors'].append(f'Health scores all zero ({total} accounts)')
+                    checks['passed'] = False
+                else:
+                    logger.info(f'    Health: avg={avg_health:.1f} across {total} accounts')
+            else:
+                logger.warning('    Health summary endpoint returned None (non-fatal)')
+        except Exception as e:
+            logger.warning(f'    Health summary check failed (non-fatal): {e}')
+
+        # ── Context graph validation (if CG was enabled) ──
+        try:
+            if self.client.is_context_graph_enabled(customer_id):
+                cg_found = False
+                for sample_aid in expected_account_ids[:3]:
+                    graph = self.client.get_context_graph_summary(sample_aid)
+                    if graph and graph.get('total_nodes', 0) > 0:
+                        total_nodes = graph['total_nodes']
+                        logger.info(f'    CG: account {sample_aid} has {total_nodes} nodes')
+                        checks['metrics']['context_graph_sample'] = {
+                            'account_id': sample_aid,
+                            'total_nodes': total_nodes,
+                        }
+                        cg_found = True
+                        break
+                if not cg_found:
+                    checks['metrics']['context_graph_warning'] = (
+                        'Context graph enabled but no nodes found for sample accounts'
+                    )
+                    logger.warning('    Context graph enabled but no nodes found for sample accounts')
+        except Exception as e:
+            logger.warning(f'    Context graph validation failed (non-fatal): {e}')
 
         return checks
 

@@ -186,9 +186,45 @@ def run_manifest(args):
         logger.error(f"  Server not reachable: {base_url}")
         sys.exit(1)
 
+    # Pre-flight: check server uptime to catch stale processes
+    try:
+        import subprocess, re
+        pids = subprocess.run(
+            ["pgrep", "-f", "app_v3_minimal"],
+            capture_output=True, text=True
+        ).stdout.strip().split('\n')
+        pids = [p for p in pids if p.strip()]
+        if len(pids) > 1:
+            logger.warning(f"  ⚠️  Multiple server processes detected (PIDs: {', '.join(pids)})")
+            logger.warning(f"     Run: kill -9 {' '.join(pids)} && restart server")
+            logger.warning(f"     Stale processes cause fixes to be invisible!")
+        if pids:
+            # Check how long the server has been running
+            ps_out = subprocess.run(
+                ["ps", "-o", "etime=", "-p", pids[0]],
+                capture_output=True, text=True
+            ).stdout.strip()
+            if ps_out:
+                logger.info(f"  Server PID {pids[0]}, uptime: {ps_out.strip()}")
+                # Warn if server has been running for more than 2 hours
+                parts = ps_out.strip().replace('-', ':').split(':')
+                if len(parts) >= 3:  # HH:MM:SS or D-HH:MM:SS
+                    hours = int(parts[-3]) if len(parts) == 3 else int(parts[-4]) * 24 + int(parts[-3])
+                    if hours >= 2:
+                        logger.warning(f"  ⚠️  Server has been running for {ps_out.strip()} — consider restarting to pick up code changes")
+    except Exception:
+        pass  # Non-fatal — pgrep may not exist on all platforms
+
     if not client.login():
         logger.error("  Login failed")
         sys.exit(1)
+
+    # Auto-enable context graph for all driver-created customers
+    try:
+        client.enable_context_graph(int(customer_id))
+        logger.info(f"  Context graph enabled for customer {customer_id}")
+    except Exception as e:
+        logger.warning(f"  Context graph toggle failed (non-fatal): {e}")
 
     # Run the manifest scenario (V3: includes validation)
     from scenarios.scenario_manifest import ScenarioManifest

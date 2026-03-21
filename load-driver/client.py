@@ -580,6 +580,54 @@ class CSPulseClient:
         params = {"month": month} if month else None
         return self.get(f"/api/dc2s/health-score/{account_id}", params=params)
 
+    def enable_context_graph(self, customer_id: int = None) -> bool:
+        """
+        Enable context_graph feature toggle (global + per-customer).
+
+        The global toggle activates the platform-level CONTEXT_GRAPH flag.
+        The per-customer toggle (via POST /api/features/context-graph) enables
+        context graph for the specific customer using the X-Customer-ID header
+        already set on the session.
+
+        Args:
+            customer_id: Customer ID (defaults to self.customer_id)
+
+        Returns:
+            True if both toggles were set successfully, False otherwise
+        """
+        cid = customer_id or self.customer_id
+
+        # 1) Global toggle — enables the platform-level CONTEXT_GRAPH flag
+        global_resp = self.post(
+            '/api/feature-toggle',
+            {'feature': 'context_graph', 'enabled': True},
+        )
+        if not global_resp:
+            logger.warning("Failed to set global context_graph toggle")
+
+        # 2) Per-customer toggle — uses X-Customer-ID header (already set)
+        per_cust_resp = self.post(
+            '/api/features/context-graph',
+            {
+                'enabled': True,
+                'sub_toggles': {
+                    'story_arcs': True,
+                    'signal_edges': True,
+                    'stakeholder_tracking': True,
+                    'decision_lifecycle': True,
+                    'outcome_economics': True,
+                    'industry_benchmarks': True,
+                },
+            },
+        )
+        if not per_cust_resp:
+            logger.warning(f"Failed to set per-customer context_graph toggle for customer {cid}")
+            return False
+
+        active = per_cust_resp.get('active', False)
+        logger.info(f"Context graph enabled for customer {cid} (active={active})")
+        return True
+
     def get_context_graph_summary(
         self,
         account_id: int

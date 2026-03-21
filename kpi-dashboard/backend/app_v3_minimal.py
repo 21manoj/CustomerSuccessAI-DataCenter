@@ -561,13 +561,19 @@ def home():
     now = datetime.datetime.now(local_tz).isoformat()
     return f"KPI Dashboard V5 Backend is running! Timestamp: {now}"
 
+_SERVER_STARTED_AT = datetime.datetime.now(datetime.timezone.utc)
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    """Health check endpoint — includes server_started_at for stale process detection."""
+    uptime = (datetime.datetime.now(datetime.timezone.utc) - _SERVER_STARTED_AT).total_seconds()
     return jsonify({
         'status': 'healthy',
         'version': 'V5',
         'timestamp': datetime.datetime.now().isoformat(),
+        'server_started_at': _SERVER_STARTED_AT.isoformat(),
+        'uptime_seconds': int(uptime),
+        'cwd': os.getcwd(),
         'message': 'KPI Dashboard V5 Backend is running'
     })
 
@@ -1179,7 +1185,27 @@ def list_routes():
     return '<br>'.join(sorted(output))
 
 if __name__ == '__main__':
+    import os, argparse
+    _cwd = os.getcwd()
+    _verticals_dir = os.path.join(_cwd, 'verticals')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, default=int(os.getenv('PORT', '5059')))
+    args, _ = parser.parse_known_args()
+
+    print(f"\n{'='*60}")
+    print(f"  CS Pulse Backend Server")
+    print(f"  CWD:       {_cwd}")
+    print(f"  Verticals: {_verticals_dir}")
+    print(f"  Port:      {args.port}")
+    print(f"  DB:        {os.getenv('DATABASE_URL', 'NOT SET')[:60]}...")
+    print(f"  CG toggle: {os.getenv('FEATURE_CONTEXT_GRAPH', 'false')}")
+    print(f"{'='*60}\n")
+
+    # Sanity check: warn if verticals dir doesn't exist
+    if not os.path.isdir(_verticals_dir):
+        print(f"⚠️  WARNING: verticals directory not found at {_verticals_dir}")
+        print(f"   Server may not find customer data. Check your CWD.")
+
     with app.app_context():
         db.create_all()
-    # Option 1: Production-ready - no auto-reload (code changes require manual restart)
-    app.run(host='0.0.0.0', port=5059, debug=False)
+    app.run(host='0.0.0.0', port=args.port, debug=False)
