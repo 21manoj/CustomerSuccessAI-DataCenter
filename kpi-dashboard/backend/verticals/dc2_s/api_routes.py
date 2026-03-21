@@ -449,6 +449,7 @@ def get_dc2s_accounts():
                 'region': account.region,
                 'revenue': float(account.revenue) if account.revenue else 0,
                 'overall_health': round(overall_health, 1),
+                'health_score': round(overall_health, 1),
                 'status': status,
                 'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
                 'enabled_pillars': enabled_pillar_codes,
