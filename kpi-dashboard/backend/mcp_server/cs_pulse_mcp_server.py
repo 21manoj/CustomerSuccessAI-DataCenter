@@ -391,6 +391,99 @@ def get_platform_instructions() -> dict:
 
 
 # ===================================================================
+# Tool: list_customers — Debug tool: recent customers by vertical
+# TEMPORARY — remove before production (exposes customer names)
+# ===================================================================
+
+@mcp.tool
+def list_customers() -> dict:
+    """List recent customers grouped by vertical (last 5 per vertical).
+
+    Debug/internal tool — returns customer_id, name, vertical, account count,
+    total ARR, and created_at for the most recent customers in each vertical.
+    Use this to find the correct customer_id before calling other tools.
+
+    No parameters required.
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Customer, Account, CustomerConfig
+        from extensions import db
+        from sqlalchemy import func, text
+
+        # Get account counts and ARR per customer
+        acct_stats = dict(
+            db.session.query(
+                Account.customer_id,
+                func.count(Account.account_id),
+            ).group_by(Account.customer_id).all()
+        )
+        arr_stats = dict(
+            db.session.query(
+                Account.customer_id,
+                func.sum(Account.revenue),
+            ).group_by(Account.customer_id).all()
+        )
+
+        # Get vertical per customer: DB config → directory detection → default dc2_s
+        cc_map = {}
+        for cc in CustomerConfig.query.all():
+            if cc.vertical:
+                cc_map[cc.customer_id] = cc.vertical
+
+        # Directory-based fallback for customers without config
+        import os, glob
+        vert_base = os.path.join(os.path.dirname(__file__), '..', 'verticals')
+        for d in glob.glob(os.path.join(vert_base, 'customer*-*')):
+            dirname = os.path.basename(d)
+            try:
+                cid_str, vsuffix = dirname.split('-', 1)
+                cid = int(cid_str.replace('customer', ''))
+                if cid not in cc_map:
+                    cc_map[cid] = vsuffix
+            except (ValueError, IndexError):
+                pass
+
+        # Get all customers with accounts, sorted by customer_id desc (most recent first)
+        customers = Customer.query.order_by(Customer.customer_id.desc()).all()
+
+        # Group by vertical
+        by_vertical = {}
+        for c in customers:
+            num_accts = acct_stats.get(c.customer_id, 0)
+            if num_accts == 0:
+                continue  # Skip customers with no accounts
+            vertical = cc_map.get(c.customer_id, 'dc2_s')
+            # Normalize aliases
+            if vertical in ('saas', 'saas_premium'):
+                vertical = 'saas_premium'
+            if vertical not in by_vertical:
+                by_vertical[vertical] = []
+            arr = arr_stats.get(c.customer_id) or 0
+            by_vertical[vertical].append({
+                'customer_id': c.customer_id,
+                'name': c.customer_name,
+                'accounts': num_accts,
+                'total_arr': round(float(arr), 0),
+                'created_at': str(getattr(c, 'created_at', 'unknown')),
+            })
+
+        # Keep only last 5 per vertical (already sorted desc by ID)
+        result = {}
+        for vertical, custs in by_vertical.items():
+            result[vertical] = custs[:5]
+
+        return {
+            'scope': 'platform',
+            'verticals': result,
+            'total_customers': sum(len(v) for v in result.values()),
+            'note': 'Debug tool — shows last 5 customers per vertical. Use customer_id with other tools.',
+        }
+
+
+# ===================================================================
 # Tool: get_kpi_catalog — Canonical KPI definitions & weights
 # ===================================================================
 
