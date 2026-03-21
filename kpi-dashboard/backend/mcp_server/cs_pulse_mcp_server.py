@@ -467,7 +467,7 @@ def list_customers() -> dict:
                 'name': c.customer_name,
                 'accounts': num_accts,
                 'total_arr': round(float(arr), 0),
-                'created_at': str(getattr(c, 'created_at', 'unknown')),
+                'created_at': getattr(c, 'created_at', None).strftime('%Y-%m-%d %H:%M:%S') if getattr(c, 'created_at', None) else 'unknown',
             })
 
         # Keep only last 5 per vertical (already sorted desc by ID)
