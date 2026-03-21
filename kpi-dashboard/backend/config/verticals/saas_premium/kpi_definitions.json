@@ -1,0 +1,1024 @@
+{
+  "version": "2.0",
+  "source": "Loveable Maturity Framework v2 \u2014 aligned March 2026",
+  "pillars": [
+    {
+      "pillar_id": "P1",
+      "name": "Product Adoption & Usage",
+      "weight_l2": 0.3,
+      "description": ""
+    },
+    {
+      "pillar_id": "P2",
+      "name": "Customer Engagement",
+      "weight_l2": 0.15,
+      "description": ""
+    },
+    {
+      "pillar_id": "P3",
+      "name": "Customer Sentiment & Support",
+      "weight_l2": 0.2,
+      "description": ""
+    },
+    {
+      "pillar_id": "P4",
+      "name": "Partner & Ecosystem Health",
+      "weight_l2": 0.15,
+      "description": ""
+    },
+    {
+      "pillar_id": "P5",
+      "name": "Revenue & Growth",
+      "weight_l2": 0.2,
+      "description": ""
+    }
+  ],
+  "kpis": [
+    {
+      "code": "P1-KPI1",
+      "name": "Daily Active Users (DAU) Rate",
+      "pillar": "P1",
+      "weight_l1": 0.16,
+      "unit": "percentage",
+      "frequency": "daily",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 60
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Mixpanel",
+        "Amplitude",
+        "Pendo",
+        "Heap"
+      ]
+    },
+    {
+      "code": "P1-KPI2",
+      "name": "Feature Adoption Breadth",
+      "pillar": "P1",
+      "weight_l1": 0.15,
+      "unit": "percentage",
+      "frequency": "weekly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 45
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Pendo",
+        "Amplitude",
+        "Heap"
+      ]
+    },
+    {
+      "code": "P1-KPI3",
+      "name": "Time-to-First-Value (TTFV)",
+      "pillar": "P1",
+      "weight_l1": 0.14,
+      "unit": "days",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 21
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Totango",
+        "ChurnZero"
+      ]
+    },
+    {
+      "code": "P1-KPI4",
+      "name": "Login Frequency",
+      "pillar": "P1",
+      "weight_l1": 0.12,
+      "unit": "sessions/user/week",
+      "frequency": "weekly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 3.5
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Auth0",
+        "Okta",
+        "Product Analytics"
+      ]
+    },
+    {
+      "code": "P1-KPI5",
+      "name": "Onboarding Completion Rate",
+      "pillar": "P1",
+      "weight_l1": 0.12,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 80
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Totango",
+        "ChurnZero"
+      ]
+    },
+    {
+      "code": "P1-KPI6",
+      "name": "Workflow Completion Rate",
+      "pillar": "P1",
+      "weight_l1": 0.09,
+      "unit": "percentage",
+      "frequency": "weekly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 75
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Pendo",
+        "Amplitude",
+        "Product Analytics"
+      ]
+    },
+    {
+      "code": "P1-KPI7",
+      "name": "Module Activation Rate",
+      "pillar": "P1",
+      "weight_l1": 0.08,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 70
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Product Analytics",
+        "License Manager"
+      ]
+    },
+    {
+      "code": "P1-KPI8",
+      "name": "API Integration Usage",
+      "pillar": "P1",
+      "weight_l1": 0.07,
+      "unit": "percentage",
+      "frequency": "weekly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 30
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "API Gateway",
+        "Kong",
+        "Apigee"
+      ]
+    },
+    {
+      "code": "P1-KPI9",
+      "name": "Knowledge Base Usage",
+      "pillar": "P1",
+      "weight_l1": 0.07,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 40
+        }
+      },
+      "description": "",
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Zendesk Guide",
+        "Confluence",
+        "Notion"
+      ]
+    },
+    {
+      "code": "P2-KPI1",
+      "name": "Executive Sponsor Engagement",
+      "pillar": "P2",
+      "weight_l1": 0.22,
+      "unit": "score",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 70
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Salesforce",
+        "CRM"
+      ]
+    },
+    {
+      "code": "P2-KPI2",
+      "name": "QBR Attendance Rate",
+      "pillar": "P2",
+      "weight_l1": 0.18,
+      "unit": "percentage",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 85
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Google Calendar",
+        "Salesforce"
+      ]
+    },
+    {
+      "code": "P2-KPI3",
+      "name": "Training Completion Rate",
+      "pillar": "P2",
+      "weight_l1": 0.15,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 60
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "LMS",
+        "Academy",
+        "Skilljar"
+      ]
+    },
+    {
+      "code": "P2-KPI4",
+      "name": "Community Participation Score",
+      "pillar": "P2",
+      "weight_l1": 0.12,
+      "unit": "score",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 40
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Community Platform",
+        "Discourse",
+        "Slack"
+      ]
+    },
+    {
+      "code": "P2-KPI5",
+      "name": "CSM Interaction Frequency",
+      "pillar": "P2",
+      "weight_l1": 0.13,
+      "unit": "interactions/month",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 4
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Salesforce",
+        "Outreach"
+      ]
+    },
+    {
+      "code": "P2-KPI6",
+      "name": "Webinar/Event Attendance",
+      "pillar": "P2",
+      "weight_l1": 0.1,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 25
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Zoom",
+        "Webex",
+        "ON24"
+      ]
+    },
+    {
+      "code": "P2-KPI7",
+      "name": "Customer Advocacy Score",
+      "pillar": "P2",
+      "weight_l1": 0.1,
+      "unit": "score",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 50
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Influitive",
+        "Gainsight",
+        "ReferenceEdge"
+      ]
+    },
+    {
+      "code": "P3-KPI1",
+      "name": "Ticket Resolution Time",
+      "pillar": "P3",
+      "weight_l1": 0.13,
+      "unit": "hours",
+      "frequency": "daily",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 24
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "ServiceNow",
+        "Freshdesk",
+        "Jira Service Management"
+      ]
+    },
+    {
+      "code": "P3-KPI2",
+      "name": "CSAT Score",
+      "pillar": "P3",
+      "weight_l1": 0.14,
+      "unit": "score",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 85
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "Qualtrics",
+        "SurveyMonkey",
+        "Delighted"
+      ]
+    },
+    {
+      "code": "P3-KPI3",
+      "name": "Net Promoter Score (NPS)",
+      "pillar": "P3",
+      "weight_l1": 0.14,
+      "unit": "score",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 40
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Qualtrics",
+        "Delighted",
+        "AskNicely",
+        "Gainsight"
+      ]
+    },
+    {
+      "code": "P3-KPI4",
+      "name": "Escalation Rate",
+      "pillar": "P3",
+      "weight_l1": 0.1,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 8
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "ServiceNow",
+        "Freshdesk"
+      ]
+    },
+    {
+      "code": "P3-KPI5",
+      "name": "First Contact Resolution Rate",
+      "pillar": "P3",
+      "weight_l1": 0.1,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 70
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "ServiceNow",
+        "Freshdesk"
+      ]
+    },
+    {
+      "code": "P3-KPI6",
+      "name": "SLA Compliance Rate",
+      "pillar": "P3",
+      "weight_l1": 0.08,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 95
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "ServiceNow",
+        "PagerDuty"
+      ]
+    },
+    {
+      "code": "P3-KPI7",
+      "name": "Support Ticket Volume Trend",
+      "pillar": "P3",
+      "weight_l1": 0.07,
+      "unit": "percentage_mom",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 5
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "ServiceNow",
+        "Freshdesk"
+      ]
+    },
+    {
+      "code": "P3-KPI8",
+      "name": "Customer Effort Score (CES)",
+      "pillar": "P3",
+      "weight_l1": 0.1,
+      "unit": "score",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 5.5
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Qualtrics",
+        "Nicereply",
+        "Zendesk"
+      ]
+    },
+    {
+      "code": "P3-KPI9",
+      "name": "Case Deflection Rate",
+      "pillar": "P3",
+      "weight_l1": 0.07,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 30
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "Intercom",
+        "Chatbot Platform"
+      ]
+    },
+    {
+      "code": "P3-KPI10",
+      "name": "Customer Complaints Rate",
+      "pillar": "P3",
+      "weight_l1": 0.07,
+      "unit": "per_1000_users",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 5
+        }
+      },
+      "description": "",
+      "data_source": "SBR",
+      "data_source_systems": [
+        "Zendesk",
+        "Salesforce",
+        "CRM"
+      ]
+    },
+    {
+      "code": "P4-KPI1",
+      "name": "Partner-Sourced Revenue Rate",
+      "pillar": "P4",
+      "weight_l1": 0.2,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 25
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "PartnerStack",
+        "Crossbeam"
+      ]
+    },
+    {
+      "code": "P4-KPI2",
+      "name": "Partner Certification Level",
+      "pillar": "P4",
+      "weight_l1": 0.16,
+      "unit": "score",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 60
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Partner Portal",
+        "LMS",
+        "Skilljar"
+      ]
+    },
+    {
+      "code": "P4-KPI3",
+      "name": "Partner Deal Registration Rate",
+      "pillar": "P4",
+      "weight_l1": 0.15,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 40
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "PartnerStack",
+        "Impartner"
+      ]
+    },
+    {
+      "code": "P4-KPI4",
+      "name": "Channel Conflict Resolution Time",
+      "pillar": "P4",
+      "weight_l1": 0.13,
+      "unit": "days",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 14
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "CRM",
+        "Partner Portal"
+      ]
+    },
+    {
+      "code": "P4-KPI5",
+      "name": "Partner Satisfaction Score",
+      "pillar": "P4",
+      "weight_l1": 0.14,
+      "unit": "score",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 75
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Qualtrics",
+        "SurveyMonkey",
+        "Partner Portal"
+      ]
+    },
+    {
+      "code": "P4-KPI6",
+      "name": "Co-Marketing Campaign ROI",
+      "pillar": "P4",
+      "weight_l1": 0.12,
+      "unit": "percentage",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 200
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "HubSpot",
+        "Marketo",
+        "Salesforce"
+      ]
+    },
+    {
+      "code": "P4-KPI7",
+      "name": "Partner Technical Enablement Score",
+      "pillar": "P4",
+      "weight_l1": 0.1,
+      "unit": "score",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 65
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "LMS",
+        "Partner Portal",
+        "Skilljar"
+      ]
+    },
+    {
+      "code": "P5-KPI1",
+      "name": "Net Revenue Retention (NRR)",
+      "pillar": "P5",
+      "weight_l1": 0.2,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 110
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "ChartMogul",
+        "Stripe",
+        "Zuora"
+      ]
+    },
+    {
+      "code": "P5-KPI2",
+      "name": "Gross Revenue Retention (GRR)",
+      "pillar": "P5",
+      "weight_l1": 0.16,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 92
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "ChartMogul",
+        "Zuora"
+      ]
+    },
+    {
+      "code": "P5-KPI3",
+      "name": "Expansion Revenue Rate",
+      "pillar": "P5",
+      "weight_l1": 0.13,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 15
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "ChartMogul",
+        "Stripe"
+      ]
+    },
+    {
+      "code": "P5-KPI4",
+      "name": "Annual Contract Value (ACV) Growth",
+      "pillar": "P5",
+      "weight_l1": 0.1,
+      "unit": "percentage",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 12
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "HubSpot CRM"
+      ]
+    },
+    {
+      "code": "P5-KPI5",
+      "name": "Renewal Probability (90d)",
+      "pillar": "P5",
+      "weight_l1": 0.14,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 85
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Totango",
+        "ChurnZero"
+      ]
+    },
+    {
+      "code": "P5-KPI6",
+      "name": "Churn Risk Score",
+      "pillar": "P5",
+      "weight_l1": 0.09,
+      "unit": "percentage",
+      "frequency": "monthly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": "<",
+          "value": 20
+        }
+      },
+      "description": "",
+      "data_source": "CSR",
+      "data_source_systems": [
+        "Gainsight",
+        "Totango",
+        "ChurnZero"
+      ]
+    },
+    {
+      "code": "P5-KPI7",
+      "name": "Customer Lifetime Value Trend",
+      "pillar": "P5",
+      "weight_l1": 0.08,
+      "unit": "ratio",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 2.0
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "ChartMogul",
+        "ProfitWell",
+        "Zuora"
+      ]
+    },
+    {
+      "code": "P5-KPI8",
+      "name": "Share of Wallet",
+      "pillar": "P5",
+      "weight_l1": 0.1,
+      "unit": "percentage",
+      "frequency": "quarterly",
+      "higher_is_better": true,
+      "range_min": 0,
+      "range_max": 100,
+      "target": {
+        "value": {
+          "operator": ">",
+          "value": 35
+        }
+      },
+      "description": "",
+      "data_source": "VBR",
+      "data_source_systems": [
+        "Salesforce",
+        "CRM",
+        "Finance Systems"
+      ]
+    }
+  ]
+}
