@@ -1378,49 +1378,78 @@ def _process_data_impl(customer_id: int) -> dict:
 
         # ----------------------------------------------------------
         # ALWAYS: Recalculate health scores from DB data
+        # Uses raw SQL (DELETE + INSERT) for reliability — avoids
+        # ORM session-state issues that can silently drop writes.
         # ----------------------------------------------------------
         try:
             calculate_fn, get_kpi_vals, _ = common.get_health_functions(vertical)
-            from models import HealthScore, PillarScore
             import utils.health_thresholds as ht
+            from datetime import date as _date
+            from sqlalchemy import create_engine, text as _text
+            import os, json as _json, logging
+            _logger = logging.getLogger(__name__)
+
+            database_url = os.environ.get('DATABASE_URL')
+            if not database_url:
+                from dotenv import load_dotenv
+                load_dotenv()
+                database_url = os.environ.get('DATABASE_URL')
 
             acct_list = Account.query.filter_by(customer_id=customer_id).all()
-            month_str = _dt.utcnow().strftime('%Y-%m-01')
-            scores_updated = 0
+            measurement_date = _date.today().replace(day=1)
+
+            # Phase 1: Compute all scores in memory (no DB writes yet)
+            score_rows = []
+            scores_skipped = 0
             for acct in acct_list:
                 try:
                     kpi_vals = get_kpi_vals(acct.account_id)
                     if not kpi_vals:
+                        scores_skipped += 1
                         continue
                     health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
-                    hs = HealthScore.query.filter_by(
-                        account_id=acct.account_id, measurement_month=month_str,
-                    ).first()
-                    if not hs:
-                        hs = HealthScore(account_id=acct.account_id, measurement_month=month_str)
-                        _db.session.add(hs)
-                    hs.health_score = round(health, 2)
-                    hs.health_status = ht.classify(health)
-                    hs.contributing_pillars = {k: round(v, 2) for k, v in pillars.items()}
-                    for pcode, pscore in pillars.items():
-                        ps = PillarScore.query.filter_by(
-                            account_id=acct.account_id, measurement_month=month_str,
-                            pillar_code=pcode,
-                        ).first()
-                        if not ps:
-                            ps = PillarScore(
-                                account_id=acct.account_id, measurement_month=month_str,
-                                pillar_code=pcode,
-                            )
-                            _db.session.add(ps)
-                        ps.pillar_score = round(pscore, 2)
-                    scores_updated += 1
-                except Exception:
-                    pass
-            _db.session.commit()
-            steps_completed.append(f'health_scores_recalculated_{scores_updated}_accounts')
+                    score_rows.append({
+                        "aid": acct.account_id,
+                        "month": measurement_date,
+                        "score": round(health, 2),
+                        "status": ht.classify(health),
+                        "pillars": _json.dumps({k: round(v, 2) for k, v in pillars.items()}) if pillars else None,
+                    })
+                except Exception as calc_err:
+                    _logger.warning(f"Health score calc failed for account {acct.account_id}: {calc_err}")
+
+            # Phase 2: Write all scores in a single transaction (DELETE + INSERT)
+            scores_written = 0
+            if database_url and score_rows:
+                engine = create_engine(database_url)
+                with engine.begin() as conn:
+                    conn.execute(_text("""
+                        DELETE FROM health_scores WHERE account_id IN
+                        (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                    """), {"cid": customer_id})
+
+                    for row in score_rows:
+                        conn.execute(_text("""
+                            INSERT INTO health_scores
+                                (account_id, measurement_month, health_score, health_status, contributing_pillars)
+                            VALUES (:aid, :month, :score, :status, :pillars)
+                        """), row)
+                        scores_written += 1
+                engine.dispose()
+            elif not database_url:
+                _logger.error("DATABASE_URL not set — cannot write health scores")
+
+            _logger.info(
+                f"Health scores: {scores_written} written, {scores_skipped} skipped (no KPIs) "
+                f"— customer {customer_id}"
+            )
+            steps_completed.append(f'health_scores_recalculated_{scores_written}_accounts')
         except Exception as e:
             errors.append(f"health_calc: {str(e)}")
+            import logging as _log2
+            _log2.getLogger(__name__).error(
+                f"Health score recalculation failed for customer {customer_id}: {e}", exc_info=True
+            )
 
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
