@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-CS Pulse Driver — CLI for manifest-driven and scenario-based data loading.
+CS Pulse Driver V3 — CLI for manifest-driven and scenario-based data loading.
+
+V3 merges V2 extensions (phase windowing, validation, NarrativeTimelinePlanner)
+into the canonical driver. This is the single entry point for all load operations.
 
 Manifest mode (primary):
     python3 cs_pulse_driver.py --manifest manifests/novastar_dc2s.json
@@ -10,7 +13,7 @@ Manifest mode (primary):
     gold-reference demo data with named accounts, stakeholders, and
     realistic health trajectories.
 
-Scenario mode (existing):
+Scenario mode (legacy):
     python3 cs_pulse_driver.py --scenarios 1,7,8 --customers 407
 
     Runs numbered load-test scenarios via the LoadDriver orchestrator.
@@ -19,7 +22,13 @@ Generate-only mode (offline):
     python3 cs_pulse_driver.py --manifest manifests/novastar_dc2s.json --generate-only /tmp/novastar/
 
     Generates CSVs to disk without uploading. Useful for inspection.
+
+Phase mode (ROI testing):
+    python3 cs_pulse_driver.py --manifest manifests/denali_dc2s.json --register --phase baseline
+    python3 cs_pulse_driver.py --manifest manifests/denali_dc2s.json -c 420 --phase intervention
 """
+
+__version__ = '3.0'
 
 import argparse
 import json
@@ -61,10 +70,10 @@ def run_manifest(args):
     Steps:
     1. Parse manifest JSON
     2. Optionally register a new customer (--register) then POST /api/onboarding/complete
-       (register only creates the DB row; complete provisions the upload directory)
     3. Generate CSVs from manifest
     4. Upload CSVs to onboarding API
     5. Trigger process-data
+    6. Post-process validation (V3: merged from V2)
     """
     from scenarios.scenario_manifest import ManifestCSVGenerator
 
@@ -78,34 +87,46 @@ def run_manifest(args):
 
     customer_info = manifest['customer']
     logger.info(f"{'='*60}")
-    logger.info(f"CS Pulse Driver — Manifest Mode")
+    logger.info(f"CS Pulse Driver V3 — Manifest Mode")
     logger.info(f"{'='*60}")
     logger.info(f"  Manifest:  {manifest_path.name}")
     logger.info(f"  Customer:  {customer_info['name']}")
     logger.info(f"  Vertical:  {customer_info.get('vertical', 'dc2_s')}")
     logger.info(f"  Accounts:  {len(manifest['accounts'])}")
     logger.info(f"  KPIs:      {manifest['kpis']['count']}")
-    logger.info(f"  Time:      {manifest['time_range']['start']} → {manifest['time_range']['end']}")
+    logger.info(f"  Time:      {manifest['time_range']['start']} -> {manifest['time_range']['end']}")
+    if args.phase:
+        logger.info(f"  Phase:     {args.phase}")
 
     # ── Generate-only mode ──
     if args.generate_only:
         output_dir = args.generate_only
-        logger.info(f"\n  Generate-only mode → {output_dir}")
+        logger.info(f"\n  Generate-only mode -> {output_dir}")
         gen = ManifestCSVGenerator(
             manifest_path=str(manifest_path),
             customer_id=args.customer_id or 0,
             seed=args.seed,
+            phase=args.phase,
         )
         files = gen.generate_all(output_dir)
         logger.info(f"\n  Generated {len(files)} files:")
-        for name, path in files.items():
+        for name in files:
             logger.info(f"    {name}")
         return
 
     # ── Online mode: need a server ──
     base_url = args.base_url
-    email = args.email or os.getenv('CS_PULSE_ADMIN_EMAIL', 'admin@sacme.com')
     password = args.password or os.getenv('CS_PULSE_ADMIN_PASSWORD', 'test123')
+    cli_or_env_email = args.email or os.getenv('CS_PULSE_ADMIN_EMAIL', 'admin@sacme.com')
+
+    # Registration creates the user for this email; login must use the same address.
+    manifest_admin = (customer_info.get('admin_email') or '').strip()
+    if args.email:
+        email = args.email
+    else:
+        email = manifest_admin or cli_or_env_email
+        if manifest_admin:
+            logger.info(f"  Login/register user: {email} (manifest admin_email)")
 
     logger.info(f"  Server:    {base_url}")
 
@@ -114,29 +135,27 @@ def run_manifest(args):
 
     if args.register:
         logger.info("\n  Registering new customer...")
-        client = CSPulseClient(base_url=base_url, timeout=30)
-        resp = client.register_customer(
+        reg_client = CSPulseClient(base_url=base_url, timeout=30)
+        resp = reg_client.register_customer(
             company_name=customer_info['name'],
             admin_name=customer_info.get('admin_name', 'Admin'),
-            email=customer_info.get('admin_email', email),
+            email=email,
             password=password,
             vertical=customer_info.get('vertical', 'dc2_s'),
         )
-        if resp and resp.get('customer_id'):
-            customer_id = resp['customer_id']
-            logger.info(f"  Registered: customer_id={customer_id}")
-        else:
+        if not (resp and resp.get('customer_id')):
             logger.error(f"  Registration failed: {resp}")
             sys.exit(1)
+        customer_id = int(resp['customer_id'])
+        logger.info(f"  Registered: customer_id={customer_id}")
 
-        # /api/register only inserts the customer + user; /api/onboarding/upload requires
-        # the per-customer directory created by /api/onboarding/complete.
+        # Provision onboarding directory
         num_accounts = len(manifest.get('accounts', [])) or 3
         logger.info(
             f"  Provisioning onboarding (POST /api/onboarding/complete, "
             f"num_accounts={num_accounts})..."
         )
-        complete = client.complete_onboarding(
+        complete = reg_client.complete_onboarding(
             customer_id=customer_id,
             customer_name=customer_info['name'],
             vertical=customer_info.get('vertical', 'dc2_s'),
@@ -159,7 +178,7 @@ def run_manifest(args):
         base_url=base_url,
         email=email,
         password=password,
-        customer_id=customer_id,
+        customer_id=int(customer_id),
         timeout=60,
     )
 
@@ -171,14 +190,17 @@ def run_manifest(args):
         logger.error("  Login failed")
         sys.exit(1)
 
-    # Run the manifest scenario
+    # Run the manifest scenario (V3: includes validation)
+    from scenarios.scenario_manifest import ScenarioManifest
     scenario_args = argparse.Namespace(
         manifest=str(manifest_path),
-        customer_id=customer_id,
+        customer_id=int(customer_id),
         seed=args.seed,
+        phase=args.phase,
+        validate_strict=args.validate_strict,
+        validate_sample_size=args.validate_sample_size,
+        health_tolerance=args.health_tolerance,
     )
-
-    from scenarios.scenario_manifest import ScenarioManifest
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
 
@@ -199,12 +221,14 @@ def run_manifest(args):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Scenario mode (delegates to existing LoadDriver)
+# Scenario mode (legacy — delegates to LoadDriver)
 # ═══════════════════════════════════════════════════════════════════════
 
 def run_scenarios(args):
     """Run numbered scenarios via LoadDriver (existing behavior)."""
-    from driver import LoadDriver
+    # Import the LoadDriver class inline — it lives in scenarios or is
+    # embedded below for legacy support.
+    from _legacy_driver import LoadDriver
 
     scenario_ids = [s.strip() for s in args.scenarios.split(',')]
     customer_ids = [int(c.strip()) for c in args.customers.split(',')]
@@ -222,18 +246,22 @@ def run_scenarios(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='CS Pulse Driver — manifest-driven and scenario-based data loading',
+        description='CS Pulse Driver V3 — manifest-driven and scenario-based data loading',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Load NovaStar gold reference into customer 407
-  python3 cs_pulse_driver.py --manifest manifests/novastar_dc2s.json --customer-id 407
+  # Load Denali gold reference (register new customer)
+  python3 cs_pulse_driver.py --manifest manifests/denali_dc2s.json --register
 
-  # Register new customer and load manifest
-  python3 cs_pulse_driver.py --manifest manifests/novastar_dc2s.json --register
+  # Load into existing customer
+  python3 cs_pulse_driver.py --manifest manifests/novastar_dc2s.json --customer-id 407
 
   # Generate CSVs only (no upload)
   python3 cs_pulse_driver.py --manifest manifests/novastar_dc2s.json --generate-only /tmp/novastar/
+
+  # Phase-based ROI loading
+  python3 cs_pulse_driver.py --manifest manifests/denali_dc2s.json --register --phase baseline
+  python3 cs_pulse_driver.py --manifest manifests/denali_dc2s.json -c 420 --phase intervention
 
   # Run numbered scenarios (legacy mode)
   python3 cs_pulse_driver.py --scenarios 1,7,8 --customers 407
@@ -254,6 +282,32 @@ Examples:
         '--register',
         action='store_true',
         help='Register a new customer from manifest before loading data',
+    )
+    parser.add_argument(
+        '--phase',
+        choices=['baseline', 'intervention'],
+        default=None,
+        help='Manifest time window: baseline=first 2/3, intervention=last 1/3 with recovery',
+    )
+
+    # ── Validation args (V3: merged from V2) ──
+    parser.add_argument(
+        '--validate-strict', dest='validate_strict',
+        action='store_true', default=True,
+        help='Enable strict post-process validation (default: on)',
+    )
+    parser.add_argument(
+        '--no-validate-strict', dest='validate_strict',
+        action='store_false',
+        help='Disable strict post-process validation',
+    )
+    parser.add_argument(
+        '--validate-sample-size', type=int, default=5,
+        help='Number of accounts to sample for validation (default: 5)',
+    )
+    parser.add_argument(
+        '--health-tolerance', type=int, default=1,
+        help='Tolerance for health distribution drift (default: 1)',
     )
 
     # ── Scenario mode args ──
@@ -301,6 +355,10 @@ Examples:
         '--verbose', '-v',
         action='store_true',
         help='Enable debug logging',
+    )
+    parser.add_argument(
+        '--version', action='version',
+        version=f'CS Pulse Driver V{__version__}',
     )
 
     # ── Scenario-specific args (passed through) ──

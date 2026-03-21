@@ -78,7 +78,7 @@ class CSPulseClient:
         self.session.mount("https://", adapter)
 
         self.session.headers.update({
-            'User-Agent': 'CS-Pulse-Load-Driver/0.1.0',
+            'User-Agent': 'CS-Pulse-Load-Driver/3.0',
             'Content-Type': 'application/json'
         })
 
@@ -568,6 +568,17 @@ class CSPulseClient:
             }
         )
         return response
+
+    def get_dc2s_health_score(
+        self, account_id: int, month: str = "aggregate"
+    ) -> Optional[Dict[str, Any]]:
+        """
+        DC2S health from latest KPI rows (works right after onboarding ingest).
+
+        Unlike get_account_scores(), this does not require health_scores rows.
+        """
+        params = {"month": month} if month else None
+        return self.get(f"/api/dc2s/health-score/{account_id}", params=params)
 
     def get_context_graph_summary(
         self,

@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-Scenario: Manifest-Driven Data Load
+Scenario: Manifest-Driven Data Load (V3)
 
-Reads a JSON manifest (e.g. manifests/novastar_dc2s.json) and generates
-deterministic CSV data for accounts, KPI measurements, signals,
-stakeholders, engagement events, profiles, products, and outcomes.
+Reads a JSON manifest and generates deterministic CSV data for accounts,
+KPI measurements, signals, stakeholders, engagement events, profiles,
+products, outcomes, decisions, and signal edges.
 
-Unlike the random CSVGenerator, this produces data that matches a
-curated narrative — specific account names, ARR values, health
-trajectories, story arcs, and named stakeholders.
+Key V3 additions:
+- NarrativeTimelinePlanner: causally-ordered event timelines per account
+  (signals before decisions before outcomes)
+- Phase/intervention support merged from V2
+- Post-process validation merged from V2
+- _header_use_account_id merged from V2
 
 Usage as scenario:
     ScenarioManifest(client, args).run()
@@ -26,6 +29,7 @@ import math
 import random
 import time
 import uuid as uuid_mod
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -48,7 +52,227 @@ except ImportError:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# ManifestCSVGenerator — the core engine
+# NarrativeTimelinePlanner — causally-ordered event timelines
+# ═══════════════════════════════════════════════════════════════════════
+
+@dataclass
+class PlannedEvent:
+    """A single event in a narrative timeline with a concrete date."""
+    account_id: int
+    phase: str
+    event_type: str       # signal, decision, outcome, stakeholder
+    event_subtype: str    # kpi_decline, escalation_to_exec, churn_risk, etc.
+    date: datetime
+    offset_days: int = 0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def date_str(self) -> str:
+        return self.date.strftime('%Y-%m-%d')
+
+
+class NarrativeTimelinePlanner:
+    """
+    Generates a causally-ordered event timeline per account.
+
+    For each account, reads the arc_type from the manifest and produces
+    a spine of events where:
+    - signal.date < decision.date (decisions reference signals)
+    - decision.date < outcome.date (outcomes reference decisions)
+    - stakeholder engagement aligns with referenced decisions
+
+    Generators pull dates FROM this spine instead of using random offsets,
+    ensuring causal ordering across all CSV files.
+    """
+
+    # Arc templates define phases with ordered events.
+    # 'month' is relative to data start (0-indexed).
+    # 'offset_days' is relative to the phase month start.
+    ARC_TEMPLATES: Dict[str, List[Dict[str, Any]]] = {
+        'ignored_churn': [
+            {'phase': 'baseline', 'months': (0, 2), 'events': []},
+            {'phase': 'warning', 'month': 3, 'events': [
+                {'type': 'signal', 'subtype': 'kpi_decline', 'offset_days': 0},
+                {'type': 'signal', 'subtype': 'support_escalation', 'offset_days': 7},
+                {'type': 'stakeholder', 'subtype': 'champion_disengagement', 'offset_days': 14},
+            ]},
+            {'phase': 'crisis', 'month': 4, 'events': [
+                {'type': 'decision', 'subtype': 'escalation_to_exec', 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'emergency_retention', 'offset_days': 7},
+            ]},
+            {'phase': 'outcome', 'month': 5, 'events': [
+                {'type': 'outcome', 'subtype': 'churn_risk', 'offset_days': 0},
+                {'type': 'outcome', 'subtype': 'engagement_decline', 'offset_days': 3},
+            ]},
+        ],
+        'proactive_growth': [
+            {'phase': 'baseline', 'months': (0, 2), 'events': []},
+            {'phase': 'expansion', 'month': 3, 'events': [
+                {'type': 'signal', 'subtype': 'expansion_signal', 'offset_days': 0},
+                {'type': 'stakeholder', 'subtype': 'champion_engages', 'offset_days': 7},
+            ]},
+            {'phase': 'invest', 'month': 4, 'events': [
+                {'type': 'decision', 'subtype': 'invest_expansion', 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'upsell_proposal', 'offset_days': 10},
+            ]},
+            {'phase': 'outcome', 'month': 5, 'events': [
+                {'type': 'outcome', 'subtype': 'expansion_opportunity', 'offset_days': 0},
+                {'type': 'outcome', 'subtype': 'revenue_growth', 'offset_days': 7},
+            ]},
+        ],
+        'crisis_recovery': [
+            {'phase': 'baseline', 'months': (0, 1), 'events': []},
+            {'phase': 'crisis', 'month': 2, 'events': [
+                {'type': 'signal', 'subtype': 'critical_incident', 'offset_days': 0},
+                {'type': 'signal', 'subtype': 'stakeholder_escalation', 'offset_days': 3},
+            ]},
+            {'phase': 'response', 'month': 2, 'events': [
+                {'type': 'decision', 'subtype': 'emergency_response', 'offset_days': 10},
+                {'type': 'stakeholder', 'subtype': 'exec_sponsor_engaged', 'offset_days': 12},
+            ]},
+            {'phase': 'recovery', 'month': 3, 'events': [
+                {'type': 'decision', 'subtype': 'recovery_plan', 'offset_days': 0},
+            ]},
+            {'phase': 'outcome', 'month': 4, 'events': [
+                {'type': 'outcome', 'subtype': 'partial_recovery', 'offset_days': 0},
+                {'type': 'outcome', 'subtype': 'revenue_protected', 'offset_days': 14},
+            ]},
+        ],
+        'expansion_champion': [
+            {'phase': 'baseline', 'months': (0, 1), 'events': []},
+            {'phase': 'champion_active', 'month': 2, 'events': [
+                {'type': 'signal', 'subtype': 'champion_advocacy', 'offset_days': 0},
+                {'type': 'stakeholder', 'subtype': 'champion_promotes', 'offset_days': 5},
+            ]},
+            {'phase': 'expansion', 'month': 3, 'events': [
+                {'type': 'signal', 'subtype': 'usage_spike', 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'expand_contract', 'offset_days': 14},
+            ]},
+            {'phase': 'outcome', 'month': 4, 'events': [
+                {'type': 'outcome', 'subtype': 'expansion_closed', 'offset_days': 0},
+                {'type': 'outcome', 'subtype': 'revenue_growth', 'offset_days': 7},
+            ]},
+        ],
+        'steady_performer': [
+            {'phase': 'baseline', 'months': (0, 3), 'events': []},
+            {'phase': 'review', 'month': 4, 'events': [
+                {'type': 'signal', 'subtype': 'routine_review', 'offset_days': 0},
+                {'type': 'stakeholder', 'subtype': 'regular_qbr', 'offset_days': 7},
+            ]},
+            {'phase': 'outcome', 'month': 5, 'events': [
+                {'type': 'decision', 'subtype': 'renewal_confirmed', 'offset_days': 0},
+                {'type': 'outcome', 'subtype': 'renewal_secured', 'offset_days': 14},
+            ]},
+        ],
+    }
+
+    # Fallback: maps classification to a default arc
+    CLASSIFICATION_TO_ARC = {
+        'critical': 'ignored_churn',
+        'at_risk': 'crisis_recovery',
+        'healthy': 'steady_performer',
+    }
+
+    def __init__(self, seed: int = 42):
+        self._rng = random.Random(seed)
+        self._plans: Dict[int, List[PlannedEvent]] = {}
+
+    def plan(
+        self,
+        account_id: int,
+        arc_type: str,
+        start_date: datetime,
+        total_months: int = 6,
+        classification: str = 'healthy',
+    ) -> List[PlannedEvent]:
+        """
+        Generate ordered events with concrete dates for one account.
+
+        Args:
+            account_id: The account's numeric ID
+            arc_type: Story arc key (e.g. 'ignored_churn')
+            start_date: First date of the data range
+            total_months: Total months of data
+            classification: Account classification fallback
+
+        Returns:
+            Chronologically sorted list of PlannedEvent
+        """
+        # Resolve arc template
+        template = self.ARC_TEMPLATES.get(arc_type)
+        if not template:
+            # Fall back to classification-based arc
+            fallback = self.CLASSIFICATION_TO_ARC.get(classification, 'steady_performer')
+            template = self.ARC_TEMPLATES.get(fallback, self.ARC_TEMPLATES['steady_performer'])
+
+        events: List[PlannedEvent] = []
+
+        for phase_def in template:
+            phase_name = phase_def['phase']
+            phase_events = phase_def.get('events', [])
+
+            if not phase_events:
+                continue
+
+            # Determine the month for this phase
+            month = phase_def.get('month')
+            if month is None:
+                months_range = phase_def.get('months', (0, 0))
+                month = months_range[1]  # end of range
+
+            # Cap month to total_months - 1
+            month = min(month, max(total_months - 1, 0))
+            phase_start = start_date + timedelta(days=month * 30)
+
+            for evt_def in phase_events:
+                evt_date = phase_start + timedelta(days=evt_def.get('offset_days', 0))
+                events.append(PlannedEvent(
+                    account_id=account_id,
+                    phase=phase_name,
+                    event_type=evt_def['type'],
+                    event_subtype=evt_def['subtype'],
+                    date=evt_date,
+                    offset_days=evt_def.get('offset_days', 0),
+                ))
+
+        # Sort by date to enforce causal ordering
+        events.sort(key=lambda e: e.date)
+
+        # Cache the plan
+        self._plans[account_id] = events
+        return events
+
+    def get_events(
+        self,
+        account_id: int,
+        event_type: Optional[str] = None,
+    ) -> List[PlannedEvent]:
+        """
+        Retrieve planned events for an account, optionally filtered by type.
+
+        Args:
+            account_id: The account ID
+            event_type: Optional filter ('signal', 'decision', 'outcome', 'stakeholder')
+
+        Returns:
+            List of PlannedEvent (may be empty if no plan exists)
+        """
+        events = self._plans.get(account_id, [])
+        if event_type:
+            events = [e for e in events if e.event_type == event_type]
+        return events
+
+    def get_plan(self, account_id: int) -> List[PlannedEvent]:
+        """Get the full plan for an account."""
+        return self._plans.get(account_id, [])
+
+    def has_plan(self, account_id: int) -> bool:
+        """Check if a plan exists for this account."""
+        return account_id in self._plans
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ManifestCSVGenerator — the core engine (V3: merged V2 extensions)
 # ═══════════════════════════════════════════════════════════════════════
 
 class ManifestCSVGenerator:
@@ -58,14 +282,28 @@ class ManifestCSVGenerator:
     The manifest specifies exact account names, ARR, health targets,
     trajectories, stakeholders, and signals — producing deterministic
     data suitable for gold-reference demos.
+
+    V3 additions (merged from V2):
+    - Phase windowing (baseline / intervention)
+    - Intervention narratives (recovery signals, CSM actions, revenue outcomes)
+    - NarrativeTimelinePlanner integration for causal ordering
+    - decisions.csv and signal_edges.csv generation
+    - _header_use_account_id static method
     """
 
-    def __init__(self, manifest_path: str, customer_id: int = 0, seed: int = 42):
+    def __init__(
+        self,
+        manifest_path: str,
+        customer_id: int = 0,
+        seed: int = 42,
+        phase: Optional[str] = None,
+    ):
         """
         Args:
             manifest_path: Path to the manifest JSON file
             customer_id: Assigned customer_id (overrides manifest if >0)
             seed: Random seed for reproducible noise
+            phase: 'baseline', 'intervention', or None (full range)
         """
         with open(manifest_path, 'r') as f:
             self.manifest = json.load(f)
@@ -78,13 +316,35 @@ class ManifestCSVGenerator:
 
         self.customer_id = customer_id
         self.seed = seed
+        self.phase = phase
+        self.vertical = self.customer_info.get('vertical', 'dc2_s')
         random.seed(seed)
 
         # Parse time range
+        raw_dp = int(self.time_range.get('data_points_per_kpi', 26))
         self.start_date = datetime.strptime(self.time_range['start'], '%Y-%m-%d')
         self.end_date = datetime.strptime(self.time_range['end'], '%Y-%m-%d')
         self.frequency = self.time_range.get('frequency', 'weekly')
-        self.data_points = self.time_range.get('data_points_per_kpi', 26)
+
+        # Phase windowing (from V2)
+        if phase == 'baseline':
+            self.data_points = int(raw_dp * 2 / 3)
+            logger.info("  Phase=baseline: generating %s data points", self.data_points)
+        elif phase == 'intervention':
+            baseline_points = int(raw_dp * 2 / 3)
+            self.data_points = raw_dp - baseline_points
+            if self.frequency == 'weekly':
+                self.start_date += timedelta(weeks=baseline_points)
+            elif self.frequency == 'daily':
+                self.start_date += timedelta(days=baseline_points)
+            else:
+                self.start_date += timedelta(days=baseline_points * 30)
+            logger.info(
+                "  Phase=intervention: generating %s data points from %s",
+                self.data_points, self.start_date.strftime('%Y-%m-%d'),
+            )
+        else:
+            self.data_points = raw_dp
 
         # Build measurement dates
         self.dates = self._build_dates()
@@ -99,6 +359,25 @@ class ManifestCSVGenerator:
 
         # Account ID base: customer_id * 1000 + 1
         self.account_id_base = (self.customer_id or 1) * 1000 + 1
+
+        # Build narrative timeline plans for all accounts
+        self.planner = NarrativeTimelinePlanner(seed=seed)
+        self._build_narrative_plans()
+
+    def _build_narrative_plans(self):
+        """Create narrative timeline plans for all accounts."""
+        total_months = max(1, int((self.end_date - self.start_date).days / 30))
+        for idx, acct in enumerate(self.accounts):
+            aid = self._account_id(idx)
+            arc_type = acct.get('story_arc', '')
+            classification = acct.get('classification', 'healthy')
+            self.planner.plan(
+                account_id=aid,
+                arc_type=arc_type,
+                start_date=self.start_date,
+                total_months=total_months,
+                classification=classification,
+            )
 
     def _build_dates(self) -> List[str]:
         """Build list of measurement date strings based on frequency."""
@@ -120,6 +399,19 @@ class ManifestCSVGenerator:
         """Deterministic account_id from index."""
         return self.account_id_base + idx
 
+    @staticmethod
+    def _header_use_account_id(csv_content: str) -> str:
+        """Replace source_account_id with account_id in CSV header."""
+        if not csv_content:
+            return csv_content
+        first_nl = csv_content.find('\n')
+        if first_nl == -1:
+            header, rest = csv_content, ''
+        else:
+            header, rest = csv_content[:first_nl], csv_content[first_nl:]
+        header = header.replace('source_account_id', 'account_id')
+        return header + rest
+
     # ── KPI value generation with trajectories ──
 
     @staticmethod
@@ -132,29 +424,18 @@ class ManifestCSVGenerator:
         """
         Reverse-engineer a KPI value that will score approximately target_health
         through the scoring engine.
-
-        The scoring engine maps KPI values → 0-100 scores using ranges:
-          - In "healthy" range → scores 70-100
-          - In "risk" range → scores 50-69
-          - In "critical" range → scores 0-49
-
-        We interpolate within the appropriate range band to produce a value
-        that the engine will score close to target_health.
         """
         healthy = ranges.get('healthy', {})
         risk = ranges.get('risk', {})
         critical = ranges.get('critical', {})
 
         if not healthy or not risk:
-            # No ranges — fall back to linear mapping but more generous
-            # Use power curve: health=90 → 95% of target, health=50 → 70%, health=30 → 50%
             factor = 0.4 + 0.6 * (target_health / 100.0) ** 0.7
             if not higher_is_better:
                 factor = 1.0 / factor
             return target_val * factor
 
         if higher_is_better:
-            # healthy: [h_min, h_max], risk: [r_min, r_max], critical: [c_min, c_max]
             h_min = healthy.get('min', target_val * 0.8)
             h_max = healthy.get('max', target_val * 1.2)
             r_min = risk.get('min', target_val * 0.5)
@@ -163,19 +444,15 @@ class ManifestCSVGenerator:
             c_max = critical.get('max', r_min)
 
             if target_health >= 70:
-                # Healthy band: score 70-100 maps to [h_min, h_max]
                 t = (target_health - 70) / 30.0
                 return h_min + t * (h_max - h_min)
             elif target_health >= 50:
-                # Risk band: score 50-69 maps to [r_min, r_max]
                 t = (target_health - 50) / 20.0
                 return r_min + t * (r_max - r_min)
             else:
-                # Critical band: score 0-49 maps to [c_min, c_max]
                 t = target_health / 50.0
                 return c_min + t * (c_max - c_min)
         else:
-            # Lower-is-better: healthy has LOW values, critical has HIGH values
             h_min = healthy.get('min', target_val * 0.5)
             h_max = healthy.get('max', target_val)
             r_min = risk.get('min', h_max)
@@ -184,7 +461,6 @@ class ManifestCSVGenerator:
             c_max = critical.get('max', target_val * 3.0)
 
             if target_health >= 70:
-                # Healthy: lower values are better
                 t = (target_health - 70) / 30.0
                 return h_max - t * (h_max - h_min)
             elif target_health >= 50:
@@ -205,12 +481,17 @@ class ManifestCSVGenerator:
         Generate a time-series of KPI values for one account+KPI.
 
         Uses the account's target_health (0-100) to set the baseline,
-        then applies trajectory (stable, declining, improving, etc.)
-        with realistic noise.
+        then applies trajectory with realistic noise.
+
+        V3: intervention phase flips declining trajectories to improving.
         """
+        # V2 phase logic: intervention flips declining to improving
+        if self.phase == 'intervention' and trajectory in ('declining', 'slow_decline'):
+            target_health = min(target_health + 15, 95)
+            trajectory = 'improving'
+
         n = len(self.dates)
 
-        # Get KPI metadata
         meta = self.kpi_catalog.get(kpi_code, {})
         higher_is_better = meta.get('higher_is_better', True)
         target_val = meta.get('target', {})
@@ -219,9 +500,6 @@ class ManifestCSVGenerator:
         elif target_val is None:
             target_val = 85.0
 
-        # Base value: use KPI ranges to reverse-engineer a value that will
-        # produce roughly the desired health score through the scoring engine.
-        # The scoring engine maps: healthy range → 70-100, risk → 50-69, critical → 0-49
         ranges = meta.get('ranges', {})
         base = self._health_to_kpi_value(
             target_health, target_val, ranges, higher_is_better
@@ -229,18 +507,17 @@ class ManifestCSVGenerator:
 
         values = []
         for i in range(n):
-            t = i / max(n - 1, 1)  # 0.0 to 1.0
+            t = i / max(n - 1, 1)
 
-            # Apply trajectory
             if trajectory == 'declining':
                 start_month = decline_start_month or 3
-                start_idx = int(start_month * (n / 6))  # convert months to index
+                start_idx = int(start_month * (n / 6))
                 if i >= start_idx:
                     decay = (i - start_idx) / max(n - start_idx, 1)
                     if higher_is_better:
-                        modifier = 1.0 - 0.35 * decay  # drop up to 35%
+                        modifier = 1.0 - 0.35 * decay
                     else:
-                        modifier = 1.0 + 0.5 * decay  # increase (worse) up to 50%
+                        modifier = 1.0 + 0.5 * decay
                 else:
                     modifier = 1.0
             elif trajectory == 'slow_decline':
@@ -248,7 +525,6 @@ class ManifestCSVGenerator:
             elif trajectory == 'improving':
                 modifier = 1.0 + 0.15 * t if higher_is_better else 1.0 - 0.15 * t
             elif trajectory == 'recovering':
-                # V-shape: decline first half, recover second half
                 if t < 0.4:
                     m = 1.0 - 0.25 * (t / 0.4)
                 else:
@@ -263,11 +539,9 @@ class ManifestCSVGenerator:
             else:  # stable
                 modifier = 1.0 + 0.01 * random.gauss(0, 1)
 
-            # Apply noise (±3%)
             noise = 1.0 + random.gauss(0, 0.03)
             val = base * modifier * noise
 
-            # Clamp to reasonable bounds
             if higher_is_better:
                 val = max(0, min(target_val * 1.2, val))
             else:
@@ -286,7 +560,6 @@ class ManifestCSVGenerator:
         if ranges:
             healthy = ranges.get('healthy', {})
             risk = ranges.get('risk', {})
-            critical = ranges.get('critical', {})
 
             if higher_is_better:
                 if healthy and value >= healthy.get('min', 0):
@@ -301,7 +574,6 @@ class ManifestCSVGenerator:
                     return 'risk'
                 return 'critical'
 
-        # Fallback: normalize to 0-100
         target_val = meta.get('target', {})
         if isinstance(target_val, dict):
             target_val = target_val.get('value', 85.0)
@@ -338,6 +610,8 @@ class ManifestCSVGenerator:
             'engagement_events.csv': self.generate_engagement_events_csv,
             'account_business_profiles.csv': self.generate_profiles_csv,
             'outcomes.csv': self.generate_outcomes_csv,
+            'decisions.csv': self.generate_decisions_csv,
+            'signal_edges.csv': self.generate_signal_edges_csv,
         }
 
         for filename, gen_fn in generators.items():
@@ -367,7 +641,6 @@ class ManifestCSVGenerator:
             aid = self._account_id(idx)
             arr = acct['arr']
 
-            # Tier from ARR
             if arr >= 5_000_000:
                 tier = 'Enterprise'
             elif arr >= 1_000_000:
@@ -375,11 +648,9 @@ class ManifestCSVGenerator:
             else:
                 tier = 'SMB'
 
-            # Classification → status
             cls = acct.get('classification', 'healthy')
             status = 'at_risk' if cls in ('critical', 'at_risk') else 'active'
 
-            # Champion = first stakeholder with champion/executive_sponsor role
             champion = None
             exec_sponsor = None
             for sh in acct.get('stakeholders', []):
@@ -389,15 +660,13 @@ class ManifestCSVGenerator:
                 if role == 'executive_sponsor' and not exec_sponsor:
                     exec_sponsor = sh
 
-            champion = champion or acct.get('stakeholders', [{}])[0] if acct.get('stakeholders') else {}
+            champion = champion or (acct.get('stakeholders', [{}])[0] if acct.get('stakeholders') else {})
             exec_sponsor_name = exec_sponsor['name'] if exec_sponsor else ''
 
-            # Dates
             renewal = acct.get('renewal_date', '2026-09-01')
             renewal_dt = datetime.strptime(renewal, '%Y-%m-%d')
             contract_start = (renewal_dt - timedelta(days=365)).strftime('%Y-%m-%d')
 
-            # CSM names
             csm_names = ['Sarah Rivera', 'Alex Chen', 'Jordan Blake', 'Morgan Lee', 'Taylor Kim']
             csm = csm_names[idx % len(csm_names)]
             csm_email = csm.lower().replace(' ', '.') + '@novastar-dc.com'
@@ -456,7 +725,6 @@ class ManifestCSVGenerator:
                 elif target_val is None:
                     target_val = 85.0
 
-                # Generate full time series
                 series = self._generate_kpi_series(
                     target_health, trajectory, decline_start, kpi_code
                 )
@@ -473,19 +741,23 @@ class ManifestCSVGenerator:
         return out.getvalue()
 
     def generate_signals_csv(self) -> str:
-        """Generate enhanced_qualitative_signals.csv from manifest key_signals + auto-generated."""
+        """Generate enhanced_qualitative_signals.csv with narrative timeline dates."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
             'signal_id', 'source_account_id', 'signal_date', 'signal_type',
             'content', 'sentiment', 'sentiment_score',
-            'arc_id', 'story_phase', 'linked_node_id',
+            'arc_id', 'story_phase', 'linked_node_id', 'signal_ref',
         ])
 
+        phase_prefix = f'{self.phase}_' if self.phase else ''
         counter = 0
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             arc = acct.get('story_arc', '')
+
+            # Get planned signal events for narrative-aligned dates
+            planned_signals = self.planner.get_events(aid, 'signal')
 
             # Manifest-defined signals (curated)
             for sig in acct.get('key_signals', []):
@@ -496,17 +768,52 @@ class ManifestCSVGenerator:
                     'neutral': 0.1,
                     'negative': -0.6, 'very_negative': -0.9,
                 }
+                sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
                 w.writerow([
-                    f'sig_{aid}_{counter}',
+                    sig_ref,
                     aid,
                     sig.get('date', '2026-01-01'),
                     sig.get('type', 'observation'),
                     sig.get('content', ''),
-                    sentiment.replace('very_', ''),  # normalize to positive/negative/neutral
+                    sentiment.replace('very_', ''),
                     score_map.get(sentiment, 0.0),
                     arc,
-                    '',  # story_phase
-                    '',  # linked_node_id
+                    '',
+                    '',
+                    sig_ref,
+                ])
+
+            # Narrative-planned signals (from NarrativeTimelinePlanner)
+            for pe in planned_signals:
+                counter += 1
+                sig_ref = f'{phase_prefix}narrative_sig_{aid}_{counter}'
+                sentiment = 'negative' if pe.event_subtype in (
+                    'kpi_decline', 'support_escalation', 'critical_incident',
+                    'stakeholder_escalation',
+                ) else 'positive'
+                score = -0.6 if sentiment == 'negative' else 0.7
+                content_map = {
+                    'kpi_decline': 'KPI metrics declining below threshold',
+                    'support_escalation': 'Support ticket escalated to management',
+                    'expansion_signal': 'Account showing expansion readiness',
+                    'critical_incident': 'Critical service incident reported',
+                    'stakeholder_escalation': 'Stakeholder escalated concerns',
+                    'champion_advocacy': 'Champion actively advocating for platform',
+                    'usage_spike': 'Significant usage increase detected',
+                    'routine_review': 'Routine quarterly review completed',
+                }
+                w.writerow([
+                    sig_ref,
+                    aid,
+                    pe.date_str,
+                    pe.event_subtype,
+                    content_map.get(pe.event_subtype, f'Signal: {pe.event_subtype}'),
+                    sentiment,
+                    round(score + random.gauss(0, 0.1), 2),
+                    arc,
+                    pe.phase,
+                    '',
+                    sig_ref,
                 ])
 
             # Auto-generated filler signals (2 per month for 6 months)
@@ -542,8 +849,9 @@ class ManifestCSVGenerator:
                         sentiment = random.choice(['positive', 'neutral', 'positive'])
 
                     score = {'positive': 0.6, 'neutral': 0.1, 'negative': -0.5}[sentiment]
+                    sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
                     w.writerow([
-                        f'sig_{aid}_{counter}',
+                        sig_ref,
                         aid,
                         date.strftime('%Y-%m-%d'),
                         random.choice(['meeting', 'health_check', 'observation', 'customer_feedback']),
@@ -553,6 +861,45 @@ class ManifestCSVGenerator:
                         arc,
                         '',
                         '',
+                        sig_ref,
+                    ])
+
+            # Intervention-phase recovery signals (from V2)
+            intervention = acct.get('intervention', {})
+            if self.phase == 'intervention' and intervention.get('recovery_signals'):
+                for rs in intervention['recovery_signals']:
+                    counter += 1
+                    sig_ref = f'{phase_prefix}recovery_{aid}_{counter}'
+                    w.writerow([
+                        sig_ref,
+                        aid,
+                        rs.get('date', '2026-03-01'),
+                        rs.get('type', 'recovery_signal'),
+                        rs.get('content', ''),
+                        rs.get('sentiment', 'positive'),
+                        0.7 if rs.get('sentiment') == 'positive' else 0.1,
+                        arc,
+                        'recovery',
+                        '',
+                        sig_ref,
+                    ])
+
+            if self.phase == 'intervention' and intervention.get('csm_actions'):
+                for ca in intervention['csm_actions']:
+                    counter += 1
+                    sig_ref = f'{phase_prefix}csm_action_{aid}_{counter}'
+                    w.writerow([
+                        sig_ref,
+                        aid,
+                        ca.get('date', '2026-02-01'),
+                        'csm_action',
+                        f'{ca["action"]} -> {ca["outcome"]}',
+                        'positive',
+                        0.8,
+                        arc,
+                        'intervention',
+                        '',
+                        sig_ref,
                     ])
 
         return out.getvalue()
@@ -579,7 +926,7 @@ class ManifestCSVGenerator:
 
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
-            random.seed(self.seed + idx)  # deterministic per account
+            random.seed(self.seed + idx)
             n_products = random.randint(1, 3)
             selected = random.sample(products, min(n_products, len(products)))
 
@@ -595,11 +942,11 @@ class ManifestCSVGenerator:
                     'active',
                 ])
 
-        random.seed(self.seed)  # reset
+        random.seed(self.seed)
         return out.getvalue()
 
     def generate_stakeholders_csv(self) -> str:
-        """Generate stakeholders.csv from manifest stakeholder data."""
+        """Generate stakeholders.csv with narrative-aligned engagement dates."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -612,11 +959,17 @@ class ManifestCSVGenerator:
             aid = self._account_id(idx)
             domain = acct['name'].lower().replace(' ', '') + '.com'
 
-            for sh in acct.get('stakeholders', []):
+            # Get planned stakeholder events to align dates
+            planned_stakeholder_events = self.planner.get_events(aid, 'stakeholder')
+
+            for si, sh in enumerate(acct.get('stakeholders', [])):
                 email = sh['name'].lower().replace(' ', '.') + '@' + domain
-                # Last contact based on engagement frequency
                 freq = sh.get('engagement_frequency', 'monthly')
-                if freq in ('none', 'none_recent'):
+
+                # Use narrative planner date if available for this stakeholder
+                if si < len(planned_stakeholder_events):
+                    last_contact = planned_stakeholder_events[si].date_str
+                elif freq in ('none', 'none_recent'):
                     last_contact = (self.end_date - timedelta(days=random.randint(90, 180))).strftime('%Y-%m-%d')
                 elif freq == 'daily':
                     last_contact = (self.end_date - timedelta(days=random.randint(0, 3))).strftime('%Y-%m-%d')
@@ -653,17 +1006,18 @@ class ManifestCSVGenerator:
             'participants', 'outcome', 'sentiment', 'notes',
         ])
 
-        event_types = ['QBR', 'check_in', 'technical_review', 'executive_briefing',
-                       'support_escalation', 'onboarding_session', 'renewal_discussion']
-
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
             stakeholders = acct.get('stakeholders', [])
             participant_names = [s['name'] for s in stakeholders[:3]]
 
-            # Number of events based on health: critical=more escalation, healthy=regular
-            n_events = {'critical': 10, 'at_risk': 8, 'healthy': 6}.get(cls, 6)
+            ev_cfg = self.context_graph_cfg.get('events_per_account')
+            if isinstance(ev_cfg, (list, tuple)) and len(ev_cfg) >= 2:
+                lo, hi = int(ev_cfg[0]), int(ev_cfg[1])
+                n_events = random.randint(min(lo, hi), max(lo, hi))
+            else:
+                n_events = {'critical': 10, 'at_risk': 8, 'healthy': 6}.get(cls, 6)
 
             for i in range(n_events):
                 event_date = self.start_date + timedelta(
@@ -724,7 +1078,7 @@ class ManifestCSVGenerator:
                 acct['name'],
                 random.choice(industries),
                 emp,
-                acct['arr'] * random.uniform(5, 20),  # company revenue >> arr to us
+                acct['arr'] * random.uniform(5, 20),
                 random.randint(2005, 2022),
                 random.choice(cities),
                 f'https://www.{domain}',
@@ -734,7 +1088,7 @@ class ManifestCSVGenerator:
         return out.getvalue()
 
     def generate_outcomes_csv(self) -> str:
-        """Generate outcomes.csv — resolved/in-progress outcomes linked to story arcs."""
+        """Generate outcomes.csv with narrative-aligned dates."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -742,15 +1096,17 @@ class ManifestCSVGenerator:
             'description', 'revenue_impact', 'status', 'linked_signal_id',
         ])
 
+        phase_prefix = f'{self.phase}_' if self.phase else ''
         counter = 0
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
-            arc = acct.get('story_arc', '')
             arr = acct['arr']
 
+            # Get planned outcome events for narrative-aligned dates
+            planned_outcomes = self.planner.get_events(aid, 'outcome')
+
             if cls == 'critical':
-                # At-risk revenue outcomes
                 outcomes = [
                     ('revenue_at_risk', f'Churn risk — {acct["name"]}',
                      f'Account showing signs of churn. ARR at risk: ${arr:,.0f}',
@@ -772,9 +1128,13 @@ class ManifestCSVGenerator:
                      arr * 0.15, 'open'),
                 ]
 
-            for otype, title, desc, impact, status in outcomes:
+            for oi, (otype, title, desc, impact, status) in enumerate(outcomes):
                 counter += 1
-                outcome_date = (self.end_date - timedelta(days=random.randint(0, 60))).strftime('%Y-%m-%d')
+                # Use narrative-planned date if available, else fallback
+                if oi < len(planned_outcomes):
+                    outcome_date = planned_outcomes[oi].date_str
+                else:
+                    outcome_date = (self.end_date - timedelta(days=random.randint(0, 60))).strftime('%Y-%m-%d')
                 w.writerow([
                     aid,
                     outcome_date,
@@ -783,98 +1143,507 @@ class ManifestCSVGenerator:
                     desc,
                     round(impact, 2),
                     status,
-                    f'sig_{aid}_1',  # link to first signal
+                    f'{phase_prefix}sig_{aid}_1',
                 ])
 
+            # Intervention revenue outcome (from V2)
+            intervention = acct.get('intervention', {})
+            if self.phase == 'intervention' and intervention.get('revenue_outcome'):
+                ro = intervention['revenue_outcome']
+                counter += 1
+                w.writerow([
+                    aid,
+                    self.end_date.strftime('%Y-%m-%d'),
+                    ro['type'],
+                    f'{ro["type"].replace("_", " ").title()} — {acct["name"]}',
+                    ro.get('description', ''),
+                    round(ro['amount'], 2),
+                    'resolved',
+                    f'{phase_prefix}sig_{aid}_1',
+                ])
+
+        return out.getvalue()
+
+    def generate_decisions_csv(self) -> str:
+        """Generate decisions.csv with narrative-aligned dates."""
+        out = io.StringIO()
+        w = csv.writer(out)
+        w.writerow([
+            'source_account_id', 'decision_date', 'decision_id', 'title',
+            'decision_maker_role', 'chosen_option', 'outcome_description',
+            'risk_level', 'revenue_impact',
+        ])
+
+        phase_prefix = f'{self.phase}_' if self.phase else ''
+
+        decision_templates = {
+            'critical': [
+                ('Escalation to executive sponsor', 'executive_sponsor', 'Escalate account risk', 'Risk review initiated', 'high'),
+                ('Emergency retention plan', 'champion', 'Launch retention playbook', 'Retention plan in progress', 'critical'),
+            ],
+            'at_risk': [
+                ('Renewal strategy review', 'executive_sponsor', 'Adjust contract terms', 'Renewal discussion underway', 'medium'),
+                ('Feature adoption push', 'champion', 'Schedule training sessions', 'Training plan approved', 'medium'),
+            ],
+            'healthy': [
+                ('Expansion discussion', 'champion', 'Propose upsell package', 'Expansion opportunity identified', 'low'),
+            ],
+        }
+
+        for idx, acct in enumerate(self.accounts):
+            aid = self._account_id(idx)
+            cls = acct.get('classification', 'healthy')
+            arr = acct['arr']
+            templates = decision_templates.get(cls, decision_templates['healthy'])
+
+            # Get planned decision events for narrative-aligned dates
+            planned_decisions = self.planner.get_events(aid, 'decision')
+
+            for di, (title, role, chosen, outcome_desc, risk) in enumerate(templates):
+                # Use narrative-planned date if available
+                if di < len(planned_decisions):
+                    decision_date = planned_decisions[di].date_str
+                else:
+                    decision_date = (self.end_date - timedelta(days=random.randint(10, 45))).strftime('%Y-%m-%d')
+                rev_impact = -arr * 0.1 if cls == 'critical' else (-arr * 0.05 if cls == 'at_risk' else arr * 0.1)
+                w.writerow([
+                    aid,
+                    decision_date,
+                    f'{phase_prefix}dec_{aid}_{di+1}',
+                    f'{title} — {acct["name"]}',
+                    role,
+                    chosen,
+                    outcome_desc,
+                    risk,
+                    round(rev_impact, 2),
+                ])
+
+            # Intervention decisions (from V2)
+            intervention = acct.get('intervention', {})
+            if self.phase == 'intervention' and intervention.get('decisions'):
+                for di, dec in enumerate(intervention['decisions']):
+                    w.writerow([
+                        aid,
+                        dec['date'],
+                        f'int_dec_{aid}_{di+1}',
+                        dec['title'],
+                        dec.get('decision_maker', 'executive_sponsor'),
+                        dec.get('rationale', ''),
+                        f'Intervention: {dec["title"]}',
+                        dec.get('impact', 'high'),
+                        round(arr * 0.1, 2),
+                    ])
+
+        return out.getvalue()
+
+    def generate_signal_edges_csv(self) -> str:
+        """Generate signal_edges.csv — causal links between signals, decisions, outcomes."""
+        out = io.StringIO()
+        w = csv.writer(out)
+        w.writerow([
+            'source_account_id', 'from_signal_ref', 'to_signal_ref',
+            'edge_type', 'label', 'confidence', 'lag_days',
+        ])
+
+        for idx, acct in enumerate(self.accounts):
+            aid = self._account_id(idx)
+            cls = acct.get('classification', 'healthy')
+
+            if cls == 'critical':
+                edges = [
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
+                    (f'decision:dec_{aid}_1', 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_2', 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
+                    (f'decision:dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
+                ]
+            elif cls == 'at_risk':
+                edges = [
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
+                    (f'decision:dec_{aid}_1', 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
+                ]
+            else:
+                edges = [
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
+                    (f'decision:dec_{aid}_1', 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
+                ]
+
+            for from_ref, to_ref, etype, label, conf, lag in edges:
+                w.writerow([aid, from_ref, to_ref, etype, label, conf, lag])
+
+            # Intervention edges (from V2)
+            intervention = acct.get('intervention', {})
+            if self.phase == 'intervention' and intervention.get('decisions'):
+                n_decisions = len(intervention['decisions'])
+                n_recovery = len(intervention.get('recovery_signals', []))
+
+                for di in range(min(n_decisions, n_recovery)):
+                    w.writerow([
+                        aid,
+                        f'decision:int_dec_{aid}_{di+1}',
+                        f'intervention_recovery_{aid}_{di+100}',
+                        'LED_TO',
+                        f'Intervention: {intervention["decisions"][di]["title"]}',
+                        0.9,
+                        14,
+                    ])
+
+                if intervention.get('revenue_outcome'):
+                    amt = intervention['revenue_outcome']['amount']
+                    w.writerow([
+                        aid,
+                        f'decision:int_dec_{aid}_{n_decisions}',
+                        'outcome:revenue_protected',
+                        'LED_TO',
+                        f'Intervention protected ${amt/1e6:.1f}M ARR',
+                        0.95,
+                        30,
+                    ])
+
+        return out.getvalue()
+
+    def generate_industry_benchmarks_csv(self) -> str:
+        """Generate industry_benchmarks.csv — one row per manifest KPI."""
+        out = io.StringIO()
+        w = csv.writer(out)
+        w.writerow([
+            'kpi_code', 'benchmark_source', 'industry_p50',
+            'industry_p25', 'industry_p75', 'account_percentile',
+            'sample_size', 'benchmark_date',
+        ])
+        bench_date = self.end_date.strftime('%Y-%m-%d')
+        for code in self.kpi_codes:
+            meta = self.kpi_catalog.get(code, {})
+            tv = meta.get('target', 85.0)
+            if isinstance(tv, dict):
+                p50 = float(tv.get('value', 85.0))
+            else:
+                try:
+                    p50 = float(tv)
+                except (TypeError, ValueError):
+                    p50 = 85.0
+            p25 = round(p50 * 0.85, 2)
+            p75 = round(p50 * 1.15, 2)
+            w.writerow([
+                code,
+                'DC2_S Industry Peer Index',
+                p50,
+                p25,
+                p75,
+                random.randint(35, 75),
+                random.choice([200, 350, 500, 750, 1000]),
+                bench_date,
+            ])
         return out.getvalue()
 
     def get_upload_file_map(self) -> Dict[str, str]:
         """
         Generate all CSVs in memory and return {file_type: csv_content}.
-        file_type keys match the onboarding API expectations.
+        Headers are normalized with account_id (not source_account_id).
         """
         return {
-            'accounts': self.generate_accounts_csv(),
-            'kpi_measurements': self.generate_kpi_measurements_csv(),
-            'enhanced_signals': self.generate_signals_csv(),
-            'products': self.generate_products_csv(),
-            'stakeholders': self.generate_stakeholders_csv(),
-            'engagement_events': self.generate_engagement_events_csv(),
-            'account_business_profiles': self.generate_profiles_csv(),
-            'outcomes': self.generate_outcomes_csv(),
+            'accounts': self._header_use_account_id(self.generate_accounts_csv()),
+            'kpi_measurements': self._header_use_account_id(self.generate_kpi_measurements_csv()),
+            'enhanced_signals': self._header_use_account_id(self.generate_signals_csv()),
+            'products': self._header_use_account_id(self.generate_products_csv()),
+            'stakeholders': self._header_use_account_id(self.generate_stakeholders_csv()),
+            'engagement_events': self._header_use_account_id(self.generate_engagement_events_csv()),
+            'account_business_profiles': self._header_use_account_id(self.generate_profiles_csv()),
+            'outcomes': self._header_use_account_id(self.generate_outcomes_csv()),
+            'decisions': self._header_use_account_id(self.generate_decisions_csv()),
+            'signal_edges': self._header_use_account_id(self.generate_signal_edges_csv()),
         }
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Scenario class (for use with LoadDriver)
+# ScenarioManifest (V3: merged V2 validation)
 # ═══════════════════════════════════════════════════════════════════════
 
 class ScenarioManifest(BaseScenario):
     """
-    Manifest-driven data load scenario.
+    Manifest-driven data load scenario with post-process validation.
 
     Reads a manifest JSON, generates all CSVs, uploads them via
-    the onboarding API, and triggers process-data.
+    the onboarding API, triggers process-data, and validates results.
 
-    Required args:
-        --manifest: Path to manifest JSON file
-        --customer-id: Target customer ID (if loading into existing customer)
+    V3: merged V2 validation logic (health score checks, distribution,
+    KPI cardinality) directly into this class.
     """
+
+    # ── Validation helpers (merged from ScenarioManifestV2) ──
+
+    def _expected_distribution(self, accounts: List[Dict[str, Any]]) -> Dict[str, int]:
+        out = {'critical': 0, 'at_risk': 0, 'healthy': 0}
+        for acct in accounts:
+            cls = str(acct.get('classification', 'healthy')).lower()
+            if cls in out:
+                out[cls] += 1
+            else:
+                out['healthy'] += 1
+        return out
+
+    @staticmethod
+    def _manifest_class_for_account(acct: Dict[str, Any]) -> str:
+        cls = str(acct.get('classification', 'healthy')).lower()
+        if cls in ('critical', 'at_risk', 'healthy'):
+            return cls
+        return 'healthy'
+
+    def _expected_account_ids(self, customer_id: int, n_accounts: int) -> List[int]:
+        base = customer_id * 1000 + 1
+        return [base + i for i in range(n_accounts)]
+
+    def _status_from_score(self, score: float) -> str:
+        if score >= 70:
+            return 'healthy'
+        if score >= 50:
+            return 'at_risk'
+        return 'critical'
+
+    def _extract_score_and_status(self, payload: Dict[str, Any]) -> Tuple[float, str]:
+        if not payload:
+            return 0.0, 'critical'
+
+        if payload.get('overall_score') is not None:
+            try:
+                score_f = float(payload['overall_score'])
+            except Exception:
+                score_f = 0.0
+            status = str(payload.get('health_status') or '').lower()
+            if status == 'risk':
+                status = 'at_risk'
+            if status not in ('critical', 'at_risk', 'healthy'):
+                status = self._status_from_score(score_f)
+            return score_f, status
+
+        hs = payload.get('health_score')
+        if isinstance(hs, dict):
+            score = hs.get('health_score')
+            status_raw = hs.get('health_status')
+        else:
+            score = hs
+            status_raw = payload.get('health_status')
+
+        if score is None and isinstance(payload.get('health'), dict):
+            score = payload['health'].get('score')
+        if score is None and isinstance(payload.get('data'), dict):
+            score = payload['data'].get('health_score')
+        try:
+            score_f = float(score) if score is not None else 0.0
+        except Exception:
+            score_f = 0.0
+
+        def _norm(s: Any) -> str:
+            r = str(s or '').lower().strip()
+            if r in ('excellent', 'good', 'healthy'):
+                return 'healthy'
+            if r in ('warning', 'at_risk', 'risk'):
+                return 'at_risk'
+            if r == 'critical':
+                return 'critical'
+            return ''
+
+        status = _norm(status_raw)
+        if not status:
+            status = _norm(payload.get('health_status'))
+        if not status:
+            st = payload.get('status')
+            if st not in ('success', 'warning', 'error', None):
+                status = _norm(st)
+        if not status:
+            status = self._status_from_score(score_f)
+        if status not in ('critical', 'at_risk', 'healthy'):
+            status = self._status_from_score(score_f)
+        return score_f, status
+
+    def _extract_kpi_count(self, payload: Dict[str, Any]) -> int:
+        if not payload:
+            return 0
+        kc = payload.get('kpi_count')
+        if kc is not None:
+            try:
+                return int(kc)
+            except Exception:
+                pass
+        for key in ('kpi_scores', 'kpis', 'kpi_data'):
+            v = payload.get(key)
+            if isinstance(v, list):
+                return len(v)
+            if isinstance(v, dict):
+                return len(v)
+        if isinstance(payload.get('pillars'), list):
+            total = 0
+            for p in payload['pillars']:
+                if isinstance(p, dict):
+                    k = p.get('kpis')
+                    if isinstance(k, list):
+                        total += len(k)
+            if total > 0:
+                return total
+        return 0
+
+    def _validate_post_process(
+        self,
+        customer_id: int,
+        expected_account_ids: List[int],
+        manifest_accounts: List[Dict[str, Any]],
+        expected_kpi_count: int,
+        expected_distribution: Dict[str, int],
+        sample_size: int,
+        health_tolerance: int,
+        strict: bool,
+    ) -> Dict[str, Any]:
+        checks: Dict[str, Any] = {'passed': True, 'errors': [], 'metrics': {}}
+
+        accounts_resp = self.client.get_accounts() or []
+        actual_ids = []
+        for row in accounts_resp:
+            if not isinstance(row, dict):
+                continue
+            aid = row.get('account_id') or row.get('source_account_id') or row.get('id')
+            if aid is None:
+                continue
+            try:
+                actual_ids.append(int(aid))
+            except Exception:
+                continue
+
+        exp_set = set(expected_account_ids)
+        act_set = set(actual_ids)
+        missing_ids = sorted(exp_set - act_set)
+        checks['metrics']['accounts_expected'] = len(expected_account_ids)
+        checks['metrics']['accounts_found'] = len(act_set)
+        checks['metrics']['missing_account_ids'] = missing_ids[:20]
+        if missing_ids:
+            checks['passed'] = False
+            checks['errors'].append(f'Missing expected account IDs: {missing_ids[:10]}')
+
+        sample_ids = expected_account_ids[:max(1, min(sample_size, len(expected_account_ids)))]
+        id_to_manifest: Dict[int, str] = {}
+        for i, aid in enumerate(expected_account_ids):
+            if i < len(manifest_accounts):
+                id_to_manifest[aid] = self._manifest_class_for_account(manifest_accounts[i])
+            else:
+                id_to_manifest[aid] = 'healthy'
+        expected_sample_manifest = {'critical': 0, 'at_risk': 0, 'healthy': 0}
+        for aid in sample_ids:
+            c = id_to_manifest.get(aid, 'healthy')
+            expected_sample_manifest[c] += 1
+
+        endpoint_failures = []
+        actual_distribution = {'critical': 0, 'at_risk': 0, 'healthy': 0}
+        kpi_count_failures = []
+        validation_call_seconds: Dict[str, float] = {}
+        for aid in sample_ids:
+            t_call = time.time()
+            payload = self.client.get_dc2s_health_score(aid)
+            validation_call_seconds[str(aid)] = round(time.time() - t_call, 3)
+            if not payload:
+                endpoint_failures.append(aid)
+                continue
+            score, status = self._extract_score_and_status(payload)
+            actual_distribution[status] += 1
+            kpi_count = self._extract_kpi_count(payload)
+            if strict and kpi_count < expected_kpi_count:
+                kpi_count_failures.append((aid, kpi_count))
+            if kpi_count == 0 or payload.get('error'):
+                endpoint_failures.append(aid)
+            checks['metrics'].setdefault('sample_scores', {})[str(aid)] = {
+                'health_score': round(score, 2),
+                'status': status,
+                'kpi_count': kpi_count,
+            }
+
+        checks['metrics']['sample_size'] = len(sample_ids)
+        checks['metrics']['endpoint_failures'] = endpoint_failures
+        checks['metrics']['validation_call_seconds'] = validation_call_seconds
+        if validation_call_seconds:
+            vals = list(validation_call_seconds.values())
+            checks['metrics']['validation_latency_summary_s'] = {
+                'min': round(min(vals), 3),
+                'max': round(max(vals), 3),
+                'avg': round(sum(vals) / len(vals), 3),
+            }
+        if endpoint_failures:
+            checks['passed'] = False
+            checks['errors'].append(f'Account score endpoint failed/empty for IDs: {endpoint_failures[:10]}')
+
+        checks['metrics']['sample_distribution_actual'] = actual_distribution
+        checks['metrics']['sample_distribution_expected'] = dict(expected_sample_manifest)
+        for cls in ('critical', 'at_risk', 'healthy'):
+            expected_sample = expected_sample_manifest[cls]
+            if abs(actual_distribution[cls] - expected_sample) > health_tolerance:
+                checks['passed'] = False
+                checks['errors'].append(
+                    f'Health distribution drift for {cls}: actual={actual_distribution[cls]} '
+                    f'expected~={expected_sample} tolerance={health_tolerance}'
+                )
+
+        checks['metrics']['kpi_count_failures'] = kpi_count_failures[:10]
+        if kpi_count_failures:
+            checks['passed'] = False
+            checks['errors'].append(f'KPI cardinality shortfall in sample accounts: {kpi_count_failures[:5]}')
+
+        return checks
+
+    # ── Main run method ──
 
     def run(self) -> Dict[str, Any]:
         self.start_timer()
-        logger.info("=== Scenario: Manifest-Driven Load ===")
+        logger.info('=== Scenario: Manifest-Driven Load V3 ===')
 
         api_calls = 0
-        errors = []
-        results = {}
+        errors: List[str] = []
+        results: Dict[str, Any] = {}
 
         manifest_path = getattr(self.args, 'manifest', None)
         if not manifest_path:
-            return self.failure("--manifest path required")
-
+            return self.failure('--manifest path required')
         manifest_path = Path(manifest_path)
         if not manifest_path.exists():
-            return self.failure(f"Manifest not found: {manifest_path}")
+            return self.failure(f'Manifest not found: {manifest_path}')
 
         customer_id = getattr(self.args, 'customer_id', None) or \
                       getattr(self.client, 'customer_id', None)
+        if not customer_id:
+            return self.failure('--customer-id required for manifest scenario')
         seed = getattr(self.args, 'seed', None) or 42
+        phase = getattr(self.args, 'phase', None)
 
-        results['manifest'] = str(manifest_path)
-        results['customer_id'] = customer_id
+        strict = bool(getattr(self.args, 'validate_strict', True))
+        sample_size = int(getattr(self.args, 'validate_sample_size', 5))
+        health_tolerance = int(getattr(self.args, 'health_tolerance', 1))
 
         try:
-            # Step 1: Parse manifest
-            logger.info(f"  Step 1: Loading manifest: {manifest_path}")
             gen = ManifestCSVGenerator(
                 manifest_path=str(manifest_path),
-                customer_id=customer_id or 0,
+                customer_id=int(customer_id),
                 seed=seed,
+                phase=phase,
             )
+
+            expected_ids = self._expected_account_ids(int(customer_id), len(gen.accounts))
+            expected_kpi_count = len(gen.kpi_codes)
+            expected_distribution = self._expected_distribution(gen.accounts)
+
+            results['manifest'] = str(manifest_path)
+            results['customer_id'] = int(customer_id)
             results['customer_name'] = gen.customer_info['name']
+            results['phase'] = phase
             results['num_accounts'] = len(gen.accounts)
             results['num_kpis'] = len(gen.kpi_codes)
             results['time_range'] = gen.time_range
-            logger.info(f"    {gen.customer_info['name']}: "
-                        f"{len(gen.accounts)} accounts, {len(gen.kpi_codes)} KPIs, "
-                        f"{gen.data_points} data points")
+            results['expected'] = {
+                'accounts': len(gen.accounts),
+                'kpi_count_per_account': expected_kpi_count,
+                'expected_account_ids_preview': expected_ids[:5],
+                'expected_distribution': expected_distribution,
+            }
+            logger.info(f'    {gen.customer_info["name"]}: '
+                        f'{len(gen.accounts)} accounts, {len(gen.kpi_codes)} KPIs, '
+                        f'{gen.data_points} data points')
 
-            # Step 2: Generate CSVs in memory
-            logger.info("  Step 2: Generating CSVs from manifest")
-            gen_start = time.time()
-            file_map = gen.get_upload_file_map()
-            gen_duration = time.time() - gen_start
-            results['generation_duration_s'] = round(gen_duration, 2)
-            results['files_generated'] = list(file_map.keys())
-            logger.info(f"    Generated {len(file_map)} files in {gen_duration:.1f}s")
-
-            # Step 3: Upload CSVs
-            logger.info("  Step 3: Uploading CSVs to onboarding API")
-            upload_start = time.time()
-            upload_results = {}
-
-            # File type → filename mapping for upload
+            # Step 1: Generate + upload CSVs (streamed per file)
+            logger.info('  Step 1/2: Generate + upload CSVs')
             filename_map = {
                 'accounts': 'accounts.csv',
                 'kpi_measurements': 'kpi_measurements.csv',
@@ -884,83 +1653,137 @@ class ScenarioManifest(BaseScenario):
                 'engagement_events': 'engagement_events.csv',
                 'account_business_profiles': 'account_business_profiles.csv',
                 'outcomes': 'outcomes.csv',
+                'decisions': 'decisions.csv',
+                'signal_edges': 'signal_edges.csv',
+                'industry_benchmarks': 'industry_benchmarks.csv',
             }
+            generators = {
+                'accounts': gen.generate_accounts_csv,
+                'kpi_measurements': gen.generate_kpi_measurements_csv,
+                'enhanced_signals': gen.generate_signals_csv,
+                'products': gen.generate_products_csv,
+                'stakeholders': gen.generate_stakeholders_csv,
+                'engagement_events': gen.generate_engagement_events_csv,
+                'account_business_profiles': gen.generate_profiles_csv,
+                'outcomes': gen.generate_outcomes_csv,
+                'decisions': gen.generate_decisions_csv,
+                'signal_edges': gen.generate_signal_edges_csv,
+                'industry_benchmarks': gen.generate_industry_benchmarks_csv,
+            }
+            upload_results = {}
+            endpoint_metrics = {
+                'generate_seconds': {},
+                'upload_seconds': {},
+                'upload_bytes': {},
+                'upload_status': {},
+            }
+            t_step12 = time.time()
+            for file_type, gen_fn in generators.items():
+                t_gen = time.time()
+                csv_content = ManifestCSVGenerator._header_use_account_id(gen_fn())
+                endpoint_metrics['generate_seconds'][file_type] = round(time.time() - t_gen, 3)
+                endpoint_metrics['upload_bytes'][file_type] = len(csv_content.encode('utf-8'))
 
-            for file_type, csv_content in file_map.items():
-                filename = filename_map.get(file_type, f'{file_type}.csv')
+                t_up = time.time()
                 resp = self.client.upload_csv(
-                    customer_id=customer_id,
+                    customer_id=int(customer_id),
                     file_type=file_type,
                     csv_content=csv_content,
-                    filename=filename,
+                    filename=filename_map.get(file_type, f'{file_type}.csv'),
                 )
+                endpoint_metrics['upload_seconds'][file_type] = round(time.time() - t_up, 3)
                 api_calls += 1
-
-                if resp and resp.get('status') == 'success':
-                    upload_results[file_type] = 'success'
-                    logger.info(f"    {file_type}: uploaded")
+                ok = bool(resp and resp.get('status') == 'success')
+                upload_results[file_type] = 'success' if ok else f'failed: {str(resp)[:80]}'
+                endpoint_metrics['upload_status'][file_type] = 'success' if ok else 'failed'
+                if not ok:
+                    errors.append(f'Upload failed: {file_type}')
                 else:
-                    upload_results[file_type] = f"failed: {str(resp)[:80]}"
-                    errors.append(f"Upload {file_type} failed")
-                    logger.warning(f"    {file_type}: FAILED — {str(resp)[:80]}")
+                    logger.info(f'    {file_type}: uploaded')
 
-            upload_duration = time.time() - upload_start
-            results['upload_duration_s'] = round(upload_duration, 2)
             results['upload_results'] = upload_results
+            total_upload_bytes = sum(endpoint_metrics['upload_bytes'].values())
+            total_upload_s = sum(endpoint_metrics['upload_seconds'].values())
+            endpoint_metrics['upload_throughput_bytes_per_s'] = round(
+                total_upload_bytes / max(total_upload_s, 0.001), 2
+            )
+            endpoint_metrics['step12_duration_s'] = round(time.time() - t_step12, 2)
+            results['endpoint_metrics'] = endpoint_metrics
+            results['generation_duration_s'] = round(
+                sum(endpoint_metrics['generate_seconds'].values()), 2
+            )
+            results['upload_duration_s'] = round(total_upload_s, 2)
 
             successes = sum(1 for v in upload_results.values() if v == 'success')
-            logger.info(f"    Uploaded {successes}/{len(file_map)} files in {upload_duration:.1f}s")
+            logger.info(f'    Uploaded {successes}/{len(generators)} files')
 
             if successes == 0:
                 return self.failure(
-                    "All CSV uploads failed",
+                    'All CSV uploads failed',
                     api_calls=api_calls, errors=errors, details=results,
                 )
 
-            # Step 4: Process data
-            logger.info("  Step 4: Processing data (health scores + ingestion)")
-            process_start = time.time()
-
+            # Step 2: Process data
+            logger.info('  Step 3: process-data')
             original_timeout = self.client.timeout
             self.client.timeout = 300
+            t1 = time.time()
             process_resp = self.client.process_data(
-                customer_id=customer_id,
+                customer_id=int(customer_id),
                 skip_wizard_b=True,
                 skip_wizard_c=False,
                 strict_kpi_ranges=False,
             )
             self.client.timeout = original_timeout
             api_calls += 1
-
-            process_duration = time.time() - process_start
-            results['process_duration_s'] = round(process_duration, 2)
-
-            if process_resp and process_resp.get('status') in ('success', 'warning'):
-                logger.info(f"    OK: Process-data completed in {process_duration:.1f}s")
-                results['process_status'] = 'success'
-            else:
-                err = str(process_resp)[:150] if process_resp else "No response"
-                logger.warning(f"    WARN: process-data: {err}")
-                results['process_status'] = f"failed: {err}"
-                errors.append(f"process-data: {err[:80]}")
-
-        except Exception as e:
-            logger.error(f"Manifest scenario error: {e}", exc_info=True)
-            return self.failure(
-                f"Manifest scenario failed: {str(e)}",
-                api_calls=api_calls, errors=errors, details=results,
+            results['process_duration_s'] = round(time.time() - t1, 2)
+            results['process_response'] = process_resp or {}
+            results.setdefault('endpoint_metrics', {})['process_data_seconds'] = round(
+                time.time() - t1, 3
+            )
+            results['endpoint_metrics']['process_data_status'] = (
+                process_resp.get('status') if process_resp else 'failed'
             )
 
-        if errors:
-            return self.success(
-                f"Manifest loaded with {len(errors)} warnings: "
-                f"{results.get('num_accounts', 0)} accounts, {successes} files",
+            if not (process_resp and process_resp.get('status') in ('success', 'warning')):
+                return self.failure(
+                    f'process-data failed: {str(process_resp)[:150]}',
+                    api_calls=api_calls, errors=errors, details=results,
+                )
+
+            # Step 3: Post-process validations
+            logger.info('  Step 4: post-process validations')
+            validation = self._validate_post_process(
+                customer_id=int(customer_id),
+                expected_account_ids=expected_ids,
+                manifest_accounts=gen.accounts,
+                expected_kpi_count=expected_kpi_count,
+                expected_distribution=expected_distribution,
+                sample_size=sample_size,
+                health_tolerance=health_tolerance,
+                strict=strict,
+            )
+            results['validation'] = validation
+            if not validation['passed']:
+                return self.failure(
+                    'Manifest ingest completed but validation checks failed',
+                    api_calls=api_calls,
+                    errors=errors + validation.get('errors', []),
+                    details=results,
+                )
+
+        except Exception as e:
+            logger.error(f'Manifest V3 scenario error: {e}', exc_info=True)
+            return self.failure(
+                f'Manifest V3 scenario failed: {str(e)}',
                 api_calls=api_calls, errors=errors, details=results,
             )
 
         return self.success(
-            f"Manifest loaded: {gen.customer_info['name']} — "
-            f"{results.get('num_accounts', 0)} accounts, "
-            f"{len(gen.kpi_codes)} KPIs, {gen.data_points} data points",
-            api_calls=api_calls, details=results,
+            f'Manifest V3 loaded + validated: {results["customer_name"]} '
+            f'({results["expected"]["accounts"]} accounts, '
+            f'{results["num_kpis"]} KPIs, {gen.data_points} data points)',
+            api_calls=api_calls,
+            errors=errors,
+            details=results,
         )

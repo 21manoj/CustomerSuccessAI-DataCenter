@@ -127,7 +127,7 @@ run_one_worker() {
   set +e
   local out
   out="$(
-    cd "$LOAD_DRIVER" && python3 V2_cs_pulse_driver.py \
+    cd "$LOAD_DRIVER" && python3 cs_pulse_driver.py \
       --manifest "$tmp_manifest" \
       --register \
       --base-url "$BASE_URL" \
@@ -156,7 +156,7 @@ run_one_worker() {
   set +e
   local out2
   out2="$(
-    cd "$LOAD_DRIVER" && python3 V2_cs_pulse_driver.py \
+    cd "$LOAD_DRIVER" && python3 cs_pulse_driver.py \
       --manifest "$tmp_manifest" \
       --customer-id "$cid" \
       --base-url "$BASE_URL" \
