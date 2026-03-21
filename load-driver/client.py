@@ -576,6 +576,82 @@ class CSPulseClient:
         """Get context graph summary (node counts, edge counts, revenue) for an account."""
         return self.get('/api/context-graph/summary', params={'account_id': account_id})
 
+    def ensure_enterprise_all_toggles(
+        self,
+        customer_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        For load / gold scenarios: set subscription tier to *enterprise* and turn on
+        per-customer toggles (context graph + all sub-toggles, revenue intelligence, MCP).
+
+        Requires an authenticated client. For admin users, set X-Customer-ID (self.customer_id)
+        to the target customer so POST /api/features/* apply to that tenant.
+
+        Note: Context graph also needs the *global* platform FEATURE_CONTEXT_GRAPH (or env) ON
+        on the server, or is_context_graph_enabled() stays false.
+
+        Returns:
+            Dict with per-step status keys and optional 'errors' list.
+        """
+        cid = int(customer_id or self.customer_id or 0)
+        out: Dict[str, Any] = {"customer_id": cid, "steps": {}, "errors": []}
+        if not cid:
+            out["errors"].append("customer_id required")
+            return out
+
+        # 1) Entitlements — subscription tier enterprise (feature_toggles.subscription_tier)
+        r = self.put(
+            "/api/entitlements/tier",
+            {"customer_id": cid, "tier": "enterprise"},
+        )
+        out["steps"]["subscription_tier_enterprise"] = bool(r and r.get("status") == "success")
+        if not out["steps"]["subscription_tier_enterprise"]:
+            out["errors"].append(f"PUT /api/entitlements/tier failed: {r}")
+
+        # 2) Revenue intelligence (per-customer DB toggle)
+        r = self.post(
+            "/api/features/customer-toggle",
+            {"feature_name": "revenue_intelligence", "enabled": True},
+        )
+        out["steps"]["revenue_intelligence"] = bool(r and r.get("status") == "success")
+        if not out["steps"]["revenue_intelligence"]:
+            out["errors"].append(f"customer-toggle revenue_intelligence failed: {r}")
+
+        # 3) Context graph master + all sub-toggles (matches gold / MCP enable_features pattern)
+        sub_all = {
+            "story_arcs": True,
+            "signal_edges": True,
+            "stakeholder_tracking": True,
+            "decision_lifecycle": True,
+            "outcome_economics": True,
+            "industry_benchmarks": True,
+        }
+        r = self.post(
+            "/api/features/context-graph",
+            {"enabled": True, "sub_toggles": sub_all},
+        )
+        out["steps"]["context_graph"] = bool(r and r.get("status") == "success")
+        if not out["steps"]["context_graph"]:
+            out["errors"].append(f"POST /api/features/context-graph failed: {r}")
+        else:
+            out["steps"]["context_graph_active"] = r.get("active")
+
+        # 4) MCP integration toggle + sub-flips (enterprise tier capability)
+        r = self.post(
+            "/api/features/mcp",
+            {
+                "enabled": True,
+                "salesforce_enabled": True,
+                "servicenow_enabled": True,
+                "surveys_enabled": True,
+            },
+        )
+        out["steps"]["mcp_integration"] = bool(r and r.get("status") == "success")
+        if not out["steps"]["mcp_integration"]:
+            out["errors"].append(f"POST /api/features/mcp failed: {r}")
+
+        return out
+
 
 # Convenience function for quick setup
 def create_authenticated_client(

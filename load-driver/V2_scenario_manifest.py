@@ -9,7 +9,7 @@ checks show partial/invalid backend state after process-data.
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from scenarios.base import BaseScenario
 
@@ -238,6 +238,110 @@ class ScenarioManifestV2(BaseScenario):
 
         return checks
 
+    def _fetch_context_graph_summary_http(self, account_id: int) -> Tuple[Optional[Dict[str, Any]], Optional[int]]:
+        """GET /api/context-graph/summary without logging per-account HTTP errors."""
+        try:
+            r = self.client.session.get(
+                f"{self.client.base_url}/api/context-graph/summary",
+                params={"account_id": account_id},
+                timeout=self.client.timeout,
+            )
+            if r.status_code == 200:
+                return r.json(), None
+            return None, r.status_code
+        except Exception as ex:
+            logger.debug("context-graph summary %s: %s", account_id, ex)
+            return None, -1
+
+    def _collect_context_graph_report(
+        self,
+        customer_id: int,
+        account_ids: List[int],
+        process_resp: Any,
+    ) -> Dict[str, Any]:
+        """
+        Per-account context graph density from the REST summary API.
+        process_resp may omit ingest counts; we infer ingestion step from steps_completed.
+        """
+        proc = process_resp if isinstance(process_resp, dict) else {}
+        steps = proc.get("steps_completed") or []
+        ingest_ran = "context_graph_ingestion" in steps
+
+        toggle_on = bool(self.client.is_context_graph_enabled(customer_id))
+        cg_payload = proc.get("context_graph")
+        if not isinstance(cg_payload, dict):
+            cg_payload = {}
+
+        rows: List[Dict[str, Any]] = []
+        if not toggle_on:
+            for aid in account_ids:
+                rows.append(
+                    {
+                        "account_id": aid,
+                        "total_nodes": None,
+                        "total_edges": None,
+                        "nodes_by_type": {},
+                        "revenue_at_risk": None,
+                        "revenue_protected": None,
+                        "revenue_expansion": None,
+                        "revenue_net_impact": None,
+                        "api_status": "skipped",
+                        "note": "context_graph feature toggle OFF",
+                    }
+                )
+            graphs_in_db = False
+        else:
+            for aid in account_ids:
+                data, err = self._fetch_context_graph_summary_http(int(aid))
+                if data and data.get("status") == "success":
+                    rev = data.get("revenue") or {}
+                    rows.append(
+                        {
+                            "account_id": int(aid),
+                            "total_nodes": int(data.get("total_nodes") or 0),
+                            "total_edges": int(data.get("total_edges") or 0),
+                            "nodes_by_type": dict(data.get("nodes_by_type") or {}),
+                            "revenue_at_risk": rev.get("at_risk"),
+                            "revenue_protected": rev.get("protected"),
+                            "revenue_expansion": rev.get("expansion"),
+                            "revenue_net_impact": rev.get("net_impact"),
+                            "api_status": "ok",
+                            "note": "",
+                        }
+                    )
+                else:
+                    rows.append(
+                        {
+                            "account_id": int(aid),
+                            "total_nodes": None,
+                            "total_edges": None,
+                            "nodes_by_type": {},
+                            "revenue_at_risk": None,
+                            "revenue_protected": None,
+                            "revenue_expansion": None,
+                            "revenue_net_impact": None,
+                            "api_status": "error",
+                            "note": f"summary HTTP {err}" if err is not None else "no response",
+                        }
+                    )
+            graphs_in_db = any((r.get("total_nodes") or 0) > 0 for r in rows)
+
+        nodes_from_process = cg_payload.get("nodes_inserted")
+        produced = bool(
+            graphs_in_db
+            or (nodes_from_process is not None and int(nodes_from_process) > 0)
+        )
+
+        return {
+            "feature_toggle_on": toggle_on,
+            "context_graph_ingestion_step_ran": ingest_ran,
+            "process_data_context_graph": cg_payload,
+            "graphs_present_in_db": graphs_in_db,
+            "context_graphs_produced": produced,
+            "account_count": len(account_ids),
+            "accounts": rows,
+        }
+
     def run(self) -> Dict[str, Any]:
         self.start_timer()
         logger.info("=== Scenario: Manifest-Driven Load V2 ===")
@@ -258,6 +362,13 @@ class ScenarioManifestV2(BaseScenario):
             return self.failure("--customer-id required for manifest scenario")
         seed = getattr(self.args, "seed", None) or 42
         phase = getattr(self.args, "phase", None)
+        if phase == "baseline":
+            logger.info("    Segment [1/2] BASELINE — early KPI window (~months 1–4); pre-intervention narratives")
+        elif phase == "intervention":
+            logger.info(
+                "    Segment [2/2] INTERVENTION & OUTCOMES — late window + recovery KPIs; "
+                "CSVs include outcomes, decisions, signal_edges, extra signals"
+            )
 
         strict = bool(getattr(self.args, "validate_strict", True))
         sample_size = int(getattr(self.args, "validate_sample_size", 5))
@@ -410,6 +521,12 @@ class ScenarioManifestV2(BaseScenario):
                 errors=errors,
                 details=results,
             )
+
+        results["context_graph_report"] = self._collect_context_graph_report(
+            int(customer_id),
+            expected_ids,
+            results.get("process_response") or {},
+        )
 
         return self.success(
             f"Manifest V2 loaded + validated: {results['customer_name']} "
