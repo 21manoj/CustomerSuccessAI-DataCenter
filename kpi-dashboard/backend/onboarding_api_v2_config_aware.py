@@ -556,6 +556,35 @@ def filter_kpi_csv_by_config(df: pd.DataFrame, customer_id: int, strict_mode: bo
 # These are generated from customer-provided data if not already uploaded.
 # ============================================================================
 
+def _row_account_id_csv(row) -> int:
+    """Resolve account id from a CSV row.
+
+    Load-driver manifest CSVs use ``source_account_id``; legacy / template CSVs
+    use ``account_id``. Ingest accepts both.
+    """
+    import pandas as pd
+
+    v = row.get("account_id") if hasattr(row, "get") else None
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        v = row.get("source_account_id") if hasattr(row, "get") else None
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        raise KeyError("missing account_id and source_account_id")
+    return int(float(v))
+
+
+def _ensure_account_id_column(df):
+    """Add ``account_id`` from ``source_account_id`` when driver-style CSV omits it."""
+    import pandas as pd
+
+    if df is None or df.empty:
+        return df
+    if "account_id" not in df.columns and "source_account_id" in df.columns:
+        out = df.copy()
+        out["account_id"] = out["source_account_id"]
+        return out
+    return df
+
+
 def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data_dir: Path, engine):
     """
     Auto-generate the 3 platform-derived context graph CSVs if they were not
@@ -579,7 +608,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                 outcomes_file = data_dir / 'outcomes.csv'
 
             if outcomes_file.exists():
-                df_outcomes = pd.read_csv(outcomes_file)
+                df_outcomes = _ensure_account_id_column(pd.read_csv(outcomes_file))
                 decisions_rows = []
                 for _, row in df_outcomes.iterrows():
                     account_id = row.get('account_id')
@@ -643,7 +672,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
             dec_file = cg_data_dir / 'decisions.csv'
             if dec_file.exists() and outcomes_file.exists():
                 df_dec = pd.read_csv(dec_file)
-                df_out = pd.read_csv(outcomes_file)
+                df_out = _ensure_account_id_column(pd.read_csv(outcomes_file))
                 for _, dec_row in df_dec.iterrows():
                     dec_ref = dec_row.get('decision_id', '')
                     dec_acct = dec_row.get('account_id')
@@ -668,7 +697,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
             if not stk_file.exists():
                 stk_file = data_dir / 'stakeholders.csv'
             if stk_file.exists() and dec_file.exists():
-                df_stk = pd.read_csv(stk_file)
+                df_stk = _ensure_account_id_column(pd.read_csv(stk_file))
                 df_dec = pd.read_csv(dec_file)
                 for _, dec_row in df_dec.iterrows():
                     dec_ref = dec_row.get('decision_id', '')
@@ -860,7 +889,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             df = pd.read_csv(stakeholders_file)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
-                    account_id_val = int(row['account_id'])
+                    account_id_val = _row_account_id_csv(row)
                     all_account_ids.add(account_id_val)
                     role = row.get('role', 'end_user')
                     props = {
@@ -894,7 +923,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             df = pd.read_csv(events_file)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
-                    account_id_val = int(row['account_id'])
+                    account_id_val = _row_account_id_csv(row)
                     all_account_ids.add(account_id_val)
                     props = {
                         'channel': row.get('channel', ''),
@@ -920,8 +949,8 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading engagement_events.csv: {e}", exc_info=True)
 
     # ── 3. account_business_profiles.csv → ACCOUNT nodes ──
-    profiles_file = data_dir / 'account_business_profiles.csv'
-    if profiles_file.exists():
+    profiles_file = _cg_csv('account_business_profiles.csv')
+    if profiles_file:
         try:
             df = pd.read_csv(profiles_file)
             with engine.begin() as conn:
@@ -936,10 +965,11 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                         'strategic_initiatives': row.get('strategic_initiatives', ''),
                         'budget_cycle': row.get('budget_cycle', ''),
                     }
+                    _aid = _row_account_id_csv(row)
                     _insert_node(
-                        conn, customer_id, row['account_id'],
+                        conn, customer_id, _aid,
                         'ACCOUNT', 'business_profile',
-                        f"Account {row['account_id']} - {row.get('industry', '')}",
+                        f"Account {_aid} - {row.get('industry', '')}",
                         props, tier=1,
                         event_time=row.get('profile_date'),
                     )
@@ -957,7 +987,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             df = pd.read_csv(decisions_file)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
-                    account_id_val = int(row['account_id'])
+                    account_id_val = _row_account_id_csv(row)
                     all_account_ids.add(account_id_val)
                     decision_id = str(row.get('decision_id', '')).strip()
                     props = {
@@ -994,13 +1024,13 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             current_app.logger.error(f"Error loading decisions.csv: {e}", exc_info=True)
 
     # ── 5. outcomes.csv → OUTCOME nodes ──
-    outcomes_file = data_dir / 'outcomes.csv'
-    if outcomes_file.exists():
+    outcomes_file = _cg_csv('outcomes.csv')
+    if outcomes_file:
         try:
             df = pd.read_csv(outcomes_file)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
-                    account_id_val = int(row['account_id'])
+                    account_id_val = _row_account_id_csv(row)
                     all_account_ids.add(account_id_val)
                     outcome_id = str(row.get('outcome_id', '')).strip()
                     rev_val = None
@@ -1035,6 +1065,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     )
                     if outcome_id:
                         outcome_ref_map.setdefault(outcome_id, {})[account_id_val] = nid
+                    # signal_edges often references outcome:<outcome_type> (e.g. revenue_at_risk) with empty outcome_id in CSV
+                    ot = str(outcome_type).strip() if outcome_type is not None else ''
+                    if ot:
+                        outcome_ref_map.setdefault(ot, {})[account_id_val] = nid
                     result['nodes_inserted'] += 1
             result['files_loaded'].append('outcomes.csv')
             current_app.logger.info(f"✅ Loaded {len(df)} outcome nodes")
@@ -1085,7 +1119,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             df = pd.read_csv(enhanced_file)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
-                    account_id_val = int(row['account_id'])
+                    account_id_val = _row_account_id_csv(row)
                     all_account_ids.add(account_id_val)
                     sig_ref = str(row.get('signal_ref', '')).strip()
                     props = {
@@ -1135,6 +1169,10 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
         if not ref:
             return None
 
+        # Bare signal ref from enhanced_qualitative_signals.csv (e.g. sig_414001_1)
+        if ref.startswith('sig_'):
+            return signal_ref_map.get(ref, {}).get(account_id)
+
         # stakeholder:<role>
         if ref.startswith('stakeholder:'):
             role = ref.split(':', 1)[1]
@@ -1169,6 +1207,11 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
         try:
             df = pd.read_csv(edges_file)
             unresolved = 0
+            _edge_acct_col = None
+            if 'account_id' in df.columns:
+                _edge_acct_col = 'account_id'
+            elif 'source_account_id' in df.columns:
+                _edge_acct_col = 'source_account_id'
             with engine.begin() as conn:
                 for _, row in df.iterrows():
                     from_ref = str(row.get('from_signal_ref', ''))
@@ -1188,8 +1231,20 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
 
                     edge_type = row.get('edge_type', 'CORRELATES_WITH')
 
-                    # Edges are arc-level (not per-account), so replicate for each account
-                    for acct_id in sorted(all_account_ids):
+                    # Per-row account_id (load-driver / manifest signal_edges) — refs are account-scoped
+                    if _edge_acct_col is not None:
+                        raw_aid = row.get(_edge_acct_col)
+                        if raw_aid is not None and not (isinstance(raw_aid, float) and pd.isna(raw_aid)):
+                            try:
+                                row_acct_ids = [int(float(raw_aid))]
+                            except (ValueError, TypeError):
+                                row_acct_ids = sorted(all_account_ids)
+                        else:
+                            row_acct_ids = sorted(all_account_ids)
+                    else:
+                        row_acct_ids = sorted(all_account_ids)
+
+                    for acct_id in row_acct_ids:
                         from_nid = _resolve_ref(from_ref, acct_id)
                         to_nid = _resolve_ref(to_ref, acct_id)
 

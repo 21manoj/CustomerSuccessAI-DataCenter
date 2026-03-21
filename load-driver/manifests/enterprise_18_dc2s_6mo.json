@@ -1,0 +1,920 @@
+{
+  "manifest_version": "1.0",
+  "customer": {
+    "name": "Enterprise DC2S 18-Account E2E",
+    "domain": "enterprise-18-e2e.dc2s.loadtest",
+    "vertical": "dc2_s",
+    "admin_email": "admin@enterprise-18-e2e.dc2s.loadtest",
+    "admin_name": "E2E Load Admin",
+    "total_arr": 62000000,
+    "description": "18 accounts, ~6 months weekly KPI history, rich engagement + full 8 CG CSVs; baseline + intervention"
+  },
+  "time_range": {
+    "start": "2025-09-01",
+    "end": "2026-02-28",
+    "frequency": "weekly",
+    "data_points_per_kpi": 26
+  },
+  "kpis": {
+    "selection": "top_4_per_pillar",
+    "count": 20,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI4",
+      "P1-KPI5",
+      "P2-KPI1",
+      "P2-KPI2",
+      "P2-KPI3",
+      "P2-KPI4",
+      "P3-KPI1",
+      "P3-KPI2",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P4-KPI1",
+      "P4-KPI2",
+      "P4-KPI3",
+      "P4-KPI4",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3",
+      "P5-KPI4"
+    ]
+  },
+  "context_graph": {
+    "stakeholders_per_account": [
+      5,
+      9
+    ],
+    "events_per_account": [
+      14,
+      22
+    ],
+    "include_decisions": true,
+    "include_outcomes": true,
+    "include_signal_edges": true,
+    "include_benchmarks": true
+  },
+  "accounts": [
+    {
+      "name": "Titan Hyperscale Labs",
+      "arr": 8200000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "VP of Infrastructure (key champion) departed in Jan 2026. Successor favors competitor. GPU utilization dropped 40% post-departure. No QBR since Nov 2025.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "stakeholders": [
+        {
+          "name": "James Morrison",
+          "role": "VP Infrastructure",
+          "title": "VP of Infrastructure",
+          "department": "Engineering",
+          "influence_score": 9,
+          "sentiment": "departed",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "Lisa Park",
+          "role": "successor",
+          "title": "Director of Infrastructure",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "negative",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "David Chen",
+          "role": "technical_lead",
+          "title": "Sr. Systems Engineer",
+          "department": "Operations",
+          "influence_score": 5,
+          "sentiment": "neutral",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Rachel Kim",
+          "role": "finance",
+          "title": "VP Finance",
+          "department": "Finance",
+          "influence_score": 6,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_change",
+          "date": "2026-01-15",
+          "content": "VP of Infrastructure James Morrison has resigned. Lisa Park promoted as interim replacement.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-02-01",
+          "content": "Lisa Park evaluating alternative GPU cloud providers. RFP issued to 3 vendors.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-02-15",
+          "content": "GPU utilization dropped from 82% to 48% over 4 weeks. Training jobs migrating to competitor.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2026-03-01",
+          "content": "No executive contact in 90+ days. QBR requests unanswered.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Meridian Cloud Services",
+      "arr": 5800000,
+      "target_health": 42,
+      "classification": "critical",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-08-01",
+      "narrative": "Hardware reliability degrading. RMA rate doubled in Q1 2026. Three Sev-1 incidents in 6 weeks. MTBF dropped below threshold. Customer escalated to CTO.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "stakeholders": [
+        {
+          "name": "Michael Torres",
+          "role": "champion",
+          "title": "CTO",
+          "department": "Technology",
+          "influence_score": 9,
+          "sentiment": "frustrated",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Amanda Foster",
+          "role": "operations",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 7,
+          "sentiment": "negative",
+          "engagement_frequency": "daily"
+        },
+        {
+          "name": "Kevin Wright",
+          "role": "technical_lead",
+          "title": "Infrastructure Manager",
+          "department": "Operations",
+          "influence_score": 6,
+          "sentiment": "negative",
+          "engagement_frequency": "daily"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "incident",
+          "date": "2026-01-20",
+          "content": "Sev-1: Complete rack failure in Pod 3. 4-hour outage affecting 120 GPU nodes.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "incident",
+          "date": "2026-02-08",
+          "content": "Sev-1: Power distribution unit failure. 2-hour outage. Second major incident in 3 weeks.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "escalation",
+          "date": "2026-02-15",
+          "content": "CTO Michael Torres escalated to our VP of Sales. Demanded reliability improvement plan within 2 weeks.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "kpi_breach",
+          "date": "2026-03-01",
+          "content": "RMA rate crossed 2.5% threshold (was 0.8% in Oct). MTBF dropped to 4200 hours (target: 8000).",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Apex Compute Holdings",
+      "arr": 4100000,
+      "target_health": 47,
+      "classification": "critical",
+      "story_arc": "budget_cut",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "FY26 budget frozen after Q4 earnings miss. Planned $2M expansion cancelled. Downsizing from 200 to 150 GPU nodes. CFO driving cost reduction.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "stakeholders": [
+        {
+          "name": "Robert Singh",
+          "role": "champion",
+          "title": "VP of AI Platform",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "supportive_but_constrained",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Patricia Huang",
+          "role": "economic_buyer",
+          "title": "CFO",
+          "department": "Finance",
+          "influence_score": 10,
+          "sentiment": "cost_focused",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Thomas Lee",
+          "role": "technical_lead",
+          "title": "Sr. ML Engineer",
+          "department": "AI/ML",
+          "influence_score": 5,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "budget_change",
+          "date": "2025-12-15",
+          "content": "Q4 earnings miss. Board mandated 15% OpEx reduction across all departments.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "expansion_cancelled",
+          "date": "2026-01-10",
+          "content": "Planned Phase 2 expansion ($2.1M) put on indefinite hold. CFO froze all new infrastructure spend.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "downsizing",
+          "date": "2026-02-01",
+          "content": "Capacity reduction: decommissioning 50 GPU nodes (200 → 150). Workloads consolidating.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "competitor_evaluation",
+          "date": "2026-03-05",
+          "content": "CFO requested pricing comparison with 2 competitors for renewal negotiation leverage.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Pacific Data Systems",
+      "arr": 6500000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "early_warning",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-15",
+      "narrative": "GPU utilization declining gradually. Training job completion rate dropping. Early signs of workload migration but champion still engaged.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 4,
+      "stakeholders": [
+        {
+          "name": "Jennifer Walsh",
+          "role": "champion",
+          "title": "Head of AI/ML",
+          "department": "Engineering",
+          "influence_score": 8,
+          "sentiment": "concerned",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Mark Anderson",
+          "role": "technical_lead",
+          "title": "Platform Engineer",
+          "department": "Engineering",
+          "influence_score": 6,
+          "sentiment": "neutral",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Susan Miller",
+          "role": "executive_sponsor",
+          "title": "CIO",
+          "department": "IT",
+          "influence_score": 9,
+          "sentiment": "neutral",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "usage_decline",
+          "date": "2026-01-15",
+          "content": "GPU utilization trending down: 78% → 71% over 6 weeks. Some workloads moved to cloud.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "support_ticket",
+          "date": "2026-02-10",
+          "content": "Multiple tickets about training job failures. Completion rate dropped from 94% to 87%.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Quantum Edge Networks",
+      "arr": 4800000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "engagement_drop",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-05-30",
+      "narrative": "No QBR in 90 days. Champion went silent after org restructure. Partner engagement score declining. Renewal in 2 months with no renewal discussion started.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 3,
+      "stakeholders": [
+        {
+          "name": "Alex Nguyen",
+          "role": "champion",
+          "title": "Director of Infrastructure",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "disengaged",
+          "engagement_frequency": "none_recent"
+        },
+        {
+          "name": "Diana Patel",
+          "role": "partner_contact",
+          "title": "Channel Manager",
+          "department": "Partnerships",
+          "influence_score": 6,
+          "sentiment": "neutral",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Chris Johnson",
+          "role": "executive_sponsor",
+          "title": "SVP Technology",
+          "department": "Technology",
+          "influence_score": 9,
+          "sentiment": "unknown",
+          "engagement_frequency": "none_recent"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "engagement_gap",
+          "date": "2026-01-01",
+          "content": "Last QBR was Oct 2025. Three scheduling attempts declined or no-showed.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "org_change",
+          "date": "2026-01-20",
+          "content": "Major restructure: Engineering team reorganized. Alex Nguyen's role changed, reduced authority.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Stratos AI Infrastructure",
+      "arr": 3200000,
+      "target_health": 62,
+      "classification": "at_risk",
+      "story_arc": "slow_expansion",
+      "partner_tier": "tier_2",
+      "renewal_date": "2026-11-15",
+      "narrative": "At 90% capacity utilization but no expansion signals. Budget discussions stalled. Technical team wants to expand but finance blocked.",
+      "kpi_trajectory": "flat_high_risk",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Emily Zhang",
+          "role": "champion",
+          "title": "VP of AI",
+          "department": "AI/ML",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "George Martinez",
+          "role": "economic_buyer",
+          "title": "VP Finance",
+          "department": "Finance",
+          "influence_score": 8,
+          "sentiment": "cautious",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Nina Kowalski",
+          "role": "technical_lead",
+          "title": "ML Platform Lead",
+          "department": "Engineering",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "capacity_warning",
+          "date": "2026-02-01",
+          "content": "Capacity utilization at 91%. Queuing delays increasing for training jobs.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "expansion_stall",
+          "date": "2026-02-15",
+          "content": "Expansion proposal ($800K) submitted in Dec. Finance requested ROI analysis, no response since.",
+          "sentiment": "neutral"
+        }
+      ]
+    },
+    {
+      "name": "CyberVault DC",
+      "arr": 2900000,
+      "target_health": 67,
+      "classification": "at_risk",
+      "story_arc": "recovery_in_progress",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-01",
+      "narrative": "Was critical (health=41) in Dec 2025. Playbook PB-02 ran in Jan. Dedicated CSM assigned. Health recovering but not yet stable.",
+      "kpi_trajectory": "recovering",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Brian O'Connor",
+          "role": "champion",
+          "title": "Director of Operations",
+          "department": "Operations",
+          "influence_score": 7,
+          "sentiment": "improving",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Laura Bennett",
+          "role": "csm",
+          "title": "Assigned CSM",
+          "department": "Customer Success",
+          "influence_score": 5,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Ryan Murphy",
+          "role": "executive_sponsor",
+          "title": "VP Engineering",
+          "department": "Engineering",
+          "influence_score": 8,
+          "sentiment": "cautiously_positive",
+          "engagement_frequency": "biweekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "playbook_executed",
+          "date": "2026-01-10",
+          "content": "PB-02 (Ops Stability) triggered. Dedicated support engineer assigned. Weekly health check calls started.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "health_improvement",
+          "date": "2026-02-15",
+          "content": "Health score improved from 41 to 58. RMA rate stabilized. MTBF trending up.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "recovery_milestone",
+          "date": "2026-03-10",
+          "content": "Health reached 67. Two consecutive weeks above at-risk threshold. Champion re-engaged.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Atlas Computing Group",
+      "arr": 5100000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "stable",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-01",
+      "narrative": "Solid account. Steady utilization, good partner engagement. No major issues. Renewal expected to be straightforward.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Karen White",
+          "role": "champion",
+          "title": "VP of Technology",
+          "department": "Technology",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Jason Brooks",
+          "role": "technical_lead",
+          "title": "Infrastructure Lead",
+          "department": "Operations",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Michelle Davis",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "positive",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Pinnacle Systems",
+      "arr": 3800000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "moderate_growth",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-09-15",
+      "narrative": "Adding new AI use cases. Training job volume up 20% QoQ. Exploring inference workloads.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Daniel Foster",
+          "role": "champion",
+          "title": "Head of ML",
+          "department": "AI/ML",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Sarah Collins",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Helix Data Corp",
+      "arr": 2600000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "stable",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-07-01",
+      "narrative": "Strong partner engagement. Regular QBRs. Good channel relationship.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Andrew Kim",
+          "role": "champion",
+          "title": "Director of Engineering",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Linda Chen",
+          "role": "partner_contact",
+          "title": "Partner Manager",
+          "department": "Partnerships",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Fortress Colocation",
+      "arr": 3400000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "expansion_candidate",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-15",
+      "narrative": "Budget signals positive. Capacity at 75%, growing. New AI initiative launching in Q3.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Peter Hoffman",
+          "role": "champion",
+          "title": "VP Infrastructure",
+          "department": "Infrastructure",
+          "influence_score": 8,
+          "sentiment": "very_positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Grace Liu",
+          "role": "economic_buyer",
+          "title": "CFO",
+          "department": "Finance",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Jake Roberts",
+          "role": "technical_lead",
+          "title": "AI Platform Lead",
+          "department": "Engineering",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_signal",
+          "date": "2026-02-20",
+          "content": "CFO approved $1.2M expansion budget for Q3. AI initiative requires 80 additional GPU nodes.",
+          "sentiment": "very_positive"
+        }
+      ]
+    },
+    {
+      "name": "NexGen AI Labs",
+      "arr": 2100000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "strong_adopter",
+      "partner_tier": "tier_2",
+      "renewal_date": "2026-11-01",
+      "narrative": "High GPU utilization. Strong training job success. Power user of the platform.",
+      "kpi_trajectory": "stable_high",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Victor Chang",
+          "role": "champion",
+          "title": "Head of AI Research",
+          "department": "Research",
+          "influence_score": 7,
+          "sentiment": "very_positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Olivia Reyes",
+          "role": "technical_lead",
+          "title": "ML Engineer",
+          "department": "Engineering",
+          "influence_score": 5,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Redline Infrastructure",
+      "arr": 1800000,
+      "target_health": 84,
+      "classification": "healthy",
+      "story_arc": "stable",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-01",
+      "narrative": "Excellent hardware reliability. Low RMA, high MTBF. Minimal support needs.",
+      "kpi_trajectory": "stable_high",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Tom Bradley",
+          "role": "champion",
+          "title": "Infrastructure Manager",
+          "department": "Operations",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Maria Santos",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Cumulus Edge Computing",
+      "arr": 1500000,
+      "target_health": 86,
+      "classification": "healthy",
+      "story_arc": "growth_trajectory",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-10-15",
+      "narrative": "Workload diversity increasing. Adding edge inference workloads. Growth potential.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Scott Peterson",
+          "role": "champion",
+          "title": "Director of Edge Computing",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Amy Taylor",
+          "role": "technical_lead",
+          "title": "Edge Platform Lead",
+          "department": "Engineering",
+          "influence_score": 5,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "SkyBridge Networks",
+      "arr": 1200000,
+      "target_health": 88,
+      "classification": "healthy",
+      "story_arc": "star_account",
+      "partner_tier": "tier_2",
+      "renewal_date": "2026-09-01",
+      "narrative": "All pillars green. Model customer. Potential reference account.",
+      "kpi_trajectory": "stable_high",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Nathan Young",
+          "role": "champion",
+          "title": "VP of Engineering",
+          "department": "Engineering",
+          "influence_score": 8,
+          "sentiment": "very_positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Jessica Moore",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "very_positive",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "IronClad Systems",
+      "arr": 1900000,
+      "target_health": 90,
+      "classification": "healthy",
+      "story_arc": "reference_customer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-15",
+      "narrative": "Top performer. Willing to do case studies. Already renewed early last year.",
+      "kpi_trajectory": "stable_high",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "William Harris",
+          "role": "champion",
+          "title": "CTO",
+          "department": "Technology",
+          "influence_score": 9,
+          "sentiment": "advocate",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Christine Lee",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "very_positive",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Derek James",
+          "role": "technical_lead",
+          "title": "Principal Engineer",
+          "department": "Engineering",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "advocacy",
+          "date": "2026-01-15",
+          "content": "CTO agreed to be a reference customer. Featured in case study and keynote at industry conference.",
+          "sentiment": "very_positive"
+        }
+      ]
+    },
+    {
+      "name": "TerraScale Solutions",
+      "arr": 1600000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "expansion_done",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-07-30",
+      "narrative": "Just expanded 30% in Feb 2026. Added 40 GPU nodes. Now ramping new workloads.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Frank Wilson",
+          "role": "champion",
+          "title": "Director of AI Platform",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "very_positive",
+          "engagement_frequency": "biweekly"
+        },
+        {
+          "name": "Helen Park",
+          "role": "economic_buyer",
+          "title": "VP Finance",
+          "department": "Finance",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_completed",
+          "date": "2026-02-10",
+          "content": "Phase 2 expansion completed. 40 new GPU nodes online. ARR increased from $1.2M to $1.6M.",
+          "sentiment": "very_positive"
+        }
+      ]
+    },
+    {
+      "name": "Velocity AI Compute",
+      "arr": 1100000,
+      "target_health": 91,
+      "classification": "healthy",
+      "story_arc": "new_customer",
+      "partner_tier": "direct",
+      "renewal_date": "2027-01-15",
+      "narrative": "Onboarded Jan 2026. Fastest TTFV in portfolio (3 days). Already at 65% GPU utilization. High growth potential.",
+      "kpi_trajectory": "ramping_up",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Angela Rivera",
+          "role": "champion",
+          "title": "Founder & CTO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "very_positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Carlos Mendez",
+          "role": "technical_lead",
+          "title": "Lead ML Engineer",
+          "department": "Engineering",
+          "influence_score": 6,
+          "sentiment": "positive",
+          "engagement_frequency": "daily"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "fast_onboarding",
+          "date": "2026-01-18",
+          "content": "Time-to-first-workload: 3 days (benchmark: 14 days). Fastest onboarding in portfolio history.",
+          "sentiment": "very_positive"
+        },
+        {
+          "type": "rapid_adoption",
+          "date": "2026-02-15",
+          "content": "GPU utilization reached 65% in 4 weeks. 12 training jobs running concurrently.",
+          "sentiment": "very_positive"
+        }
+      ]
+    }
+  ]
+}

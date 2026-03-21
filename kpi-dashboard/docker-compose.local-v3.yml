@@ -10,6 +10,8 @@ services:
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+      # Platform master switch for context graph (must be true for CG ingest/APIs)
+      - FEATURE_CONTEXT_GRAPH=true
     volumes:
       - ./backend:/app
       - ./instance:/app/instance

@@ -1,44 +1,25 @@
 # ================================================================
-# CS Pulse — Run from container registry (ECR or Docker Hub).
-# Set REGISTRY (and optional tags) in .env, then: docker compose pull && docker compose up -d
-# Requires: .env with REGISTRY, POSTGRES_PASSWORD, SECRET_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY
-# See: docs/DEPLOYMENT_PATTERN_REGISTRY.md
+# EC2 only — second platform container (same Postgres & DB, extra capacity).
+# Merge WITH docker-compose.ec2-registry.yml (+ docker-compose.ec2-loaddriver.yml)
+# on the EC2 host (~/cspulse). Set REGISTRY + PLATFORM_TAG in .env; see
+# scripts/rehydrate-ec2-ecr.sh.
+#
+# Host ports (primary cs-pulse: 80/443/8001):
+#   9080  HTTP   9443  HTTPS   8002  MCP
+#
+# External: BASE_URL=http://<EC2_PUBLIC_IP>:9080
+# Same host / cspulse-net: http://cspulse-platform-b:5059
+# Security group: inbound TCP 9080 (9443/8002 if used).
 # ================================================================
 
 services:
-  postgres:
-    image: ${REGISTRY}/cspulse-postgres:${POSTGRES_TAG:-latest}
-    container_name: cspulse-postgres
-    environment:
-      POSTGRES_DB: cs_pulse
-      POSTGRES_USER: cspulse
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "127.0.0.1:5433:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - cspulse-net
-    restart: always
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '1.0'
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cspulse -d cs_pulse"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
-  cs-pulse:
+  cs-pulse-b:
     image: ${REGISTRY}/cspulse-platform:${PLATFORM_TAG:-latest}
-    container_name: cspulse-platform
+    container_name: cspulse-platform-b
     ports:
-      - "80:80"
-      - "443:443"
-      - "8001:8001"
+      - "9080:80"
+      - "9443:443"
+      - "8002:8001"
     environment:
       DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -66,20 +47,10 @@ services:
       resources:
         limits:
           memory: 2G
-          cpus: '2.0'
+          cpus: "2.0"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5059/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 45s
-
-networks:
-  cspulse-net:
-    driver: bridge
-
-volumes:
-  pgdata:
-  uploads:
-  verticals:
-  instance:

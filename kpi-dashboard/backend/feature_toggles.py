@@ -202,9 +202,11 @@ class FeatureNotEnabledException(Exception):
 # Context Graph Toggle — Per-Customer DB-Backed
 # ============================================================
 # The global FeatureToggle.CONTEXT_GRAPH acts as the platform
-# master switch. The per-customer toggle in the DB controls
-# whether a specific customer has context graph enabled.
-# Both must be ON for context graph features to activate.
+# master switch (FEATURE_CONTEXT_GRAPH env, or POST /api/feature-toggle).
+# It is NOT tied to "enterprise" customer tier — enterprise only affects
+# billing/plan metadata unless you wire tier → toggles separately.
+# The per-customer toggle in the DB controls whether a specific customer
+# has context graph enabled. Both global AND per-customer must be ON.
 #
 # Sub-toggles allow incremental rollout:
 #   story_arcs, signal_edges, stakeholder_tracking,
