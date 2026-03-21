@@ -1,3 +1,9 @@
 account_id,event_date,event_type,description,stakeholder_name,sentiment_shift,channel,duration_minutes,outcome
-10001,2026-02-21,qbr,Quarterly business review,Sarah Chen,+0.1,video,60,expansion_discussed
-10001,2026-02-28,technical_review,GPU cluster performance review,James Park,+0.05,in_person,45,issue_resolved
+10001,2026-02-07,onboarding,Initial kickoff call with infrastructure team,Sarah Chen,+0.2,video,60,next_steps_agreed
+10001,2026-02-14,technical_review,GPU cluster performance review — latency issues discussed,James Park,-0.1,in_person,45,issue_identified
+10001,2026-02-21,qbr,Quarterly business review — expansion roadmap presented,Sarah Chen,+0.15,video,90,expansion_discussed
+10001,2026-02-28,escalation,P1 incident follow-up with CTO,James Park,-0.3,phone,30,escalation_logged
+10002,2026-02-10,executive_briefing,CIO onboarding with product roadmap,Robert Kim,+0.2,in_person,60,champion_identified
+10002,2026-03-01,expansion_meeting,Capacity planning for Q3 GPU expansion,Maria Rodriguez,+0.25,video,45,deal_advanced
+10003,2026-02-20,risk_review,Account health review — churn risk identified,Tom Bradley,-0.2,video,30,action_plan_created
+10004,2026-02-25,product_feedback,Feature request workshop with engineering team,Karen Zhang,+0.05,in_person,120,feedback_collected

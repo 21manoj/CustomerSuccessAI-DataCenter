@@ -1,4 +1,9 @@
 product_id,product_name,category,description
-1,AI Compute Platform,Infrastructure,High-performance GPU compute platform for AI workloads
-2,Data Analytics Suite,Software,Comprehensive analytics and reporting tools
-3,Managed Services,Services,24/7 managed infrastructure services
+1,AI Compute Platform,Infrastructure,High-performance GPU compute for AI/ML training and inference workloads
+2,Managed Kubernetes,Infrastructure,Enterprise Kubernetes with auto-scaling and multi-tenant isolation
+3,Data Analytics Suite,Software,Real-time analytics dashboard with custom metrics and alerting
+4,24/7 Managed Services,Services,Round-the-clock infrastructure monitoring and incident response
+5,Disaster Recovery,Infrastructure,Cross-region backup and automated failover for critical workloads
+6,Security & Compliance,Services,SOC2/HIPAA compliance monitoring with automated remediation
+7,Edge Computing,Infrastructure,Low-latency edge nodes for real-time inference and IoT workloads
+8,Professional Services,Services,Architecture review and migration planning for enterprise customers

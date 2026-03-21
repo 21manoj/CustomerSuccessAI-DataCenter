@@ -40,35 +40,6 @@ class TestMCPIntegration:
         assert isinstance(config, dict)
 
 
-# ============================================================
-# MOCK MCP SERVER TESTS
-# ============================================================
-
-class TestMockServers:
-    def test_salesforce_server_import(self):
-        try:
-            from mcp_servers.mock_salesforce_server import MockSalesforceMCPServer
-            server = MockSalesforceMCPServer()
-            assert server is not None
-        except ImportError:
-            pytest.skip("Salesforce mock server not available")
-
-    def test_servicenow_server_import(self):
-        try:
-            from mcp_servers.mock_servicenow_server import MockServiceNowMCPServer
-            server = MockServiceNowMCPServer()
-            assert server is not None
-        except ImportError:
-            pytest.skip("ServiceNow mock server not available")
-
-    def test_survey_server_import(self):
-        try:
-            from mcp_servers.mock_survey_server import MockSurveyMCPServer
-            server = MockSurveyMCPServer()
-            assert server is not None
-        except ImportError:
-            pytest.skip("Survey mock server not available")
-
 
 # ============================================================
 # PROVIDER ADAPTER TESTS (MCP → Action Interface bridge)

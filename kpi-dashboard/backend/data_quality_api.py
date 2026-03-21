@@ -58,14 +58,17 @@ def _parse_percent(value: str):
 @data_quality_api.route('/api/data-quality/report', methods=['GET'])
 def get_data_quality_report():
     """Return a summary of data hygiene issues per account."""
-    accounts = Account.query.all()
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({'error': 'Customer ID required'}), 400
+    accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
     report = []
 
     for acct in accounts:
         issues = {
             'account_id': acct.account_id,
             'account_name': acct.account_name,
-            'products_count': len(acct.products or []),
+            'products_count': 0,
             'duplicate_account_level_params': [],
             'percent_out_of_range': [],
             'aggregates_in_primary_view': False,

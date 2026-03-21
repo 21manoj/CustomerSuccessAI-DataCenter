@@ -116,20 +116,10 @@ def get_accounts():
         query = Account.query.filter(Account.customer_id == customer_id)
         logger.info(f"[DEBUG /api/accounts] Query filter: Account.customer_id == {customer_id}")
         
-        # Additional security: Filter by vertical to prevent cross-vertical data leakage
-        # DC users (vertical='dc2_s') should see ALL accounts for their customer (DC accounts may have various vertical values)
-        # SaaS users (vertical='saas' or None) should only see SaaS accounts
-        if user_vertical == 'dc2_s':
-            # DC users: Show ALL accounts for Customer 9 (DC accounts may have vertical='dc2_s' or other journey states)
-            # Don't filter by vertical - Customer 9 accounts have various vertical values (Success Story, Churned, etc.)
-            # All accounts belong to Customer 9, so they should all be visible
-            pass  # No additional filtering needed - already filtered by customer_id
-        elif user_vertical == 'saas' or user_vertical is None:
-            # SaaS users see accounts with vertical='saas' or vertical=None (legacy)
-            query = query.filter((Account.vertical == 'saas') | (Account.vertical.is_(None)))
-        else:
-            # For other verticals, filter by that specific vertical
-            query = query.filter(Account.vertical == user_vertical)
+        # Tenant isolation is already enforced by customer_id filter above.
+        # No additional vertical filtering needed — a customer's accounts may have
+        # various vertical values (dc2_s, saas, saas_premium, etc.) and should all
+        # be visible to that customer's users.
         
         accounts = query.all()
         logger.info(f"[DEBUG /api/accounts] Query returned {len(accounts)} accounts")

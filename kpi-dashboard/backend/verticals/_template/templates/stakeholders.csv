@@ -1,3 +1,9 @@
 account_id,stakeholder_name,title,role,influence_score,email,engagement_frequency,sentiment,department,is_active
 10001,Sarah Chen,VP Infrastructure,champion,0.85,schen@acme.com,weekly,positive,Engineering,true
 10001,James Park,CTO,decision_maker,0.95,jpark@acme.com,monthly,neutral,Technology,true
+10001,Emily Torres,Director DevOps,influencer,0.6,etorres@acme.com,biweekly,positive,Engineering,true
+10002,Maria Rodriguez,CFO,economic_buyer,0.9,mrodriguez@pinnacle.com,quarterly,positive,Finance,true
+10002,Robert Kim,CIO,decision_maker,0.85,rkim@pinnacle.com,monthly,positive,Technology,true
+10003,Tom Bradley,VP Infrastructure,champion,0.8,tbradley@medvault.com,weekly,negative,Infrastructure,false
+10003,Lisa Wang,VP Procurement,blocker,0.7,lwang@medvault.com,monthly,negative,Procurement,true
+10004,Karen Zhang,Director Engineering,influencer,0.65,kzhang@nexgen.com,biweekly,neutral,Engineering,true

@@ -1,3 +1,9 @@
 account_id,customer_id,account_name,revenue,industry,region,account_status,external_account_id,profile_metadata
-10001,1,Acme Corporation - Datacenter East,2500000.00,Technology,North America,active,EXT-1-10001,"{""assigned_csm"": ""John Smith"", ""csm_manager"": ""Jane Doe"", ""onboarding_status"": ""completed""}"
-10002,1,Acme Corporation - Cloud Ops,1800000.00,Technology,North America,active,EXT-1-10002,"{""assigned_csm"": ""John Smith"", ""csm_manager"": ""Jane Doe"", ""onboarding_status"": ""completed""}"
+10001,1,Acme Corp - Datacenter East,4200000.00,Technology,North America,active,SF-001-ACME,"{""assigned_csm"": ""Sarah Chen"", ""csm_manager"": ""Mike Roberts"", ""onboarding_status"": ""completed""}"
+10002,1,Pinnacle Financial Services,8500000.00,Financial Services,North America,active,SF-002-PINN,"{""assigned_csm"": ""David Liu"", ""csm_manager"": ""Mike Roberts"", ""onboarding_status"": ""completed""}"
+10003,1,MedVault Healthcare Systems,3100000.00,Healthcare,EMEA,active,SF-003-MEDV,"{""assigned_csm"": ""Sarah Chen"", ""csm_manager"": ""Jane Doe"", ""onboarding_status"": ""in_progress""}"
+10004,1,NexGen Retail Group,5700000.00,Retail,APAC,active,SF-004-NEXG,"{""assigned_csm"": ""Amy Park"", ""csm_manager"": ""Jane Doe"", ""onboarding_status"": ""completed""}"
+10005,1,Horizon Aerospace,12000000.00,Manufacturing,North America,active,SF-005-HORI,"{""assigned_csm"": ""David Liu"", ""csm_manager"": ""Mike Roberts"", ""onboarding_status"": ""completed""}"
+10006,1,CloudBridge EdTech,1800000.00,Education,EMEA,active,SF-006-CLBR,"{""assigned_csm"": ""Amy Park"", ""csm_manager"": ""Jane Doe"", ""onboarding_status"": ""completed""}"
+10007,1,TerraEnergy Solutions,6400000.00,Energy,LATAM,at_risk,SF-007-TERR,"{""assigned_csm"": ""Sarah Chen"", ""csm_manager"": ""Mike Roberts"", ""onboarding_status"": ""completed""}"
+10008,1,Quantum Research Labs,2200000.00,Technology,North America,churned,SF-008-QNTM,"{""assigned_csm"": ""David Liu"", ""csm_manager"": ""Mike Roberts"", ""onboarding_status"": ""completed""}"

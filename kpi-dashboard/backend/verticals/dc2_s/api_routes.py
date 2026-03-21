@@ -400,7 +400,6 @@ def get_dc2s_accounts():
         # Get all DC2_S accounts for this customer
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s'
         ).all()
         
         logger.info(f"[DEBUG /api/dc2s/accounts] Found {len(accounts)} accounts for customer {customer_id}")
@@ -448,6 +447,7 @@ def get_dc2s_accounts():
                 'account_name': account.account_name,
                 'industry': account.industry,
                 'region': account.region,
+                'revenue': float(account.revenue) if account.revenue else 0,
                 'overall_health': round(overall_health, 1),
                 'status': status,
                 'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
@@ -487,7 +487,6 @@ def get_dc2s_account_detail(account_id):
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
-            vertical='dc2_s'
         ).first()
         
         if not account:
@@ -538,6 +537,7 @@ def get_dc2s_account_detail(account_id):
             'industry': account.industry,
             'region': account.region,
             'vertical': account.vertical,
+            'revenue': float(account.revenue) if account.revenue else 0,
             'overall_health': round(overall_health, 1),
             'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
             'kpis_by_pillar': kpis_by_pillar,
@@ -589,7 +589,6 @@ def get_dc2s_account_kpis(account_id):
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
-            vertical='dc2_s'
         ).first()
         
         if not account:
@@ -691,7 +690,6 @@ def get_all_dc2s_kpis():
         # Get all DC2_S accounts for this customer
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s'
         ).all()
         
         account_dict = {acc.account_id: acc for acc in accounts}
@@ -796,7 +794,6 @@ def get_dc2s_kpi_timeseries(account_id):
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
-            vertical='dc2_s'
         ).first()
 
         if not account:
@@ -937,7 +934,6 @@ def get_dc2s_alerts(account_id):
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
-            vertical='dc2_s'
         ).first()
         
         if not account:
@@ -1041,7 +1037,6 @@ def get_dc2s_recommendations(account_id):
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
-            vertical='dc2_s'
         ).first()
 
         if not account:
@@ -1149,7 +1144,6 @@ def get_dc2s_health_score(account_id):
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=int(customer_id),
-            vertical='dc2_s'
         ).first()
         
         if not account:
@@ -1221,7 +1215,6 @@ def get_dc2s_health_summary():
         # Get all DC2_S accounts
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s'
         ).all()
 
         # Apply user-level account filtering (contractors/restricted users)
@@ -1369,7 +1362,7 @@ def create_dc2s_playbook_execution():
 
         # Verify account
         account = Account.query.filter_by(
-            account_id=account_id, customer_id=int(customer_id), vertical='dc2_s'
+            account_id=account_id, customer_id=int(customer_id)
         ).first()
         if not account:
             return jsonify({'error': 'Account not found'}), 404
@@ -2016,7 +2009,6 @@ def get_csm_daily_actions():
         # 1. Fetch all DC accounts
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
-            Account.vertical == 'dc2_s'
         ).all()
 
         if not accounts:

@@ -62,38 +62,21 @@ class MCPIntegration:
             return False
     
     async def _connect_to_system(self, system: str):
-        """Connect to a specific MCP server"""
-        import os
-        
-        server_map = {
-            'salesforce': 'mock_salesforce_server.py',
-            'servicenow': 'mock_servicenow_server.py',
-            'surveys': 'mock_survey_server.py'
-        }
-        
-        if system not in server_map:
+        """Connect to a specific external system (Salesforce, ServiceNow, etc.)"""
+        SUPPORTED_SYSTEMS = {'salesforce', 'servicenow', 'surveys'}
+
+        if system not in SUPPORTED_SYSTEMS:
             logger.warning(f"Unknown MCP system: {system}")
             return
-        
-        script_path = os.path.join(
-            os.path.dirname(__file__),
-            'mcp_servers',
-            server_map[system]
-        )
-        
-        if not os.path.exists(script_path):
-            logger.error(f"MCP server script not found: {script_path}")
-            return
-        
-        # Note: Actual connection would use stdio_client
-        # For now, we'll simulate the connection
+
+        # TODO: Implement real OAuth/API connections for each system
+        # Real integrations coming — SFDC, HubSpot, Zendesk
+        logger.info(f"Integration with {system} not yet configured — stub only")
         self.sessions[system] = {
-            'connected': True,
-            'script': script_path,
-            'connected_at': datetime.now().isoformat()
+            'connected': False,
+            'connected_at': datetime.now().isoformat(),
+            'status': 'not_configured'
         }
-        
-        logger.info(f"Connected to {system} MCP server")
     
     async def fetch_account_data(self, account_id: int, systems: List[str]) -> Dict[str, Any]:
         """
@@ -117,75 +100,16 @@ class MCPIntegration:
         return context
     
     async def _fetch_from_system(self, system: str, account_id: int) -> Dict[str, Any]:
-        """Fetch data from a specific MCP server"""
-        # For mock implementation, we'll call the server directly
-        from app import app, db
-        from models import Account, KPI, HealthTrend
-        
-        with app.app_context():
-            from extensions import db
-            account = db.session.get(Account, account_id)
-            if not account:
-                return {'error': 'Account not found'}
-            
-            if system == 'salesforce':
-                # Simulate Salesforce data
-                return {
-                    'account': {
-                        'Id': f'SF_{account_id}',
-                        'Name': account.account_name,
-                        'ARR__c': float(account.revenue) if account.revenue else 0,
-                        'Industry': account.industry,
-                        'Region__c': account.region
-                    },
-                    'opportunity': {
-                        'StageName': 'Renewal',
-                        'CloseDate': '2026-03-15',
-                        'Probability': 85
-                    }
-                }
-            
-            elif system == 'servicenow':
-                # Generate mock tickets
-                import random
-                num_tickets = random.randint(2, 8)
-                tickets = []
-                
-                for i in range(num_tickets):
-                    tickets.append({
-                        'Number': f'INC{account_id:04d}{i:04d}',
-                        'Priority': random.choice(['1-Critical', '2-High', '3-Medium', '4-Low']),
-                        'State': random.choice(['New', 'In Progress', 'Resolved']),
-                        'ShortDescription': random.choice([
-                            'Performance issue',
-                            'Feature request',
-                            'Configuration help'
-                        ])
-                    })
-                
-                return {'tickets': tickets, 'count': len(tickets)}
-            
-            elif system == 'surveys':
-                # Get NPS/CSAT from KPIs if available
-                nps_kpi = KPI.query.filter_by(account_id=account_id).filter(
-                    KPI.kpi_parameter.like('%NPS%')
-                ).first()
-                
-                nps_score = float(nps_kpi.data) if nps_kpi and nps_kpi.data else random.randint(-50, 80)
-                
-                return {
-                    'nps': {
-                        'score': nps_score,
-                        'survey_date': datetime.now().strftime('%Y-%m-%d'),
-                        'response_rate': round(random.uniform(40, 80), 1)
-                    },
-                    'csat': {
-                        'score': round(random.uniform(2.5, 4.8), 1),
-                        'trend': 'stable'
-                    }
-                }
-        
-        return {}
+        """Fetch data from a specific external system.
+
+        TODO: Implement real connectors for Salesforce, HubSpot, Zendesk, ServiceNow.
+        Each connector should use OAuth tokens stored in CustomerWorkflowConfig.
+        """
+        session = self.sessions.get(system)
+        if not session or session.get('status') == 'not_configured':
+            return {'error': f'{system} integration not configured'}
+
+        return {'error': f'{system} connector not yet implemented'}
     
     async def disconnect_all(self):
         """Disconnect from all MCP servers"""

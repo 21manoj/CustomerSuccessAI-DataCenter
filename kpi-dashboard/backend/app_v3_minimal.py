@@ -1118,6 +1118,18 @@ except ImportError as e:
     print(f"⚠️  Warning: Report Generation API not available: {e}")
 
 # ====================================================================
+# Integration Framework API (SFDC, HubSpot, Zendesk, n8n)
+# ====================================================================
+try:
+    from integration_api import integration_api
+    from playbook_webhook_engine import playbook_webhook_api
+    app.register_blueprint(integration_api)
+    app.register_blueprint(playbook_webhook_api)
+    print("✅ Registered Integration API: /api/integrations/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Integration API not available: {e}")
+
+# ====================================================================
 # SaaS Premium Vertical API
 # ====================================================================
 try:

@@ -62,13 +62,9 @@ CONTEXT_GRAPH_FILE_TYPES = {
 # Auto-generated file types — process-data will generate these if not uploaded
 AUTO_GENERATED_CG_FILES = {'decisions', 'signal_edges', 'industry_benchmarks'}
 
-# Deprecated file types — accepted with warning for backward compatibility
-DEPRECATED_FILE_TYPES = {
-    'signals': 'qualitative_signals.csv',       # → use enhanced_signals
-    'profiles': 'profiles.csv',                  # → merged into account_business_profiles
-    'customers': 'customers.csv',                # → created by /complete endpoint
-    'decision_evidence': 'decision_evidence.csv', # → merged into signal_edges
-}
+# Legacy file types removed March 2026:
+# 'signals' → 'enhanced_signals', 'profiles' → 'account_business_profiles',
+# 'customers' → created by /complete, 'decision_evidence' → signal_edges
 
 onboarding_api = Blueprint('onboarding_v2', __name__)
 
@@ -748,39 +744,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
         except Exception as e:
             current_app.logger.warning(f"Could not auto-generate industry_benchmarks.csv: {e}")
 
-    # ── Handle deprecated decision_evidence.csv — merge into signal_edges if present ──
-    dep_evidence = cg_data_dir / 'decision_evidence.csv'
-    if not dep_evidence.exists():
-        dep_evidence = data_dir / 'decision_evidence.csv'
-    if dep_evidence.exists():
-        current_app.logger.warning("⚠️  Deprecated decision_evidence.csv found — merging SOURCED_FROM edges into signal_edges.csv")
-        try:
-            df_ev = pd.read_csv(dep_evidence)
-            extra_edges = []
-            for _, row in df_ev.iterrows():
-                extra_edges.append({
-                    'from_signal_ref': f'decision:{row.get("decision_ref", "")}',
-                    'to_signal_ref': f'signal:{row.get("signal_ref", row.get("kpi_code", ""))}',
-                    'edge_type': 'SOURCED_FROM',
-                    'weight': float(row.get('confidence', 0.5)),
-                    'confidence': float(row.get('confidence', 0.5)),
-                    'evidence': row.get('evidence_description', ''),
-                    'evidence_type': row.get('evidence_type', ''),
-                    'kpi_code': row.get('kpi_code', ''),
-                    'kpi_value': row.get('kpi_value', ''),
-                    'created_by': 'deprecated_migration',
-                })
-            if extra_edges:
-                edges_file = cg_data_dir / 'signal_edges.csv'
-                if edges_file.exists():
-                    df_existing = pd.read_csv(edges_file)
-                    df_merged = pd.concat([df_existing, pd.DataFrame(extra_edges)], ignore_index=True)
-                else:
-                    df_merged = pd.DataFrame(extra_edges)
-                df_merged.to_csv(edges_file, index=False)
-                current_app.logger.info(f"✅ Merged {len(extra_edges)} SOURCED_FROM edges from decision_evidence.csv into signal_edges.csv")
-        except Exception as e:
-            current_app.logger.warning(f"Could not merge decision_evidence.csv: {e}")
+    # decision_evidence.csv migration removed March 2026 — use signal_edges.csv directly
 
 
 # ============================================================================
@@ -1256,8 +1220,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             result['errors'].append(f"signal_edges.csv: {str(e)}")
             current_app.logger.error(f"Error loading signal_edges.csv: {e}", exc_info=True)
 
-    # NOTE: decision_evidence.csv handling removed — SOURCED_FROM edges are now
-    # included in signal_edges.csv. Deprecated decision_evidence.csv files are
+    # NOTE: SOURCED_FROM edges are now included in signal_edges.csv.
     # merged into signal_edges.csv by _auto_generate_context_graph_files() before
     # this function is called.
 
@@ -2258,12 +2221,8 @@ def process_data():
                     import traceback
                     current_app.logger.debug(traceback.format_exc())
 
-            # Load qualitative signals (prefer enhanced_qualitative_signals.csv, fall back to old qualitative_signals.csv)
+            # Load qualitative signals from enhanced_qualitative_signals.csv
             signals_file = data_dir / 'enhanced_qualitative_signals.csv'
-            if not signals_file.exists():
-                signals_file = data_dir / 'qualitative_signals.csv'  # backward compat
-                if signals_file.exists():
-                    current_app.logger.warning("⚠️  Using deprecated qualitative_signals.csv — migrate to enhanced_qualitative_signals.csv")
             if signals_file.exists():
                 current_app.logger.info(f"Loading {signals_file} into qualitative_signals table...")
                 df_signals = pd.read_csv(signals_file)
@@ -2326,21 +2285,16 @@ def process_data():
             
             # ---------------------------------------------------------------------
             # Load profile data → accounts.profile_metadata
-            # Priority: account_business_profiles.csv (context_graph/) > profiles.csv (deprecated) > account_profiles.csv (deprecated)
-            # CSM/champion fields merged into account_business_profiles.csv as of v2.0
+            # Source: account_business_profiles.csv (context_graph/ or data/)
             # ---------------------------------------------------------------------
             _profile_source = None
             for _pf_candidate in [
                 data_dir / 'context_graph' / 'account_business_profiles.csv',
                 data_dir / 'account_business_profiles.csv',
-                data_dir / 'profiles.csv',
-                data_dir / 'account_profiles.csv',
             ]:
                 if _pf_candidate.exists():
                     _profile_source = _pf_candidate
                     break
-            if _profile_source and 'profiles.csv' in str(_profile_source):
-                current_app.logger.warning("⚠️  Using deprecated profiles.csv — migrate CSM/champion data to account_business_profiles.csv")
             if _profile_source:
                 current_app.logger.info(f"Loading profile data from {_profile_source} into accounts.profile_metadata...")
                 try:
@@ -3084,27 +3038,11 @@ def upload_onboarding_csv():
         
         # Determine target filename based on file_type
         is_context_graph_file = False
-        deprecation_warning = None
         if file_type in FILE_TYPES:
             target_filename = FILE_TYPES.get(file_type, filename)
         elif file_type in CONTEXT_GRAPH_FILE_TYPES:
             target_filename = CONTEXT_GRAPH_FILE_TYPES[file_type]
             is_context_graph_file = True
-        elif file_type in DEPRECATED_FILE_TYPES:
-            # Backward compat — accept deprecated files with warning
-            target_filename = DEPRECATED_FILE_TYPES[file_type]
-            deprecation_warning = f"'{file_type}' is deprecated. "
-            if file_type == 'signals':
-                deprecation_warning += "Use 'enhanced_signals' (enhanced_qualitative_signals.csv) instead."
-            elif file_type == 'profiles':
-                deprecation_warning += "Merge CSM/champion data into account_business_profiles.csv instead."
-                is_context_graph_file = True
-            elif file_type == 'customers':
-                deprecation_warning += "Customer record is created by /api/onboarding/complete. This file will be ignored."
-            elif file_type == 'decision_evidence':
-                deprecation_warning += "Use signal_edges.csv with edge_type=SOURCED_FROM instead."
-                is_context_graph_file = True
-            current_app.logger.warning(f"⚠️  Deprecated file type '{file_type}' uploaded for customer {customer_id}: {deprecation_warning}")
         else:
             target_filename = filename
 
@@ -3191,6 +3129,34 @@ def upload_onboarding_csv():
                 'message': 'Failed to save file. Please try again or contact support.'
             }), 500
         
+        # Log upload to activity log for audit trail
+        try:
+            from models import ActivityLog
+            from flask_login import current_user
+            row_count = 0
+            try:
+                import pandas as _pd
+                row_count = len(_pd.read_csv(file_path)) if file_path.exists() else 0
+            except Exception:
+                pass
+            log_entry = ActivityLog(
+                customer_id=customer_id,
+                user_id=getattr(current_user, 'user_id', None) if hasattr(current_user, 'user_id') else None,
+                action_type='data_upload',
+                action_category='data',
+                action_description=f'Uploaded {target_filename} ({upload_mode})',
+                resource_type=file_type,
+                resource_id=str(customer_id),
+                status='success',
+                details={'file_name': target_filename, 'upload_mode': upload_mode, 'records_count': row_count},
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:200],
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+        except Exception as log_err:
+            current_app.logger.warning(f"Could not log upload activity: {log_err}")
+
         resp = {
             'status': 'success',
             'message': 'File saved to customer directory',
@@ -3203,13 +3169,6 @@ def upload_onboarding_csv():
         }
         if upload_warnings:
             resp['warnings'] = upload_warnings
-        if deprecation_warning:
-            resp.setdefault('warnings', [])
-            if isinstance(resp['warnings'], list):
-                resp['warnings'].append(deprecation_warning)
-            else:
-                resp['warnings'] = [resp['warnings'], deprecation_warning]
-            resp['deprecated'] = True
         return jsonify(resp)
             
     except Exception as e:

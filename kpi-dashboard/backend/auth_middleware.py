@@ -27,6 +27,9 @@ PUBLIC_ENDPOINTS = [
     '/api/onboarding/processing-status',
     '/api/onboarding/templates',  # Template download endpoints
     '/api/onboarding/validate-csv',  # CSV validation endpoint
+    # Integration framework — webhook endpoints must be public (n8n/external push)
+    '/api/integrations/webhook',  # Public inbound webhook (HMAC-authenticated)
+    '/api/integrations/connector-types',  # Discovery endpoint
     # /api/test-runner and /api/admin/uuid-backfill are protected (require auth)
 ]
 
@@ -88,7 +91,14 @@ def init_auth_middleware(app):
                 logger.info(f"[DEBUG auth_middleware] Session: {session_dict}")
             except Exception as e:
                 logger.info(f"[DEBUG auth_middleware] Session error: {e}")
-            
+
+            # Integration API: accept X-Customer-ID header (for n8n/external systems)
+            if not is_auth and request.path.startswith('/api/integrations/'):
+                cid = request.headers.get('X-Customer-ID')
+                if cid:
+                    logger.info(f"[auth] Integration API: using X-Customer-ID={cid}")
+                    return None  # Allow — integration API handles its own tenant isolation
+
             # Require authentication for all API endpoints
             if not is_auth:
                 logger.warning(f"Unauthorized API access attempt: {request.path} from {request.remote_addr}")

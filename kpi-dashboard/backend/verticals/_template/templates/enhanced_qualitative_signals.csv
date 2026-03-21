@@ -1,3 +1,9 @@
 account_id,signal_date,signal_type,content,sentiment,sentiment_score,stakeholder_name,stakeholder_title,causal_chain_ref,revenue_impact,confidence
-10001,2026-02-28,champion_signal,VP Infrastructure advocates for expanded deployment in leadership meeting,positive,0.9,Sarah Chen,VP Infrastructure,SIG-001→SIG-003,500000,0.85
-10001,2026-03-03,risk_signal,Competitor demo scheduled with procurement team,negative,-0.6,James Park,CTO,,-2500000,0.7
+10001,2026-02-10,champion_signal,VP Infrastructure presented CS Pulse ROI to board — advocating for 3-year renewal,positive,0.9,Sarah Chen,VP Infrastructure,SIG-001,500000,0.85
+10001,2026-02-18,risk_signal,CTO raised concerns about GPU cluster latency during peak workloads,negative,-0.4,James Park,CTO,SIG-002,-250000,0.7
+10001,2026-02-28,escalation,P1 ticket unresolved for 72 hours — customer escalated to VP level,negative,-0.8,James Park,CTO,SIG-003,-1500000,0.8
+10002,2026-02-15,expansion_signal,CFO approved budget for 2x GPU capacity in Q3 — strong expansion signal,positive,0.95,Maria Rodriguez,CFO,SIG-004,4200000,0.9
+10002,2026-03-01,champion_signal,New CIO hired — former customer at previous company and strong advocate,positive,0.85,Robert Kim,CIO,SIG-005,,0.75
+10003,2026-02-20,churn_signal,Procurement team evaluating CoreWeave for next fiscal year renewal,negative,-0.7,Lisa Wang,VP Procurement,SIG-006,-3100000,0.65
+10003,2026-03-05,risk_signal,Primary champion (VP Infra) leaving company in 30 days,negative,-0.9,Tom Bradley,VP Infrastructure,SIG-007,-3100000,0.8
+10004,2026-02-25,product_feedback,Feature request: multi-region failover — blocking enterprise adoption,neutral,0.1,Karen Zhang,Director Engineering,SIG-008,,0.6

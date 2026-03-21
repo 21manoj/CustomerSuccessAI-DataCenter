@@ -70,7 +70,6 @@ const getCustomerId = (): string | null => {
     const session = localStorage.getItem('session');
     if (session) {
       const parsed = JSON.parse(session);
-      // UUID migration: prefer customer_uuid when available
       return parsed.customer_uuid || String(parsed.customer_id || '');
     }
   } catch (e) {
@@ -79,192 +78,208 @@ const getCustomerId = (): string | null => {
   return null;
 };
 
-// Get health score for a specific account
+// Get health score for a specific account — uses real DC2S pillar breakdown
 export const getAccountHealthScore = async (accountId: number | string): Promise<HealthScoreData> => {
   const customerId = getCustomerId();
-  const response = await apiCall(`/api/accounts/${accountId}`, {
-    method: 'GET',
-    headers: customerId ? { 'X-Customer-ID': customerId } : {}
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch account health score');
+  const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
+
+  // Fetch pillar breakdown from DC2S health-score endpoint
+  const healthResp = await apiCall(`/api/dc2s/health-score/${accountId}`, { method: 'GET', headers });
+
+  // Fetch trends for trend delta calculation
+  const trendsResp = await apiCall(`/api/health-trends?account_id=${accountId}`, { method: 'GET', headers });
+
+  let categoryScores = { reliability: 0, efficiency: 0, capacity: 0, security: 0, service: 0 };
+  let healthScore = 0;
+  let kpiCount = 0;
+
+  if (healthResp.ok) {
+    const data = await healthResp.json();
+    healthScore = data.overall_score || 0;
+    kpiCount = data.kpi_count || 0;
+    // Map P1-P5 pillars to UI names
+    const cs = data.category_scores || {};
+    categoryScores = {
+      reliability: cs.P1?.score ?? cs.P2?.score ?? 0,   // P1: AI/ML Performance or P2: Infra
+      efficiency: cs.P2?.score ?? 0,                      // P2: Infrastructure Reliability
+      capacity: cs.P3?.score ?? 0,                        // P3: Cloud & DevOps
+      security: cs.P4?.score ?? 0,                        // P4: Customer Engagement
+      service: cs.P5?.score ?? 0,                         // P5: Commercial & Expansion
+    };
+  } else {
+    // Fallback: use generic account endpoint
+    const fallbackResp = await apiCall(`/api/accounts/${accountId}`, { method: 'GET', headers });
+    if (fallbackResp.ok) {
+      const account = await fallbackResp.json();
+      healthScore = account.health_score || 0;
+    }
   }
-  
-  const account = await response.json();
-  
-  // Get health trends for trend calculation
-  const trendsResponse = await apiCall(`/api/health-trends?account_id=${accountId}`, {
-    method: 'GET',
-    headers: customerId ? { 'X-Customer-ID': customerId } : {}
-  });
-  
-  const trendsData = trendsResponse.ok ? await trendsResponse.json() : { trends: [] };
-  
-  // Calculate category scores (mock for now - would come from actual KPI data)
-  const categoryScores = {
-    reliability: account.health_score ? account.health_score * 0.95 : 85,
-    efficiency: account.health_score ? account.health_score * 0.88 : 80,
-    capacity: account.health_score ? account.health_score * 0.85 : 75,
-    security: account.health_score ? account.health_score * 1.0 : 90,
-    service: account.health_score ? account.health_score * 0.96 : 88
-  };
-  
-  // Calculate trends
-  const previousMonth = trendsData.trends?.[trendsData.trends.length - 2];
-  const currentMonth = trendsData.trends?.[trendsData.trends.length - 1];
-  const overallTrend = previousMonth && currentMonth 
-    ? ((currentMonth.score - previousMonth.score) / previousMonth.score) * 100 
-    : 0;
-  
+
+  // Calculate trend from real health trends
+  let overallTrend = 0;
+  const categoryTrends: Record<string, number> = {};
+  if (trendsResp.ok) {
+    const trendsData = await trendsResp.json();
+    const trends = trendsData.trends || [];
+    if (trends.length >= 2) {
+      const prev = trends[trends.length - 2];
+      const curr = trends[trends.length - 1];
+      overallTrend = prev.score > 0 ? ((curr.score - prev.score) / prev.score) * 100 : 0;
+      // Compute per-pillar trends
+      for (const key of ['product_usage_score', 'support_score', 'customer_sentiment_score', 'business_outcomes_score', 'relationship_strength_score']) {
+        const shortKey = key.replace('_score', '');
+        categoryTrends[shortKey] = prev[key] > 0 ? ((curr[key] - prev[key]) / prev[key]) * 100 : 0;
+      }
+    }
+  }
+
+  const { healthy_min, at_risk_min } = thresholdValues();
   return {
-    accountId: account.account_id,
-    healthScore: account.health_score || 75,
+    accountId,
+    healthScore: Math.round(healthScore * 10) / 10,
     categoryScores,
     trends: {
-      overall: overallTrend,
-      categories: {
-        reliability: 3,
-        efficiency: -2,
-        capacity: 0,
-        security: 0,
-        service: 1
-      }
+      overall: Math.round(overallTrend * 10) / 10,
+      categories: categoryTrends,
     },
-    riskCount: account.health_score < 70 ? 2 : account.health_score < 85 ? 1 : 0,
-    healthyMetrics: account.health_score > 85 ? 12 : account.health_score > 70 ? 8 : 5
+    riskCount: healthScore < at_risk_min ? 2 : healthScore < healthy_min ? 1 : 0,
+    healthyMetrics: kpiCount > 0 ? Math.round(kpiCount * (healthScore / 100)) : 0,
   };
 };
 
-// Get portfolio overview
+// Get portfolio overview — uses real account data + health summary
 export const getPortfolioOverview = async (): Promise<PortfolioOverview> => {
   const customerId = getCustomerId();
-  const response = await apiCall('/api/accounts', {
-    method: 'GET',
-    headers: customerId ? { 'X-Customer-ID': customerId } : {}
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch portfolio overview');
-  }
-  
-  const data = await response.json();
-  const accounts = Array.isArray(data) ? data : (data?.accounts || []);
+  const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
 
-  // Categorize accounts using centralized thresholds
-  const { healthy_min, at_risk_min } = thresholdValues();
-  const healthy = accounts.filter((a: any) => (a.health_score || 0) >= healthy_min);
-  const atRisk = accounts.filter((a: any) => (a.health_score || 0) >= at_risk_min && (a.health_score || 0) < healthy_min);
-  const critical = accounts.filter((a: any) => (a.health_score || 0) < at_risk_min);
-  
-  // Calculate averages
-  const avgHealthy = healthy.length > 0 
-    ? healthy.reduce((sum: number, a: any) => sum + (a.health_score || 0), 0) / healthy.length 
-    : 0;
-  const avgAtRisk = atRisk.length > 0 
-    ? atRisk.reduce((sum: number, a: any) => sum + (a.health_score || 0), 0) / atRisk.length 
-    : 0;
-  const avgCritical = critical.length > 0 
-    ? critical.reduce((sum: number, a: any) => sum + (a.health_score || 0), 0) / critical.length 
-    : 0;
-  
-  // Mock top risks (would come from actual analysis)
-  const topRisks = [
-    { description: 'PUE > 1.6 (efficiency concern)', affectedCount: 12, severity: 'high' as const },
-    { description: 'Power capacity < 15% (expansion needed)', affectedCount: 5, severity: 'medium' as const },
-    { description: 'Security incidents this month', affectedCount: 3, severity: 'high' as const }
-  ];
-  
+  // Use health-summary for aggregated stats
+  const summaryResp = await apiCall('/api/dc2s/health-summary', { method: 'GET', headers });
+
+  // Get accounts for detailed risk analysis
+  const accountsResp = await apiCall('/api/accounts', { method: 'GET', headers });
+
+  let healthyCount = 0, atRiskCount = 0, criticalCount = 0;
+  let avgHealthy = 0, avgAtRisk = 0, avgCritical = 0;
+
+  if (summaryResp.ok) {
+    const summary = await summaryResp.json();
+    healthyCount = summary.healthy_accounts || 0;
+    atRiskCount = summary.risk_accounts || 0;
+    criticalCount = summary.critical_accounts || 0;
+  }
+
+  // Calculate real average scores and top risks from accounts
+  const topRisks: Array<{ description: string; affectedCount: number; severity: 'high' | 'medium' | 'low' }> = [];
+  if (accountsResp.ok) {
+    const data = await accountsResp.json();
+    const accounts = Array.isArray(data) ? data : (data?.accounts || []);
+    const { healthy_min, at_risk_min } = thresholdValues();
+
+    const healthy = accounts.filter((a: any) => (a.health_score || 0) >= healthy_min);
+    const atRisk = accounts.filter((a: any) => (a.health_score || 0) >= at_risk_min && (a.health_score || 0) < healthy_min);
+    const critical = accounts.filter((a: any) => (a.health_score || 0) < at_risk_min);
+
+    avgHealthy = healthy.length > 0 ? healthy.reduce((s: number, a: any) => s + (a.health_score || 0), 0) / healthy.length : 0;
+    avgAtRisk = atRisk.length > 0 ? atRisk.reduce((s: number, a: any) => s + (a.health_score || 0), 0) / atRisk.length : 0;
+    avgCritical = critical.length > 0 ? critical.reduce((s: number, a: any) => s + (a.health_score || 0), 0) / critical.length : 0;
+
+    // Build real top risks from critical/at-risk accounts
+    if (critical.length > 0) {
+      topRisks.push({
+        description: `${critical.length} account(s) in critical health (score < ${at_risk_min})`,
+        affectedCount: critical.length,
+        severity: 'high',
+      });
+    }
+    if (atRisk.length > 0) {
+      topRisks.push({
+        description: `${atRisk.length} account(s) at risk (score ${at_risk_min}-${healthy_min - 1})`,
+        affectedCount: atRisk.length,
+        severity: 'medium',
+      });
+    }
+    // Find accounts with declining trend
+    const declining = accounts.filter((a: any) => (a.trend_change || 0) < -5);
+    if (declining.length > 0) {
+      topRisks.push({
+        description: `${declining.length} account(s) with declining health trend`,
+        affectedCount: declining.length,
+        severity: 'high',
+      });
+    }
+  }
+
   return {
-    healthyCount: healthy.length,
-    atRiskCount: atRisk.length,
-    criticalCount: critical.length,
+    healthyCount,
+    atRiskCount,
+    criticalCount,
     averageScores: {
       healthy: Math.round(avgHealthy),
       atRisk: Math.round(avgAtRisk),
-      critical: Math.round(avgCritical)
+      critical: Math.round(avgCritical),
     },
-    trends: {
-      healthy: 5,
-      atRisk: -8,
-      critical: 0
-    },
-    topRisks
+    trends: { healthy: 0, atRisk: 0, critical: 0 },
+    topRisks,
   };
 };
 
-// Get health trends
+// Get health trends — uses real pillar breakdown from /api/health-trends
 export const getHealthTrends = async (accountId?: number | string, months: number = 6): Promise<HealthTrend[]> => {
   const customerId = getCustomerId();
-  const url = accountId 
+  const url = accountId
     ? `/api/health-trends?account_id=${accountId}`
     : '/api/health-trends';
-  
+
   const response = await apiCall(url, {
     method: 'GET',
-    headers: customerId ? { 'X-Customer-ID': customerId } : {}
+    headers: customerId ? { 'X-Customer-ID': customerId } : {},
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch health trends');
   }
-  
+
   const data = await response.json();
   const trends = data.trends || [];
-  
-  // Map to expected format
+
+  // Map real pillar scores to UI format
   return trends.slice(-months).map((t: any) => ({
     month: t.month,
     overallScore: t.score,
-    reliability: t.score * 0.95,
-    efficiency: t.score * 0.88,
-    capacity: t.score * 0.85,
-    security: t.score * 1.0,
-    service: t.score * 0.96
+    reliability: t.product_usage_score ?? t.score * 0.95,
+    efficiency: t.support_score ?? t.score * 0.88,
+    capacity: t.customer_sentiment_score ?? t.score * 0.85,
+    security: t.business_outcomes_score ?? t.score,
+    service: t.relationship_strength_score ?? t.score * 0.96,
   }));
 };
 
-// Get smart actions
+// Get smart actions — uses real CSM daily actions endpoint
 export const getSmartActions = async (): Promise<SmartAction[]> => {
-  // This would come from playbook recommendations API
-  // For now, return mock data
-  return [
-    {
-      id: '1',
-      urgency: 'critical',
-      title: 'Schedule review with Argo AI',
-      description: 'Uptime dropped to 98.5%, 3 security incidents',
-      accountId: 1,
-      accountName: 'Argo AI',
-      actions: [
-        { label: 'Schedule Meeting', type: 'schedule', handler: () => {} },
-        { label: 'View Playbook', type: 'playbook', handler: () => {} }
-      ]
-    },
-    {
-      id: '2',
-      urgency: 'high',
-      title: 'Capacity planning for Scale AI',
-      description: '82% rack utilization, trending to constraint in 3mo',
-      accountId: 2,
-      accountName: 'Scale AI',
-      actions: [
-        { label: 'Run Capacity Analysis', type: 'analysis', handler: () => {} },
-        { label: 'Prepare Proposal', type: 'template', handler: () => {} }
-      ]
-    },
-    {
-      id: '3',
-      urgency: 'opportunity',
-      title: 'Expansion talk with DeepMind Research',
-      description: 'Health score 92%, GPU utilization 78%',
-      accountId: 3,
-      accountName: 'DeepMind Research',
-      actions: [
-        { label: 'View Expansion Template', type: 'template', handler: () => {} },
-        { label: 'Book QBR', type: 'schedule', handler: () => {} }
-      ]
-    }
-  ];
-};
+  const customerId = getCustomerId();
+  const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
 
+  const response = await apiCall('/api/dc2s/daily-actions', { method: 'GET', headers });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+  const actions = data.actions || [];
+
+  return actions.slice(0, 10).map((a: any, idx: number) => ({
+    id: String(idx + 1),
+    urgency: a.urgency === 'critical' ? 'critical' : a.urgency === 'high' ? 'high' : 'opportunity',
+    title: a.action_title || 'Review account',
+    description: a.playbook_name
+      ? `${a.playbook_name} — est. ${a.estimated_hours || 0}h, impact $${((a.projected_impact_usd || 0) / 1000).toFixed(0)}K`
+      : `Priority index: ${(a.priority_index || 0).toFixed(1)}`,
+    accountId: a.account_id,
+    accountName: a.account_name || `Account ${a.account_id}`,
+    actions: [
+      { label: 'View Details', type: 'analysis' as const, handler: () => {} },
+      { label: 'Start Playbook', type: 'playbook' as const, handler: () => {} },
+    ],
+  }));
+};

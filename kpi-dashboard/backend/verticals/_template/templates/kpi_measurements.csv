@@ -1,4 +1,19 @@
-account_id,kpi_code,measurement_date,value,unit,source,notes
-10001,P3-KPI1,2026-02-05,85.5,%,System Monitoring,GPU Utilization
-10001,P4-KPI1,2026-02-05,82.0,score,Health Calculator,Overall Health Score
-10001,P1-KPI1,2026-02-05,12,days,Deployment System,Time to First Workload
+account_id,kpi_code,measurement_date,value,target,unit,source,notes
+10001,P1-KPI1,2026-02-01,14,10,days,Deployment System,Time to First Value (workload onboarding)
+10001,P1-KPI2,2026-02-01,88.5,95,%,Monitoring,AI Model Training Throughput
+10001,P2-KPI1,2026-02-01,99.92,99.95,%,Uptime Monitor,Infrastructure Uptime
+10001,P3-KPI1,2026-02-01,78.2,85,%,GPU Cluster,GPU Utilization Rate
+10001,P4-KPI1,2026-02-01,42,35,score,NPS Survey,Net Promoter Score
+10001,P5-KPI1,2026-02-01,92,90,%,CRM,Net Revenue Retention
+10002,P1-KPI1,2026-02-01,8,10,days,Deployment System,Time to First Value
+10002,P2-KPI1,2026-02-01,99.98,99.95,%,Uptime Monitor,Infrastructure Uptime — exceeds SLA
+10002,P3-KPI1,2026-02-01,91.3,85,%,GPU Cluster,GPU Utilization Rate
+10002,P4-KPI1,2026-02-01,65,35,score,NPS Survey,Net Promoter Score — strong promoter
+10002,P5-KPI1,2026-02-01,108,90,%,CRM,Net Revenue Retention (expanded)
+10003,P1-KPI1,2026-02-01,22,10,days,Deployment System,Time to First Value — delayed onboarding
+10003,P2-KPI1,2026-02-01,99.5,99.95,%,Uptime Monitor,Below SLA threshold — 2 incidents
+10003,P4-KPI1,2026-02-01,18,35,score,NPS Survey,Detractor — escalation needed
+10004,P1-KPI1,2026-02-01,11,10,days,Deployment System,Time to First Value
+10004,P3-KPI1,2026-02-01,82.0,85,%,GPU Cluster,Slightly below target
+10001,P1-KPI1,2026-03-01,11,10,days,Deployment System,Improved from 14 to 11 days MoM
+10001,P2-KPI1,2026-03-01,99.95,99.95,%,Uptime Monitor,Met SLA target this month

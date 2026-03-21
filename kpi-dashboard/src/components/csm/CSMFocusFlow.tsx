@@ -271,8 +271,16 @@ const CSMFocusFlow: React.FC = () => {
       const res = await fetch('/api/dc2s/daily-actions', { headers });
       if (!res.ok) throw new Error(`Actions: ${res.status}`);
       const data = await res.json();
-      const list: DailyAction[] = data.actions || data.data || data || [];
-      setActions(Array.isArray(list) ? list : []);
+      const raw: any[] = data.actions || data.data || data || [];
+      // Map backend field names to component interface
+      const list: DailyAction[] = (Array.isArray(raw) ? raw : []).map((a: any) => ({
+        ...a,
+        action: a.action || a.action_title || a.action_description || '',
+        health_score: a.health_score ?? a.account_health ?? a.overall_health ?? 0,
+        projected_impact: a.projected_impact ?? a.roi_projected_impact ?? 0,
+        arr: a.arr ?? a.revenue ?? 0,
+      }));
+      setActions(list);
       setCurrentIdx(0);
     } catch (e: any) {
       setError(e.message || 'Failed to load actions');
@@ -288,8 +296,15 @@ const CSMFocusFlow: React.FC = () => {
       const res = await fetch('/api/dc2s/accounts', { headers });
       if (!res.ok) throw new Error(`Accounts: ${res.status}`);
       const data = await res.json();
-      const list: AccountSummary[] = data.accounts || data.data || data || [];
-      setAccounts(Array.isArray(list) ? list : []);
+      const raw: any[] = data.accounts || data.data || data || [];
+      // Map backend field names to component interface
+      const list: AccountSummary[] = (Array.isArray(raw) ? raw : []).map((a: any) => ({
+        ...a,
+        health_score: a.health_score ?? a.overall_health ?? 0,
+        arr: a.arr ?? a.revenue ?? 0,
+        status: a.status ?? a.account_status ?? '',
+      }));
+      setAccounts(list);
     } catch (e: any) {
       setError(e.message || 'Failed to load accounts');
     } finally {
@@ -318,21 +333,52 @@ const CSMFocusFlow: React.FC = () => {
     setSignals([]);
     setRecommendations([]);
     try {
-      const [detailRes, alertsRes, recsRes] = await Promise.allSettled([
+      const [detailRes, healthRes, recsRes] = await Promise.allSettled([
         fetch(`/api/dc2s/accounts/${accountId}`, { headers }),
-        fetch(`/api/dc2s/alerts/${accountId}`, { headers }),
+        fetch(`/api/dc2s/health-score/${accountId}`, { headers }),
         fetch(`/api/dc2s/recommendations/${accountId}`, { headers }),
       ]);
 
+      // Build account detail from both endpoints
+      let detail: any = {};
       if (detailRes.status === 'fulfilled' && detailRes.value.ok) {
         const d = await detailRes.value.json();
-        setAccountDetail(d.account || d.data || d);
+        detail = d.account || d.data || d || {};
       }
-      if (alertsRes.status === 'fulfilled' && alertsRes.value.ok) {
-        const a = await alertsRes.value.json();
-        const sigList = a.alerts || a.signals || a.data || [];
-        setSignals(Array.isArray(sigList) ? sigList.slice(0, 5) : []);
+      if (healthRes.status === 'fulfilled' && healthRes.value.ok) {
+        const h = await healthRes.value.json();
+        detail.health_score = h.overall_score ?? h.health_score ?? detail.overall_health ?? 0;
+        detail.pillar_scores = h.category_scores
+          ? Object.fromEntries(Object.entries(h.category_scores).map(([k, v]: [string, any]) => [k, v?.score ?? v]))
+          : detail.pillar_scores ?? {};
       }
+      // Map field names
+      detail.health_score = detail.health_score ?? detail.overall_health ?? 0;
+      detail.contract = detail.contract || { arr: detail.arr ?? detail.revenue ?? 0, renewal_date: detail.renewal_date };
+      // Extract signals from metadata or qualitative_signals if present
+      const metaSignals = detail.metadata?.recent_signals || detail.signals || [];
+      setAccountDetail(detail);
+
+      // Fetch qualitative signals for this account as alerts
+      try {
+        const sigRes = await fetch(`/api/health-trends?account_id=${accountId}`, { headers });
+        if (sigRes.ok) {
+          const sigData = await sigRes.json();
+          const trends = sigData.trends || [];
+          // Convert trends to signal-like format for display
+          const sigList = trends.slice(-3).map((t: any) => ({
+            date: t.month ? `2026-${t.month}-01` : null,
+            summary: `Health: ${Math.round(t.score)} | P1: ${Math.round(t.product_usage_score ?? 0)} P3: ${Math.round(t.customer_sentiment_score ?? 0)} P5: ${Math.round(t.relationship_strength_score ?? 0)}`,
+            type: t.score < 50 ? 'risk' : t.score < 70 ? 'warning' : 'positive',
+          }));
+          setSignals(metaSignals.length > 0 ? metaSignals.slice(0, 5) : sigList);
+        } else {
+          setSignals(metaSignals.slice(0, 5));
+        }
+      } catch {
+        setSignals(metaSignals.slice(0, 5));
+      }
+
       if (recsRes.status === 'fulfilled' && recsRes.value.ok) {
         const r = await recsRes.value.json();
         const recList = r.recommendations || r.playbooks || r.data || [];

@@ -579,25 +579,45 @@ const CSMCockpit: React.FC = () => {
 
       if (acctRes.status === 'fulfilled' && acctRes.value.ok) {
         const data = await acctRes.value.json();
-        setAccounts(data.accounts || data || []);
+        const raw: any[] = data.accounts || data || [];
+        // Map backend field names to component interface
+        setAccounts((Array.isArray(raw) ? raw : []).map((a: any) => ({
+          ...a,
+          id: a.id ?? a.account_id,
+          name: a.name ?? a.account_name ?? '',
+          health_score: a.health_score ?? a.overall_health ?? 0,
+          arr: a.arr ?? a.revenue ?? 0,
+          status: a.status ?? a.account_status ?? '',
+          pillar_scores: a.pillar_scores ?? {},
+        })));
       } else {
         throw new Error('Failed to load accounts');
       }
 
       if (actRes.status === 'fulfilled' && actRes.value.ok) {
         const data = await actRes.value.json();
-        setActions(data.actions || data || []);
+        const raw: any[] = data.actions || data || [];
+        setActions((Array.isArray(raw) ? raw : []).map((a: any) => ({
+          ...a,
+          id: a.id ?? a.rank ?? 0,
+          action: a.action || a.action_title || a.action_description || '',
+          impact_score: a.impact_score ?? a.priority_index ?? 0,
+          projected_impact: a.projected_impact ?? a.roi_projected_impact ?? 0,
+        })));
       }
 
-      // Load approvals
+      // Load approvals (endpoint optional — may not exist)
       try {
         const appRes = await fetch('/api/approvals/pending', { headers });
         if (appRes.ok) {
           const data = await appRes.json();
-          setApprovals(data.approvals || data || []);
+          const appList = data.approvals || data.data || [];
+          setApprovals(Array.isArray(appList) ? appList : []);
+        } else {
+          setApprovals([]);
         }
       } catch {
-        // approvals endpoint optional
+        setApprovals([]);
       }
 
       // Mock completed today (no dedicated API)

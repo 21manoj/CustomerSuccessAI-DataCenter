@@ -1,2 +1,9 @@
 account_id,arr,industry,employee_count,fiscal_year_end,tech_stack,cloud_provider,competitive_landscape,strategic_initiatives
-10001,2500000,Technology,5000,December,"NVIDIA DGX, VMware, Kubernetes",hybrid,"CoreWeave, Lambda Labs","AI training expansion, multi-cloud migration"
+10001,4200000,Technology,5000,December,"NVIDIA DGX, VMware, Kubernetes",hybrid,"CoreWeave, Lambda Labs","AI training expansion, multi-cloud migration"
+10002,8500000,Financial Services,12000,March,"Intel Xeon, Red Hat OpenShift",on_prem,"Equinix, QTS Realty","Regulatory compliance, latency optimization"
+10003,3100000,Healthcare,3000,June,"AMD EPYC, Docker, Terraform",AWS,"AWS Outposts, Azure Stack","HIPAA workload migration, edge compute for imaging"
+10004,5700000,Retail,8000,January,"NVIDIA A100, Databricks, Snowflake",GCP,"Google Cloud, Azure","Real-time personalization, demand forecasting"
+10005,12000000,Manufacturing,25000,September,"Custom ASIC, Kubernetes, ArgoCD",hybrid,"AWS, Azure","Digital twin simulation, predictive maintenance"
+10006,1800000,Education,1500,August,"NVIDIA T4, JupyterHub, Slurm",AWS,"Paperspace, Google Colab","Research computing, student GPU access"
+10007,6400000,Energy,7000,December,"AMD MI250, Ceph, OpenStack",on_prem,"Equinix, CyrusOne","Seismic modeling, carbon capture simulation"
+10008,2200000,Technology,800,December,"NVIDIA H100, Ray, MLflow",GCP,"Lambda Labs, Coreweave","Foundation model training, inference optimization"

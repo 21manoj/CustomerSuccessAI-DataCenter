@@ -1,3 +1,9 @@
 account_id,outcome_date,title,outcome_type,revenue_value,evidence,confidence,related_decision_id
-10001,2026-02-20,Expansion deal signed,expansion,500000,SOW signed after GPU cluster performance improvement,1.0,DEC-001
-10001,2026-02-25,Contract renewal at higher tier,retention,2500000,Auto-renewed with 10% uplift,0.95,
+10001,2026-02-20,GPU cluster expansion approved,expansion,750000,VP signed SOW after performance improvement demo,0.95,DEC-001
+10001,2026-03-01,Annual contract renewed with uplift,retention,4200000,3-year renewal at 10% uplift — champion-driven,1.0,DEC-002
+10002,2026-02-28,Q3 capacity doubling confirmed,expansion,4200000,CFO budget approval for 2x GPU nodes,0.9,DEC-003
+10002,2026-03-05,Managed services upsell,expansion,600000,Added 24/7 managed services tier,0.85,DEC-004
+10003,2026-02-15,Renewal deferred to Q4,at_risk,-500000,Customer requested 90-day extension to evaluate alternatives,0.7,DEC-005
+10003,2026-03-10,Partial churn — 1 product dropped,churn,-800000,Dropped disaster recovery module citing cost,0.9,DEC-006
+10004,2026-02-25,Pilot expanded to production,expansion,1200000,Edge computing pilot converted to 3-year production contract,0.85,DEC-007
+10007,2026-03-01,Contract downgrade risk,at_risk,-2000000,Customer signaled move from premium to standard tier,0.6,DEC-008

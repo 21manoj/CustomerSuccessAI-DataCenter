@@ -226,27 +226,24 @@ const DCDataIntegration: React.FC = () => {
 
   const fetchUploadHistory = async () => {
     try {
-      // TODO: Replace with actual API endpoint: GET /api/data/upload-history
-      // For now, use mock data
-      const mockHistory: UploadHistoryItem[] = [
-        {
-          upload_id: 1,
-          file_name: 'accounts.csv',
-          upload_mode: 'incremental',
-          status: 'completed',
-          uploaded_at: new Date().toISOString(),
-          records_count: 30,
-        },
-        {
-          upload_id: 2,
-          file_name: 'kpis.csv',
-          upload_mode: 'upsert',
-          status: 'completed',
-          uploaded_at: new Date(Date.now() - 86400000).toISOString(),
-          records_count: 11700,
-        },
-      ];
-      setUploadHistory(mockHistory);
+      const response = await fetch('/api/activity-logs?action_category=data&limit=20', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const logs = data.logs || [];
+        const history: UploadHistoryItem[] = logs
+          .filter((l: any) => l.action_type === 'data_upload' || l.action_type === 'csv_upload' || l.action_description?.includes('upload'))
+          .map((l: any, idx: number) => ({
+            upload_id: l.id || idx + 1,
+            file_name: l.details?.file_name || l.resource_type || 'data upload',
+            upload_mode: l.details?.upload_mode || 'incremental',
+            status: l.status === 'success' ? 'completed' : l.status || 'completed',
+            uploaded_at: l.created_at,
+            records_count: l.details?.records_count,
+          }));
+        setUploadHistory(history);
+      }
     } catch (err) {
       console.error('Error fetching upload history:', err);
     }

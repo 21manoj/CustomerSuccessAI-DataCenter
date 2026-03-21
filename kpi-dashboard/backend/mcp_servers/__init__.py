@@ -1,15 +1,7 @@
 """
 MCP Servers Package
-Mock servers for testing external system integration
+External system integrations (Salesforce, ServiceNow, etc.)
+Mock servers removed March 2026 — real integrations to follow.
 """
 
-from .mock_salesforce_server import MockSalesforceMCPServer
-from .mock_servicenow_server import MockServiceNowMCPServer
-from .mock_survey_server import MockSurveyMCPServer
-
-__all__ = [
-    'MockSalesforceMCPServer',
-    'MockServiceNowMCPServer',
-    'MockSurveyMCPServer'
-]
-
+__all__ = []
