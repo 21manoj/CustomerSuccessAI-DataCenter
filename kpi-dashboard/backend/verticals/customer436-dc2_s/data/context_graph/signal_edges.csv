@@ -1,0 +1,43 @@
+account_id,from_signal_ref,to_signal_ref,edge_type,label,confidence,lag_days
+436001,sig_436001_1,decision:dec_436001_1,TRIGGERED,Signal triggered escalation,0.9,7
+436001,decision:dec_436001_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+436001,sig_436001_1,decision:dec_436001_2,TRIGGERED,Signal triggered retention plan,0.85,10
+436001,decision:dec_436001_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+436002,sig_436002_1,decision:dec_436002_1,TRIGGERED,Signal triggered escalation,0.9,7
+436002,decision:dec_436002_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+436002,sig_436002_1,decision:dec_436002_2,TRIGGERED,Signal triggered retention plan,0.85,10
+436002,decision:dec_436002_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+436003,sig_436003_1,decision:dec_436003_1,TRIGGERED,Signal triggered escalation,0.9,7
+436003,decision:dec_436003_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+436003,sig_436003_1,decision:dec_436003_2,TRIGGERED,Signal triggered retention plan,0.85,10
+436003,decision:dec_436003_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+436004,sig_436004_1,decision:dec_436004_1,TRIGGERED,Signal triggered renewal review,0.8,14
+436004,decision:dec_436004_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+436005,sig_436005_1,decision:dec_436005_1,TRIGGERED,Signal triggered renewal review,0.8,14
+436005,decision:dec_436005_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+436006,sig_436006_1,decision:dec_436006_1,TRIGGERED,Signal triggered renewal review,0.8,14
+436006,decision:dec_436006_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+436007,sig_436007_1,decision:dec_436007_1,TRIGGERED,Signal triggered renewal review,0.8,14
+436007,decision:dec_436007_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+436008,sig_436008_1,decision:dec_436008_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436008,decision:dec_436008_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436009,sig_436009_1,decision:dec_436009_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436009,decision:dec_436009_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436010,sig_436010_1,decision:dec_436010_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436010,decision:dec_436010_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436011,sig_436011_1,decision:dec_436011_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436011,decision:dec_436011_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436012,sig_436012_1,decision:dec_436012_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436012,decision:dec_436012_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436013,sig_436013_1,decision:dec_436013_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436013,decision:dec_436013_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436014,sig_436014_1,decision:dec_436014_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436014,decision:dec_436014_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436015,sig_436015_1,decision:dec_436015_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436015,decision:dec_436015_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436016,sig_436016_1,decision:dec_436016_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436016,decision:dec_436016_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436017,sig_436017_1,decision:dec_436017_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436017,decision:dec_436017_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+436018,sig_436018_1,decision:dec_436018_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+436018,decision:dec_436018_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14

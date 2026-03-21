@@ -1,0 +1,22 @@
+account_id,outcome_date,outcome_type,title,description,revenue_impact,status,linked_signal_id
+434001,2026-02-28,revenue_at_risk,Churn risk — Titan Hyperscale Labs,"Account showing signs of churn. ARR at risk: $8,200,000",-4100000.0,open,sig_434001_1
+434001,2026-03-03,engagement_decline,Engagement decline — Titan Hyperscale Labs,Stakeholder engagement dropped significantly,-820000.0,in_progress,sig_434001_1
+434002,2026-02-28,revenue_at_risk,Churn risk — Meridian Cloud Services,"Account showing signs of churn. ARR at risk: $5,800,000",-2900000.0,open,sig_434002_1
+434002,2026-03-03,engagement_decline,Engagement decline — Meridian Cloud Services,Stakeholder engagement dropped significantly,-580000.0,in_progress,sig_434002_1
+434003,2026-02-28,revenue_at_risk,Churn risk — Apex Compute Holdings,"Account showing signs of churn. ARR at risk: $4,100,000",-2050000.0,open,sig_434003_1
+434003,2026-03-03,engagement_decline,Engagement decline — Apex Compute Holdings,Stakeholder engagement dropped significantly,-410000.0,in_progress,sig_434003_1
+434004,2026-01-29,renewal_risk,Renewal uncertainty — Pacific Data Systems,Renewal discussion stalled or delayed,-1300000.0,in_progress,sig_434004_1
+434005,2026-01-29,renewal_risk,Renewal uncertainty — Quantum Edge Networks,Renewal discussion stalled or delayed,-960000.0,in_progress,sig_434005_1
+434006,2026-01-29,renewal_risk,Renewal uncertainty — Stratos AI Infrastructure,Renewal discussion stalled or delayed,-640000.0,in_progress,sig_434006_1
+434007,2026-01-29,renewal_risk,Renewal uncertainty — CyberVault DC,Renewal discussion stalled or delayed,-580000.0,in_progress,sig_434007_1
+434008,2026-03-14,expansion_opportunity,Expansion potential — Atlas Computing Group,Account showing expansion signals,765000.0,open,sig_434008_1
+434009,2026-03-14,expansion_opportunity,Expansion potential — Pinnacle Systems,Account showing expansion signals,570000.0,open,sig_434009_1
+434010,2026-03-14,expansion_opportunity,Expansion potential — Helix Data Corp,Account showing expansion signals,390000.0,open,sig_434010_1
+434011,2026-03-14,expansion_opportunity,Expansion potential — Fortress Colocation,Account showing expansion signals,510000.0,open,sig_434011_1
+434012,2026-03-14,expansion_opportunity,Expansion potential — NexGen AI Labs,Account showing expansion signals,315000.0,open,sig_434012_1
+434013,2026-03-14,expansion_opportunity,Expansion potential — Redline Infrastructure,Account showing expansion signals,270000.0,open,sig_434013_1
+434014,2026-03-14,expansion_opportunity,Expansion potential — Cumulus Edge Computing,Account showing expansion signals,225000.0,open,sig_434014_1
+434015,2026-03-14,expansion_opportunity,Expansion potential — SkyBridge Networks,Account showing expansion signals,180000.0,open,sig_434015_1
+434016,2026-03-14,expansion_opportunity,Expansion potential — IronClad Systems,Account showing expansion signals,285000.0,open,sig_434016_1
+434017,2026-03-14,expansion_opportunity,Expansion potential — TerraScale Solutions,Account showing expansion signals,240000.0,open,sig_434017_1
+434018,2026-03-14,expansion_opportunity,Expansion potential — Velocity AI Compute,Account showing expansion signals,165000.0,open,sig_434018_1

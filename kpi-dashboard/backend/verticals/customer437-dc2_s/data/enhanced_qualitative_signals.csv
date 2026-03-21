@@ -1,0 +1,268 @@
+signal_id,account_id,signal_date,signal_type,content,sentiment,sentiment_score,arc_id,story_phase,linked_node_id,signal_ref
+sig_437001_1,437001,2026-01-15,champion_change,VP of Infrastructure James Morrison has resigned. Lisa Park promoted as interim replacement.,negative,-0.6,champion_loss,,,sig_437001_1
+sig_437001_2,437001,2026-02-01,competitor_mention,Lisa Park evaluating alternative GPU cloud providers. RFP issued to 3 vendors.,negative,-0.9,champion_loss,,,sig_437001_2
+sig_437001_3,437001,2026-02-15,usage_decline,GPU utilization dropped from 82% to 48% over 4 weeks. Training jobs migrating to competitor.,negative,-0.6,champion_loss,,,sig_437001_3
+sig_437001_4,437001,2026-03-01,engagement_gap,No executive contact in 90+ days. QBR requests unanswered.,negative,-0.6,champion_loss,,,sig_437001_4
+narrative_sig_437001_5,437001,2025-12-30,kpi_decline,KPI metrics declining below threshold,negative,-0.67,champion_loss,warning,,narrative_sig_437001_5
+narrative_sig_437001_6,437001,2026-01-06,support_escalation,Support ticket escalated to management,negative,-0.61,champion_loss,warning,,narrative_sig_437001_6
+sig_437001_7,437001,2025-10-23,health_check,Performance metrics under review,negative,-0.4,champion_loss,,,sig_437001_7
+sig_437001_8,437001,2025-10-25,observation,Performance metrics under review,neutral,0.03,champion_loss,,,sig_437001_8
+sig_437001_9,437001,2025-11-06,health_check,Stakeholder alignment meeting scheduled,neutral,0.21,champion_loss,,,sig_437001_9
+sig_437001_10,437001,2025-11-09,meeting,Support ticket volume above normal,neutral,0.19,champion_loss,,,sig_437001_10
+sig_437001_11,437001,2025-12-06,health_check,Stakeholder alignment meeting scheduled,neutral,0.2,champion_loss,,,sig_437001_11
+sig_437001_12,437001,2025-12-14,health_check,Stakeholder alignment meeting scheduled,negative,-0.54,champion_loss,,,sig_437001_12
+sig_437001_13,437001,2026-01-17,observation,Support ticket volume above normal,negative,-0.58,champion_loss,,,sig_437001_13
+sig_437001_14,437001,2026-01-24,health_check,Stakeholder alignment meeting scheduled,negative,-0.6,champion_loss,,,sig_437001_14
+sig_437001_15,437001,2026-02-08,health_check,Support ticket volume above normal,neutral,0.11,champion_loss,,,sig_437001_15
+sig_437001_16,437001,2026-02-17,meeting,Escalation review meeting conducted,negative,-0.62,champion_loss,,,sig_437001_16
+sig_437001_17,437001,2026-03-02,meeting,Escalation review meeting conducted,negative,-0.52,champion_loss,,,sig_437001_17
+sig_437001_18,437001,2026-03-29,health_check,Support ticket volume above normal,neutral,0.14,champion_loss,,,sig_437001_18
+sig_437002_19,437002,2026-01-20,incident,Sev-1: Complete rack failure in Pod 3. 4-hour outage affecting 120 GPU nodes.,negative,-0.9,infrastructure_decay,,,sig_437002_19
+sig_437002_20,437002,2026-02-08,incident,Sev-1: Power distribution unit failure. 2-hour outage. Second major incident in 3 weeks.,negative,-0.9,infrastructure_decay,,,sig_437002_20
+sig_437002_21,437002,2026-02-15,escalation,CTO Michael Torres escalated to our VP of Sales. Demanded reliability improvement plan within 2 weeks.,negative,-0.9,infrastructure_decay,,,sig_437002_21
+sig_437002_22,437002,2026-03-01,kpi_breach,RMA rate crossed 2.5% threshold (was 0.8% in Oct). MTBF dropped to 4200 hours (target: 8000).,negative,-0.6,infrastructure_decay,,,sig_437002_22
+narrative_sig_437002_23,437002,2025-12-30,kpi_decline,KPI metrics declining below threshold,negative,-0.52,infrastructure_decay,warning,,narrative_sig_437002_23
+narrative_sig_437002_24,437002,2026-01-06,support_escalation,Support ticket escalated to management,negative,-0.62,infrastructure_decay,warning,,narrative_sig_437002_24
+sig_437002_25,437002,2025-10-03,observation,Stakeholder alignment meeting scheduled,neutral,-0.05,infrastructure_decay,,,sig_437002_25
+sig_437002_26,437002,2025-10-10,meeting,Support ticket volume above normal,neutral,0.12,infrastructure_decay,,,sig_437002_26
+sig_437002_27,437002,2025-11-28,health_check,Stakeholder alignment meeting scheduled,negative,-0.34,infrastructure_decay,,,sig_437002_27
+sig_437002_28,437002,2025-11-13,customer_feedback,Performance metrics under review,negative,-0.35,infrastructure_decay,,,sig_437002_28
+sig_437002_29,437002,2025-12-22,meeting,Support ticket volume above normal,negative,-0.46,infrastructure_decay,,,sig_437002_29
+sig_437002_30,437002,2025-12-01,customer_feedback,Stakeholder alignment meeting scheduled,negative,-0.52,infrastructure_decay,,,sig_437002_30
+sig_437002_31,437002,2026-01-11,health_check,Escalation review meeting conducted,neutral,-0.15,infrastructure_decay,,,sig_437002_31
+sig_437002_32,437002,2026-01-10,health_check,Stakeholder alignment meeting scheduled,neutral,-0.05,infrastructure_decay,,,sig_437002_32
+sig_437002_33,437002,2026-02-26,customer_feedback,Performance metrics under review,negative,-0.28,infrastructure_decay,,,sig_437002_33
+sig_437002_34,437002,2026-02-26,meeting,Support ticket volume above normal,neutral,-0.1,infrastructure_decay,,,sig_437002_34
+sig_437002_35,437002,2026-03-04,customer_feedback,Support ticket volume above normal,neutral,0.28,infrastructure_decay,,,sig_437002_35
+sig_437002_36,437002,2026-03-21,observation,Performance metrics under review,negative,-0.35,infrastructure_decay,,,sig_437002_36
+sig_437003_37,437003,2025-12-15,budget_change,Q4 earnings miss. Board mandated 15% OpEx reduction across all departments.,negative,-0.6,budget_cut,,,sig_437003_37
+sig_437003_38,437003,2026-01-10,expansion_cancelled,Planned Phase 2 expansion ($2.1M) put on indefinite hold. CFO froze all new infrastructure spend.,negative,-0.9,budget_cut,,,sig_437003_38
+sig_437003_39,437003,2026-02-01,downsizing,Capacity reduction: decommissioning 50 GPU nodes (200 → 150). Workloads consolidating.,negative,-0.6,budget_cut,,,sig_437003_39
+sig_437003_40,437003,2026-03-05,competitor_evaluation,CFO requested pricing comparison with 2 competitors for renewal negotiation leverage.,negative,-0.6,budget_cut,,,sig_437003_40
+narrative_sig_437003_41,437003,2025-12-30,kpi_decline,KPI metrics declining below threshold,negative,-0.66,budget_cut,warning,,narrative_sig_437003_41
+narrative_sig_437003_42,437003,2026-01-06,support_escalation,Support ticket escalated to management,negative,-0.84,budget_cut,warning,,narrative_sig_437003_42
+sig_437003_43,437003,2025-10-03,customer_feedback,Escalation review meeting conducted,neutral,0.0,budget_cut,,,sig_437003_43
+sig_437003_44,437003,2025-10-06,observation,Support ticket volume above normal,neutral,0.01,budget_cut,,,sig_437003_44
+sig_437003_45,437003,2025-11-16,meeting,Stakeholder alignment meeting scheduled,neutral,0.07,budget_cut,,,sig_437003_45
+sig_437003_46,437003,2025-11-20,observation,Performance metrics under review,negative,-0.45,budget_cut,,,sig_437003_46
+sig_437003_47,437003,2025-12-14,observation,Escalation review meeting conducted,neutral,0.05,budget_cut,,,sig_437003_47
+sig_437003_48,437003,2025-12-21,meeting,Performance metrics under review,neutral,0.42,budget_cut,,,sig_437003_48
+sig_437003_49,437003,2026-01-16,health_check,Escalation review meeting conducted,negative,-0.5,budget_cut,,,sig_437003_49
+sig_437003_50,437003,2026-01-11,customer_feedback,Stakeholder alignment meeting scheduled,negative,-0.52,budget_cut,,,sig_437003_50
+sig_437003_51,437003,2026-02-10,observation,Stakeholder alignment meeting scheduled,negative,-0.59,budget_cut,,,sig_437003_51
+sig_437003_52,437003,2026-02-25,customer_feedback,Performance metrics under review,neutral,0.25,budget_cut,,,sig_437003_52
+sig_437003_53,437003,2026-03-04,observation,Support ticket volume above normal,neutral,0.02,budget_cut,,,sig_437003_53
+sig_437003_54,437003,2026-03-29,meeting,Performance metrics under review,neutral,0.11,budget_cut,,,sig_437003_54
+sig_437004_55,437004,2026-01-15,usage_decline,GPU utilization trending down: 78% → 71% over 6 weeks. Some workloads moved to cloud.,negative,-0.6,early_warning,,,sig_437004_55
+sig_437004_56,437004,2026-02-10,support_ticket,Multiple tickets about training job failures. Completion rate dropped from 94% to 87%.,negative,-0.6,early_warning,,,sig_437004_56
+narrative_sig_437004_57,437004,2025-11-30,critical_incident,Critical service incident reported,negative,-0.46,early_warning,crisis,,narrative_sig_437004_57
+narrative_sig_437004_58,437004,2025-12-03,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.76,early_warning,crisis,,narrative_sig_437004_58
+sig_437004_59,437004,2025-10-01,meeting,Usage patterns reviewed with team,neutral,0.19,early_warning,,,sig_437004_59
+sig_437004_60,437004,2025-10-05,health_check,Quarterly check-in completed,neutral,0.14,early_warning,,,sig_437004_60
+sig_437004_61,437004,2025-11-27,meeting,Quarterly check-in completed,neutral,0.09,early_warning,,,sig_437004_61
+sig_437004_62,437004,2025-11-29,meeting,Usage patterns reviewed with team,neutral,0.01,early_warning,,,sig_437004_62
+sig_437004_63,437004,2025-12-18,customer_feedback,Renewal discussion in progress,neutral,0.11,early_warning,,,sig_437004_63
+sig_437004_64,437004,2025-12-03,health_check,Usage patterns reviewed with team,neutral,0.05,early_warning,,,sig_437004_64
+sig_437004_65,437004,2026-01-28,meeting,Usage patterns reviewed with team,neutral,0.31,early_warning,,,sig_437004_65
+sig_437004_66,437004,2025-12-30,health_check,Usage patterns reviewed with team,negative,-0.37,early_warning,,,sig_437004_66
+sig_437004_67,437004,2026-01-30,meeting,Technical review session held,neutral,0.05,early_warning,,,sig_437004_67
+sig_437004_68,437004,2026-02-13,customer_feedback,Usage patterns reviewed with team,neutral,0.21,early_warning,,,sig_437004_68
+sig_437004_69,437004,2026-03-15,meeting,Technical review session held,negative,-0.5,early_warning,,,sig_437004_69
+sig_437004_70,437004,2026-03-05,observation,Usage patterns reviewed with team,neutral,0.11,early_warning,,,sig_437004_70
+sig_437005_71,437005,2026-01-01,engagement_gap,Last QBR was Oct 2025. Three scheduling attempts declined or no-showed.,negative,-0.6,engagement_drop,,,sig_437005_71
+sig_437005_72,437005,2026-01-20,org_change,"Major restructure: Engineering team reorganized. Alex Nguyen's role changed, reduced authority.",negative,-0.6,engagement_drop,,,sig_437005_72
+narrative_sig_437005_73,437005,2025-11-30,critical_incident,Critical service incident reported,negative,-0.51,engagement_drop,crisis,,narrative_sig_437005_73
+narrative_sig_437005_74,437005,2025-12-03,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.69,engagement_drop,crisis,,narrative_sig_437005_74
+sig_437005_75,437005,2025-10-07,meeting,Quarterly check-in completed,neutral,0.17,engagement_drop,,,sig_437005_75
+sig_437005_76,437005,2025-10-25,health_check,Technical review session held,neutral,0.28,engagement_drop,,,sig_437005_76
+sig_437005_77,437005,2025-11-20,observation,Technical review session held,neutral,0.02,engagement_drop,,,sig_437005_77
+sig_437005_78,437005,2025-11-13,observation,Usage patterns reviewed with team,negative,-0.5,engagement_drop,,,sig_437005_78
+sig_437005_79,437005,2025-12-16,observation,Renewal discussion in progress,neutral,0.1,engagement_drop,,,sig_437005_79
+sig_437005_80,437005,2025-12-02,observation,Quarterly check-in completed,negative,-0.54,engagement_drop,,,sig_437005_80
+sig_437005_81,437005,2026-01-18,meeting,Technical review session held,negative,-0.34,engagement_drop,,,sig_437005_81
+sig_437005_82,437005,2026-01-01,observation,Quarterly check-in completed,negative,-0.49,engagement_drop,,,sig_437005_82
+sig_437005_83,437005,2026-02-16,observation,Technical review session held,negative,-0.61,engagement_drop,,,sig_437005_83
+sig_437005_84,437005,2026-02-09,observation,Technical review session held,negative,-0.36,engagement_drop,,,sig_437005_84
+sig_437005_85,437005,2026-03-10,health_check,Usage patterns reviewed with team,neutral,0.07,engagement_drop,,,sig_437005_85
+sig_437005_86,437005,2026-03-11,customer_feedback,Technical review session held,negative,-0.52,engagement_drop,,,sig_437005_86
+sig_437006_87,437006,2026-02-01,capacity_warning,Capacity utilization at 91%. Queuing delays increasing for training jobs.,negative,-0.6,slow_expansion,,,sig_437006_87
+sig_437006_88,437006,2026-02-15,expansion_stall,"Expansion proposal ($800K) submitted in Dec. Finance requested ROI analysis, no response since.",neutral,0.1,slow_expansion,,,sig_437006_88
+narrative_sig_437006_89,437006,2025-11-30,critical_incident,Critical service incident reported,negative,-0.68,slow_expansion,crisis,,narrative_sig_437006_89
+narrative_sig_437006_90,437006,2025-12-03,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.44,slow_expansion,crisis,,narrative_sig_437006_90
+sig_437006_91,437006,2025-10-13,customer_feedback,Technical review session held,negative,-0.41,slow_expansion,,,sig_437006_91
+sig_437006_92,437006,2025-10-13,meeting,Usage patterns reviewed with team,negative,-0.37,slow_expansion,,,sig_437006_92
+sig_437006_93,437006,2025-11-25,customer_feedback,Usage patterns reviewed with team,negative,-0.51,slow_expansion,,,sig_437006_93
+sig_437006_94,437006,2025-11-25,health_check,Usage patterns reviewed with team,neutral,0.11,slow_expansion,,,sig_437006_94
+sig_437006_95,437006,2025-12-18,health_check,Quarterly check-in completed,neutral,0.21,slow_expansion,,,sig_437006_95
+sig_437006_96,437006,2025-12-08,health_check,Quarterly check-in completed,negative,-0.49,slow_expansion,,,sig_437006_96
+sig_437006_97,437006,2026-01-14,health_check,Renewal discussion in progress,negative,-0.41,slow_expansion,,,sig_437006_97
+sig_437006_98,437006,2026-01-07,health_check,Technical review session held,neutral,-0.07,slow_expansion,,,sig_437006_98
+sig_437006_99,437006,2026-02-17,customer_feedback,Technical review session held,neutral,-0.08,slow_expansion,,,sig_437006_99
+sig_437006_100,437006,2026-02-13,meeting,Renewal discussion in progress,neutral,0.18,slow_expansion,,,sig_437006_100
+sig_437006_101,437006,2026-03-03,observation,Technical review session held,neutral,0.06,slow_expansion,,,sig_437006_101
+sig_437006_102,437006,2026-03-16,health_check,Technical review session held,negative,-0.53,slow_expansion,,,sig_437006_102
+sig_437007_103,437007,2026-01-10,playbook_executed,PB-02 (Ops Stability) triggered. Dedicated support engineer assigned. Weekly health check calls started.,positive,0.7,recovery_in_progress,,,sig_437007_103
+sig_437007_104,437007,2026-02-15,health_improvement,Health score improved from 41 to 58. RMA rate stabilized. MTBF trending up.,positive,0.7,recovery_in_progress,,,sig_437007_104
+sig_437007_105,437007,2026-03-10,recovery_milestone,Health reached 67. Two consecutive weeks above at-risk threshold. Champion re-engaged.,positive,0.7,recovery_in_progress,,,sig_437007_105
+narrative_sig_437007_106,437007,2025-11-30,critical_incident,Critical service incident reported,negative,-0.85,recovery_in_progress,crisis,,narrative_sig_437007_106
+narrative_sig_437007_107,437007,2025-12-03,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.59,recovery_in_progress,crisis,,narrative_sig_437007_107
+sig_437007_108,437007,2025-10-21,observation,Renewal discussion in progress,neutral,0.06,recovery_in_progress,,,sig_437007_108
+sig_437007_109,437007,2025-10-04,health_check,Renewal discussion in progress,neutral,0.0,recovery_in_progress,,,sig_437007_109
+sig_437007_110,437007,2025-11-10,observation,Usage patterns reviewed with team,neutral,-0.08,recovery_in_progress,,,sig_437007_110
+sig_437007_111,437007,2025-11-02,customer_feedback,Renewal discussion in progress,neutral,0.29,recovery_in_progress,,,sig_437007_111
+sig_437007_112,437007,2025-12-13,health_check,Renewal discussion in progress,neutral,0.02,recovery_in_progress,,,sig_437007_112
+sig_437007_113,437007,2025-12-28,customer_feedback,Renewal discussion in progress,negative,-0.7,recovery_in_progress,,,sig_437007_113
+sig_437007_114,437007,2026-01-16,observation,Usage patterns reviewed with team,negative,-0.29,recovery_in_progress,,,sig_437007_114
+sig_437007_115,437007,2026-01-24,health_check,Usage patterns reviewed with team,neutral,-0.05,recovery_in_progress,,,sig_437007_115
+sig_437007_116,437007,2026-02-24,customer_feedback,Technical review session held,neutral,0.17,recovery_in_progress,,,sig_437007_116
+sig_437007_117,437007,2026-02-26,customer_feedback,Usage patterns reviewed with team,neutral,0.04,recovery_in_progress,,,sig_437007_117
+sig_437007_118,437007,2026-03-19,meeting,Technical review session held,negative,-0.71,recovery_in_progress,,,sig_437007_118
+sig_437007_119,437007,2026-03-23,meeting,Technical review session held,negative,-0.45,recovery_in_progress,,,sig_437007_119
+narrative_sig_437008_120,437008,2026-01-29,routine_review,Routine quarterly review completed,positive,0.65,stable,review,,narrative_sig_437008_120
+sig_437008_121,437008,2025-10-25,health_check,Champion engagement remains strong,neutral,0.14,stable,,,sig_437008_121
+sig_437008_122,437008,2025-10-28,customer_feedback,Product adoption metrics trending well,positive,0.6,stable,,,sig_437008_122
+sig_437008_123,437008,2025-11-11,customer_feedback,Product adoption metrics trending well,positive,0.61,stable,,,sig_437008_123
+sig_437008_124,437008,2025-11-25,observation,Expansion discussion in early stages,neutral,0.24,stable,,,sig_437008_124
+sig_437008_125,437008,2025-12-17,health_check,Regular QBR completed successfully,positive,0.59,stable,,,sig_437008_125
+sig_437008_126,437008,2025-12-09,meeting,Product adoption metrics trending well,positive,0.48,stable,,,sig_437008_126
+sig_437008_127,437008,2026-01-06,customer_feedback,Regular QBR completed successfully,neutral,0.08,stable,,,sig_437008_127
+sig_437008_128,437008,2026-01-08,health_check,Product adoption metrics trending well,neutral,0.09,stable,,,sig_437008_128
+sig_437008_129,437008,2026-02-18,meeting,Champion engagement remains strong,neutral,0.12,stable,,,sig_437008_129
+sig_437008_130,437008,2026-02-12,customer_feedback,Expansion discussion in early stages,positive,0.47,stable,,,sig_437008_130
+sig_437008_131,437008,2026-03-24,meeting,Champion engagement remains strong,neutral,0.05,stable,,,sig_437008_131
+sig_437008_132,437008,2026-03-14,health_check,Expansion discussion in early stages,neutral,0.07,stable,,,sig_437008_132
+narrative_sig_437009_133,437009,2026-01-29,routine_review,Routine quarterly review completed,positive,0.83,moderate_growth,review,,narrative_sig_437009_133
+sig_437009_134,437009,2025-10-11,meeting,Regular QBR completed successfully,positive,0.69,moderate_growth,,,sig_437009_134
+sig_437009_135,437009,2025-10-12,observation,Expansion discussion in early stages,positive,0.51,moderate_growth,,,sig_437009_135
+sig_437009_136,437009,2025-11-17,customer_feedback,Champion engagement remains strong,positive,0.53,moderate_growth,,,sig_437009_136
+sig_437009_137,437009,2025-11-26,observation,Champion engagement remains strong,positive,0.65,moderate_growth,,,sig_437009_137
+sig_437009_138,437009,2025-12-18,meeting,Regular QBR completed successfully,positive,0.57,moderate_growth,,,sig_437009_138
+sig_437009_139,437009,2025-12-15,meeting,Product adoption metrics trending well,positive,0.44,moderate_growth,,,sig_437009_139
+sig_437009_140,437009,2026-01-03,health_check,Product adoption metrics trending well,positive,0.68,moderate_growth,,,sig_437009_140
+sig_437009_141,437009,2026-01-10,meeting,Expansion discussion in early stages,neutral,0.15,moderate_growth,,,sig_437009_141
+sig_437009_142,437009,2026-02-08,customer_feedback,Expansion discussion in early stages,positive,0.48,moderate_growth,,,sig_437009_142
+sig_437009_143,437009,2026-02-18,health_check,Regular QBR completed successfully,neutral,0.07,moderate_growth,,,sig_437009_143
+sig_437009_144,437009,2026-03-26,customer_feedback,Product adoption metrics trending well,positive,0.76,moderate_growth,,,sig_437009_144
+sig_437009_145,437009,2026-03-08,health_check,Regular QBR completed successfully,positive,0.75,moderate_growth,,,sig_437009_145
+narrative_sig_437010_146,437010,2026-01-29,routine_review,Routine quarterly review completed,positive,0.62,stable,review,,narrative_sig_437010_146
+sig_437010_147,437010,2025-10-02,health_check,Expansion discussion in early stages,positive,0.5,stable,,,sig_437010_147
+sig_437010_148,437010,2025-10-02,health_check,Product adoption metrics trending well,positive,0.84,stable,,,sig_437010_148
+sig_437010_149,437010,2025-11-04,observation,Champion engagement remains strong,positive,0.52,stable,,,sig_437010_149
+sig_437010_150,437010,2025-11-12,customer_feedback,Regular QBR completed successfully,positive,0.52,stable,,,sig_437010_150
+sig_437010_151,437010,2025-11-30,customer_feedback,Regular QBR completed successfully,positive,0.59,stable,,,sig_437010_151
+sig_437010_152,437010,2025-12-01,meeting,Product adoption metrics trending well,positive,0.61,stable,,,sig_437010_152
+sig_437010_153,437010,2026-01-10,meeting,Champion engagement remains strong,positive,0.72,stable,,,sig_437010_153
+sig_437010_154,437010,2026-01-15,customer_feedback,Product adoption metrics trending well,positive,0.61,stable,,,sig_437010_154
+sig_437010_155,437010,2026-02-18,observation,Champion engagement remains strong,positive,0.61,stable,,,sig_437010_155
+sig_437010_156,437010,2026-02-15,customer_feedback,Product adoption metrics trending well,neutral,0.19,stable,,,sig_437010_156
+sig_437010_157,437010,2026-03-08,health_check,Champion engagement remains strong,neutral,-0.04,stable,,,sig_437010_157
+sig_437010_158,437010,2026-03-28,customer_feedback,Regular QBR completed successfully,neutral,0.04,stable,,,sig_437010_158
+sig_437011_159,437011,2026-02-20,expansion_signal,CFO approved $1.2M expansion budget for Q3. AI initiative requires 80 additional GPU nodes.,positive,0.9,expansion_candidate,,,sig_437011_159
+narrative_sig_437011_160,437011,2026-01-29,routine_review,Routine quarterly review completed,positive,0.61,expansion_candidate,review,,narrative_sig_437011_160
+sig_437011_161,437011,2025-10-15,customer_feedback,Product adoption metrics trending well,positive,0.61,expansion_candidate,,,sig_437011_161
+sig_437011_162,437011,2025-10-26,health_check,Product adoption metrics trending well,positive,0.63,expansion_candidate,,,sig_437011_162
+sig_437011_163,437011,2025-11-24,observation,Product adoption metrics trending well,positive,0.74,expansion_candidate,,,sig_437011_163
+sig_437011_164,437011,2025-11-11,meeting,Product adoption metrics trending well,neutral,-0.02,expansion_candidate,,,sig_437011_164
+sig_437011_165,437011,2025-12-18,health_check,Regular QBR completed successfully,neutral,0.07,expansion_candidate,,,sig_437011_165
+sig_437011_166,437011,2025-12-05,health_check,Expansion discussion in early stages,neutral,0.16,expansion_candidate,,,sig_437011_166
+sig_437011_167,437011,2026-01-22,observation,Expansion discussion in early stages,neutral,0.24,expansion_candidate,,,sig_437011_167
+sig_437011_168,437011,2026-01-04,customer_feedback,Champion engagement remains strong,neutral,0.09,expansion_candidate,,,sig_437011_168
+sig_437011_169,437011,2026-02-23,health_check,Regular QBR completed successfully,positive,0.45,expansion_candidate,,,sig_437011_169
+sig_437011_170,437011,2026-02-25,meeting,Regular QBR completed successfully,positive,0.46,expansion_candidate,,,sig_437011_170
+sig_437011_171,437011,2026-03-08,observation,Expansion discussion in early stages,positive,0.5,expansion_candidate,,,sig_437011_171
+sig_437011_172,437011,2026-03-05,meeting,Champion engagement remains strong,positive,0.69,expansion_candidate,,,sig_437011_172
+narrative_sig_437012_173,437012,2026-01-29,routine_review,Routine quarterly review completed,positive,0.71,strong_adopter,review,,narrative_sig_437012_173
+sig_437012_174,437012,2025-10-14,observation,Regular QBR completed successfully,positive,0.66,strong_adopter,,,sig_437012_174
+sig_437012_175,437012,2025-10-09,meeting,Champion engagement remains strong,neutral,0.13,strong_adopter,,,sig_437012_175
+sig_437012_176,437012,2025-11-09,observation,Expansion discussion in early stages,positive,0.39,strong_adopter,,,sig_437012_176
+sig_437012_177,437012,2025-11-29,meeting,Regular QBR completed successfully,positive,0.77,strong_adopter,,,sig_437012_177
+sig_437012_178,437012,2025-12-05,meeting,Regular QBR completed successfully,positive,0.44,strong_adopter,,,sig_437012_178
+sig_437012_179,437012,2025-12-23,customer_feedback,Champion engagement remains strong,positive,0.58,strong_adopter,,,sig_437012_179
+sig_437012_180,437012,2026-01-14,health_check,Product adoption metrics trending well,positive,0.75,strong_adopter,,,sig_437012_180
+sig_437012_181,437012,2026-01-01,customer_feedback,Regular QBR completed successfully,neutral,0.2,strong_adopter,,,sig_437012_181
+sig_437012_182,437012,2026-02-12,health_check,Regular QBR completed successfully,neutral,0.12,strong_adopter,,,sig_437012_182
+sig_437012_183,437012,2026-02-16,meeting,Champion engagement remains strong,positive,0.56,strong_adopter,,,sig_437012_183
+sig_437012_184,437012,2026-03-06,meeting,Champion engagement remains strong,neutral,-0.05,strong_adopter,,,sig_437012_184
+sig_437012_185,437012,2026-03-27,health_check,Expansion discussion in early stages,positive,0.72,strong_adopter,,,sig_437012_185
+narrative_sig_437013_186,437013,2026-01-29,routine_review,Routine quarterly review completed,positive,0.39,stable,review,,narrative_sig_437013_186
+sig_437013_187,437013,2025-10-02,customer_feedback,Expansion discussion in early stages,positive,0.64,stable,,,sig_437013_187
+sig_437013_188,437013,2025-10-24,observation,Champion engagement remains strong,positive,0.45,stable,,,sig_437013_188
+sig_437013_189,437013,2025-11-02,observation,Expansion discussion in early stages,positive,0.65,stable,,,sig_437013_189
+sig_437013_190,437013,2025-11-11,observation,Product adoption metrics trending well,positive,0.49,stable,,,sig_437013_190
+sig_437013_191,437013,2025-12-10,observation,Expansion discussion in early stages,positive,0.65,stable,,,sig_437013_191
+sig_437013_192,437013,2025-12-14,observation,Product adoption metrics trending well,neutral,0.19,stable,,,sig_437013_192
+sig_437013_193,437013,2026-01-25,customer_feedback,Expansion discussion in early stages,positive,0.53,stable,,,sig_437013_193
+sig_437013_194,437013,2026-01-18,health_check,Champion engagement remains strong,neutral,0.18,stable,,,sig_437013_194
+sig_437013_195,437013,2026-02-27,customer_feedback,Expansion discussion in early stages,neutral,0.1,stable,,,sig_437013_195
+sig_437013_196,437013,2026-02-03,observation,Product adoption metrics trending well,positive,0.4,stable,,,sig_437013_196
+sig_437013_197,437013,2026-03-19,health_check,Product adoption metrics trending well,neutral,0.28,stable,,,sig_437013_197
+sig_437013_198,437013,2026-03-26,customer_feedback,Regular QBR completed successfully,positive,0.57,stable,,,sig_437013_198
+narrative_sig_437014_199,437014,2026-01-29,routine_review,Routine quarterly review completed,positive,0.79,growth_trajectory,review,,narrative_sig_437014_199
+sig_437014_200,437014,2025-10-17,meeting,Regular QBR completed successfully,positive,0.42,growth_trajectory,,,sig_437014_200
+sig_437014_201,437014,2025-10-19,observation,Product adoption metrics trending well,positive,0.59,growth_trajectory,,,sig_437014_201
+sig_437014_202,437014,2025-11-25,customer_feedback,Regular QBR completed successfully,neutral,-0.05,growth_trajectory,,,sig_437014_202
+sig_437014_203,437014,2025-11-10,observation,Expansion discussion in early stages,positive,0.42,growth_trajectory,,,sig_437014_203
+sig_437014_204,437014,2025-12-07,observation,Expansion discussion in early stages,positive,0.57,growth_trajectory,,,sig_437014_204
+sig_437014_205,437014,2025-12-22,health_check,Expansion discussion in early stages,positive,0.69,growth_trajectory,,,sig_437014_205
+sig_437014_206,437014,2026-01-23,meeting,Regular QBR completed successfully,positive,0.73,growth_trajectory,,,sig_437014_206
+sig_437014_207,437014,2026-01-14,meeting,Champion engagement remains strong,positive,0.61,growth_trajectory,,,sig_437014_207
+sig_437014_208,437014,2026-02-24,meeting,Product adoption metrics trending well,positive,0.7,growth_trajectory,,,sig_437014_208
+sig_437014_209,437014,2026-01-29,meeting,Champion engagement remains strong,positive,0.65,growth_trajectory,,,sig_437014_209
+sig_437014_210,437014,2026-03-24,meeting,Regular QBR completed successfully,positive,0.64,growth_trajectory,,,sig_437014_210
+sig_437014_211,437014,2026-03-08,meeting,Expansion discussion in early stages,neutral,0.24,growth_trajectory,,,sig_437014_211
+narrative_sig_437015_212,437015,2026-01-29,routine_review,Routine quarterly review completed,positive,0.65,star_account,review,,narrative_sig_437015_212
+sig_437015_213,437015,2025-10-01,observation,Champion engagement remains strong,positive,0.55,star_account,,,sig_437015_213
+sig_437015_214,437015,2025-10-14,customer_feedback,Regular QBR completed successfully,positive,0.64,star_account,,,sig_437015_214
+sig_437015_215,437015,2025-11-21,meeting,Expansion discussion in early stages,neutral,0.09,star_account,,,sig_437015_215
+sig_437015_216,437015,2025-11-22,customer_feedback,Regular QBR completed successfully,neutral,0.12,star_account,,,sig_437015_216
+sig_437015_217,437015,2025-12-13,observation,Expansion discussion in early stages,positive,0.7,star_account,,,sig_437015_217
+sig_437015_218,437015,2025-12-15,customer_feedback,Champion engagement remains strong,positive,0.6,star_account,,,sig_437015_218
+sig_437015_219,437015,2026-01-16,meeting,Product adoption metrics trending well,positive,0.57,star_account,,,sig_437015_219
+sig_437015_220,437015,2026-01-28,customer_feedback,Expansion discussion in early stages,positive,0.44,star_account,,,sig_437015_220
+sig_437015_221,437015,2026-02-21,health_check,Expansion discussion in early stages,neutral,0.18,star_account,,,sig_437015_221
+sig_437015_222,437015,2026-02-22,customer_feedback,Product adoption metrics trending well,positive,0.62,star_account,,,sig_437015_222
+sig_437015_223,437015,2026-03-19,meeting,Regular QBR completed successfully,neutral,0.05,star_account,,,sig_437015_223
+sig_437015_224,437015,2026-03-21,customer_feedback,Regular QBR completed successfully,positive,0.48,star_account,,,sig_437015_224
+sig_437016_225,437016,2026-01-15,advocacy,CTO agreed to be a reference customer. Featured in case study and keynote at industry conference.,positive,0.9,reference_customer,,,sig_437016_225
+narrative_sig_437016_226,437016,2026-01-29,routine_review,Routine quarterly review completed,positive,0.59,reference_customer,review,,narrative_sig_437016_226
+sig_437016_227,437016,2025-10-23,customer_feedback,Regular QBR completed successfully,positive,0.6,reference_customer,,,sig_437016_227
+sig_437016_228,437016,2025-10-09,meeting,Expansion discussion in early stages,positive,0.65,reference_customer,,,sig_437016_228
+sig_437016_229,437016,2025-11-27,meeting,Champion engagement remains strong,positive,0.7,reference_customer,,,sig_437016_229
+sig_437016_230,437016,2025-11-19,customer_feedback,Regular QBR completed successfully,neutral,-0.0,reference_customer,,,sig_437016_230
+sig_437016_231,437016,2025-12-02,customer_feedback,Expansion discussion in early stages,positive,0.36,reference_customer,,,sig_437016_231
+sig_437016_232,437016,2025-12-07,customer_feedback,Product adoption metrics trending well,positive,0.6,reference_customer,,,sig_437016_232
+sig_437016_233,437016,2026-01-04,observation,Expansion discussion in early stages,positive,0.57,reference_customer,,,sig_437016_233
+sig_437016_234,437016,2026-01-06,customer_feedback,Regular QBR completed successfully,positive,0.64,reference_customer,,,sig_437016_234
+sig_437016_235,437016,2026-02-21,meeting,Expansion discussion in early stages,positive,0.63,reference_customer,,,sig_437016_235
+sig_437016_236,437016,2026-02-13,customer_feedback,Regular QBR completed successfully,neutral,0.04,reference_customer,,,sig_437016_236
+sig_437016_237,437016,2026-03-11,meeting,Expansion discussion in early stages,positive,0.39,reference_customer,,,sig_437016_237
+sig_437016_238,437016,2026-03-15,observation,Expansion discussion in early stages,positive,0.5,reference_customer,,,sig_437016_238
+sig_437017_239,437017,2026-02-10,expansion_completed,Phase 2 expansion completed. 40 new GPU nodes online. ARR increased from $1.2M to $1.6M.,positive,0.9,expansion_done,,,sig_437017_239
+narrative_sig_437017_240,437017,2026-01-29,routine_review,Routine quarterly review completed,positive,0.66,expansion_done,review,,narrative_sig_437017_240
+sig_437017_241,437017,2025-10-03,observation,Champion engagement remains strong,positive,0.48,expansion_done,,,sig_437017_241
+sig_437017_242,437017,2025-10-08,meeting,Regular QBR completed successfully,positive,0.62,expansion_done,,,sig_437017_242
+sig_437017_243,437017,2025-11-05,health_check,Product adoption metrics trending well,positive,0.28,expansion_done,,,sig_437017_243
+sig_437017_244,437017,2025-11-11,observation,Expansion discussion in early stages,positive,0.71,expansion_done,,,sig_437017_244
+sig_437017_245,437017,2025-12-02,health_check,Expansion discussion in early stages,positive,0.62,expansion_done,,,sig_437017_245
+sig_437017_246,437017,2025-12-06,observation,Product adoption metrics trending well,positive,0.62,expansion_done,,,sig_437017_246
+sig_437017_247,437017,2026-01-22,customer_feedback,Regular QBR completed successfully,positive,0.52,expansion_done,,,sig_437017_247
+sig_437017_248,437017,2025-12-30,observation,Regular QBR completed successfully,positive,0.69,expansion_done,,,sig_437017_248
+sig_437017_249,437017,2026-02-07,observation,Product adoption metrics trending well,positive,0.72,expansion_done,,,sig_437017_249
+sig_437017_250,437017,2026-02-04,customer_feedback,Expansion discussion in early stages,positive,0.46,expansion_done,,,sig_437017_250
+sig_437017_251,437017,2026-03-15,meeting,Product adoption metrics trending well,positive,0.49,expansion_done,,,sig_437017_251
+sig_437017_252,437017,2026-03-17,health_check,Product adoption metrics trending well,positive,0.69,expansion_done,,,sig_437017_252
+sig_437018_253,437018,2026-01-18,fast_onboarding,Time-to-first-workload: 3 days (benchmark: 14 days). Fastest onboarding in portfolio history.,positive,0.9,new_customer,,,sig_437018_253
+sig_437018_254,437018,2026-02-15,rapid_adoption,GPU utilization reached 65% in 4 weeks. 12 training jobs running concurrently.,positive,0.9,new_customer,,,sig_437018_254
+narrative_sig_437018_255,437018,2026-01-29,routine_review,Routine quarterly review completed,positive,0.74,new_customer,review,,narrative_sig_437018_255
+sig_437018_256,437018,2025-10-25,customer_feedback,Regular QBR completed successfully,positive,0.56,new_customer,,,sig_437018_256
+sig_437018_257,437018,2025-10-19,health_check,Expansion discussion in early stages,positive,0.65,new_customer,,,sig_437018_257
+sig_437018_258,437018,2025-11-07,customer_feedback,Regular QBR completed successfully,neutral,0.02,new_customer,,,sig_437018_258
+sig_437018_259,437018,2025-11-24,meeting,Champion engagement remains strong,neutral,0.1,new_customer,,,sig_437018_259
+sig_437018_260,437018,2025-12-21,observation,Expansion discussion in early stages,positive,0.58,new_customer,,,sig_437018_260
+sig_437018_261,437018,2025-12-14,health_check,Product adoption metrics trending well,positive,0.36,new_customer,,,sig_437018_261
+sig_437018_262,437018,2026-01-15,health_check,Product adoption metrics trending well,neutral,0.13,new_customer,,,sig_437018_262
+sig_437018_263,437018,2026-01-18,observation,Expansion discussion in early stages,positive,0.62,new_customer,,,sig_437018_263
+sig_437018_264,437018,2026-01-29,meeting,Regular QBR completed successfully,neutral,-0.01,new_customer,,,sig_437018_264
+sig_437018_265,437018,2026-02-20,meeting,Champion engagement remains strong,positive,0.59,new_customer,,,sig_437018_265
+sig_437018_266,437018,2026-03-20,observation,Champion engagement remains strong,neutral,0.18,new_customer,,,sig_437018_266
+sig_437018_267,437018,2026-03-29,customer_feedback,Expansion discussion in early stages,neutral,-0.05,new_customer,,,sig_437018_267

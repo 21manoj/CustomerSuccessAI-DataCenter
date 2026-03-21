@@ -13,3 +13,5 @@ kpi_dashboard.db
 *.pem
 __pycache__/
 *.pyc
+*.swp
+.claude/

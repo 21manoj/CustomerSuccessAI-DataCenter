@@ -1,0 +1,34 @@
+account_id,product_name,product_category,quantity,unit_price,deployment_date,status
+436001,AI Training Platform,AI/ML,67,26205.02,2025-04-14,active
+436001,GPU Compute Cluster,Compute,178,75363.44,2025-07-11,active
+436001,Cooling Management System,Facilities,27,61096.79,2024-11-26,active
+436002,Network Fabric Controller,Networking,123,40138.33,2025-06-20,active
+436003,AI Training Platform,AI/ML,62,32508.97,2025-02-19,active
+436003,Monitoring Dashboard,Observability,34,59025.47,2025-05-09,active
+436004,Power Distribution Unit,Facilities,25,33803.25,2025-04-23,active
+436004,Data Lake Storage,Storage,23,51004.31,2025-08-21,active
+436005,Power Distribution Unit,Facilities,155,60755.71,2025-08-12,active
+436006,AI Training Platform,AI/ML,121,59225.1,2024-11-22,active
+436006,Data Lake Storage,Storage,136,41722.92,2025-04-23,active
+436007,Cooling Management System,Facilities,82,80350.41,2024-12-02,active
+436007,AI Training Platform,AI/ML,54,72817.42,2024-12-17,active
+436007,Network Fabric Controller,Networking,47,19690.97,2025-01-21,active
+436008,Cooling Management System,Facilities,33,35732.05,2025-02-02,active
+436009,Network Fabric Controller,Networking,67,70791.6,2024-10-10,active
+436009,Inference Engine,AI/ML,26,56156.77,2025-03-17,active
+436010,Inference Engine,AI/ML,64,84096.9,2025-04-29,active
+436011,GPU Compute Cluster,Compute,128,86236.96,2024-12-13,active
+436011,Cooling Management System,Facilities,109,8235.13,2025-02-24,active
+436012,Data Lake Storage,Storage,188,54453.18,2024-12-28,active
+436012,Monitoring Dashboard,Observability,191,7965.49,2025-01-12,active
+436012,Network Fabric Controller,Networking,48,97866.79,2025-08-14,active
+436013,Monitoring Dashboard,Observability,81,50887.14,2024-11-21,active
+436014,Data Lake Storage,Storage,194,33755.37,2025-06-17,active
+436015,GPU Compute Cluster,Compute,82,77927.71,2024-12-08,active
+436015,Data Lake Storage,Storage,186,26938.94,2025-01-29,active
+436015,Cooling Management System,Facilities,163,11431.26,2025-02-22,active
+436016,Cooling Management System,Facilities,159,6834.53,2024-11-04,active
+436017,Data Lake Storage,Storage,56,8914.61,2024-10-08,active
+436017,AI Training Platform,AI/ML,108,38577.33,2025-01-14,active
+436017,Cooling Management System,Facilities,71,96839.44,2025-04-07,active
+436018,AI Training Platform,AI/ML,122,7162.06,2024-10-03,active

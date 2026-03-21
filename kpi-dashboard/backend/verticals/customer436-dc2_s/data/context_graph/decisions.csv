@@ -1,0 +1,26 @@
+account_id,decision_date,decision_id,title,decision_maker_role,chosen_option,outcome_description,risk_level,revenue_impact
+436001,2026-01-29,dec_436001_1,Escalation to executive sponsor — Titan Hyperscale Labs,executive_sponsor,Escalate account risk,Risk review initiated,high,-820000.0
+436001,2026-02-05,dec_436001_2,Emergency retention plan — Titan Hyperscale Labs,champion,Launch retention playbook,Retention plan in progress,critical,-820000.0
+436002,2026-01-29,dec_436002_1,Escalation to executive sponsor — Meridian Cloud Services,executive_sponsor,Escalate account risk,Risk review initiated,high,-580000.0
+436002,2026-02-05,dec_436002_2,Emergency retention plan — Meridian Cloud Services,champion,Launch retention playbook,Retention plan in progress,critical,-580000.0
+436003,2026-01-29,dec_436003_1,Escalation to executive sponsor — Apex Compute Holdings,executive_sponsor,Escalate account risk,Risk review initiated,high,-410000.0
+436003,2026-02-05,dec_436003_2,Emergency retention plan — Apex Compute Holdings,champion,Launch retention playbook,Retention plan in progress,critical,-410000.0
+436004,2025-12-10,dec_436004_1,Renewal strategy review — Pacific Data Systems,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-325000.0
+436004,2025-12-30,dec_436004_2,Feature adoption push — Pacific Data Systems,champion,Schedule training sessions,Training plan approved,medium,-325000.0
+436005,2025-12-10,dec_436005_1,Renewal strategy review — Quantum Edge Networks,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-240000.0
+436005,2025-12-30,dec_436005_2,Feature adoption push — Quantum Edge Networks,champion,Schedule training sessions,Training plan approved,medium,-240000.0
+436006,2025-12-10,dec_436006_1,Renewal strategy review — Stratos AI Infrastructure,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-160000.0
+436006,2025-12-30,dec_436006_2,Feature adoption push — Stratos AI Infrastructure,champion,Schedule training sessions,Training plan approved,medium,-160000.0
+436007,2025-12-10,dec_436007_1,Renewal strategy review — CyberVault DC,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-145000.0
+436007,2025-12-30,dec_436007_2,Feature adoption push — CyberVault DC,champion,Schedule training sessions,Training plan approved,medium,-145000.0
+436008,2026-02-28,dec_436008_1,Expansion discussion — Atlas Computing Group,champion,Propose upsell package,Expansion opportunity identified,low,510000.0
+436009,2026-02-28,dec_436009_1,Expansion discussion — Pinnacle Systems,champion,Propose upsell package,Expansion opportunity identified,low,380000.0
+436010,2026-02-28,dec_436010_1,Expansion discussion — Helix Data Corp,champion,Propose upsell package,Expansion opportunity identified,low,260000.0
+436011,2026-02-28,dec_436011_1,Expansion discussion — Fortress Colocation,champion,Propose upsell package,Expansion opportunity identified,low,340000.0
+436012,2026-02-28,dec_436012_1,Expansion discussion — NexGen AI Labs,champion,Propose upsell package,Expansion opportunity identified,low,210000.0
+436013,2026-02-28,dec_436013_1,Expansion discussion — Redline Infrastructure,champion,Propose upsell package,Expansion opportunity identified,low,180000.0
+436014,2026-02-28,dec_436014_1,Expansion discussion — Cumulus Edge Computing,champion,Propose upsell package,Expansion opportunity identified,low,150000.0
+436015,2026-02-28,dec_436015_1,Expansion discussion — SkyBridge Networks,champion,Propose upsell package,Expansion opportunity identified,low,120000.0
+436016,2026-02-28,dec_436016_1,Expansion discussion — IronClad Systems,champion,Propose upsell package,Expansion opportunity identified,low,190000.0
+436017,2026-02-28,dec_436017_1,Expansion discussion — TerraScale Solutions,champion,Propose upsell package,Expansion opportunity identified,low,160000.0
+436018,2026-02-28,dec_436018_1,Expansion discussion — Velocity AI Compute,champion,Propose upsell package,Expansion opportunity identified,low,110000.0
