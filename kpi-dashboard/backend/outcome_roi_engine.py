@@ -693,6 +693,17 @@ def calculate_forward_roi(
         cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
         plat_pct = 1 - cs_pct
 
+    # ── ARR-proportional investment cap (15% max) ──
+    # Prevents absurd investment-to-ARR ratios on smaller accounts
+    # Industry benchmark: CS investment = 8-15% of ARR
+    if account_arr and account_arr > 0:
+        max_investment = account_arr * 0.15
+        if investment > max_investment:
+            scale_down = max_investment / investment
+            investment = max_investment
+            # Proportionally adjust CS/platform split
+            cs_pct = cs_pct  # ratios stay the same
+
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
     total_impact = total_direct_impact + compounding
@@ -854,6 +865,46 @@ def calculate_outcome_story(
         "scaling_scenarios": scaled_scenarios,
         "roadmap": roadmap,
     }
+
+    # ── Expected value churn risk ──
+    # CRM renewal probability gives a more accurate risk picture than
+    # context graph outcomes alone: EV = ARR × (1 - renewal_probability)
+    if account_arr and account_arr > 0:
+        # Extract GRR from actuals if available — lower GRR = higher churn risk
+        grr_val = metric_actuals.get('GRR', {}).get('current', 90.0)
+        # Derive renewal probability from GRR (GRR 85% → ~65% renewal, GRR 95% → ~90% renewal)
+        renewal_prob = min(0.95, max(0.30, (grr_val - 50) / 50.0))
+        churn_prob = 1.0 - renewal_prob
+        ev_risk = account_arr * churn_prob
+        result['risk_analysis'] = {
+            'account_arr': round(account_arr, 2),
+            'renewal_probability': round(renewal_prob * 100, 1),
+            'churn_probability': round(churn_prob * 100, 1),
+            'expected_value_at_risk': round(ev_risk, 2),
+            'context_graph_at_risk': result.get('combined', {}).get('revenue_protected', 0),
+            'note': 'Expected value = ARR × churn_probability. More accurate than summing context graph outcomes alone.',
+        }
+
+    # ── KPI trend summary (shows trends even with no playbooks) ──
+    kpi_trends = {}
+    for metric_id, actuals in metric_actuals.items():
+        baseline = actuals.get('baseline', actuals.get('start', None))
+        current = actuals.get('current', None)
+        if baseline is not None and current is not None:
+            delta = current - baseline
+            direction = 'improving' if delta > 0 else ('declining' if delta < 0 else 'flat')
+            metric = POWER_OF_1_METRICS.get(metric_id)
+            if metric and metric.direction == 'lower_is_better':
+                direction = 'improving' if delta < 0 else ('declining' if delta > 0 else 'flat')
+            kpi_trends[metric_id] = {
+                'baseline': round(baseline, 2),
+                'current': round(current, 2),
+                'delta': round(delta, 2),
+                'delta_pct': round((delta / baseline * 100) if baseline else 0, 1),
+                'direction': direction,
+            }
+    if kpi_trends:
+        result['kpi_trends'] = kpi_trends
 
     # Context graph enrichment (feature-toggle gated, graceful fallback)
     if customer_id and account_ids:
