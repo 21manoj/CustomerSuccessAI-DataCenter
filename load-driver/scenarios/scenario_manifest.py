@@ -542,10 +542,18 @@ class ManifestCSVGenerator:
             noise = 1.0 + random.gauss(0, 0.03)
             val = base * modifier * noise
 
-            if higher_is_better:
-                val = max(0, min(target_val * 1.2, val))
+            # Clamp to valid range — uses the band-based ranges from kpi_definitions
+            # (same logic as backend's validate_kpi_values_against_ranges)
+            ranges = meta.get('ranges', {})
+            if ranges:
+                all_mins = [float(b['min']) for b in ranges.values() if isinstance(b.get('min'), (int, float))]
+                all_maxs = [float(b['max']) for b in ranges.values() if isinstance(b.get('max'), (int, float))]
+                range_min = min(all_mins) if all_mins else 0.0
+                range_max = max(all_maxs) if all_maxs else 100.0
             else:
-                val = max(target_val * 0.5, val)
+                range_min = float(meta.get('range_min') or 0)
+                range_max = float(meta.get('range_max') or 100)
+            val = max(range_min, min(range_max, val))
 
             values.append(round(val, 2))
 

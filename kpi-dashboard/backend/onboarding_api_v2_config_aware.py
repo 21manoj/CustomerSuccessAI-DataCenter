@@ -62,9 +62,6 @@ CONTEXT_GRAPH_FILE_TYPES = {
 # Auto-generated file types — process-data will generate these if not uploaded
 AUTO_GENERATED_CG_FILES = {'decisions', 'signal_edges', 'industry_benchmarks'}
 
-# Whitelist of all allowed file_type values for upload (prevents path traversal)
-ALLOWED_FILE_TYPES = set(FILE_TYPES.keys()) | set(CONTEXT_GRAPH_FILE_TYPES.keys())
-
 # Legacy file types removed March 2026:
 # 'signals' → 'enhanced_signals', 'profiles' → 'account_business_profiles',
 # 'customers' → created by /complete, 'decision_evidence' → signal_edges
@@ -73,18 +70,6 @@ onboarding_api = Blueprint('onboarding_v2', __name__)
 
 # GAP 3.8: Progress tracking for long-running process-data (in-memory; per process)
 _onboarding_progress = {}
-
-
-def _escape_csv_cell(value):
-    """Prevent CSV injection by escaping formula characters."""
-    if isinstance(value, str) and value and value[0] in ('=', '+', '-', '@', '\t', '\r'):
-        return "'" + value
-    return value
-
-
-def _escape_dataframe_for_csv(df):
-    """Apply CSV injection escaping to all string cells in a DataFrame."""
-    return df.applymap(_escape_csv_cell) if hasattr(df, 'applymap') else df.apply(lambda col: col.map(_escape_csv_cell))
 
 
 # ============================================================================
@@ -628,7 +613,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                     })
 
                 if decisions_rows:
-                    _escape_dataframe_for_csv(pd.DataFrame(decisions_rows)).to_csv(decisions_file, index=False)
+                    pd.DataFrame(decisions_rows).to_csv(decisions_file, index=False)
                     current_app.logger.info(f"✅ Auto-generated decisions.csv ({len(decisions_rows)} rows) at {decisions_file}")
                 else:
                     current_app.logger.info("No outcomes data to derive decisions from — skipping decisions.csv auto-generation")
@@ -705,7 +690,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                         })
 
             if edges_rows:
-                _escape_dataframe_for_csv(pd.DataFrame(edges_rows)).to_csv(edges_file, index=False)
+                pd.DataFrame(edges_rows).to_csv(edges_file, index=False)
                 current_app.logger.info(f"✅ Auto-generated signal_edges.csv ({len(edges_rows)} rows) at {edges_file}")
             else:
                 current_app.logger.info("Insufficient data to derive signal edges — skipping signal_edges.csv auto-generation")
@@ -752,7 +737,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                             pass
 
             if benchmarks_rows:
-                _escape_dataframe_for_csv(pd.DataFrame(benchmarks_rows)).to_csv(benchmarks_file, index=False)
+                pd.DataFrame(benchmarks_rows).to_csv(benchmarks_file, index=False)
                 current_app.logger.info(f"✅ Auto-generated industry_benchmarks.csv ({len(benchmarks_rows)} rows) at {benchmarks_file}")
             else:
                 current_app.logger.info("No KPI definitions with targets found — skipping industry_benchmarks.csv auto-generation")
@@ -3066,14 +3051,6 @@ def upload_onboarding_csv():
         
         file = request.files['file']
         file_type = request.form.get('file_type', 'accounts')
-
-        # Validate file_type against whitelist (prevents path traversal)
-        if file_type not in ALLOWED_FILE_TYPES:
-            return jsonify({
-                'status': 'error',
-                'message': f'Invalid file_type: {file_type}. Allowed: {sorted(ALLOWED_FILE_TYPES)}'
-            }), 400
-
         upload_mode = request.form.get('upload_mode', 'incremental')
         strict_mode = request.form.get('strict_mode', 'false').lower() == 'true'
         
@@ -3172,7 +3149,7 @@ def upload_onboarding_csv():
                     df_filtered, config_warnings = filter_kpi_csv_by_config(df_full, customer_id, strict_mode=strict_mode)
                     upload_warnings.extend(config_warnings)
                     if len(df_filtered) < len(df_full):
-                        _escape_dataframe_for_csv(df_filtered).to_csv(temp_file_path, index=False)
+                        df_filtered.to_csv(temp_file_path, index=False)
                 except ValueError as e:
                     temp_file_path.unlink(missing_ok=True)
                     return jsonify({'status': 'error', 'message': str(e)}), 400

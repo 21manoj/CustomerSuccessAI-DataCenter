@@ -17,7 +17,7 @@ Endpoints:
   POST /api/integrations/webhook/<customer_id>/<connector_type> — Public webhook endpoint
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from datetime import datetime, timedelta
 from sqlalchemy import desc, func
 import hashlib
@@ -33,12 +33,78 @@ integration_api = Blueprint('integration_api', __name__)
 
 
 def _get_customer_id():
-    """Get customer_id from auth context or header."""
+    """Get customer_id from auth context, Bearer token, or header."""
+    # If Bearer token auth set g.customer_id, use it
+    if hasattr(g, 'customer_id') and g.customer_id:
+        return g.customer_id
     try:
         from auth_middleware import get_current_customer_id
         return get_current_customer_id()
     except Exception:
         return int(request.headers.get('X-Customer-ID', 0))
+
+
+def _log_ingestion_event(customer_id, source, entity_type, records_count, errors_count=0):
+    """Log a data ingestion event to activity_logs for audit trail."""
+    try:
+        from models import ActivityLog
+        from extensions import db
+        log_entry = ActivityLog(
+            customer_id=customer_id,
+            action_type=f"data_ingestion_{entity_type}",
+            action_category='data',
+            action_description=f"Webhook ingest: {records_count} {entity_type} records from {source}",
+            resource_type=entity_type,
+            resource_id=str(customer_id),
+            status='success' if errors_count == 0 else 'partial',
+            details={
+                "source": source,
+                "entity_type": entity_type,
+                "records": records_count,
+                "errors": errors_count,
+                "auth_method": getattr(g, 'auth_method', 'unknown'),
+            },
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:200],
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+    except Exception:
+        try:
+            from extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+
+
+def _try_bearer_auth():
+    """
+    If a Bearer token is present, validate it and set g.customer_id.
+    Non-blocking: if no token or invalid, silently returns (falls through to session auth).
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return
+    try:
+        from utils.api_token_auth import _authenticate_bearer_token
+        token = auth_header[7:]
+        api_key = _authenticate_bearer_token(token)
+        if api_key:
+            g.customer_id = api_key.customer_id
+            g.api_key_id = api_key.id
+            g.api_key_name = api_key.name
+            g.api_key_scopes = api_key.scopes or ['read']
+            g.auth_method = 'bearer_token'
+            # Update last-used tracking
+            try:
+                from extensions import db
+                api_key.last_used_at = datetime.utcnow()
+                api_key.last_used_ip = request.remote_addr
+                db.session.commit()
+            except Exception:
+                pass
+    except Exception as e:
+        logger.debug(f"Bearer auth attempt failed: {e}")
 
 
 def _verify_webhook_signature(payload_bytes, signature, secret_hash):
@@ -187,6 +253,7 @@ def deactivate_connector(connector_id):
 def ingest_single():
     """
     Receive a single record from an external system.
+    Accepts Bearer token auth OR session cookie.
 
     Expected JSON:
     {
@@ -197,6 +264,9 @@ def ingest_single():
         "source_id": "optional-dedup-key"
     }
     """
+    # Accept Bearer token if present (sets g.customer_id)
+    _try_bearer_auth()
+
     from extensions import db
     from integration_models import WebhookEvent, IntegrationConnector, IntegrationSyncLog
 
@@ -267,6 +337,15 @@ def ingest_single():
 
     db.session.commit()
 
+    # Audit log
+    _log_ingestion_event(
+        customer_id=customer_id,
+        source=source,
+        entity_type=entity_type,
+        records_count=1 if result['success'] else 0,
+        errors_count=0 if result['success'] else 1,
+    )
+
     return jsonify({
         'event_id': event.event_id,
         'status': event.processing_status,
@@ -280,6 +359,7 @@ def ingest_single():
 def ingest_batch():
     """
     Receive multiple records in one call.
+    Accepts Bearer token auth OR session cookie.
 
     Expected JSON:
     {
@@ -290,6 +370,9 @@ def ingest_batch():
         ]
     }
     """
+    # Accept Bearer token if present
+    _try_bearer_auth()
+
     from extensions import db
     from integration_models import IntegrationConnector, IntegrationSyncLog
 
@@ -368,6 +451,15 @@ def ingest_batch():
             connector.consecutive_errors = 0
 
     db.session.commit()
+
+    # Audit log
+    _log_ingestion_event(
+        customer_id=customer_id,
+        source=source,
+        entity_type='batch',
+        records_count=created + updated,
+        errors_count=errored,
+    )
 
     return jsonify({
         'sync_log_id': sync_log.log_id,
@@ -448,6 +540,15 @@ def public_webhook(customer_id, connector_type):
     connector.last_sync_records = processed
 
     db.session.commit()
+
+    # Audit log
+    _log_ingestion_event(
+        customer_id=customer_id,
+        source=connector_type,
+        entity_type='webhook',
+        records_count=processed,
+        errors_count=errors,
+    )
 
     return jsonify({
         'status': 'ok',
