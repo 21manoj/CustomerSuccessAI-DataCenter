@@ -89,36 +89,46 @@ const SignalAnalyst: React.FC<SignalAnalystProps> = ({ accountId, accountName })
     return outcomes[outcome] || outcome;
   };
 
+  const escapeHtml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   const formatMarkdown = (text: string): string => {
     if (!text) return '';
-    
-    let html = text;
-    
+
+    // Escape HTML entities FIRST to prevent XSS
+    let html = escapeHtml(text);
+
     // Convert markdown headers
     html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 1.125rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #111827;">$1</h3>');
     html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 1.25rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1 style="font-size: 1.5rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 1rem; color: #111827;">$1</h1>');
-    
+
     // Convert bold **text** to <strong>
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600; color: #111827;">$1</strong>');
-    
+
     // Convert numbered lists
     html = html.replace(/^\d+\.\s+(.*$)/gim, '<li style="margin-bottom: 0.5rem; padding-left: 0.5rem;">$1</li>');
     html = html.replace(/(<li.*<\/li>\n?)+/g, '<ol style="margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; list-style-type: decimal;">$&</ol>');
-    
+
     // Convert bullet points
     html = html.replace(/^[-*]\s+(.*$)/gim, '<li style="margin-bottom: 0.5rem; padding-left: 0.5rem;">$1</li>');
     html = html.replace(/(<li.*<\/li>\n?)+/g, '<ul style="margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; list-style-type: disc;">$&</ul>');
-    
+
     // Convert line breaks
     html = html.replace(/\n\n/g, '</p><p style="margin-bottom: 1rem; line-height: 1.6; color: #374151;">');
     html = html.replace(/\n/g, '<br />');
-    
+
     // Wrap in paragraphs if not already wrapped
     if (!html.startsWith('<')) {
       html = '<p style="margin-bottom: 1rem; line-height: 1.6; color: #374151;">' + html + '</p>';
     }
-    
+
     return html;
   };
 

@@ -104,6 +104,46 @@ No building on EC2 and no S3 tarballs for images. The registry is the single sou
 
 ---
 
+## Second platform on same EC2 (shared Postgres)
+
+For extra app capacity or **load tests against a second endpoint** without a second database:
+
+1. **Compose:** `kpi-dashboard/docker-compose.ec2-platform-replica.yml` defines **`cs-pulse-b`** (`cspulse-platform-b`) with the same image, env, and **named volumes** as `cs-pulse`, and the same `DATABASE_URL` to `postgres`.
+2. **Ports:** Host **`9080` → HTTP**, **`9443` → HTTPS**, **`8002` → MCP** (primary stays `80` / `443` / `8001`).
+3. **Deploy:** `scripts/rehydrate-ec2-ecr.sh` copies this file and runs compose with **three** `-f` files (registry + load-driver + replica).
+4. **Load tester (from your machine):**  
+   `BASE_URL=http://<EC2_PUBLIC_IP>:9080`
+5. **Security group:** Allow inbound **TCP 9080** (and **9443** / **8002** if you use them) from your IP or test runners.
+6. **From another container** on `cspulse-net`: `http://cspulse-platform-b:5059` (same pattern as `cspulse-platform:5059` for the load-driver image).
+
+### Restart on EC2 (pick up compose env changes, e.g. `FEATURE_CONTEXT_GRAPH`)
+
+Run **on the EC2 instance** from `~/cspulse` (same three compose files as `scripts/rehydrate-ec2-ecr.sh`). `docker restart` does **not** reload environment variables from YAML — use **`up -d --force-recreate`** when you changed `environment:` in compose or `.env` values referenced there.
+
+**Second platform only** (`cspulse-platform-b`, port 9080):
+
+```bash
+cd ~/cspulse
+sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml up -d --force-recreate cs-pulse-b
+```
+
+**Primary platform only** (`cspulse-platform`, ports 80/443/8001):
+
+```bash
+cd ~/cspulse
+sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml up -d --force-recreate cs-pulse
+```
+
+**Full stack** (pull new images + recreate all defined services):
+
+```bash
+cd ~/cspulse
+sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml pull
+sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml up -d
+```
+
+---
+
 ## Summary
 
 | Step   | Where      | Action |

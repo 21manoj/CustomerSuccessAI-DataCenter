@@ -84,6 +84,9 @@ scp -o StrictHostKeyChecking=no -i "$KEY_FILE" \
 scp -o StrictHostKeyChecking=no -i "$KEY_FILE" \
   "${REPO_ROOT}/docker-compose.ec2-loaddriver.yml" \
   "ec2-user@${PUBLIC_IP}:~/cspulse/docker-compose.ec2-loaddriver.yml"
+scp -o StrictHostKeyChecking=no -i "$KEY_FILE" \
+  "${REPO_ROOT}/kpi-dashboard/docker-compose.ec2-platform-replica.yml" \
+  "ec2-user@${PUBLIC_IP}:~/cspulse/docker-compose.ec2-platform-replica.yml"
 echo "Compose files copied."
 echo ""
 
@@ -101,9 +104,9 @@ ssh -o StrictHostKeyChecking=no -i "$KEY_FILE" "ec2-user@${PUBLIC_IP}" "set -e
     echo 'REGISTRY=${REGISTRY}' >> .env
   fi
   sudo docker login --username AWS --password-stdin ${REGISTRY} < .ecr-token && rm -f .ecr-token
-  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml pull
-  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml up -d
-  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml ps
+  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml pull
+  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml up -d
+  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml ps
 "
 
 # Update CloudFront origins to this EC2 so HTTPS works (optional; skip if script missing or env set)
@@ -115,6 +118,8 @@ fi
 echo ""
 echo "=== Rehydration complete ==="
 echo "  App URL:    http://${PUBLIC_IP}/"
+echo "  Platform B (load-test / extra capacity): http://${PUBLIC_IP}:9080/  (same DB)"
+echo "  Health B:   curl -s http://${PUBLIC_IP}:9080/api/health"
 echo "  Health:     curl -s http://${PUBLIC_IP}/api/health"
 echo "  HTTPS:      https://d2oqfugrb2ltg9.cloudfront.net/ (CloudFront; may take 5–15 min to deploy)"
 echo "  MCP (HTTPS): https://d2oqfugrb2ltg9.cloudfront.net/mcp"

@@ -76,21 +76,9 @@ def init_auth_middleware(app):
         
         # Check if this is an API endpoint
         if request.path.startswith('/api/'):
-            # DEBUG: Log authentication status
-            from flask import session
-            logger.info(f"[DEBUG auth_middleware] Checking {request.path}")
             # User model defines is_authenticated as a METHOD, not a property, so we need to call it
             is_auth = current_user.is_authenticated() if callable(current_user.is_authenticated) else (current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False)
-            logger.info(f"[DEBUG auth_middleware] current_user.is_authenticated: {is_auth}")
-            logger.info(f"[DEBUG auth_middleware] current_user type: {type(current_user)}")
-            if hasattr(current_user, 'email'):
-                logger.info(f"[DEBUG auth_middleware] current_user.email: {current_user.email}")
-            logger.info(f"[DEBUG auth_middleware] Cookies: {request.cookies}")
-            try:
-                session_dict = dict(session) if hasattr(session, '__iter__') else 'N/A'
-                logger.info(f"[DEBUG auth_middleware] Session: {session_dict}")
-            except Exception as e:
-                logger.info(f"[DEBUG auth_middleware] Session error: {e}")
+            logger.debug(f"[auth] Auth check for {request.path}: authenticated={is_auth}")
 
             # Integration API: accept X-Customer-ID header (for n8n/external systems)
             if not is_auth and request.path.startswith('/api/integrations/'):

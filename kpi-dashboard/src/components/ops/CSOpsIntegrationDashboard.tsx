@@ -240,7 +240,7 @@ const CSOpsIntegrationDashboard: React.FC = () => {
   }, [fetchAll]);
 
   const deleteConnector = useCallback(async (connectorId: number) => {
-    if (!confirm('Disable this connector?')) return;
+    if (!window.confirm('Disable this connector?')) return;
     await fetch(`/api/integrations/connectors/${connectorId}`, {
       method: 'DELETE', headers: headers(),
     });
