@@ -410,6 +410,225 @@ def reactivate_customer(cid):
         return jsonify({"error": str(e)}), 500
 
 
+@admin_ui_api.route("/api/admin-ui/customers/<int:cid>/purge", methods=["DELETE"])
+@super_admin_required
+def purge_customer(cid):
+    """Hard-delete a customer and ALL related data (cascade). Irreversible."""
+    try:
+        c = db.session.get(Customer, cid)
+        if not c:
+            return jsonify({"error": f"Customer {cid} not found"}), 404
+
+        customer_name = c.customer_name
+        from sqlalchemy import text
+
+        # Get account IDs for this customer (needed for account_id-only tables)
+        account_ids = [
+            r[0] for r in db.session.execute(
+                text("SELECT account_id FROM accounts WHERE customer_id = :cid"),
+                {"cid": cid}
+            ).fetchall()
+        ]
+
+        deleted = {}
+
+        # 1. Delete from account_id-only tables
+        if account_ids:
+            aid_list = ','.join(str(a) for a in account_ids)
+            for tbl in ['dc2s_kpis', 'health_scores', 'kpi_scores', 'kpis',
+                        'pillar_scores', 'qualitative_signals']:
+                try:
+                    r = db.session.execute(
+                        text(f"DELETE FROM {tbl} WHERE account_id IN ({aid_list})")
+                    )
+                    deleted[tbl] = r.rowcount
+                except Exception:
+                    pass
+
+        # 2. Delete from customer_id tables (order: children first)
+        customer_id_tables = [
+            'context_edges', 'context_nodes', 'webhook_events',
+            'playbook_webhook_logs', 'playbook_webhook_triggers',
+            'integration_sync_logs', 'integration_credentials', 'integration_connectors',
+            'approval_requests', 'agent_memory', 'activity_logs',
+            'action_economics', 'account_notes', 'account_snapshots',
+            'crm_field_mappings', 'customer_action_bindings', 'customer_contacts',
+            'customer_insights', 'customer_workflow_configs',
+            'feature_toggles', 'financial_projections', 'health_trends',
+            'journey_data', 'kpi_reference_ranges', 'kpi_time_series', 'kpi_uploads',
+            'playbook_executions', 'playbook_reports', 'playbook_triggers',
+            'portfolio_memberships',
+            'product_aggregate_trends', 'product_catalog', 'product_trends', 'products',
+            'query_audits', 'rag_knowledge_base', 'rag_query_log',
+            'roi_snapshots', 'weight_calibration_history', 'wizard_runs',
+            'customer_api_keys', 'users', 'accounts',
+            'customer_configs',
+        ]
+        for tbl in customer_id_tables:
+            try:
+                r = db.session.execute(
+                    text(f"DELETE FROM {tbl} WHERE customer_id = :cid"),
+                    {"cid": cid}
+                )
+                if r.rowcount > 0:
+                    deleted[tbl] = r.rowcount
+            except Exception:
+                pass
+
+        # 3. Delete the customer record itself
+        db.session.execute(
+            text("DELETE FROM customers WHERE customer_id = :cid"),
+            {"cid": cid}
+        )
+        deleted['customers'] = 1
+
+        # 4. Clean up filesystem (verticals/customer{id}-*)
+        import shutil, glob
+        vert_dir = glob.glob(f'verticals/customer{cid}-*')
+        for d in vert_dir:
+            shutil.rmtree(d, ignore_errors=True)
+            deleted['filesystem'] = d
+
+        db.session.commit()
+
+        logger.info(f"PURGED customer {cid} ({customer_name}): {deleted}")
+        return jsonify({
+            "status": "success",
+            "message": f"Customer {cid} ({customer_name}) permanently deleted",
+            "deleted": deleted,
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Purge customer {cid} failed: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_ui_api.route("/api/admin-ui/customers/bulk-purge", methods=["POST"])
+@super_admin_required
+def bulk_purge_customers():
+    """Bulk-delete multiple customers. Body: {"customer_ids": [1, 2, 3]}"""
+    try:
+        data = request.get_json() or {}
+        cids = data.get('customer_ids', [])
+        if not cids:
+            return jsonify({"error": "customer_ids required"}), 400
+
+        # Safety: never delete customer_id=1 (CS Pulse Admin)
+        cids = [int(c) for c in cids if int(c) != 1]
+
+        results = []
+        for cid in cids:
+            c = db.session.get(Customer, cid)
+            if not c:
+                results.append({"customer_id": cid, "status": "not_found"})
+                continue
+
+            # Delegate to single purge logic (inline for transaction efficiency)
+            from sqlalchemy import text
+            customer_name = c.customer_name
+            account_ids = [
+                r[0] for r in db.session.execute(
+                    text("SELECT account_id FROM accounts WHERE customer_id = :cid"),
+                    {"cid": cid}
+                ).fetchall()
+            ]
+            if account_ids:
+                aid_list = ','.join(str(a) for a in account_ids)
+                for tbl in ['dc2s_kpis', 'health_scores', 'kpi_scores', 'kpis',
+                            'pillar_scores', 'qualitative_signals']:
+                    try:
+                        db.session.execute(text(f"DELETE FROM {tbl} WHERE account_id IN ({aid_list})"))
+                    except Exception:
+                        pass
+
+            for tbl in ['context_edges', 'context_nodes', 'webhook_events',
+                        'playbook_webhook_logs', 'playbook_webhook_triggers',
+                        'integration_sync_logs', 'integration_credentials', 'integration_connectors',
+                        'approval_requests', 'agent_memory', 'activity_logs',
+                        'action_economics', 'account_notes', 'account_snapshots',
+                        'crm_field_mappings', 'customer_action_bindings', 'customer_contacts',
+                        'customer_insights', 'customer_workflow_configs',
+                        'feature_toggles', 'financial_projections', 'health_trends',
+                        'journey_data', 'kpi_reference_ranges', 'kpi_time_series', 'kpi_uploads',
+                        'playbook_executions', 'playbook_reports', 'playbook_triggers',
+                        'portfolio_memberships',
+                        'product_aggregate_trends', 'product_catalog', 'product_trends', 'products',
+                        'query_audits', 'rag_knowledge_base', 'rag_query_log',
+                        'roi_snapshots', 'weight_calibration_history', 'wizard_runs',
+                        'customer_api_keys', 'users', 'accounts', 'customer_configs']:
+                try:
+                    db.session.execute(text(f"DELETE FROM {tbl} WHERE customer_id = :cid"), {"cid": cid})
+                except Exception:
+                    pass
+
+            db.session.execute(text("DELETE FROM customers WHERE customer_id = :cid"), {"cid": cid})
+
+            import shutil, glob
+            for d in glob.glob(f'verticals/customer{cid}-*'):
+                shutil.rmtree(d, ignore_errors=True)
+
+            results.append({"customer_id": cid, "name": customer_name, "status": "purged"})
+
+        db.session.commit()
+        logger.info(f"BULK PURGE: {len(results)} customers processed")
+        return jsonify({"status": "success", "results": results, "purged": len([r for r in results if r['status'] == 'purged'])})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Bulk purge failed: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_ui_api.route("/api/admin-ui/customers/orphans", methods=["GET"])
+@super_admin_required
+def detect_orphans():
+    """Detect orphaned customers: 0 accounts, 0 KPIs, or no login in 7+ days."""
+    try:
+        from sqlalchemy import text
+        rows = db.session.execute(text("""
+            SELECT c.customer_id, c.customer_name, c.created_at,
+                   count(DISTINCT a.account_id) as account_count,
+                   count(DISTINCT u.user_id) as user_count,
+                   max(u.last_login) as last_login
+            FROM customers c
+            LEFT JOIN accounts a ON c.customer_id = a.customer_id
+            LEFT JOIN users u ON c.customer_id = u.customer_id
+            WHERE c.customer_id != 1
+            GROUP BY c.customer_id, c.customer_name, c.created_at
+            ORDER BY c.created_at DESC
+        """)).fetchall()
+
+        orphans = []
+        for r in rows:
+            reasons = []
+            if r[3] == 0:
+                reasons.append("no_accounts")
+            if r[4] == 0:
+                reasons.append("no_users")
+            if r[5] is None:
+                reasons.append("never_logged_in")
+            elif (datetime.utcnow() - r[5]).days > 7:
+                reasons.append("inactive_7d+")
+
+            orphans.append({
+                "customer_id": r[0],
+                "name": r[1],
+                "created_at": r[2].isoformat() if r[2] else None,
+                "accounts": r[3],
+                "users": r[4],
+                "last_login": r[5].isoformat() if r[5] else None,
+                "reasons": reasons,
+                "is_orphan": len(reasons) > 0,
+            })
+
+        return jsonify({
+            "total": len(orphans),
+            "orphans": [o for o in orphans if o['is_orphan']],
+            "healthy": [o for o in orphans if not o['is_orphan']],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------

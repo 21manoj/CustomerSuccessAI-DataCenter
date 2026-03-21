@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   RefreshCw,
   X,
+  Trash2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   fetchCustomers,
@@ -246,6 +248,72 @@ const CustomerListPage: React.FC = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [revealKey, setRevealKey] = useState<{ key: string; id: number } | null>(null);
 
+  // Bulk select & cleanup
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [orphans, setOrphans] = useState<any[]>([]);
+  const [showOrphans, setShowOrphans] = useState(false);
+  const [orphanLoading, setOrphanLoading] = useState(false);
+
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === customers.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(customers.filter(c => c.customer_id !== 1).map(c => c.customer_id)));
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selected.size} customer(s) and ALL their data? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      const resp = await fetch('/api/admin-ui/customers/bulk-purge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_ids: Array.from(selected) }),
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        setSelected(new Set());
+        loadCustomers();
+      } else {
+        setError(data.error || 'Bulk delete failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Bulk delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const detectOrphans = async () => {
+    setOrphanLoading(true);
+    try {
+      const resp = await fetch('/api/admin-ui/customers/orphans');
+      const data = await resp.json();
+      setOrphans(data.orphans || []);
+      setShowOrphans(true);
+    } catch {
+      setError('Failed to detect orphans');
+    } finally {
+      setOrphanLoading(false);
+    }
+  };
+
+  const selectOrphans = () => {
+    setSelected(new Set(orphans.map((o: any) => o.customer_id)));
+    setShowOrphans(false);
+  };
+
   // Load verticals once
   useEffect(() => {
     fetchVerticals()
@@ -313,12 +381,32 @@ const CustomerListPage: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-900">Customers</h2>
           <p className="text-sm text-gray-500 mt-0.5">{total} total customers</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 self-start"
-        >
-          <Plus size={16} /> New Customer
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          {selected.size > 0 && (
+            <button
+              onClick={bulkDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              Delete {selected.size} Selected
+            </button>
+          )}
+          <button
+            onClick={detectOrphans}
+            disabled={orphanLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50"
+          >
+            {orphanLoading ? <Loader2 size={14} className="animate-spin" /> : <AlertCircle size={14} />}
+            Find Orphans
+          </button>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+          >
+            <Plus size={16} /> New Customer
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -378,6 +466,15 @@ const CustomerListPage: React.FC = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left text-gray-500 border-b border-gray-100">
+                  <th className="px-3 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selected.size > 0 && selected.size === customers.filter(c => c.customer_id !== 1).length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </th>
+                  <th className="px-4 py-3 font-medium">ID</th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Vertical</th>
                   <th className="px-4 py-3 font-medium">Domain</th>
@@ -389,22 +486,34 @@ const CustomerListPage: React.FC = () => {
                 {customers.map((c) => (
                   <tr
                     key={c.customer_id}
-                    onClick={() => navigate(`/admin/customers/${c.customer_id}`)}
-                    className="hover:bg-indigo-50/50 cursor-pointer transition-colors"
+                    className={`hover:bg-indigo-50/50 cursor-pointer transition-colors ${selected.has(c.customer_id) ? 'bg-red-50' : ''}`}
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      {c.customer_id !== 1 && (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(c.customer_id)}
+                          onChange={() => toggleSelect(c.customer_id)}
+                          className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs font-mono" onClick={() => navigate(`/admin/customers/${c.customer_id}`)}>
+                      {c.customer_id}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap" onClick={() => navigate(`/admin/customers/${c.customer_id}`)}>
                       {c.customer_name}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap" onClick={() => navigate(`/admin/customers/${c.customer_id}`)}>
                       <span className="inline-flex px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">
                         {c.vertical}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{c.domain || '--'}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap" onClick={() => navigate(`/admin/customers/${c.customer_id}`)}>{c.domain || '--'}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => navigate(`/admin/customers/${c.customer_id}`)}>
                       {new Date(c.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={() => navigate(`/admin/customers/${c.customer_id}`)}>
                       {c.is_reference && (
                         <span className="inline-flex px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">
                           Ref
@@ -461,6 +570,72 @@ const CustomerListPage: React.FC = () => {
             navigate(`/admin/customers/${revealKey.id}`);
           }}
         />
+      )}
+
+      {/* Orphan Detection Modal */}
+      {showOrphans && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Orphaned Customers ({orphans.length})
+              </h3>
+              <button onClick={() => setShowOrphans(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {orphans.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No orphaned customers found.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-2">ID</th>
+                      <th className="py-2">Name</th>
+                      <th className="py-2">Accounts</th>
+                      <th className="py-2">Users</th>
+                      <th className="py-2">Issues</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {orphans.map((o: any) => (
+                      <tr key={o.customer_id} className="hover:bg-red-50">
+                        <td className="py-2 font-mono text-xs text-gray-400">{o.customer_id}</td>
+                        <td className="py-2 font-medium">{o.name}</td>
+                        <td className="py-2">{o.accounts}</td>
+                        <td className="py-2">{o.users}</td>
+                        <td className="py-2">
+                          {o.reasons.map((r: string) => (
+                            <span key={r} className="inline-flex px-1.5 py-0.5 bg-red-50 text-red-600 text-xs rounded mr-1">
+                              {r}
+                            </span>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {orphans.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowOrphans(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={selectOrphans}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                >
+                  Select All {orphans.length} for Deletion
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
