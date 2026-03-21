@@ -19,7 +19,7 @@ import { useSession } from '../../contexts/SessionContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Persona = 'cro' | 'cfo' | 'ceo';
+type Persona = 'cro' | 'cfo' | 'ceo' | 'vpcs' | 'sales';
 
 interface Message {
   id: string;
@@ -73,6 +73,20 @@ const PERSONA_META: Record<Persona, {
     gradient: 'from-violet-500/20 to-purple-500/20',
     accent: 'text-violet-400',
   },
+  vpcs: {
+    title: 'CS Team Advisor',
+    subtitle: 'Ask about team performance, renewals, playbooks',
+    icon: Shield,
+    gradient: 'from-teal-500/20 to-cyan-500/20',
+    accent: 'text-teal-400',
+  },
+  sales: {
+    title: 'Expansion Advisor',
+    subtitle: 'Ask about upsell, whitespace, QBR prep',
+    icon: TrendingUp,
+    gradient: 'from-amber-500/20 to-orange-500/20',
+    accent: 'text-amber-400',
+  },
 };
 
 const DEFAULT_SUGGESTIONS: Record<Persona, string[]> = {
@@ -93,6 +107,18 @@ const DEFAULT_SUGGESTIONS: Record<Persona, string[]> = {
     'What is our single biggest strategic risk?',
     'What would 1% improvement across all metrics be worth?',
     'How should I think about CS investment next year?',
+  ],
+  vpcs: [
+    'Which accounts need immediate attention?',
+    'What is our playbook completion rate this month?',
+    'Which CSM has the highest at-risk ARR?',
+    'Show me renewals coming up in the next 90 days.',
+  ],
+  sales: [
+    'Which accounts are ready for expansion?',
+    'What is the product whitespace across my top 10 accounts?',
+    'Prepare a QBR brief for my next renewal.',
+    'What accounts have the highest upsell potential?',
   ],
 };
 

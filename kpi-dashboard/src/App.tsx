@@ -16,6 +16,9 @@ import CRODashboard from './components/dashboard/CRODashboard';
 import CFODashboard from './components/dashboard/CFODashboard';
 import CSMDashboard from './components/csm/CSMDashboard';
 import CSOpsIntegrationDashboard from './components/ops/CSOpsIntegrationDashboard';
+import CEODashboard from './components/dashboard/CEODashboard';
+import VPCSDashboard from './components/dashboard/VPCSDashboard';
+import AESalesDashboard from './components/dashboard/AESalesDashboard';
 import AuctusAIWebsite from './components/AuctusAIWebsite';
 import SuperAdminConsole from './components/SuperAdminConsole';
 import AdminLayout from './components/admin-ui/AdminLayout';
@@ -253,6 +256,30 @@ const AppRoutes: React.FC = () => {
           element={
             <PrivateRoute vertical="datacenter">
               <CSOpsIntegrationDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/ceo"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <CEODashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/vpcs"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <VPCSDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/sales"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <AESalesDashboard />
             </PrivateRoute>
           }
         />
