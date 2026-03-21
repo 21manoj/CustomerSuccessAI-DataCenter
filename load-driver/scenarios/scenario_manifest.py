@@ -1236,8 +1236,55 @@ class ManifestCSVGenerator:
 
         return out.getvalue()
 
+    def _signal_counter_before_account(self, account_index: int) -> int:
+        """Mirror generate_signals_csv global counter *before* any rows for accounts[account_index]."""
+        counter = 0
+        for i in range(account_index):
+            acct = self.accounts[i]
+            aid = self._account_id(i)
+            counter += len(acct.get('key_signals', []))
+            counter += len(self.planner.get_events(aid, 'signal'))
+            counter += 12  # filler: 6 months × 2
+            iv = acct.get('intervention', {})
+            if self.phase == 'intervention':
+                counter += len(iv.get('recovery_signals', []))
+                counter += len(iv.get('csm_actions', []))
+        return counter
+
+    def _primary_signal_ref_for_edges(self, account_index: int) -> str:
+        """First signal_ref emitted for this account in generate_signals_csv (matches ingest maps)."""
+        phase_prefix = f'{self.phase}_' if self.phase else ''
+        acct = self.accounts[account_index]
+        aid = self._account_id(account_index)
+        c = self._signal_counter_before_account(account_index)
+        if acct.get('key_signals'):
+            c += 1
+            return f'{phase_prefix}sig_{aid}_{c}'
+        planned = self.planner.get_events(aid, 'signal')
+        if planned:
+            c += 1
+            return f'{phase_prefix}narrative_sig_{aid}_{c}'
+        c += 1
+        return f'{phase_prefix}sig_{aid}_{c}'
+
+    def _nth_recovery_signal_ref(self, account_index: int, recovery_index: int) -> str:
+        """recovery_index 0 = first intervention recovery_signals row for this account."""
+        phase_prefix = f'{self.phase}_' if self.phase else ''
+        acct = self.accounts[account_index]
+        aid = self._account_id(account_index)
+        c = self._signal_counter_before_account(account_index)
+        c += len(acct.get('key_signals', []))
+        c += len(self.planner.get_events(aid, 'signal'))
+        c += 12
+        c += recovery_index + 1
+        return f'{phase_prefix}recovery_{aid}_{c}'
+
     def generate_signal_edges_csv(self) -> str:
-        """Generate signal_edges.csv — causal links between signals, decisions, outcomes."""
+        """Generate signal_edges.csv — causal links between signals, decisions, outcomes.
+
+        Refs must match decision_id / signal_ref in decisions.csv and enhanced_qualitative_signals.csv,
+        including phase prefix (baseline_ / intervention_) and global signal counter sequencing.
+        """
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1245,26 +1292,31 @@ class ManifestCSVGenerator:
             'edge_type', 'label', 'confidence', 'lag_days',
         ])
 
+        phase_prefix = f'{self.phase}_' if self.phase else ''
+
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
+            primary_sig = self._primary_signal_ref_for_edges(idx)
+            d1 = f'decision:{phase_prefix}dec_{aid}_1'
+            d2 = f'decision:{phase_prefix}dec_{aid}_2'
 
             if cls == 'critical':
                 edges = [
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
-                    (f'decision:dec_{aid}_1', 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_2', 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
-                    (f'decision:dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
+                    (primary_sig, d1, 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
+                    (d1, 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
+                    (primary_sig, d2, 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
+                    (d2, 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
                 ]
             elif cls == 'at_risk':
                 edges = [
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
-                    (f'decision:dec_{aid}_1', 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
+                    (primary_sig, d1, 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
+                    (d1, 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
                 ]
             else:
                 edges = [
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
-                    (f'decision:dec_{aid}_1', 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
+                    (primary_sig, d1, 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
+                    (d1, 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
                 ]
 
             for from_ref, to_ref, etype, label, conf, lag in edges:
@@ -1280,7 +1332,7 @@ class ManifestCSVGenerator:
                     w.writerow([
                         aid,
                         f'decision:int_dec_{aid}_{di+1}',
-                        f'intervention_recovery_{aid}_{di+100}',
+                        self._nth_recovery_signal_ref(idx, di),
                         'LED_TO',
                         f'Intervention: {intervention["decisions"][di]["title"]}',
                         0.9,

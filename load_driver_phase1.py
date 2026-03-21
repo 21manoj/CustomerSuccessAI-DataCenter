@@ -1,5 +1,7 @@
 # Shell cheat sheet (run from repo root or load-driver as noted).
 #
+# EC2 deploy (primary app): http://3.93.17.185  — Platform B (extra capacity): http://3.93.17.185:9080
+#
 # Step 0 — optional: copy template and edit customer block (name, domain, admin_email).
 #   cp load-driver/manifests/novastar_dc2s.json load-driver/manifests/mountainhigh_dc2s.json
 #
@@ -7,7 +9,7 @@
 #   python3 cs_pulse_driver.py \
 #     --manifest manifests/mountainhigh_dc2s.json \
 #     --register \
-#     --base-url http://YOUR_HOST \
+#     --base-url http://3.93.17.185 \
 #     --password "$CS_PULSE_PASSWORD" \
 #     --phase baseline \
 #     --seed 42
@@ -18,7 +20,7 @@
 #   python3 cs_pulse_driver.py \
 #     --manifest manifests/mountainhigh_dc2s.json \
 #     --customer-id <ID> \
-#     --base-url http://YOUR_HOST \
+#     --base-url http://3.93.17.185 \
 #     --email admin@your-domain.com \
 #     --password "$CS_PULSE_PASSWORD" \
 #     --phase intervention \
