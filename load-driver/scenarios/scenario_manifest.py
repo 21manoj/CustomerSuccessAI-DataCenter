@@ -1491,6 +1491,7 @@ class ScenarioManifest(BaseScenario):
         sample_size: int,
         health_tolerance: int,
         strict: bool,
+        phase: str = None,
     ) -> Dict[str, Any]:
         checks: Dict[str, Any] = {'passed': True, 'errors': [], 'metrics': {}}
 
@@ -1569,14 +1570,19 @@ class ScenarioManifest(BaseScenario):
 
         checks['metrics']['sample_distribution_actual'] = actual_distribution
         checks['metrics']['sample_distribution_expected'] = dict(expected_sample_manifest)
-        for cls in ('critical', 'at_risk', 'healthy'):
-            expected_sample = expected_sample_manifest[cls]
-            if abs(actual_distribution[cls] - expected_sample) > health_tolerance:
-                checks['passed'] = False
-                checks['errors'].append(
-                    f'Health distribution drift for {cls}: actual={actual_distribution[cls]} '
-                    f'expected~={expected_sample} tolerance={health_tolerance}'
-                )
+        # Skip distribution drift check for intervention phase — health tiers
+        # are expected to shift upward (critical→at_risk, at_risk→healthy)
+        if phase == 'intervention':
+            logger.info('    Distribution drift check skipped (intervention phase — tiers expected to shift)')
+        else:
+            for cls in ('critical', 'at_risk', 'healthy'):
+                expected_sample = expected_sample_manifest[cls]
+                if abs(actual_distribution[cls] - expected_sample) > health_tolerance:
+                    checks['passed'] = False
+                    checks['errors'].append(
+                        f'Health distribution drift for {cls}: actual={actual_distribution[cls]} '
+                        f'expected~={expected_sample} tolerance={health_tolerance}'
+                    )
 
         checks['metrics']['kpi_count_failures'] = kpi_count_failures[:10]
         if kpi_count_failures:
@@ -1808,6 +1814,7 @@ class ScenarioManifest(BaseScenario):
                 sample_size=sample_size,
                 health_tolerance=health_tolerance,
                 strict=strict,
+                phase=phase,
             )
             results['validation'] = validation
             if not validation['passed']:
