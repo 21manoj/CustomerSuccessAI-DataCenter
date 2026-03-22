@@ -1,129 +1,95 @@
 #!/usr/bin/env python3
 """
-CS Pulse MCP — Revenue Intelligence & ROI tier.
+CS Pulse MCP — Revenue & Portfolio Tools.
 
-7 tools covering context-graph revenue, ROI stories, portfolio views,
-and cross-customer comparisons.
+7 tools moved from cs_pulse_mcp_server.py:
+  - calculate_power_of_1
+  - get_outcome_roi_story
+  - get_playbook_economics
+  - get_playbook_recommendations
+  - get_portfolio_roi_summary
+  - list_portfolio_customers
+  - get_portfolio_cross_customer_comparison
 
-Port: 8002 (HTTP) or stdio.
+All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
 
-import os
-import sys
-
-# Ensure backend is on the Python path
-_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _backend_dir not in sys.path:
-    sys.path.insert(0, _backend_dir)
-
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-from mcp_server import common
-
-# ---------------------------------------------------------------------------
-# Server instance
-# ---------------------------------------------------------------------------
-mcp = FastMCP(
-    "CS Pulse Revenue Intelligence",
-    instructions=common.load_system_prompt(),
+from cs_pulse_mcp_server import (
+    mcp,
+    _check_mcp_enabled,
+    _require_auth,
+    _require_account_auth,
+    _get_flask_app,
+    _validate_account_ownership,
+    _get_account_arr,
+    _resolve_customer_vertical,
+    _get_health_functions,
+    _ensure_registry,
+    _backend_dir,
+    ToolError,
 )
 
 
 # ===================================================================
-# Context Graph / Revenue Intelligence (3 tools)
+# Tool: calculate_power_of_1
 # ===================================================================
 
 @mcp.tool
-def get_revenue_at_risk(customer_id: int, account_id: int) -> dict:
-    """Get revenue breakdown from context graph: at-risk, protected, expansion, lost.
-
-    IMPORTANT: This is the ONLY authoritative source for revenue figures. Never manually
-    sum revenue_impact values from individual context graph nodes — that causes double-counting.
-    Individual SIGNAL nodes have revenue_impact=null; only OUTCOME nodes carry revenue.
-
-    Args:
-        customer_id: The customer (tenant) ID
-        account_id: The account to analyze
-    """
-    common.check_mcp_enabled()
-    common.require_account_auth(customer_id, account_id)
-    app = common.get_flask_app()
-
-    with app.app_context():
-        common.check_context_graph(customer_id)
-        from utils.context_graph import get_revenue_at_risk as _get_rev
-
-        account = common.validate_account_ownership(customer_id, account_id)
-        result = _get_rev(account_id)
-        result["scope"] = "account"
-        result["account_id"] = account_id
-        result["account_name"] = account.account_name
-        return result
-
-
-@mcp.tool
-def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream") -> dict:
-    """Traverse the causal chain (Signal → Decision → Outcome) from a context graph node.
+def calculate_power_of_1(
+    customer_id: int,
+    metric_id: str,
+    improvement_pct: float = 1.0,
+    account_arr: float = None,
+) -> dict:
+    """Calculate the revenue impact of a 1% improvement in a business metric (Power-of-1).
 
     Args:
         customer_id: The customer (tenant) ID
-        node_id: The starting context graph node ID
-        direction: 'upstream' (what caused this) or 'downstream' (what this led to)
+        metric_id: Metric to improve (e.g. NRR, GRR, product_adoption, expansion_rate, ticket_resolution_time, TTFV)
+        improvement_pct: Percentage improvement (default 1.0 = 1%)
+        account_arr: Optional account ARR override. If omitted, uses portfolio total.
     """
-    common.check_mcp_enabled()
-    common.require_auth(customer_id)
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
 
     with app.app_context():
-        common.check_context_graph(customer_id)
-        from utils.context_graph import get_causal_chain as _get_chain
-        from models import ContextNode, db
+        from models import Account
+        from power_of_1_model import calculate_power_of_1_impact
 
-        start_node = db.session.get(ContextNode, node_id)
-        if not start_node:
-            raise ToolError(f"Node {node_id} not found")
+        if account_arr:
+            scope = "account"
+            arr_source = "explicit_account_arr"
+            effective_arr = account_arr
+        else:
+            scope = "portfolio"
+            arr_source = "portfolio_total"
+            accounts = Account.query.filter(
+                Account.customer_id == int(customer_id),
+            ).all()
+            effective_arr = sum(_get_account_arr(a) for a in accounts)
+            if not effective_arr:
+                effective_arr = None
 
-        # Tenant isolation: verify node belongs to this customer
-        if start_node.customer_id != int(customer_id):
-            raise ToolError(
-                f"Node {node_id} not found for customer {customer_id}"
-            )
+        po1_vertical = _resolve_customer_vertical(customer_id)
 
-        chain = _get_chain(node_id, direction=direction, max_depth=5)
+        result = calculate_power_of_1_impact(
+            metric_id=metric_id,
+            improvement_pct=improvement_pct,
+            account_arr=effective_arr,
+            vertical=po1_vertical,
+        )
 
-        return {
-            "scope": "node_traversal",
-            "start_node": start_node.to_dict(),
-            "direction": direction,
-            "chain_length": len(chain),
-            "chain": chain,
-        }
+        if "error" in result:
+            raise ToolError(f"Power-of-1 calculation failed: {result['error']}")
 
-
-@mcp.tool
-def get_graph_summary(customer_id: int, account_id: int) -> dict:
-    """Get context graph summary: node/edge counts and revenue breakdown.
-
-    Args:
-        customer_id: The customer (tenant) ID
-        account_id: The account to analyze
-    """
-    common.check_mcp_enabled()
-    common.require_account_auth(customer_id, account_id)
-    app = common.get_flask_app()
-
-    with app.app_context():
-        common.check_context_graph(customer_id)
-        from utils.context_graph import get_account_graph_summary
-
-        common.validate_account_ownership(customer_id, account_id)
-        result = get_account_graph_summary(account_id)
-        result["scope"] = "account"
+        result["scope"] = scope
+        result["arr_source"] = arr_source
         return result
 
 
 # ===================================================================
-# Financial / ROI (1 tool)
+# Tool: get_outcome_roi_story
 # ===================================================================
 
 @mcp.tool
@@ -141,26 +107,22 @@ def get_outcome_roi_story(
         target_improvement_pct: Target improvement percentage (default 10%)
         projection_months: Projection horizon in months (default 12)
     """
-    common.check_mcp_enabled()
-    common.require_account_auth(customer_id, account_id)
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
 
     with app.app_context():
         from outcome_roi_engine import calculate_outcome_story
         from power_of_1_model import POWER_OF_1_METRICS
 
-        account = common.validate_account_ownership(customer_id, account_id)
+        account = _validate_account_ownership(customer_id, account_id)
 
-        arr = common.get_account_arr(account)
+        arr = _get_account_arr(account)
 
-        # Build metric_actuals in the format expected by calculate_outcome_story:
-        # {metric_id: {"current": float, "baseline": float}}
-        # Use baselines as defaults (the engine computes delta from there)
         metric_actuals = {}
         for mid, m in POWER_OF_1_METRICS.items():
             metric_actuals[mid] = {"current": m.baseline, "baseline": m.baseline}
 
-        # Determine vertical from account
         acct_vertical = getattr(account, 'vertical', None)
 
         story = calculate_outcome_story(
@@ -178,7 +140,102 @@ def get_outcome_roi_story(
 
 
 # ===================================================================
-# Portfolio ROI (1 tool)
+# Tool: get_playbook_economics
+# ===================================================================
+
+@mcp.tool
+def get_playbook_economics(
+    customer_id: int,
+    account_arr: float = None,
+) -> dict:
+    """Get playbook cost bridge economics — investment breakdown, hours, ROI per playbook.
+
+    Returns per-metric and per-playbook economics derived from:
+      - Power of 1 JSON benchmarks (source of truth for budgets)
+      - PLAYBOOK_CONFIG hours (manual vs automated breakdown)
+      - CSM hourly rate from resource_rates.json
+
+    Use this to answer: "How much do playbooks cost?", "What's the CSM investment?",
+    "Show me the investment breakdown", "What's the ROI per playbook run?"
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_arr: Customer ARR for scaling (optional, defaults to sum of account revenues)
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account
+        from playbook_cost_bridge import calculate_cost_bridge, bridge_to_dict
+
+        if account_arr:
+            effective_arr = float(account_arr)
+        else:
+            accounts = Account.query.filter(
+                Account.customer_id == int(customer_id),
+            ).all()
+            effective_arr = float(sum(_get_account_arr(a) for a in accounts)) if accounts else 10_000_000
+
+        result = calculate_cost_bridge(account_arr=effective_arr)
+        return bridge_to_dict(result)
+
+
+# ===================================================================
+# Tool: get_playbook_recommendations
+# ===================================================================
+
+@mcp.tool
+def get_playbook_recommendations(
+    customer_id: int,
+    account_id: int,
+) -> dict:
+    """Get recommended playbooks for an account based on health score and signals.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: The account to get recommendations for
+    """
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        _validate_account_ownership(customer_id, account_id)
+        _ensure_registry()
+        from agent_tool_registry import get_tool_registry
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+
+        kpi_values = _get_trailing_kpi_values(account_id)
+
+        precalc_health, _, _ = get_precalculated_scores(account_id)
+        if precalc_health is not None:
+            health = precalc_health
+        else:
+            health, _ = calculate_kpi_health(kpi_values, customer_id)
+
+        registry = get_tool_registry()
+        result = registry.invoke(
+            "playbook_recommend",
+            account_id=account_id,
+            customer_id=customer_id,
+            health_score=round(health, 1),
+            kpi_values=kpi_values,
+        )
+
+        if not result.success:
+            raise ToolError(f"Playbook recommendations failed: {result.error}")
+
+        data = result.result
+        data["scope"] = "account"
+        return data
+
+
+# ===================================================================
+# Tool: get_portfolio_roi_summary
 # ===================================================================
 
 @mcp.tool
@@ -188,9 +245,9 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
     Args:
         customer_id: The customer (tenant) ID
     """
-    common.check_mcp_enabled()
-    common.require_auth(customer_id)
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Account
@@ -204,13 +261,9 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
 
-        # Extract historical metric actuals from DB
         metric_actuals, data_source = _extract_historical_actuals(accounts, 6)
-
-        # Identify at-risk accounts per Power of 1 metric
         accounts_at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
 
-        # Determine vertical from first account (portfolio is single-vertical)
         portfolio_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
 
         story = calculate_outcome_story(
@@ -237,7 +290,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
 
 
 # ===================================================================
-# Portfolio / CEO View (2 tools)
+# Tool: list_portfolio_customers
 # ===================================================================
 
 @mcp.tool
@@ -250,8 +303,8 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
     Args:
         portfolio_id: The portfolio (PE fund / holding company) ID
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Portfolio, PortfolioMembership, Customer, Account
@@ -285,13 +338,13 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
                 continue
 
             mem_vertical = getattr(customer, 'vertical', None) or mem.vertical or 'dc2_s'
-            calc_health, get_trailing, get_precalc = common.get_health_functions(mem_vertical)
+            calc_health, get_trailing, get_precalc = _get_health_functions(mem_vertical)
 
             accounts = Account.query.filter(
                 Account.customer_id == mem.customer_id,
             ).all()
 
-            total_arr = sum(common.get_account_arr(a) for a in accounts)
+            total_arr = sum(_get_account_arr(a) for a in accounts)
             health_scores = []
             at_risk_count = 0
 
@@ -315,6 +368,7 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
             customer_summaries.append({
                 "customer_id": mem.customer_id,
                 "customer_name": getattr(customer, 'customer_name', None) or getattr(customer, 'company_name', 'Unknown'),
+                "created_at": customer.created_at.isoformat() if customer.created_at else None,
                 "vertical": mem_vertical,
                 "status": mem.status,
                 "total_accounts": len(accounts),
@@ -350,6 +404,10 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
         }
 
 
+# ===================================================================
+# Tool: get_portfolio_cross_customer_comparison
+# ===================================================================
+
 @mcp.tool
 def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
     """Compare all customers in a portfolio side-by-side: health, ARR, risk, expansion. CEO-level view.
@@ -360,8 +418,8 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
     Args:
         portfolio_id: The portfolio (PE fund / holding company) ID
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Portfolio, PortfolioMembership, Customer, Account
@@ -386,13 +444,13 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
                 continue
 
             mem_vertical = getattr(customer, 'vertical', None) or mem.vertical or 'dc2_s'
-            calc_health, get_trailing, get_precalc = common.get_health_functions(mem_vertical)
+            calc_health, get_trailing, get_precalc = _get_health_functions(mem_vertical)
 
             accounts = Account.query.filter(
                 Account.customer_id == mem.customer_id,
             ).all()
 
-            total_arr = sum(common.get_account_arr(a) for a in accounts)
+            total_arr = sum(_get_account_arr(a) for a in accounts)
             pillar_totals = {}
             health_scores = []
             statuses = {'healthy': 0, 'at_risk': 0, 'critical': 0}
@@ -460,10 +518,3 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
             "portfolio_name": portfolio.portfolio_name,
             "comparisons": comparisons,
         }
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    common.run_server(mcp, default_port=8002)

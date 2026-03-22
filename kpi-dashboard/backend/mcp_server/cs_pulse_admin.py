@@ -1,1298 +1,829 @@
 #!/usr/bin/env python3
 """
-CS Pulse Admin MCP Server — admin tools for cloning customers,
-exporting/downloading CSV data.
+CS Pulse MCP — Admin / Operational Intelligence Tools.
 
-Extracted from the monolithic cs_pulse_mcp_server.py.
-Runs on port 8004.
+5 tools moved from cs_pulse_mcp_server.py:
+  - get_crm_account_data
+  - get_support_tickets
+  - get_customer_feedback
+  - get_csm_daily_actions
+  - partner_portal
+
+All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
 
 import os
-import sys
 
-# Ensure backend is on the Python path
-_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _backend_dir not in sys.path:
-    sys.path.insert(0, _backend_dir)
-
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-from mcp_server import common
-
-mcp = FastMCP(
-    "CS Pulse Admin",
-    instructions="CS Pulse admin tools — clone customers, export/download CSVs. Requires admin scope.",
+from cs_pulse_mcp_server import (
+    mcp,
+    _check_mcp_enabled,
+    _require_auth,
+    _require_account_auth,
+    _get_flask_app,
+    _validate_account_ownership,
+    _get_account_arr,
+    _resolve_customer_vertical,
+    _get_health_functions,
+    _get_kpi_definitions,
+    _get_playbook_config,
+    _ensure_registry,
+    _backend_dir,
+    ToolError,
 )
 
 
-# ===================================================================
-# Tool: clone_customer — Deep-copy an existing customer for demos
-# ===================================================================
+# ---------------------------------------------------------------------------
+# Helpers for CRM / feedback tools (local to this module)
+# ---------------------------------------------------------------------------
 
-@mcp.tool
-def clone_customer(
-    source_customer_id: int,
-    new_name: str,
-    new_domain: str,
-) -> dict:
-    """Deep-copy an existing customer with all data into a new customer.
+def _get_account_profile(account) -> dict:
+    """Safely extract profile_metadata fields with defaults."""
+    meta = account.profile_metadata if isinstance(account.profile_metadata, dict) else {}
+    return {
+        "assigned_csm": meta.get("assigned_csm", "Unassigned"),
+        "executive_sponsor": meta.get("executive_sponsor", ""),
+        "contract_start_date": meta.get("contract_start_date", ""),
+        "contract_end_date": meta.get("contract_end_date", ""),
+        "renewal_date": meta.get("renewal_date", ""),
+        "champion_name": meta.get("primary_champion_name", ""),
+        "champion_title": meta.get("champion_title", ""),
+        "champion_email": meta.get("champion_email", ""),
+        "champion_status": meta.get("champion_status", "Unknown"),
+        "champion_influence_level": meta.get("champion_influence_level", ""),
+        "economic_buyer": meta.get("economic_buyer_name", ""),
+        "industry": meta.get("industry", ""),
+        "region": meta.get("region", ""),
+        "tier": meta.get("account_tier", ""),
+        "products_used": meta.get("products_used", ""),
+    }
 
-    Creates a full clone including accounts, KPI measurements, health scores,
-    context graph (nodes + edges with remapped IDs), qualitative signals,
-    playbook executions, and ROI snapshots. Enables instant demo setup:
-    "clone Gold_DC_Alpha as Acme Corp" in ~2 seconds.
 
-    No authentication required (onboarding tool).
+def _compute_renewal_stage(days_until_renewal: int, health_status: str) -> dict:
+    """Derive CRM renewal stage and probability from days remaining and health."""
+    if days_until_renewal > 180:
+        stage, forecast = "Early Renewal", "Pipeline"
+    elif days_until_renewal > 90:
+        stage, forecast = "Renewal Discussion", "Best Case"
+    elif days_until_renewal > 30:
+        stage, forecast = "Negotiation", "Commit"
+    elif days_until_renewal > 0:
+        stage, forecast = "Final Review", "Commit"
+    else:
+        stage, forecast = "Overdue", "Omitted"
 
-    Args:
-        source_customer_id: Customer ID to clone from (e.g. 407 for Gold_DC_Alpha)
-        new_name: Name for the new customer (e.g. 'Acme Corp')
-        new_domain: Domain for the new customer (e.g. 'acme.com')
-    """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    prob = {"healthy": 90, "at_risk": 65, "critical": 35}.get(health_status, 70)
+    return {"stage": stage, "probability": prob, "forecast_category": forecast}
 
-    with app.app_context():
-        from models import (
-            Customer, CustomerConfig, Account, DC2SKPI,
-            HealthScore, KPIScore, PillarScore,
-            ContextNode, ContextEdge,
-            QualitativeSignal, PlaybookExecution,
-            ROISnapshot, JourneyData,
+
+def _derive_nps_from_signals(signals) -> dict:
+    """Compute NPS proxy from QualitativeSignal sentiment distribution."""
+    if not signals:
+        return {"score": 0, "trend": "unknown", "response_count": 0}
+
+    total = len(signals)
+    positive = sum(1 for s in signals if getattr(s, 'sentiment', '') == 'positive')
+    negative = sum(1 for s in signals if getattr(s, 'sentiment', '') == 'negative')
+
+    nps = int(((positive - negative) / total) * 100) if total else 0
+
+    mid = total // 2
+    if mid > 0:
+        older_half_pos = sum(1 for s in signals[mid:] if getattr(s, 'sentiment', '') == 'positive')
+        newer_half_pos = sum(1 for s in signals[:mid] if getattr(s, 'sentiment', '') == 'positive')
+        trend = "improving" if newer_half_pos > older_half_pos else (
+            "declining" if newer_half_pos < older_half_pos else "stable"
         )
-        from extensions import db
-        import uuid as _uuid_mod
-        from datetime import datetime
+    else:
+        trend = "stable"
 
-        # ----------------------------------------------------------
-        # Validate source customer exists
-        # ----------------------------------------------------------
-        source = db.session.get(Customer, int(source_customer_id))
-        if not source:
-            raise ToolError(f"Source customer {source_customer_id} not found.")
-
-        # Check for duplicate domain
-        existing = Customer.query.filter_by(domain=new_domain).first()
-        if existing:
-            raise ToolError(
-                f"A customer with domain '{new_domain}' already exists "
-                f"(customer_id={existing.customer_id})."
-            )
-
-        summary = {}
-
-        # ----------------------------------------------------------
-        # 1. Clone Customer record
-        # ----------------------------------------------------------
-        new_customer = Customer(
-            customer_name=new_name,
-            email=None,  # No email for cloned customer
-            domain=new_domain,
-            vertical=source.vertical,
-        )
-        # Generate UUID
-        try:
-            from id_generator import generate_id
-            uuid_vertical = 'dc' if (source.vertical or '').startswith('dc') else (source.vertical or 'dc')
-            new_customer.uuid = generate_id(uuid_vertical, 'customer')
-        except Exception:
-            new_customer.uuid = f"clone_{_uuid_mod.uuid4().hex[:16]}"
-        db.session.add(new_customer)
-        db.session.flush()  # Get new customer_id
-
-        new_cid = new_customer.customer_id
-        summary['customer_id'] = new_cid
-        summary['customer_name'] = new_name
-        summary['domain'] = new_domain
-        summary['vertical'] = source.vertical
-
-        # ----------------------------------------------------------
-        # 2. Clone CustomerConfig
-        # ----------------------------------------------------------
-        source_config = CustomerConfig.query.filter_by(
-            customer_id=source_customer_id,
-        ).first()
-        if source_config:
-            new_config = CustomerConfig(
-                customer_id=new_cid,
-                vertical=source_config.vertical,
-                kpi_upload_mode=source_config.kpi_upload_mode,
-                dc2s_pillar_weights=source_config.dc2s_pillar_weights,
-                dc2s_enabled_kpis=source_config.dc2s_enabled_kpis,
-                dc2s_kpi_overrides=source_config.dc2s_kpi_overrides,
-                dc2s_kpi_weights=source_config.dc2s_kpi_weights,
-                dc2s_kpi_definitions=source_config.dc2s_kpi_definitions,
-                config_version=source_config.config_version,
-            )
-            db.session.add(new_config)
-            summary['config_cloned'] = True
-        else:
-            summary['config_cloned'] = False
-
-        # ----------------------------------------------------------
-        # 3. Clone Accounts (build old->new account_id map)
-        # ----------------------------------------------------------
-        source_accounts = Account.query.filter_by(
-            customer_id=source_customer_id,
-        ).all()
-
-        acct_id_map = {}  # old_account_id -> new_account_id
-        for acct in source_accounts:
-            new_acct = Account(
-                customer_id=new_cid,
-                account_name=acct.account_name,
-                revenue=acct.revenue,
-                account_status=acct.account_status,
-                industry=acct.industry,
-                vertical=acct.vertical,
-                region=acct.region,
-                external_account_id=acct.external_account_id,
-                profile_metadata=acct.profile_metadata,
-            )
-            # Generate account UUID
-            try:
-                new_acct.uuid = generate_id(uuid_vertical, 'account')
-            except Exception:
-                new_acct.uuid = f"clone_acct_{_uuid_mod.uuid4().hex[:12]}"
-            new_acct.customer_uuid = new_customer.uuid
-            db.session.add(new_acct)
-            db.session.flush()
-            acct_id_map[acct.account_id] = new_acct.account_id
-
-        summary['accounts_cloned'] = len(acct_id_map)
-
-        # ----------------------------------------------------------
-        # 4. Clone DC2S KPI measurements (joins through accounts)
-        # ----------------------------------------------------------
-        kpi_count = 0
-        for old_aid, new_aid in acct_id_map.items():
-            kpis = DC2SKPI.query.filter_by(account_id=old_aid).all()
-            for kpi in kpis:
-                new_kpi = DC2SKPI(
-                    account_id=new_aid,
-                    kpi_code=kpi.kpi_code,
-                    value=kpi.value,
-                    target=kpi.target,
-                    pillar=kpi.pillar,
-                    weight=kpi.weight,
-                    status=kpi.status,
-                    measured_at=kpi.measured_at,
-                    created_at=kpi.created_at,
-                )
-                db.session.add(new_kpi)
-                kpi_count += 1
-        summary['dc2s_kpis_cloned'] = kpi_count
-
-        # ----------------------------------------------------------
-        # 5. Clone Health Scores (joins through accounts)
-        # ----------------------------------------------------------
-        hs_count = 0
-        for old_aid, new_aid in acct_id_map.items():
-            scores = HealthScore.query.filter_by(account_id=old_aid).all()
-            for s in scores:
-                new_hs = HealthScore(
-                    account_id=new_aid,
-                    measurement_month=s.measurement_month,
-                    health_score=s.health_score,
-                    health_status=s.health_status,
-                    trend=s.trend,
-                    change_from_last_month=s.change_from_last_month,
-                    contributing_pillars=s.contributing_pillars,
-                    pillar_weights=s.pillar_weights,
-                    calculated_at=s.calculated_at,
-                )
-                db.session.add(new_hs)
-                hs_count += 1
-        summary['health_scores_cloned'] = hs_count
-
-        # ----------------------------------------------------------
-        # 5b. Clone KPI Scores (L1) and Pillar Scores (L2)
-        # ----------------------------------------------------------
-        kpi_score_count = 0
-        for old_aid, new_aid in acct_id_map.items():
-            rows = KPIScore.query.filter_by(account_id=old_aid).all()
-            for r in rows:
-                new_row = KPIScore(
-                    account_id=new_aid,
-                    measurement_month=r.measurement_month,
-                    kpi_code=r.kpi_code,
-                    kpi_value=r.kpi_value,
-                    kpi_target=r.kpi_target,
-                    kpi_score=r.kpi_score,
-                    kpi_status=r.kpi_status,
-                    calculated_at=r.calculated_at,
-                )
-                db.session.add(new_row)
-                kpi_score_count += 1
-        summary['kpi_scores_cloned'] = kpi_score_count
-
-        pillar_score_count = 0
-        for old_aid, new_aid in acct_id_map.items():
-            rows = PillarScore.query.filter_by(account_id=old_aid).all()
-            for r in rows:
-                new_row = PillarScore(
-                    account_id=new_aid,
-                    measurement_month=r.measurement_month,
-                    pillar_code=r.pillar_code,
-                    pillar_score=r.pillar_score,
-                    pillar_status=r.pillar_status,
-                    contributing_kpis=r.contributing_kpis,
-                    kpi_weights=r.kpi_weights,
-                    calculated_at=r.calculated_at,
-                )
-                db.session.add(new_row)
-                pillar_score_count += 1
-        summary['pillar_scores_cloned'] = pillar_score_count
-
-        # ----------------------------------------------------------
-        # 6. Clone Context Graph Nodes (has customer_id)
-        # ----------------------------------------------------------
-        source_nodes = ContextNode.query.filter_by(
-            customer_id=source_customer_id,
-        ).all()
-
-        node_id_map = {}  # old_node_id -> new_node_id
-        for node in source_nodes:
-            new_account_id = acct_id_map.get(node.account_id)
-            if new_account_id is None:
-                continue  # Skip orphaned nodes
-            new_node = ContextNode(
-                customer_id=new_cid,
-                account_id=new_account_id,
-                node_type=node.node_type,
-                node_subtype=node.node_subtype,
-                tier=node.tier,
-                title=node.title,
-                properties=node.properties,
-                revenue_impact=node.revenue_impact,
-                revenue_impact_type=node.revenue_impact_type,
-                confidence=node.confidence,
-                source_platform=node.source_platform,
-                source_event_id=node.source_event_id,
-                source_ref=node.source_ref,
-                occurred_at=node.occurred_at,
-                expires_at=node.expires_at,
-                weight_decay=node.weight_decay,
-            )
-            db.session.add(new_node)
-            db.session.flush()  # Get new node_id for edge remapping
-            node_id_map[node.node_id] = new_node.node_id
-
-        summary['context_nodes_cloned'] = len(node_id_map)
-
-        # ----------------------------------------------------------
-        # 7. Clone Context Graph Edges (remap node IDs)
-        # ----------------------------------------------------------
-        edge_count = 0
-        source_edges = ContextEdge.query.filter_by(
-            customer_id=source_customer_id,
-        ).all()
-        for edge in source_edges:
-            new_from = node_id_map.get(edge.from_node_id)
-            new_to = node_id_map.get(edge.to_node_id)
-            if new_from is None or new_to is None:
-                continue  # Skip edges with unmapped nodes
-            new_edge = ContextEdge(
-                customer_id=new_cid,
-                from_node_id=new_from,
-                to_node_id=new_to,
-                edge_type=edge.edge_type,
-                lag_days=edge.lag_days,
-                weight=edge.weight,
-                confidence=edge.confidence,
-                revenue_impact=edge.revenue_impact,
-                revenue_impact_type=edge.revenue_impact_type,
-                properties=edge.properties,
-                source_platform=edge.source_platform,
-                created_by=edge.created_by,
-                occurred_at=edge.occurred_at,
-                expires_at=edge.expires_at,
-            )
-            db.session.add(new_edge)
-            edge_count += 1
-        summary['context_edges_cloned'] = edge_count
-
-        # ----------------------------------------------------------
-        # 8. Clone Qualitative Signals (account_id based)
-        # ----------------------------------------------------------
-        signal_count = 0
-        for old_aid, new_aid in acct_id_map.items():
-            signals = QualitativeSignal.query.filter_by(account_id=old_aid).all()
-            for sig in signals:
-                new_sig = QualitativeSignal(
-                    signal_id=f"clone_{_uuid_mod.uuid4().hex[:8]}_{sig.signal_id[-8:] if len(sig.signal_id) > 8 else sig.signal_id}",
-                    account_id=new_aid,
-                    signal_date=sig.signal_date,
-                    signal_type=sig.signal_type,
-                    content=sig.content,
-                    sentiment=sig.sentiment,
-                    stakeholder_level=sig.stakeholder_level,
-                    stakeholder_title=sig.stakeholder_title,
-                    sentiment_score=sig.sentiment_score,
-                    keywords=sig.keywords,
-                    is_narrative_signal=sig.is_narrative_signal,
-                )
-                db.session.add(new_sig)
-                signal_count += 1
-        summary['qualitative_signals_cloned'] = signal_count
-
-        # ----------------------------------------------------------
-        # 9. Clone Playbook Executions (has customer_id)
-        # ----------------------------------------------------------
-        pb_count = 0
-        source_pbs = PlaybookExecution.query.filter_by(
-            customer_id=source_customer_id,
-        ).all()
-        for pb in source_pbs:
-            new_account_id = acct_id_map.get(pb.account_id) if pb.account_id else None
-            new_exec_id = str(_uuid_mod.uuid4())
-            new_pb = PlaybookExecution(
-                execution_id=new_exec_id,
-                customer_id=new_cid,
-                account_id=new_account_id,
-                playbook_id=pb.playbook_id,
-                status=pb.status,
-                current_step=pb.current_step,
-                execution_data=pb.execution_data,
-                started_at=pb.started_at,
-                completed_at=pb.completed_at,
-                execution_mode=pb.execution_mode,
-                trigger_context=pb.trigger_context,
-                outcome=pb.outcome,
-                outcome_notes=pb.outcome_notes,
-                llm_validation_result=pb.llm_validation_result,
-            )
-            db.session.add(new_pb)
-            pb_count += 1
-        summary['playbook_executions_cloned'] = pb_count
-
-        # ----------------------------------------------------------
-        # 10. Clone ROI Snapshots (has customer_id)
-        # ----------------------------------------------------------
-        roi_count = 0
-        source_rois = ROISnapshot.query.filter_by(
-            customer_id=source_customer_id,
-        ).all()
-        for roi in source_rois:
-            new_roi = ROISnapshot(
-                customer_id=new_cid,
-                snapshot_date=roi.snapshot_date,
-                improvement_pct=roi.improvement_pct,
-                historical_roi_pct=roi.historical_roi_pct,
-                historical_impact=roi.historical_impact,
-                historical_investment=roi.historical_investment,
-                forward_roi_pct=roi.forward_roi_pct,
-                forward_impact=roi.forward_impact,
-                forward_investment=roi.forward_investment,
-                combined_roi_pct=roi.combined_roi_pct,
-                total_arr=roi.total_arr,
-                metric_details=roi.metric_details,
-            )
-            db.session.add(new_roi)
-            roi_count += 1
-        summary['roi_snapshots_cloned'] = roi_count
-
-        # ----------------------------------------------------------
-        # 11. Clone Journey Data (has customer_id + account_id)
-        # ----------------------------------------------------------
-        journey_count = 0
-        for old_aid, new_aid in acct_id_map.items():
-            journeys = JourneyData.query.filter_by(
-                customer_id=source_customer_id,
-                account_id=old_aid,
-            ).all()
-            for j in journeys:
-                new_j = JourneyData(
-                    customer_id=new_cid,
-                    account_id=new_aid,
-                    journey_json=j.journey_json,
-                    total_weeks=j.total_weeks,
-                    journey_pattern=j.journey_pattern,
-                    generator_version=j.generator_version,
-                    generated_at=j.generated_at,
-                )
-                db.session.add(new_j)
-                journey_count += 1
-        summary['journey_data_cloned'] = journey_count
-
-        # ----------------------------------------------------------
-        # 12. Create admin user for the new customer
-        # ----------------------------------------------------------
-        admin_user = None
-        try:
-            from models import User
-            from werkzeug.security import generate_password_hash
-            import secrets as _secrets
-            admin_email = f"admin@{new_domain}"
-            admin_password = _secrets.token_urlsafe(16)
-            new_user = User(
-                email=admin_email,
-                user_name=f"Admin ({new_name})",
-                customer_id=new_cid,
-                role='admin',
-                password_hash=generate_password_hash(admin_password),
-                vertical=source.vertical,
-            )
-            new_user.customer_uuid = new_customer.uuid
-            try:
-                new_user.uuid = generate_id(uuid_vertical, 'user')
-            except Exception:
-                new_user.uuid = f"clone_user_{_uuid_mod.uuid4().hex[:12]}"
-            db.session.add(new_user)
-            db.session.flush()
-            admin_user = {
-                'user_id': new_user.user_id,
-                'email': admin_email,
-                'password': admin_password,
-                'role': 'admin',
-            }
-            summary['admin_user_created'] = True
-        except Exception as e:
-            summary['admin_user_created'] = False
-            summary['admin_user_error'] = str(e)
-
-        # ----------------------------------------------------------
-        # 13. Generate API key for the new customer
-        # ----------------------------------------------------------
-        api_key = None
-        try:
-            from api_key_service import generate_api_key as _gen_api_key
-            full_key, _key_record = _gen_api_key(
-                customer_id=new_cid,
-                created_by=0,  # System-generated
-                name='Clone Onboarding Key',
-                scopes=['read', 'write'],
-            )
-            api_key = full_key
-        except Exception:
-            api_key = None
-
-        # ----------------------------------------------------------
-        # Commit the entire transaction atomically
-        # ----------------------------------------------------------
-        db.session.commit()
-
-        # ----------------------------------------------------------
-        # Build response
-        # ----------------------------------------------------------
-        total_records = (
-            summary.get('accounts_cloned', 0)
-            + summary.get('dc2s_kpis_cloned', 0)
-            + summary.get('health_scores_cloned', 0)
-            + summary.get('kpi_scores_cloned', 0)
-            + summary.get('pillar_scores_cloned', 0)
-            + summary.get('context_nodes_cloned', 0)
-            + summary.get('context_edges_cloned', 0)
-            + summary.get('qualitative_signals_cloned', 0)
-            + summary.get('playbook_executions_cloned', 0)
-            + summary.get('roi_snapshots_cloned', 0)
-            + summary.get('journey_data_cloned', 0)
-        )
-
-        result = {
-            'scope': 'customer',
-            'status': 'cloned',
-            'source_customer_id': source_customer_id,
-            'new_customer_id': new_cid,
-            'new_customer_name': new_name,
-            'new_domain': new_domain,
-            'vertical': source.vertical,
-            'total_records_cloned': total_records,
-            'details': summary,
-            'message': (
-                f"Successfully cloned customer {source_customer_id} "
-                f"as '{new_name}' (ID={new_cid}). "
-                f"{summary.get('accounts_cloned', 0)} accounts, "
-                f"{summary.get('context_nodes_cloned', 0)} context nodes, "
-                f"{total_records} total records."
-            ),
-        }
-
-        if api_key:
-            result['api_key'] = api_key
-            result['api_key_note'] = (
-                'Save this API key — it is shown only once. '
-                'Use it for the intelligence tools.'
-            )
-
-        if admin_user:
-            result['admin_user'] = admin_user
-            result['admin_user_note'] = (
-                'Admin user auto-created. Use these credentials to log in.'
-            )
-
-        result['next_steps'] = (
-            'OPTION 1 — Use as-is: Clone is ready immediately. '
-            'All data (accounts, KPIs, health scores, context graph, '
-            'signals, playbooks, ROI) has been deep-copied with '
-            'pre-calculated scores. No Wizards or process_data needed. '
-            'OPTION 2 — Customize: Use export_customer_csvs() to download '
-            'the 8 CSVs, modify them (change account names, KPI values, etc.), '
-            'then upload_csv() + process_data() to recalculate scores '
-            'with your changes. Wizards A/B/C only needed if you want '
-            'to regenerate journeys or recalibrate weights.'
-        )
-
-        # Include canonical pillar labels so LLM clients display correct names
-        result['dc2s_pillar_labels'] = common.get_pillar_labels('dc2_s')
-
-        return result
+    return {"score": nps, "trend": trend, "response_count": total}
 
 
 # ===================================================================
-# Tool: export_customer_csvs — Export all customer data as CSVs
+# Tool: get_crm_account_data
 # ===================================================================
 
 @mcp.tool
-def export_customer_csvs(
-    customer_id: int,
-    output_dir: str = '',
-) -> dict:
-    """Export all data for a customer as CSV files matching the onboarding upload format.
-
-    Produces CSVs that can be re-uploaded via upload_csv() + process_data()
-    without any transformation. Useful for cloning, backup, or data migration.
-
-    No authentication required (onboarding tool).
-
-    Exported files (8 customer-provided CSVs matching config/csv_schemas.json):
-      Regular model: accounts.csv, kpi_measurements.csv, enhanced_qualitative_signals.csv, products.csv
-      Context graph: stakeholders.csv, engagement_events.csv, account_business_profiles.csv, outcomes.csv
-
-    Note: The 3 auto-generated files (decisions.csv, signal_edges.csv, industry_benchmarks.csv)
-    are NOT exported — they get regenerated by process_data() from the uploaded data.
+def get_crm_account_data(customer_id: int, account_id: int) -> dict:
+    """Pull CRM data for an account — contract details, renewal opportunity, champion contacts, usage metrics. Simulates Salesforce integration; reads from CS Pulse platform data.
 
     Args:
-        customer_id: Customer ID to export data from
-        output_dir: Directory to save CSVs. Default: /tmp/cs_pulse_export_{customer_id}/
+        customer_id: The customer (tenant) ID
+        account_id: The account to pull CRM data for
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
 
     with app.app_context():
-        import csv
-        import io
-        from pathlib import Path
-        from models import (
-            Customer, Account, DC2SKPI, Product,
-            QualitativeSignal, ContextNode,
-        )
-        from extensions import db
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+        import utils.health_thresholds as ht
+        from datetime import datetime, date
 
-        # ----------------------------------------------------------
-        # Validate customer
-        # ----------------------------------------------------------
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            raise ToolError(f"Customer {customer_id} not found.")
+        account = _validate_account_ownership(customer_id, account_id)
 
-        # Resolve output directory
-        if not output_dir:
-            output_dir = f'/tmp/cs_pulse_export_{customer_id}'
-        out_path = Path(output_dir)
-        out_path.mkdir(parents=True, exist_ok=True)
+        profile = _get_account_profile(account)
+        arr = _get_account_arr(account)
 
-        # ----------------------------------------------------------
-        # Helper: write rows to CSV
-        # ----------------------------------------------------------
-        def _write_csv(filename: str, columns: list, rows: list) -> int:
-            """Write rows to a CSV file. Returns row count."""
-            fp = out_path / filename
-            with open(fp, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
-                writer.writeheader()
-                for row in rows:
-                    writer.writerow(row)
-            return len(rows)
+        precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account_id)
+        kpi_values = _get_trailing_kpi_values(account_id)
 
-        # ----------------------------------------------------------
-        # Load all accounts for this customer (needed for joins)
-        # ----------------------------------------------------------
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        account_ids = [a.account_id for a in accounts]
-        # Build account_id -> account_name lookup
-        acct_name_map = {a.account_id: a.account_name for a in accounts}
-
-        results = {}
-
-        # ----------------------------------------------------------
-        # 1. accounts.csv
-        # ----------------------------------------------------------
-        acct_cols = [
-            'source_account_id', 'customer_id', 'account_name', 'industry', 'region',
-            'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
-            'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid',
-        ]
-        acct_rows = []
-        for a in accounts:
-            pm = a.profile_metadata or {}
-            acct_rows.append({
-                'source_account_id': a.account_id,
-                'customer_id': a.customer_id,
-                'account_name': a.account_name,
-                'industry': a.industry,
-                'region': a.region,
-                'vertical': a.vertical,
-                'tier': pm.get('tier', ''),
-                'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
-                'revenue': float(a.revenue) if a.revenue else '',
-                'contract_start': pm.get('contract_start', ''),
-                'contract_end': pm.get('contract_end', ''),
-                'renewal_date': pm.get('renewal_date', ''),
-                'csm_name': pm.get('assigned_csm', '') or pm.get('csm_name', ''),
-                'csm_email': pm.get('csm_email', ''),
-                'account_status': a.account_status,
-                'uuid': a.uuid or '',
-            })
-        results['accounts.csv'] = _write_csv('accounts.csv', acct_cols, acct_rows)
-
-        # ----------------------------------------------------------
-        # 2. kpi_measurements.csv
-        # ----------------------------------------------------------
-        kpi_cols = [
-            'source_account_id', 'kpi_code', 'measured_at', 'value',
-            'kpi_name', 'pillar', 'target', 'weight', 'unit', 'status',
-        ]
-        kpi_rows = []
-        if account_ids:
-            kpis = DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids)).all()
-            for k in kpis:
-                kpi_rows.append({
-                    'source_account_id': k.account_id,
-                    'kpi_code': k.kpi_code,
-                    'measured_at': k.measured_at.isoformat() if k.measured_at else '',
-                    'value': float(k.value),
-                    'kpi_name': '',
-                    'pillar': k.pillar or '',
-                    'target': float(k.target) if k.target else '',
-                    'weight': float(k.weight) if k.weight else '',
-                    'unit': '',
-                    'status': k.status or '',
-                })
-        results['kpi_measurements.csv'] = _write_csv('kpi_measurements.csv', kpi_cols, kpi_rows)
-
-        # ----------------------------------------------------------
-        # 3. enhanced_qualitative_signals.csv
-        # ----------------------------------------------------------
-        qs_cols = [
-            'source_account_id', 'signal_date', 'signal_type', 'content', 'sentiment',
-            'signal_ref', 'sentiment_score', 'stakeholder_name', 'stakeholder_title',
-            'causal_chain_ref', 'revenue_impact', 'confidence', 'source_platform',
-        ]
-        qs_rows = []
-        if account_ids:
-            signals = QualitativeSignal.query.filter(
-                QualitativeSignal.account_id.in_(account_ids)
-            ).all()
-            for s in signals:
-                qs_rows.append({
-                    'source_account_id': s.account_id,
-                    'signal_date': s.signal_date.isoformat() if s.signal_date else '',
-                    'signal_type': s.signal_type or '',
-                    'content': s.content or '',
-                    'sentiment': s.sentiment or '',
-                    'signal_ref': s.signal_id or '',
-                    'sentiment_score': float(s.sentiment_score) if s.sentiment_score else '',
-                    'stakeholder_name': '',
-                    'stakeholder_title': s.stakeholder_title or '',
-                    'causal_chain_ref': '',
-                    'revenue_impact': '',
-                    'confidence': '',
-                    'source_platform': '',
-                })
-        results['enhanced_qualitative_signals.csv'] = _write_csv(
-            'enhanced_qualitative_signals.csv', qs_cols, qs_rows
-        )
-
-        # ----------------------------------------------------------
-        # 4. products.csv
-        # ----------------------------------------------------------
-        prod_cols = [
-            'source_account_id', 'product_name', 'product_category', 'quantity',
-            'unit_price', 'deployment_date', 'status', 'customer_id',
-        ]
-        prod_rows = []
-        if account_ids:
-            products = Product.query.filter(Product.account_id.in_(account_ids)).all()
-            for p in products:
-                prod_rows.append({
-                    'source_account_id': p.account_id,
-                    'product_name': p.product_name,
-                    'product_category': p.product_type or '',
-                    'quantity': '',
-                    'unit_price': float(p.revenue) if p.revenue else '',
-                    'deployment_date': '',
-                    'status': p.status or '',
-                    'customer_id': p.customer_id,
-                })
-        results['products.csv'] = _write_csv('products.csv', prod_cols, prod_rows)
-
-        # ----------------------------------------------------------
-        # Context Graph CSVs — from context_nodes table
-        # ----------------------------------------------------------
-        ctx_nodes = []
-        if account_ids:
-            ctx_nodes = ContextNode.query.filter(
-                ContextNode.account_id.in_(account_ids)
-            ).all()
-
-        # Group nodes by type
-        nodes_by_type = {}
-        for n in ctx_nodes:
-            nodes_by_type.setdefault(n.node_type, []).append(n)
-
-        # ----------------------------------------------------------
-        # 5. stakeholders.csv (node_type=STAKEHOLDER)
-        # ----------------------------------------------------------
-        sh_cols = [
-            'source_account_id', 'stakeholder_name', 'title', 'role', 'influence_score',
-            'email', 'engagement_frequency', 'sentiment', 'department',
-            'is_active', 'source_platform', 'first_observed_at',
-        ]
-        sh_rows = []
-        for n in nodes_by_type.get('STAKEHOLDER', []):
-            props = n.properties or {}
-            sh_rows.append({
-                'source_account_id': n.account_id,
-                'stakeholder_name': n.title or props.get('stakeholder_name', ''),
-                'title': props.get('title', ''),
-                'role': props.get('role', n.node_subtype or ''),
-                'influence_score': props.get('influence_score', ''),
-                'email': props.get('email', ''),
-                'engagement_frequency': props.get('engagement_frequency', ''),
-                'sentiment': props.get('sentiment', ''),
-                'department': props.get('department', ''),
-                'is_active': props.get('is_active', ''),
-                'source_platform': n.source_platform or '',
-                'first_observed_at': n.occurred_at.isoformat() if n.occurred_at else '',
-            })
-        results['stakeholders.csv'] = _write_csv('stakeholders.csv', sh_cols, sh_rows)
-
-        # ----------------------------------------------------------
-        # 6. engagement_events.csv (node_type=SIGNAL, subtype=engagement)
-        # ----------------------------------------------------------
-        ee_cols = [
-            'source_account_id', 'event_date', 'event_type', 'description',
-            'stakeholder_name', 'sentiment_shift', 'channel',
-            'duration_minutes', 'outcome', 'source_platform',
-        ]
-        ee_rows = []
-        for n in nodes_by_type.get('SIGNAL', []):
-            props = n.properties or {}
-            # Include all SIGNAL nodes as engagement events
-            ee_rows.append({
-                'source_account_id': n.account_id,
-                'event_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                'event_type': n.node_subtype or props.get('event_type', ''),
-                'description': n.title or '',
-                'stakeholder_name': props.get('stakeholder_name', ''),
-                'sentiment_shift': props.get('sentiment_shift', ''),
-                'channel': props.get('channel', ''),
-                'duration_minutes': props.get('duration_minutes', ''),
-                'outcome': props.get('outcome', ''),
-                'source_platform': n.source_platform or '',
-            })
-        results['engagement_events.csv'] = _write_csv('engagement_events.csv', ee_cols, ee_rows)
-
-        # ----------------------------------------------------------
-        # 7. account_business_profiles.csv (node_type=ACCOUNT)
-        # ----------------------------------------------------------
-        abp_cols = [
-            'source_account_id', 'arr', 'industry', 'employee_count',
-            'fiscal_year_end', 'tech_stack', 'cloud_provider',
-            'competitive_landscape', 'strategic_initiatives', 'budget_cycle',
-            'profile_date', 'assigned_csm', 'csm_manager', 'executive_sponsor',
-            'mrr', 'primary_champion_name', 'primary_champion_title',
-            'primary_champion_email', 'primary_champion_engagement_score',
-            'last_updated',
-        ]
-        abp_rows = []
-        # If no ACCOUNT nodes, build from the accounts table profile_metadata
-        account_nodes = nodes_by_type.get('ACCOUNT', [])
-        if account_nodes:
-            for n in account_nodes:
-                props = n.properties or {}
-                abp_rows.append({
-                    'source_account_id': n.account_id,
-                    'arr': props.get('arr', ''),
-                    'industry': props.get('industry', ''),
-                    'employee_count': props.get('employee_count', ''),
-                    'fiscal_year_end': props.get('fiscal_year_end', ''),
-                    'tech_stack': props.get('tech_stack', ''),
-                    'cloud_provider': props.get('cloud_provider', ''),
-                    'competitive_landscape': props.get('competitive_landscape', ''),
-                    'strategic_initiatives': props.get('strategic_initiatives', ''),
-                    'budget_cycle': props.get('budget_cycle', ''),
-                    'profile_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                    'assigned_csm': props.get('assigned_csm', ''),
-                    'csm_manager': props.get('csm_manager', ''),
-                    'executive_sponsor': props.get('executive_sponsor', ''),
-                    'mrr': props.get('mrr', ''),
-                    'primary_champion_name': props.get('primary_champion_name', ''),
-                    'primary_champion_title': props.get('primary_champion_title', ''),
-                    'primary_champion_email': props.get('primary_champion_email', ''),
-                    'primary_champion_engagement_score': props.get('primary_champion_engagement_score', ''),
-                    'last_updated': n.updated_at.isoformat() if n.updated_at else '',
-                })
+        if precalc_health is not None:
+            health = precalc_health
+            health_status = precalc_status
         else:
-            # Fallback: build from accounts table profile_metadata
-            for a in accounts:
-                pm = a.profile_metadata or {}
-                abp_rows.append({
-                    'source_account_id': a.account_id,
-                    'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
-                    'industry': a.industry or '',
-                    'employee_count': pm.get('employee_count', ''),
-                    'fiscal_year_end': pm.get('fiscal_year_end', ''),
-                    'tech_stack': pm.get('tech_stack', ''),
-                    'cloud_provider': pm.get('cloud_provider', ''),
-                    'competitive_landscape': pm.get('competitive_landscape', ''),
-                    'strategic_initiatives': pm.get('strategic_initiatives', ''),
-                    'budget_cycle': pm.get('budget_cycle', ''),
-                    'profile_date': '',
-                    'assigned_csm': pm.get('assigned_csm', ''),
-                    'csm_manager': pm.get('csm_manager', ''),
-                    'executive_sponsor': pm.get('executive_sponsor', ''),
-                    'mrr': pm.get('mrr', ''),
-                    'primary_champion_name': pm.get('primary_champion_name', ''),
-                    'primary_champion_title': pm.get('primary_champion_title', ''),
-                    'primary_champion_email': pm.get('primary_champion_email', ''),
-                    'primary_champion_engagement_score': pm.get('primary_champion_engagement_score', ''),
-                    'last_updated': a.updated_at.isoformat() if a.updated_at else '',
-                })
-        results['account_business_profiles.csv'] = _write_csv(
-            'account_business_profiles.csv', abp_cols, abp_rows
-        )
+            health, pillars = calculate_kpi_health(kpi_values, customer_id)
+            health_status = ht.classify(health)
 
-        # ----------------------------------------------------------
-        # 8. outcomes.csv (node_type=OUTCOME)
-        # ----------------------------------------------------------
-        out_cols = [
-            'source_account_id', 'outcome_date', 'title', 'outcome_type', 'revenue_value',
-            'outcome_id', 'evidence', 'confidence', 'related_decision_id',
-            'source_platform',
-        ]
-        out_rows = []
-        for n in nodes_by_type.get('OUTCOME', []):
-            props = n.properties or {}
-            out_rows.append({
-                'source_account_id': n.account_id,
-                'outcome_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                'title': n.title or '',
-                'outcome_type': n.node_subtype or props.get('outcome_type', ''),
-                'revenue_value': float(n.revenue_impact) if n.revenue_impact else '',
-                'outcome_id': n.source_ref or n.source_event_id or '',
-                'evidence': props.get('evidence', ''),
-                'confidence': float(n.confidence) if n.confidence else '',
-                'related_decision_id': props.get('related_decision_id', ''),
-                'source_platform': n.source_platform or '',
-            })
-        results['outcomes.csv'] = _write_csv('outcomes.csv', out_cols, out_rows)
+        days_until_renewal = 180
+        if profile["contract_end_date"]:
+            try:
+                end_date = datetime.strptime(str(profile["contract_end_date"])[:10], "%Y-%m-%d").date()
+                days_until_renewal = (end_date - date.today()).days
+            except (ValueError, TypeError):
+                pass
 
-        # ----------------------------------------------------------
-        # Build response
-        # NOTE: decisions.csv, signal_edges.csv, industry_benchmarks.csv
-        # are auto-generated by process_data() — not exported here.
-        # ----------------------------------------------------------
-        files_created = [
-            {'file': name, 'rows': count, 'path': str(out_path / name)}
-            for name, count in results.items()
-            if count > 0
-        ]
-        total_rows = sum(results.values())
-        all_files = [
-            {'file': name, 'rows': count, 'path': str(out_path / name)}
-            for name, count in results.items()
-        ]
+        renewal = _compute_renewal_stage(days_until_renewal, health_status)
+
+        gpu_util = kpi_values.get("P3-KPI1", 0)
+        capacity_util = kpi_values.get("P5-KPI1", 0)
+        uptime = kpi_values.get("P2-KPI4", 0)
 
         return {
-            'scope': 'customer',
-            'customer_id': customer_id,
-            'customer_name': customer.customer_name,
-            'output_dir': str(out_path),
-            'files_with_data': len(files_created),
-            'total_files': len(all_files),
-            'total_rows': total_rows,
-            'files': all_files,
-            'message': (
-                f"Exported {total_rows} rows across {len(files_created)} files "
-                f"(of {len(all_files)} total) to {out_path}. "
-                f"Re-upload via upload_csv() + process_data(). "
-                f"NOTE: If you cannot access these files (e.g. Claude.ai), "
-                f"use download_customer_csv() instead — it returns CSV content inline."
-            ),
-        }
-
-
-# ===================================================================
-# Tool: download_customer_csv — Return CSV content inline for download
-# ===================================================================
-
-@mcp.tool
-def download_customer_csv(
-    customer_id: int,
-    file_type: str = 'all',
-) -> dict:
-    """Download customer data as CSV content returned inline in the response.
-
-    Unlike export_customer_csvs() which writes to the server filesystem,
-    this tool returns CSV content directly in the response — making it
-    accessible to Claude.ai and other MCP clients that cannot access
-    the server's filesystem.
-
-    No authentication required (onboarding tool).
-
-    Args:
-        customer_id: Customer ID to download data from
-        file_type: Which CSV to download. Options:
-            'all' — returns all 8 CSVs (may be large)
-            'accounts' — accounts.csv
-            'kpi_measurements' — kpi_measurements.csv
-            'signals' — enhanced_qualitative_signals.csv
-            'products' — products.csv
-            'stakeholders' — stakeholders.csv
-            'engagement_events' — engagement_events.csv
-            'profiles' — account_business_profiles.csv
-            'outcomes' — outcomes.csv
-    """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
-
-    with app.app_context():
-        import csv
-        import io
-        from models import (
-            Customer, Account, DC2SKPI, Product,
-            QualitativeSignal, ContextNode,
-        )
-        from extensions import db
-
-        # Validate customer
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            raise ToolError(f"Customer {customer_id} not found.")
-
-        # Load accounts
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        account_ids = [a.account_id for a in accounts]
-
-        # Helper: build CSV string in memory
-        def _csv_string(columns: list, rows: list) -> str:
-            buf = io.StringIO()
-            writer = csv.DictWriter(buf, fieldnames=columns, extrasaction='ignore')
-            writer.writeheader()
-            for row in rows:
-                writer.writerow(row)
-            return buf.getvalue()
-
-        # Map of file_type -> (generator_function)
-        valid_types = [
-            'accounts', 'kpi_measurements', 'signals', 'products',
-            'stakeholders', 'engagement_events', 'profiles', 'outcomes',
-        ]
-
-        if file_type != 'all' and file_type not in valid_types:
-            raise ToolError(
-                f"Invalid file_type '{file_type}'. "
-                f"Valid options: 'all', {', '.join(valid_types)}"
-            )
-
-        requested = valid_types if file_type == 'all' else [file_type]
-        csvs = {}
-
-        # ---- accounts ----
-        if 'accounts' in requested:
-            cols = [
-                'source_account_id', 'customer_id', 'account_name', 'industry', 'region',
-                'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
-                'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid',
-            ]
-            rows = []
-            for a in accounts:
-                pm = a.profile_metadata or {}
-                rows.append({
-                    'source_account_id': a.account_id,
-                    'customer_id': a.customer_id,
-                    'account_name': a.account_name,
-                    'industry': a.industry,
-                    'region': a.region,
-                    'vertical': a.vertical,
-                    'tier': pm.get('tier', ''),
-                    'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
-                    'revenue': float(a.revenue) if a.revenue else '',
-                    'contract_start': pm.get('contract_start', ''),
-                    'contract_end': pm.get('contract_end', ''),
-                    'renewal_date': pm.get('renewal_date', ''),
-                    'csm_name': pm.get('assigned_csm', '') or pm.get('csm_name', ''),
-                    'csm_email': pm.get('csm_email', ''),
-                    'account_status': a.account_status,
-                    'uuid': a.uuid or '',
-                })
-            csvs['accounts.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- kpi_measurements ----
-        if 'kpi_measurements' in requested:
-            cols = [
-                'source_account_id', 'kpi_code', 'measured_at', 'value',
-                'kpi_name', 'pillar', 'target', 'weight', 'unit', 'status',
-            ]
-            rows = []
-            if account_ids:
-                kpis = DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids)).all()
-                for k in kpis:
-                    rows.append({
-                        'source_account_id': k.account_id,
-                        'kpi_code': k.kpi_code,
-                        'measured_at': k.measured_at.isoformat() if k.measured_at else '',
-                        'value': float(k.value),
-                        'kpi_name': '',
-                        'pillar': k.pillar or '',
-                        'target': float(k.target) if k.target else '',
-                        'weight': float(k.weight) if k.weight else '',
-                        'unit': '',
-                        'status': k.status or '',
-                    })
-            csvs['kpi_measurements.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- signals ----
-        if 'signals' in requested:
-            cols = [
-                'source_account_id', 'signal_date', 'signal_type', 'content', 'sentiment',
-                'signal_ref', 'sentiment_score', 'stakeholder_name', 'stakeholder_title',
-                'causal_chain_ref', 'revenue_impact', 'confidence', 'source_platform',
-            ]
-            rows = []
-            if account_ids:
-                signals = QualitativeSignal.query.filter(
-                    QualitativeSignal.account_id.in_(account_ids)
-                ).all()
-                for s in signals:
-                    rows.append({
-                        'source_account_id': s.account_id,
-                        'signal_date': s.signal_date.isoformat() if s.signal_date else '',
-                        'signal_type': s.signal_type or '',
-                        'content': s.content or '',
-                        'sentiment': s.sentiment or '',
-                        'signal_ref': s.signal_id or '',
-                        'sentiment_score': float(s.sentiment_score) if s.sentiment_score else '',
-                        'stakeholder_name': '',
-                        'stakeholder_title': s.stakeholder_title or '',
-                        'causal_chain_ref': '',
-                        'revenue_impact': '',
-                        'confidence': '',
-                        'source_platform': '',
-                    })
-            csvs['enhanced_qualitative_signals.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- products ----
-        if 'products' in requested:
-            cols = [
-                'source_account_id', 'product_name', 'product_category', 'quantity',
-                'unit_price', 'deployment_date', 'status', 'customer_id',
-            ]
-            rows = []
-            if account_ids:
-                products = Product.query.filter(Product.account_id.in_(account_ids)).all()
-                for p in products:
-                    rows.append({
-                        'source_account_id': p.account_id,
-                        'product_name': p.product_name,
-                        'product_category': p.product_type or '',
-                        'quantity': '',
-                        'unit_price': float(p.revenue) if p.revenue else '',
-                        'deployment_date': '',
-                        'status': p.status or '',
-                        'customer_id': p.customer_id,
-                    })
-            csvs['products.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- Context graph CSVs ----
-        ctx_nodes = []
-        if account_ids and any(t in requested for t in ['stakeholders', 'engagement_events', 'profiles', 'outcomes']):
-            ctx_nodes = ContextNode.query.filter(
-                ContextNode.account_id.in_(account_ids)
-            ).all()
-
-        nodes_by_type = {}
-        for n in ctx_nodes:
-            nodes_by_type.setdefault(n.node_type, []).append(n)
-
-        # ---- stakeholders ----
-        if 'stakeholders' in requested:
-            cols = [
-                'source_account_id', 'stakeholder_name', 'title', 'role', 'influence_score',
-                'email', 'engagement_frequency', 'sentiment', 'department',
-                'is_active', 'source_platform', 'first_observed_at',
-            ]
-            rows = []
-            for n in nodes_by_type.get('STAKEHOLDER', []):
-                props = n.properties or {}
-                rows.append({
-                    'source_account_id': n.account_id,
-                    'stakeholder_name': n.title or props.get('stakeholder_name', ''),
-                    'title': props.get('title', ''),
-                    'role': props.get('role', n.node_subtype or ''),
-                    'influence_score': props.get('influence_score', ''),
-                    'email': props.get('email', ''),
-                    'engagement_frequency': props.get('engagement_frequency', ''),
-                    'sentiment': props.get('sentiment', ''),
-                    'department': props.get('department', ''),
-                    'is_active': props.get('is_active', ''),
-                    'source_platform': n.source_platform or '',
-                    'first_observed_at': n.occurred_at.isoformat() if n.occurred_at else '',
-                })
-            csvs['stakeholders.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- engagement_events ----
-        if 'engagement_events' in requested:
-            cols = [
-                'source_account_id', 'event_date', 'event_type', 'description',
-                'stakeholder_name', 'sentiment_shift', 'channel',
-                'duration_minutes', 'outcome', 'source_platform',
-            ]
-            rows = []
-            for n in nodes_by_type.get('SIGNAL', []):
-                props = n.properties or {}
-                rows.append({
-                    'source_account_id': n.account_id,
-                    'event_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                    'event_type': n.node_subtype or props.get('event_type', ''),
-                    'description': n.title or '',
-                    'stakeholder_name': props.get('stakeholder_name', ''),
-                    'sentiment_shift': props.get('sentiment_shift', ''),
-                    'channel': props.get('channel', ''),
-                    'duration_minutes': props.get('duration_minutes', ''),
-                    'outcome': props.get('outcome', ''),
-                    'source_platform': n.source_platform or '',
-                })
-            csvs['engagement_events.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- profiles ----
-        if 'profiles' in requested:
-            cols = [
-                'source_account_id', 'arr', 'industry', 'employee_count',
-                'fiscal_year_end', 'tech_stack', 'cloud_provider',
-                'competitive_landscape', 'strategic_initiatives', 'budget_cycle',
-                'profile_date', 'assigned_csm', 'csm_manager', 'executive_sponsor',
-                'mrr', 'primary_champion_name', 'primary_champion_title',
-                'primary_champion_email', 'primary_champion_engagement_score',
-                'last_updated',
-            ]
-            rows = []
-            account_nodes = nodes_by_type.get('ACCOUNT', [])
-            if account_nodes:
-                for n in account_nodes:
-                    props = n.properties or {}
-                    rows.append({
-                        'source_account_id': n.account_id,
-                        'arr': props.get('arr', ''),
-                        'industry': props.get('industry', ''),
-                        'employee_count': props.get('employee_count', ''),
-                        'fiscal_year_end': props.get('fiscal_year_end', ''),
-                        'tech_stack': props.get('tech_stack', ''),
-                        'cloud_provider': props.get('cloud_provider', ''),
-                        'competitive_landscape': props.get('competitive_landscape', ''),
-                        'strategic_initiatives': props.get('strategic_initiatives', ''),
-                        'budget_cycle': props.get('budget_cycle', ''),
-                        'profile_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                        'assigned_csm': props.get('assigned_csm', ''),
-                        'csm_manager': props.get('csm_manager', ''),
-                        'executive_sponsor': props.get('executive_sponsor', ''),
-                        'mrr': props.get('mrr', ''),
-                        'primary_champion_name': props.get('primary_champion_name', ''),
-                        'primary_champion_title': props.get('primary_champion_title', ''),
-                        'primary_champion_email': props.get('primary_champion_email', ''),
-                        'primary_champion_engagement_score': props.get('primary_champion_engagement_score', ''),
-                        'last_updated': n.updated_at.isoformat() if n.updated_at else '',
-                    })
-            else:
-                for a in accounts:
-                    pm = a.profile_metadata or {}
-                    rows.append({
-                        'source_account_id': a.account_id,
-                        'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
-                        'industry': a.industry or '',
-                        'employee_count': pm.get('employee_count', ''),
-                        'fiscal_year_end': pm.get('fiscal_year_end', ''),
-                        'tech_stack': pm.get('tech_stack', ''),
-                        'cloud_provider': pm.get('cloud_provider', ''),
-                        'competitive_landscape': pm.get('competitive_landscape', ''),
-                        'strategic_initiatives': pm.get('strategic_initiatives', ''),
-                        'budget_cycle': pm.get('budget_cycle', ''),
-                        'profile_date': '',
-                        'assigned_csm': pm.get('assigned_csm', ''),
-                        'csm_manager': pm.get('csm_manager', ''),
-                        'executive_sponsor': pm.get('executive_sponsor', ''),
-                        'mrr': pm.get('mrr', ''),
-                        'primary_champion_name': pm.get('primary_champion_name', ''),
-                        'primary_champion_title': pm.get('primary_champion_title', ''),
-                        'primary_champion_email': pm.get('primary_champion_email', ''),
-                        'primary_champion_engagement_score': pm.get('primary_champion_engagement_score', ''),
-                        'last_updated': a.updated_at.isoformat() if a.updated_at else '',
-                    })
-            csvs['account_business_profiles.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # ---- outcomes ----
-        if 'outcomes' in requested:
-            cols = [
-                'source_account_id', 'outcome_date', 'title', 'outcome_type', 'revenue_value',
-                'outcome_id', 'evidence', 'confidence', 'related_decision_id',
-                'source_platform',
-            ]
-            rows = []
-            for n in nodes_by_type.get('OUTCOME', []):
-                props = n.properties or {}
-                rows.append({
-                    'source_account_id': n.account_id,
-                    'outcome_date': n.occurred_at.isoformat() if n.occurred_at else '',
-                    'title': n.title or '',
-                    'outcome_type': n.node_subtype or props.get('outcome_type', ''),
-                    'revenue_value': float(n.revenue_impact) if n.revenue_impact else '',
-                    'outcome_id': n.source_ref or n.source_event_id or '',
-                    'evidence': props.get('evidence', ''),
-                    'confidence': float(n.confidence) if n.confidence else '',
-                    'related_decision_id': props.get('related_decision_id', ''),
-                    'source_platform': n.source_platform or '',
-                })
-            csvs['outcomes.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
-
-        # Build response
-        total_rows = sum(f['rows'] for f in csvs.values())
-        files_summary = [
-            {'file': name, 'rows': info['rows']}
-            for name, info in csvs.items()
-        ]
-
-        result = {
-            'scope': 'customer',
-            'customer_id': customer_id,
-            'customer_name': customer.customer_name,
-            'file_type': file_type,
-            'total_files': len(csvs),
-            'total_rows': total_rows,
-            'files': files_summary,
-            'message': (
-                f"Downloaded {total_rows} rows across {len(csvs)} CSV(s) for "
-                f"{customer.customer_name}. CSV content is in the 'csv_data' field. "
-                f"Save each file using the filename as key."
-            ),
-            'csv_data': {
-                name: info['content']
-                for name, info in csvs.items()
+            "scope": "account",
+            "source": "salesforce_simulated",
+            "account_id": account_id,
+            "account_name": account.account_name,
+            "crm_id": f"SF-{account_id}",
+            "industry": profile["industry"] or getattr(account, 'industry', ''),
+            "region": profile["region"] or getattr(account, 'region', ''),
+            "contract": {
+                "start_date": profile["contract_start_date"],
+                "end_date": profile["contract_end_date"],
+                "renewal_date": profile["renewal_date"],
+                "days_until_renewal": days_until_renewal,
+                "arr": arr,
+                "mrr": round(arr / 12, 2) if arr else 0,
+            },
+            "renewal_opportunity": {
+                "stage": renewal["stage"],
+                "probability": renewal["probability"],
+                "amount": arr,
+                "forecast_category": renewal["forecast_category"],
+            },
+            "champion": {
+                "name": profile["champion_name"],
+                "title": profile["champion_title"],
+                "email": profile["champion_email"],
+                "status": profile["champion_status"],
+                "influence_level": profile["champion_influence_level"],
+            },
+            "executive_sponsor": profile["executive_sponsor"],
+            "assigned_csm": profile["assigned_csm"],
+            "account_tier": profile["tier"],
+            "health_score": round(health, 1),
+            "health_status": health_status,
+            "usage_summary": {
+                "gpu_utilization_pct": round(gpu_util, 1),
+                "capacity_utilization_pct": round(capacity_util, 1),
+                "system_uptime_pct": round(uptime, 1),
             },
         }
 
-        # For single file, also put content at top level for easy access
-        if file_type != 'all' and len(csvs) == 1:
-            fname = list(csvs.keys())[0]
-            result['filename'] = fname
-            result['csv_content'] = csvs[fname]['content']
 
+# ===================================================================
+# Tool: get_support_tickets
+# ===================================================================
+
+@mcp.tool
+def get_support_tickets(customer_id: int, account_id: int) -> dict:
+    """Pull support ticket summary for an account — open tickets, SLA compliance, escalations, risk indicators. Simulates ServiceNow integration; derives ticket data from operational KPIs and qualitative signals.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: The account to pull ticket data for
+    """
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import QualitativeSignal
+        vertical = _resolve_customer_vertical(customer_id)
+        _, _get_trailing_kpi_values, _ = _get_health_functions(vertical)
+        import math
+
+        account = _validate_account_ownership(customer_id, account_id)
+
+        kpi_values = _get_trailing_kpi_values(account_id)
+
+        critical_incidents = kpi_values.get("P2-KPI3", 0)
+        mttr_hours = kpi_values.get("P2-KPI7", 4.0)
+        uptime_pct = kpi_values.get("P2-KPI4", 99.9)
+        mtbf_hours = kpi_values.get("P2-KPI2", 720)
+        rma_rate = kpi_values.get("P2-KPI1", 2.0)
+        thermal_score = kpi_values.get("P2-KPI5", 85)
+        preventive_maint = kpi_values.get("P2-KPI8", 90)
+
+        open_tickets = max(0, math.ceil(critical_incidents))
+        resolved_last_30d = max(0, open_tickets + int(critical_incidents * 1.5))
+
+        resolution_target_hours = 4.0
+        resolution_sla_met = mttr_hours <= resolution_target_hours
+        sla_breaches = max(0, math.ceil((mttr_hours - resolution_target_hours) * 2)) if not resolution_sla_met else 0
+
+        recent_signals = QualitativeSignal.query.filter(
+            QualitativeSignal.account_id == str(account_id),
+            QualitativeSignal.sentiment == 'negative',
+        ).order_by(QualitativeSignal.signal_date.desc()).limit(10).all()
+
+        escalation_entries = []
+        for sig in recent_signals[:3]:
+            escalation_entries.append({
+                "date": sig.signal_date.strftime('%Y-%m-%d') if sig.signal_date else "",
+                "summary": (getattr(sig, 'content', '') or "")[:200],
+                "stakeholder": getattr(sig, 'stakeholder_level', '') or "",
+            })
+
+        return {
+            "scope": "account",
+            "source": "servicenow_simulated",
+            "account_id": account_id,
+            "account_name": account.account_name,
+            "ticket_summary": {
+                "open_tickets": open_tickets,
+                "resolved_last_30d": resolved_last_30d,
+                "critical_incidents_30d": round(critical_incidents, 1),
+                "avg_resolution_hours": round(mttr_hours, 1),
+                "mtbf_hours": round(mtbf_hours, 1),
+                "system_uptime_pct": round(uptime_pct, 2),
+            },
+            "sla_compliance": {
+                "overall_pct": round(uptime_pct, 2),
+                "response_sla_met": uptime_pct >= 99.5,
+                "resolution_sla_met": resolution_sla_met,
+                "resolution_target_hours": resolution_target_hours,
+                "breaches_last_30d": sla_breaches,
+            },
+            "escalations": {
+                "count": len(recent_signals),
+                "recent": escalation_entries,
+            },
+            "risk_indicators": {
+                "rma_rate_pct": round(rma_rate, 2),
+                "preventive_maintenance_compliance_pct": round(preventive_maint, 1),
+                "thermal_management_score": round(thermal_score, 1),
+            },
+        }
+
+
+# ===================================================================
+# Tool: get_customer_feedback
+# ===================================================================
+
+@mcp.tool
+def get_customer_feedback(customer_id: int, account_id: int) -> dict:
+    """Pull customer feedback for an account — NPS trend, CSAT indicators, VoC summaries, CSM relationship assessment. Simulates survey system integration; derives sentiment from qualitative signals and health data.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: The account to pull feedback for
+    """
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import QualitativeSignal
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+        import utils.health_thresholds as ht
+
+        account = _validate_account_ownership(customer_id, account_id)
+
+        kpi_values = _get_trailing_kpi_values(account_id)
+
+        precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account_id)
+        if precalc_health is not None:
+            health = precalc_health
+            health_status = precalc_status
+            pillars = precalc_pillars or {}
+        else:
+            health, pillars = calculate_kpi_health(kpi_values, customer_id)
+            health_status = ht.classify(health)
+
+        signals = QualitativeSignal.query.filter(
+            QualitativeSignal.account_id == str(account_id),
+        ).order_by(QualitativeSignal.signal_date.desc()).limit(20).all()
+
+        partner_nps = kpi_values.get("P4-KPI6")
+        if partner_nps is not None and partner_nps > 0:
+            nps_data = {"score": int(partner_nps), "trend": "stable", "source": "kpi_data", "response_count": 1}
+        else:
+            nps_data = _derive_nps_from_signals(signals)
+            nps_data["source"] = "signal_derived"
+
+        sentiment_scores = [
+            s.sentiment_score for s in signals
+            if hasattr(s, 'sentiment_score') and s.sentiment_score is not None
+        ]
+        avg_sentiment = round(sum(sentiment_scores) / len(sentiment_scores), 2) if sentiment_scores else 0.0
+        csat_score = round(max(1.0, min(5.0, (avg_sentiment + 1) * 2 + 1)), 1)
+
+        positive_count = sum(1 for s in signals if getattr(s, 'sentiment', '') == 'positive')
+        negative_count = sum(1 for s in signals if getattr(s, 'sentiment', '') == 'negative')
+        neutral_count = len(signals) - positive_count - negative_count
+
+        voc_entries = []
+        for sig in signals[:5]:
+            text = getattr(sig, 'content', '') or ''
+            if text and len(text) > 20:
+                voc_entries.append({
+                    "date": sig.signal_date.strftime('%Y-%m-%d') if sig.signal_date else "",
+                    "type": getattr(sig, 'signal_type', 'general'),
+                    "summary": text[:300],
+                    "sentiment": getattr(sig, 'sentiment', 'neutral'),
+                })
+            if len(voc_entries) >= 3:
+                break
+
+        relationship_strength = min(5, max(1, int(health / 20)))
+        expansion_kpi = kpi_values.get("P5-KPI7", 0)
+        champion_engagement = kpi_values.get("P5-KPI8", kpi_values.get("P4-KPI1", 0))
+
+        return {
+            "scope": "account",
+            "source": "survey_simulated",
+            "account_id": account_id,
+            "account_name": account.account_name,
+            "nps": nps_data,
+            "csat": {
+                "score": csat_score,
+                "avg_sentiment_score": avg_sentiment,
+            },
+            "voice_of_customer": voc_entries,
+            "csm_assessment": {
+                "relationship_strength": relationship_strength,
+                "churn_risk": health_status,
+                "expansion_potential": f"{expansion_kpi:.0f}%" if expansion_kpi else "Unknown",
+                "champion_engagement_score": round(champion_engagement, 1),
+                "health_score": round(health, 1),
+                "recommended_focus": min(pillars, key=pillars.get) if pillars else "Unknown",
+            },
+            "sentiment_distribution": {
+                "positive": positive_count,
+                "neutral": neutral_count,
+                "negative": negative_count,
+                "total_signals": len(signals),
+            },
+        }
+
+
+# ===================================================================
+# Tool: get_csm_daily_actions
+# ===================================================================
+
+@mcp.tool
+def get_csm_daily_actions(customer_id: int) -> dict:
+    """Get top-10 prioritized CSM actions across all accounts (portfolio-level). Each action includes the linked playbook, urgency level, estimated effort hours, and projected dollar impact via Power-of-1 ROI metric correlation.
+
+    Use for "What should I do today?" or "Morning briefing" questions.
+    Priority formula: (impact × 0.6 × arr_weight) - (effort × 0.4)
+
+    Args:
+        customer_id: The customer (tenant) ID — actions span ALL accounts for this tenant
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account
+        from datetime import datetime
+        import utils.health_thresholds as ht
+
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+        PLAYBOOK_CONFIG, should_trigger_playbook = _get_playbook_config(vertical)
+        KPI_DEFS = _get_kpi_definitions(vertical)
+
+        try:
+            if vertical in ('saas_premium', 'saas'):
+                from verticals.saas_premium.api_routes import (
+                    _normalize_kpi_code_for_health,
+                    _compute_impact_score, _compute_effort_score,
+                    _determine_urgency, _get_roi_context,
+                )
+            else:
+                raise ImportError("use dc2_s")
+        except (ImportError, AttributeError):
+            from verticals.dc2_s.api_routes import (
+                _normalize_kpi_code_for_health,
+                _compute_impact_score, _compute_effort_score,
+                _determine_urgency, _get_roi_context,
+            )
+
+        DC2S_KPIS = KPI_DEFS
+
+        accounts = Account.query.filter(
+            Account.customer_id == int(customer_id),
+        ).all()
+
+        if not accounts:
+            return {
+                "scope": "portfolio",
+                "date": datetime.utcnow().strftime('%Y-%m-%d'),
+                "actions": [],
+                "summary": {
+                    "total_actions": 0, "critical_count": 0,
+                    "high_count": 0, "opportunity_count": 0,
+                    "total_estimated_hours": 0,
+                    "total_roi_projected_impact": 0,
+                },
+            }
+
+        all_actions = []
+
+        for account in accounts:
+            precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account.account_id)
+            trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
+
+            if precalc_health is not None:
+                overall_health = precalc_health
+                pillar_averages = precalc_pillars or {}
+            else:
+                overall_health, pillar_averages = calculate_kpi_health(
+                    trailing_kpis, customer_id=customer_id
+                )
+
+            normalized_kpis = {}
+            for code, val in trailing_kpis.items():
+                norm = _normalize_kpi_code_for_health(code)
+                if norm:
+                    normalized_kpis[norm] = val
+            normalized_kpis['OVERALL_HEALTH'] = overall_health
+
+            arr = _get_account_arr(account)
+            if arr > 10_000_000:
+                arr_weight = 1.5
+            elif arr > 5_000_000:
+                arr_weight = 1.3
+            elif arr > 2_000_000:
+                arr_weight = 1.1
+            elif arr > 0:
+                arr_weight = 1.0
+            else:
+                arr_weight = 0.8
+
+            h_cls = ht.classify(overall_health)
+            churn_prob = 80 if h_cls == 'critical' else (40 if h_cls == 'at_risk' else 15)
+            expansion_prob_val = 75 if h_cls == 'healthy' else (30 if h_cls == 'at_risk' else 5)
+
+            exp_kpi = normalized_kpis.get('P5-KPI7')
+            if exp_kpi is not None:
+                expansion_prob_val = max(expansion_prob_val, exp_kpi)
+
+            for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+                if should_trigger_playbook(pb_id, normalized_kpis):
+                    impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                    effort = _compute_effort_score(pb_cfg)
+                    priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+
+                    total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+
+                    trigger_details = []
+                    for tk in pb_cfg.get('trigger_kpis', []):
+                        if tk in normalized_kpis:
+                            cond = pb_cfg.get('trigger_conditions', {}).get(tk, {})
+                            threshold = cond.get('value', '?')
+                            kpi_name = DC2S_KPIS.get(tk, {}).get('name', tk)
+                            trigger_details.append(f"{kpi_name}: {normalized_kpis[tk]:.1f} (threshold {threshold})")
+
+                    description = '; '.join(trigger_details) if trigger_details else pb_cfg.get('estimated_impact', '')
+
+                    roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                    all_actions.append({
+                        'account_id': account.account_id,
+                        'account_name': account.account_name,
+                        'action_title': f"Start {pb_cfg['name']} Playbook",
+                        'action_description': description,
+                        'action_type': 'playbook',
+                        'related_playbook_id': pb_id,
+                        'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                        'impact_score': impact,
+                        'effort_score': effort,
+                        'priority_index': priority_index,
+                        'account_health': round(overall_health, 1),
+                        'estimated_hours': total_hours,
+                        'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                        **roi_ctx,
+                    })
+
+            if overall_health < 80:
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 20
+                priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                roi_ctx = _get_roi_context('follow_up', None, arr)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': 'Health Check Follow-up',
+                    'action_description': f'Health score at {overall_health:.0f}. Schedule intervention call.',
+                    'action_type': 'follow_up',
+                    'related_playbook_id': None,
+                    'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                    'impact_score': impact, 'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 2,
+                    'estimated_duration_display': '1 day',
+                    **roi_ctx,
+                })
+
+            qbr_val = normalized_kpis.get('P4-KPI3')
+            if qbr_val is not None and qbr_val < 3:
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 25
+                priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                roi_ctx = _get_roi_context('qbr', None, arr)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': 'Schedule QBR',
+                    'action_description': f'QBR frequency at {qbr_val:.0f}/yr (target 3+). Schedule next review.',
+                    'action_type': 'qbr',
+                    'related_playbook_id': None,
+                    'urgency': 'high',
+                    'impact_score': impact, 'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 4,
+                    'estimated_duration_display': '1-2 days',
+                    **roi_ctx,
+                })
+
+            if exp_kpi is not None and exp_kpi > 70:
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 30
+                priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                roi_ctx = _get_roi_context('expansion', None, arr)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': 'Expansion Opportunity Call',
+                    'action_description': f'Expansion probability at {exp_kpi:.0f}%. Schedule capacity planning discussion.',
+                    'action_type': 'expansion',
+                    'related_playbook_id': None,
+                    'urgency': 'opportunity',
+                    'impact_score': impact, 'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 3,
+                    'estimated_duration_display': '1 day',
+                    **roi_ctx,
+                })
+
+        all_actions.sort(key=lambda a: a['priority_index'], reverse=True)
+        top_actions = all_actions[:10]
+
+        for i, action in enumerate(top_actions, 1):
+            action['rank'] = i
+            action['id'] = f"act-{i:03d}"
+
+        urgency_counts = {'critical': 0, 'high': 0, 'opportunity': 0, 'medium': 0}
+        total_hours = 0
+        for a in top_actions:
+            urg = a.get('urgency', 'medium')
+            urgency_counts[urg] = urgency_counts.get(urg, 0) + 1
+            total_hours += a.get('estimated_hours', 0)
+
+        total_roi_impact = sum(a.get('roi_projected_impact', 0) for a in top_actions)
+        roi_metrics_involved = list({a['roi_metric_name'] for a in top_actions if a.get('roi_metric_name')})
+
+        return {
+            "scope": "portfolio",
+            "date": datetime.utcnow().strftime('%Y-%m-%d'),
+            "actions": top_actions,
+            "summary": {
+                "total_actions": len(top_actions),
+                "critical_count": urgency_counts.get('critical', 0),
+                "high_count": urgency_counts.get('high', 0),
+                "opportunity_count": urgency_counts.get('opportunity', 0),
+                "total_estimated_hours": total_hours,
+                "total_roi_projected_impact": total_roi_impact,
+                "roi_metrics_involved": roi_metrics_involved,
+            },
+        }
+
+
+# ===================================================================
+# Tool: partner_portal
+# ===================================================================
+
+@mcp.tool
+def partner_portal(
+    customer_id: int,
+    partner_id: int,
+    action: str = "scorecard",
+    data_type: str = None,
+    csv_content: str = None,
+    metric_id: str = "partner_nps",
+) -> dict:
+    """Partner-scoped portal for P4 (Channel & Partner Health) operations.
+
+    Consolidates all partner interactions into one tool. All responses are
+    scoped to P4 pillar only — no revenue, ARR, or other pillar data exposed.
+
+    Actions:
+      - scorecard: P4 health scores and KPI breakdown per account
+      - submit_data: Upload partner engagement data (requires data_type + csv_content)
+      - actions: P4 playbook recommendations for partner improvement
+      - benchmarks: Anonymized P4 performance vs portfolio average
+      - impact: Power-of-1 analysis for a P4 metric (uses metric_id param)
+
+    Args:
+        customer_id: The customer (tenant) ID
+        partner_id: The partner ID (used for scoping)
+        action: One of: scorecard, submit_data, actions, benchmarks, impact
+        data_type: For submit_data only: 'engagement_events', 'stakeholders', or 'signals'
+        csv_content: For submit_data only: raw CSV content string
+        metric_id: For impact only: partner_engagement, var_performance, qbr_frequency,
+                   channel_conflict, co_selling, partner_nps (default)
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+    valid_actions = ('scorecard', 'submit_data', 'actions', 'benchmarks', 'impact')
+    if action not in valid_actions:
+        raise ToolError(f"Invalid action '{action}'. Use one of: {', '.join(valid_actions)}")
+
+    if action != 'submit_data':
+        _require_auth(customer_id)
+
+    def _get_p4_score(acct_id):
+        from models import PillarScore, HealthScore
+        ps = PillarScore.query.filter_by(account_id=acct_id, pillar_code='P4') \
+            .order_by(PillarScore.measurement_month.desc()).first()
+        if ps and ps.pillar_score is not None:
+            return float(ps.pillar_score)
+        hs = HealthScore.query.filter_by(account_id=acct_id) \
+            .order_by(HealthScore.measurement_month.desc()).first()
+        if hs and hs.contributing_pillars:
+            return float(hs.contributing_pillars.get('P4', 0))
+        return None
+
+    def _get_p4_kpis(acct_id):
+        from models import DC2SKPI
+        kpi_rows = DC2SKPI.query.filter(
+            DC2SKPI.account_id == acct_id, DC2SKPI.kpi_code.like('P4-%'),
+        ).order_by(DC2SKPI.measured_at.desc()).all()
+        result, seen = {}, set()
+        for k in kpi_rows:
+            if k.kpi_code not in seen:
+                result[k.kpi_code] = round(float(k.value), 2)
+                seen.add(k.kpi_code)
         return result
 
+    with app.app_context():
+        from models import Account
+        import utils.health_thresholds as ht
 
-# ===================================================================
-# Entrypoint
-# ===================================================================
-if __name__ == "__main__":
-    common.run_server(mcp, default_port=8004)
+        if action == 'submit_data':
+            if not data_type or not csv_content:
+                raise ToolError("submit_data requires both data_type and csv_content parameters.")
+            TYPE_MAP = {
+                'engagement_events': 'engagement_events.csv',
+                'stakeholders': 'stakeholders.csv',
+                'signals': 'enhanced_qualitative_signals.csv',
+            }
+            ft = TYPE_MAP.get(data_type)
+            if not ft:
+                raise ToolError(f"Invalid data_type '{data_type}'. Allowed: {sorted(TYPE_MAP.keys())}")
+
+            import json as _json, csv as _csv, io as _io
+            schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
+            with open(schemas_path, 'r') as f:
+                schemas = _json.load(f)
+            schema = None
+            for mk in ('regular_model', 'context_graph_model'):
+                if ft in schemas.get(mk, {}).get('files', {}):
+                    schema = schemas[mk]['files'][ft]
+                    break
+            if not schema:
+                raise ToolError(f"Schema not found for {ft}.")
+
+            required = set(schema.get('required_columns', []))
+            reader = _csv.DictReader(_io.StringIO(csv_content))
+            headers = set(reader.fieldnames or [])
+            rows = list(reader)
+            missing = required - headers
+            if missing:
+                return {'scope': 'partner', 'status': 'validation_failed', 'errors': [f"Missing: {sorted(missing)}"]}
+            if not rows:
+                return {'scope': 'partner', 'status': 'validation_failed', 'errors': ['No data rows.']}
+
+            from models import Customer
+            from extensions import db
+            from pathlib import Path
+            customer = db.session.get(Customer, int(customer_id))
+            if not customer:
+                raise ToolError(f"Customer {customer_id} not found.")
+            vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+            data_dir = Path(__file__).parent.parent / 'verticals' / f'customer{customer_id}-{vertical}' / 'data'
+            data_dir.mkdir(parents=True, exist_ok=True)
+            output = _io.StringIO()
+            all_cols = list(headers) + (['partner_id'] if 'partner_id' not in headers else [])
+            writer = _csv.DictWriter(output, fieldnames=all_cols, extrasaction='ignore')
+            writer.writeheader()
+            for row in rows:
+                row['partner_id'] = str(partner_id)
+                writer.writerow(row)
+            (data_dir / ft).write_text(output.getvalue(), encoding='utf-8')
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'submit_data', 'status': 'accepted', 'rows_accepted': len(rows),
+                    'message': f"Accepted {len(rows)} rows. Use process_data() to ingest."}
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        if not accounts:
+            raise ToolError(f"No accounts found for customer {customer_id}.")
+
+        if action == 'scorecard':
+            scorecard = []
+            for acct in accounts:
+                p4 = _get_p4_score(acct.account_id)
+                scorecard.append({
+                    'account_id': acct.account_id, 'account_name': acct.account_name,
+                    'p4_score': round(p4, 1) if p4 is not None else None,
+                    'p4_status': ht.classify(p4) if p4 is not None else 'unknown',
+                    'p4_kpis': _get_p4_kpis(acct.account_id),
+                })
+            avg = [s['p4_score'] for s in scorecard if s['p4_score'] is not None]
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'scorecard', 'account_count': len(scorecard),
+                    'avg_p4_score': round(sum(avg) / len(avg), 1) if avg else None,
+                    'accounts': scorecard}
+
+        elif action == 'actions':
+            _ensure_registry()
+            from agent_tool_registry import get_tool_registry
+            vertical = _resolve_customer_vertical(customer_id)
+            _, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+            registry = get_tool_registry()
+            partner_actions = []
+            for acct in accounts:
+                kpi_vals = _get_trailing_kpi_values(acct.account_id)
+                health, _, _ = get_precalculated_scores(acct.account_id)
+                try:
+                    res = registry.invoke("playbook_recommend", account_id=acct.account_id,
+                                          customer_id=customer_id, health_score=round(health or 0, 1), kpi_values=kpi_vals)
+                    if res.success and res.result:
+                        for pb in res.result.get('playbooks', []):
+                            if pb.get('trigger_pillar') == 'P4' or pb.get('playbook_id') in ('PB-04',):
+                                partner_actions.append({
+                                    'account_id': acct.account_id, 'account_name': acct.account_name,
+                                    'action': pb.get('name', ''), 'urgency': pb.get('urgency', 'medium'),
+                                    'effort_hours': pb.get('effort_hours', 0),
+                                })
+                except Exception:
+                    pass
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'actions', 'total_actions': len(partner_actions), 'actions': partner_actions}
+
+        elif action == 'benchmarks':
+            all_p4, kpi_totals = [], {}
+            for acct in accounts:
+                p4 = _get_p4_score(acct.account_id)
+                if p4 is not None:
+                    all_p4.append(p4)
+                for code, val in _get_p4_kpis(acct.account_id).items():
+                    kpi_totals.setdefault(code, []).append(val)
+            avg = round(sum(all_p4) / len(all_p4), 1) if all_p4 else None
+            kpi_avgs = {c: round(sum(v) / len(v), 2) for c, v in kpi_totals.items() if v}
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'benchmarks', 'partner_p4_avg': avg, 'portfolio_p4_avg': avg,
+                    'top_kpi': max(kpi_avgs, key=kpi_avgs.get) if kpi_avgs else None,
+                    'weakest_kpi': min(kpi_avgs, key=kpi_avgs.get) if kpi_avgs else None,
+                    'kpi_averages': kpi_avgs, 'accounts_with_p4_data': len(all_p4)}
+
+        elif action == 'impact':
+            P4_MAP = {'partner_engagement': 'P4-KPI1', 'var_performance': 'P4-KPI2',
+                      'qbr_frequency': 'P4-KPI3', 'channel_conflict': 'P4-KPI4',
+                      'co_selling': 'P4-KPI5', 'partner_nps': 'P4-KPI6'}
+            if metric_id not in P4_MAP:
+                raise ToolError(f"Unknown metric '{metric_id}'. Available: {sorted(P4_MAP.keys())}")
+            from models import DC2SKPI
+            kpi_code = P4_MAP[metric_id]
+            kpi_vals = []
+            for acct in accounts:
+                row = DC2SKPI.query.filter(DC2SKPI.account_id == acct.account_id,
+                                           DC2SKPI.kpi_code == kpi_code) \
+                    .order_by(DC2SKPI.measured_at.desc()).first()
+                if row:
+                    kpi_vals.append(float(row.value))
+            current = round(sum(kpi_vals) / len(kpi_vals), 2) if kpi_vals else None
+            arr = sum(_get_account_arr(a) for a in accounts)
+            impact = round(arr * 0.003, 2) if arr else None
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'impact', 'metric': metric_id, 'kpi_code': kpi_code,
+                    'current_value': current, 'improved_value': round(current * 1.01, 2) if current else None,
+                    'annual_revenue_impact': impact}

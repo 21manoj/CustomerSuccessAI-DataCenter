@@ -1,43 +1,67 @@
 #!/usr/bin/env python3
 """
-CS Pulse MCP — Onboarding Server (port 8003).
+CS Pulse MCP — Onboarding Tools (frictionless auth).
 
-Exposes 13 onboarding/setup tools for customer creation, KPI configuration,
-CSV upload, data processing, wizard triggering, and onboarding completion.
+11 tools moved from cs_pulse_mcp_server.py:
+  - list_verticals
+  - get_csv_templates
+  - create_customer
+  - configure_customer_kpis
+  - enable_features
+  - upload_csv
+  - process_data  (delegates to _process_data_impl)
+  - trigger_wizard
+  - complete_onboarding
+  - clone_customer
+  - download_customer_csv
 
-All tools use frictionless auth (no API key required).
+Plus the _process_data_impl function (single source of truth for data processing).
 
-Usage:
-  # stdio (default)
-  python backend/mcp_server/cs_pulse_onboarding.py
-
-  # Streamable HTTP
-  python backend/mcp_server/cs_pulse_onboarding.py http
+All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
 
 import os
-import sys
 
-# Ensure backend is on the Python path
-_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _backend_dir not in sys.path:
-    sys.path.insert(0, _backend_dir)
-
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-from mcp_server import common
-
-# ---------------------------------------------------------------------------
-# Server instance
-# ---------------------------------------------------------------------------
-mcp = FastMCP(
-    "CS Pulse Onboarding",
-    instructions="CS Pulse customer onboarding — create customers, configure KPIs, upload CSVs, process data, run wizards.",
+from cs_pulse_mcp_server import (
+    mcp,
+    _check_mcp_enabled,
+    _get_flask_app,
+    _get_account_arr,
+    _get_health_functions,
+    _get_kpi_definitions,
+    _get_dc2s_pillar_labels,
+    _resolve_customer_vertical,
+    _backend_dir,
+    ToolError,
 )
 
 
 # ===================================================================
-# Discovery Phase (read-only, no auth)
+# Onboarding tool set (used by auth.py for frictionless auth)
+# ===================================================================
+
+ONBOARDING_TOOLS = {
+    'list_verticals',
+    'get_csv_templates',
+    'create_customer',
+    'configure_customer_kpis',
+    'enable_features',
+    'upload_csv',
+    'process_data',
+    'trigger_wizard',
+    'complete_onboarding',
+    'clone_customer',
+    'download_customer_csv',
+}
+
+
+def _is_onboarding_tool(name: str) -> bool:
+    """Return True if the tool name is in the frictionless onboarding set."""
+    return name in ONBOARDING_TOOLS
+
+
+# ===================================================================
+# Tool: list_verticals
 # ===================================================================
 
 @mcp.tool
@@ -48,15 +72,12 @@ def list_verticals() -> dict:
     Returns each vertical with its description, total KPI count,
     and the number of config type templates available.
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
-        # Build vertical catalog from kpi_definitions (always available)
-        # VerticalTemplate model is optional — used when DB templates exist.
         verticals: dict = {}
 
-        # Try DB-backed VerticalTemplate if available
         try:
             from models import VerticalTemplate
             from extensions import db
@@ -84,12 +105,11 @@ def list_verticals() -> dict:
                 verticals[vertical]['config_types'].append(config_type)
                 verticals[vertical]['config_type_count'] += 1
         except (ImportError, Exception):
-            pass  # VerticalTemplate not available yet — use fallback below
+            pass
 
-        # Enrich with KPI count from kpi_definitions if available
         for v_key, v_info in verticals.items():
             try:
-                kpi_defs = common.get_kpi_definitions(v_key)
+                kpi_defs = _get_kpi_definitions(v_key)
                 v_info['kpi_count'] = len(kpi_defs)
             except Exception:
                 pass
@@ -98,7 +118,6 @@ def list_verticals() -> dict:
             elif v_key in ('saas_premium', 'saas'):
                 v_info['description'] = 'SaaS Premium vertical — product adoption, operational resilience, growth efficiency, partner ecosystem, strategic value'
 
-        # Fallback: if no DB templates, return known verticals from kpi_definitions
         if not verticals:
             known_verticals = {
                 'dc2_s': ('Data Center Infrastructure vertical', 38),
@@ -106,7 +125,7 @@ def list_verticals() -> dict:
             }
             for v_slug, (v_desc, v_default_count) in known_verticals.items():
                 try:
-                    kpi_defs = common.get_kpi_definitions(v_slug)
+                    kpi_defs = _get_kpi_definitions(v_slug)
                     kpi_count = len(kpi_defs)
                 except Exception:
                     kpi_count = v_default_count
@@ -118,6 +137,37 @@ def list_verticals() -> dict:
                     'description': v_desc,
                 }
 
+        try:
+            from models import Customer, Account
+
+            for v_slug, v_info in verticals.items():
+                ref_customer = None
+                try:
+                    ref_customer = Customer.query.filter_by(
+                        is_reference=True,
+                        reference_for=v_slug,
+                    ).first()
+                except Exception:
+                    pass
+
+                if not ref_customer:
+                    ref_customer = Customer.query.filter_by(vertical=v_slug).first()
+
+                if ref_customer:
+                    acct_count = Account.query.filter_by(
+                        customer_id=ref_customer.customer_id,
+                    ).count()
+                    v_info['reference_customer'] = {
+                        'customer_id': ref_customer.customer_id,
+                        'name': ref_customer.customer_name,
+                        'account_count': acct_count,
+                    }
+                else:
+                    v_info['reference_customer'] = None
+        except Exception:
+            for v_info in verticals.values():
+                v_info['reference_customer'] = None
+
         return {
             'scope': 'platform',
             'total_verticals': len(verticals),
@@ -125,85 +175,9 @@ def list_verticals() -> dict:
         }
 
 
-@mcp.tool
-def get_reference_customer(vertical: str) -> dict:
-    """Get the reference/demo customer for a vertical.
-
-    Discovery tool — no authentication required.
-    Returns the reference customer's ID, name, account count, and health summary.
-    Reference customers are pre-seeded demo tenants that showcase the platform.
-
-    Args:
-        vertical: The vertical slug (e.g. 'dc2_s')
-    """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
-
-    with app.app_context():
-        from models import Customer, Account
-        import utils.health_thresholds as ht
-
-        customer = None
-
-        # Try DB columns if they exist (is_reference, reference_for)
-        try:
-            customer = Customer.query.filter_by(
-                is_reference=True,
-                reference_for=vertical,
-            ).first()
-        except Exception:
-            pass  # Columns not available yet
-
-        if not customer:
-            # Fallback: find any customer tagged with the vertical
-            customer = Customer.query.filter_by(vertical=vertical).first()
-            if not customer:
-                raise ToolError(
-                    f"No reference customer found for vertical '{vertical}'. "
-                    f"Available verticals can be discovered via list_verticals()."
-                )
-
-        # Use the vertical parameter to resolve health functions
-        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = common.get_health_functions(vertical)
-
-        accounts = Account.query.filter_by(
-            customer_id=customer.customer_id,
-        ).all()
-
-        # Health summary
-        health_scores = []
-        for acct in accounts:
-            precalc_health, _, _ = get_precalculated_scores(acct.account_id)
-            if precalc_health is not None:
-                health_scores.append(precalc_health)
-            else:
-                try:
-                    kpi_values = _get_trailing_kpi_values(acct.account_id)
-                    h, _ = calculate_kpi_health(kpi_values, customer.customer_id)
-                    health_scores.append(h)
-                except Exception:
-                    pass
-
-        avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else None
-        healthy_count = sum(1 for h in health_scores if h >= ht.healthy_min())
-        at_risk_count = sum(1 for h in health_scores if ht.at_risk_min() <= h < ht.healthy_min())
-        critical_count = sum(1 for h in health_scores if h < ht.at_risk_min())
-
-        return {
-            'scope': 'portfolio',
-            'customer_id': customer.customer_id,
-            'customer_name': customer.customer_name,
-            'vertical': vertical,
-            'is_reference': getattr(customer, 'is_reference', False),
-            'account_count': len(accounts),
-            'health_summary': {
-                'avg_health': avg_health,
-                'healthy': healthy_count,
-                'at_risk': at_risk_count,
-                'critical': critical_count,
-            },
-        }
-
+# ===================================================================
+# Tool: get_csv_templates
+# ===================================================================
 
 @mcp.tool
 def get_csv_templates(vertical: str, file_type: str = None) -> dict:
@@ -218,7 +192,7 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
         file_type: Optional specific file type (e.g. 'accounts.csv', 'kpi_measurements.csv').
                    If omitted, returns all file types for the vertical.
     """
-    common.check_mcp_enabled()
+    _check_mcp_enabled()
 
     import json as _json
 
@@ -229,7 +203,6 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
     with open(schemas_path, 'r') as f:
         schemas = _json.load(f)
 
-    # Combine regular + context_graph files
     all_files = {}
     for model_key in ('regular_model', 'context_graph_model'):
         model = schemas.get(model_key, {})
@@ -264,215 +237,8 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
     }
 
 
-@mcp.tool
-def get_vertical_config(vertical: str, config_type: str = None) -> dict:
-    """Get vertical configuration templates.
-
-    Discovery tool — no authentication required.
-    Returns base configuration from VerticalTemplate for the specified vertical.
-    If config_type is specified, returns just that config; otherwise returns all.
-
-    Args:
-        vertical: The vertical slug (e.g. 'dc2_s')
-        config_type: Optional config type (e.g. 'kpi_weights', 'pillar_weights',
-                     'health_thresholds', 'scoring_rules'). If omitted, returns all.
-    """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
-
-    with app.app_context():
-        results = []
-
-        # Try DB-backed VerticalTemplate if available
-        try:
-            from models import VerticalTemplate
-
-            query = VerticalTemplate.query.filter_by(vertical=vertical)
-            if config_type:
-                query = query.filter_by(config_type=config_type)
-
-            templates = query.all()
-            for t in templates:
-                results.append({
-                    'template_id': t.template_id,
-                    'vertical': t.vertical,
-                    'config_type': t.config_type,
-                    'version': t.version,
-                    'config': t.config,
-                })
-        except (ImportError, Exception):
-            pass  # VerticalTemplate not available — use fallback
-
-        # Fallback: build config from kpi_definitions + config files
-        if not results:
-            try:
-                kpi_defs = common.get_kpi_definitions(vertical)
-                results.append({
-                    'template_id': None,
-                    'vertical': vertical,
-                    'config_type': 'kpi_definitions',
-                    'version': '1.0',
-                    'config': {
-                        'kpi_count': len(kpi_defs),
-                        'kpis': list(kpi_defs.keys())[:10],  # First 10 for preview
-                        'note': f'Full {len(kpi_defs)} KPI definitions available',
-                    },
-                })
-            except Exception:
-                pass
-
-            # Health thresholds config
-            try:
-                import utils.health_thresholds as ht
-                results.append({
-                    'template_id': None,
-                    'vertical': vertical,
-                    'config_type': 'health_thresholds',
-                    'version': '1.0',
-                    'config': {
-                        'healthy_min': ht.healthy_min(),
-                        'at_risk_min': ht.at_risk_min(),
-                    },
-                })
-            except Exception:
-                pass
-
-        if config_type and not results:
-            raise ToolError(
-                f"No config template found for vertical='{vertical}', "
-                f"config_type='{config_type}'"
-            )
-
-        if config_type and len(results) == 1:
-            return {
-                'scope': 'platform',
-                'vertical': vertical,
-                'config_type': config_type,
-                'template': results[0],
-            }
-
-        return {
-            'scope': 'platform',
-            'vertical': vertical,
-            'total_configs': len(results),
-            'templates': results,
-        }
-
-
-@mcp.tool
-def get_onboarding_status(customer_id: int) -> dict:
-    """Check onboarding progress for a customer.
-
-    Returns a checklist of what has been completed: customer record, admin user,
-    config, accounts, KPI data, scores, wizard runs, etc.
-
-    Args:
-        customer_id: The customer ID to check
-    """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
-
-    with app.app_context():
-        from models import Customer, CustomerConfig, Account, User, DC2SKPI, WizardRun, db
-        from pathlib import Path
-
-        checklist = {
-            'customer_exists': False,
-            'admin_user_exists': False,
-            'config_exists': False,
-            'accounts_uploaded': False,
-            'account_count': 0,
-            'kpi_data_loaded': False,
-            'kpi_record_count': 0,
-            'scores_calculated': False,
-            'wizard_runs': 0,
-            'directory_provisioned': False,
-            'data_files_present': [],
-        }
-
-        # Customer
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            return {
-                'scope': 'customer',
-                'customer_id': customer_id,
-                'status': 'not_found',
-                'checklist': checklist,
-                'message': f'Customer {customer_id} does not exist yet. Use create_customer() to begin.',
-            }
-        checklist['customer_exists'] = True
-
-        # Admin user
-        admin = User.query.filter_by(customer_id=customer_id).first()
-        checklist['admin_user_exists'] = admin is not None
-
-        # Config
-        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
-        checklist['config_exists'] = config is not None
-
-        # Accounts
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
-        checklist['accounts_uploaded'] = len(accounts) > 0
-        checklist['account_count'] = len(accounts)
-
-        # KPI data
-        if accounts:
-            account_ids = [a.account_id for a in accounts]
-            kpi_count = DC2SKPI.query.filter(
-                DC2SKPI.account_id.in_(account_ids)
-            ).count()
-            checklist['kpi_data_loaded'] = kpi_count > 0
-            checklist['kpi_record_count'] = kpi_count
-
-        # Pre-calculated scores
-        if accounts:
-            cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-            _, _, get_precalculated_scores = common.get_health_functions(cust_vertical)
-            scored = 0
-            for acct in accounts:
-                h, _, _ = get_precalculated_scores(acct.account_id)
-                if h is not None:
-                    scored += 1
-            checklist['scores_calculated'] = scored > 0
-
-        # Wizard runs
-        wizard_count = WizardRun.query.filter_by(customer_id=customer_id).count()
-        checklist['wizard_runs'] = wizard_count
-
-        # Directory — use customer's actual vertical
-        backend_dir = Path(__file__).parent.parent
-        cust_v = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_v}'
-        checklist['directory_provisioned'] = customer_dir.exists()
-        if customer_dir.exists():
-            data_dir = customer_dir / 'data'
-            if data_dir.exists():
-                checklist['data_files_present'] = [
-                    f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv'
-                ]
-
-        # Overall status
-        all_done = all([
-            checklist['customer_exists'],
-            checklist['admin_user_exists'],
-            checklist['config_exists'],
-            checklist['accounts_uploaded'],
-            checklist['kpi_data_loaded'],
-            checklist['scores_calculated'],
-        ])
-        status = 'complete' if all_done else 'in_progress'
-
-        return {
-            'scope': 'customer',
-            'customer_id': customer_id,
-            'customer_name': customer.customer_name,
-            'status': status,
-            'checklist': checklist,
-        }
-
-
 # ===================================================================
-# Customer Setup Phase (write, no auth)
+# Tool: create_customer
 # ===================================================================
 
 @mcp.tool
@@ -500,8 +266,8 @@ def create_customer(
         admin_email: Admin user email
         admin_name: Admin user display name
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Customer, User, CustomerConfig
@@ -509,21 +275,18 @@ def create_customer(
         from werkzeug.security import generate_password_hash
         import secrets as _secrets
 
-        # Check for duplicate domain
         existing = Customer.query.filter_by(domain=domain).first()
         if existing:
             raise ToolError(
                 f"A customer with domain '{domain}' already exists "
                 f"(customer_id={existing.customer_id}). "
-                f"Use get_onboarding_status() to check its state."
+                f"Use complete_onboarding(check_only=True) to check its state."
             )
 
-        # Check for duplicate email
         existing_user = User.query.filter_by(email=admin_email).first()
         if existing_user:
             raise ToolError(f"Email '{admin_email}' is already registered.")
 
-        # Generate UUID
         try:
             from id_generator import generate_id, resolve_vertical_prefix
             uuid_vertical = 'dc' if vertical.startswith('dc') else vertical
@@ -531,7 +294,6 @@ def create_customer(
         except Exception:
             customer_uuid = None
 
-        # Create customer
         customer = Customer(
             customer_name=name,
             email=admin_email,
@@ -541,11 +303,10 @@ def create_customer(
         if customer_uuid:
             customer.uuid = customer_uuid
         db.session.add(customer)
-        db.session.flush()  # Get customer_id
+        db.session.flush()
 
         customer_id = customer.customer_id
 
-        # Create admin user with generated password
         generated_password = _secrets.token_urlsafe(16)
         user = User(
             customer_id=customer_id,
@@ -563,16 +324,14 @@ def create_customer(
         except Exception:
             pass
         db.session.add(user)
-        db.session.flush()  # Get user_id
+        db.session.flush()
 
-        # Create default CustomerConfig
         config = CustomerConfig(
             customer_id=customer_id,
             vertical=vertical,
         )
         db.session.add(config)
 
-        # Generate API key
         try:
             from api_key_service import generate_api_key as _gen_api_key
             full_key, _key_record = _gen_api_key(
@@ -584,7 +343,6 @@ def create_customer(
         except Exception as e:
             full_key = None
 
-        # Provision customer directory
         try:
             from verticals.provision_dc_customer import provision_customer
             provision_customer(
@@ -606,6 +364,7 @@ def create_customer(
             'customer_uuid': customer_uuid,
             'domain': domain,
             'vertical': vertical,
+            'created_at': customer.created_at.isoformat() if customer.created_at else None,
             'admin_user_id': user.user_id,
             'admin_email': admin_email,
             'directory_provisioned': directory_provisioned,
@@ -620,6 +379,10 @@ def create_customer(
 
         return result
 
+
+# ===================================================================
+# Tool: configure_customer_kpis
+# ===================================================================
 
 @mcp.tool
 def configure_customer_kpis(
@@ -644,8 +407,8 @@ def configure_customer_kpis(
         pillar_weights: Optional dict of pillar weights (e.g. {'P1': 0.4, 'P3': 0.35, 'P5': 0.25})
         kpi_weights: Optional dict of KPI weights per pillar (e.g. {'P1': {'P1-KPI1': 0.5}})
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Customer, CustomerConfig
@@ -661,13 +424,11 @@ def configure_customer_kpis(
             config = CustomerConfig(customer_id=customer_id, vertical=cust_vertical)
             db.session.add(config)
 
-        # Determine enabled KPIs
         if enabled_kpis:
             config.dc2s_enabled_kpis = enabled_kpis
         elif enabled_pillars:
-            # Derive KPIs from pillar selection using the customer's vertical
             try:
-                kpi_defs = common.get_kpi_definitions(cust_vertical)
+                kpi_defs = _get_kpi_definitions(cust_vertical)
                 derived_kpis = [
                     code for code, defn in kpi_defs.items()
                     if defn.get('pillar') in enabled_pillars
@@ -676,7 +437,6 @@ def configure_customer_kpis(
             except Exception:
                 raise ToolError("Could not load KPI definitions for pillar-based selection.")
 
-        # Set pillar weights (auto-normalize to sum 1.0)
         if pillar_weights:
             pw_total = sum(pillar_weights.values())
             if pw_total > 0 and abs(pw_total - 1.0) > 0.0001:
@@ -687,7 +447,6 @@ def configure_customer_kpis(
                     pillar_weights[_pw_keys[-1]] = round(pillar_weights[_pw_keys[-1]] + _pw_diff, 4)
             config.dc2s_pillar_weights = pillar_weights
 
-        # Set KPI weights (auto-normalize each pillar to sum 1.0)
         if kpi_weights:
             for pillar, kw in kpi_weights.items():
                 kw_total = sum(kw.values())
@@ -713,6 +472,10 @@ def configure_customer_kpis(
         }
 
 
+# ===================================================================
+# Tool: enable_features
+# ===================================================================
+
 @mcp.tool
 def enable_features(customer_id: int, features: list = None) -> dict:
     """Enable or disable feature toggles for a customer.
@@ -725,8 +488,8 @@ def enable_features(customer_id: int, features: list = None) -> dict:
         customer_id: The customer ID
         features: List of feature names to enable. If None, returns current state.
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Customer
@@ -738,7 +501,6 @@ def enable_features(customer_id: int, features: list = None) -> dict:
             raise ToolError(f"Customer {customer_id} not found.")
 
         if features is None:
-            # Read-only: return current toggles
             toggles = FTModel.query.filter_by(customer_id=customer_id).all()
             return {
                 'scope': 'customer',
@@ -749,7 +511,6 @@ def enable_features(customer_id: int, features: list = None) -> dict:
                 'total_features': len(toggles),
             }
 
-        # Enable specified features
         results = {}
         for feature_name in features:
             toggle = FTModel.query.filter_by(
@@ -780,28 +541,34 @@ def enable_features(customer_id: int, features: list = None) -> dict:
 
 
 # ===================================================================
-# Data Ingestion Phase (write, no auth)
+# Tool: upload_csv
 # ===================================================================
 
 @mcp.tool
-def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
-    """Validate CSV content against the platform schema before uploading.
+def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool = False) -> dict:
+    """Upload CSV data for a customer.
 
-    Checks that required columns are present and reports any issues.
-    Does NOT persist data — use upload_csv() after validation passes.
+    Saves the CSV content to the customer's data directory on disk.
+    The file can then be processed via process_data().
+
+    When dry_run=True, validates the CSV against the platform schema
+    (required/optional columns, row count) but does NOT persist data.
+    Use dry_run=True to check your CSV before committing an upload.
 
     Args:
-        customer_id: The customer ID (used for context only)
+        customer_id: The customer ID
         file_type: The CSV file type (e.g. 'accounts.csv', 'kpi_measurements.csv')
         csv_content: The raw CSV content as a string
+        dry_run: If True, validate only — do not persist. Returns validation result.
     """
-    common.check_mcp_enabled()
+    _check_mcp_enabled()
 
     import json as _json
     import csv as _csv
     import io as _io
 
-    # Load schema
+    ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
+
     schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
     if not os.path.isfile(schemas_path):
         raise ToolError("CSV schemas config not found.")
@@ -809,10 +576,6 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
     with open(schemas_path, 'r') as f:
         schemas = _json.load(f)
 
-    # Normalize file_type: accept both 'kpi_measurements' and 'kpi_measurements.csv'
-    ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
-
-    # Find schema for file_type
     schema = None
     for model_key in ('regular_model', 'context_graph_model'):
         files = schemas.get(model_key, {}).get('files', {})
@@ -832,12 +595,10 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
     optional_columns = set(schema.get('optional_columns', []))
     all_known = required_columns | optional_columns
 
-    # Parse CSV
     reader = _csv.DictReader(_io.StringIO(csv_content))
     headers = set(reader.fieldnames or [])
     rows = list(reader)
 
-    # Validation
     missing_required = required_columns - headers
     unknown_columns = headers - all_known
     errors = []
@@ -852,34 +613,28 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
 
     valid = len(errors) == 0
 
-    return {
-        'scope': 'validation',
-        'customer_id': customer_id,
-        'file_type': file_type,
-        'valid': valid,
-        'row_count': len(rows),
-        'columns_found': sorted(headers),
-        'required_columns': sorted(required_columns),
-        'missing_required': sorted(missing_required) if missing_required else [],
-        'errors': errors,
-        'warnings': warnings,
-    }
+    if dry_run:
+        return {
+            'scope': 'validation',
+            'customer_id': customer_id,
+            'file_type': file_type,
+            'dry_run': True,
+            'valid': valid,
+            'row_count': len(rows),
+            'columns_found': sorted(headers),
+            'required_columns': sorted(required_columns),
+            'missing_required': sorted(missing_required) if missing_required else [],
+            'errors': errors,
+            'warnings': warnings,
+        }
 
+    if not valid:
+        raise ToolError(
+            f"CSV validation failed for {file_type}: {'; '.join(errors)}. "
+            f"Use dry_run=True to inspect details without uploading."
+        )
 
-@mcp.tool
-def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
-    """Upload CSV data for a customer.
-
-    Saves the CSV content to the customer's data directory on disk.
-    The file can then be processed via process_data().
-
-    Args:
-        customer_id: The customer ID
-        file_type: The CSV file type (e.g. 'accounts.csv', 'kpi_measurements.csv')
-        csv_content: The raw CSV content as a string
-    """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Customer, db
@@ -889,19 +644,13 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
         if not customer:
             raise ToolError(f"Customer {customer_id} not found.")
 
-        # Normalize file_type to include .csv extension
-        ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
-
-        # Determine customer data directory
         vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
         backend_dir = Path(__file__).parent.parent
         customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
 
-        # Ensure directory exists
         data_dir = customer_dir / 'data'
         data_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write file
         file_path = data_dir / ft
         file_path.write_text(csv_content, encoding='utf-8')
 
@@ -911,23 +660,29 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
             'file_type': file_type,
             'file_path': str(file_path),
             'bytes_written': len(csv_content.encode('utf-8')),
-            'message': f"Uploaded {file_type} ({len(csv_content.encode('utf-8'))} bytes). "
-                       f"Use process_data() to ingest into the database.",
+            'row_count': len(rows),
+            'warnings': warnings,
+            'message': f"Uploaded {file_type} ({len(csv_content.encode('utf-8'))} bytes, "
+                       f"{len(rows)} rows). Use process_data() to ingest into the database.",
         }
 
+
+# ===================================================================
+# _process_data_impl — Single source of truth for data processing
+# ===================================================================
 
 def _process_data_impl(customer_id: int) -> dict:
     """Trigger the data processing pipeline for a customer.
 
     Two paths:
-    - Path 1 (DB-native): Data already in DB → recalculate health scores
-    - Path 2 (Fresh CSV): No data in DB → load CSVs into DB, then calculate
+    - Path 1 (DB-native): Data already in DB -> recalculate health scores
+    - Path 2 (Fresh CSV): No data in DB -> load CSVs into DB, then calculate
 
     Args:
         customer_id: The customer ID
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Customer
@@ -996,11 +751,10 @@ def _process_data_impl(customer_id: int) -> dict:
                     _db.session.flush()
                     steps_completed.append('accounts_loaded_from_csv')
 
-            # Refresh account list
             existing_accounts = Account.query.filter_by(customer_id=customer_id).all()
             existing_acct_ids = [a.account_id for a in existing_accounts]
 
-            # Step 2: Build CSV→DB account ID mapping
+            # Step 2: Build CSV->DB account ID mapping
             db_accounts = existing_accounts
             accounts_by_name = {a.account_name: a.account_id for a in db_accounts}
             accounts_by_db_id = {a.account_id: a for a in db_accounts}
@@ -1222,9 +976,9 @@ def _process_data_impl(customer_id: int) -> dict:
                                 continue
                             pname = str(row.get('product_name', ''))
                             if pname:
-                                existing = Product.query.filter_by(
+                                existing_prod = Product.query.filter_by(
                                     account_id=acct_id, product_name=pname).first()
-                                if not existing:
+                                if not existing_prod:
                                     _db.session.add(Product(
                                         account_id=acct_id, customer_id=customer_id,
                                         product_name=pname,
@@ -1314,7 +1068,7 @@ def _process_data_impl(customer_id: int) -> dict:
                             return None
                         ref_str = str(ref_str).strip()
                         phase_ref, title_part = None, None
-                        for sep in [' — ', ' – ', ' - ']:
+                        for sep in [' \u2014 ', ' \u2013 ', ' - ']:
                             if sep in ref_str:
                                 phase_ref = ref_str.split(sep, 1)[0].strip()
                                 title_part = ref_str.split(sep, 1)[1].strip()
@@ -1371,22 +1125,19 @@ def _process_data_impl(customer_id: int) -> dict:
                     pass
 
         else:
-            # Path 1: data already in DB — skip CSV loading
             steps_completed.append(
                 f'data_already_in_db_{len(existing_accounts)}_accounts_{existing_kpi_count}_kpis'
             )
 
         # ----------------------------------------------------------
         # ALWAYS: Recalculate health scores from DB data
-        # Uses raw SQL (DELETE + INSERT) for reliability — avoids
-        # ORM session-state issues that can silently drop writes.
         # ----------------------------------------------------------
         try:
-            calculate_fn, get_kpi_vals, _ = common.get_health_functions(vertical)
+            calculate_fn, get_kpi_vals, _ = _get_health_functions(vertical)
             import utils.health_thresholds as ht
             from datetime import date as _date
             from sqlalchemy import create_engine, text as _text
-            import os, json as _json, logging
+            import json as _json, logging
             _logger = logging.getLogger(__name__)
 
             database_url = os.environ.get('DATABASE_URL')
@@ -1398,7 +1149,6 @@ def _process_data_impl(customer_id: int) -> dict:
             acct_list = Account.query.filter_by(customer_id=customer_id).all()
             measurement_date = _date.today().replace(day=1)
 
-            # Phase 1: Compute all scores in memory (no DB writes yet)
             score_rows = []
             scores_skipped = 0
             for acct in acct_list:
@@ -1418,7 +1168,6 @@ def _process_data_impl(customer_id: int) -> dict:
                 except Exception as calc_err:
                     _logger.warning(f"Health score calc failed for account {acct.account_id}: {calc_err}")
 
-            # Phase 2: Write all scores in a single transaction (DELETE + INSERT)
             scores_written = 0
             if database_url and score_rows:
                 engine = create_engine(database_url)
@@ -1470,6 +1219,10 @@ def _process_data_impl(customer_id: int) -> dict:
         }
 
 
+# ===================================================================
+# Tool: process_data
+# ===================================================================
+
 @mcp.tool
 def process_data(customer_id: int) -> dict:
     """Trigger the data processing pipeline for a customer.
@@ -1489,7 +1242,7 @@ def process_data(customer_id: int) -> dict:
 
 
 # ===================================================================
-# Post-Onboarding Phase (write, no auth)
+# Tool: trigger_wizard
 # ===================================================================
 
 @mcp.tool
@@ -1505,12 +1258,13 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
         customer_id: The customer ID
         wizard: Which wizard to trigger: 'a', 'b', or 'c'
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
         from models import Customer, WizardRun
         from extensions import db
+        from pathlib import Path
         from datetime import datetime
 
         customer = db.session.get(Customer, int(customer_id))
@@ -1527,7 +1281,6 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
             'c': 'Weight Calibration',
         }[wizard]
 
-        # Create a WizardRun record
         import uuid as _uuid
         run_id = f"wizard_{wizard}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{_uuid.uuid4().hex[:8]}"
 
@@ -1543,54 +1296,41 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
         result_summary = {}
 
         try:
-            # Ensure clean DB session (prior errors may have left it aborted)
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-
-            run.status = 'running'
-            run.started_at = datetime.utcnow()
-            db.session.add(run)
-            db.session.commit()
+            db.session.rollback()
 
             if wizard == 'a':
                 from wizards.wizard_a_journey_db import run_wizard_a
-                result_summary = run_wizard_a(customer_id)
+                wiz_result = run_wizard_a(customer_id)
+                result_summary = wiz_result
+                result_summary['return_code'] = 0
 
             elif wizard == 'b':
                 try:
                     from wizards.wizard_b_pattern_db import run_wizard_b
-                    result_summary = run_wizard_b(customer_id)
-                except (ImportError, ValueError) as wb_err:
-                    result_summary = {
-                        'status': 'skipped',
-                        'reason': str(wb_err),
-                    }
+                    wiz_result = run_wizard_b(customer_id)
+                    result_summary = wiz_result
+                    result_summary['return_code'] = 0
+                except Exception as wb_err:
+                    result_summary['error'] = str(wb_err)
+                    result_summary['return_code'] = 1
 
             elif wizard == 'c':
                 from wizards.wizard_c_weight_calibrator_db import run_wizard_c
-                result_summary = run_wizard_c(customer_id)
+                wiz_result = run_wizard_c(customer_id)
+                result_summary = wiz_result
+                result_summary['return_code'] = 0
 
-            run.status = result_summary.get('status', 'completed')
+            run.status = 'completed' if result_summary.get('return_code', 1) == 0 else 'failed'
             run.completed_at = datetime.utcnow()
             run.results = result_summary
             db.session.commit()
 
         except Exception as e:
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-            try:
-                run.status = 'failed'
-                run.error_message = str(e)[:500]
-                run.completed_at = datetime.utcnow()
-                db.session.add(run)
-                db.session.commit()
-            except Exception:
-                pass
-            result_summary['error'] = str(e)[:500]
+            run.status = 'failed'
+            run.error_message = str(e)
+            run.completed_at = datetime.utcnow()
+            db.session.commit()
+            result_summary['error'] = str(e)
 
         return {
             'scope': 'customer',
@@ -1603,8 +1343,12 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
         }
 
 
+# ===================================================================
+# Tool: complete_onboarding
+# ===================================================================
+
 @mcp.tool
-def complete_onboarding(customer_id: int) -> dict:
+def complete_onboarding(customer_id: int, check_only: bool = False) -> dict:
     """Finalize onboarding for a customer.
 
     Performs final checks and marks the customer as onboarded:
@@ -1612,21 +1356,117 @@ def complete_onboarding(customer_id: int) -> dict:
     2. Sets the customer status to active
     3. Returns a final summary with next steps
 
+    When check_only=True, returns a detailed onboarding status checklist
+    (customer record, admin user, config, accounts, KPI data, scores,
+    wizard runs, data files) without finalizing. Use this to monitor
+    onboarding progress before completing.
+
     Args:
         customer_id: The customer ID
+        check_only: If True, return onboarding status checklist without finalizing.
     """
-    common.check_mcp_enabled()
-    app = common.get_flask_app()
+    _check_mcp_enabled()
+    app = _get_flask_app()
 
     with app.app_context():
-        from models import Customer, CustomerConfig, Account, User, DC2SKPI
+        from models import Customer, CustomerConfig, Account, User, DC2SKPI, WizardRun
         from extensions import db
+        from pathlib import Path
 
+        if check_only:
+            checklist = {
+                'customer_exists': False,
+                'admin_user_exists': False,
+                'config_exists': False,
+                'accounts_uploaded': False,
+                'account_count': 0,
+                'kpi_data_loaded': False,
+                'kpi_record_count': 0,
+                'scores_calculated': False,
+                'wizard_runs': 0,
+                'directory_provisioned': False,
+                'data_files_present': [],
+            }
+
+            customer = db.session.get(Customer, int(customer_id))
+            if not customer:
+                return {
+                    'scope': 'customer',
+                    'customer_id': customer_id,
+                    'check_only': True,
+                    'status': 'not_found',
+                    'checklist': checklist,
+                    'message': f'Customer {customer_id} does not exist yet. Use create_customer() to begin.',
+                }
+            checklist['customer_exists'] = True
+
+            admin = User.query.filter_by(customer_id=customer_id).first()
+            checklist['admin_user_exists'] = admin is not None
+
+            config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+            checklist['config_exists'] = config is not None
+
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
+            checklist['accounts_uploaded'] = len(accounts) > 0
+            checklist['account_count'] = len(accounts)
+
+            if accounts:
+                account_ids = [a.account_id for a in accounts]
+                kpi_count = DC2SKPI.query.filter(
+                    DC2SKPI.account_id.in_(account_ids)
+                ).count()
+                checklist['kpi_data_loaded'] = kpi_count > 0
+                checklist['kpi_record_count'] = kpi_count
+
+            if accounts:
+                cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+                _, _, get_precalculated_scores_fn = _get_health_functions(cust_vertical)
+                scored = 0
+                for acct in accounts:
+                    h, _, _ = get_precalculated_scores_fn(acct.account_id)
+                    if h is not None:
+                        scored += 1
+                checklist['scores_calculated'] = scored > 0
+
+            wizard_count = WizardRun.query.filter_by(customer_id=customer_id).count()
+            checklist['wizard_runs'] = wizard_count
+
+            backend_dir = Path(__file__).parent.parent
+            cust_v = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+            customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{cust_v}'
+            checklist['directory_provisioned'] = customer_dir.exists()
+            if customer_dir.exists():
+                data_dir = customer_dir / 'data'
+                if data_dir.exists():
+                    checklist['data_files_present'] = [
+                        f.name for f in data_dir.iterdir() if f.is_file() and f.suffix == '.csv'
+                    ]
+
+            all_done = all([
+                checklist['customer_exists'],
+                checklist['admin_user_exists'],
+                checklist['config_exists'],
+                checklist['accounts_uploaded'],
+                checklist['kpi_data_loaded'],
+                checklist['scores_calculated'],
+            ])
+            status = 'complete' if all_done else 'in_progress'
+
+            return {
+                'scope': 'customer',
+                'customer_id': customer_id,
+                'customer_name': customer.customer_name,
+                'created_at': customer.created_at.isoformat() if customer.created_at else None,
+                'check_only': True,
+                'status': status,
+                'checklist': checklist,
+            }
+
+        # --- Normal finalization mode ---
         customer = db.session.get(Customer, int(customer_id))
         if not customer:
             raise ToolError(f"Customer {customer_id} not found.")
 
-        # Check all required pieces
         issues = []
 
         admin = User.query.filter_by(customer_id=customer_id).first()
@@ -1660,9 +1500,8 @@ def complete_onboarding(customer_id: int) -> dict:
                 'message': 'Onboarding cannot be finalized. Resolve the issues above.',
             }
 
-        # Calculate portfolio health for summary
         cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = common.get_health_functions(cust_vertical)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(cust_vertical)
         import utils.health_thresholds as ht
 
         health_scores = []
@@ -1678,7 +1517,7 @@ def complete_onboarding(customer_id: int) -> dict:
                     health_scores.append(h)
                 except Exception:
                     pass
-            total_arr += common.get_account_arr(acct)
+            total_arr += _get_account_arr(acct)
 
         avg_health = round(sum(health_scores) / len(health_scores), 1) if health_scores else 0
 
@@ -1707,8 +1546,652 @@ def complete_onboarding(customer_id: int) -> dict:
         }
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    common.run_server(mcp, default_port=8003)
+# ===================================================================
+# Tool: clone_customer
+# ===================================================================
+
+@mcp.tool
+def clone_customer(
+    source_customer_id: int,
+    new_name: str,
+    new_domain: str,
+) -> dict:
+    """Deep-copy an existing customer with all data into a new customer.
+
+    Creates a full clone including accounts, KPI measurements, health scores,
+    context graph (nodes + edges with remapped IDs), qualitative signals,
+    playbook executions, and ROI snapshots. Enables instant demo setup:
+    "clone Gold_DC_Alpha as Acme Corp" in ~2 seconds.
+
+    No authentication required (onboarding tool).
+
+    Args:
+        source_customer_id: Customer ID to clone from (e.g. 407 for Gold_DC_Alpha)
+        new_name: Name for the new customer (e.g. 'Acme Corp')
+        new_domain: Domain for the new customer (e.g. 'acme.com')
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import (
+            Customer, CustomerConfig, Account, DC2SKPI,
+            HealthScore, KPIScore, PillarScore,
+            ContextNode, ContextEdge,
+            QualitativeSignal, PlaybookExecution,
+            ROISnapshot, JourneyData,
+        )
+        from extensions import db
+        import uuid as _uuid_mod
+        from datetime import datetime
+
+        source = db.session.get(Customer, int(source_customer_id))
+        if not source:
+            raise ToolError(f"Source customer {source_customer_id} not found.")
+
+        existing = Customer.query.filter_by(domain=new_domain).first()
+        if existing:
+            raise ToolError(
+                f"A customer with domain '{new_domain}' already exists "
+                f"(customer_id={existing.customer_id})."
+            )
+
+        summary = {}
+
+        # 1. Clone Customer record
+        new_customer = Customer(
+            customer_name=new_name,
+            email=None,
+            domain=new_domain,
+            vertical=source.vertical,
+        )
+        try:
+            from id_generator import generate_id
+            uuid_vertical = 'dc' if (source.vertical or '').startswith('dc') else (source.vertical or 'dc')
+            new_customer.uuid = generate_id(uuid_vertical, 'customer')
+        except Exception:
+            new_customer.uuid = f"clone_{_uuid_mod.uuid4().hex[:16]}"
+        db.session.add(new_customer)
+        db.session.flush()
+
+        new_cid = new_customer.customer_id
+        summary['customer_id'] = new_cid
+        summary['customer_name'] = new_name
+        summary['domain'] = new_domain
+        summary['vertical'] = source.vertical
+        summary['created_at'] = new_customer.created_at.isoformat() if new_customer.created_at else None
+
+        # 2. Clone CustomerConfig
+        source_config = CustomerConfig.query.filter_by(customer_id=source_customer_id).first()
+        if source_config:
+            new_config = CustomerConfig(
+                customer_id=new_cid,
+                vertical=source_config.vertical,
+                kpi_upload_mode=source_config.kpi_upload_mode,
+                dc2s_pillar_weights=source_config.dc2s_pillar_weights,
+                dc2s_enabled_kpis=source_config.dc2s_enabled_kpis,
+                dc2s_kpi_overrides=source_config.dc2s_kpi_overrides,
+                dc2s_kpi_weights=source_config.dc2s_kpi_weights,
+                dc2s_kpi_definitions=source_config.dc2s_kpi_definitions,
+                config_version=source_config.config_version,
+            )
+            db.session.add(new_config)
+            summary['config_cloned'] = True
+        else:
+            summary['config_cloned'] = False
+
+        # 3. Clone Accounts
+        source_accounts = Account.query.filter_by(customer_id=source_customer_id).all()
+        acct_id_map = {}
+        for acct in source_accounts:
+            new_acct = Account(
+                customer_id=new_cid,
+                account_name=acct.account_name,
+                revenue=acct.revenue,
+                account_status=acct.account_status,
+                industry=acct.industry,
+                vertical=acct.vertical,
+                region=acct.region,
+                external_account_id=acct.external_account_id,
+                profile_metadata=acct.profile_metadata,
+            )
+            try:
+                new_acct.uuid = generate_id(uuid_vertical, 'account')
+            except Exception:
+                new_acct.uuid = f"clone_acct_{_uuid_mod.uuid4().hex[:12]}"
+            new_acct.customer_uuid = new_customer.uuid
+            db.session.add(new_acct)
+            db.session.flush()
+            acct_id_map[acct.account_id] = new_acct.account_id
+        summary['accounts_cloned'] = len(acct_id_map)
+
+        # 4. Clone DC2S KPI measurements
+        kpi_count = 0
+        for old_aid, new_aid in acct_id_map.items():
+            kpis = DC2SKPI.query.filter_by(account_id=old_aid).all()
+            for kpi in kpis:
+                new_kpi = DC2SKPI(
+                    account_id=new_aid, kpi_code=kpi.kpi_code, value=kpi.value,
+                    target=kpi.target, pillar=kpi.pillar, weight=kpi.weight,
+                    status=kpi.status, measured_at=kpi.measured_at, created_at=kpi.created_at,
+                )
+                db.session.add(new_kpi)
+                kpi_count += 1
+        summary['dc2s_kpis_cloned'] = kpi_count
+
+        # 5. Clone Health Scores
+        hs_count = 0
+        for old_aid, new_aid in acct_id_map.items():
+            scores = HealthScore.query.filter_by(account_id=old_aid).all()
+            for s in scores:
+                new_hs = HealthScore(
+                    account_id=new_aid, measurement_month=s.measurement_month,
+                    health_score=s.health_score, health_status=s.health_status,
+                    trend=s.trend, change_from_last_month=s.change_from_last_month,
+                    contributing_pillars=s.contributing_pillars, pillar_weights=s.pillar_weights,
+                    calculated_at=s.calculated_at,
+                )
+                db.session.add(new_hs)
+                hs_count += 1
+        summary['health_scores_cloned'] = hs_count
+
+        # 5b. Clone KPI Scores + Pillar Scores
+        kpi_score_count = 0
+        for old_aid, new_aid in acct_id_map.items():
+            rows = KPIScore.query.filter_by(account_id=old_aid).all()
+            for r in rows:
+                new_row = KPIScore(
+                    account_id=new_aid, measurement_month=r.measurement_month,
+                    kpi_code=r.kpi_code, kpi_value=r.kpi_value, kpi_target=r.kpi_target,
+                    kpi_score=r.kpi_score, kpi_status=r.kpi_status, calculated_at=r.calculated_at,
+                )
+                db.session.add(new_row)
+                kpi_score_count += 1
+        summary['kpi_scores_cloned'] = kpi_score_count
+
+        pillar_score_count = 0
+        for old_aid, new_aid in acct_id_map.items():
+            rows = PillarScore.query.filter_by(account_id=old_aid).all()
+            for r in rows:
+                new_row = PillarScore(
+                    account_id=new_aid, measurement_month=r.measurement_month,
+                    pillar_code=r.pillar_code, pillar_score=r.pillar_score,
+                    pillar_status=r.pillar_status, contributing_kpis=r.contributing_kpis,
+                    kpi_weights=r.kpi_weights, calculated_at=r.calculated_at,
+                )
+                db.session.add(new_row)
+                pillar_score_count += 1
+        summary['pillar_scores_cloned'] = pillar_score_count
+
+        # 6. Clone Context Graph Nodes
+        source_nodes = ContextNode.query.filter_by(customer_id=source_customer_id).all()
+        node_id_map = {}
+        for node in source_nodes:
+            new_account_id = acct_id_map.get(node.account_id)
+            if new_account_id is None:
+                continue
+            new_node = ContextNode(
+                customer_id=new_cid, account_id=new_account_id,
+                node_type=node.node_type, node_subtype=node.node_subtype, tier=node.tier,
+                title=node.title, properties=node.properties,
+                revenue_impact=node.revenue_impact, revenue_impact_type=node.revenue_impact_type,
+                confidence=node.confidence, source_platform=node.source_platform,
+                source_event_id=node.source_event_id, source_ref=node.source_ref,
+                occurred_at=node.occurred_at, expires_at=node.expires_at, weight_decay=node.weight_decay,
+            )
+            db.session.add(new_node)
+            db.session.flush()
+            node_id_map[node.node_id] = new_node.node_id
+        summary['context_nodes_cloned'] = len(node_id_map)
+
+        # 7. Clone Context Graph Edges
+        edge_count = 0
+        source_edges = ContextEdge.query.filter_by(customer_id=source_customer_id).all()
+        for edge in source_edges:
+            new_from = node_id_map.get(edge.from_node_id)
+            new_to = node_id_map.get(edge.to_node_id)
+            if new_from is None or new_to is None:
+                continue
+            new_edge = ContextEdge(
+                customer_id=new_cid, from_node_id=new_from, to_node_id=new_to,
+                edge_type=edge.edge_type, lag_days=edge.lag_days, weight=edge.weight,
+                confidence=edge.confidence, revenue_impact=edge.revenue_impact,
+                revenue_impact_type=edge.revenue_impact_type, properties=edge.properties,
+                source_platform=edge.source_platform, created_by=edge.created_by,
+                occurred_at=edge.occurred_at, expires_at=edge.expires_at,
+            )
+            db.session.add(new_edge)
+            edge_count += 1
+        summary['context_edges_cloned'] = edge_count
+
+        # 8. Clone Qualitative Signals
+        signal_count = 0
+        for old_aid, new_aid in acct_id_map.items():
+            signals = QualitativeSignal.query.filter_by(account_id=old_aid).all()
+            for sig in signals:
+                new_sig = QualitativeSignal(
+                    signal_id=f"clone_{_uuid_mod.uuid4().hex[:8]}_{sig.signal_id[-8:] if len(sig.signal_id) > 8 else sig.signal_id}",
+                    account_id=new_aid, signal_date=sig.signal_date, signal_type=sig.signal_type,
+                    content=sig.content, sentiment=sig.sentiment,
+                    stakeholder_level=sig.stakeholder_level, stakeholder_title=sig.stakeholder_title,
+                    sentiment_score=sig.sentiment_score, keywords=sig.keywords,
+                    is_narrative_signal=sig.is_narrative_signal,
+                )
+                db.session.add(new_sig)
+                signal_count += 1
+        summary['qualitative_signals_cloned'] = signal_count
+
+        # 9. Clone Playbook Executions
+        pb_count = 0
+        source_pbs = PlaybookExecution.query.filter_by(customer_id=source_customer_id).all()
+        for pb in source_pbs:
+            new_account_id = acct_id_map.get(pb.account_id) if pb.account_id else None
+            new_pb = PlaybookExecution(
+                execution_id=str(_uuid_mod.uuid4()), customer_id=new_cid,
+                account_id=new_account_id, playbook_id=pb.playbook_id,
+                status=pb.status, current_step=pb.current_step,
+                execution_data=pb.execution_data, started_at=pb.started_at,
+                completed_at=pb.completed_at, execution_mode=pb.execution_mode,
+                trigger_context=pb.trigger_context, outcome=pb.outcome,
+                outcome_notes=pb.outcome_notes, llm_validation_result=pb.llm_validation_result,
+            )
+            db.session.add(new_pb)
+            pb_count += 1
+        summary['playbook_executions_cloned'] = pb_count
+
+        # 10. Clone ROI Snapshots
+        roi_count = 0
+        source_rois = ROISnapshot.query.filter_by(customer_id=source_customer_id).all()
+        for roi in source_rois:
+            new_roi = ROISnapshot(
+                customer_id=new_cid, snapshot_date=roi.snapshot_date,
+                improvement_pct=roi.improvement_pct, historical_roi_pct=roi.historical_roi_pct,
+                historical_impact=roi.historical_impact, historical_investment=roi.historical_investment,
+                forward_roi_pct=roi.forward_roi_pct, forward_impact=roi.forward_impact,
+                forward_investment=roi.forward_investment, combined_roi_pct=roi.combined_roi_pct,
+                total_arr=roi.total_arr, metric_details=roi.metric_details,
+            )
+            db.session.add(new_roi)
+            roi_count += 1
+        summary['roi_snapshots_cloned'] = roi_count
+
+        # 11. Clone Journey Data
+        journey_count = 0
+        for old_aid, new_aid in acct_id_map.items():
+            journeys = JourneyData.query.filter_by(
+                customer_id=source_customer_id, account_id=old_aid,
+            ).all()
+            for j in journeys:
+                new_j = JourneyData(
+                    customer_id=new_cid, account_id=new_aid,
+                    journey_json=j.journey_json, total_weeks=j.total_weeks,
+                    journey_pattern=j.journey_pattern, generator_version=j.generator_version,
+                    generated_at=j.generated_at,
+                )
+                db.session.add(new_j)
+                journey_count += 1
+        summary['journey_data_cloned'] = journey_count
+
+        # 12. Create admin user
+        admin_user = None
+        try:
+            from models import User
+            from werkzeug.security import generate_password_hash
+            import secrets as _secrets
+            admin_email = f"admin@{new_domain}"
+            admin_password = _secrets.token_urlsafe(16)
+            new_user = User(
+                email=admin_email, user_name=f"Admin ({new_name})",
+                customer_id=new_cid, role='admin',
+                password_hash=generate_password_hash(admin_password),
+                vertical=source.vertical,
+            )
+            new_user.customer_uuid = new_customer.uuid
+            try:
+                new_user.uuid = generate_id(uuid_vertical, 'user')
+            except Exception:
+                new_user.uuid = f"clone_user_{_uuid_mod.uuid4().hex[:12]}"
+            db.session.add(new_user)
+            db.session.flush()
+            admin_user = {
+                'user_id': new_user.user_id, 'email': admin_email,
+                'password': admin_password, 'role': 'admin',
+            }
+            summary['admin_user_created'] = True
+        except Exception as e:
+            summary['admin_user_created'] = False
+            summary['admin_user_error'] = str(e)
+
+        # 13. Generate API key
+        api_key = None
+        try:
+            from api_key_service import generate_api_key as _gen_api_key
+            full_key, _key_record = _gen_api_key(
+                customer_id=new_cid, created_by=0,
+                name='Clone Onboarding Key', scopes=['read', 'write'],
+            )
+            api_key = full_key
+        except Exception:
+            api_key = None
+
+        db.session.commit()
+
+        total_records = (
+            summary.get('accounts_cloned', 0) + summary.get('dc2s_kpis_cloned', 0)
+            + summary.get('health_scores_cloned', 0) + summary.get('kpi_scores_cloned', 0)
+            + summary.get('pillar_scores_cloned', 0) + summary.get('context_nodes_cloned', 0)
+            + summary.get('context_edges_cloned', 0) + summary.get('qualitative_signals_cloned', 0)
+            + summary.get('playbook_executions_cloned', 0) + summary.get('roi_snapshots_cloned', 0)
+            + summary.get('journey_data_cloned', 0)
+        )
+
+        result = {
+            'scope': 'customer', 'status': 'cloned',
+            'source_customer_id': source_customer_id,
+            'new_customer_id': new_cid, 'new_customer_name': new_name,
+            'new_domain': new_domain, 'vertical': source.vertical,
+            'total_records_cloned': total_records, 'details': summary,
+            'message': (
+                f"Successfully cloned customer {source_customer_id} "
+                f"as '{new_name}' (ID={new_cid}). "
+                f"{summary.get('accounts_cloned', 0)} accounts, "
+                f"{summary.get('context_nodes_cloned', 0)} context nodes, "
+                f"{total_records} total records."
+            ),
+        }
+
+        if api_key:
+            result['api_key'] = api_key
+            result['api_key_note'] = 'Save this API key — it is shown only once.'
+
+        if admin_user:
+            result['admin_user'] = admin_user
+            result['admin_user_note'] = 'Admin user auto-created. Use these credentials to log in.'
+
+        result['next_steps'] = (
+            'OPTION 1 — Use as-is: Clone is ready immediately. '
+            'All data has been deep-copied with pre-calculated scores. '
+            'OPTION 2 — Customize: Use download_customer_csv() to get '
+            'the 8 CSVs, modify them, then upload_csv() + process_data() to recalculate.'
+        )
+
+        result['dc2s_pillar_labels'] = _get_dc2s_pillar_labels()
+
+        return result
+
+
+# ===================================================================
+# Tool: download_customer_csv
+# ===================================================================
+
+@mcp.tool
+def download_customer_csv(
+    customer_id: int,
+    file_type: str = 'all',
+) -> dict:
+    """Download customer data as CSV content returned inline in the response.
+
+    Unlike export_customer_csvs() which writes to the server filesystem,
+    this tool returns CSV content directly in the response — making it
+    accessible to Claude.ai and other MCP clients that cannot access
+    the server's filesystem.
+
+    No authentication required (onboarding tool).
+
+    Args:
+        customer_id: Customer ID to download data from
+        file_type: Which CSV to download. Options:
+            'all' — returns all 8 CSVs (may be large)
+            'accounts' — accounts.csv
+            'kpi_measurements' — kpi_measurements.csv
+            'signals' — enhanced_qualitative_signals.csv
+            'products' — products.csv
+            'stakeholders' — stakeholders.csv
+            'engagement_events' — engagement_events.csv
+            'profiles' — account_business_profiles.csv
+            'outcomes' — outcomes.csv
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        import csv
+        import io
+        from models import (
+            Customer, Account, DC2SKPI, Product,
+            QualitativeSignal, ContextNode,
+        )
+        from extensions import db
+
+        customer = db.session.get(Customer, int(customer_id))
+        if not customer:
+            raise ToolError(f"Customer {customer_id} not found.")
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        account_ids = [a.account_id for a in accounts]
+
+        def _csv_string(columns: list, rows: list) -> str:
+            buf = io.StringIO()
+            writer = csv.DictWriter(buf, fieldnames=columns, extrasaction='ignore')
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+            return buf.getvalue()
+
+        valid_types = [
+            'accounts', 'kpi_measurements', 'signals', 'products',
+            'stakeholders', 'engagement_events', 'profiles', 'outcomes',
+        ]
+
+        if file_type != 'all' and file_type not in valid_types:
+            raise ToolError(
+                f"Invalid file_type '{file_type}'. "
+                f"Valid options: 'all', {', '.join(valid_types)}"
+            )
+
+        requested = valid_types if file_type == 'all' else [file_type]
+        csvs = {}
+
+        if 'accounts' in requested:
+            cols = ['account_id', 'customer_id', 'account_name', 'industry', 'region',
+                    'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
+                    'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid']
+            rows = []
+            for a in accounts:
+                pm = a.profile_metadata or {}
+                rows.append({
+                    'account_id': a.account_id, 'customer_id': a.customer_id,
+                    'account_name': a.account_name, 'industry': a.industry, 'region': a.region,
+                    'vertical': a.vertical, 'tier': pm.get('tier', ''),
+                    'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
+                    'revenue': float(a.revenue) if a.revenue else '',
+                    'contract_start': pm.get('contract_start', ''),
+                    'contract_end': pm.get('contract_end', ''),
+                    'renewal_date': pm.get('renewal_date', ''),
+                    'csm_name': pm.get('assigned_csm', '') or pm.get('csm_name', ''),
+                    'csm_email': pm.get('csm_email', ''),
+                    'account_status': a.account_status, 'uuid': a.uuid or '',
+                })
+            csvs['accounts.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        if 'kpi_measurements' in requested:
+            cols = ['account_id', 'kpi_code', 'measured_at', 'value',
+                    'kpi_name', 'pillar', 'target', 'weight', 'unit', 'status']
+            rows = []
+            if account_ids:
+                kpis = DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids)).all()
+                for k in kpis:
+                    rows.append({
+                        'account_id': k.account_id, 'kpi_code': k.kpi_code,
+                        'measured_at': k.measured_at.isoformat() if k.measured_at else '',
+                        'value': float(k.value), 'kpi_name': '', 'pillar': k.pillar or '',
+                        'target': float(k.target) if k.target else '',
+                        'weight': float(k.weight) if k.weight else '',
+                        'unit': '', 'status': k.status or '',
+                    })
+            csvs['kpi_measurements.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        if 'signals' in requested:
+            cols = ['account_id', 'signal_date', 'signal_type', 'content', 'sentiment',
+                    'signal_ref', 'sentiment_score', 'stakeholder_name', 'stakeholder_title',
+                    'causal_chain_ref', 'revenue_impact', 'confidence', 'source_platform']
+            rows = []
+            if account_ids:
+                signals = QualitativeSignal.query.filter(
+                    QualitativeSignal.account_id.in_(account_ids)
+                ).all()
+                for s in signals:
+                    rows.append({
+                        'account_id': s.account_id,
+                        'signal_date': s.signal_date.isoformat() if s.signal_date else '',
+                        'signal_type': s.signal_type or '', 'content': s.content or '',
+                        'sentiment': s.sentiment or '', 'signal_ref': s.signal_id or '',
+                        'sentiment_score': float(s.sentiment_score) if s.sentiment_score else '',
+                        'stakeholder_name': '', 'stakeholder_title': s.stakeholder_title or '',
+                        'causal_chain_ref': '', 'revenue_impact': '', 'confidence': '',
+                        'source_platform': '',
+                    })
+            csvs['enhanced_qualitative_signals.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        if 'products' in requested:
+            cols = ['account_id', 'product_name', 'product_category', 'quantity',
+                    'unit_price', 'deployment_date', 'status', 'customer_id']
+            rows = []
+            if account_ids:
+                products = Product.query.filter(Product.account_id.in_(account_ids)).all()
+                for p in products:
+                    rows.append({
+                        'account_id': p.account_id, 'product_name': p.product_name,
+                        'product_category': p.product_type or '', 'quantity': '',
+                        'unit_price': float(p.revenue) if p.revenue else '',
+                        'deployment_date': '', 'status': p.status or '',
+                        'customer_id': p.customer_id,
+                    })
+            csvs['products.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        ctx_nodes = []
+        if account_ids and any(t in requested for t in ['stakeholders', 'engagement_events', 'profiles', 'outcomes']):
+            ctx_nodes = ContextNode.query.filter(
+                ContextNode.account_id.in_(account_ids)
+            ).all()
+
+        nodes_by_type = {}
+        for n in ctx_nodes:
+            nodes_by_type.setdefault(n.node_type, []).append(n)
+
+        if 'stakeholders' in requested:
+            cols = ['account_id', 'stakeholder_name', 'title', 'role', 'influence_score',
+                    'email', 'engagement_frequency', 'sentiment', 'department',
+                    'is_active', 'source_platform', 'first_observed_at']
+            rows = []
+            for n in nodes_by_type.get('STAKEHOLDER', []):
+                props = n.properties or {}
+                rows.append({
+                    'account_id': n.account_id,
+                    'stakeholder_name': n.title or props.get('stakeholder_name', ''),
+                    'title': props.get('title', ''),
+                    'role': props.get('role', n.node_subtype or ''),
+                    'influence_score': props.get('influence_score', ''),
+                    'email': props.get('email', ''),
+                    'engagement_frequency': props.get('engagement_frequency', ''),
+                    'sentiment': props.get('sentiment', ''),
+                    'department': props.get('department', ''),
+                    'is_active': props.get('is_active', ''),
+                    'source_platform': n.source_platform or '',
+                    'first_observed_at': n.occurred_at.isoformat() if n.occurred_at else '',
+                })
+            csvs['stakeholders.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        if 'engagement_events' in requested:
+            cols = ['account_id', 'event_date', 'event_type', 'description',
+                    'stakeholder_name', 'sentiment_shift', 'channel',
+                    'duration_minutes', 'outcome', 'source_platform']
+            rows = []
+            for n in nodes_by_type.get('SIGNAL', []):
+                props = n.properties or {}
+                rows.append({
+                    'account_id': n.account_id,
+                    'event_date': n.occurred_at.isoformat() if n.occurred_at else '',
+                    'event_type': n.node_subtype or props.get('event_type', ''),
+                    'description': n.title or '',
+                    'stakeholder_name': props.get('stakeholder_name', ''),
+                    'sentiment_shift': props.get('sentiment_shift', ''),
+                    'channel': props.get('channel', ''),
+                    'duration_minutes': props.get('duration_minutes', ''),
+                    'outcome': props.get('outcome', ''),
+                    'source_platform': n.source_platform or '',
+                })
+            csvs['engagement_events.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        if 'profiles' in requested:
+            cols = ['account_id', 'arr', 'industry', 'employee_count',
+                    'fiscal_year_end', 'tech_stack', 'cloud_provider',
+                    'competitive_landscape', 'strategic_initiatives', 'budget_cycle',
+                    'profile_date', 'assigned_csm', 'csm_manager', 'executive_sponsor',
+                    'mrr', 'primary_champion_name', 'primary_champion_title',
+                    'primary_champion_email', 'primary_champion_engagement_score',
+                    'last_updated']
+            rows = []
+            account_nodes = nodes_by_type.get('ACCOUNT', [])
+            if account_nodes:
+                for n in account_nodes:
+                    props = n.properties or {}
+                    rows.append({
+                        'account_id': n.account_id,
+                        **{c: props.get(c, '') for c in cols if c not in ('account_id', 'profile_date', 'last_updated')},
+                        'profile_date': n.occurred_at.isoformat() if n.occurred_at else '',
+                        'last_updated': n.updated_at.isoformat() if n.updated_at else '',
+                    })
+            else:
+                for a in accounts:
+                    pm = a.profile_metadata or {}
+                    rows.append({
+                        'account_id': a.account_id,
+                        **{c: pm.get(c, '') for c in cols if c not in ('account_id', 'profile_date', 'last_updated')},
+                        'arr': pm.get('arr', '') or (float(a.revenue) if a.revenue else ''),
+                        'industry': a.industry or '',
+                        'profile_date': '',
+                        'last_updated': a.updated_at.isoformat() if a.updated_at else '',
+                    })
+            csvs['account_business_profiles.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        if 'outcomes' in requested:
+            cols = ['account_id', 'outcome_date', 'title', 'outcome_type', 'revenue_value',
+                    'outcome_id', 'evidence', 'confidence', 'related_decision_id', 'source_platform']
+            rows = []
+            for n in nodes_by_type.get('OUTCOME', []):
+                props = n.properties or {}
+                rows.append({
+                    'account_id': n.account_id,
+                    'outcome_date': n.occurred_at.isoformat() if n.occurred_at else '',
+                    'title': n.title or '',
+                    'outcome_type': n.node_subtype or props.get('outcome_type', ''),
+                    'revenue_value': float(n.revenue_impact) if n.revenue_impact else '',
+                    'outcome_id': n.source_ref or n.source_event_id or '',
+                    'evidence': props.get('evidence', ''),
+                    'confidence': float(n.confidence) if n.confidence else '',
+                    'related_decision_id': props.get('related_decision_id', ''),
+                    'source_platform': n.source_platform or '',
+                })
+            csvs['outcomes.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
+
+        total_rows = sum(f['rows'] for f in csvs.values())
+        files_summary = [{'file': name, 'rows': info['rows']} for name, info in csvs.items()]
+
+        result = {
+            'scope': 'customer', 'customer_id': customer_id,
+            'customer_name': customer.customer_name, 'file_type': file_type,
+            'total_files': len(csvs), 'total_rows': total_rows, 'files': files_summary,
+            'message': (
+                f"Downloaded {total_rows} rows across {len(csvs)} CSV(s) for "
+                f"{customer.customer_name}. CSV content is in the 'csv_data' field."
+            ),
+            'csv_data': {name: info['content'] for name, info in csvs.items()},
+        }
+
+        if file_type != 'all' and len(csvs) == 1:
+            fname = list(csvs.keys())[0]
+            result['filename'] = fname
+            result['csv_content'] = csvs[fname]['content']
+
+        return result
