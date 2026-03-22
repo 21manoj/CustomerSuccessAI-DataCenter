@@ -83,7 +83,7 @@ const TABS: TabDef[] = [
 // ---------------------------------------------------------------------------
 
 const CustomerDetailPage: React.FC = () => {
-  const { customerId: rawId } = useParams<{ customerId: string }>();
+  const { id: rawId } = useParams<{ id: string }>();
   const customerId = Number(rawId);
   const navigate = useNavigate();
 
