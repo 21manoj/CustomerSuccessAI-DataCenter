@@ -586,7 +586,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                     outcome_type = str(row.get('outcome_type', 'unknown'))
                     outcome_date = row.get('outcome_date', '')
                     title = row.get('title', '')
-                    revenue = row.get('revenue_value', 0)
+                    revenue = row.get('revenue_impact', row.get('revenue_value', 0))
 
                     # Infer a decision that led to this outcome
                     decision_map = {
@@ -658,7 +658,7 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                             'weight': 0.8,
                             'confidence': 0.7,
                             'lag_days': 30,
-                            'revenue_impact': out_row.get('revenue_value', 0),
+                            'revenue_impact': out_row.get('revenue_impact', row.get('revenue_value', 0)),
                             'evidence': f'Decision {dec_ref} led to outcome',
                             'created_by': 'auto_generation',
                         })
@@ -979,14 +979,19 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     outcome_id = str(row.get('outcome_id', '')).strip()
                     rev_val = None
                     try:
-                        rev_val = float(row.get('revenue_value', 0))
+                        rev_val = float(row.get('revenue_impact', row.get('revenue_value', 0)))
                     except (ValueError, TypeError):
                         pass
                     outcome_type = row.get('outcome_type', 'retention')
                     rev_type_map = {
-                        'expansion': 'expansion', 'retention': 'protected',
-                        'churn_averted': 'protected', 'cost_reduction': 'protected',
-                        'churn_loss': 'lost',
+                        'expansion': 'expansion', 'expansion_approved': 'expansion',
+                        'retention': 'protected', 'revenue_protected': 'protected',
+                        'churn_averted': 'protected', 'renewal_secured': 'protected',
+                        'engagement_recovery': 'protected', 'cost_reduction': 'protected',
+                        'churn_loss': 'lost', 'revenue_at_risk': 'at_risk',
+                        'engagement_decline': 'at_risk', 'renewal_uncertainty': 'at_risk',
+                        'capacity_constraint': 'at_risk', 'partner_friction': 'at_risk',
+                        'revenue_growth': 'expansion',
                     }
                     props = {
                         'outcome_id': outcome_id,
