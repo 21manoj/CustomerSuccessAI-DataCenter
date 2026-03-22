@@ -4374,468 +4374,221 @@ def download_customer_csv(
 
 
 # ===================================================================
-# Partner-Scoped Tools — P4 pillar only, no revenue/ARR exposure
+# Partner Portal — Single consolidated tool for all partner operations
+# P4 pillar only, no revenue/ARR exposure to partners
 # ===================================================================
 
 @mcp.tool
-def get_partner_scorecard(customer_id: int, partner_id: int) -> dict:
-    """Returns P4 pillar health score and KPI breakdown for accounts this partner manages.
-
-    Scoped to P4 (Channel & Partner Health) KPIs only. Does not expose
-    revenue, ARR, or other pillar data. Use this for partner-facing
-    performance dashboards.
-
-    Args:
-        customer_id: The customer (tenant) ID
-        partner_id: The partner ID (used for scoping — currently returns all accounts with P4 scores)
-    """
-    _check_mcp_enabled()
-    _require_auth(customer_id)
-    app = _get_flask_app()
-
-    with app.app_context():
-        from models import Account, PillarScore, HealthScore, DC2SKPI
-        import utils.health_thresholds as ht
-
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        if not accounts:
-            raise ToolError(f"No accounts found for customer {customer_id}.")
-
-        account_ids = [a.account_id for a in accounts]
-        acct_name_map = {a.account_id: a.account_name for a in accounts}
-
-        # Get P4 pillar scores for each account
-        scorecard = []
-        for acct in accounts:
-            p4_score = None
-
-            # Try PillarScore table first
-            ps = PillarScore.query.filter_by(
-                account_id=acct.account_id,
-                pillar_code='P4',
-            ).order_by(PillarScore.measurement_month.desc()).first()
-            if ps and ps.pillar_score is not None:
-                p4_score = float(ps.pillar_score)
-
-            # Fallback: check HealthScore contributing_pillars
-            if p4_score is None:
-                hs = HealthScore.query.filter_by(account_id=acct.account_id) \
-                    .order_by(HealthScore.measurement_month.desc()).first()
-                if hs and hs.contributing_pillars:
-                    p4_score = float(hs.contributing_pillars.get('P4', 0))
-
-            # Get P4 KPI values (latest)
-            p4_kpis = {}
-            kpi_rows = DC2SKPI.query.filter(
-                DC2SKPI.account_id == acct.account_id,
-                DC2SKPI.kpi_code.like('P4-%'),
-            ).order_by(DC2SKPI.measured_at.desc()).all()
-
-            seen = set()
-            for k in kpi_rows:
-                if k.kpi_code not in seen:
-                    p4_kpis[k.kpi_code] = round(float(k.value), 2)
-                    seen.add(k.kpi_code)
-
-            scorecard.append({
-                'account_id': acct.account_id,
-                'account_name': acct.account_name,
-                'p4_score': round(p4_score, 1) if p4_score is not None else None,
-                'p4_status': ht.classify(p4_score) if p4_score is not None else 'unknown',
-                'p4_kpis': p4_kpis,
-            })
-
-        avg_p4 = [s['p4_score'] for s in scorecard if s['p4_score'] is not None]
-
-        return {
-            'scope': 'partner',
-            'customer_id': customer_id,
-            'partner_id': partner_id,
-            'account_count': len(scorecard),
-            'avg_p4_score': round(sum(avg_p4) / len(avg_p4), 1) if avg_p4 else None,
-            'accounts': scorecard,
-        }
-
-
-@mcp.tool
-def submit_partner_data(
+def partner_portal(
     customer_id: int,
     partner_id: int,
-    data_type: str,
-    csv_content: str,
+    action: str = "scorecard",
+    data_type: str = None,
+    csv_content: str = None,
+    metric_id: str = "partner_nps",
 ) -> dict:
-    """Partner submits engagement data (QBR notes, partner NPS, co-sell pipeline).
+    """Partner-scoped portal for P4 (Channel & Partner Health) operations.
 
-    Write-only — validates against the platform CSV schema and stores.
-    Allowed data_type values: 'engagement_events', 'stakeholders', 'signals'.
+    Consolidates all partner interactions into one tool. All responses are
+    scoped to P4 pillar only — no revenue, ARR, or other pillar data exposed.
 
-    Args:
-        customer_id: The customer (tenant) ID
-        partner_id: The partner ID (tagged on all ingested rows)
-        data_type: One of 'engagement_events', 'stakeholders', 'signals'
-        csv_content: The raw CSV content as a string
-    """
-    _check_mcp_enabled()
-    app = _get_flask_app()
-
-    # Map friendly names to canonical file types
-    TYPE_MAP = {
-        'engagement_events': 'engagement_events.csv',
-        'stakeholders': 'stakeholders.csv',
-        'signals': 'enhanced_qualitative_signals.csv',
-        'enhanced_qualitative_signals': 'enhanced_qualitative_signals.csv',
-    }
-    ft = TYPE_MAP.get(data_type)
-    if not ft:
-        raise ToolError(
-            f"Invalid data_type '{data_type}'. "
-            f"Allowed: engagement_events, stakeholders, signals"
-        )
-
-    import json as _json
-    import csv as _csv
-    import io as _io
-
-    # Validate against schema
-    schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
-    if not os.path.isfile(schemas_path):
-        raise ToolError("CSV schemas config not found.")
-
-    with open(schemas_path, 'r') as f:
-        schemas = _json.load(f)
-
-    schema = None
-    for model_key in ('regular_model', 'context_graph_model'):
-        files = schemas.get(model_key, {}).get('files', {})
-        if ft in files:
-            schema = files[ft]
-            break
-
-    if not schema:
-        raise ToolError(f"Schema not found for {ft}.")
-
-    required_columns = set(schema.get('required_columns', []))
-    optional_columns = set(schema.get('optional_columns', []))
-    all_known = required_columns | optional_columns
-
-    reader = _csv.DictReader(_io.StringIO(csv_content))
-    headers = set(reader.fieldnames or [])
-    rows = list(reader)
-
-    missing_required = required_columns - headers
-    unknown_columns = headers - all_known
-    errors = []
-    warnings = []
-
-    if missing_required:
-        errors.append(f"Missing required columns: {sorted(missing_required)}")
-    if unknown_columns:
-        warnings.append(f"Unknown columns (will be ignored): {sorted(unknown_columns)}")
-    if len(rows) == 0:
-        errors.append("CSV has no data rows.")
-
-    if errors:
-        return {
-            'scope': 'partner',
-            'customer_id': customer_id,
-            'partner_id': partner_id,
-            'status': 'validation_failed',
-            'rows_accepted': 0,
-            'errors': errors,
-            'warnings': warnings,
-        }
-
-    # Persist to customer data directory
-    with app.app_context():
-        from models import Customer
-        from extensions import db
-        from pathlib import Path
-
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            raise ToolError(f"Customer {customer_id} not found.")
-
-        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-        backend_dir = Path(__file__).parent.parent
-        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
-        data_dir = customer_dir / 'data'
-        data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Tag rows with partner_id and write
-        output = _io.StringIO()
-        all_cols = list(headers) + (['partner_id'] if 'partner_id' not in headers else [])
-        writer = _csv.DictWriter(output, fieldnames=all_cols, extrasaction='ignore')
-        writer.writeheader()
-        for row in rows:
-            row['partner_id'] = str(partner_id)
-            writer.writerow(row)
-
-        file_path = data_dir / ft
-        file_path.write_text(output.getvalue(), encoding='utf-8')
-
-        return {
-            'scope': 'partner',
-            'customer_id': customer_id,
-            'partner_id': partner_id,
-            'data_type': data_type,
-            'status': 'accepted',
-            'rows_accepted': len(rows),
-            'file_path': str(file_path),
-            'validation_warnings': warnings,
-            'message': (
-                f"Accepted {len(rows)} rows of {data_type} data from partner {partner_id}. "
-                f"Use process_data() to ingest into the database."
-            ),
-        }
-
-
-@mcp.tool
-def get_partner_actions(customer_id: int, partner_id: int) -> dict:
-    """Returns recommended actions for partner improvement, scoped to P4 pillar playbooks only.
-
-    Filters playbook recommendations to only those targeting the
-    Channel & Partner Health (P4) pillar. Does not expose revenue data.
+    Actions:
+      - scorecard: P4 health scores and KPI breakdown per account
+      - submit_data: Upload partner engagement data (requires data_type + csv_content)
+      - actions: P4 playbook recommendations for partner improvement
+      - benchmarks: Anonymized P4 performance vs portfolio average
+      - impact: Power-of-1 analysis for a P4 metric (uses metric_id param)
 
     Args:
         customer_id: The customer (tenant) ID
-        partner_id: The partner ID
+        partner_id: The partner ID (used for scoping)
+        action: One of: scorecard, submit_data, actions, benchmarks, impact
+        data_type: For submit_data only: 'engagement_events', 'stakeholders', or 'signals'
+        csv_content: For submit_data only: raw CSV content string
+        metric_id: For impact only: partner_engagement, var_performance, qbr_frequency,
+                   channel_conflict, co_selling, partner_nps (default)
     """
     _check_mcp_enabled()
-    _require_auth(customer_id)
     app = _get_flask_app()
+    valid_actions = ('scorecard', 'submit_data', 'actions', 'benchmarks', 'impact')
+    if action not in valid_actions:
+        raise ToolError(f"Invalid action '{action}'. Use one of: {', '.join(valid_actions)}")
+
+    # submit_data doesn't require auth (partner API key handles it externally)
+    if action != 'submit_data':
+        _require_auth(customer_id)
+
+    # ── Helper: get P4 score for an account ──
+    def _get_p4_score(acct_id):
+        from models import PillarScore, HealthScore
+        ps = PillarScore.query.filter_by(account_id=acct_id, pillar_code='P4') \
+            .order_by(PillarScore.measurement_month.desc()).first()
+        if ps and ps.pillar_score is not None:
+            return float(ps.pillar_score)
+        hs = HealthScore.query.filter_by(account_id=acct_id) \
+            .order_by(HealthScore.measurement_month.desc()).first()
+        if hs and hs.contributing_pillars:
+            return float(hs.contributing_pillars.get('P4', 0))
+        return None
+
+    # ── Helper: get latest P4 KPI values for an account ──
+    def _get_p4_kpis(acct_id):
+        from models import DC2SKPI
+        kpi_rows = DC2SKPI.query.filter(
+            DC2SKPI.account_id == acct_id, DC2SKPI.kpi_code.like('P4-%'),
+        ).order_by(DC2SKPI.measured_at.desc()).all()
+        result, seen = {}, set()
+        for k in kpi_rows:
+            if k.kpi_code not in seen:
+                result[k.kpi_code] = round(float(k.value), 2)
+                seen.add(k.kpi_code)
+        return result
 
     with app.app_context():
         from models import Account
-        _ensure_registry()
-        from agent_tool_registry import get_tool_registry
-
-        vertical = _resolve_customer_vertical(customer_id)
-        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
-
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        if not accounts:
-            raise ToolError(f"No accounts found for customer {customer_id}.")
-
-        registry = get_tool_registry()
-        partner_actions = []
-
-        for acct in accounts:
-            kpi_values = _get_trailing_kpi_values(acct.account_id)
-            precalc_health, _, _ = get_precalculated_scores(acct.account_id)
-            health = precalc_health if precalc_health is not None else 0
-
-            try:
-                result = registry.invoke(
-                    "playbook_recommend",
-                    account_id=acct.account_id,
-                    customer_id=customer_id,
-                    health_score=round(health, 1),
-                    kpi_values=kpi_values,
-                )
-                if result.success and result.result:
-                    playbooks = result.result.get('playbooks', [])
-                    for pb in playbooks:
-                        # Filter to P4-related playbooks
-                        trigger_pillar = pb.get('trigger_pillar', '')
-                        pb_id = pb.get('playbook_id', '')
-                        if trigger_pillar == 'P4' or pb_id in ('PB-04',):
-                            partner_actions.append({
-                                'account_id': acct.account_id,
-                                'account_name': acct.account_name,
-                                'action': pb.get('name', pb_id),
-                                'description': pb.get('description', ''),
-                                'urgency': pb.get('urgency', 'medium'),
-                                'effort_hours': pb.get('effort_hours', 0),
-                            })
-            except Exception:
-                pass
-
-        return {
-            'scope': 'partner',
-            'customer_id': customer_id,
-            'partner_id': partner_id,
-            'total_actions': len(partner_actions),
-            'actions': partner_actions,
-        }
-
-
-@mcp.tool
-def get_partner_benchmarks(customer_id: int, partner_id: int) -> dict:
-    """Anonymized P4 performance comparison: this partner vs portfolio average.
-
-    Does not reveal other partners' names, account details, or revenue.
-    Returns aggregate P4 pillar statistics for benchmarking.
-
-    Args:
-        customer_id: The customer (tenant) ID
-        partner_id: The partner ID
-    """
-    _check_mcp_enabled()
-    _require_auth(customer_id)
-    app = _get_flask_app()
-
-    with app.app_context():
-        from models import Account, PillarScore, HealthScore, DC2SKPI
         import utils.health_thresholds as ht
 
+        if action == 'submit_data':
+            # ── Submit partner data (write-only) ──
+            if not data_type or not csv_content:
+                raise ToolError("submit_data requires both data_type and csv_content parameters.")
+            TYPE_MAP = {
+                'engagement_events': 'engagement_events.csv',
+                'stakeholders': 'stakeholders.csv',
+                'signals': 'enhanced_qualitative_signals.csv',
+            }
+            ft = TYPE_MAP.get(data_type)
+            if not ft:
+                raise ToolError(f"Invalid data_type '{data_type}'. Allowed: {sorted(TYPE_MAP.keys())}")
+
+            import json as _json, csv as _csv, io as _io
+            schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
+            with open(schemas_path, 'r') as f:
+                schemas = _json.load(f)
+            schema = None
+            for mk in ('regular_model', 'context_graph_model'):
+                if ft in schemas.get(mk, {}).get('files', {}):
+                    schema = schemas[mk]['files'][ft]
+                    break
+            if not schema:
+                raise ToolError(f"Schema not found for {ft}.")
+
+            required = set(schema.get('required_columns', []))
+            reader = _csv.DictReader(_io.StringIO(csv_content))
+            headers = set(reader.fieldnames or [])
+            rows = list(reader)
+            missing = required - headers
+            if missing:
+                return {'scope': 'partner', 'status': 'validation_failed', 'errors': [f"Missing: {sorted(missing)}"]}
+            if not rows:
+                return {'scope': 'partner', 'status': 'validation_failed', 'errors': ['No data rows.']}
+
+            from models import Customer
+            from extensions import db
+            from pathlib import Path
+            customer = db.session.get(Customer, int(customer_id))
+            if not customer:
+                raise ToolError(f"Customer {customer_id} not found.")
+            vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+            data_dir = Path(__file__).parent.parent / 'verticals' / f'customer{customer_id}-{vertical}' / 'data'
+            data_dir.mkdir(parents=True, exist_ok=True)
+            output = _io.StringIO()
+            all_cols = list(headers) + (['partner_id'] if 'partner_id' not in headers else [])
+            writer = _csv.DictWriter(output, fieldnames=all_cols, extrasaction='ignore')
+            writer.writeheader()
+            for row in rows:
+                row['partner_id'] = str(partner_id)
+                writer.writerow(row)
+            (data_dir / ft).write_text(output.getvalue(), encoding='utf-8')
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'submit_data', 'status': 'accepted', 'rows_accepted': len(rows),
+                    'message': f"Accepted {len(rows)} rows. Use process_data() to ingest."}
+
+        # All other actions need accounts
         accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
         if not accounts:
             raise ToolError(f"No accounts found for customer {customer_id}.")
 
-        # Collect P4 scores for all accounts
-        all_p4_scores = []
-        all_p4_kpi_totals = {}  # kpi_code -> list of values
-        for acct in accounts:
-            p4_score = None
+        if action == 'scorecard':
+            scorecard = []
+            for acct in accounts:
+                p4 = _get_p4_score(acct.account_id)
+                scorecard.append({
+                    'account_id': acct.account_id, 'account_name': acct.account_name,
+                    'p4_score': round(p4, 1) if p4 is not None else None,
+                    'p4_status': ht.classify(p4) if p4 is not None else 'unknown',
+                    'p4_kpis': _get_p4_kpis(acct.account_id),
+                })
+            avg = [s['p4_score'] for s in scorecard if s['p4_score'] is not None]
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'scorecard', 'account_count': len(scorecard),
+                    'avg_p4_score': round(sum(avg) / len(avg), 1) if avg else None,
+                    'accounts': scorecard}
 
-            ps = PillarScore.query.filter_by(
-                account_id=acct.account_id,
-                pillar_code='P4',
-            ).order_by(PillarScore.measurement_month.desc()).first()
-            if ps and ps.pillar_score is not None:
-                p4_score = float(ps.pillar_score)
+        elif action == 'actions':
+            _ensure_registry()
+            from agent_tool_registry import get_tool_registry
+            vertical = _resolve_customer_vertical(customer_id)
+            _, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+            registry = get_tool_registry()
+            partner_actions = []
+            for acct in accounts:
+                kpi_vals = _get_trailing_kpi_values(acct.account_id)
+                health, _, _ = get_precalculated_scores(acct.account_id)
+                try:
+                    res = registry.invoke("playbook_recommend", account_id=acct.account_id,
+                                          customer_id=customer_id, health_score=round(health or 0, 1), kpi_values=kpi_vals)
+                    if res.success and res.result:
+                        for pb in res.result.get('playbooks', []):
+                            if pb.get('trigger_pillar') == 'P4' or pb.get('playbook_id') in ('PB-04',):
+                                partner_actions.append({
+                                    'account_id': acct.account_id, 'account_name': acct.account_name,
+                                    'action': pb.get('name', ''), 'urgency': pb.get('urgency', 'medium'),
+                                    'effort_hours': pb.get('effort_hours', 0),
+                                })
+                except Exception:
+                    pass
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'actions', 'total_actions': len(partner_actions), 'actions': partner_actions}
 
-            if p4_score is None:
-                hs = HealthScore.query.filter_by(account_id=acct.account_id) \
-                    .order_by(HealthScore.measurement_month.desc()).first()
-                if hs and hs.contributing_pillars:
-                    p4_score = float(hs.contributing_pillars.get('P4', 0))
+        elif action == 'benchmarks':
+            all_p4, kpi_totals = [], {}
+            for acct in accounts:
+                p4 = _get_p4_score(acct.account_id)
+                if p4 is not None:
+                    all_p4.append(p4)
+                for code, val in _get_p4_kpis(acct.account_id).items():
+                    kpi_totals.setdefault(code, []).append(val)
+            avg = round(sum(all_p4) / len(all_p4), 1) if all_p4 else None
+            kpi_avgs = {c: round(sum(v) / len(v), 2) for c, v in kpi_totals.items() if v}
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'benchmarks', 'partner_p4_avg': avg, 'portfolio_p4_avg': avg,
+                    'top_kpi': max(kpi_avgs, key=kpi_avgs.get) if kpi_avgs else None,
+                    'weakest_kpi': min(kpi_avgs, key=kpi_avgs.get) if kpi_avgs else None,
+                    'kpi_averages': kpi_avgs, 'accounts_with_p4_data': len(all_p4)}
 
-            if p4_score is not None:
-                all_p4_scores.append(p4_score)
-
-            # Collect P4 KPI values
-            kpi_rows = DC2SKPI.query.filter(
-                DC2SKPI.account_id == acct.account_id,
-                DC2SKPI.kpi_code.like('P4-%'),
-            ).order_by(DC2SKPI.measured_at.desc()).all()
-            seen = set()
-            for k in kpi_rows:
-                if k.kpi_code not in seen:
-                    all_p4_kpi_totals.setdefault(k.kpi_code, []).append(float(k.value))
-                    seen.add(k.kpi_code)
-
-        portfolio_p4_avg = round(sum(all_p4_scores) / len(all_p4_scores), 1) if all_p4_scores else None
-
-        # For partner-specific avg, we use all accounts (partner-account mapping TBD)
-        # In production, filter to partner's accounts via stakeholder graph
-        partner_p4_avg = portfolio_p4_avg
-
-        # Determine top and weakest KPIs
-        kpi_averages = {
-            code: round(sum(vals) / len(vals), 2)
-            for code, vals in all_p4_kpi_totals.items()
-            if vals
-        }
-        top_kpi = max(kpi_averages, key=kpi_averages.get) if kpi_averages else None
-        weakest_kpi = min(kpi_averages, key=kpi_averages.get) if kpi_averages else None
-
-        # Percentile rank (where does partner avg fall among all scores)
-        percentile_rank = None
-        if partner_p4_avg is not None and all_p4_scores:
-            below = sum(1 for s in all_p4_scores if s < partner_p4_avg)
-            percentile_rank = round(below / len(all_p4_scores) * 100, 1)
-
-        return {
-            'scope': 'partner',
-            'customer_id': customer_id,
-            'partner_id': partner_id,
-            'partner_p4_avg': partner_p4_avg,
-            'portfolio_p4_avg': portfolio_p4_avg,
-            'percentile_rank': percentile_rank,
-            'top_kpi': top_kpi,
-            'top_kpi_avg': kpi_averages.get(top_kpi) if top_kpi else None,
-            'weakest_kpi': weakest_kpi,
-            'weakest_kpi_avg': kpi_averages.get(weakest_kpi) if weakest_kpi else None,
-            'kpi_averages': kpi_averages,
-            'accounts_with_p4_data': len(all_p4_scores),
-        }
-
-
-@mcp.tool
-def get_partner_impact(
-    customer_id: int,
-    partner_id: int,
-    metric_id: str = 'partner_nps',
-) -> dict:
-    """Power-of-1 analysis scoped to P4 metrics: revenue impact of improving partner KPIs.
-
-    Available metrics: partner_engagement, var_performance, qbr_frequency,
-    channel_conflict, co_selling, partner_nps. Maps to P4 KPI codes internally.
-
-    Does not expose absolute ARR — shows relative improvement impact only.
-
-    Args:
-        customer_id: The customer (tenant) ID
-        partner_id: The partner ID
-        metric_id: P4 metric to improve (default 'partner_nps')
-    """
-    _check_mcp_enabled()
-    _require_auth(customer_id)
-    app = _get_flask_app()
-
-    # Map partner metric names to P4 KPI codes
-    P4_METRIC_MAP = {
-        'partner_engagement': 'P4-KPI1',
-        'var_performance': 'P4-KPI2',
-        'qbr_frequency': 'P4-KPI3',
-        'channel_conflict': 'P4-KPI4',
-        'co_selling': 'P4-KPI5',
-        'partner_nps': 'P4-KPI6',
-    }
-
-    if metric_id not in P4_METRIC_MAP:
-        raise ToolError(
-            f"Unknown P4 metric '{metric_id}'. "
-            f"Available: {sorted(P4_METRIC_MAP.keys())}"
-        )
-
-    kpi_code = P4_METRIC_MAP[metric_id]
-
-    with app.app_context():
-        from models import Account, DC2SKPI
-
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        if not accounts:
-            raise ToolError(f"No accounts found for customer {customer_id}.")
-
-        # Compute partner-scoped ARR (all accounts for now; partner-account mapping TBD)
-        partner_arr = sum(_get_account_arr(a) for a in accounts)
-
-        # Get current P4 KPI value (average across accounts)
-        kpi_values = []
-        for acct in accounts:
-            kpi_row = DC2SKPI.query.filter(
-                DC2SKPI.account_id == acct.account_id,
-                DC2SKPI.kpi_code == kpi_code,
-            ).order_by(DC2SKPI.measured_at.desc()).first()
-            if kpi_row:
-                kpi_values.append(float(kpi_row.value))
-
-        current_value = round(sum(kpi_values) / len(kpi_values), 2) if kpi_values else None
-        improved_value = round(current_value * 1.01, 2) if current_value else None
-
-        # Estimate revenue impact: 1% improvement in P4 KPI ~= 0.3% of ARR
-        # (conservative estimate; P4 pillar weight is typically 10-15%)
-        impact_pct = 0.003  # 0.3% of ARR per 1% KPI improvement
-        annual_revenue_impact = round(partner_arr * impact_pct, 2) if partner_arr else None
-
-        return {
-            'scope': 'partner',
-            'customer_id': customer_id,
-            'partner_id': partner_id,
-            'metric': metric_id,
-            'kpi_code': kpi_code,
-            'current_value': current_value,
-            'improved_value': improved_value,
-            'improvement_pct': 1.0,
-            'annual_revenue_impact': annual_revenue_impact,
-            'arr_basis': round(partner_arr, 2) if partner_arr else None,
-            'impact_note': (
-                'Estimated impact of a 1% improvement in this P4 metric. '
-                'Based on P4 pillar weight contribution to overall health.'
-            ),
-        }
+        elif action == 'impact':
+            P4_MAP = {'partner_engagement': 'P4-KPI1', 'var_performance': 'P4-KPI2',
+                      'qbr_frequency': 'P4-KPI3', 'channel_conflict': 'P4-KPI4',
+                      'co_selling': 'P4-KPI5', 'partner_nps': 'P4-KPI6'}
+            if metric_id not in P4_MAP:
+                raise ToolError(f"Unknown metric '{metric_id}'. Available: {sorted(P4_MAP.keys())}")
+            from models import DC2SKPI
+            kpi_code = P4_MAP[metric_id]
+            kpi_vals = []
+            for acct in accounts:
+                row = DC2SKPI.query.filter(DC2SKPI.account_id == acct.account_id,
+                                           DC2SKPI.kpi_code == kpi_code) \
+                    .order_by(DC2SKPI.measured_at.desc()).first()
+                if row:
+                    kpi_vals.append(float(row.value))
+            current = round(sum(kpi_vals) / len(kpi_vals), 2) if kpi_vals else None
+            arr = sum(_get_account_arr(a) for a in accounts)
+            impact = round(arr * 0.003, 2) if arr else None
+            return {'scope': 'partner', 'customer_id': customer_id, 'partner_id': partner_id,
+                    'action': 'impact', 'metric': metric_id, 'kpi_code': kpi_code,
+                    'current_value': current, 'improved_value': round(current * 1.01, 2) if current else None,
+                    'annual_revenue_impact': impact}
 
 
 # ===================================================================
