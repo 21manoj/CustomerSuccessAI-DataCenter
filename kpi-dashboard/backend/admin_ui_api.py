@@ -433,17 +433,20 @@ def purge_customer(cid):
         deleted = {}
 
         # 1. Delete from account_id-only tables
+        # Use SAVEPOINTs so a missing table doesn't abort the entire transaction
         if account_ids:
             aid_list = ','.join(str(a) for a in account_ids)
             for tbl in ['dc2s_kpis', 'health_scores', 'kpi_scores', 'kpis',
                         'pillar_scores', 'qualitative_signals']:
                 try:
+                    db.session.execute(text("SAVEPOINT sp_del"))
                     r = db.session.execute(
                         text(f"DELETE FROM {tbl} WHERE account_id IN ({aid_list})")
                     )
                     deleted[tbl] = r.rowcount
+                    db.session.execute(text("RELEASE SAVEPOINT sp_del"))
                 except Exception:
-                    pass
+                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_del"))
 
         # 2. Delete from customer_id tables (order: children first)
         customer_id_tables = [
@@ -466,14 +469,16 @@ def purge_customer(cid):
         ]
         for tbl in customer_id_tables:
             try:
+                db.session.execute(text("SAVEPOINT sp_del"))
                 r = db.session.execute(
                     text(f"DELETE FROM {tbl} WHERE customer_id = :cid"),
                     {"cid": cid}
                 )
                 if r.rowcount > 0:
                     deleted[tbl] = r.rowcount
+                db.session.execute(text("RELEASE SAVEPOINT sp_del"))
             except Exception:
-                pass
+                db.session.execute(text("ROLLBACK TO SAVEPOINT sp_del"))
 
         # 3. Delete the customer record itself
         db.session.execute(
@@ -537,9 +542,11 @@ def bulk_purge_customers():
                 for tbl in ['dc2s_kpis', 'health_scores', 'kpi_scores', 'kpis',
                             'pillar_scores', 'qualitative_signals']:
                     try:
+                        db.session.execute(text("SAVEPOINT sp_bulk"))
                         db.session.execute(text(f"DELETE FROM {tbl} WHERE account_id IN ({aid_list})"))
+                        db.session.execute(text("RELEASE SAVEPOINT sp_bulk"))
                     except Exception:
-                        pass
+                        db.session.execute(text("ROLLBACK TO SAVEPOINT sp_bulk"))
 
             for tbl in ['context_edges', 'context_nodes', 'webhook_events',
                         'playbook_webhook_logs', 'playbook_webhook_triggers',
@@ -557,9 +564,11 @@ def bulk_purge_customers():
                         'roi_snapshots', 'weight_calibration_history', 'wizard_runs',
                         'customer_api_keys', 'users', 'accounts', 'customer_configs']:
                 try:
+                    db.session.execute(text("SAVEPOINT sp_bulk"))
                     db.session.execute(text(f"DELETE FROM {tbl} WHERE customer_id = :cid"), {"cid": cid})
+                    db.session.execute(text("RELEASE SAVEPOINT sp_bulk"))
                 except Exception:
-                    pass
+                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_bulk"))
 
             db.session.execute(text("DELETE FROM customers WHERE customer_id = :cid"), {"cid": cid})
 
