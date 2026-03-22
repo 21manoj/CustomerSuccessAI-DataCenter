@@ -30,10 +30,13 @@ Architecture:
 import os
 import sys
 
-# Ensure backend is on the Python path
+# Ensure backend AND mcp_server dirs are on the Python path
 _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_mcp_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
+if _mcp_dir not in sys.path:
+    sys.path.insert(0, _mcp_dir)
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -772,10 +775,13 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
 # ===================================================================
 # Register tools from modules (import triggers @mcp.tool registration)
 # ===================================================================
-import cs_pulse_intelligence  # noqa: F401,E402
-import cs_pulse_revenue  # noqa: F401,E402
-import cs_pulse_onboarding  # noqa: F401,E402
-import cs_pulse_admin  # noqa: F401,E402
+_module_tools = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 5}
+for _mod_name, _expected in _module_tools.items():
+    try:
+        __import__(f'cs_pulse_{_mod_name}')
+        print(f"  ✅ Loaded cs_pulse_{_mod_name} ({_expected} tools)")
+    except Exception as _e:
+        print(f"  ❌ FAILED to load cs_pulse_{_mod_name}: {_e}")
 
 
 # ===================================================================
