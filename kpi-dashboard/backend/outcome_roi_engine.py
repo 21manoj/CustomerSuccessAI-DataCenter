@@ -679,30 +679,33 @@ def calculate_forward_roi(
         plat_pct = 1 - cs_pct
     else:
         # No learned data, no override → benchmark fallback per metric
+        # Benchmarks are calibrated for $10M ARR base. Scale investment
+        # proportionally for different ARR sizes (sub-linear: sqrt scaling)
+        # so smaller accounts get proportionally less, not the same flat cost.
         investment = 0
         total_cs = 0
         total_plat = 0
+        inv_arr_scale = 1.0
+        if account_arr and account_arr > 0:
+            # Sub-linear: sqrt(arr/10M) — $3.2M → 0.57x, $8.2M → 0.91x, $20M → 1.41x
+            inv_arr_scale = (account_arr / 10_000_000) ** 0.5
         for metric_id, metric in POWER_OF_1_METRICS.items():
             imp = improvement_pcts_map.get(metric_id, 0)
             if imp > 0:
                 cost_scale = max(1.0, 1.0 + 0.5 * (imp - 1.0))
                 period_fraction = projection_months / 12.0
-                investment += metric.total_investment * cost_scale * period_fraction
-                total_cs += metric.cs_initiative_cost * cost_scale * period_fraction
-                total_plat += metric.platform_cost * cost_scale * period_fraction
+                investment += metric.total_investment * cost_scale * period_fraction * inv_arr_scale
+                total_cs += metric.cs_initiative_cost * cost_scale * period_fraction * inv_arr_scale
+                total_plat += metric.platform_cost * cost_scale * period_fraction * inv_arr_scale
         cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
         plat_pct = 1 - cs_pct
 
     # ── ARR-proportional investment cap (15% max) ──
-    # Prevents absurd investment-to-ARR ratios on smaller accounts
-    # Industry benchmark: CS investment = 8-15% of ARR
+    # Safety net: CS investment never exceeds 15% of account ARR
     if account_arr and account_arr > 0:
         max_investment = account_arr * 0.15
         if investment > max_investment:
-            scale_down = max_investment / investment
             investment = max_investment
-            # Proportionally adjust CS/platform split
-            cs_pct = cs_pct  # ratios stay the same
 
     # Compounding
     compounding = total_direct_impact * COMPOUNDING_MULTIPLIER
