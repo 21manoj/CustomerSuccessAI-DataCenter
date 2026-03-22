@@ -295,14 +295,28 @@ def _get_trailing_kpi_values(account_id, days=30):
     return trailing_values
 
 
-def calculate_kpi_health(kpi_values, customer_id=None):
+def calculate_kpi_health(kpi_values, customer_id=None, vertical=None):
     """
     Calculate health score from KPI values using config-aware weights when possible.
-    When customer_id is provided and CustomerConfig (dc2_s) exists, uses DB pillar weights;
-    otherwise falls back to code default weights (logged explicitly).
+    Vertical-aware: uses the correct KPI catalog (DC2_S=38 KPIs, SaaS Premium=41 KPIs).
+    When customer_id is provided, auto-detects vertical from CustomerConfig.
     Normalizes AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes (GAP 1.3).
     Only includes pillars that have non-zero weight in customer config (enabled pillars).
     """
+    from utils.vertical_registry import get_kpis, get_pillars, get_vertical_for_customer, normalize_vertical
+
+    # Resolve vertical
+    if vertical:
+        resolved_vertical = normalize_vertical(vertical)
+    elif customer_id is not None:
+        resolved_vertical = get_vertical_for_customer(customer_id)
+    else:
+        resolved_vertical = 'dc2_s'
+
+    # Load the correct KPI catalog and pillar definitions
+    kpi_catalog = get_kpis(resolved_vertical)
+    pillar_catalog = get_pillars(resolved_vertical)
+
     # Config-aware: use CustomerConfig.dc2s_pillar_weights when customer_id provided
     weights = get_weights_for_customer(customer_id) if customer_id is not None else get_current_weights()
 
@@ -329,10 +343,10 @@ def calculate_kpi_health(kpi_values, customer_id=None):
     pillar_scores = {}
 
     for kpi_code, value in kpi_values.items():
-        if kpi_code not in DC2S_KPIS:
+        if kpi_code not in kpi_catalog:
             continue
 
-        kpi_def = DC2S_KPIS[kpi_code]
+        kpi_def = kpi_catalog[kpi_code]
         pillar = kpi_def.get('pillar', kpi_def.get('l1_category'))
 
         # Skip KPIs from disabled pillars
@@ -369,7 +383,7 @@ def calculate_kpi_health(kpi_values, customer_id=None):
     for pillar, score in pillar_averages.items():
         # Get weight from CustomerConfig L2 weights, fallback to catalog weight_l2
         pillar_data = weights.get(pillar, {})
-        weight = pillar_data.get('weight', DC2S_PILLARS.get(pillar, {}).get('weight_l2', 0.2))
+        weight = pillar_data.get('weight', pillar_catalog.get(pillar, {}).get('weight_l2', 0.2))
         overall_health += score * weight
         total_weight += weight
 

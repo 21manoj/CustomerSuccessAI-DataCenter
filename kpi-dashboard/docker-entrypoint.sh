@@ -42,6 +42,9 @@ fi
 if [ "${FEATURE_MCP_SERVER}" = "true" ]; then
     echo "Starting MCP server on port 8001..."
     (cd /app/backend && FEATURE_MCP_SERVER=true python3 mcp_server/cs_pulse_mcp_server.py http) &
+
+    echo "Starting Partner MCP server on port 8002..."
+    (cd /app/backend && FEATURE_MCP_SERVER=true python3 mcp_server/partner_mcp_server.py http) &
 fi
 
 # Start Nginx in background (serves React frontend + proxies /api/)

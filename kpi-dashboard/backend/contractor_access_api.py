@@ -290,6 +290,7 @@ def create_api_key(cid):
         scopes = data.get("scopes", ["read"])
         duration_days = data.get("duration_days")
         allowed_account_ids = data.get("allowed_account_ids")
+        partner_tier = data.get("partner_tier")  # e.g. 'reseller', 'technology_partner'
 
         if not name:
             return jsonify({"error": "Key name is required"}), 400
@@ -307,9 +308,21 @@ def create_api_key(cid):
                 scopes=scopes,
                 expires_at=expires_at,
                 allowed_account_ids=allowed_account_ids,
+                partner_tier=partner_tier,
             )
-            _log("api_key_create", f"API key '{name}' created for customer #{cid}",
-                 customer_id=cid, resource_type="api_key")
+            desc = f"API key '{name}' created for customer #{cid}"
+            if partner_tier:
+                desc += f" (partner_tier={partner_tier}, accounts={allowed_account_ids or 'ALL'})"
+            _log("api_key_create", desc, customer_id=cid, resource_type="api_key")
+
+            # Also log to partner audit log if partner key
+            if partner_tier:
+                _log_partner("partner_key_created", cid, {
+                    "key_name": name, "partner_tier": partner_tier,
+                    "scopes": scopes, "allowed_account_ids": allowed_account_ids or "ALL",
+                    "expires_at": expires_at.isoformat() if expires_at else "never",
+                })
+
             return jsonify(result), 201
         except ImportError:
             return jsonify({"error": "API key service not available on this branch"}), 501
@@ -389,4 +402,298 @@ def get_activity_log():
 
     except Exception as e:
         logger.exception("get_activity_log failed")
+        return jsonify({"error": str(e)}), 500
+
+
+# ===================================================================
+# Partner Audit Log
+# ===================================================================
+
+_partner_logger = logging.getLogger("partner_audit")
+
+
+def _log_partner(action: str, customer_id: int, details: dict):
+    """Log partner-specific actions to both the partner audit logger and DB activity log.
+
+    Partner logs are separate from super admin logs for compliance and auditing.
+    They include: key creation, key revocation, data uploads, access changes.
+    """
+    user_id = flask_session.get('user_id')
+    ip = request.remote_addr if request else 'N/A'
+
+    # Structured partner audit log (file/stdout)
+    _partner_logger.info(
+        "PARTNER_AUDIT | action=%s | customer_id=%s | user_id=%s | ip=%s | %s",
+        action, customer_id, user_id, ip,
+        " | ".join(f"{k}={v}" for k, v in details.items()),
+    )
+
+    # Also persist to DB activity log with 'partner' category
+    try:
+        activity_logger.log_activity(
+            customer_id=customer_id,
+            user_id=user_id,
+            action_type=action,
+            action_description=f"[PARTNER] {action}: {details}",
+            resource_type="partner_key",
+            resource_id=details.get("key_name"),
+            status="success",
+            details={**details, "category": "partner", "ip_address": ip},
+        )
+    except Exception as e:
+        logger.warning("Failed to persist partner audit log: %s", e)
+
+
+# ===================================================================
+# List accounts for a customer (used by partner key account picker)
+# ===================================================================
+
+@contractor_access_bp.route("/api/admin-ui/customers/<int:cid>/accounts", methods=["GET"])
+@super_admin_required
+def list_customer_accounts(cid):
+    """List all accounts for a customer — used by the partner key account picker."""
+    try:
+        from models import Account
+        accounts = Account.query.filter_by(customer_id=cid).all()
+        result = []
+        for a in accounts:
+            arr = getattr(a, 'arr', None) or getattr(a, 'revenue', None)
+            result.append({
+                "account_id": a.account_id,
+                "account_name": a.account_name,
+                "vertical": getattr(a, 'vertical', None),
+                "arr": float(arr) if arr else None,
+                "status": getattr(a, 'status', 'active'),
+            })
+        return jsonify({"accounts": result})
+    except Exception as e:
+        logger.exception("list_customer_accounts failed")
+        return jsonify({"error": str(e)}), 500
+
+
+# ===================================================================
+# Partner key management (dedicated workflow)
+# ===================================================================
+
+@contractor_access_bp.route("/api/admin-ui/customers/<int:cid>/partner-keys", methods=["POST"])
+@super_admin_required
+def create_partner_key(cid):
+    """Create a partner-scoped API key with account restrictions and optional email notification.
+
+    Request body:
+    {
+        "partner_name": "Acme Partners",
+        "partner_email": "ops@acmepartners.com",
+        "partner_tier": "reseller",
+        "allowed_account_ids": [1001, 1003, 1005],
+        "scopes": ["read"],
+        "duration_days": 365,
+        "send_email": true
+    }
+    """
+    try:
+        data = request.get_json(force=True)
+        partner_name = data.get("partner_name", "").strip()
+        partner_email = data.get("partner_email", "").strip()
+        partner_tier = data.get("partner_tier", "reseller")
+        allowed_account_ids = data.get("allowed_account_ids")
+        scopes = data.get("scopes", ["read"])
+        duration_days = data.get("duration_days", 365)
+        send_email = data.get("send_email", False)
+
+        if not partner_name:
+            return jsonify({"error": "partner_name is required"}), 400
+        if not partner_tier:
+            return jsonify({"error": "partner_tier is required"}), 400
+        if not allowed_account_ids or not isinstance(allowed_account_ids, list):
+            return jsonify({"error": "allowed_account_ids (list) is required — partners must be scoped to specific accounts"}), 400
+
+        # Validate accounts belong to this customer
+        from models import Account
+        valid_ids = {a.account_id for a in Account.query.filter_by(customer_id=cid).all()}
+        invalid = set(allowed_account_ids) - valid_ids
+        if invalid:
+            return jsonify({"error": f"Account IDs {sorted(invalid)} do not belong to customer {cid}"}), 400
+
+        # Generate the key
+        expires_at = datetime.utcnow() + timedelta(days=int(duration_days)) if duration_days else None
+        key_name = f"Partner: {partner_name}"
+
+        from api_key_service import generate_api_key as gen_key
+        full_key, key_record = gen_key(
+            customer_id=cid,
+            name=key_name,
+            scopes=scopes,
+            expires_at=expires_at,
+            allowed_account_ids=allowed_account_ids,
+            partner_tier=partner_tier,
+        )
+
+        # Log to both admin and partner audit
+        account_names = []
+        for a in Account.query.filter(Account.account_id.in_(allowed_account_ids)).all():
+            account_names.append(a.account_name)
+
+        _log("partner_key_create",
+             f"Partner key created: '{partner_name}' ({partner_tier}) for customer #{cid}, "
+             f"accounts: {account_names}, email: {partner_email or 'N/A'}",
+             customer_id=cid, resource_type="partner_key", resource_id=str(key_record.id))
+
+        _log_partner("partner_key_created", cid, {
+            "partner_name": partner_name,
+            "partner_email": partner_email or "N/A",
+            "partner_tier": partner_tier,
+            "key_id": key_record.id,
+            "key_prefix": key_record.key_prefix,
+            "allowed_account_ids": allowed_account_ids,
+            "allowed_account_names": account_names,
+            "scopes": scopes,
+            "expires_at": expires_at.isoformat() if expires_at else "never",
+            "send_email": send_email,
+        })
+
+        # Email notification (non-blocking — log if send fails)
+        email_sent = False
+        if send_email and partner_email:
+            email_sent = _send_partner_key_email(
+                partner_email, partner_name, full_key,
+                account_names, partner_tier, expires_at,
+            )
+            _log_partner("partner_email_sent" if email_sent else "partner_email_failed", cid, {
+                "partner_name": partner_name,
+                "partner_email": partner_email,
+                "email_sent": email_sent,
+            })
+
+        return jsonify({
+            "key": full_key,
+            "key_info": key_record.to_dict(),
+            "partner_name": partner_name,
+            "partner_email": partner_email,
+            "allowed_accounts": [{"id": aid, "name": n} for aid, n in zip(allowed_account_ids, account_names)],
+            "email_sent": email_sent,
+        }), 201
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("create_partner_key failed")
+        return jsonify({"error": str(e)}), 500
+
+
+def _send_partner_key_email(email: str, partner_name: str, api_key: str,
+                            account_names: list, tier: str, expires_at) -> bool:
+    """Send partner API key via email. Returns True if sent successfully.
+
+    Uses SMTP if configured (SMTP_HOST env var), otherwise logs the email content
+    for manual delivery. This is a best-effort notification — key creation
+    succeeds regardless of email delivery.
+    """
+    import os
+    smtp_host = os.environ.get("SMTP_HOST")
+
+    subject = f"CS Pulse Partner Access: Your API Key for {len(account_names)} accounts"
+    body = f"""Hello {partner_name},
+
+Your CS Pulse Partner Portal API key has been created.
+
+Partner Tier: {tier}
+Accounts: {', '.join(account_names)}
+Expires: {expires_at.strftime('%Y-%m-%d') if expires_at else 'Never'}
+
+Your API Key (save securely — shown only once):
+{api_key}
+
+Partner MCP Endpoint: /mcp/partner
+Documentation: Contact your CS Pulse administrator for integration guides.
+
+This key provides read-only access to P4 (Channel & Partner Health) data
+for the accounts listed above. Do not share this key.
+"""
+
+    if smtp_host:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+
+            smtp_port = int(os.environ.get("SMTP_PORT", 587))
+            smtp_user = os.environ.get("SMTP_USER", "")
+            smtp_pass = os.environ.get("SMTP_PASS", "")
+            from_addr = os.environ.get("SMTP_FROM", "noreply@cspulse.io")
+
+            msg = MIMEText(body)
+            msg["Subject"] = subject
+            msg["From"] = from_addr
+            msg["To"] = email
+
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                if smtp_port == 587:
+                    server.starttls()
+                if smtp_user:
+                    server.login(smtp_user, smtp_pass)
+                server.sendmail(from_addr, [email], msg.as_string())
+
+            _partner_logger.info("Partner key email sent to %s for %s", email, partner_name)
+            return True
+        except Exception as e:
+            _partner_logger.error("SMTP send failed for %s: %s", email, e)
+            return False
+    else:
+        # No SMTP configured — log for manual delivery
+        _partner_logger.info(
+            "PARTNER_EMAIL_PENDING | to=%s | subject=%s | body_preview=%s",
+            email, subject, body[:200].replace('\n', ' '),
+        )
+        logger.info("No SMTP configured — partner key email logged for manual delivery to %s", email)
+        return False
+
+
+# ===================================================================
+# Partner audit log viewer
+# ===================================================================
+
+@contractor_access_bp.route("/api/admin-ui/partner-audit-log", methods=["GET"])
+@super_admin_required
+def get_partner_audit_log():
+    """Get partner-specific activity log entries."""
+    try:
+        customer_id = request.args.get("customer_id", type=int)
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 25, type=int)
+
+        query = ActivityLog.query.filter(
+            ActivityLog.action_description.like('%[PARTNER]%')
+        ).order_by(ActivityLog.created_at.desc())
+
+        if customer_id:
+            query = query.filter(ActivityLog.customer_id == customer_id)
+
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        logs = []
+        for log in paginated.items:
+            logs.append({
+                "id": log.id,
+                "customer_id": log.customer_id,
+                "user_id": log.user_id,
+                "action_type": log.action_type,
+                "action_description": log.action_description,
+                "resource_type": getattr(log, 'resource_type', None),
+                "resource_id": getattr(log, 'resource_id', None),
+                "status": log.status,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+            })
+
+        return jsonify({
+            "partner_logs": logs,
+            "pagination": {
+                "page": paginated.page,
+                "per_page": paginated.per_page,
+                "total": paginated.total,
+                "pages": paginated.pages,
+            },
+        })
+
+    except Exception as e:
+        logger.exception("get_partner_audit_log failed")
         return jsonify({"error": str(e)}), 500

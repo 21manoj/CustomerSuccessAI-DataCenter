@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-DC2_S Score Calculator
+Vertical-Aware Score Calculator
 Calculates L1 (KPI) → L2 (Pillar) → L3 (Health) scores
+Supports DC2_S (38 KPIs) and SaaS Premium (41 KPIs).
 """
 
 from typing import Dict, List, Tuple, Optional
@@ -13,17 +14,11 @@ from pathlib import Path
 from models import db, DC2SKPI, CustomerConfig, KPIScore, PillarScore, HealthScore, Account
 from sqlalchemy import func
 from utils.config_validator import ConfigValidator
+from utils.vertical_registry import get_pillars, get_kpis, get_vertical_for_customer, get_default_pillar_weights, normalize_vertical
 import utils.health_thresholds as ht
 
-# Load canonical pillar weights from kpi_definitions (single source of truth)
-try:
-    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS as _PILLARS
-    DEFAULT_PILLAR_WEIGHTS = {
-        pid: info.get('weight_l2', 0.20)
-        for pid, info in _PILLARS.items()
-    }
-except ImportError:
-    DEFAULT_PILLAR_WEIGHTS = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
+# Backward-compat: DC2_S default weights (used when no CustomerConfig exists)
+DEFAULT_PILLAR_WEIGHTS = get_default_pillar_weights('dc2_s')
 
 class ScoreCalculator:
     """
@@ -34,9 +29,10 @@ class ScoreCalculator:
     
     def __init__(self, customer_id: int):
         self.customer_id = customer_id
+        self.vertical = get_vertical_for_customer(customer_id)
         self.config = self._load_config()
         self.validator = ConfigValidator()
-    
+
     def _load_config(self) -> Dict:
         """
         Load customer configuration with 3-tier weight priority:
@@ -49,8 +45,11 @@ class ScoreCalculator:
 
         config = CustomerConfig.query.filter_by(customer_id=self.customer_id).first()
 
-        if not config or config.vertical != 'dc2_s':
-            raise ValueError(f"No DC2_S config found for customer {self.customer_id}")
+        if not config:
+            raise ValueError(f"No CustomerConfig found for customer {self.customer_id}")
+
+        # Normalize vertical
+        self.vertical = normalize_vertical(config.vertical or 'dc2_s')
 
         # Tier 1: DB weights (Wizard C calibrated)
         pillar_weights = config.dc2s_pillar_weights or {}
@@ -73,10 +72,11 @@ class ScoreCalculator:
                 log.debug("ScoreCalculator: Bootstrap file not available for customer %s: %s",
                           self.customer_id, e)
 
-        # Tier 3: kpi_definitions.py defaults
+        # Tier 3: kpi_definitions.py defaults (vertical-aware)
         if not pillar_weights:
-            pillar_weights = DEFAULT_PILLAR_WEIGHTS.copy()
-            log.info("ScoreCalculator: Using kpi_definitions defaults for customer %s", self.customer_id)
+            pillar_weights = get_default_pillar_weights(self.vertical)
+            log.info("ScoreCalculator: Using %s kpi_definitions defaults for customer %s",
+                     self.vertical, self.customer_id)
 
         # kpi_weights left empty -> populated from kpi_definitions at L2 calc time (existing behavior)
 
@@ -89,37 +89,64 @@ class ScoreCalculator:
         }
     
     def _get_kpi_definition(self, kpi_code: str) -> Optional[Dict]:
-        """Get KPI definition (catalog or custom)"""
-        
+        """Get KPI definition from vertical catalog or custom definitions."""
+
         # Check if custom KPI
         if kpi_code.startswith('CUSTOM-'):
             return self.config['kpi_definitions'].get(kpi_code)
-        
-        # Check catalog KPIs - extract pillar from code (e.g., "P3-KPI1" -> "P3")
+
+        # Check vertical's KPI catalog first
+        catalog_kpis = get_kpis(self.vertical)
+        if kpi_code in catalog_kpis:
+            cat_def = catalog_kpis[kpi_code]
+            override = self.config['kpi_overrides'].get(kpi_code, {})
+
+            # Build definition from catalog, with customer overrides on top
+            target_obj = cat_def.get('target', {})
+            higher = cat_def.get('higher_is_better', True)
+            ranges = cat_def.get('ranges', {})
+
+            # Derive range [min, max] from catalog ranges
+            if ranges:
+                all_mins = [r.get('min', 0) for r in ranges.values()]
+                all_maxs = [r.get('max', 100) for r in ranges.values()]
+                range_min = min(all_mins)
+                range_max = max(all_maxs)
+            else:
+                range_min, range_max = 0.0, 100.0
+
+            kpi_def = {
+                'pillar': cat_def.get('pillar', kpi_code.split('-')[0]),
+                'name': cat_def.get('name', kpi_code),
+                'unit': cat_def.get('unit', 'numeric'),
+                'target': override.get('target', target_obj.get('value', 85.0)),
+                'operator': override.get('operator', target_obj.get('operator', '>' if higher else '<')),
+                'range': override.get('range', [range_min, range_max]),
+                'higher_is_better': higher,
+                'weight_l1': cat_def.get('weight_l1', 0),
+            }
+
+            # Apply any other overrides
+            for key, value in override.items():
+                if key not in ('target', 'operator', 'range'):
+                    kpi_def[key] = value
+
+            return kpi_def
+
+        # Fallback: generic P-format KPI
         if '-' in kpi_code:
             pillar = kpi_code.split('-')[0]
             if pillar in ['P1', 'P2', 'P3', 'P4', 'P5']:
-                # Create a default definition for catalog KPIs
-                # Use overrides if available
                 override = self.config['kpi_overrides'].get(kpi_code, {})
-                
-                # Default catalog KPI definition
-                kpi_def = {
+                return {
                     'pillar': pillar,
                     'name': kpi_code,
                     'unit': 'numeric',
-                    'target': override.get('target', 85.0),  # Default target
-                    'operator': override.get('operator', '>'),  # Default: higher is better
-                    'range': override.get('range', [0.0, 100.0])  # Default range
+                    'target': override.get('target', 85.0),
+                    'operator': override.get('operator', '>'),
+                    'range': override.get('range', [0.0, 100.0]),
                 }
-                
-                # Apply any other overrides
-                for key, value in override.items():
-                    if key not in ['target', 'operator', 'range']:
-                        kpi_def[key] = value
-                
-                return kpi_def
-        
+
         return None
     
     # ================================================================
@@ -207,14 +234,11 @@ class ScoreCalculator:
         kpi_weights = self.config['kpi_weights'].get(pillar_code, {})
 
         if not kpi_weights:
-            # Fallback: use weight_l1 from DC2S_KPIS catalog definitions
-            try:
-                from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-                for kpi_code in kpi_scores:
-                    if kpi_code in DC2S_KPIS:
-                        kpi_weights[kpi_code] = DC2S_KPIS[kpi_code].get('weight_l1', 0)
-            except ImportError:
-                pass
+            # Fallback: use weight_l1 from vertical's KPI catalog definitions
+            catalog_kpis = get_kpis(self.vertical)
+            for kpi_code in kpi_scores:
+                if kpi_code in catalog_kpis:
+                    kpi_weights[kpi_code] = catalog_kpis[kpi_code].get('weight_l1', 0)
 
         if not kpi_weights:
             # Final fallback: equal weights

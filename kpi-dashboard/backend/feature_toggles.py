@@ -21,6 +21,7 @@ class FeatureToggle(Enum):
     REVENUE_INTELLIGENCE = "revenue_intelligence"
     CONTEXT_GRAPH = "context_graph"
     MCP_SERVER = "mcp_server"
+    SIGNAL_ENGINE = "signal_engine"
 
 @dataclass
 class FeatureConfig:
@@ -105,6 +106,14 @@ class FeatureToggleManager:
                 description="Expose CS Pulse as MCP tool provider for external LLMs (Claude, Copilot, ChatGPT)",
                 version="1.0.0",
                 dependencies=[],
+                environment_required=None
+            ),
+            FeatureToggle.SIGNAL_ENGINE: FeatureConfig(
+                enabled=False,
+                description="QSIM Signal Engine: qualitative signal ingestion, LLM enrichment, "
+                            "structural urgency classification, CG collision, composite scoring",
+                version="0.1.0",
+                dependencies=[FeatureToggle.CONTEXT_GRAPH],
                 environment_required=None
             ),
         }

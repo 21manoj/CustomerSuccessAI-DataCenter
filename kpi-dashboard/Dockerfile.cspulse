@@ -58,7 +58,7 @@ COPY kpi-dashboard/backend/ ./
 RUN python setup_cython.py build_ext --inplace 2>&1 | tail -5
 
 # Remove .py source ONLY from dirs that are never imported at runtime.
-# KEEP: agents/, verticals/, mcp_servers/ — all excluded from Cython but imported at runtime.
+# KEEP: agents/, verticals/, mcp_server/ — all excluded from Cython but imported at runtime.
 # KEEP: scripts/generate_synthetic_*.py — needed at runtime for demo-mode onboarding
 RUN for dir in migrations templates; do \
       find "./$dir" -name "*.py" -delete 2>/dev/null || true; \

@@ -706,9 +706,17 @@ def partner_portal(
                 schemas = _json.load(f)
             schema = None
             for mk in ('regular_model', 'context_graph_model'):
-                if ft in schemas.get(mk, {}).get('files', {}):
-                    schema = schemas[mk]['files'][ft]
+                model = schemas.get(mk, {})
+                if isinstance(model, dict) and ft in model.get('files', {}):
+                    schema = model['files'][ft]
                     break
+                if isinstance(model, dict):
+                    for sub in ('customer_provided', 'auto_generated', 'files'):
+                        if isinstance(model.get(sub), dict) and ft in model[sub]:
+                            schema = model[sub][ft]
+                            break
+                    if schema:
+                        break
             if not schema:
                 raise ToolError(f"Schema not found for {ft}.")
 

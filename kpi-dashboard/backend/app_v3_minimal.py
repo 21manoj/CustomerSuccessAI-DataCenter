@@ -1148,6 +1148,31 @@ except ImportError as e:
     print(f"⚠️  Warning: Integration API not available: {e}")
 
 # ====================================================================
+# QSIM Signal Engine API (feature-toggled)
+# ====================================================================
+try:
+    import os as _os
+    _signal_engine_enabled = _os.environ.get('FEATURE_SIGNAL_ENGINE', 'false').lower() in ('true', '1', 'yes')
+    if _signal_engine_enabled:
+        from signal_engine.ingest_api import signal_api
+        app.register_blueprint(signal_api)
+        print("✅ Registered Signal Engine API: /api/signals/* (FEATURE_SIGNAL_ENGINE=true)")
+
+        # Run idempotent schema migration for enrichment columns
+        try:
+            from signal_engine.models import ensure_enrichment_columns, ensure_alert_records_table
+            with app.app_context():
+                ensure_enrichment_columns(db.engine)
+                ensure_alert_records_table(db.engine)
+            print("   Signal Engine DB schema ensured")
+        except Exception as _e:
+            print(f"   ⚠️  Signal Engine DB migration skipped: {_e}")
+    else:
+        print("ℹ️  Signal Engine disabled (FEATURE_SIGNAL_ENGINE=false)")
+except ImportError as e:
+    print(f"⚠️  Warning: Signal Engine not available: {e}")
+
+# ====================================================================
 # SaaS Premium Vertical API
 # ====================================================================
 try:

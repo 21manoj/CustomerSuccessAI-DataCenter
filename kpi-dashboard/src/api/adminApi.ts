@@ -488,7 +488,13 @@ export async function fetchApiKeys(customerId: number): Promise<ApiKeyInfo[]> {
 
 export async function generateApiKey(
   customerId: number,
-  data: { name: string; scopes: string[]; duration_days?: number; allowed_account_ids?: number[] | null },
+  data: {
+    name: string;
+    scopes: string[];
+    duration_days?: number;
+    allowed_account_ids?: number[] | null;
+    partner_tier?: string | null;
+  },
 ): Promise<{ key: string; key_info: ApiKeyInfo }> {
   return request(`/customers/${customerId}/api-keys`, {
     method: 'POST',
@@ -498,6 +504,81 @@ export async function generateApiKey(
 
 export async function revokeApiKey(keyId: number): Promise<void> {
   return request(`/api-keys/${keyId}/revoke`, { method: 'POST' });
+}
+
+// ---------------------------------------------------------------------------
+// Partner Key Management
+// ---------------------------------------------------------------------------
+
+export interface AccountSummary {
+  account_id: number;
+  account_name: string;
+  vertical: string | null;
+  arr: number | null;
+  status: string;
+}
+
+export interface CreatePartnerKeyPayload {
+  partner_name: string;
+  partner_email: string;
+  partner_tier: string;
+  allowed_account_ids: number[];
+  scopes: string[];
+  duration_days: number;
+  send_email: boolean;
+}
+
+export interface PartnerKeyResult {
+  key: string;
+  key_info: ApiKeyInfo;
+  partner_name: string;
+  partner_email: string;
+  allowed_accounts: Array<{ id: number; name: string }>;
+  email_sent: boolean;
+}
+
+export async function fetchCustomerAccounts(customerId: number): Promise<AccountSummary[]> {
+  const raw = await request<{ accounts: AccountSummary[] }>(`/customers/${customerId}/accounts`);
+  return raw.accounts ?? [];
+}
+
+export async function createPartnerKey(
+  customerId: number,
+  data: CreatePartnerKeyPayload,
+): Promise<PartnerKeyResult> {
+  return request(`/customers/${customerId}/partner-keys`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export interface PartnerAuditEntry {
+  id: number;
+  customer_id: number | null;
+  action_type: string;
+  action_description: string;
+  resource_type: string | null;
+  created_at: string;
+}
+
+export async function fetchPartnerAuditLog(
+  params?: { customer_id?: number; page?: number; limit?: number },
+): Promise<{ logs: PartnerAuditEntry[]; total: number; page: number }> {
+  const bp: Record<string, string | number> = {};
+  if (params?.customer_id) bp.customer_id = params.customer_id;
+  if (params?.page) bp.page = params.page;
+  if (params?.limit) bp.per_page = params.limit;
+
+  const raw = await request<{
+    partner_logs: PartnerAuditEntry[];
+    pagination: { page: number; total: number };
+  }>(`/partner-audit-log${qs(bp)}`);
+
+  return {
+    logs: raw.partner_logs ?? [],
+    total: raw.pagination?.total ?? 0,
+    page: raw.pagination?.page ?? 1,
+  };
 }
 
 // ---------------------------------------------------------------------------
