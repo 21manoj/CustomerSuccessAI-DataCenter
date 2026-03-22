@@ -55,7 +55,7 @@ def _check_customer_signal_engine(customer_id: int) -> bool:
             customer_id=customer_id,
             feature_name='signal_engine',
         ).first()
-        return toggle and toggle.is_enabled if toggle else False
+        return toggle.enabled if toggle else False
     except Exception:
         return False
 
@@ -107,31 +107,46 @@ def _ingest_signal(source_type: str):
         from extensions import db
         from models import QualitativeSignal
 
+        # Parse timestamp
+        if isinstance(timestamp, str):
+            try:
+                parsed_date = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).date()
+            except ValueError:
+                parsed_date = datetime.utcnow().date()
+        else:
+            parsed_date = datetime.utcnow().date()
+
         # Create raw signal record
+        # QualitativeSignal uses signal_id (VARCHAR PK), no customer_id column
         signal = QualitativeSignal(
+            signal_id=signal_id,
             account_id=int(account_id),
-            customer_id=int(customer_id),
             signal_type=source_type,
             content=raw_text[:2000],  # Truncate for safety
             sentiment='neutral',  # Placeholder — enrichment will update
-            signal_date=datetime.fromisoformat(timestamp.replace('Z', '+00:00')) if isinstance(timestamp, str) else timestamp,
+            signal_date=parsed_date,
         )
 
-        # Set QSIM-specific columns (if migration has run)
-        try:
-            signal.source_type = source_type
-            signal.raw_text = raw_text
-            signal.requires_review = False
-            signal.consent_verified = data.get('consent_verified', source_type != 'transcript')
-            signal.composite_signal_id = signal_id
+        # Set QSIM enrichment columns (if migration has run)
+        for attr, val in [
+            ('source_type', source_type),
+            ('raw_text', raw_text),
+            ('requires_review', False),
+            ('consent_verified', data.get('consent_verified', source_type != 'transcript')),
+            ('composite_signal_id', signal_id),
+        ]:
+            try:
+                setattr(signal, attr, val)
+            except Exception:
+                pass  # Column not yet migrated
 
-            # Store participant list as stakeholder_roles
-            participants = data.get('participant_list', [])
-            if participants:
+        # Store participant list as stakeholder_roles
+        participants = data.get('participant_list', [])
+        if participants:
+            try:
                 signal.stakeholder_roles = participants
-        except AttributeError:
-            # Enrichment columns not yet migrated — signal still saves with base columns
-            logger.debug("QSIM enrichment columns not available — saving base signal only")
+            except Exception:
+                pass
 
         db.session.add(signal)
         db.session.commit()
@@ -141,16 +156,13 @@ def _ingest_signal(source_type: str):
             signal_id, source_type, account_id, customer_id,
         )
 
-        # TODO Phase 1: Queue for LLM enrichment (async)
-        # For now, the signal is saved raw. Enrichment is triggered
-        # separately via the enrichment module or a background task.
-
         return jsonify({
             'raw_signal_id': signal_id,
-            'signal_db_id': signal.id if hasattr(signal, 'id') else None,
+            'signal_db_id': signal.signal_id,
             'status': 'queued',
             'source_type': source_type,
             'account_id': account_id,
+            'customer_id': customer_id,
             'message': 'Signal accepted. Enrichment will run asynchronously.',
         }), 202
 
@@ -238,16 +250,21 @@ def get_review_queue():
     per_page = request.args.get('per_page', 25, type=int)
 
     try:
-        from models import QualitativeSignal
+        from models import QualitativeSignal, Account
 
-        query = QualitativeSignal.query.filter_by(customer_id=customer_id)
+        # QualitativeSignal has no customer_id — filter via account join
+        account_ids = [a.account_id for a in
+                       Account.query.filter_by(customer_id=customer_id).with_entities(Account.account_id).all()]
+        if not account_ids:
+            return jsonify({'review_queue': [], 'total': 0, 'page': 1})
 
-        # Filter to signals needing review
+        query = QualitativeSignal.query.filter(QualitativeSignal.account_id.in_(account_ids))
+
+        # Filter to signals needing review (if enrichment column exists)
         try:
             query = query.filter(QualitativeSignal.requires_review == True)
         except Exception:
-            # Column may not exist if migration hasn't run
-            return jsonify({'review_queue': [], 'total': 0, 'page': 1})
+            pass  # Column not yet migrated — return all signals
 
         if account_id:
             query = query.filter_by(account_id=account_id)
@@ -263,7 +280,7 @@ def get_review_queue():
         signals = []
         for s in paginated.items:
             signals.append({
-                'id': s.id,
+                'signal_id': s.signal_id,
                 'account_id': s.account_id,
                 'signal_type': s.signal_type,
                 'content': s.content[:200] if s.content else '',

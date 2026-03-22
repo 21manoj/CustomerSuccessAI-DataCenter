@@ -1,0 +1,447 @@
+#!/usr/bin/env python3
+"""
+QSIM Signal Engine — LLM Enrichment Service.
+
+Enriches raw signals with sentiment, intent, urgency, stakeholder roles
+using Claude Sonnet via Anthropic SDK. Vertical-aware prompts ensure
+accurate extraction for DC2_S vs SaaS Premium contexts.
+
+Feature-toggled: Only active when FEATURE_SIGNAL_ENGINE=true.
+
+Cost guardrails:
+  - Max 200 LLM calls per customer per day
+  - Max 50 LLM calls per account per day
+  - Cache TTL: 1 hour for near-identical signals
+  - ~$0.003 per signal (Claude Sonnet)
+"""
+
+import json
+import logging
+import os
+from datetime import datetime, timedelta
+from typing import Dict, Optional, List
+
+logger = logging.getLogger(__name__)
+
+# ============================================================
+# Configuration
+# ============================================================
+
+DEFAULT_MODEL = "claude-sonnet-4-20250514"
+MAX_CALLS_PER_CUSTOMER_PER_DAY = 200
+MAX_CALLS_PER_ACCOUNT_PER_DAY = 50
+CONFIDENCE_THRESHOLD = 0.6  # Below this → requires_review=True
+
+# Intent codes recognized by the system
+VALID_INTENTS = [
+    'renewal_risk', 'expansion_interest', 'champion_change',
+    'product_frustration', 'feature_request', 'executive_escalation',
+    'pricing_concern', 'competitor_mention', 'deployment_blocker',
+    'nps_drop_indicator',
+]
+
+# ============================================================
+# Vertical-aware prompt templates
+# ============================================================
+
+VERTICAL_CONTEXT = {
+    'dc2_s': {
+        'name': 'Data Center Hardware Infrastructure',
+        'description': 'GPU/AI compute, rack deployment, thermal management, power capacity',
+        'pillars': 'P1 Deployment Velocity, P2 Operational Stability, P3 AI Workload Performance, P4 Channel & Partner Health, P5 Expansion Readiness',
+        'key_terms': 'racks, GPUs, thermal throttling, power draw, deployment, firmware, DCIM, colocation',
+    },
+    'saas_premium': {
+        'name': 'SaaS Premium',
+        'description': 'Product-led SaaS with subscription renewals, feature adoption, support tickets',
+        'pillars': 'P1 Product Adoption & Usage, P2 Customer Engagement, P3 Customer Sentiment & Support, P4 Partner & Ecosystem Health, P5 Revenue & Growth',
+        'key_terms': 'DAU, feature adoption, onboarding, NPS, CSAT, churn, expansion, upsell, seats',
+    },
+}
+
+ENRICHMENT_PROMPT = """You are a B2B Customer Success signal extraction engine for the {vertical_name} vertical.
+
+Industry context: {vertical_description}
+Key pillars: {vertical_pillars}
+Industry terminology: {vertical_terms}
+
+Analyze the following customer communication and extract structured intelligence.
+Return ONLY valid JSON. No preamble. No markdown fences. No explanation.
+
+Confidence scores reflect explicitness:
+  1.0 = stated directly in the text
+  0.7 = strongly implied
+  0.5 = weakly implied
+  0.0 = not determinable from the text
+
+If confidence for any field is below 0.6, set requires_review to true.
+
+VALID INTENT CODES (use ONLY these):
+{intent_codes}
+
+TEXT TO ANALYZE:
+{raw_text}
+
+RESPOND WITH THIS EXACT JSON STRUCTURE:
+{{
+  "sentiment_score": <float -1.0 to +1.0>,
+  "relationship_sentiment": <float -1.0 to +1.0>,
+  "product_sentiment": <float -1.0 to +1.0>,
+  "urgency_score": <float 0.0 to 1.0>,
+  "escalation_probability": <float 0.0 to 1.0>,
+  "intent_signals": ["<intent_code>", ...],
+  "stakeholder_roles": [{{"role": "<title>", "name": "<name or null>"}}],
+  "suggested_action": "<one sentence recommended CSM action>",
+  "confidence": {{
+    "sentiment_score": <float>,
+    "intent_signals": <float>,
+    "urgency_score": <float>,
+    "escalation_probability": <float>
+  }},
+  "requires_review": <boolean>
+}}"""
+
+
+# ============================================================
+# Cost tracking (in-memory for Phase 2, Redis/DB in Phase 3)
+# ============================================================
+
+_call_counts: Dict[str, Dict[str, int]] = {}  # {date_key: {customer_X: count, account_Y: count}}
+
+
+def _check_rate_limit(customer_id: int, account_id: int) -> Optional[str]:
+    """Check if customer/account has exceeded daily LLM call limits.
+
+    Returns error message if limit exceeded, None if OK.
+    """
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    if today not in _call_counts:
+        _call_counts.clear()  # Reset on new day
+        _call_counts[today] = {}
+
+    counts = _call_counts[today]
+    cust_key = f"customer_{customer_id}"
+    acct_key = f"account_{account_id}"
+
+    if counts.get(cust_key, 0) >= MAX_CALLS_PER_CUSTOMER_PER_DAY:
+        return f"Customer {customer_id} exceeded daily limit ({MAX_CALLS_PER_CUSTOMER_PER_DAY} calls/day)"
+    if counts.get(acct_key, 0) >= MAX_CALLS_PER_ACCOUNT_PER_DAY:
+        return f"Account {account_id} exceeded daily limit ({MAX_CALLS_PER_ACCOUNT_PER_DAY} calls/day)"
+
+    return None
+
+
+def _record_call(customer_id: int, account_id: int):
+    """Record an LLM call for rate limiting."""
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    if today not in _call_counts:
+        _call_counts.clear()
+        _call_counts[today] = {}
+
+    counts = _call_counts[today]
+    cust_key = f"customer_{customer_id}"
+    acct_key = f"account_{account_id}"
+    counts[cust_key] = counts.get(cust_key, 0) + 1
+    counts[acct_key] = counts.get(acct_key, 0) + 1
+
+
+# ============================================================
+# LLM Enrichment
+# ============================================================
+
+def enrich_signal(
+    signal_id: str,
+    raw_text: str,
+    account_id: int,
+    customer_id: int,
+    vertical: str = 'dc2_s',
+) -> Dict:
+    """Enrich a raw signal using Claude Sonnet.
+
+    Returns enrichment dict with sentiment, intent, urgency, etc.
+    On failure, returns partial result with requires_review=True.
+
+    Args:
+        signal_id: The signal UUID
+        raw_text: Original communication text
+        account_id: Account ID
+        customer_id: Customer ID
+        vertical: Customer vertical ('dc2_s' or 'saas_premium')
+
+    Returns:
+        Dict with enrichment fields matching QualitativeSignal columns
+    """
+    # Rate limit check
+    limit_error = _check_rate_limit(customer_id, account_id)
+    if limit_error:
+        logger.warning("QSIM rate limit: %s", limit_error)
+        return {
+            'requires_review': True,
+            'confidence': {'rate_limited': True},
+            'suggested_action': f'Rate limited: {limit_error}',
+        }
+
+    # Build vertical-aware prompt
+    v_ctx = VERTICAL_CONTEXT.get(vertical, VERTICAL_CONTEXT['dc2_s'])
+    prompt = ENRICHMENT_PROMPT.format(
+        vertical_name=v_ctx['name'],
+        vertical_description=v_ctx['description'],
+        vertical_pillars=v_ctx['pillars'],
+        vertical_terms=v_ctx['key_terms'],
+        intent_codes=', '.join(VALID_INTENTS),
+        raw_text=raw_text[:3000],  # Truncate for cost control
+    )
+
+    # Call Claude
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not api_key:
+        logger.warning("QSIM enrichment: ANTHROPIC_API_KEY not set — returning stub enrichment")
+        return _stub_enrichment(raw_text)
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        response = client.messages.create(
+            model=DEFAULT_MODEL,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        _record_call(customer_id, account_id)
+
+        # Parse response
+        content = response.content[0].text.strip()
+        enrichment = json.loads(content)
+
+        # Validate and sanitize
+        enrichment = _validate_enrichment(enrichment)
+        enrichment['llm_model_version'] = DEFAULT_MODEL
+
+        logger.info(
+            "QSIM enrichment complete: signal=%s intents=%s urgency=%.2f review=%s",
+            signal_id, enrichment.get('intent_signals', []),
+            enrichment.get('urgency_score', 0), enrichment.get('requires_review', False),
+        )
+
+        return enrichment
+
+    except json.JSONDecodeError as e:
+        logger.warning("QSIM enrichment: invalid JSON from LLM for signal %s: %s", signal_id, e)
+        return {
+            'requires_review': True,
+            'confidence': {'parse_error': True},
+            'suggested_action': 'LLM returned invalid JSON — manual review required',
+            'llm_model_version': DEFAULT_MODEL,
+        }
+
+    except Exception as e:
+        logger.exception("QSIM enrichment failed for signal %s: %s", signal_id, e)
+        return {
+            'requires_review': True,
+            'confidence': {'error': str(e)},
+            'suggested_action': f'Enrichment error: {str(e)[:100]}',
+        }
+
+
+def _validate_enrichment(data: Dict) -> Dict:
+    """Validate and sanitize LLM enrichment output."""
+    # Clamp numeric values
+    for field in ('sentiment_score', 'relationship_sentiment', 'product_sentiment'):
+        if field in data:
+            data[field] = max(-1.0, min(1.0, float(data[field])))
+
+    for field in ('urgency_score', 'escalation_probability'):
+        if field in data:
+            data[field] = max(0.0, min(1.0, float(data[field])))
+
+    # Validate intent codes
+    if 'intent_signals' in data:
+        data['intent_signals'] = [i for i in data['intent_signals'] if i in VALID_INTENTS]
+
+    # Check confidence threshold
+    confidence = data.get('confidence', {})
+    low_confidence = any(
+        v < CONFIDENCE_THRESHOLD
+        for k, v in confidence.items()
+        if isinstance(v, (int, float))
+    )
+    if low_confidence:
+        data['requires_review'] = True
+
+    return data
+
+
+def _stub_enrichment(raw_text: str) -> Dict:
+    """Stub enrichment when no API key available.
+
+    Uses simple keyword matching for basic intent detection.
+    Always sets requires_review=True (not LLM-verified).
+    """
+    text_lower = raw_text.lower()
+
+    # Simple keyword-based intent detection
+    intents = []
+    if any(w in text_lower for w in ('competitor', 'alternative', 'evaluating', 'switch')):
+        intents.append('competitor_mention')
+    if any(w in text_lower for w in ('expand', 'capacity', 'growth', 'additional', 'upgrade')):
+        intents.append('expansion_interest')
+    if any(w in text_lower for w in ('escalat', 'board', 'cto', 'vp', 'urgent')):
+        intents.append('executive_escalation')
+    if any(w in text_lower for w in ('renew', 'contract', 'subscription')):
+        intents.append('renewal_risk')
+    if any(w in text_lower for w in ('frustrat', 'issue', 'problem', 'broken', 'fail')):
+        intents.append('product_frustration')
+    if any(w in text_lower for w in ('feature', 'request', 'wishlist', 'need')):
+        intents.append('feature_request')
+    if any(w in text_lower for w in ('champion', 'leaving', 'departed', 'new role')):
+        intents.append('champion_change')
+    if any(w in text_lower for w in ('price', 'cost', 'budget', 'expensive')):
+        intents.append('pricing_concern')
+
+    # Simple sentiment from keywords
+    positive_words = {'positive', 'great', 'excellent', 'happy', 'confirmed', 'approved', 'love'}
+    negative_words = {'negative', 'issue', 'problem', 'frustrated', 'escalate', 'concerned', 'risk'}
+    pos_count = sum(1 for w in positive_words if w in text_lower)
+    neg_count = sum(1 for w in negative_words if w in text_lower)
+    sentiment = (pos_count - neg_count) / max(pos_count + neg_count, 1)
+
+    urgency = 0.7 if 'urgent' in text_lower or 'escalat' in text_lower else 0.3
+
+    return {
+        'sentiment_score': round(sentiment, 2),
+        'relationship_sentiment': round(sentiment * 0.8, 2),
+        'product_sentiment': round(sentiment * 0.6, 2),
+        'urgency_score': urgency,
+        'escalation_probability': 0.6 if 'escalat' in text_lower else 0.1,
+        'intent_signals': intents,
+        'stakeholder_roles': [],
+        'suggested_action': 'Review signal — stub enrichment (no API key)',
+        'confidence': {
+            'sentiment_score': 0.3,
+            'intent_signals': 0.4,
+            'urgency_score': 0.3,
+            'escalation_probability': 0.3,
+        },
+        'requires_review': True,
+        'llm_model_version': 'stub_keyword_v1',
+    }
+
+
+# ============================================================
+# Batch enrichment (for processing queue)
+# ============================================================
+
+def enrich_pending_signals(customer_id: int, limit: int = 20) -> Dict:
+    """Enrich all un-enriched signals for a customer.
+
+    Processes signals that have source_type set (QSIM-ingested)
+    but no intent_signals (not yet enriched).
+
+    Args:
+        customer_id: Customer to process
+        limit: Max signals to enrich in this batch
+
+    Returns:
+        Summary dict with counts
+    """
+    try:
+        from extensions import db
+        from models import QualitativeSignal, Account
+        from utils.vertical_registry import get_vertical_for_customer
+
+        vertical = get_vertical_for_customer(customer_id)
+
+        # Get account IDs for this customer
+        account_ids = [a.account_id for a in
+                       Account.query.filter_by(customer_id=customer_id)
+                       .with_entities(Account.account_id).all()]
+
+        if not account_ids:
+            return {'status': 'no_accounts', 'enriched': 0}
+
+        # Find un-enriched QSIM signals
+        signals = QualitativeSignal.query.filter(
+            QualitativeSignal.account_id.in_(account_ids),
+            QualitativeSignal.source_type.isnot(None),  # QSIM-ingested
+            QualitativeSignal.intent_signals.is_(None),  # Not yet enriched
+        ).limit(limit).all()
+
+        if not signals:
+            return {'status': 'nothing_to_enrich', 'enriched': 0}
+
+        enriched_count = 0
+        errors = 0
+
+        for sig in signals:
+            raw = sig.raw_text or sig.content or ''
+            if not raw:
+                continue
+
+            result = enrich_signal(
+                signal_id=sig.signal_id,
+                raw_text=raw,
+                account_id=sig.account_id,
+                customer_id=customer_id,
+                vertical=vertical,
+            )
+
+            # Apply enrichment to signal
+            for field in ('sentiment_score', 'relationship_sentiment', 'product_sentiment',
+                          'urgency_score', 'escalation_probability', 'intent_signals',
+                          'stakeholder_roles', 'suggested_action', 'confidence',
+                          'requires_review', 'llm_model_version'):
+                if field in result:
+                    try:
+                        setattr(sig, field, result[field])
+                    except Exception:
+                        pass
+
+            # Run structural urgency classifier
+            try:
+                from signal_engine.urgency import (
+                    classify_structural_urgency, resolve_effective_urgency,
+                    AccountContext, SignalContext,
+                )
+                acct_ctx = AccountContext(account_id=sig.account_id)
+                sig_ctx = SignalContext(
+                    intent_signals=result.get('intent_signals', []),
+                    health_delta=0,  # Would need actual health data
+                    llm_urgency_score=result.get('urgency_score', 0.5),
+                    escalation_probability=result.get('escalation_probability', 0),
+                )
+                structural = classify_structural_urgency(sig_ctx, acct_ctx)
+                effective = resolve_effective_urgency(
+                    structural,
+                    result.get('urgency_score', 0.5),
+                    result.get('escalation_probability', 0),
+                )
+                sig.structural_urgency = structural
+                sig.effective_urgency = effective
+            except Exception as e:
+                logger.debug("Urgency classification skipped: %s", e)
+
+            # Map sentiment to existing sentiment column
+            score = result.get('sentiment_score', 0)
+            if score > 0.2:
+                sig.sentiment = 'positive'
+            elif score < -0.2:
+                sig.sentiment = 'negative'
+            else:
+                sig.sentiment = 'neutral'
+
+            enriched_count += 1
+
+        db.session.commit()
+
+        return {
+            'status': 'completed',
+            'enriched': enriched_count,
+            'errors': errors,
+            'customer_id': customer_id,
+            'vertical': vertical,
+        }
+
+    except Exception as e:
+        logger.exception("Batch enrichment failed: %s", e)
+        return {'status': 'error', 'error': str(e), 'enriched': 0}

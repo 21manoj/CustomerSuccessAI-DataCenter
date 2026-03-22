@@ -1169,6 +1169,15 @@ try:
             print(f"   ⚠️  Signal Engine DB migration skipped: {_e}")
     else:
         print("ℹ️  Signal Engine disabled (FEATURE_SIGNAL_ENGINE=false)")
+        # Purge any orphaned QSIM data when toggle is OFF
+        try:
+            from signal_engine.cleanup import purge_all_qsim_signals
+            with app.app_context():
+                purged = purge_all_qsim_signals()
+                if purged > 0:
+                    print(f"   Cleaned up {purged} orphaned QSIM signals")
+        except Exception:
+            pass  # Cleanup is best-effort
 except ImportError as e:
     print(f"⚠️  Warning: Signal Engine not available: {e}")
 

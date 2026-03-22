@@ -123,7 +123,7 @@ def ensure_enrichment_columns(engine):
         for col_name, col_type in ENRICHMENT_COLUMNS.items():
             try:
                 conn.execute(text(
-                    f"ALTER TABLE enhanced_qualitative_signals "
+                    f"ALTER TABLE qualitative_signals "
                     f"ADD COLUMN IF NOT EXISTS {col_name} {col_type}"
                 ))
             except Exception:

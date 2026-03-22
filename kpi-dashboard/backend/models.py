@@ -955,6 +955,28 @@ class QualitativeSignal(db.Model):
     sentiment_score = db.Column(db.Numeric, nullable=True)
     keywords = db.Column(db.Text, nullable=True)
     is_narrative_signal = db.Column(db.Boolean, nullable=True)
+
+    # QSIM Signal Engine enrichment columns (added by signal_engine migration)
+    # These columns are nullable and only populated when FEATURE_SIGNAL_ENGINE=true
+    source_type = db.Column(db.String(30), nullable=True)           # slack, email, transcript, manual
+    raw_text = db.Column(db.Text, nullable=True)                    # Original unstructured text
+    relationship_sentiment = db.Column(db.Float, nullable=True)     # -1.0 to +1.0
+    product_sentiment = db.Column(db.Float, nullable=True)          # -1.0 to +1.0
+    urgency_score = db.Column(db.Float, nullable=True)              # 0.0 to 1.0
+    escalation_probability = db.Column(db.Float, nullable=True)     # 0.0 to 1.0
+    intent_signals = db.Column(db.JSON, nullable=True)              # List of intent codes
+    stakeholder_roles = db.Column(db.JSON, nullable=True)           # [{role, name}]
+    suggested_action = db.Column(db.String(500), nullable=True)     # LLM-recommended action
+    confidence = db.Column(db.JSON, nullable=True)                  # Per-field confidence scores
+    requires_review = db.Column(db.Boolean, default=False)          # True if confidence < 0.6
+    llm_model_version = db.Column(db.String(100), nullable=True)    # Model ID for audit
+    composite_signal_id = db.Column(db.String(100), nullable=True)  # Dedup parent link
+    dedup_confidence = db.Column(db.Float, nullable=True)           # Merge confidence
+    cg_node_id = db.Column(db.Integer, nullable=True)               # Linked CG node
+    alert_suppressed = db.Column(db.Boolean, default=False)         # CG collision suppressed
+    structural_urgency = db.Column(db.String(20), nullable=True)    # critical/high/medium/low
+    effective_urgency = db.Column(db.String(20), nullable=True)     # max(structural, llm)
+    consent_verified = db.Column(db.Boolean, default=False)         # Transcript consent
     
     def to_dict(self):
         return {
