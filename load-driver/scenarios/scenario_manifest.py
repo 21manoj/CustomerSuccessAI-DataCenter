@@ -289,7 +289,122 @@ class ManifestCSVGenerator:
     - NarrativeTimelinePlanner integration for causal ordering
     - decisions.csv and signal_edges.csv generation
     - _header_use_account_id static method
+
+    V3.1 enrichments:
+    - Diverse stakeholders (5-6 per account with seeded selection)
+    - Diverse engagement events (8-12 per account, multiple types)
+    - Richer products (3-5 per account based on ARR tier)
+    - Richer outcomes (3-4 critical, 2-3 at_risk, 1-2 healthy)
+    - Phase 2 (intervention) recovery signals, outcomes, decisions
+    - Phase 2 KPI improvement boost for critical/at_risk accounts
     """
+
+    # ── Enrichment templates (V3.1) ──
+
+    STAKEHOLDER_TEMPLATES = [
+        {"role": "champion", "title": "VP of Engineering", "department": "Engineering",
+         "names": ["Sarah Chen", "Michael Torres", "Priya Sharma", "James Wilson"]},
+        {"role": "economic_buyer", "title": "VP of Finance", "department": "Finance",
+         "names": ["George Martinez", "Amanda Foster", "Robert Kim", "Lisa Wang"]},
+        {"role": "technical_lead", "title": "Sr. Systems Engineer", "department": "Engineering",
+         "names": ["Kevin Wright", "Nina Kowalski", "David Park", "Elena Rossi"]},
+        {"role": "executive_sponsor", "title": "CTO", "department": "Executive",
+         "names": ["Thomas Anderson", "Jennifer Brooks", "Raj Patel", "Maria Santos"]},
+        {"role": "csm", "title": "Customer Success Manager", "department": "Customer Success",
+         "names": ["Alex Thompson", "Rachel Kim", "Chris Davis", "Maya Johnson"]},
+        {"role": "procurement", "title": "Director of Procurement", "department": "Operations",
+         "names": ["Brian Foster", "Samantha Lee", "Marcus Chen", "Diana Walsh"]},
+    ]
+
+    ENGAGEMENT_EVENT_TEMPLATES = [
+        {"type": "qbr", "title": "Quarterly Business Review", "cadence": "quarterly"},
+        {"type": "executive_briefing", "title": "Executive Sponsor Check-in", "cadence": "monthly"},
+        {"type": "technical_review", "title": "Technical Architecture Review", "cadence": "monthly"},
+        {"type": "training", "title": "Platform Training Session", "cadence": "quarterly"},
+        {"type": "incident_review", "title": "Post-Incident Review", "cadence": "as_needed"},
+        {"type": "roadmap_session", "title": "Product Roadmap Preview", "cadence": "quarterly"},
+        {"type": "health_check", "title": "System Health Assessment", "cadence": "monthly"},
+        {"type": "expansion_discussion", "title": "Capacity Planning & Expansion", "cadence": "quarterly"},
+    ]
+
+    DC_PRODUCTS = [
+        {"name": "GPU Compute Cluster", "category": "compute", "tier": "enterprise"},
+        {"name": "High-Performance Storage", "category": "storage", "tier": "premium"},
+        {"name": "Network Fabric", "category": "networking", "tier": "standard"},
+        {"name": "Managed Kubernetes", "category": "platform", "tier": "enterprise"},
+        {"name": "AI Training Pipeline", "category": "ml_ops", "tier": "premium"},
+        {"name": "Edge Computing Nodes", "category": "edge", "tier": "standard"},
+        {"name": "Disaster Recovery", "category": "resilience", "tier": "enterprise"},
+        {"name": "Monitoring & Observability", "category": "ops", "tier": "standard"},
+    ]
+
+    RECOVERY_SIGNAL_TEMPLATES = {
+        'critical': [
+            {"type": "csm_intervention", "content": "New CSM {csm_name} assigned. First QBR scheduled for next week.", "sentiment": "positive"},
+            {"type": "kpi_recovery", "content": "GPU utilization recovering: 48% -> 67% after PB-03 optimization playbook.", "sentiment": "positive"},
+            {"type": "executive_engagement", "content": "Executive sponsor engagement: VP Finance joined monthly review cadence.", "sentiment": "positive"},
+            {"type": "churn_averted", "content": "Churn risk mitigated. Retention plan approved with 12-month commitment.", "sentiment": "very_positive"},
+        ],
+        'at_risk': [
+            {"type": "deployment_improvement", "content": "Deployment velocity improved 30% after PB-01 acceleration playbook.", "sentiment": "positive"},
+            {"type": "champion_reengagement", "content": "Champion {champion_name} re-engaged. Quarterly roadmap session completed.", "sentiment": "positive"},
+            {"type": "health_improvement", "content": "Account health trending upward: +12 points over 4 weeks.", "sentiment": "positive"},
+        ],
+        'healthy': [
+            {"type": "expansion_signal", "content": "Account expanding GPU cluster capacity by 40%. New PO in procurement.", "sentiment": "very_positive"},
+            {"type": "advocacy", "content": "Customer agreed to co-present at annual user conference.", "sentiment": "positive"},
+        ],
+    }
+
+    RECOVERY_OUTCOME_TEMPLATES = {
+        'critical': [
+            ("churn_averted", "Churn Risk Averted", "Retention plan executed successfully. Account committed to 12-month renewal.", "resolved"),
+            ("revenue_protected", "Revenue Protected", "Intervention protected ARR through executive engagement and service improvements.", "resolved"),
+            ("engagement_recovery", "Engagement Recovery", "Stakeholder engagement restored to healthy levels after CSM intervention.", "resolved"),
+        ],
+        'at_risk': [
+            ("engagement_recovery", "Engagement Recovery", "Regular QBR cadence re-established with key stakeholders.", "resolved"),
+            ("revenue_protected", "Revenue Protected", "Renewal secured after addressing platform concerns.", "resolved"),
+            ("renewal_secured", "Renewal Confirmed", "Account renewed with expanded scope after successful intervention.", "resolved"),
+        ],
+        'healthy': [
+            ("expansion_approved", "Expansion Approved", "Account approved additional capacity and new product modules.", "in_progress"),
+            ("revenue_growth", "Revenue Growth", "Upsell opportunity converted. New workload onboarded.", "resolved"),
+        ],
+    }
+
+    RECOVERY_DECISION_TEMPLATES = {
+        'critical': [
+            ("CSM resource allocation approved", "executive_sponsor", "Assign dedicated senior CSM", "Resource reallocation approved", "high"),
+            ("Executive QBR cadence established", "executive_sponsor", "Weekly executive check-ins for 90 days", "Cadence approved", "high"),
+            ("GPU optimization playbook initiated", "technical_lead", "Deploy PB-03 optimization playbook", "Playbook execution started", "medium"),
+        ],
+        'at_risk': [
+            ("Renewal incentive package approved", "economic_buyer", "Offer multi-year discount", "Incentive approved", "medium"),
+            ("Technical remediation plan", "technical_lead", "Address top 3 platform concerns", "Remediation in progress", "medium"),
+        ],
+        'healthy': [
+            ("Expansion proposal submitted", "champion", "Propose additional capacity", "Expansion under review", "low"),
+        ],
+    }
+
+    PHASE1_OUTCOME_TEMPLATES = {
+        'critical': [
+            ('revenue_at_risk', 'Churn risk identified', 'Account showing signs of churn. ARR at risk.', -0.5, 'open'),
+            ('engagement_decline', 'Engagement declining', 'Stakeholder engagement dropped significantly.', -0.1, 'in_progress'),
+            ('renewal_uncertainty', 'Renewal at risk', 'Renewal timeline uncertain due to unresolved issues.', -0.3, 'open'),
+            ('capacity_constraint', 'Capacity issues', 'Infrastructure capacity constraints impacting service quality.', -0.15, 'in_progress'),
+        ],
+        'at_risk': [
+            ('renewal_uncertainty', 'Renewal discussion stalled', 'Renewal discussion delayed pending resolution of concerns.', -0.2, 'in_progress'),
+            ('engagement_decline', 'Engagement cooling', 'Key stakeholder engagement frequency declining.', -0.1, 'open'),
+            ('partner_friction', 'Integration friction', 'P4 partner integration issues causing workflow disruption.', -0.08, 'in_progress'),
+        ],
+        'healthy': [
+            ('expansion_opportunity', 'Expansion potential identified', 'Account showing strong expansion signals.', 0.15, 'open'),
+            ('renewal_secured', 'Renewal on track', 'Renewal discussion progressing positively.', 0.05, 'in_progress'),
+        ],
+    }
 
     def __init__(
         self,
@@ -476,6 +591,7 @@ class ManifestCSVGenerator:
         trajectory: str,
         decline_start_month: Optional[int],
         kpi_code: str,
+        classification: str = 'healthy',
     ) -> List[float]:
         """
         Generate a time-series of KPI values for one account+KPI.
@@ -484,11 +600,21 @@ class ManifestCSVGenerator:
         then applies trajectory with realistic noise.
 
         V3: intervention phase flips declining trajectories to improving.
+        V3.1: adds recovery_boost for critical/at_risk accounts in intervention phase.
         """
         # V2 phase logic: intervention flips declining to improving
         if self.phase == 'intervention' and trajectory in ('declining', 'slow_decline'):
             target_health = min(target_health + 15, 95)
             trajectory = 'improving'
+
+        # V3.1: Additional recovery boost for intervention phase
+        recovery_boost_pct = 0.0
+        if self.phase == 'intervention':
+            rng = random.Random(self.seed + hash(kpi_code))
+            if classification == 'critical':
+                recovery_boost_pct = rng.uniform(0.05, 0.15)
+            elif classification == 'at_risk':
+                recovery_boost_pct = rng.uniform(0.03, 0.08)
 
         n = len(self.dates)
 
@@ -541,6 +667,16 @@ class ManifestCSVGenerator:
 
             noise = 1.0 + random.gauss(0, 0.03)
             val = base * modifier * noise
+
+            # V3.1: Apply recovery boost for intervention phase (progressive)
+            if recovery_boost_pct > 0:
+                # Progressive boost: increases through the intervention window
+                progress = (i + 1) / max(n, 1)
+                boost_range = target_val * recovery_boost_pct * progress
+                if higher_is_better:
+                    val += boost_range
+                else:
+                    val -= boost_range
 
             if higher_is_better:
                 val = max(0, min(target_val * 1.2, val))
@@ -712,6 +848,7 @@ class ManifestCSVGenerator:
             target_health = acct['target_health']
             trajectory = acct.get('kpi_trajectory', 'stable')
             decline_start = acct.get('decline_start_month')
+            classification = acct.get('classification', 'healthy')
 
             for kpi_code in self.kpi_codes:
                 meta = self.kpi_catalog.get(kpi_code, {})
@@ -726,7 +863,8 @@ class ManifestCSVGenerator:
                     target_val = 85.0
 
                 series = self._generate_kpi_series(
-                    target_health, trajectory, decline_start, kpi_code
+                    target_health, trajectory, decline_start, kpi_code,
+                    classification=classification,
                 )
 
                 for i, date_str in enumerate(self.dates):
@@ -864,7 +1002,7 @@ class ManifestCSVGenerator:
                         sig_ref,
                     ])
 
-            # Intervention-phase recovery signals (from V2)
+            # Intervention-phase recovery signals (from V2 — manifest-defined)
             intervention = acct.get('intervention', {})
             if self.phase == 'intervention' and intervention.get('recovery_signals'):
                 for rs in intervention['recovery_signals']:
@@ -902,10 +1040,64 @@ class ManifestCSVGenerator:
                         sig_ref,
                     ])
 
+            # V3.1: Auto-generated recovery signals for intervention phase
+            if self.phase == 'intervention':
+                recovery_templates = self.RECOVERY_SIGNAL_TEMPLATES.get(cls, [])
+                acct_rng = random.Random(self.seed + aid + 7000)
+                # Determine how many recovery signals
+                if cls == 'critical':
+                    n_recovery = acct_rng.randint(3, 4)
+                elif cls == 'at_risk':
+                    n_recovery = acct_rng.randint(2, 3)
+                else:
+                    n_recovery = acct_rng.randint(1, 2)
+                n_recovery = min(n_recovery, len(recovery_templates))
+
+                # Pick a CSM name and champion name for template interpolation
+                stakeholders = acct.get('stakeholders', [])
+                csm_name = 'Sarah Rivera'
+                champion_name = 'the champion'
+                for sh in stakeholders:
+                    if sh.get('role') == 'csm':
+                        csm_name = sh['name']
+                    if sh.get('role') == 'champion':
+                        champion_name = sh['name']
+
+                selected_recovery = acct_rng.sample(recovery_templates, n_recovery)
+                total_days = max(1, (self.end_date - self.start_date).days)
+                for ri, rtpl in enumerate(selected_recovery):
+                    counter += 1
+                    # Spread recovery signals across the intervention window
+                    day_offset = int(total_days * (ri + 1) / (n_recovery + 1))
+                    sig_date = self.start_date + timedelta(days=day_offset)
+                    content = rtpl['content'].format(
+                        csm_name=csm_name,
+                        champion_name=champion_name,
+                    )
+                    sentiment = rtpl.get('sentiment', 'positive')
+                    score_map = {
+                        'very_positive': 0.9, 'positive': 0.7,
+                        'neutral': 0.1, 'negative': -0.6,
+                    }
+                    sig_ref = f'{phase_prefix}auto_recovery_{aid}_{counter}'
+                    w.writerow([
+                        sig_ref,
+                        aid,
+                        sig_date.strftime('%Y-%m-%d'),
+                        rtpl.get('type', 'recovery_signal'),
+                        content,
+                        sentiment.replace('very_', ''),
+                        round(score_map.get(sentiment, 0.7) + acct_rng.gauss(0, 0.05), 2),
+                        arc,
+                        'recovery',
+                        '',
+                        sig_ref,
+                    ])
+
         return out.getvalue()
 
     def generate_products_csv(self) -> str:
-        """Generate products.csv — 1-3 products per account."""
+        """Generate products.csv — 3-5 products per account based on ARR tier."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -913,40 +1105,44 @@ class ManifestCSVGenerator:
             'quantity', 'unit_price', 'deployment_date', 'status',
         ])
 
-        products = [
-            ('GPU Compute Cluster', 'Compute'),
-            ('AI Training Platform', 'AI/ML'),
-            ('Inference Engine', 'AI/ML'),
-            ('Data Lake Storage', 'Storage'),
-            ('Network Fabric Controller', 'Networking'),
-            ('Cooling Management System', 'Facilities'),
-            ('Power Distribution Unit', 'Facilities'),
-            ('Monitoring Dashboard', 'Observability'),
-        ]
-
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
-            random.seed(self.seed + idx)
-            n_products = random.randint(1, 3)
-            selected = random.sample(products, min(n_products, len(products)))
+            arr = acct.get('arr', 1_000_000)
+            acct_rng = random.Random(self.seed + idx + 3000)
 
-            for prod_name, category in selected:
-                deploy_date = self.start_date - timedelta(days=random.randint(30, 365))
+            # Higher ARR = more products (3-5)
+            if arr >= 5_000_000:
+                n_products = acct_rng.randint(4, 5)
+            elif arr >= 2_000_000:
+                n_products = acct_rng.randint(3, 5)
+            else:
+                n_products = acct_rng.randint(3, 4)
+
+            n_products = min(n_products, len(self.DC_PRODUCTS))
+            selected = acct_rng.sample(self.DC_PRODUCTS, n_products)
+
+            for prod in selected:
+                deploy_date = self.start_date - timedelta(days=acct_rng.randint(30, 365))
+                # Scale quantity and price by ARR tier
+                base_qty = acct_rng.randint(5, 50)
+                qty_multiplier = max(1, int(arr / 2_000_000))
+                quantity = base_qty * qty_multiplier
+                unit_price = round(acct_rng.uniform(5000, 100000), 2)
+
                 w.writerow([
                     aid,
-                    prod_name,
-                    category,
-                    random.randint(5, 200),
-                    round(random.uniform(5000, 100000), 2),
+                    prod['name'],
+                    prod['category'],
+                    quantity,
+                    unit_price,
                     deploy_date.strftime('%Y-%m-%d'),
                     'active',
                 ])
 
-        random.seed(self.seed)
         return out.getvalue()
 
     def generate_stakeholders_csv(self) -> str:
-        """Generate stakeholders.csv with narrative-aligned engagement dates."""
+        """Generate stakeholders.csv with 5-6 diverse stakeholders per account."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -955,14 +1151,58 @@ class ManifestCSVGenerator:
             'engagement_frequency', 'last_contact_date',
         ])
 
+        freq_by_role = {
+            'champion': 'weekly',
+            'economic_buyer': 'monthly',
+            'technical_lead': 'weekly',
+            'executive_sponsor': 'monthly',
+            'csm': 'daily',
+            'procurement': 'quarterly',
+        }
+        influence_by_role = {
+            'champion': 8,
+            'economic_buyer': 9,
+            'technical_lead': 7,
+            'executive_sponsor': 10,
+            'csm': 6,
+            'procurement': 5,
+        }
+
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             domain = acct['name'].lower().replace(' ', '') + '.com'
+            cls = acct.get('classification', 'healthy')
+            acct_rng = random.Random(self.seed + aid + 5000)
 
             # Get planned stakeholder events to align dates
             planned_stakeholder_events = self.planner.get_events(aid, 'stakeholder')
 
-            for si, sh in enumerate(acct.get('stakeholders', [])):
+            # Start with manifest-defined stakeholders
+            manifest_stakeholders = acct.get('stakeholders', [])
+            existing_roles = {sh.get('role', 'contact') for sh in manifest_stakeholders}
+            all_stakeholders = list(manifest_stakeholders)
+
+            # Fill from templates to reach 5-6 total
+            target_count = acct_rng.randint(5, 6)
+            for tpl in self.STAKEHOLDER_TEMPLATES:
+                if len(all_stakeholders) >= target_count:
+                    break
+                if tpl['role'] in existing_roles:
+                    continue
+                # Pick a deterministic name from the pool
+                name = tpl['names'][aid % len(tpl['names'])]
+                all_stakeholders.append({
+                    'name': name,
+                    'role': tpl['role'],
+                    'title': tpl['title'],
+                    'department': tpl['department'],
+                    'engagement_frequency': freq_by_role.get(tpl['role'], 'monthly'),
+                    'influence_score': influence_by_role.get(tpl['role'], 5),
+                    'sentiment': 'positive' if cls == 'healthy' else ('neutral' if cls == 'at_risk' else 'negative'),
+                })
+                existing_roles.add(tpl['role'])
+
+            for si, sh in enumerate(all_stakeholders):
                 email = sh['name'].lower().replace(' ', '.') + '@' + domain
                 freq = sh.get('engagement_frequency', 'monthly')
 
@@ -970,17 +1210,17 @@ class ManifestCSVGenerator:
                 if si < len(planned_stakeholder_events):
                     last_contact = planned_stakeholder_events[si].date_str
                 elif freq in ('none', 'none_recent'):
-                    last_contact = (self.end_date - timedelta(days=random.randint(90, 180))).strftime('%Y-%m-%d')
+                    last_contact = (self.end_date - timedelta(days=acct_rng.randint(90, 180))).strftime('%Y-%m-%d')
                 elif freq == 'daily':
-                    last_contact = (self.end_date - timedelta(days=random.randint(0, 3))).strftime('%Y-%m-%d')
+                    last_contact = (self.end_date - timedelta(days=acct_rng.randint(0, 3))).strftime('%Y-%m-%d')
                 elif freq == 'weekly':
-                    last_contact = (self.end_date - timedelta(days=random.randint(0, 10))).strftime('%Y-%m-%d')
+                    last_contact = (self.end_date - timedelta(days=acct_rng.randint(0, 10))).strftime('%Y-%m-%d')
                 elif freq == 'biweekly':
-                    last_contact = (self.end_date - timedelta(days=random.randint(0, 18))).strftime('%Y-%m-%d')
+                    last_contact = (self.end_date - timedelta(days=acct_rng.randint(0, 18))).strftime('%Y-%m-%d')
                 elif freq == 'quarterly':
-                    last_contact = (self.end_date - timedelta(days=random.randint(30, 95))).strftime('%Y-%m-%d')
+                    last_contact = (self.end_date - timedelta(days=acct_rng.randint(30, 95))).strftime('%Y-%m-%d')
                 else:  # monthly
-                    last_contact = (self.end_date - timedelta(days=random.randint(0, 35))).strftime('%Y-%m-%d')
+                    last_contact = (self.end_date - timedelta(days=acct_rng.randint(0, 35))).strftime('%Y-%m-%d')
 
                 w.writerow([
                     aid,
@@ -998,7 +1238,7 @@ class ManifestCSVGenerator:
         return out.getvalue()
 
     def generate_engagement_events_csv(self) -> str:
-        """Generate engagement_events.csv — meetings, QBRs, calls per account."""
+        """Generate engagement_events.csv — 8-12 diverse events per account."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1006,39 +1246,72 @@ class ManifestCSVGenerator:
             'participants', 'outcome', 'sentiment', 'notes',
         ])
 
+        outcome_by_cls = {
+            'critical': ['action_items_assigned', 'escalated', 'follow_up_needed', 'partially_resolved', 'risk_identified'],
+            'at_risk': ['follow_up_needed', 'positive_engagement', 'action_items_assigned', 'improvement_noted'],
+            'healthy': ['positive_engagement', 'expansion_discussed', 'renewal_confirmed', 'best_practices_shared'],
+        }
+        sentiment_by_cls = {
+            'critical': ['negative', 'neutral', 'negative', 'neutral'],
+            'at_risk': ['neutral', 'negative', 'neutral', 'positive'],
+            'healthy': ['positive', 'neutral', 'positive', 'positive'],
+        }
+
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
-            stakeholders = acct.get('stakeholders', [])
-            participant_names = [s['name'] for s in stakeholders[:3]]
+            acct_rng = random.Random(self.seed + aid + 6000)
 
+            # Build participant pool from manifest stakeholders + generated
+            stakeholders = acct.get('stakeholders', [])
+            participant_pool = [s['name'] for s in stakeholders[:4]]
+            if len(participant_pool) < 2:
+                participant_pool = ['Sarah Chen', 'Alex Thompson']
+
+            # Determine event count: 8-12 per account
             ev_cfg = self.context_graph_cfg.get('events_per_account')
             if isinstance(ev_cfg, (list, tuple)) and len(ev_cfg) >= 2:
                 lo, hi = int(ev_cfg[0]), int(ev_cfg[1])
-                n_events = random.randint(min(lo, hi), max(lo, hi))
+                n_events = acct_rng.randint(max(lo, 8), max(hi, 12))
             else:
-                n_events = {'critical': 10, 'at_risk': 8, 'healthy': 6}.get(cls, 6)
+                n_events = acct_rng.randint(8, 12)
 
-            for i in range(n_events):
+            total_days = max(1, (self.end_date - self.start_date).days)
+
+            # Pick diverse event types (cycle through templates to ensure variety)
+            event_types_for_account = []
+            shuffled_templates = list(self.ENGAGEMENT_EVENT_TEMPLATES)
+            acct_rng.shuffle(shuffled_templates)
+            while len(event_types_for_account) < n_events:
+                event_types_for_account.extend(shuffled_templates)
+            event_types_for_account = event_types_for_account[:n_events]
+
+            for i, evt_tpl in enumerate(event_types_for_account):
+                # Spread events evenly across the time range
                 event_date = self.start_date + timedelta(
-                    days=int((self.end_date - self.start_date).days * i / max(n_events - 1, 1))
+                    days=int(total_days * i / max(n_events - 1, 1))
                 )
 
-                if cls == 'critical':
-                    etype = random.choice(['support_escalation', 'check_in', 'executive_briefing', 'check_in'])
-                    sentiment = random.choice(['negative', 'neutral', 'negative'])
-                    outcome = random.choice(['action_items_assigned', 'escalated', 'follow_up_needed', 'partially_resolved'])
-                elif cls == 'at_risk':
-                    etype = random.choice(['check_in', 'QBR', 'technical_review', 'renewal_discussion'])
-                    sentiment = random.choice(['neutral', 'negative', 'neutral', 'positive'])
-                    outcome = random.choice(['follow_up_needed', 'positive_engagement', 'action_items_assigned'])
-                else:
-                    etype = random.choice(['QBR', 'check_in', 'technical_review'])
-                    sentiment = random.choice(['positive', 'neutral', 'positive'])
-                    outcome = random.choice(['positive_engagement', 'expansion_discussed', 'renewal_confirmed'])
+                etype = evt_tpl['type']
+                title = f"{evt_tpl['title']} — {acct['name']}"
+                sentiment = acct_rng.choice(sentiment_by_cls.get(cls, ['neutral']))
+                outcome = acct_rng.choice(outcome_by_cls.get(cls, ['follow_up_needed']))
 
-                participants = ', '.join(random.sample(participant_names, min(2, len(participant_names))))
-                title = f"{etype.replace('_', ' ').title()} — {acct['name']}"
+                n_participants = acct_rng.randint(2, min(4, len(participant_pool)))
+                participants = ', '.join(acct_rng.sample(participant_pool, n_participants))
+
+                # Richer notes based on event type
+                notes_map = {
+                    'qbr': f"Quarterly review covered health metrics, roadmap alignment, and renewal timeline for {acct['name']}.",
+                    'executive_briefing': f"Executive sponsor briefed on account status and strategic priorities.",
+                    'technical_review': f"Technical deep-dive on infrastructure performance and optimization opportunities.",
+                    'training': f"Hands-on training session on new platform features and best practices.",
+                    'incident_review': f"Post-incident review: root cause analysis and prevention measures discussed.",
+                    'roadmap_session': f"Product roadmap preview with feedback collection on upcoming features.",
+                    'health_check': f"System health assessment completed. Key metrics reviewed with recommendations.",
+                    'expansion_discussion': f"Capacity planning discussion. Growth projections and expansion options reviewed.",
+                }
+                notes = notes_map.get(etype, f"Engagement with {acct['name']}: {outcome.replace('_', ' ')}")
 
                 w.writerow([
                     aid,
@@ -1048,8 +1321,31 @@ class ManifestCSVGenerator:
                     participants,
                     outcome,
                     sentiment,
-                    f"Engagement with {acct['name']}: {outcome.replace('_', ' ')}",
+                    notes,
                 ])
+
+            # V3.1: Additional recovery engagement events for intervention phase
+            if self.phase == 'intervention' and cls in ('critical', 'at_risk'):
+                recovery_events = [
+                    ('executive_briefing', 'Emergency Executive Review', 'positive', 'risk_mitigation_discussed'),
+                    ('health_check', 'Intervention Health Assessment', 'positive', 'improvement_noted'),
+                    ('technical_review', 'Remediation Progress Review', 'positive', 'action_items_assigned'),
+                ]
+                for ri, (re_type, re_title, re_sent, re_outcome) in enumerate(recovery_events[:2 if cls == 'at_risk' else 3]):
+                    day_offset = int(total_days * (ri + 1) / 4)
+                    event_date = self.start_date + timedelta(days=day_offset)
+                    n_participants = acct_rng.randint(2, min(3, len(participant_pool)))
+                    participants = ', '.join(acct_rng.sample(participant_pool, n_participants))
+                    w.writerow([
+                        aid,
+                        event_date.strftime('%Y-%m-%d'),
+                        re_type,
+                        f"{re_title} — {acct['name']}",
+                        participants,
+                        re_outcome,
+                        re_sent,
+                        f"Recovery intervention: {re_title.lower()} for {acct['name']}.",
+                    ])
 
         return out.getvalue()
 
@@ -1088,7 +1384,7 @@ class ManifestCSVGenerator:
         return out.getvalue()
 
     def generate_outcomes_csv(self) -> str:
-        """Generate outcomes.csv with narrative-aligned dates."""
+        """Generate outcomes.csv with narrative-aligned dates (V3.1: richer outcomes + Phase 2 recovery)."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1102,39 +1398,38 @@ class ManifestCSVGenerator:
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
             arr = acct['arr']
+            acct_rng = random.Random(self.seed + aid + 8000)
 
             # Get planned outcome events for narrative-aligned dates
             planned_outcomes = self.planner.get_events(aid, 'outcome')
 
+            # V3.1: Use richer outcome templates
+            outcome_templates = self.PHASE1_OUTCOME_TEMPLATES.get(cls, self.PHASE1_OUTCOME_TEMPLATES['healthy'])
+            # Determine how many outcomes: 3-4 critical, 2-3 at_risk, 1-2 healthy
             if cls == 'critical':
-                outcomes = [
-                    ('revenue_at_risk', f'Churn risk — {acct["name"]}',
-                     f'Account showing signs of churn. ARR at risk: ${arr:,.0f}',
-                     -arr * 0.5, 'open'),
-                    ('engagement_decline', f'Engagement decline — {acct["name"]}',
-                     'Stakeholder engagement dropped significantly',
-                     -arr * 0.1, 'in_progress'),
-                ]
+                n_outcomes = acct_rng.randint(3, min(4, len(outcome_templates)))
             elif cls == 'at_risk':
-                outcomes = [
-                    ('renewal_risk', f'Renewal uncertainty — {acct["name"]}',
-                     'Renewal discussion stalled or delayed',
-                     -arr * 0.2, 'in_progress'),
-                ]
+                n_outcomes = acct_rng.randint(2, min(3, len(outcome_templates)))
             else:
-                outcomes = [
-                    ('expansion_opportunity', f'Expansion potential — {acct["name"]}',
-                     'Account showing expansion signals',
-                     arr * 0.15, 'open'),
-                ]
+                n_outcomes = acct_rng.randint(1, min(2, len(outcome_templates)))
 
-            for oi, (otype, title, desc, impact, status) in enumerate(outcomes):
+            selected_outcomes = outcome_templates[:n_outcomes]
+            total_days = max(1, (self.end_date - self.start_date).days)
+
+            for oi, (otype, title_tpl, desc_tpl, impact_pct, status) in enumerate(selected_outcomes):
                 counter += 1
-                # Use narrative-planned date if available, else fallback
+                impact = arr * impact_pct
+                title = f'{title_tpl} — {acct["name"]}'
+                desc = desc_tpl
+
+                # Use narrative-planned date if available, else spread across range
                 if oi < len(planned_outcomes):
                     outcome_date = planned_outcomes[oi].date_str
                 else:
-                    outcome_date = (self.end_date - timedelta(days=random.randint(0, 60))).strftime('%Y-%m-%d')
+                    # Spread outcomes across the latter half of the time range
+                    day_offset = int(total_days * 0.5) + acct_rng.randint(0, int(total_days * 0.5))
+                    outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+
                 w.writerow([
                     aid,
                     outcome_date,
@@ -1146,7 +1441,7 @@ class ManifestCSVGenerator:
                     f'{phase_prefix}sig_{aid}_1',
                 ])
 
-            # Intervention revenue outcome (from V2)
+            # Intervention revenue outcome (from V2 — manifest-defined)
             intervention = acct.get('intervention', {})
             if self.phase == 'intervention' and intervention.get('revenue_outcome'):
                 ro = intervention['revenue_outcome']
@@ -1161,6 +1456,51 @@ class ManifestCSVGenerator:
                     'resolved',
                     f'{phase_prefix}sig_{aid}_1',
                 ])
+
+            # V3.1: Auto-generated recovery outcomes for intervention phase
+            if self.phase == 'intervention':
+                recovery_outcome_templates = self.RECOVERY_OUTCOME_TEMPLATES.get(cls, [])
+                # Pick 2-3 for critical, 2 for at_risk, 1 for healthy
+                if cls == 'critical':
+                    n_recovery_outcomes = acct_rng.randint(2, min(3, len(recovery_outcome_templates)))
+                elif cls == 'at_risk':
+                    n_recovery_outcomes = min(2, len(recovery_outcome_templates))
+                else:
+                    n_recovery_outcomes = min(1, len(recovery_outcome_templates))
+
+                selected_recovery = acct_rng.sample(
+                    recovery_outcome_templates,
+                    min(n_recovery_outcomes, len(recovery_outcome_templates)),
+                )
+
+                for ri, (ro_type, ro_title, ro_desc, ro_status) in enumerate(selected_recovery):
+                    counter += 1
+                    # Positive revenue impact for recovery outcomes
+                    if ro_type == 'churn_averted':
+                        rev_impact = arr * acct_rng.uniform(0.3, 0.5)
+                    elif ro_type in ('revenue_protected', 'renewal_secured'):
+                        rev_impact = arr * acct_rng.uniform(0.1, 0.25)
+                    elif ro_type == 'expansion_approved':
+                        rev_impact = arr * acct_rng.uniform(0.15, 0.3)
+                    elif ro_type == 'revenue_growth':
+                        rev_impact = arr * acct_rng.uniform(0.1, 0.2)
+                    else:
+                        rev_impact = arr * acct_rng.uniform(0.05, 0.1)
+
+                    # Spread recovery outcomes across the intervention window
+                    day_offset = int(total_days * (ri + 1) / (n_recovery_outcomes + 1))
+                    outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+
+                    w.writerow([
+                        aid,
+                        outcome_date,
+                        ro_type,
+                        f'{ro_title} — {acct["name"]}',
+                        ro_desc,
+                        round(rev_impact, 2),
+                        ro_status,
+                        f'{phase_prefix}auto_recovery_{aid}_1',
+                    ])
 
         return out.getvalue()
 
@@ -1218,7 +1558,7 @@ class ManifestCSVGenerator:
                     round(rev_impact, 2),
                 ])
 
-            # Intervention decisions (from V2)
+            # Intervention decisions (from V2 — manifest-defined)
             intervention = acct.get('intervention', {})
             if self.phase == 'intervention' and intervention.get('decisions'):
                 for di, dec in enumerate(intervention['decisions']):
@@ -1234,57 +1574,32 @@ class ManifestCSVGenerator:
                         round(arr * 0.1, 2),
                     ])
 
+            # V3.1: Auto-generated recovery decisions for intervention phase
+            if self.phase == 'intervention':
+                acct_rng = random.Random(self.seed + aid + 9000)
+                recovery_decision_templates = self.RECOVERY_DECISION_TEMPLATES.get(cls, [])
+                total_days = max(1, (self.end_date - self.start_date).days)
+
+                for rdi, (rd_title, rd_role, rd_chosen, rd_outcome, rd_risk) in enumerate(recovery_decision_templates):
+                    day_offset = int(total_days * (rdi + 1) / (len(recovery_decision_templates) + 1))
+                    decision_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+                    rev_impact = arr * acct_rng.uniform(0.05, 0.15)
+                    w.writerow([
+                        aid,
+                        decision_date,
+                        f'{phase_prefix}auto_dec_{aid}_{rdi+1}',
+                        f'{rd_title} — {acct["name"]}',
+                        rd_role,
+                        rd_chosen,
+                        rd_outcome,
+                        rd_risk,
+                        round(rev_impact, 2),
+                    ])
+
         return out.getvalue()
 
-    def _signal_counter_before_account(self, account_index: int) -> int:
-        """Mirror generate_signals_csv global counter *before* any rows for accounts[account_index]."""
-        counter = 0
-        for i in range(account_index):
-            acct = self.accounts[i]
-            aid = self._account_id(i)
-            counter += len(acct.get('key_signals', []))
-            counter += len(self.planner.get_events(aid, 'signal'))
-            counter += 12  # filler: 6 months × 2
-            iv = acct.get('intervention', {})
-            if self.phase == 'intervention':
-                counter += len(iv.get('recovery_signals', []))
-                counter += len(iv.get('csm_actions', []))
-        return counter
-
-    def _primary_signal_ref_for_edges(self, account_index: int) -> str:
-        """First signal_ref emitted for this account in generate_signals_csv (matches ingest maps)."""
-        phase_prefix = f'{self.phase}_' if self.phase else ''
-        acct = self.accounts[account_index]
-        aid = self._account_id(account_index)
-        c = self._signal_counter_before_account(account_index)
-        if acct.get('key_signals'):
-            c += 1
-            return f'{phase_prefix}sig_{aid}_{c}'
-        planned = self.planner.get_events(aid, 'signal')
-        if planned:
-            c += 1
-            return f'{phase_prefix}narrative_sig_{aid}_{c}'
-        c += 1
-        return f'{phase_prefix}sig_{aid}_{c}'
-
-    def _nth_recovery_signal_ref(self, account_index: int, recovery_index: int) -> str:
-        """recovery_index 0 = first intervention recovery_signals row for this account."""
-        phase_prefix = f'{self.phase}_' if self.phase else ''
-        acct = self.accounts[account_index]
-        aid = self._account_id(account_index)
-        c = self._signal_counter_before_account(account_index)
-        c += len(acct.get('key_signals', []))
-        c += len(self.planner.get_events(aid, 'signal'))
-        c += 12
-        c += recovery_index + 1
-        return f'{phase_prefix}recovery_{aid}_{c}'
-
     def generate_signal_edges_csv(self) -> str:
-        """Generate signal_edges.csv — causal links between signals, decisions, outcomes.
-
-        Refs must match decision_id / signal_ref in decisions.csv and enhanced_qualitative_signals.csv,
-        including phase prefix (baseline_ / intervention_) and global signal counter sequencing.
-        """
+        """Generate signal_edges.csv — causal links between signals, decisions, outcomes."""
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1297,26 +1612,23 @@ class ManifestCSVGenerator:
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
-            primary_sig = self._primary_signal_ref_for_edges(idx)
-            d1 = f'decision:{phase_prefix}dec_{aid}_1'
-            d2 = f'decision:{phase_prefix}dec_{aid}_2'
 
             if cls == 'critical':
                 edges = [
-                    (primary_sig, d1, 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
-                    (d1, 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
-                    (primary_sig, d2, 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
-                    (d2, 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
+                    (f'decision:dec_{aid}_1', 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_2', 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
+                    (f'decision:dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
                 ]
             elif cls == 'at_risk':
                 edges = [
-                    (primary_sig, d1, 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
-                    (d1, 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
+                    (f'decision:dec_{aid}_1', 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
                 ]
             else:
                 edges = [
-                    (primary_sig, d1, 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
-                    (d1, 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
+                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
+                    (f'decision:dec_{aid}_1', 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
                 ]
 
             for from_ref, to_ref, etype, label, conf, lag in edges:
@@ -1332,7 +1644,7 @@ class ManifestCSVGenerator:
                     w.writerow([
                         aid,
                         f'decision:int_dec_{aid}_{di+1}',
-                        self._nth_recovery_signal_ref(idx, di),
+                        f'intervention_recovery_{aid}_{di+100}',
                         'LED_TO',
                         f'Intervention: {intervention["decisions"][di]["title"]}',
                         0.9,
@@ -1350,6 +1662,40 @@ class ManifestCSVGenerator:
                         0.95,
                         30,
                     ])
+
+            # V3.1: Auto-generated recovery edges for intervention phase
+            if self.phase == 'intervention':
+                recovery_decision_templates = self.RECOVERY_DECISION_TEMPLATES.get(cls, [])
+                recovery_outcome_templates = self.RECOVERY_OUTCOME_TEMPLATES.get(cls, [])
+
+                # Link recovery signals -> recovery decisions
+                for rdi in range(len(recovery_decision_templates)):
+                    w.writerow([
+                        aid,
+                        f'{phase_prefix}auto_recovery_{aid}_1',
+                        f'decision:{phase_prefix}auto_dec_{aid}_{rdi+1}',
+                        'TRIGGERED',
+                        f'Recovery signal triggered intervention decision',
+                        0.85,
+                        7,
+                    ])
+
+                # Link recovery decisions -> recovery outcomes
+                n_dec = len(recovery_decision_templates)
+                n_out = min(len(recovery_outcome_templates), 3 if cls == 'critical' else (2 if cls == 'at_risk' else 1))
+                for roi in range(n_out):
+                    dec_idx = min(roi, n_dec - 1) if n_dec > 0 else 0
+                    if n_dec > 0:
+                        ro_type = recovery_outcome_templates[roi][0] if roi < len(recovery_outcome_templates) else 'revenue_protected'
+                        w.writerow([
+                            aid,
+                            f'decision:{phase_prefix}auto_dec_{aid}_{dec_idx+1}',
+                            f'outcome:{ro_type}',
+                            'LED_TO',
+                            f'Intervention led to {ro_type.replace("_", " ")}',
+                            0.9,
+                            21,
+                        ])
 
         return out.getvalue()
 
@@ -1543,7 +1889,6 @@ class ScenarioManifest(BaseScenario):
         sample_size: int,
         health_tolerance: int,
         strict: bool,
-        phase: str = None,
     ) -> Dict[str, Any]:
         checks: Dict[str, Any] = {'passed': True, 'errors': [], 'metrics': {}}
 
@@ -1622,19 +1967,14 @@ class ScenarioManifest(BaseScenario):
 
         checks['metrics']['sample_distribution_actual'] = actual_distribution
         checks['metrics']['sample_distribution_expected'] = dict(expected_sample_manifest)
-        # Skip distribution drift check for intervention phase — health tiers
-        # are expected to shift upward (critical→at_risk, at_risk→healthy)
-        if phase == 'intervention':
-            logger.info('    Distribution drift check skipped (intervention phase — tiers expected to shift)')
-        else:
-            for cls in ('critical', 'at_risk', 'healthy'):
-                expected_sample = expected_sample_manifest[cls]
-                if abs(actual_distribution[cls] - expected_sample) > health_tolerance:
-                    checks['passed'] = False
-                    checks['errors'].append(
-                        f'Health distribution drift for {cls}: actual={actual_distribution[cls]} '
-                        f'expected~={expected_sample} tolerance={health_tolerance}'
-                    )
+        for cls in ('critical', 'at_risk', 'healthy'):
+            expected_sample = expected_sample_manifest[cls]
+            if abs(actual_distribution[cls] - expected_sample) > health_tolerance:
+                checks['passed'] = False
+                checks['errors'].append(
+                    f'Health distribution drift for {cls}: actual={actual_distribution[cls]} '
+                    f'expected~={expected_sample} tolerance={health_tolerance}'
+                )
 
         checks['metrics']['kpi_count_failures'] = kpi_count_failures[:10]
         if kpi_count_failures:
@@ -1866,7 +2206,6 @@ class ScenarioManifest(BaseScenario):
                 sample_size=sample_size,
                 health_tolerance=health_tolerance,
                 strict=strict,
-                phase=phase,
             )
             results['validation'] = validation
             if not validation['passed']:
