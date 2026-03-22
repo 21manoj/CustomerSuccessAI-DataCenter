@@ -774,20 +774,43 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
 
 # ===================================================================
 # Register tools from modules (import triggers @mcp.tool registration)
+# Only runs when imported as a module (not when run as __main__).
+# When run as __main__, tool imports happen in the entrypoint block below
+# AFTER sys.modules aliasing fixes the dual-instance bug.
 # ===================================================================
-_module_tools = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 5}
-for _mod_name, _expected in _module_tools.items():
-    try:
-        __import__(f'cs_pulse_{_mod_name}')
-        print(f"  ✅ Loaded cs_pulse_{_mod_name} ({_expected} tools)")
-    except Exception as _e:
-        print(f"  ❌ FAILED to load cs_pulse_{_mod_name}: {_e}")
+if __name__ != "__main__":
+    _module_tools = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 5}
+    for _mod_name, _expected in _module_tools.items():
+        try:
+            __import__(f'cs_pulse_{_mod_name}')
+        except Exception as _e:
+            print(f"  ❌ FAILED to load cs_pulse_{_mod_name}: {_e}")
 
 
 # ===================================================================
 # Entrypoint
 # ===================================================================
 if __name__ == "__main__":
+    # CRITICAL: When run as `python3 mcp_server/cs_pulse_mcp_server.py`,
+    # this file is loaded as __main__, not as cs_pulse_mcp_server.
+    # Submodules do `from cs_pulse_mcp_server import mcp` which would
+    # create a SECOND module instance with its own `mcp` object.
+    # Fix: register __main__ as cs_pulse_mcp_server in sys.modules
+    # so submodule imports find THIS instance, not a fresh copy.
+    import types
+    sys.modules['cs_pulse_mcp_server'] = sys.modules['__main__']
+
+    # Now import submodules — they'll get our mcp instance
+    _module_tools_main = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 5}
+    for _mod, _exp in _module_tools_main.items():
+        try:
+            __import__(f'cs_pulse_{_mod}')
+            print(f"  ✅ Loaded cs_pulse_{_mod} ({_exp} tools)")
+        except Exception as _e:
+            print(f"  ❌ FAILED to load cs_pulse_{_mod}: {_e}")
+
+    print(f"  Total tools registered: {len(mcp._tool_manager._tools)}")
+
     transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
 
     if transport == "http":
