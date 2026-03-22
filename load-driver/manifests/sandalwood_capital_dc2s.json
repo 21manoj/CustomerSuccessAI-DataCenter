@@ -1,0 +1,381 @@
+{
+  "customer": {
+    "name": "Sandalwood Capital",
+    "vertical": "dc2_s",
+    "admin_email": "admin@sandalwoodcapital.com",
+    "admin_name": "Marcus Sterling",
+    "domain": "sandalwoodcapital.com"
+  },
+  "accounts": [
+    {
+      "name": "Vertex Compute",
+      "arr": 8200000,
+      "target_health": 35,
+      "classification": "critical",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "CTO and key champion Alex Rivera departed in Jan 2026. New CTO favors competitor cloud. GPU utilization crashed from 82% to 41%. No executive contact in 90+ days.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "AI/ML",
+      "region": "US-West",
+      "stakeholders": [
+        {"name": "Alex Rivera", "role": "VP Infrastructure", "title": "VP of Infrastructure", "department": "Engineering", "engagement_frequency": 9, "status": "departed"},
+        {"name": "Priya Sharma", "role": "successor", "title": "Director of Infrastructure", "department": "Engineering", "engagement_frequency": 4, "sentiment": "negative"},
+        {"name": "Marcus Chen", "role": "technical_lead", "title": "Sr. ML Platform Engineer", "department": "Engineering", "engagement_frequency": 6, "sentiment": "neutral"},
+        {"name": "Diana Walsh", "role": "finance", "title": "VP Finance", "department": "Finance", "engagement_frequency": 3, "sentiment": "neutral"}
+      ],
+      "key_signals": [
+        {"type": "champion_change", "month": 3, "description": "CTO Alex Rivera resigned. Priya Sharma promoted as interim."},
+        {"type": "usage_decline", "month": 4, "description": "GPU utilization crashed from 82% to 41% over 4 weeks."},
+        {"type": "competitor_mention", "month": 4, "description": "New CTO evaluating AWS and CoreWeave. RFP issued."},
+        {"type": "engagement_gap", "month": 5, "description": "No executive contact in 90+ days. QBR requests unanswered."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "csm_assigned", "description": "Senior CSM Sarah Chen assigned with executive mandate to save the account."},
+          {"type": "kpi_recovery", "description": "GPU utilization recovering: 41% → 68% after PB-03 optimization playbook."},
+          {"type": "executive_engagement", "description": "New CTO Priya Sharma re-engaged after product roadmap preview."}
+        ],
+        "outcomes": [
+          {"type": "churn_averted", "revenue_impact": 4100000, "description": "12-month commitment secured after executive intervention."},
+          {"type": "revenue_protected", "revenue_impact": 3280000, "description": "ARR protected through dedicated CSM and optimization playbook."}
+        ]
+      }
+    },
+    {
+      "name": "Ironridge Manufacturing",
+      "arr": 5800000,
+      "target_health": 32,
+      "classification": "critical",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "Sev-1 outage in Pod 3 took down 40% of production workloads for 6 hours. MTBF dropped below SLA. Executive escalation to CEO.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Manufacturing",
+      "region": "US-East",
+      "stakeholders": [
+        {"name": "Robert Kim", "role": "champion", "title": "VP of Operations", "department": "Operations", "engagement_frequency": 7, "sentiment": "negative"},
+        {"name": "Jennifer Brooks", "role": "executive_sponsor", "title": "CTO", "department": "Technology", "engagement_frequency": 3, "sentiment": "negative"},
+        {"name": "Kevin Wright", "role": "technical_lead", "title": "Infrastructure Manager", "department": "Operations", "engagement_frequency": 8, "sentiment": "neutral"}
+      ],
+      "key_signals": [
+        {"type": "support_escalation", "month": 2, "description": "Sev-1: Complete rack failure in Pod 3. 6-hour production outage."},
+        {"type": "executive_escalation", "month": 3, "description": "CEO called our VP of Sales directly. Demanding root cause within 48 hours."},
+        {"type": "usage_decline", "month": 4, "description": "Workload migration to backup DC started. 30% capacity shift."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "csm_assigned", "description": "VP of Customer Success personally assigned as exec sponsor."},
+          {"type": "kpi_recovery", "description": "System uptime restored to 99.95% after infrastructure overhaul."}
+        ],
+        "outcomes": [
+          {"type": "churn_averted", "revenue_impact": 2900000, "description": "Retention plan approved with 18-month commitment and SLA credits."},
+          {"type": "renewal_secured", "revenue_impact": 5800000, "description": "Full renewal secured after infrastructure overhaul demonstration."}
+        ]
+      }
+    },
+    {
+      "name": "Sentinel Cybersecurity",
+      "arr": 4200000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "budget_pressure",
+      "partner_tier": "var",
+      "renewal_date": "2026-08-15",
+      "narrative": "Q4 earnings miss triggered 15% budget cuts across IT. CFO mandated vendor consolidation review. Board considering cheaper alternatives.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Cybersecurity",
+      "region": "US-Central",
+      "stakeholders": [
+        {"name": "Thomas Anderson", "role": "champion", "title": "CISO", "department": "Security", "engagement_frequency": 6, "sentiment": "neutral"},
+        {"name": "George Martinez", "role": "economic_buyer", "title": "CFO", "department": "Finance", "engagement_frequency": 2, "sentiment": "negative"}
+      ],
+      "key_signals": [
+        {"type": "engagement_gap", "month": 3, "description": "Q4 earnings miss. Board mandated 15% IT budget reduction."},
+        {"type": "competitor_mention", "month": 4, "description": "CFO requesting competitive bids from 3 vendors."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "executive_engagement", "description": "CFO George Martinez presented with TCO analysis showing 23% savings vs alternatives."}
+        ],
+        "outcomes": [
+          {"type": "revenue_protected", "revenue_impact": 2100000, "description": "Budget cuts redirected to non-critical vendors. Our contract preserved."}
+        ]
+      }
+    },
+    {
+      "name": "Meridian Financial Systems",
+      "arr": 6500000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "competitor_evaluation",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "VP of Infrastructure evaluating Azure for compliance workloads. GPU utilization trending down. Last QBR was Oct 2025.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Financial Services",
+      "region": "US-East",
+      "key_signals": [
+        {"type": "competitor_mention", "month": 4, "description": "VP evaluating Azure for SOC2 compliance workloads."},
+        {"type": "engagement_gap", "month": 5, "description": "Last QBR was Oct 2025. Three scheduled meetings cancelled."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "executive_engagement", "description": "VP Finance approved expansion budget for compliance-ready GPU cluster."}
+        ],
+        "outcomes": [
+          {"type": "expansion_approved", "revenue_impact": 1950000, "description": "New compliance-certified GPU cluster for regulated workloads."}
+        ]
+      }
+    },
+    {
+      "name": "Clearwater Health Platform",
+      "arr": 5100000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-30",
+      "narrative": "HIPAA compliance deployment stalled at 60% for 3 months. Technical champion frustrated with support response times.",
+      "kpi_trajectory": "flat",
+      "decline_start_month": 4,
+      "industry": "Healthcare",
+      "region": "US-Central",
+      "key_signals": [
+        {"type": "support_escalation", "month": 4, "description": "HIPAA deployment stalled. Champion threatening to pause expansion."},
+        {"type": "engagement_gap", "month": 5, "description": "Technical champion cancelling weekly syncs."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "csm_assigned", "description": "Dedicated CSM re-engaged champion with weekly deployment cadence."}
+        ],
+        "outcomes": [
+          {"type": "engagement_recovery", "revenue_impact": 1020000, "description": "Deployment accelerated to 95%. Champion re-engaged."},
+          {"type": "expansion_approved", "revenue_impact": 1530000, "description": "Phase 2 HIPAA workload migration approved."}
+        ]
+      }
+    },
+    {
+      "name": "Quantum Edge Networks",
+      "arr": 4800000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "engagement_decline",
+      "partner_tier": "var",
+      "renewal_date": "2026-10-15",
+      "narrative": "Partner VAR disengaged after channel conflict. Co-selling pipeline dried up. Joint QBRs cancelled since Q3.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Telecommunications",
+      "region": "US-East",
+      "key_signals": [
+        {"type": "engagement_gap", "month": 4, "description": "Partner VAR stopped attending joint QBRs. Channel conflict escalated."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "executive_engagement", "description": "Channel conflict resolved. VAR re-engaged with new co-selling terms."}
+        ],
+        "outcomes": [
+          {"type": "expansion_approved", "revenue_impact": 1440000, "description": "Edge computing expansion across 5G network sites."}
+        ]
+      }
+    },
+    {
+      "name": "Blackstone Analytics",
+      "arr": 4800000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-15",
+      "narrative": "Strong champion. CTO agreed to be reference customer. GPU utilization at 89%. Ready for next-gen training pipeline.",
+      "kpi_trajectory": "improving",
+      "industry": "Data Analytics",
+      "region": "US-West",
+      "key_signals": [
+        {"type": "champion_change", "month": 3, "description": "CTO agreed to be a reference customer. Conference keynote scheduled."}
+      ],
+      "intervention": {
+        "outcomes": [
+          {"type": "expansion_approved", "revenue_impact": 1900000, "description": "Training pipeline scale-up: 100 → 500 GPU hours/day."}
+        ]
+      }
+    },
+    {
+      "name": "Ridgeline Energy Systems",
+      "arr": 4600000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-30",
+      "narrative": "Stable account. Grid optimization workloads running smoothly. Exploring edge computing for remote substations.",
+      "kpi_trajectory": "stable",
+      "industry": "Energy",
+      "region": "US-Central",
+      "intervention": {
+        "outcomes": [
+          {"type": "expansion_approved", "revenue_impact": 1380000, "description": "Edge computing deployment across 12 remote substations."}
+        ]
+      }
+    },
+    {
+      "name": "Oakwood Retail Tech",
+      "arr": 3800000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "var",
+      "renewal_date": "2027-01-15",
+      "narrative": "Demand forecasting models running well. Seasonal capacity planning in progress for holiday surge.",
+      "kpi_trajectory": "stable",
+      "industry": "Retail",
+      "region": "US-East"
+    },
+    {
+      "name": "Crestline Logistics",
+      "arr": 3500000,
+      "target_health": 77,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-01",
+      "narrative": "Route optimization AI delivering 12% cost savings. VP Ops requesting capacity for real-time fleet tracking.",
+      "kpi_trajectory": "improving",
+      "industry": "Logistics",
+      "region": "US-Central",
+      "intervention": {
+        "outcomes": [
+          {"type": "expansion_approved", "revenue_impact": 1050000, "description": "Real-time fleet tracking GPU cluster approved."}
+        ]
+      }
+    },
+    {
+      "name": "Pinnacle Biotech",
+      "arr": 3200000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2027-02-28",
+      "narrative": "Genomics pipeline running at capacity. Research team publishing papers citing our infrastructure.",
+      "kpi_trajectory": "stable",
+      "industry": "Life Sciences",
+      "region": "US-West"
+    },
+    {
+      "name": "Northstar Media Group",
+      "arr": 2800000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "var",
+      "renewal_date": "2027-03-15",
+      "narrative": "Content rendering farm humming. 4K/8K transcoding workloads stable. Low-touch, high-satisfaction account.",
+      "kpi_trajectory": "stable",
+      "industry": "Media",
+      "region": "US-East"
+    },
+    {
+      "name": "Apex Robotics",
+      "arr": 2500000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2027-01-30",
+      "narrative": "Computer vision training models running 24/7. High GPU utilization. Model accuracy improving quarterly.",
+      "kpi_trajectory": "stable",
+      "industry": "Robotics",
+      "region": "US-West"
+    },
+    {
+      "name": "Vanguard Legal Tech",
+      "arr": 2400000,
+      "target_health": 83,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "var",
+      "renewal_date": "2027-04-15",
+      "narrative": "NLP document analysis platform. Processing 2M documents/month. Compliance workloads growing.",
+      "kpi_trajectory": "stable",
+      "industry": "Legal",
+      "region": "US-Central"
+    },
+    {
+      "name": "Terraforge Mining",
+      "arr": 2100000,
+      "target_health": 79,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2027-02-15",
+      "narrative": "Geological modeling and mineral exploration AI. Remote site connectivity challenges but operations stable.",
+      "kpi_trajectory": "stable",
+      "industry": "Mining",
+      "region": "US-West"
+    },
+    {
+      "name": "Cascade Aerospace",
+      "arr": 1800000,
+      "target_health": 81,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2027-05-01",
+      "narrative": "Flight simulation and aerodynamics modeling. High-performance computing with strict latency requirements.",
+      "kpi_trajectory": "stable",
+      "industry": "Aerospace",
+      "region": "US-Central"
+    },
+    {
+      "name": "Horizon EdTech",
+      "arr": 1500000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "var",
+      "renewal_date": "2027-03-30",
+      "narrative": "AI tutoring platform serving 500K students. Inference workloads scaling with enrollment cycles.",
+      "kpi_trajectory": "stable",
+      "industry": "Education",
+      "region": "US-East"
+    },
+    {
+      "name": "Forge Financial",
+      "arr": 1100000,
+      "target_health": 84,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "var",
+      "renewal_date": "2027-06-15",
+      "narrative": "Algorithmic trading backtesting infrastructure. Low-latency compute with burst capacity needs.",
+      "kpi_trajectory": "stable",
+      "industry": "FinTech",
+      "region": "US-West"
+    }
+  ],
+  "kpis": {
+    "selection": "top_4_per_pillar",
+    "count": 20,
+    "codes": [
+      "P1-KPI1", "P1-KPI2", "P1-KPI4", "P1-KPI5",
+      "P2-KPI1", "P2-KPI2", "P2-KPI3", "P2-KPI4",
+      "P3-KPI1", "P3-KPI2", "P3-KPI3", "P3-KPI4",
+      "P4-KPI1", "P4-KPI2", "P4-KPI3", "P4-KPI4",
+      "P5-KPI1", "P5-KPI2", "P5-KPI3", "P5-KPI4"
+    ],
+    "pillars": ["P1", "P2", "P3", "P4", "P5"]
+  },
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  }
+}

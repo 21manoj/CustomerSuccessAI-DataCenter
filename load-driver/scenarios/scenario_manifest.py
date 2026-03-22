@@ -1967,7 +1967,15 @@ class ScenarioManifest(BaseScenario):
 
         checks['metrics']['sample_distribution_actual'] = actual_distribution
         checks['metrics']['sample_distribution_expected'] = dict(expected_sample_manifest)
+        phase = getattr(self.args, 'phase', None)
+        skip_dist = (not strict) or (phase == 'intervention')
+        if skip_dist and phase == 'intervention':
+            logger.info(
+                '    Distribution drift check skipped (intervention phase — tiers expected to shift)'
+            )
         for cls in ('critical', 'at_risk', 'healthy'):
+            if skip_dist:
+                continue
             expected_sample = expected_sample_manifest[cls]
             if abs(actual_distribution[cls] - expected_sample) > health_tolerance:
                 checks['passed'] = False
