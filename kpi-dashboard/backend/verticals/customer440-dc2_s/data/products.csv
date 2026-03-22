@@ -1,0 +1,73 @@
+account_id,product_name,product_category,quantity,unit_price,deployment_date,status
+440001,Managed Kubernetes,platform,152,79590.68,2025-03-22,active
+440001,Monitoring & Observability,ops,24,82277.4,2025-04-23,active
+440001,Edge Computing Nodes,edge,132,26358.51,2025-03-24,active
+440001,Network Fabric,networking,168,44728.63,2025-04-07,active
+440001,Disaster Recovery,resilience,56,64588.3,2025-03-18,active
+440002,Edge Computing Nodes,edge,82,26470.55,2025-06-19,active
+440002,AI Training Pipeline,ml_ops,98,88811.08,2025-06-13,active
+440002,Disaster Recovery,resilience,16,13224.54,2025-11-28,active
+440002,High-Performance Storage,storage,96,29818.21,2025-07-30,active
+440002,Managed Kubernetes,platform,66,33325.94,2025-07-27,active
+440003,Managed Kubernetes,platform,12,23970.46,2025-11-02,active
+440003,Monitoring & Observability,ops,36,38167.93,2025-08-05,active
+440003,Disaster Recovery,resilience,98,99246.76,2025-04-22,active
+440003,Edge Computing Nodes,edge,80,13517.8,2025-07-18,active
+440004,Network Fabric,networking,72,29028.94,2025-02-01,active
+440004,Edge Computing Nodes,edge,114,26310.17,2025-09-01,active
+440004,AI Training Pipeline,ml_ops,51,94488.79,2025-12-18,active
+440004,High-Performance Storage,storage,144,64959.07,2025-12-14,active
+440004,Managed Kubernetes,platform,108,48729.95,2025-08-19,active
+440005,Edge Computing Nodes,edge,96,99820.23,2025-10-14,active
+440005,GPU Compute Cluster,compute,36,76445.89,2025-03-30,active
+440005,Monitoring & Observability,ops,84,80979.58,2025-04-09,active
+440006,Disaster Recovery,resilience,12,15599.83,2025-02-23,active
+440006,Network Fabric,networking,24,26841.88,2025-08-27,active
+440006,AI Training Pipeline,ml_ops,50,15444.72,2025-06-29,active
+440006,Edge Computing Nodes,edge,9,64556.71,2025-03-12,active
+440007,Managed Kubernetes,platform,29,67787.79,2025-03-20,active
+440007,Monitoring & Observability,ops,23,12020.59,2025-03-04,active
+440007,High-Performance Storage,storage,11,31293.6,2025-10-11,active
+440008,Edge Computing Nodes,edge,84,23733.65,2025-02-18,active
+440008,AI Training Pipeline,ml_ops,60,15911.69,2025-09-24,active
+440008,High-Performance Storage,storage,16,91153.67,2025-06-02,active
+440008,Disaster Recovery,resilience,44,57886.07,2025-07-09,active
+440008,Network Fabric,networking,20,51231.04,2025-11-02,active
+440009,AI Training Pipeline,ml_ops,26,64228.23,2025-11-17,active
+440009,Monitoring & Observability,ops,16,63794.85,2025-03-16,active
+440009,Managed Kubernetes,platform,28,45108.11,2025-10-21,active
+440009,Disaster Recovery,resilience,17,86556.49,2025-02-24,active
+440009,High-Performance Storage,storage,10,29719.88,2025-10-29,active
+440010,High-Performance Storage,storage,10,91788.6,2025-12-13,active
+440010,Edge Computing Nodes,edge,43,82486.25,2025-08-08,active
+440010,GPU Compute Cluster,compute,28,30071.23,2025-10-10,active
+440010,Monitoring & Observability,ops,30,13698.24,2025-03-04,active
+440010,Managed Kubernetes,platform,38,56620.13,2025-09-13,active
+440011,Managed Kubernetes,platform,9,39878.53,2025-06-19,active
+440011,High-Performance Storage,storage,43,73259.99,2025-03-02,active
+440011,GPU Compute Cluster,compute,27,61124.73,2025-07-02,active
+440012,Network Fabric,networking,44,22744.03,2025-09-11,active
+440012,Managed Kubernetes,platform,49,11596.45,2025-05-22,active
+440012,GPU Compute Cluster,compute,36,85060.37,2025-09-02,active
+440012,Edge Computing Nodes,edge,15,75445.81,2025-03-17,active
+440013,AI Training Pipeline,ml_ops,32,82402.34,2025-12-17,active
+440013,Network Fabric,networking,35,99288.49,2025-12-29,active
+440013,High-Performance Storage,storage,36,78193.63,2025-07-31,active
+440014,Managed Kubernetes,platform,5,18936.91,2025-08-02,active
+440014,Monitoring & Observability,ops,30,86757.67,2025-02-05,active
+440014,GPU Compute Cluster,compute,28,86339.46,2025-08-15,active
+440015,High-Performance Storage,storage,23,85628.19,2025-05-20,active
+440015,GPU Compute Cluster,compute,36,19820.9,2025-12-04,active
+440015,Managed Kubernetes,platform,39,33544.05,2025-10-24,active
+440015,AI Training Pipeline,ml_ops,33,23067.1,2025-03-10,active
+440016,Disaster Recovery,resilience,36,74299.66,2025-10-25,active
+440016,High-Performance Storage,storage,35,63142.74,2025-08-10,active
+440016,Network Fabric,networking,47,20980.67,2025-08-25,active
+440016,Monitoring & Observability,ops,23,37570.78,2025-08-07,active
+440017,Monitoring & Observability,ops,10,26658.68,2025-07-23,active
+440017,Network Fabric,networking,38,38062.25,2025-04-16,active
+440017,Disaster Recovery,resilience,32,62393.57,2025-09-04,active
+440017,High-Performance Storage,storage,49,29977.1,2025-12-23,active
+440018,AI Training Pipeline,ml_ops,8,92108.51,2025-02-03,active
+440018,Network Fabric,networking,41,76176.73,2025-09-09,active
+440018,Disaster Recovery,resilience,22,45624.31,2025-09-16,active

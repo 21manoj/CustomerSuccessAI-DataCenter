@@ -1,0 +1,54 @@
+account_id,decision_date,decision_id,title,decision_maker_role,chosen_option,outcome_description,risk_level,revenue_impact
+443001,2026-02-27,intervention_dec_443001_1,Escalation to executive sponsor — Titan Hyperscale Labs,executive_sponsor,Escalate account risk,Risk review initiated,high,-820000.0
+443001,2026-03-06,intervention_dec_443001_2,Emergency retention plan — Titan Hyperscale Labs,champion,Launch retention playbook,Retention plan in progress,critical,-820000.0
+443001,2026-02-12,intervention_auto_dec_443001_1,CSM resource allocation approved — Titan Hyperscale Labs,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,472599.29
+443001,2026-02-28,intervention_auto_dec_443001_2,Executive QBR cadence established — Titan Hyperscale Labs,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,801636.05
+443001,2026-03-15,intervention_auto_dec_443001_3,GPU optimization playbook initiated — Titan Hyperscale Labs,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,498637.15
+443002,2026-02-27,intervention_dec_443002_1,Escalation to executive sponsor — Meridian Cloud Services,executive_sponsor,Escalate account risk,Risk review initiated,high,-580000.0
+443002,2026-03-06,intervention_dec_443002_2,Emergency retention plan — Meridian Cloud Services,champion,Launch retention playbook,Retention plan in progress,critical,-580000.0
+443002,2026-02-12,intervention_auto_dec_443002_1,CSM resource allocation approved — Meridian Cloud Services,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,647730.65
+443002,2026-02-28,intervention_auto_dec_443002_2,Executive QBR cadence established — Meridian Cloud Services,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,529381.01
+443002,2026-03-15,intervention_auto_dec_443002_3,GPU optimization playbook initiated — Meridian Cloud Services,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,763484.33
+443003,2026-02-27,intervention_dec_443003_1,Escalation to executive sponsor — Apex Compute Holdings,executive_sponsor,Escalate account risk,Risk review initiated,high,-410000.0
+443003,2026-03-06,intervention_dec_443003_2,Emergency retention plan — Apex Compute Holdings,champion,Launch retention playbook,Retention plan in progress,critical,-410000.0
+443003,2026-02-12,intervention_auto_dec_443003_1,CSM resource allocation approved — Apex Compute Holdings,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,557947.92
+443003,2026-02-28,intervention_auto_dec_443003_2,Executive QBR cadence established — Apex Compute Holdings,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,526151.29
+443003,2026-03-15,intervention_auto_dec_443003_3,GPU optimization playbook initiated — Apex Compute Holdings,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,430270.6
+443004,2026-02-27,intervention_dec_443004_1,Renewal strategy review — Pacific Data Systems,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-325000.0
+443004,2026-03-09,intervention_dec_443004_2,Feature adoption push — Pacific Data Systems,champion,Schedule training sessions,Training plan approved,medium,-325000.0
+443004,2026-02-17,intervention_auto_dec_443004_1,Renewal incentive package approved — Pacific Data Systems,economic_buyer,Offer multi-year discount,Incentive approved,medium,773720.85
+443004,2026-03-10,intervention_auto_dec_443004_2,Technical remediation plan — Pacific Data Systems,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,646711.16
+443005,2026-02-27,intervention_dec_443005_1,Renewal strategy review — Quantum Edge Networks,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-240000.0
+443005,2026-03-09,intervention_dec_443005_2,Feature adoption push — Quantum Edge Networks,champion,Schedule training sessions,Training plan approved,medium,-240000.0
+443005,2026-02-17,intervention_auto_dec_443005_1,Renewal incentive package approved — Quantum Edge Networks,economic_buyer,Offer multi-year discount,Incentive approved,medium,479374.91
+443005,2026-03-10,intervention_auto_dec_443005_2,Technical remediation plan — Quantum Edge Networks,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,460378.39
+443006,2026-02-27,intervention_dec_443006_1,Renewal strategy review — Stratos AI Infrastructure,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-160000.0
+443006,2026-03-09,intervention_dec_443006_2,Feature adoption push — Stratos AI Infrastructure,champion,Schedule training sessions,Training plan approved,medium,-160000.0
+443006,2026-02-17,intervention_auto_dec_443006_1,Renewal incentive package approved — Stratos AI Infrastructure,economic_buyer,Offer multi-year discount,Incentive approved,medium,364568.95
+443006,2026-03-10,intervention_auto_dec_443006_2,Technical remediation plan — Stratos AI Infrastructure,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,263754.77
+443007,2026-02-27,intervention_dec_443007_1,Renewal strategy review — CyberVault DC,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-145000.0
+443007,2026-03-09,intervention_dec_443007_2,Feature adoption push — CyberVault DC,champion,Schedule training sessions,Training plan approved,medium,-145000.0
+443007,2026-02-17,intervention_auto_dec_443007_1,Renewal incentive package approved — CyberVault DC,economic_buyer,Offer multi-year discount,Incentive approved,medium,300992.64
+443007,2026-03-10,intervention_auto_dec_443007_2,Technical remediation plan — CyberVault DC,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,205112.54
+443008,2026-02-27,intervention_dec_443008_1,Expansion discussion — Atlas Computing Group,champion,Propose upsell package,Expansion opportunity identified,low,510000.0
+443008,2026-02-28,intervention_auto_dec_443008_1,Expansion proposal submitted — Atlas Computing Group,champion,Propose additional capacity,Expansion under review,low,551198.21
+443009,2026-02-27,intervention_dec_443009_1,Expansion discussion — Pinnacle Systems,champion,Propose upsell package,Expansion opportunity identified,low,380000.0
+443009,2026-02-28,intervention_auto_dec_443009_1,Expansion proposal submitted — Pinnacle Systems,champion,Propose additional capacity,Expansion under review,low,343926.77
+443010,2026-02-27,intervention_dec_443010_1,Expansion discussion — Helix Data Corp,champion,Propose upsell package,Expansion opportunity identified,low,260000.0
+443010,2026-02-28,intervention_auto_dec_443010_1,Expansion proposal submitted — Helix Data Corp,champion,Propose additional capacity,Expansion under review,low,266475.2
+443011,2026-02-27,intervention_dec_443011_1,Expansion discussion — Fortress Colocation,champion,Propose upsell package,Expansion opportunity identified,low,340000.0
+443011,2026-02-28,intervention_auto_dec_443011_1,Expansion proposal submitted — Fortress Colocation,champion,Propose additional capacity,Expansion under review,low,345633.58
+443012,2026-02-27,intervention_dec_443012_1,Expansion discussion — NexGen AI Labs,champion,Propose upsell package,Expansion opportunity identified,low,210000.0
+443012,2026-02-28,intervention_auto_dec_443012_1,Expansion proposal submitted — NexGen AI Labs,champion,Propose additional capacity,Expansion under review,low,116379.54
+443013,2026-02-27,intervention_dec_443013_1,Expansion discussion — Redline Infrastructure,champion,Propose upsell package,Expansion opportunity identified,low,180000.0
+443013,2026-02-28,intervention_auto_dec_443013_1,Expansion proposal submitted — Redline Infrastructure,champion,Propose additional capacity,Expansion under review,low,184609.7
+443014,2026-02-27,intervention_dec_443014_1,Expansion discussion — Cumulus Edge Computing,champion,Propose upsell package,Expansion opportunity identified,low,150000.0
+443014,2026-02-28,intervention_auto_dec_443014_1,Expansion proposal submitted — Cumulus Edge Computing,champion,Propose additional capacity,Expansion under review,low,195384.46
+443015,2026-02-27,intervention_dec_443015_1,Expansion discussion — SkyBridge Networks,champion,Propose upsell package,Expansion opportunity identified,low,120000.0
+443015,2026-02-28,intervention_auto_dec_443015_1,Expansion proposal submitted — SkyBridge Networks,champion,Propose additional capacity,Expansion under review,low,64497.7
+443016,2026-02-27,intervention_dec_443016_1,Expansion discussion — IronClad Systems,champion,Propose upsell package,Expansion opportunity identified,low,190000.0
+443016,2026-02-28,intervention_auto_dec_443016_1,Expansion proposal submitted — IronClad Systems,champion,Propose additional capacity,Expansion under review,low,178143.64
+443017,2026-02-27,intervention_dec_443017_1,Expansion discussion — TerraScale Solutions,champion,Propose upsell package,Expansion opportunity identified,low,160000.0
+443017,2026-02-28,intervention_auto_dec_443017_1,Expansion proposal submitted — TerraScale Solutions,champion,Propose additional capacity,Expansion under review,low,178303.14
+443018,2026-02-27,intervention_dec_443018_1,Expansion discussion — Velocity AI Compute,champion,Propose upsell package,Expansion opportunity identified,low,110000.0
+443018,2026-02-28,intervention_auto_dec_443018_1,Expansion proposal submitted — Velocity AI Compute,champion,Propose additional capacity,Expansion under review,low,148454.83

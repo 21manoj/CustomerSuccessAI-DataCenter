@@ -1,0 +1,303 @@
+signal_id,account_id,signal_date,signal_type,content,sentiment,sentiment_score,arc_id,story_phase,linked_node_id,signal_ref
+intervention_sig_440001_1,440001,2026-01-15,champion_change,VP of Infrastructure James Morrison has resigned. Lisa Park promoted as interim replacement.,negative,-0.6,champion_loss,,,intervention_sig_440001_1
+intervention_sig_440001_2,440001,2026-02-01,competitor_mention,Lisa Park evaluating alternative GPU cloud providers. RFP issued to 3 vendors.,negative,-0.9,champion_loss,,,intervention_sig_440001_2
+intervention_sig_440001_3,440001,2026-02-15,usage_decline,GPU utilization dropped from 82% to 48% over 4 weeks. Training jobs migrating to competitor.,negative,-0.6,champion_loss,,,intervention_sig_440001_3
+intervention_sig_440001_4,440001,2026-03-01,engagement_gap,No executive contact in 90+ days. QBR requests unanswered.,negative,-0.6,champion_loss,,,intervention_sig_440001_4
+intervention_narrative_sig_440001_5,440001,2026-02-27,kpi_decline,KPI metrics declining below threshold,negative,-0.75,champion_loss,warning,,intervention_narrative_sig_440001_5
+intervention_narrative_sig_440001_6,440001,2026-03-06,support_escalation,Support ticket escalated to management,negative,-0.63,champion_loss,warning,,intervention_narrative_sig_440001_6
+intervention_sig_440001_7,440001,2026-02-12,observation,Escalation review meeting conducted,neutral,0.12,champion_loss,,,intervention_sig_440001_7
+intervention_sig_440001_8,440001,2026-02-16,meeting,Performance metrics under review,negative,-0.68,champion_loss,,,intervention_sig_440001_8
+intervention_sig_440001_9,440001,2026-03-05,customer_feedback,Stakeholder alignment meeting scheduled,neutral,0.1,champion_loss,,,intervention_sig_440001_9
+intervention_sig_440001_10,440001,2026-03-19,customer_feedback,Support ticket volume above normal,neutral,0.26,champion_loss,,,intervention_sig_440001_10
+intervention_sig_440001_11,440001,2026-04-06,customer_feedback,Support ticket volume above normal,negative,-0.68,champion_loss,,,intervention_sig_440001_11
+intervention_sig_440001_12,440001,2026-04-17,observation,Performance metrics under review,neutral,0.08,champion_loss,,,intervention_sig_440001_12
+intervention_sig_440001_13,440001,2026-05-11,meeting,Support ticket volume above normal,negative,-0.47,champion_loss,,,intervention_sig_440001_13
+intervention_sig_440001_14,440001,2026-05-12,observation,Stakeholder alignment meeting scheduled,neutral,0.14,champion_loss,,,intervention_sig_440001_14
+intervention_sig_440001_15,440001,2026-06-03,meeting,Support ticket volume above normal,neutral,0.22,champion_loss,,,intervention_sig_440001_15
+intervention_sig_440001_16,440001,2026-06-02,observation,Performance metrics under review,negative,-0.46,champion_loss,,,intervention_sig_440001_16
+intervention_sig_440001_17,440001,2026-07-01,meeting,Support ticket volume above normal,neutral,0.11,champion_loss,,,intervention_sig_440001_17
+intervention_sig_440001_18,440001,2026-07-03,customer_feedback,Performance metrics under review,neutral,0.11,champion_loss,,,intervention_sig_440001_18
+intervention_auto_recovery_440001_19,440001,2026-02-12,churn_averted,Churn risk mitigated. Retention plan approved with 12-month commitment.,positive,0.95,champion_loss,recovery,,intervention_auto_recovery_440001_19
+intervention_auto_recovery_440001_20,440001,2026-02-28,kpi_recovery,GPU utilization recovering: 48% -> 67% after PB-03 optimization playbook.,positive,0.74,champion_loss,recovery,,intervention_auto_recovery_440001_20
+intervention_auto_recovery_440001_21,440001,2026-03-15,csm_intervention,New CSM Sarah Rivera assigned. First QBR scheduled for next week.,positive,0.71,champion_loss,recovery,,intervention_auto_recovery_440001_21
+intervention_sig_440002_22,440002,2026-01-20,incident,Sev-1: Complete rack failure in Pod 3. 4-hour outage affecting 120 GPU nodes.,negative,-0.9,infrastructure_decay,,,intervention_sig_440002_22
+intervention_sig_440002_23,440002,2026-02-08,incident,Sev-1: Power distribution unit failure. 2-hour outage. Second major incident in 3 weeks.,negative,-0.9,infrastructure_decay,,,intervention_sig_440002_23
+intervention_sig_440002_24,440002,2026-02-15,escalation,CTO Michael Torres escalated to our VP of Sales. Demanded reliability improvement plan within 2 weeks.,negative,-0.9,infrastructure_decay,,,intervention_sig_440002_24
+intervention_sig_440002_25,440002,2026-03-01,kpi_breach,RMA rate crossed 2.5% threshold (was 0.8% in Oct). MTBF dropped to 4200 hours (target: 8000).,negative,-0.6,infrastructure_decay,,,intervention_sig_440002_25
+intervention_narrative_sig_440002_26,440002,2026-02-27,kpi_decline,KPI metrics declining below threshold,negative,-0.57,infrastructure_decay,warning,,intervention_narrative_sig_440002_26
+intervention_narrative_sig_440002_27,440002,2026-03-06,support_escalation,Support ticket escalated to management,negative,-0.71,infrastructure_decay,warning,,intervention_narrative_sig_440002_27
+intervention_sig_440002_28,440002,2026-02-08,meeting,Performance metrics under review,neutral,0.25,infrastructure_decay,,,intervention_sig_440002_28
+intervention_sig_440002_29,440002,2026-02-01,observation,Stakeholder alignment meeting scheduled,negative,-0.42,infrastructure_decay,,,intervention_sig_440002_29
+intervention_sig_440002_30,440002,2026-03-01,health_check,Support ticket volume above normal,neutral,0.16,infrastructure_decay,,,intervention_sig_440002_30
+intervention_sig_440002_31,440002,2026-03-11,meeting,Support ticket volume above normal,negative,-0.55,infrastructure_decay,,,intervention_sig_440002_31
+intervention_sig_440002_32,440002,2026-04-10,health_check,Escalation review meeting conducted,neutral,0.15,infrastructure_decay,,,intervention_sig_440002_32
+intervention_sig_440002_33,440002,2026-04-01,customer_feedback,Stakeholder alignment meeting scheduled,negative,-0.35,infrastructure_decay,,,intervention_sig_440002_33
+intervention_sig_440002_34,440002,2026-05-19,observation,Support ticket volume above normal,neutral,0.08,infrastructure_decay,,,intervention_sig_440002_34
+intervention_sig_440002_35,440002,2026-05-27,observation,Stakeholder alignment meeting scheduled,negative,-0.52,infrastructure_decay,,,intervention_sig_440002_35
+intervention_sig_440002_36,440002,2026-06-17,health_check,Performance metrics under review,neutral,0.25,infrastructure_decay,,,intervention_sig_440002_36
+intervention_sig_440002_37,440002,2026-06-03,health_check,Stakeholder alignment meeting scheduled,negative,-0.63,infrastructure_decay,,,intervention_sig_440002_37
+intervention_sig_440002_38,440002,2026-07-07,health_check,Performance metrics under review,negative,-0.59,infrastructure_decay,,,intervention_sig_440002_38
+intervention_sig_440002_39,440002,2026-07-04,meeting,Stakeholder alignment meeting scheduled,negative,-0.55,infrastructure_decay,,,intervention_sig_440002_39
+intervention_auto_recovery_440002_40,440002,2026-02-12,csm_intervention,New CSM Sarah Rivera assigned. First QBR scheduled for next week.,positive,0.76,infrastructure_decay,recovery,,intervention_auto_recovery_440002_40
+intervention_auto_recovery_440002_41,440002,2026-02-28,churn_averted,Churn risk mitigated. Retention plan approved with 12-month commitment.,positive,0.95,infrastructure_decay,recovery,,intervention_auto_recovery_440002_41
+intervention_auto_recovery_440002_42,440002,2026-03-15,kpi_recovery,GPU utilization recovering: 48% -> 67% after PB-03 optimization playbook.,positive,0.67,infrastructure_decay,recovery,,intervention_auto_recovery_440002_42
+intervention_sig_440003_43,440003,2025-12-15,budget_change,Q4 earnings miss. Board mandated 15% OpEx reduction across all departments.,negative,-0.6,budget_cut,,,intervention_sig_440003_43
+intervention_sig_440003_44,440003,2026-01-10,expansion_cancelled,Planned Phase 2 expansion ($2.1M) put on indefinite hold. CFO froze all new infrastructure spend.,negative,-0.9,budget_cut,,,intervention_sig_440003_44
+intervention_sig_440003_45,440003,2026-02-01,downsizing,Capacity reduction: decommissioning 50 GPU nodes (200 → 150). Workloads consolidating.,negative,-0.6,budget_cut,,,intervention_sig_440003_45
+intervention_sig_440003_46,440003,2026-03-05,competitor_evaluation,CFO requested pricing comparison with 2 competitors for renewal negotiation leverage.,negative,-0.6,budget_cut,,,intervention_sig_440003_46
+intervention_narrative_sig_440003_47,440003,2026-02-27,kpi_decline,KPI metrics declining below threshold,negative,-0.62,budget_cut,warning,,intervention_narrative_sig_440003_47
+intervention_narrative_sig_440003_48,440003,2026-03-06,support_escalation,Support ticket escalated to management,negative,-0.65,budget_cut,warning,,intervention_narrative_sig_440003_48
+intervention_sig_440003_49,440003,2026-02-21,health_check,Support ticket volume above normal,negative,-0.65,budget_cut,,,intervention_sig_440003_49
+intervention_sig_440003_50,440003,2026-02-07,meeting,Performance metrics under review,negative,-0.5,budget_cut,,,intervention_sig_440003_50
+intervention_sig_440003_51,440003,2026-03-19,meeting,Support ticket volume above normal,negative,-0.59,budget_cut,,,intervention_sig_440003_51
+intervention_sig_440003_52,440003,2026-03-16,customer_feedback,Support ticket volume above normal,neutral,0.11,budget_cut,,,intervention_sig_440003_52
+intervention_sig_440003_53,440003,2026-03-29,observation,Support ticket volume above normal,neutral,0.1,budget_cut,,,intervention_sig_440003_53
+intervention_sig_440003_54,440003,2026-04-20,observation,Stakeholder alignment meeting scheduled,neutral,0.13,budget_cut,,,intervention_sig_440003_54
+intervention_sig_440003_55,440003,2026-05-04,observation,Performance metrics under review,negative,-0.51,budget_cut,,,intervention_sig_440003_55
+intervention_sig_440003_56,440003,2026-05-24,meeting,Support ticket volume above normal,negative,-0.58,budget_cut,,,intervention_sig_440003_56
+intervention_sig_440003_57,440003,2026-06-11,observation,Performance metrics under review,neutral,-0.07,budget_cut,,,intervention_sig_440003_57
+intervention_sig_440003_58,440003,2026-06-13,health_check,Escalation review meeting conducted,neutral,0.15,budget_cut,,,intervention_sig_440003_58
+intervention_sig_440003_59,440003,2026-07-16,health_check,Performance metrics under review,neutral,0.07,budget_cut,,,intervention_sig_440003_59
+intervention_sig_440003_60,440003,2026-07-14,health_check,Stakeholder alignment meeting scheduled,neutral,-0.04,budget_cut,,,intervention_sig_440003_60
+intervention_auto_recovery_440003_61,440003,2026-02-09,csm_intervention,New CSM Sarah Rivera assigned. First QBR scheduled for next week.,positive,0.76,budget_cut,recovery,,intervention_auto_recovery_440003_61
+intervention_auto_recovery_440003_62,440003,2026-02-21,churn_averted,Churn risk mitigated. Retention plan approved with 12-month commitment.,positive,0.9,budget_cut,recovery,,intervention_auto_recovery_440003_62
+intervention_auto_recovery_440003_63,440003,2026-03-06,kpi_recovery,GPU utilization recovering: 48% -> 67% after PB-03 optimization playbook.,positive,0.74,budget_cut,recovery,,intervention_auto_recovery_440003_63
+intervention_auto_recovery_440003_64,440003,2026-03-18,executive_engagement,Executive sponsor engagement: VP Finance joined monthly review cadence.,positive,0.69,budget_cut,recovery,,intervention_auto_recovery_440003_64
+intervention_sig_440004_65,440004,2026-01-15,usage_decline,GPU utilization trending down: 78% → 71% over 6 weeks. Some workloads moved to cloud.,negative,-0.6,early_warning,,,intervention_sig_440004_65
+intervention_sig_440004_66,440004,2026-02-10,support_ticket,Multiple tickets about training job failures. Completion rate dropped from 94% to 87%.,negative,-0.6,early_warning,,,intervention_sig_440004_66
+intervention_narrative_sig_440004_67,440004,2026-02-27,critical_incident,Critical service incident reported,negative,-0.59,early_warning,crisis,,intervention_narrative_sig_440004_67
+intervention_narrative_sig_440004_68,440004,2026-03-02,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.66,early_warning,crisis,,intervention_narrative_sig_440004_68
+intervention_sig_440004_69,440004,2026-02-06,customer_feedback,Renewal discussion in progress,negative,-0.41,early_warning,,,intervention_sig_440004_69
+intervention_sig_440004_70,440004,2026-01-30,health_check,Usage patterns reviewed with team,neutral,0.18,early_warning,,,intervention_sig_440004_70
+intervention_sig_440004_71,440004,2026-03-26,health_check,Quarterly check-in completed,neutral,0.05,early_warning,,,intervention_sig_440004_71
+intervention_sig_440004_72,440004,2026-03-17,customer_feedback,Technical review session held,neutral,0.1,early_warning,,,intervention_sig_440004_72
+intervention_sig_440004_73,440004,2026-04-14,observation,Quarterly check-in completed,neutral,0.01,early_warning,,,intervention_sig_440004_73
+intervention_sig_440004_74,440004,2026-03-31,health_check,Technical review session held,neutral,0.2,early_warning,,,intervention_sig_440004_74
+intervention_sig_440004_75,440004,2026-05-27,customer_feedback,Quarterly check-in completed,neutral,-0.01,early_warning,,,intervention_sig_440004_75
+intervention_sig_440004_76,440004,2026-05-26,observation,Quarterly check-in completed,negative,-0.37,early_warning,,,intervention_sig_440004_76
+intervention_sig_440004_77,440004,2026-06-23,observation,Quarterly check-in completed,neutral,0.08,early_warning,,,intervention_sig_440004_77
+intervention_sig_440004_78,440004,2026-05-30,meeting,Quarterly check-in completed,neutral,-0.09,early_warning,,,intervention_sig_440004_78
+intervention_sig_440004_79,440004,2026-07-20,customer_feedback,Usage patterns reviewed with team,neutral,0.15,early_warning,,,intervention_sig_440004_79
+intervention_sig_440004_80,440004,2026-07-15,health_check,Technical review session held,neutral,0.24,early_warning,,,intervention_sig_440004_80
+intervention_auto_recovery_440004_81,440004,2026-02-17,deployment_improvement,Deployment velocity improved 30% after PB-01 acceleration playbook.,positive,0.73,early_warning,recovery,,intervention_auto_recovery_440004_81
+intervention_auto_recovery_440004_82,440004,2026-03-10,health_improvement,Account health trending upward: +12 points over 4 weeks.,positive,0.75,early_warning,recovery,,intervention_auto_recovery_440004_82
+intervention_sig_440005_83,440005,2026-01-01,engagement_gap,Last QBR was Oct 2025. Three scheduling attempts declined or no-showed.,negative,-0.6,engagement_drop,,,intervention_sig_440005_83
+intervention_sig_440005_84,440005,2026-01-20,org_change,"Major restructure: Engineering team reorganized. Alex Nguyen's role changed, reduced authority.",negative,-0.6,engagement_drop,,,intervention_sig_440005_84
+intervention_narrative_sig_440005_85,440005,2026-02-27,critical_incident,Critical service incident reported,negative,-0.6,engagement_drop,crisis,,intervention_narrative_sig_440005_85
+intervention_narrative_sig_440005_86,440005,2026-03-02,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.77,engagement_drop,crisis,,intervention_narrative_sig_440005_86
+intervention_sig_440005_87,440005,2026-02-15,customer_feedback,Technical review session held,negative,-0.46,engagement_drop,,,intervention_sig_440005_87
+intervention_sig_440005_88,440005,2026-02-02,customer_feedback,Renewal discussion in progress,neutral,0.06,engagement_drop,,,intervention_sig_440005_88
+intervention_sig_440005_89,440005,2026-03-20,customer_feedback,Renewal discussion in progress,neutral,0.2,engagement_drop,,,intervention_sig_440005_89
+intervention_sig_440005_90,440005,2026-03-09,customer_feedback,Technical review session held,negative,-0.57,engagement_drop,,,intervention_sig_440005_90
+intervention_sig_440005_91,440005,2026-04-24,observation,Usage patterns reviewed with team,neutral,0.04,engagement_drop,,,intervention_sig_440005_91
+intervention_sig_440005_92,440005,2026-04-22,observation,Renewal discussion in progress,neutral,0.07,engagement_drop,,,intervention_sig_440005_92
+intervention_sig_440005_93,440005,2026-05-12,customer_feedback,Quarterly check-in completed,negative,-0.54,engagement_drop,,,intervention_sig_440005_93
+intervention_sig_440005_94,440005,2026-05-17,health_check,Renewal discussion in progress,neutral,-0.18,engagement_drop,,,intervention_sig_440005_94
+intervention_sig_440005_95,440005,2026-05-28,health_check,Usage patterns reviewed with team,negative,-0.49,engagement_drop,,,intervention_sig_440005_95
+intervention_sig_440005_96,440005,2026-06-23,observation,Usage patterns reviewed with team,neutral,0.08,engagement_drop,,,intervention_sig_440005_96
+intervention_sig_440005_97,440005,2026-06-30,customer_feedback,Renewal discussion in progress,neutral,0.14,engagement_drop,,,intervention_sig_440005_97
+intervention_sig_440005_98,440005,2026-07-25,health_check,Usage patterns reviewed with team,neutral,0.17,engagement_drop,,,intervention_sig_440005_98
+intervention_auto_recovery_440005_99,440005,2026-02-12,champion_reengagement,Champion Alex Nguyen re-engaged. Quarterly roadmap session completed.,positive,0.68,engagement_drop,recovery,,intervention_auto_recovery_440005_99
+intervention_auto_recovery_440005_100,440005,2026-02-28,health_improvement,Account health trending upward: +12 points over 4 weeks.,positive,0.69,engagement_drop,recovery,,intervention_auto_recovery_440005_100
+intervention_auto_recovery_440005_101,440005,2026-03-15,deployment_improvement,Deployment velocity improved 30% after PB-01 acceleration playbook.,positive,0.71,engagement_drop,recovery,,intervention_auto_recovery_440005_101
+intervention_sig_440006_102,440006,2026-02-01,capacity_warning,Capacity utilization at 91%. Queuing delays increasing for training jobs.,negative,-0.6,slow_expansion,,,intervention_sig_440006_102
+intervention_sig_440006_103,440006,2026-02-15,expansion_stall,"Expansion proposal ($800K) submitted in Dec. Finance requested ROI analysis, no response since.",neutral,0.1,slow_expansion,,,intervention_sig_440006_103
+intervention_narrative_sig_440006_104,440006,2026-02-27,critical_incident,Critical service incident reported,negative,-0.6,slow_expansion,crisis,,intervention_narrative_sig_440006_104
+intervention_narrative_sig_440006_105,440006,2026-03-02,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.52,slow_expansion,crisis,,intervention_narrative_sig_440006_105
+intervention_sig_440006_106,440006,2026-02-15,health_check,Quarterly check-in completed,negative,-0.53,slow_expansion,,,intervention_sig_440006_106
+intervention_sig_440006_107,440006,2026-02-02,meeting,Renewal discussion in progress,negative,-0.68,slow_expansion,,,intervention_sig_440006_107
+intervention_sig_440006_108,440006,2026-02-28,customer_feedback,Quarterly check-in completed,neutral,0.14,slow_expansion,,,intervention_sig_440006_108
+intervention_sig_440006_109,440006,2026-03-09,customer_feedback,Technical review session held,negative,-0.72,slow_expansion,,,intervention_sig_440006_109
+intervention_sig_440006_110,440006,2026-04-27,health_check,Quarterly check-in completed,neutral,0.01,slow_expansion,,,intervention_sig_440006_110
+intervention_sig_440006_111,440006,2026-03-30,meeting,Renewal discussion in progress,negative,-0.61,slow_expansion,,,intervention_sig_440006_111
+intervention_sig_440006_112,440006,2026-05-15,health_check,Renewal discussion in progress,neutral,0.03,slow_expansion,,,intervention_sig_440006_112
+intervention_sig_440006_113,440006,2026-04-29,customer_feedback,Technical review session held,neutral,0.1,slow_expansion,,,intervention_sig_440006_113
+intervention_sig_440006_114,440006,2026-06-21,meeting,Usage patterns reviewed with team,neutral,-0.06,slow_expansion,,,intervention_sig_440006_114
+intervention_sig_440006_115,440006,2026-06-01,observation,Quarterly check-in completed,neutral,0.17,slow_expansion,,,intervention_sig_440006_115
+intervention_sig_440006_116,440006,2026-07-12,meeting,Technical review session held,neutral,0.09,slow_expansion,,,intervention_sig_440006_116
+intervention_sig_440006_117,440006,2026-07-10,health_check,Usage patterns reviewed with team,neutral,0.2,slow_expansion,,,intervention_sig_440006_117
+intervention_auto_recovery_440006_118,440006,2026-02-17,champion_reengagement,Champion Emily Zhang re-engaged. Quarterly roadmap session completed.,positive,0.72,slow_expansion,recovery,,intervention_auto_recovery_440006_118
+intervention_auto_recovery_440006_119,440006,2026-03-10,health_improvement,Account health trending upward: +12 points over 4 weeks.,positive,0.63,slow_expansion,recovery,,intervention_auto_recovery_440006_119
+intervention_sig_440007_120,440007,2026-01-10,playbook_executed,PB-02 (Ops Stability) triggered. Dedicated support engineer assigned. Weekly health check calls started.,positive,0.7,recovery_in_progress,,,intervention_sig_440007_120
+intervention_sig_440007_121,440007,2026-02-15,health_improvement,Health score improved from 41 to 58. RMA rate stabilized. MTBF trending up.,positive,0.7,recovery_in_progress,,,intervention_sig_440007_121
+intervention_sig_440007_122,440007,2026-03-10,recovery_milestone,Health reached 67. Two consecutive weeks above at-risk threshold. Champion re-engaged.,positive,0.7,recovery_in_progress,,,intervention_sig_440007_122
+intervention_narrative_sig_440007_123,440007,2026-02-27,critical_incident,Critical service incident reported,negative,-0.67,recovery_in_progress,crisis,,intervention_narrative_sig_440007_123
+intervention_narrative_sig_440007_124,440007,2026-03-02,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.59,recovery_in_progress,crisis,,intervention_narrative_sig_440007_124
+intervention_sig_440007_125,440007,2026-02-09,health_check,Usage patterns reviewed with team,neutral,0.1,recovery_in_progress,,,intervention_sig_440007_125
+intervention_sig_440007_126,440007,2026-02-10,meeting,Quarterly check-in completed,negative,-0.42,recovery_in_progress,,,intervention_sig_440007_126
+intervention_sig_440007_127,440007,2026-03-20,customer_feedback,Renewal discussion in progress,negative,-0.55,recovery_in_progress,,,intervention_sig_440007_127
+intervention_sig_440007_128,440007,2026-03-18,meeting,Renewal discussion in progress,neutral,0.17,recovery_in_progress,,,intervention_sig_440007_128
+intervention_sig_440007_129,440007,2026-04-03,customer_feedback,Usage patterns reviewed with team,negative,-0.71,recovery_in_progress,,,intervention_sig_440007_129
+intervention_sig_440007_130,440007,2026-04-05,observation,Usage patterns reviewed with team,neutral,0.18,recovery_in_progress,,,intervention_sig_440007_130
+intervention_sig_440007_131,440007,2026-05-22,meeting,Quarterly check-in completed,neutral,0.1,recovery_in_progress,,,intervention_sig_440007_131
+intervention_sig_440007_132,440007,2026-05-17,observation,Quarterly check-in completed,neutral,0.03,recovery_in_progress,,,intervention_sig_440007_132
+intervention_sig_440007_133,440007,2026-06-07,meeting,Renewal discussion in progress,neutral,0.08,recovery_in_progress,,,intervention_sig_440007_133
+intervention_sig_440007_134,440007,2026-06-03,health_check,Usage patterns reviewed with team,neutral,0.11,recovery_in_progress,,,intervention_sig_440007_134
+intervention_sig_440007_135,440007,2026-07-14,observation,Technical review session held,neutral,-0.12,recovery_in_progress,,,intervention_sig_440007_135
+intervention_sig_440007_136,440007,2026-07-19,meeting,Technical review session held,neutral,-0.12,recovery_in_progress,,,intervention_sig_440007_136
+intervention_auto_recovery_440007_137,440007,2026-02-17,health_improvement,Account health trending upward: +12 points over 4 weeks.,positive,0.65,recovery_in_progress,recovery,,intervention_auto_recovery_440007_137
+intervention_auto_recovery_440007_138,440007,2026-03-10,champion_reengagement,Champion Brian O'Connor re-engaged. Quarterly roadmap session completed.,positive,0.76,recovery_in_progress,recovery,,intervention_auto_recovery_440007_138
+intervention_narrative_sig_440008_139,440008,2026-02-27,routine_review,Routine quarterly review completed,positive,0.57,stable,review,,intervention_narrative_sig_440008_139
+intervention_sig_440008_140,440008,2026-01-29,health_check,Regular QBR completed successfully,neutral,0.03,stable,,,intervention_sig_440008_140
+intervention_sig_440008_141,440008,2026-02-06,observation,Regular QBR completed successfully,positive,0.36,stable,,,intervention_sig_440008_141
+intervention_sig_440008_142,440008,2026-03-01,observation,Champion engagement remains strong,neutral,0.15,stable,,,intervention_sig_440008_142
+intervention_sig_440008_143,440008,2026-03-26,meeting,Champion engagement remains strong,positive,0.7,stable,,,intervention_sig_440008_143
+intervention_sig_440008_144,440008,2026-04-05,meeting,Champion engagement remains strong,neutral,-0.01,stable,,,intervention_sig_440008_144
+intervention_sig_440008_145,440008,2026-04-13,meeting,Product adoption metrics trending well,positive,0.68,stable,,,intervention_sig_440008_145
+intervention_sig_440008_146,440008,2026-05-15,meeting,Regular QBR completed successfully,positive,0.85,stable,,,intervention_sig_440008_146
+intervention_sig_440008_147,440008,2026-05-05,observation,Champion engagement remains strong,positive,0.44,stable,,,intervention_sig_440008_147
+intervention_sig_440008_148,440008,2026-05-28,observation,Champion engagement remains strong,neutral,0.11,stable,,,intervention_sig_440008_148
+intervention_sig_440008_149,440008,2026-06-17,health_check,Champion engagement remains strong,neutral,0.15,stable,,,intervention_sig_440008_149
+intervention_sig_440008_150,440008,2026-07-25,meeting,Champion engagement remains strong,neutral,-0.03,stable,,,intervention_sig_440008_150
+intervention_sig_440008_151,440008,2026-07-04,observation,Expansion discussion in early stages,positive,0.58,stable,,,intervention_sig_440008_151
+intervention_auto_recovery_440008_152,440008,2026-02-17,advocacy,Customer agreed to co-present at annual user conference.,positive,0.73,stable,recovery,,intervention_auto_recovery_440008_152
+intervention_auto_recovery_440008_153,440008,2026-03-10,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,1.01,stable,recovery,,intervention_auto_recovery_440008_153
+intervention_narrative_sig_440009_154,440009,2026-02-27,routine_review,Routine quarterly review completed,positive,0.66,moderate_growth,review,,intervention_narrative_sig_440009_154
+intervention_sig_440009_155,440009,2026-02-09,health_check,Expansion discussion in early stages,positive,0.6,moderate_growth,,,intervention_sig_440009_155
+intervention_sig_440009_156,440009,2026-02-06,observation,Expansion discussion in early stages,positive,0.66,moderate_growth,,,intervention_sig_440009_156
+intervention_sig_440009_157,440009,2026-03-16,health_check,Product adoption metrics trending well,positive,0.47,moderate_growth,,,intervention_sig_440009_157
+intervention_sig_440009_158,440009,2026-03-05,observation,Product adoption metrics trending well,positive,0.53,moderate_growth,,,intervention_sig_440009_158
+intervention_sig_440009_159,440009,2026-04-11,health_check,Champion engagement remains strong,positive,0.71,moderate_growth,,,intervention_sig_440009_159
+intervention_sig_440009_160,440009,2026-04-21,health_check,Champion engagement remains strong,positive,0.65,moderate_growth,,,intervention_sig_440009_160
+intervention_sig_440009_161,440009,2026-05-24,meeting,Champion engagement remains strong,positive,0.68,moderate_growth,,,intervention_sig_440009_161
+intervention_sig_440009_162,440009,2026-05-11,customer_feedback,Champion engagement remains strong,neutral,0.03,moderate_growth,,,intervention_sig_440009_162
+intervention_sig_440009_163,440009,2026-06-01,meeting,Product adoption metrics trending well,positive,0.67,moderate_growth,,,intervention_sig_440009_163
+intervention_sig_440009_164,440009,2026-06-16,observation,Product adoption metrics trending well,positive,0.76,moderate_growth,,,intervention_sig_440009_164
+intervention_sig_440009_165,440009,2026-07-16,health_check,Regular QBR completed successfully,positive,0.5,moderate_growth,,,intervention_sig_440009_165
+intervention_sig_440009_166,440009,2026-07-12,customer_feedback,Champion engagement remains strong,positive,0.72,moderate_growth,,,intervention_sig_440009_166
+intervention_auto_recovery_440009_167,440009,2026-02-28,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.97,moderate_growth,recovery,,intervention_auto_recovery_440009_167
+intervention_narrative_sig_440010_168,440010,2026-02-27,routine_review,Routine quarterly review completed,positive,0.74,stable,review,,intervention_narrative_sig_440010_168
+intervention_sig_440010_169,440010,2026-02-12,health_check,Product adoption metrics trending well,positive,0.69,stable,,,intervention_sig_440010_169
+intervention_sig_440010_170,440010,2026-02-04,customer_feedback,Regular QBR completed successfully,positive,0.82,stable,,,intervention_sig_440010_170
+intervention_sig_440010_171,440010,2026-03-06,health_check,Product adoption metrics trending well,positive,0.49,stable,,,intervention_sig_440010_171
+intervention_sig_440010_172,440010,2026-03-01,customer_feedback,Expansion discussion in early stages,positive,0.52,stable,,,intervention_sig_440010_172
+intervention_sig_440010_173,440010,2026-04-26,customer_feedback,Expansion discussion in early stages,positive,0.41,stable,,,intervention_sig_440010_173
+intervention_sig_440010_174,440010,2026-04-22,customer_feedback,Champion engagement remains strong,positive,0.41,stable,,,intervention_sig_440010_174
+intervention_sig_440010_175,440010,2026-05-16,meeting,Regular QBR completed successfully,positive,0.75,stable,,,intervention_sig_440010_175
+intervention_sig_440010_176,440010,2026-05-12,meeting,Product adoption metrics trending well,neutral,0.0,stable,,,intervention_sig_440010_176
+intervention_sig_440010_177,440010,2026-06-20,customer_feedback,Regular QBR completed successfully,positive,0.59,stable,,,intervention_sig_440010_177
+intervention_sig_440010_178,440010,2026-06-03,customer_feedback,Expansion discussion in early stages,neutral,0.23,stable,,,intervention_sig_440010_178
+intervention_sig_440010_179,440010,2026-07-06,health_check,Expansion discussion in early stages,neutral,-0.01,stable,,,intervention_sig_440010_179
+intervention_sig_440010_180,440010,2026-07-06,meeting,Product adoption metrics trending well,positive,0.46,stable,,,intervention_sig_440010_180
+intervention_auto_recovery_440010_181,440010,2026-02-17,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.8,stable,recovery,,intervention_auto_recovery_440010_181
+intervention_auto_recovery_440010_182,440010,2026-03-10,advocacy,Customer agreed to co-present at annual user conference.,positive,0.66,stable,recovery,,intervention_auto_recovery_440010_182
+intervention_sig_440011_183,440011,2026-02-20,expansion_signal,CFO approved $1.2M expansion budget for Q3. AI initiative requires 80 additional GPU nodes.,positive,0.9,expansion_candidate,,,intervention_sig_440011_183
+intervention_narrative_sig_440011_184,440011,2026-02-27,routine_review,Routine quarterly review completed,positive,0.73,expansion_candidate,review,,intervention_narrative_sig_440011_184
+intervention_sig_440011_185,440011,2026-01-30,meeting,Product adoption metrics trending well,positive,0.64,expansion_candidate,,,intervention_sig_440011_185
+intervention_sig_440011_186,440011,2026-02-19,health_check,Expansion discussion in early stages,positive,0.37,expansion_candidate,,,intervention_sig_440011_186
+intervention_sig_440011_187,440011,2026-03-12,customer_feedback,Regular QBR completed successfully,neutral,0.16,expansion_candidate,,,intervention_sig_440011_187
+intervention_sig_440011_188,440011,2026-03-21,customer_feedback,Regular QBR completed successfully,positive,0.72,expansion_candidate,,,intervention_sig_440011_188
+intervention_sig_440011_189,440011,2026-04-06,health_check,Regular QBR completed successfully,neutral,0.23,expansion_candidate,,,intervention_sig_440011_189
+intervention_sig_440011_190,440011,2026-04-18,meeting,Expansion discussion in early stages,neutral,0.18,expansion_candidate,,,intervention_sig_440011_190
+intervention_sig_440011_191,440011,2026-05-21,health_check,Expansion discussion in early stages,positive,0.57,expansion_candidate,,,intervention_sig_440011_191
+intervention_sig_440011_192,440011,2026-05-03,health_check,Product adoption metrics trending well,neutral,0.09,expansion_candidate,,,intervention_sig_440011_192
+intervention_sig_440011_193,440011,2026-06-24,health_check,Regular QBR completed successfully,positive,0.52,expansion_candidate,,,intervention_sig_440011_193
+intervention_sig_440011_194,440011,2026-06-21,observation,Product adoption metrics trending well,neutral,0.14,expansion_candidate,,,intervention_sig_440011_194
+intervention_sig_440011_195,440011,2026-06-30,health_check,Regular QBR completed successfully,positive,0.55,expansion_candidate,,,intervention_sig_440011_195
+intervention_sig_440011_196,440011,2026-07-11,customer_feedback,Regular QBR completed successfully,neutral,0.05,expansion_candidate,,,intervention_sig_440011_196
+intervention_auto_recovery_440011_197,440011,2026-02-28,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.9,expansion_candidate,recovery,,intervention_auto_recovery_440011_197
+intervention_narrative_sig_440012_198,440012,2026-02-27,routine_review,Routine quarterly review completed,positive,0.61,strong_adopter,review,,intervention_narrative_sig_440012_198
+intervention_sig_440012_199,440012,2026-02-03,customer_feedback,Expansion discussion in early stages,positive,0.53,strong_adopter,,,intervention_sig_440012_199
+intervention_sig_440012_200,440012,2026-02-10,meeting,Regular QBR completed successfully,neutral,0.1,strong_adopter,,,intervention_sig_440012_200
+intervention_sig_440012_201,440012,2026-03-18,health_check,Regular QBR completed successfully,positive,0.73,strong_adopter,,,intervention_sig_440012_201
+intervention_sig_440012_202,440012,2026-03-04,meeting,Champion engagement remains strong,positive,0.79,strong_adopter,,,intervention_sig_440012_202
+intervention_sig_440012_203,440012,2026-04-19,observation,Champion engagement remains strong,positive,0.64,strong_adopter,,,intervention_sig_440012_203
+intervention_sig_440012_204,440012,2026-04-27,meeting,Regular QBR completed successfully,positive,0.55,strong_adopter,,,intervention_sig_440012_204
+intervention_sig_440012_205,440012,2026-05-19,health_check,Expansion discussion in early stages,neutral,0.13,strong_adopter,,,intervention_sig_440012_205
+intervention_sig_440012_206,440012,2026-05-21,observation,Regular QBR completed successfully,positive,0.67,strong_adopter,,,intervention_sig_440012_206
+intervention_sig_440012_207,440012,2026-06-08,meeting,Expansion discussion in early stages,neutral,0.15,strong_adopter,,,intervention_sig_440012_207
+intervention_sig_440012_208,440012,2026-06-23,meeting,Champion engagement remains strong,positive,0.55,strong_adopter,,,intervention_sig_440012_208
+intervention_sig_440012_209,440012,2026-07-24,observation,Expansion discussion in early stages,neutral,0.11,strong_adopter,,,intervention_sig_440012_209
+intervention_sig_440012_210,440012,2026-07-13,health_check,Regular QBR completed successfully,positive,0.73,strong_adopter,,,intervention_sig_440012_210
+intervention_auto_recovery_440012_211,440012,2026-02-17,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.95,strong_adopter,recovery,,intervention_auto_recovery_440012_211
+intervention_auto_recovery_440012_212,440012,2026-03-10,advocacy,Customer agreed to co-present at annual user conference.,positive,0.69,strong_adopter,recovery,,intervention_auto_recovery_440012_212
+intervention_narrative_sig_440013_213,440013,2026-02-27,routine_review,Routine quarterly review completed,positive,0.8,stable,review,,intervention_narrative_sig_440013_213
+intervention_sig_440013_214,440013,2026-02-17,meeting,Expansion discussion in early stages,positive,0.58,stable,,,intervention_sig_440013_214
+intervention_sig_440013_215,440013,2026-02-22,observation,Expansion discussion in early stages,positive,0.47,stable,,,intervention_sig_440013_215
+intervention_sig_440013_216,440013,2026-03-18,observation,Champion engagement remains strong,neutral,0.22,stable,,,intervention_sig_440013_216
+intervention_sig_440013_217,440013,2026-03-14,customer_feedback,Expansion discussion in early stages,positive,0.54,stable,,,intervention_sig_440013_217
+intervention_sig_440013_218,440013,2026-04-23,health_check,Champion engagement remains strong,positive,0.61,stable,,,intervention_sig_440013_218
+intervention_sig_440013_219,440013,2026-03-29,meeting,Product adoption metrics trending well,neutral,0.1,stable,,,intervention_sig_440013_219
+intervention_sig_440013_220,440013,2026-05-23,customer_feedback,Expansion discussion in early stages,positive,0.69,stable,,,intervention_sig_440013_220
+intervention_sig_440013_221,440013,2026-05-23,health_check,Regular QBR completed successfully,positive,0.63,stable,,,intervention_sig_440013_221
+intervention_sig_440013_222,440013,2026-06-17,observation,Champion engagement remains strong,positive,0.62,stable,,,intervention_sig_440013_222
+intervention_sig_440013_223,440013,2026-06-13,observation,Regular QBR completed successfully,positive,0.52,stable,,,intervention_sig_440013_223
+intervention_sig_440013_224,440013,2026-06-30,observation,Champion engagement remains strong,positive,0.5,stable,,,intervention_sig_440013_224
+intervention_sig_440013_225,440013,2026-06-27,health_check,Champion engagement remains strong,positive,0.68,stable,,,intervention_sig_440013_225
+intervention_auto_recovery_440013_226,440013,2026-02-17,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.92,stable,recovery,,intervention_auto_recovery_440013_226
+intervention_auto_recovery_440013_227,440013,2026-03-10,advocacy,Customer agreed to co-present at annual user conference.,positive,0.66,stable,recovery,,intervention_auto_recovery_440013_227
+intervention_narrative_sig_440014_228,440014,2026-02-27,routine_review,Routine quarterly review completed,positive,0.81,growth_trajectory,review,,intervention_narrative_sig_440014_228
+intervention_sig_440014_229,440014,2026-02-12,meeting,Product adoption metrics trending well,neutral,-0.1,growth_trajectory,,,intervention_sig_440014_229
+intervention_sig_440014_230,440014,2026-02-12,customer_feedback,Champion engagement remains strong,positive,0.42,growth_trajectory,,,intervention_sig_440014_230
+intervention_sig_440014_231,440014,2026-03-28,meeting,Champion engagement remains strong,positive,0.64,growth_trajectory,,,intervention_sig_440014_231
+intervention_sig_440014_232,440014,2026-03-17,observation,Regular QBR completed successfully,positive,0.64,growth_trajectory,,,intervention_sig_440014_232
+intervention_sig_440014_233,440014,2026-04-23,meeting,Product adoption metrics trending well,neutral,0.25,growth_trajectory,,,intervention_sig_440014_233
+intervention_sig_440014_234,440014,2026-04-06,observation,Expansion discussion in early stages,positive,0.47,growth_trajectory,,,intervention_sig_440014_234
+intervention_sig_440014_235,440014,2026-05-16,customer_feedback,Product adoption metrics trending well,positive,0.46,growth_trajectory,,,intervention_sig_440014_235
+intervention_sig_440014_236,440014,2026-05-17,observation,Champion engagement remains strong,positive,0.58,growth_trajectory,,,intervention_sig_440014_236
+intervention_sig_440014_237,440014,2026-05-30,health_check,Champion engagement remains strong,neutral,0.02,growth_trajectory,,,intervention_sig_440014_237
+intervention_sig_440014_238,440014,2026-06-11,health_check,Champion engagement remains strong,neutral,0.14,growth_trajectory,,,intervention_sig_440014_238
+intervention_sig_440014_239,440014,2026-06-28,meeting,Expansion discussion in early stages,positive,0.69,growth_trajectory,,,intervention_sig_440014_239
+intervention_sig_440014_240,440014,2026-07-13,customer_feedback,Product adoption metrics trending well,positive,0.68,growth_trajectory,,,intervention_sig_440014_240
+intervention_auto_recovery_440014_241,440014,2026-02-28,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.84,growth_trajectory,recovery,,intervention_auto_recovery_440014_241
+intervention_narrative_sig_440015_242,440015,2026-02-27,routine_review,Routine quarterly review completed,positive,0.91,star_account,review,,intervention_narrative_sig_440015_242
+intervention_sig_440015_243,440015,2026-02-20,observation,Champion engagement remains strong,positive,0.73,star_account,,,intervention_sig_440015_243
+intervention_sig_440015_244,440015,2026-02-23,health_check,Product adoption metrics trending well,positive,0.76,star_account,,,intervention_sig_440015_244
+intervention_sig_440015_245,440015,2026-03-22,customer_feedback,Expansion discussion in early stages,positive,0.57,star_account,,,intervention_sig_440015_245
+intervention_sig_440015_246,440015,2026-02-27,meeting,Regular QBR completed successfully,neutral,-0.02,star_account,,,intervention_sig_440015_246
+intervention_sig_440015_247,440015,2026-04-08,meeting,Regular QBR completed successfully,neutral,-0.05,star_account,,,intervention_sig_440015_247
+intervention_sig_440015_248,440015,2026-04-07,observation,Product adoption metrics trending well,positive,0.58,star_account,,,intervention_sig_440015_248
+intervention_sig_440015_249,440015,2026-05-08,health_check,Champion engagement remains strong,positive,0.59,star_account,,,intervention_sig_440015_249
+intervention_sig_440015_250,440015,2026-05-12,meeting,Champion engagement remains strong,positive,0.69,star_account,,,intervention_sig_440015_250
+intervention_sig_440015_251,440015,2026-06-01,observation,Regular QBR completed successfully,positive,0.74,star_account,,,intervention_sig_440015_251
+intervention_sig_440015_252,440015,2026-06-13,health_check,Champion engagement remains strong,positive,0.61,star_account,,,intervention_sig_440015_252
+intervention_sig_440015_253,440015,2026-07-14,observation,Product adoption metrics trending well,neutral,0.27,star_account,,,intervention_sig_440015_253
+intervention_sig_440015_254,440015,2026-07-15,health_check,Regular QBR completed successfully,positive,0.54,star_account,,,intervention_sig_440015_254
+intervention_auto_recovery_440015_255,440015,2026-02-28,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.9,star_account,recovery,,intervention_auto_recovery_440015_255
+intervention_sig_440016_256,440016,2026-01-15,advocacy,CTO agreed to be a reference customer. Featured in case study and keynote at industry conference.,positive,0.9,reference_customer,,,intervention_sig_440016_256
+intervention_narrative_sig_440016_257,440016,2026-02-27,routine_review,Routine quarterly review completed,positive,0.62,reference_customer,review,,intervention_narrative_sig_440016_257
+intervention_sig_440016_258,440016,2026-02-14,meeting,Product adoption metrics trending well,neutral,0.3,reference_customer,,,intervention_sig_440016_258
+intervention_sig_440016_259,440016,2026-01-28,meeting,Regular QBR completed successfully,neutral,0.07,reference_customer,,,intervention_sig_440016_259
+intervention_sig_440016_260,440016,2026-03-11,customer_feedback,Champion engagement remains strong,positive,0.63,reference_customer,,,intervention_sig_440016_260
+intervention_sig_440016_261,440016,2026-03-08,health_check,Regular QBR completed successfully,neutral,0.27,reference_customer,,,intervention_sig_440016_261
+intervention_sig_440016_262,440016,2026-04-12,health_check,Regular QBR completed successfully,positive,0.57,reference_customer,,,intervention_sig_440016_262
+intervention_sig_440016_263,440016,2026-04-24,customer_feedback,Regular QBR completed successfully,positive,0.45,reference_customer,,,intervention_sig_440016_263
+intervention_sig_440016_264,440016,2026-05-20,customer_feedback,Product adoption metrics trending well,neutral,0.14,reference_customer,,,intervention_sig_440016_264
+intervention_sig_440016_265,440016,2026-05-05,observation,Champion engagement remains strong,positive,0.48,reference_customer,,,intervention_sig_440016_265
+intervention_sig_440016_266,440016,2026-06-18,observation,Expansion discussion in early stages,neutral,0.2,reference_customer,,,intervention_sig_440016_266
+intervention_sig_440016_267,440016,2026-06-12,meeting,Expansion discussion in early stages,positive,0.69,reference_customer,,,intervention_sig_440016_267
+intervention_sig_440016_268,440016,2026-07-24,observation,Champion engagement remains strong,positive,0.67,reference_customer,,,intervention_sig_440016_268
+intervention_sig_440016_269,440016,2026-07-16,health_check,Regular QBR completed successfully,positive,0.47,reference_customer,,,intervention_sig_440016_269
+intervention_auto_recovery_440016_270,440016,2026-02-28,advocacy,Customer agreed to co-present at annual user conference.,positive,0.75,reference_customer,recovery,,intervention_auto_recovery_440016_270
+intervention_sig_440017_271,440017,2026-02-10,expansion_completed,Phase 2 expansion completed. 40 new GPU nodes online. ARR increased from $1.2M to $1.6M.,positive,0.9,expansion_done,,,intervention_sig_440017_271
+intervention_narrative_sig_440017_272,440017,2026-02-27,routine_review,Routine quarterly review completed,positive,0.79,expansion_done,review,,intervention_narrative_sig_440017_272
+intervention_sig_440017_273,440017,2026-01-31,meeting,Champion engagement remains strong,neutral,0.0,expansion_done,,,intervention_sig_440017_273
+intervention_sig_440017_274,440017,2026-02-10,health_check,Product adoption metrics trending well,positive,0.58,expansion_done,,,intervention_sig_440017_274
+intervention_sig_440017_275,440017,2026-03-14,meeting,Champion engagement remains strong,neutral,0.14,expansion_done,,,intervention_sig_440017_275
+intervention_sig_440017_276,440017,2026-03-12,observation,Product adoption metrics trending well,neutral,0.25,expansion_done,,,intervention_sig_440017_276
+intervention_sig_440017_277,440017,2026-04-03,meeting,Expansion discussion in early stages,positive,0.7,expansion_done,,,intervention_sig_440017_277
+intervention_sig_440017_278,440017,2026-04-08,meeting,Expansion discussion in early stages,positive,0.69,expansion_done,,,intervention_sig_440017_278
+intervention_sig_440017_279,440017,2026-05-03,customer_feedback,Regular QBR completed successfully,neutral,-0.02,expansion_done,,,intervention_sig_440017_279
+intervention_sig_440017_280,440017,2026-05-17,observation,Expansion discussion in early stages,neutral,0.01,expansion_done,,,intervention_sig_440017_280
+intervention_sig_440017_281,440017,2026-06-17,meeting,Regular QBR completed successfully,positive,0.61,expansion_done,,,intervention_sig_440017_281
+intervention_sig_440017_282,440017,2026-06-15,meeting,Product adoption metrics trending well,positive,0.65,expansion_done,,,intervention_sig_440017_282
+intervention_sig_440017_283,440017,2026-07-18,customer_feedback,Champion engagement remains strong,positive,0.5,expansion_done,,,intervention_sig_440017_283
+intervention_sig_440017_284,440017,2026-07-03,observation,Champion engagement remains strong,positive,0.68,expansion_done,,,intervention_sig_440017_284
+intervention_auto_recovery_440017_285,440017,2026-02-17,expansion_signal,Account expanding GPU cluster capacity by 40%. New PO in procurement.,positive,0.99,expansion_done,recovery,,intervention_auto_recovery_440017_285
+intervention_auto_recovery_440017_286,440017,2026-03-10,advocacy,Customer agreed to co-present at annual user conference.,positive,0.69,expansion_done,recovery,,intervention_auto_recovery_440017_286
+intervention_sig_440018_287,440018,2026-01-18,fast_onboarding,Time-to-first-workload: 3 days (benchmark: 14 days). Fastest onboarding in portfolio history.,positive,0.9,new_customer,,,intervention_sig_440018_287
+intervention_sig_440018_288,440018,2026-02-15,rapid_adoption,GPU utilization reached 65% in 4 weeks. 12 training jobs running concurrently.,positive,0.9,new_customer,,,intervention_sig_440018_288
+intervention_narrative_sig_440018_289,440018,2026-02-27,routine_review,Routine quarterly review completed,positive,0.5,new_customer,review,,intervention_narrative_sig_440018_289
+intervention_sig_440018_290,440018,2026-02-06,observation,Regular QBR completed successfully,neutral,0.01,new_customer,,,intervention_sig_440018_290
+intervention_sig_440018_291,440018,2026-02-15,customer_feedback,Product adoption metrics trending well,positive,0.62,new_customer,,,intervention_sig_440018_291
+intervention_sig_440018_292,440018,2026-03-27,meeting,Regular QBR completed successfully,positive,0.57,new_customer,,,intervention_sig_440018_292
+intervention_sig_440018_293,440018,2026-03-21,observation,Regular QBR completed successfully,positive,0.73,new_customer,,,intervention_sig_440018_293
+intervention_sig_440018_294,440018,2026-04-05,customer_feedback,Champion engagement remains strong,neutral,-0.05,new_customer,,,intervention_sig_440018_294
+intervention_sig_440018_295,440018,2026-04-20,customer_feedback,Expansion discussion in early stages,neutral,0.04,new_customer,,,intervention_sig_440018_295
+intervention_sig_440018_296,440018,2026-05-03,health_check,Product adoption metrics trending well,neutral,0.13,new_customer,,,intervention_sig_440018_296
+intervention_sig_440018_297,440018,2026-05-15,observation,Expansion discussion in early stages,neutral,0.3,new_customer,,,intervention_sig_440018_297
+intervention_sig_440018_298,440018,2026-06-18,health_check,Regular QBR completed successfully,positive,0.88,new_customer,,,intervention_sig_440018_298
+intervention_sig_440018_299,440018,2026-05-30,meeting,Product adoption metrics trending well,positive,0.58,new_customer,,,intervention_sig_440018_299
+intervention_sig_440018_300,440018,2026-07-10,meeting,Product adoption metrics trending well,positive,0.49,new_customer,,,intervention_sig_440018_300
+intervention_sig_440018_301,440018,2026-07-17,customer_feedback,Expansion discussion in early stages,neutral,0.02,new_customer,,,intervention_sig_440018_301
+intervention_auto_recovery_440018_302,440018,2026-02-28,advocacy,Customer agreed to co-present at annual user conference.,positive,0.73,new_customer,recovery,,intervention_auto_recovery_440018_302

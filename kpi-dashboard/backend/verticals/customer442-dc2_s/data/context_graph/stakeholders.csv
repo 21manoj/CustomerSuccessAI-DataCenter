@@ -1,0 +1,98 @@
+account_id,stakeholder_name,role,title,department,email,influence_score,sentiment,engagement_frequency,last_contact_date
+442001,James Morrison,VP Infrastructure,VP of Infrastructure,Engineering,james.morrison@titanhyperscalelabs.com,9,departed,none,2026-03-13
+442001,Lisa Park,successor,Director of Infrastructure,Engineering,lisa.park@titanhyperscalelabs.com,7,negative,monthly,2026-03-05
+442001,David Chen,technical_lead,Sr. Systems Engineer,Operations,david.chen@titanhyperscalelabs.com,5,neutral,weekly,2026-03-24
+442001,Rachel Kim,finance,VP Finance,Finance,rachel.kim@titanhyperscalelabs.com,6,neutral,quarterly,2026-02-12
+442001,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@titanhyperscalelabs.com,8,negative,weekly,2026-03-30
+442002,Michael Torres,champion,CTO,Technology,michael.torres@meridiancloudservices.com,9,frustrated,weekly,2026-03-13
+442002,Amanda Foster,operations,VP Operations,Operations,amanda.foster@meridiancloudservices.com,7,negative,daily,2026-03-31
+442002,Kevin Wright,technical_lead,Infrastructure Manager,Operations,kevin.wright@meridiancloudservices.com,6,negative,daily,2026-03-31
+442002,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@meridiancloudservices.com,9,negative,monthly,2026-03-15
+442002,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@meridiancloudservices.com,10,negative,monthly,2026-03-24
+442003,Robert Singh,champion,VP of AI Platform,Engineering,robert.singh@apexcomputeholdings.com,7,supportive_but_constrained,biweekly,2026-03-13
+442003,Patricia Huang,economic_buyer,CFO,Finance,patricia.huang@apexcomputeholdings.com,10,cost_focused,quarterly,2026-02-27
+442003,Thomas Lee,technical_lead,Sr. ML Engineer,AI/ML,thomas.lee@apexcomputeholdings.com,5,positive,weekly,2026-03-30
+442003,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@apexcomputeholdings.com,10,negative,monthly,2026-03-06
+442003,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@apexcomputeholdings.com,6,negative,daily,2026-03-28
+442003,Diana Walsh,procurement,Director of Procurement,Operations,diana.walsh@apexcomputeholdings.com,5,negative,quarterly,2026-02-28
+442004,Jennifer Walsh,champion,Head of AI/ML,Engineering,jennifer.walsh@pacificdatasystems.com,8,concerned,biweekly,2026-03-11
+442004,Mark Anderson,technical_lead,Platform Engineer,Engineering,mark.anderson@pacificdatasystems.com,6,neutral,weekly,2026-03-28
+442004,Susan Miller,executive_sponsor,CIO,IT,susan.miller@pacificdatasystems.com,9,neutral,monthly,2026-03-26
+442004,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@pacificdatasystems.com,9,neutral,monthly,2026-03-20
+442004,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@pacificdatasystems.com,6,neutral,daily,2026-03-28
+442005,Alex Nguyen,champion,Director of Infrastructure,Engineering,alex.nguyen@quantumedgenetworks.com,7,disengaged,none_recent,2026-03-11
+442005,Diana Patel,partner_contact,Channel Manager,Partnerships,diana.patel@quantumedgenetworks.com,6,neutral,monthly,2026-03-14
+442005,Chris Johnson,executive_sponsor,SVP Technology,Technology,chris.johnson@quantumedgenetworks.com,9,unknown,none_recent,2025-10-29
+442005,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@quantumedgenetworks.com,9,neutral,monthly,2026-02-28
+442005,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@quantumedgenetworks.com,7,neutral,weekly,2026-03-22
+442005,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@quantumedgenetworks.com,6,neutral,daily,2026-03-30
+442006,Emily Zhang,champion,VP of AI,AI/ML,emily.zhang@stratosaiinfrastructure.com,8,positive,biweekly,2026-03-11
+442006,George Martinez,economic_buyer,VP Finance,Finance,george.martinez@stratosaiinfrastructure.com,8,cautious,quarterly,2026-01-15
+442006,Nina Kowalski,technical_lead,ML Platform Lead,Engineering,nina.kowalski@stratosaiinfrastructure.com,6,positive,weekly,2026-03-22
+442006,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@stratosaiinfrastructure.com,10,neutral,monthly,2026-03-07
+442006,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@stratosaiinfrastructure.com,6,neutral,daily,2026-03-28
+442007,Brian O'Connor,champion,Director of Operations,Operations,brian.o'connor@cybervaultdc.com,7,improving,weekly,2026-03-11
+442007,Laura Bennett,csm,Assigned CSM,Customer Success,laura.bennett@cybervaultdc.com,5,positive,weekly,2026-03-23
+442007,Ryan Murphy,executive_sponsor,VP Engineering,Engineering,ryan.murphy@cybervaultdc.com,8,cautiously_positive,biweekly,2026-03-18
+442007,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@cybervaultdc.com,9,neutral,monthly,2026-03-08
+442007,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@cybervaultdc.com,7,neutral,weekly,2026-03-28
+442008,Karen White,champion,VP of Technology,Technology,karen.white@atlascomputinggroup.com,8,positive,monthly,2026-03-06
+442008,Jason Brooks,technical_lead,Infrastructure Lead,Operations,jason.brooks@atlascomputinggroup.com,6,positive,biweekly,2026-03-19
+442008,Michelle Davis,executive_sponsor,CEO,Executive,michelle.davis@atlascomputinggroup.com,10,positive,quarterly,2025-12-27
+442008,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@atlascomputinggroup.com,9,positive,monthly,2026-03-29
+442008,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@atlascomputinggroup.com,6,positive,daily,2026-03-30
+442008,Brian Foster,procurement,Director of Procurement,Operations,brian.foster@atlascomputinggroup.com,5,positive,quarterly,2026-01-09
+442009,Daniel Foster,champion,Head of ML,AI/ML,daniel.foster@pinnaclesystems.com,7,positive,biweekly,2026-03-06
+442009,Sarah Collins,executive_sponsor,CTO,Technology,sarah.collins@pinnaclesystems.com,9,positive,monthly,2026-03-18
+442009,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@pinnaclesystems.com,9,positive,monthly,2026-03-27
+442009,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@pinnaclesystems.com,7,positive,weekly,2026-03-21
+442009,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@pinnaclesystems.com,6,positive,daily,2026-03-30
+442010,Andrew Kim,champion,Director of Engineering,Engineering,andrew.kim@helixdatacorp.com,7,positive,biweekly,2026-03-06
+442010,Linda Chen,partner_contact,Partner Manager,Partnerships,linda.chen@helixdatacorp.com,6,positive,monthly,2026-03-26
+442010,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@helixdatacorp.com,9,positive,monthly,2026-03-28
+442010,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@helixdatacorp.com,7,positive,weekly,2026-03-23
+442010,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@helixdatacorp.com,10,positive,monthly,2026-03-09
+442010,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@helixdatacorp.com,6,positive,daily,2026-03-28
+442011,Peter Hoffman,champion,VP Infrastructure,Infrastructure,peter.hoffman@fortresscolocation.com,8,very_positive,biweekly,2026-03-06
+442011,Grace Liu,economic_buyer,CFO,Finance,grace.liu@fortresscolocation.com,9,positive,quarterly,2026-02-08
+442011,Jake Roberts,technical_lead,AI Platform Lead,Engineering,jake.roberts@fortresscolocation.com,6,positive,weekly,2026-03-26
+442011,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@fortresscolocation.com,10,positive,monthly,2026-02-25
+442011,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@fortresscolocation.com,6,positive,daily,2026-03-31
+442012,Victor Chang,champion,Head of AI Research,Research,victor.chang@nexgenailabs.com,7,very_positive,weekly,2026-03-06
+442012,Olivia Reyes,technical_lead,ML Engineer,Engineering,olivia.reyes@nexgenailabs.com,5,positive,weekly,2026-03-21
+442012,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@nexgenailabs.com,9,positive,monthly,2026-03-29
+442012,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@nexgenailabs.com,10,positive,monthly,2026-03-25
+442012,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@nexgenailabs.com,6,positive,daily,2026-03-28
+442012,Brian Foster,procurement,Director of Procurement,Operations,brian.foster@nexgenailabs.com,5,positive,quarterly,2026-01-27
+442013,Tom Bradley,champion,Infrastructure Manager,Operations,tom.bradley@redlineinfrastructure.com,6,positive,monthly,2026-03-06
+442013,Maria Santos,executive_sponsor,CTO,Technology,maria.santos@redlineinfrastructure.com,8,positive,quarterly,2026-02-11
+442013,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@redlineinfrastructure.com,9,positive,monthly,2026-03-16
+442013,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@redlineinfrastructure.com,7,positive,weekly,2026-03-21
+442013,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@redlineinfrastructure.com,6,positive,daily,2026-03-29
+442013,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@redlineinfrastructure.com,5,positive,quarterly,2026-02-05
+442014,Scott Peterson,champion,Director of Edge Computing,Engineering,scott.peterson@cumulusedgecomputing.com,7,positive,biweekly,2026-03-06
+442014,Amy Taylor,technical_lead,Edge Platform Lead,Engineering,amy.taylor@cumulusedgecomputing.com,5,positive,weekly,2026-03-28
+442014,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@cumulusedgecomputing.com,9,positive,monthly,2026-02-24
+442014,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@cumulusedgecomputing.com,10,positive,monthly,2026-03-26
+442014,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@cumulusedgecomputing.com,6,positive,daily,2026-03-28
+442015,Nathan Young,champion,VP of Engineering,Engineering,nathan.young@skybridgenetworks.com,8,very_positive,monthly,2026-03-06
+442015,Jessica Moore,executive_sponsor,CEO,Executive,jessica.moore@skybridgenetworks.com,10,very_positive,quarterly,2026-02-01
+442015,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@skybridgenetworks.com,9,positive,monthly,2026-03-31
+442015,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@skybridgenetworks.com,7,positive,weekly,2026-03-23
+442015,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@skybridgenetworks.com,6,positive,daily,2026-03-30
+442016,William Harris,champion,CTO,Technology,william.harris@ironcladsystems.com,9,advocate,monthly,2026-03-06
+442016,Christine Lee,executive_sponsor,CEO,Executive,christine.lee@ironcladsystems.com,10,very_positive,quarterly,2026-01-08
+442016,Derek James,technical_lead,Principal Engineer,Engineering,derek.james@ironcladsystems.com,6,positive,weekly,2026-03-29
+442016,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@ironcladsystems.com,9,positive,monthly,2026-03-14
+442016,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@ironcladsystems.com,6,positive,daily,2026-03-29
+442017,Frank Wilson,champion,Director of AI Platform,Engineering,frank.wilson@terrascalesolutions.com,7,very_positive,biweekly,2026-03-06
+442017,Helen Park,economic_buyer,VP Finance,Finance,helen.park@terrascalesolutions.com,7,positive,quarterly,2026-02-04
+442017,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@terrascalesolutions.com,7,positive,weekly,2026-03-28
+442017,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@terrascalesolutions.com,10,positive,monthly,2026-03-15
+442017,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@terrascalesolutions.com,6,positive,daily,2026-03-29
+442017,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@terrascalesolutions.com,5,positive,quarterly,2025-12-26
+442018,Angela Rivera,champion,Founder & CTO,Executive,angela.rivera@velocityaicompute.com,10,very_positive,weekly,2026-03-06
+442018,Carlos Mendez,technical_lead,Lead ML Engineer,Engineering,carlos.mendez@velocityaicompute.com,6,positive,daily,2026-03-29
+442018,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@velocityaicompute.com,9,positive,monthly,2026-03-20
+442018,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@velocityaicompute.com,10,positive,monthly,2026-03-31
+442018,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@velocityaicompute.com,6,positive,daily,2026-03-31

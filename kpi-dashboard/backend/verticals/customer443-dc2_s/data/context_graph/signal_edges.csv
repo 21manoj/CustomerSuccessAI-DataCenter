@@ -1,0 +1,99 @@
+account_id,from_signal_ref,to_signal_ref,edge_type,label,confidence,lag_days
+443001,sig_443001_1,decision:dec_443001_1,TRIGGERED,Signal triggered escalation,0.9,7
+443001,decision:dec_443001_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+443001,sig_443001_1,decision:dec_443001_2,TRIGGERED,Signal triggered retention plan,0.85,10
+443001,decision:dec_443001_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+443001,intervention_auto_recovery_443001_1,decision:intervention_auto_dec_443001_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443001,intervention_auto_recovery_443001_1,decision:intervention_auto_dec_443001_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443001,intervention_auto_recovery_443001_1,decision:intervention_auto_dec_443001_3,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443001,decision:intervention_auto_dec_443001_1,outcome:churn_averted,LED_TO,Intervention led to churn averted,0.9,21
+443001,decision:intervention_auto_dec_443001_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443001,decision:intervention_auto_dec_443001_3,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443002,sig_443002_1,decision:dec_443002_1,TRIGGERED,Signal triggered escalation,0.9,7
+443002,decision:dec_443002_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+443002,sig_443002_1,decision:dec_443002_2,TRIGGERED,Signal triggered retention plan,0.85,10
+443002,decision:dec_443002_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+443002,intervention_auto_recovery_443002_1,decision:intervention_auto_dec_443002_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443002,intervention_auto_recovery_443002_1,decision:intervention_auto_dec_443002_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443002,intervention_auto_recovery_443002_1,decision:intervention_auto_dec_443002_3,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443002,decision:intervention_auto_dec_443002_1,outcome:churn_averted,LED_TO,Intervention led to churn averted,0.9,21
+443002,decision:intervention_auto_dec_443002_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443002,decision:intervention_auto_dec_443002_3,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443003,sig_443003_1,decision:dec_443003_1,TRIGGERED,Signal triggered escalation,0.9,7
+443003,decision:dec_443003_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+443003,sig_443003_1,decision:dec_443003_2,TRIGGERED,Signal triggered retention plan,0.85,10
+443003,decision:dec_443003_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+443003,intervention_auto_recovery_443003_1,decision:intervention_auto_dec_443003_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443003,intervention_auto_recovery_443003_1,decision:intervention_auto_dec_443003_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443003,intervention_auto_recovery_443003_1,decision:intervention_auto_dec_443003_3,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443003,decision:intervention_auto_dec_443003_1,outcome:churn_averted,LED_TO,Intervention led to churn averted,0.9,21
+443003,decision:intervention_auto_dec_443003_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443003,decision:intervention_auto_dec_443003_3,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443004,sig_443004_1,decision:dec_443004_1,TRIGGERED,Signal triggered renewal review,0.8,14
+443004,decision:dec_443004_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+443004,intervention_auto_recovery_443004_1,decision:intervention_auto_dec_443004_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443004,intervention_auto_recovery_443004_1,decision:intervention_auto_dec_443004_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443004,decision:intervention_auto_dec_443004_1,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443004,decision:intervention_auto_dec_443004_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443005,sig_443005_1,decision:dec_443005_1,TRIGGERED,Signal triggered renewal review,0.8,14
+443005,decision:dec_443005_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+443005,intervention_auto_recovery_443005_1,decision:intervention_auto_dec_443005_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443005,intervention_auto_recovery_443005_1,decision:intervention_auto_dec_443005_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443005,decision:intervention_auto_dec_443005_1,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443005,decision:intervention_auto_dec_443005_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443006,sig_443006_1,decision:dec_443006_1,TRIGGERED,Signal triggered renewal review,0.8,14
+443006,decision:dec_443006_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+443006,intervention_auto_recovery_443006_1,decision:intervention_auto_dec_443006_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443006,intervention_auto_recovery_443006_1,decision:intervention_auto_dec_443006_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443006,decision:intervention_auto_dec_443006_1,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443006,decision:intervention_auto_dec_443006_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443007,sig_443007_1,decision:dec_443007_1,TRIGGERED,Signal triggered renewal review,0.8,14
+443007,decision:dec_443007_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+443007,intervention_auto_recovery_443007_1,decision:intervention_auto_dec_443007_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443007,intervention_auto_recovery_443007_1,decision:intervention_auto_dec_443007_2,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443007,decision:intervention_auto_dec_443007_1,outcome:engagement_recovery,LED_TO,Intervention led to engagement recovery,0.9,21
+443007,decision:intervention_auto_dec_443007_2,outcome:revenue_protected,LED_TO,Intervention led to revenue protected,0.9,21
+443008,sig_443008_1,decision:dec_443008_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443008,decision:dec_443008_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443008,intervention_auto_recovery_443008_1,decision:intervention_auto_dec_443008_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443008,decision:intervention_auto_dec_443008_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443009,sig_443009_1,decision:dec_443009_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443009,decision:dec_443009_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443009,intervention_auto_recovery_443009_1,decision:intervention_auto_dec_443009_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443009,decision:intervention_auto_dec_443009_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443010,sig_443010_1,decision:dec_443010_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443010,decision:dec_443010_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443010,intervention_auto_recovery_443010_1,decision:intervention_auto_dec_443010_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443010,decision:intervention_auto_dec_443010_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443011,sig_443011_1,decision:dec_443011_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443011,decision:dec_443011_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443011,intervention_auto_recovery_443011_1,decision:intervention_auto_dec_443011_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443011,decision:intervention_auto_dec_443011_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443012,sig_443012_1,decision:dec_443012_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443012,decision:dec_443012_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443012,intervention_auto_recovery_443012_1,decision:intervention_auto_dec_443012_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443012,decision:intervention_auto_dec_443012_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443013,sig_443013_1,decision:dec_443013_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443013,decision:dec_443013_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443013,intervention_auto_recovery_443013_1,decision:intervention_auto_dec_443013_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443013,decision:intervention_auto_dec_443013_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443014,sig_443014_1,decision:dec_443014_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443014,decision:dec_443014_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443014,intervention_auto_recovery_443014_1,decision:intervention_auto_dec_443014_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443014,decision:intervention_auto_dec_443014_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443015,sig_443015_1,decision:dec_443015_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443015,decision:dec_443015_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443015,intervention_auto_recovery_443015_1,decision:intervention_auto_dec_443015_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443015,decision:intervention_auto_dec_443015_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443016,sig_443016_1,decision:dec_443016_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443016,decision:dec_443016_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443016,intervention_auto_recovery_443016_1,decision:intervention_auto_dec_443016_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443016,decision:intervention_auto_dec_443016_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443017,sig_443017_1,decision:dec_443017_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443017,decision:dec_443017_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443017,intervention_auto_recovery_443017_1,decision:intervention_auto_dec_443017_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443017,decision:intervention_auto_dec_443017_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21
+443018,sig_443018_1,decision:dec_443018_1,TRIGGERED,Positive signal prompted expansion,0.85,7
+443018,decision:dec_443018_1,outcome:expansion_opportunity,LED_TO,Discussion identified expansion,0.8,14
+443018,intervention_auto_recovery_443018_1,decision:intervention_auto_dec_443018_1,TRIGGERED,Recovery signal triggered intervention decision,0.85,7
+443018,decision:intervention_auto_dec_443018_1,outcome:expansion_approved,LED_TO,Intervention led to expansion approved,0.9,21

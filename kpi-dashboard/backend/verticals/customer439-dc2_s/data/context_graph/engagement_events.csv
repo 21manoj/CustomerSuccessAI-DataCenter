@@ -1,0 +1,179 @@
+account_id,event_date,event_type,title,participants,outcome,sentiment,notes
+439001,2025-10-01,executive_briefing,Executive Briefing — Titan Hyperscale Labs,"Lisa Park, James Morrison",escalated,negative,Engagement with Titan Hyperscale Labs: escalated
+439001,2025-10-21,support_escalation,Support Escalation — Titan Hyperscale Labs,"Lisa Park, David Chen",action_items_assigned,neutral,Engagement with Titan Hyperscale Labs: action items assigned
+439001,2025-11-10,executive_briefing,Executive Briefing — Titan Hyperscale Labs,"David Chen, James Morrison",partially_resolved,negative,Engagement with Titan Hyperscale Labs: partially resolved
+439001,2025-11-30,check_in,Check In — Titan Hyperscale Labs,"David Chen, Lisa Park",follow_up_needed,negative,Engagement with Titan Hyperscale Labs: follow up needed
+439001,2025-12-20,check_in,Check In — Titan Hyperscale Labs,"James Morrison, David Chen",action_items_assigned,negative,Engagement with Titan Hyperscale Labs: action items assigned
+439001,2026-01-09,executive_briefing,Executive Briefing — Titan Hyperscale Labs,"James Morrison, Lisa Park",escalated,negative,Engagement with Titan Hyperscale Labs: escalated
+439001,2026-01-29,executive_briefing,Executive Briefing — Titan Hyperscale Labs,"James Morrison, Lisa Park",follow_up_needed,neutral,Engagement with Titan Hyperscale Labs: follow up needed
+439001,2026-02-18,executive_briefing,Executive Briefing — Titan Hyperscale Labs,"David Chen, James Morrison",follow_up_needed,negative,Engagement with Titan Hyperscale Labs: follow up needed
+439001,2026-03-10,check_in,Check In — Titan Hyperscale Labs,"James Morrison, Lisa Park",escalated,negative,Engagement with Titan Hyperscale Labs: escalated
+439001,2026-03-31,check_in,Check In — Titan Hyperscale Labs,"David Chen, Lisa Park",escalated,neutral,Engagement with Titan Hyperscale Labs: escalated
+439002,2025-10-01,check_in,Check In — Meridian Cloud Services,"Amanda Foster, Kevin Wright",follow_up_needed,negative,Engagement with Meridian Cloud Services: follow up needed
+439002,2025-10-26,support_escalation,Support Escalation — Meridian Cloud Services,"Michael Torres, Amanda Foster",follow_up_needed,negative,Engagement with Meridian Cloud Services: follow up needed
+439002,2025-11-21,check_in,Check In — Meridian Cloud Services,"Michael Torres, Amanda Foster",partially_resolved,negative,Engagement with Meridian Cloud Services: partially resolved
+439002,2025-12-17,check_in,Check In — Meridian Cloud Services,"Kevin Wright, Amanda Foster",follow_up_needed,negative,Engagement with Meridian Cloud Services: follow up needed
+439002,2026-01-12,check_in,Check In — Meridian Cloud Services,"Michael Torres, Amanda Foster",escalated,neutral,Engagement with Meridian Cloud Services: escalated
+439002,2026-02-07,support_escalation,Support Escalation — Meridian Cloud Services,"Michael Torres, Kevin Wright",action_items_assigned,negative,Engagement with Meridian Cloud Services: action items assigned
+439002,2026-03-05,check_in,Check In — Meridian Cloud Services,"Amanda Foster, Kevin Wright",action_items_assigned,negative,Engagement with Meridian Cloud Services: action items assigned
+439002,2026-03-31,check_in,Check In — Meridian Cloud Services,"Kevin Wright, Michael Torres",follow_up_needed,negative,Engagement with Meridian Cloud Services: follow up needed
+439003,2025-10-01,executive_briefing,Executive Briefing — Apex Compute Holdings,"Robert Singh, Patricia Huang",follow_up_needed,negative,Engagement with Apex Compute Holdings: follow up needed
+439003,2025-10-26,check_in,Check In — Apex Compute Holdings,"Robert Singh, Patricia Huang",partially_resolved,negative,Engagement with Apex Compute Holdings: partially resolved
+439003,2025-11-21,check_in,Check In — Apex Compute Holdings,"Thomas Lee, Patricia Huang",action_items_assigned,negative,Engagement with Apex Compute Holdings: action items assigned
+439003,2025-12-17,check_in,Check In — Apex Compute Holdings,"Robert Singh, Thomas Lee",follow_up_needed,negative,Engagement with Apex Compute Holdings: follow up needed
+439003,2026-01-12,executive_briefing,Executive Briefing — Apex Compute Holdings,"Robert Singh, Patricia Huang",action_items_assigned,neutral,Engagement with Apex Compute Holdings: action items assigned
+439003,2026-02-07,executive_briefing,Executive Briefing — Apex Compute Holdings,"Robert Singh, Thomas Lee",action_items_assigned,negative,Engagement with Apex Compute Holdings: action items assigned
+439003,2026-03-05,support_escalation,Support Escalation — Apex Compute Holdings,"Robert Singh, Thomas Lee",partially_resolved,negative,Engagement with Apex Compute Holdings: partially resolved
+439003,2026-03-31,check_in,Check In — Apex Compute Holdings,"Thomas Lee, Robert Singh",partially_resolved,negative,Engagement with Apex Compute Holdings: partially resolved
+439004,2025-10-01,renewal_discussion,Renewal Discussion — Pacific Data Systems,"Susan Miller, Jennifer Walsh",action_items_assigned,negative,Engagement with Pacific Data Systems: action items assigned
+439004,2025-10-21,technical_review,Technical Review — Pacific Data Systems,"Susan Miller, Mark Anderson",action_items_assigned,positive,Engagement with Pacific Data Systems: action items assigned
+439004,2025-11-10,renewal_discussion,Renewal Discussion — Pacific Data Systems,"Jennifer Walsh, Susan Miller",follow_up_needed,positive,Engagement with Pacific Data Systems: follow up needed
+439004,2025-11-30,check_in,Check In — Pacific Data Systems,"Susan Miller, Jennifer Walsh",follow_up_needed,neutral,Engagement with Pacific Data Systems: follow up needed
+439004,2025-12-20,QBR,Qbr — Pacific Data Systems,"Susan Miller, Jennifer Walsh",follow_up_needed,neutral,Engagement with Pacific Data Systems: follow up needed
+439004,2026-01-09,QBR,Qbr — Pacific Data Systems,"Mark Anderson, Jennifer Walsh",follow_up_needed,neutral,Engagement with Pacific Data Systems: follow up needed
+439004,2026-01-29,QBR,Qbr — Pacific Data Systems,"Mark Anderson, Jennifer Walsh",action_items_assigned,neutral,Engagement with Pacific Data Systems: action items assigned
+439004,2026-02-18,QBR,Qbr — Pacific Data Systems,"Mark Anderson, Susan Miller",follow_up_needed,positive,Engagement with Pacific Data Systems: follow up needed
+439004,2026-03-10,QBR,Qbr — Pacific Data Systems,"Susan Miller, Mark Anderson",follow_up_needed,neutral,Engagement with Pacific Data Systems: follow up needed
+439004,2026-03-31,technical_review,Technical Review — Pacific Data Systems,"Mark Anderson, Jennifer Walsh",positive_engagement,positive,Engagement with Pacific Data Systems: positive engagement
+439005,2025-10-01,check_in,Check In — Quantum Edge Networks,"Diana Patel, Alex Nguyen",action_items_assigned,positive,Engagement with Quantum Edge Networks: action items assigned
+439005,2025-10-26,QBR,Qbr — Quantum Edge Networks,"Chris Johnson, Diana Patel",follow_up_needed,negative,Engagement with Quantum Edge Networks: follow up needed
+439005,2025-11-21,QBR,Qbr — Quantum Edge Networks,"Diana Patel, Chris Johnson",follow_up_needed,positive,Engagement with Quantum Edge Networks: follow up needed
+439005,2025-12-17,QBR,Qbr — Quantum Edge Networks,"Chris Johnson, Alex Nguyen",positive_engagement,neutral,Engagement with Quantum Edge Networks: positive engagement
+439005,2026-01-12,check_in,Check In — Quantum Edge Networks,"Alex Nguyen, Chris Johnson",follow_up_needed,neutral,Engagement with Quantum Edge Networks: follow up needed
+439005,2026-02-07,renewal_discussion,Renewal Discussion — Quantum Edge Networks,"Alex Nguyen, Diana Patel",positive_engagement,positive,Engagement with Quantum Edge Networks: positive engagement
+439005,2026-03-05,check_in,Check In — Quantum Edge Networks,"Alex Nguyen, Diana Patel",positive_engagement,negative,Engagement with Quantum Edge Networks: positive engagement
+439005,2026-03-31,technical_review,Technical Review — Quantum Edge Networks,"Diana Patel, Chris Johnson",positive_engagement,positive,Engagement with Quantum Edge Networks: positive engagement
+439006,2025-10-01,QBR,Qbr — Stratos AI Infrastructure,"Emily Zhang, Nina Kowalski",follow_up_needed,neutral,Engagement with Stratos AI Infrastructure: follow up needed
+439006,2025-10-23,technical_review,Technical Review — Stratos AI Infrastructure,"Nina Kowalski, George Martinez",follow_up_needed,neutral,Engagement with Stratos AI Infrastructure: follow up needed
+439006,2025-11-15,QBR,Qbr — Stratos AI Infrastructure,"Emily Zhang, Nina Kowalski",action_items_assigned,neutral,Engagement with Stratos AI Infrastructure: action items assigned
+439006,2025-12-07,check_in,Check In — Stratos AI Infrastructure,"Emily Zhang, George Martinez",action_items_assigned,neutral,Engagement with Stratos AI Infrastructure: action items assigned
+439006,2025-12-30,check_in,Check In — Stratos AI Infrastructure,"Nina Kowalski, Emily Zhang",action_items_assigned,negative,Engagement with Stratos AI Infrastructure: action items assigned
+439006,2026-01-22,check_in,Check In — Stratos AI Infrastructure,"Nina Kowalski, George Martinez",action_items_assigned,positive,Engagement with Stratos AI Infrastructure: action items assigned
+439006,2026-02-13,technical_review,Technical Review — Stratos AI Infrastructure,"Nina Kowalski, George Martinez",action_items_assigned,negative,Engagement with Stratos AI Infrastructure: action items assigned
+439006,2026-03-08,QBR,Qbr — Stratos AI Infrastructure,"Emily Zhang, George Martinez",positive_engagement,neutral,Engagement with Stratos AI Infrastructure: positive engagement
+439006,2026-03-31,renewal_discussion,Renewal Discussion — Stratos AI Infrastructure,"Emily Zhang, George Martinez",follow_up_needed,neutral,Engagement with Stratos AI Infrastructure: follow up needed
+439007,2025-10-01,check_in,Check In — CyberVault DC,"Brian O'Connor, Laura Bennett",action_items_assigned,neutral,Engagement with CyberVault DC: action items assigned
+439007,2025-10-17,QBR,Qbr — CyberVault DC,"Brian O'Connor, Laura Bennett",follow_up_needed,neutral,Engagement with CyberVault DC: follow up needed
+439007,2025-11-02,technical_review,Technical Review — CyberVault DC,"Ryan Murphy, Laura Bennett",positive_engagement,negative,Engagement with CyberVault DC: positive engagement
+439007,2025-11-19,check_in,Check In — CyberVault DC,"Brian O'Connor, Ryan Murphy",action_items_assigned,neutral,Engagement with CyberVault DC: action items assigned
+439007,2025-12-05,technical_review,Technical Review — CyberVault DC,"Ryan Murphy, Brian O'Connor",follow_up_needed,neutral,Engagement with CyberVault DC: follow up needed
+439007,2025-12-22,technical_review,Technical Review — CyberVault DC,"Brian O'Connor, Laura Bennett",action_items_assigned,neutral,Engagement with CyberVault DC: action items assigned
+439007,2026-01-07,QBR,Qbr — CyberVault DC,"Laura Bennett, Ryan Murphy",action_items_assigned,neutral,Engagement with CyberVault DC: action items assigned
+439007,2026-01-24,check_in,Check In — CyberVault DC,"Laura Bennett, Ryan Murphy",action_items_assigned,neutral,Engagement with CyberVault DC: action items assigned
+439007,2026-02-09,check_in,Check In — CyberVault DC,"Brian O'Connor, Laura Bennett",positive_engagement,neutral,Engagement with CyberVault DC: positive engagement
+439007,2026-02-26,QBR,Qbr — CyberVault DC,"Ryan Murphy, Laura Bennett",action_items_assigned,positive,Engagement with CyberVault DC: action items assigned
+439007,2026-03-14,check_in,Check In — CyberVault DC,"Ryan Murphy, Brian O'Connor",follow_up_needed,neutral,Engagement with CyberVault DC: follow up needed
+439007,2026-03-31,check_in,Check In — CyberVault DC,"Ryan Murphy, Brian O'Connor",action_items_assigned,neutral,Engagement with CyberVault DC: action items assigned
+439008,2025-10-01,QBR,Qbr — Atlas Computing Group,"Jason Brooks, Karen White",expansion_discussed,positive,Engagement with Atlas Computing Group: expansion discussed
+439008,2025-10-19,check_in,Check In — Atlas Computing Group,"Karen White, Michelle Davis",renewal_confirmed,positive,Engagement with Atlas Computing Group: renewal confirmed
+439008,2025-11-06,check_in,Check In — Atlas Computing Group,"Michelle Davis, Karen White",expansion_discussed,positive,Engagement with Atlas Computing Group: expansion discussed
+439008,2025-11-24,QBR,Qbr — Atlas Computing Group,"Jason Brooks, Karen White",positive_engagement,positive,Engagement with Atlas Computing Group: positive engagement
+439008,2025-12-12,QBR,Qbr — Atlas Computing Group,"Jason Brooks, Karen White",expansion_discussed,positive,Engagement with Atlas Computing Group: expansion discussed
+439008,2025-12-30,check_in,Check In — Atlas Computing Group,"Karen White, Jason Brooks",renewal_confirmed,positive,Engagement with Atlas Computing Group: renewal confirmed
+439008,2026-01-17,QBR,Qbr — Atlas Computing Group,"Karen White, Jason Brooks",positive_engagement,neutral,Engagement with Atlas Computing Group: positive engagement
+439008,2026-02-04,check_in,Check In — Atlas Computing Group,"Karen White, Michelle Davis",positive_engagement,neutral,Engagement with Atlas Computing Group: positive engagement
+439008,2026-02-22,technical_review,Technical Review — Atlas Computing Group,"Jason Brooks, Michelle Davis",expansion_discussed,positive,Engagement with Atlas Computing Group: expansion discussed
+439008,2026-03-12,QBR,Qbr — Atlas Computing Group,"Michelle Davis, Jason Brooks",expansion_discussed,neutral,Engagement with Atlas Computing Group: expansion discussed
+439008,2026-03-31,technical_review,Technical Review — Atlas Computing Group,"Karen White, Michelle Davis",expansion_discussed,positive,Engagement with Atlas Computing Group: expansion discussed
+439009,2025-10-01,QBR,Qbr — Pinnacle Systems,"Daniel Foster, Sarah Collins",expansion_discussed,positive,Engagement with Pinnacle Systems: expansion discussed
+439009,2025-10-21,technical_review,Technical Review — Pinnacle Systems,"Sarah Collins, Daniel Foster",expansion_discussed,neutral,Engagement with Pinnacle Systems: expansion discussed
+439009,2025-11-10,technical_review,Technical Review — Pinnacle Systems,"Sarah Collins, Daniel Foster",positive_engagement,positive,Engagement with Pinnacle Systems: positive engagement
+439009,2025-11-30,check_in,Check In — Pinnacle Systems,"Sarah Collins, Daniel Foster",renewal_confirmed,positive,Engagement with Pinnacle Systems: renewal confirmed
+439009,2025-12-20,technical_review,Technical Review — Pinnacle Systems,"Daniel Foster, Sarah Collins",renewal_confirmed,positive,Engagement with Pinnacle Systems: renewal confirmed
+439009,2026-01-09,check_in,Check In — Pinnacle Systems,"Sarah Collins, Daniel Foster",renewal_confirmed,positive,Engagement with Pinnacle Systems: renewal confirmed
+439009,2026-01-29,technical_review,Technical Review — Pinnacle Systems,"Sarah Collins, Daniel Foster",renewal_confirmed,positive,Engagement with Pinnacle Systems: renewal confirmed
+439009,2026-02-18,technical_review,Technical Review — Pinnacle Systems,"Sarah Collins, Daniel Foster",expansion_discussed,neutral,Engagement with Pinnacle Systems: expansion discussed
+439009,2026-03-10,technical_review,Technical Review — Pinnacle Systems,"Sarah Collins, Daniel Foster",positive_engagement,positive,Engagement with Pinnacle Systems: positive engagement
+439009,2026-03-31,technical_review,Technical Review — Pinnacle Systems,"Sarah Collins, Daniel Foster",positive_engagement,positive,Engagement with Pinnacle Systems: positive engagement
+439010,2025-10-01,QBR,Qbr — Helix Data Corp,"Andrew Kim, Linda Chen",expansion_discussed,neutral,Engagement with Helix Data Corp: expansion discussed
+439010,2025-10-17,technical_review,Technical Review — Helix Data Corp,"Linda Chen, Andrew Kim",renewal_confirmed,positive,Engagement with Helix Data Corp: renewal confirmed
+439010,2025-11-02,check_in,Check In — Helix Data Corp,"Andrew Kim, Linda Chen",renewal_confirmed,neutral,Engagement with Helix Data Corp: renewal confirmed
+439010,2025-11-19,technical_review,Technical Review — Helix Data Corp,"Andrew Kim, Linda Chen",renewal_confirmed,positive,Engagement with Helix Data Corp: renewal confirmed
+439010,2025-12-05,technical_review,Technical Review — Helix Data Corp,"Linda Chen, Andrew Kim",renewal_confirmed,positive,Engagement with Helix Data Corp: renewal confirmed
+439010,2025-12-22,QBR,Qbr — Helix Data Corp,"Andrew Kim, Linda Chen",expansion_discussed,positive,Engagement with Helix Data Corp: expansion discussed
+439010,2026-01-07,QBR,Qbr — Helix Data Corp,"Andrew Kim, Linda Chen",positive_engagement,positive,Engagement with Helix Data Corp: positive engagement
+439010,2026-01-24,technical_review,Technical Review — Helix Data Corp,"Linda Chen, Andrew Kim",expansion_discussed,positive,Engagement with Helix Data Corp: expansion discussed
+439010,2026-02-09,technical_review,Technical Review — Helix Data Corp,"Linda Chen, Andrew Kim",expansion_discussed,positive,Engagement with Helix Data Corp: expansion discussed
+439010,2026-02-26,QBR,Qbr — Helix Data Corp,"Andrew Kim, Linda Chen",renewal_confirmed,positive,Engagement with Helix Data Corp: renewal confirmed
+439010,2026-03-14,check_in,Check In — Helix Data Corp,"Linda Chen, Andrew Kim",positive_engagement,positive,Engagement with Helix Data Corp: positive engagement
+439010,2026-03-31,technical_review,Technical Review — Helix Data Corp,"Linda Chen, Andrew Kim",positive_engagement,positive,Engagement with Helix Data Corp: positive engagement
+439011,2025-10-01,technical_review,Technical Review — Fortress Colocation,"Jake Roberts, Grace Liu",renewal_confirmed,positive,Engagement with Fortress Colocation: renewal confirmed
+439011,2025-10-19,check_in,Check In — Fortress Colocation,"Jake Roberts, Grace Liu",renewal_confirmed,positive,Engagement with Fortress Colocation: renewal confirmed
+439011,2025-11-06,technical_review,Technical Review — Fortress Colocation,"Jake Roberts, Grace Liu",positive_engagement,neutral,Engagement with Fortress Colocation: positive engagement
+439011,2025-11-24,check_in,Check In — Fortress Colocation,"Jake Roberts, Grace Liu",positive_engagement,neutral,Engagement with Fortress Colocation: positive engagement
+439011,2025-12-12,technical_review,Technical Review — Fortress Colocation,"Peter Hoffman, Grace Liu",renewal_confirmed,neutral,Engagement with Fortress Colocation: renewal confirmed
+439011,2025-12-30,check_in,Check In — Fortress Colocation,"Grace Liu, Peter Hoffman",renewal_confirmed,positive,Engagement with Fortress Colocation: renewal confirmed
+439011,2026-01-17,check_in,Check In — Fortress Colocation,"Jake Roberts, Peter Hoffman",expansion_discussed,neutral,Engagement with Fortress Colocation: expansion discussed
+439011,2026-02-04,QBR,Qbr — Fortress Colocation,"Grace Liu, Peter Hoffman",positive_engagement,positive,Engagement with Fortress Colocation: positive engagement
+439011,2026-02-22,technical_review,Technical Review — Fortress Colocation,"Grace Liu, Jake Roberts",positive_engagement,positive,Engagement with Fortress Colocation: positive engagement
+439011,2026-03-12,check_in,Check In — Fortress Colocation,"Grace Liu, Peter Hoffman",expansion_discussed,positive,Engagement with Fortress Colocation: expansion discussed
+439011,2026-03-31,QBR,Qbr — Fortress Colocation,"Jake Roberts, Peter Hoffman",expansion_discussed,neutral,Engagement with Fortress Colocation: expansion discussed
+439012,2025-10-01,check_in,Check In — NexGen AI Labs,"Olivia Reyes, Victor Chang",positive_engagement,neutral,Engagement with NexGen AI Labs: positive engagement
+439012,2025-10-17,check_in,Check In — NexGen AI Labs,"Victor Chang, Olivia Reyes",renewal_confirmed,neutral,Engagement with NexGen AI Labs: renewal confirmed
+439012,2025-11-02,QBR,Qbr — NexGen AI Labs,"Olivia Reyes, Victor Chang",expansion_discussed,neutral,Engagement with NexGen AI Labs: expansion discussed
+439012,2025-11-19,check_in,Check In — NexGen AI Labs,"Olivia Reyes, Victor Chang",renewal_confirmed,neutral,Engagement with NexGen AI Labs: renewal confirmed
+439012,2025-12-05,check_in,Check In — NexGen AI Labs,"Victor Chang, Olivia Reyes",renewal_confirmed,positive,Engagement with NexGen AI Labs: renewal confirmed
+439012,2025-12-22,technical_review,Technical Review — NexGen AI Labs,"Victor Chang, Olivia Reyes",renewal_confirmed,positive,Engagement with NexGen AI Labs: renewal confirmed
+439012,2026-01-07,technical_review,Technical Review — NexGen AI Labs,"Olivia Reyes, Victor Chang",positive_engagement,neutral,Engagement with NexGen AI Labs: positive engagement
+439012,2026-01-24,QBR,Qbr — NexGen AI Labs,"Olivia Reyes, Victor Chang",expansion_discussed,neutral,Engagement with NexGen AI Labs: expansion discussed
+439012,2026-02-09,check_in,Check In — NexGen AI Labs,"Olivia Reyes, Victor Chang",expansion_discussed,neutral,Engagement with NexGen AI Labs: expansion discussed
+439012,2026-02-26,check_in,Check In — NexGen AI Labs,"Olivia Reyes, Victor Chang",positive_engagement,neutral,Engagement with NexGen AI Labs: positive engagement
+439012,2026-03-14,technical_review,Technical Review — NexGen AI Labs,"Olivia Reyes, Victor Chang",positive_engagement,positive,Engagement with NexGen AI Labs: positive engagement
+439012,2026-03-31,technical_review,Technical Review — NexGen AI Labs,"Victor Chang, Olivia Reyes",renewal_confirmed,positive,Engagement with NexGen AI Labs: renewal confirmed
+439013,2025-10-01,QBR,Qbr — Redline Infrastructure,"Tom Bradley, Maria Santos",renewal_confirmed,positive,Engagement with Redline Infrastructure: renewal confirmed
+439013,2025-10-23,QBR,Qbr — Redline Infrastructure,"Tom Bradley, Maria Santos",renewal_confirmed,neutral,Engagement with Redline Infrastructure: renewal confirmed
+439013,2025-11-15,check_in,Check In — Redline Infrastructure,"Maria Santos, Tom Bradley",expansion_discussed,positive,Engagement with Redline Infrastructure: expansion discussed
+439013,2025-12-07,technical_review,Technical Review — Redline Infrastructure,"Tom Bradley, Maria Santos",renewal_confirmed,positive,Engagement with Redline Infrastructure: renewal confirmed
+439013,2025-12-30,check_in,Check In — Redline Infrastructure,"Tom Bradley, Maria Santos",renewal_confirmed,positive,Engagement with Redline Infrastructure: renewal confirmed
+439013,2026-01-22,technical_review,Technical Review — Redline Infrastructure,"Maria Santos, Tom Bradley",expansion_discussed,positive,Engagement with Redline Infrastructure: expansion discussed
+439013,2026-02-13,QBR,Qbr — Redline Infrastructure,"Tom Bradley, Maria Santos",renewal_confirmed,positive,Engagement with Redline Infrastructure: renewal confirmed
+439013,2026-03-08,technical_review,Technical Review — Redline Infrastructure,"Tom Bradley, Maria Santos",renewal_confirmed,neutral,Engagement with Redline Infrastructure: renewal confirmed
+439013,2026-03-31,check_in,Check In — Redline Infrastructure,"Maria Santos, Tom Bradley",expansion_discussed,positive,Engagement with Redline Infrastructure: expansion discussed
+439014,2025-10-01,technical_review,Technical Review — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",positive_engagement,neutral,Engagement with Cumulus Edge Computing: positive engagement
+439014,2025-10-17,QBR,Qbr — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",expansion_discussed,neutral,Engagement with Cumulus Edge Computing: expansion discussed
+439014,2025-11-02,check_in,Check In — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",renewal_confirmed,positive,Engagement with Cumulus Edge Computing: renewal confirmed
+439014,2025-11-19,check_in,Check In — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",renewal_confirmed,neutral,Engagement with Cumulus Edge Computing: renewal confirmed
+439014,2025-12-05,QBR,Qbr — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",expansion_discussed,positive,Engagement with Cumulus Edge Computing: expansion discussed
+439014,2025-12-22,check_in,Check In — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",renewal_confirmed,positive,Engagement with Cumulus Edge Computing: renewal confirmed
+439014,2026-01-07,QBR,Qbr — Cumulus Edge Computing,"Scott Peterson, Amy Taylor",expansion_discussed,neutral,Engagement with Cumulus Edge Computing: expansion discussed
+439014,2026-01-24,QBR,Qbr — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",expansion_discussed,neutral,Engagement with Cumulus Edge Computing: expansion discussed
+439014,2026-02-09,technical_review,Technical Review — Cumulus Edge Computing,"Scott Peterson, Amy Taylor",expansion_discussed,positive,Engagement with Cumulus Edge Computing: expansion discussed
+439014,2026-02-26,QBR,Qbr — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",renewal_confirmed,positive,Engagement with Cumulus Edge Computing: renewal confirmed
+439014,2026-03-14,technical_review,Technical Review — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",renewal_confirmed,positive,Engagement with Cumulus Edge Computing: renewal confirmed
+439014,2026-03-31,check_in,Check In — Cumulus Edge Computing,"Amy Taylor, Scott Peterson",positive_engagement,positive,Engagement with Cumulus Edge Computing: positive engagement
+439015,2025-10-01,technical_review,Technical Review — SkyBridge Networks,"Jessica Moore, Nathan Young",expansion_discussed,positive,Engagement with SkyBridge Networks: expansion discussed
+439015,2025-10-19,technical_review,Technical Review — SkyBridge Networks,"Jessica Moore, Nathan Young",expansion_discussed,positive,Engagement with SkyBridge Networks: expansion discussed
+439015,2025-11-06,check_in,Check In — SkyBridge Networks,"Jessica Moore, Nathan Young",expansion_discussed,positive,Engagement with SkyBridge Networks: expansion discussed
+439015,2025-11-24,check_in,Check In — SkyBridge Networks,"Nathan Young, Jessica Moore",positive_engagement,positive,Engagement with SkyBridge Networks: positive engagement
+439015,2025-12-12,QBR,Qbr — SkyBridge Networks,"Nathan Young, Jessica Moore",renewal_confirmed,positive,Engagement with SkyBridge Networks: renewal confirmed
+439015,2025-12-30,QBR,Qbr — SkyBridge Networks,"Jessica Moore, Nathan Young",expansion_discussed,positive,Engagement with SkyBridge Networks: expansion discussed
+439015,2026-01-17,QBR,Qbr — SkyBridge Networks,"Nathan Young, Jessica Moore",expansion_discussed,positive,Engagement with SkyBridge Networks: expansion discussed
+439015,2026-02-04,QBR,Qbr — SkyBridge Networks,"Nathan Young, Jessica Moore",positive_engagement,neutral,Engagement with SkyBridge Networks: positive engagement
+439015,2026-02-22,QBR,Qbr — SkyBridge Networks,"Jessica Moore, Nathan Young",renewal_confirmed,positive,Engagement with SkyBridge Networks: renewal confirmed
+439015,2026-03-12,technical_review,Technical Review — SkyBridge Networks,"Nathan Young, Jessica Moore",positive_engagement,neutral,Engagement with SkyBridge Networks: positive engagement
+439015,2026-03-31,check_in,Check In — SkyBridge Networks,"Jessica Moore, Nathan Young",expansion_discussed,neutral,Engagement with SkyBridge Networks: expansion discussed
+439016,2025-10-01,check_in,Check In — IronClad Systems,"William Harris, Christine Lee",positive_engagement,neutral,Engagement with IronClad Systems: positive engagement
+439016,2025-10-26,check_in,Check In — IronClad Systems,"Derek James, William Harris",renewal_confirmed,positive,Engagement with IronClad Systems: renewal confirmed
+439016,2025-11-21,QBR,Qbr — IronClad Systems,"Christine Lee, William Harris",renewal_confirmed,positive,Engagement with IronClad Systems: renewal confirmed
+439016,2025-12-17,QBR,Qbr — IronClad Systems,"Christine Lee, William Harris",renewal_confirmed,positive,Engagement with IronClad Systems: renewal confirmed
+439016,2026-01-12,technical_review,Technical Review — IronClad Systems,"Christine Lee, Derek James",expansion_discussed,neutral,Engagement with IronClad Systems: expansion discussed
+439016,2026-02-07,technical_review,Technical Review — IronClad Systems,"Derek James, William Harris",expansion_discussed,neutral,Engagement with IronClad Systems: expansion discussed
+439016,2026-03-05,technical_review,Technical Review — IronClad Systems,"William Harris, Derek James",positive_engagement,positive,Engagement with IronClad Systems: positive engagement
+439016,2026-03-31,check_in,Check In — IronClad Systems,"William Harris, Derek James",positive_engagement,positive,Engagement with IronClad Systems: positive engagement
+439017,2025-10-01,technical_review,Technical Review — TerraScale Solutions,"Frank Wilson, Helen Park",positive_engagement,positive,Engagement with TerraScale Solutions: positive engagement
+439017,2025-10-23,check_in,Check In — TerraScale Solutions,"Helen Park, Frank Wilson",renewal_confirmed,positive,Engagement with TerraScale Solutions: renewal confirmed
+439017,2025-11-15,QBR,Qbr — TerraScale Solutions,"Helen Park, Frank Wilson",expansion_discussed,positive,Engagement with TerraScale Solutions: expansion discussed
+439017,2025-12-07,QBR,Qbr — TerraScale Solutions,"Helen Park, Frank Wilson",positive_engagement,positive,Engagement with TerraScale Solutions: positive engagement
+439017,2025-12-30,check_in,Check In — TerraScale Solutions,"Frank Wilson, Helen Park",renewal_confirmed,positive,Engagement with TerraScale Solutions: renewal confirmed
+439017,2026-01-22,check_in,Check In — TerraScale Solutions,"Frank Wilson, Helen Park",positive_engagement,positive,Engagement with TerraScale Solutions: positive engagement
+439017,2026-02-13,check_in,Check In — TerraScale Solutions,"Helen Park, Frank Wilson",renewal_confirmed,positive,Engagement with TerraScale Solutions: renewal confirmed
+439017,2026-03-08,QBR,Qbr — TerraScale Solutions,"Helen Park, Frank Wilson",renewal_confirmed,neutral,Engagement with TerraScale Solutions: renewal confirmed
+439017,2026-03-31,check_in,Check In — TerraScale Solutions,"Helen Park, Frank Wilson",renewal_confirmed,positive,Engagement with TerraScale Solutions: renewal confirmed
+439018,2025-10-01,technical_review,Technical Review — Velocity AI Compute,"Carlos Mendez, Angela Rivera",expansion_discussed,positive,Engagement with Velocity AI Compute: expansion discussed
+439018,2025-10-26,QBR,Qbr — Velocity AI Compute,"Angela Rivera, Carlos Mendez",positive_engagement,positive,Engagement with Velocity AI Compute: positive engagement
+439018,2025-11-21,technical_review,Technical Review — Velocity AI Compute,"Carlos Mendez, Angela Rivera",positive_engagement,positive,Engagement with Velocity AI Compute: positive engagement
+439018,2025-12-17,check_in,Check In — Velocity AI Compute,"Carlos Mendez, Angela Rivera",renewal_confirmed,positive,Engagement with Velocity AI Compute: renewal confirmed
+439018,2026-01-12,QBR,Qbr — Velocity AI Compute,"Carlos Mendez, Angela Rivera",expansion_discussed,neutral,Engagement with Velocity AI Compute: expansion discussed
+439018,2026-02-07,check_in,Check In — Velocity AI Compute,"Angela Rivera, Carlos Mendez",positive_engagement,positive,Engagement with Velocity AI Compute: positive engagement
+439018,2026-03-05,check_in,Check In — Velocity AI Compute,"Carlos Mendez, Angela Rivera",expansion_discussed,positive,Engagement with Velocity AI Compute: expansion discussed
+439018,2026-03-31,technical_review,Technical Review — Velocity AI Compute,"Angela Rivera, Carlos Mendez",expansion_discussed,positive,Engagement with Velocity AI Compute: expansion discussed

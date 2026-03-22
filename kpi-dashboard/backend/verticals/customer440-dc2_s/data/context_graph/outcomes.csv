@@ -1,0 +1,65 @@
+account_id,outcome_date,outcome_type,title,description,revenue_impact,status,linked_signal_id
+440001,2026-02-27,revenue_at_risk,Churn risk identified — Titan Hyperscale Labs,Account showing signs of churn. ARR at risk.,-4100000.0,open,intervention_sig_440001_1
+440001,2026-03-02,engagement_decline,Engagement declining — Titan Hyperscale Labs,Stakeholder engagement dropped significantly.,-820000.0,in_progress,intervention_sig_440001_1
+440001,2026-03-18,renewal_uncertainty,Renewal at risk — Titan Hyperscale Labs,Renewal timeline uncertain due to unresolved issues.,-2460000.0,open,intervention_sig_440001_1
+440001,2026-02-17,engagement_recovery,Engagement Recovery — Titan Hyperscale Labs,Stakeholder engagement restored to healthy levels after CSM intervention.,658580.59,resolved,intervention_auto_recovery_440001_1
+440001,2026-03-10,revenue_protected,Revenue Protected — Titan Hyperscale Labs,Intervention protected ARR through executive engagement and service improvements.,1005714.4,resolved,intervention_auto_recovery_440001_1
+440002,2026-02-27,revenue_at_risk,Churn risk identified — Meridian Cloud Services,Account showing signs of churn. ARR at risk.,-2900000.0,open,intervention_sig_440002_1
+440002,2026-03-02,engagement_decline,Engagement declining — Meridian Cloud Services,Stakeholder engagement dropped significantly.,-580000.0,in_progress,intervention_sig_440002_1
+440002,2026-03-20,renewal_uncertainty,Renewal at risk — Meridian Cloud Services,Renewal timeline uncertain due to unresolved issues.,-1740000.0,open,intervention_sig_440002_1
+440002,2026-03-21,capacity_constraint,Capacity issues — Meridian Cloud Services,Infrastructure capacity constraints impacting service quality.,-870000.0,in_progress,intervention_sig_440002_1
+440002,2026-02-12,churn_averted,Churn Risk Averted — Meridian Cloud Services,Retention plan executed successfully. Account committed to 12-month renewal.,2847533.62,resolved,intervention_auto_recovery_440002_1
+440002,2026-02-28,revenue_protected,Revenue Protected — Meridian Cloud Services,Intervention protected ARR through executive engagement and service improvements.,723401.68,resolved,intervention_auto_recovery_440002_1
+440002,2026-03-15,engagement_recovery,Engagement Recovery — Meridian Cloud Services,Stakeholder engagement restored to healthy levels after CSM intervention.,494825.7,resolved,intervention_auto_recovery_440002_1
+440003,2026-02-27,revenue_at_risk,Churn risk identified — Apex Compute Holdings,Account showing signs of churn. ARR at risk.,-2050000.0,open,intervention_sig_440003_1
+440003,2026-03-02,engagement_decline,Engagement declining — Apex Compute Holdings,Stakeholder engagement dropped significantly.,-410000.0,in_progress,intervention_sig_440003_1
+440003,2026-03-17,renewal_uncertainty,Renewal at risk — Apex Compute Holdings,Renewal timeline uncertain due to unresolved issues.,-1230000.0,open,intervention_sig_440003_1
+440003,2026-02-12,churn_averted,Churn Risk Averted — Apex Compute Holdings,Retention plan executed successfully. Account committed to 12-month renewal.,1330157.54,resolved,intervention_auto_recovery_440003_1
+440003,2026-02-28,revenue_protected,Revenue Protected — Apex Compute Holdings,Intervention protected ARR through executive engagement and service improvements.,570861.09,resolved,intervention_auto_recovery_440003_1
+440003,2026-03-15,engagement_recovery,Engagement Recovery — Apex Compute Holdings,Stakeholder engagement restored to healthy levels after CSM intervention.,236633.89,resolved,intervention_auto_recovery_440003_1
+440004,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Pacific Data Systems,Renewal discussion delayed pending resolution of concerns.,-1300000.0,in_progress,intervention_sig_440004_1
+440004,2026-03-13,engagement_decline,Engagement cooling — Pacific Data Systems,Key stakeholder engagement frequency declining.,-650000.0,open,intervention_sig_440004_1
+440004,2026-03-26,partner_friction,Integration friction — Pacific Data Systems,P4 partner integration issues causing workflow disruption.,-520000.0,in_progress,intervention_sig_440004_1
+440004,2026-02-17,renewal_secured,Renewal Confirmed — Pacific Data Systems,Account renewed with expanded scope after successful intervention.,1409276.13,resolved,intervention_auto_recovery_440004_1
+440004,2026-03-10,engagement_recovery,Engagement Recovery — Pacific Data Systems,Regular QBR cadence re-established with key stakeholders.,549084.6,resolved,intervention_auto_recovery_440004_1
+440005,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Quantum Edge Networks,Renewal discussion delayed pending resolution of concerns.,-960000.0,in_progress,intervention_sig_440005_1
+440005,2026-03-13,engagement_decline,Engagement cooling — Quantum Edge Networks,Key stakeholder engagement frequency declining.,-480000.0,open,intervention_sig_440005_1
+440005,2026-02-17,engagement_recovery,Engagement Recovery — Quantum Edge Networks,Regular QBR cadence re-established with key stakeholders.,396342.1,resolved,intervention_auto_recovery_440005_1
+440005,2026-03-10,revenue_protected,Revenue Protected — Quantum Edge Networks,Renewal secured after addressing platform concerns.,800690.54,resolved,intervention_auto_recovery_440005_1
+440006,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Stratos AI Infrastructure,Renewal discussion delayed pending resolution of concerns.,-640000.0,in_progress,intervention_sig_440006_1
+440006,2026-03-13,engagement_decline,Engagement cooling — Stratos AI Infrastructure,Key stakeholder engagement frequency declining.,-320000.0,open,intervention_sig_440006_1
+440006,2026-03-22,partner_friction,Integration friction — Stratos AI Infrastructure,P4 partner integration issues causing workflow disruption.,-256000.0,in_progress,intervention_sig_440006_1
+440006,2026-02-17,renewal_secured,Renewal Confirmed — Stratos AI Infrastructure,Account renewed with expanded scope after successful intervention.,686915.44,resolved,intervention_auto_recovery_440006_1
+440006,2026-03-10,engagement_recovery,Engagement Recovery — Stratos AI Infrastructure,Regular QBR cadence re-established with key stakeholders.,204289.16,resolved,intervention_auto_recovery_440006_1
+440007,2026-02-27,renewal_uncertainty,Renewal discussion stalled — CyberVault DC,Renewal discussion delayed pending resolution of concerns.,-580000.0,in_progress,intervention_sig_440007_1
+440007,2026-03-13,engagement_decline,Engagement cooling — CyberVault DC,Key stakeholder engagement frequency declining.,-290000.0,open,intervention_sig_440007_1
+440007,2026-03-20,partner_friction,Integration friction — CyberVault DC,P4 partner integration issues causing workflow disruption.,-232000.0,in_progress,intervention_sig_440007_1
+440007,2026-02-17,renewal_secured,Renewal Confirmed — CyberVault DC,Account renewed with expanded scope after successful intervention.,579390.26,resolved,intervention_auto_recovery_440007_1
+440007,2026-03-10,revenue_protected,Revenue Protected — CyberVault DC,Renewal secured after addressing platform concerns.,654961.13,resolved,intervention_auto_recovery_440007_1
+440008,2026-03-13,expansion_opportunity,Expansion potential identified — Atlas Computing Group,Account showing strong expansion signals.,765000.0,open,intervention_sig_440008_1
+440008,2026-02-28,revenue_growth,Revenue Growth — Atlas Computing Group,Upsell opportunity converted. New workload onboarded.,520093.15,resolved,intervention_auto_recovery_440008_1
+440009,2026-03-13,expansion_opportunity,Expansion potential identified — Pinnacle Systems,Account showing strong expansion signals.,570000.0,open,intervention_sig_440009_1
+440009,2026-02-28,revenue_growth,Revenue Growth — Pinnacle Systems,Upsell opportunity converted. New workload onboarded.,656913.85,resolved,intervention_auto_recovery_440009_1
+440010,2026-03-13,expansion_opportunity,Expansion potential identified — Helix Data Corp,Account showing strong expansion signals.,390000.0,open,intervention_sig_440010_1
+440010,2026-02-28,expansion_approved,Expansion Approved — Helix Data Corp,Account approved additional capacity and new product modules.,516776.16,in_progress,intervention_auto_recovery_440010_1
+440011,2026-03-13,expansion_opportunity,Expansion potential identified — Fortress Colocation,Account showing strong expansion signals.,510000.0,open,intervention_sig_440011_1
+440011,2026-03-03,renewal_secured,Renewal on track — Fortress Colocation,Renewal discussion progressing positively.,170000.0,in_progress,intervention_sig_440011_1
+440011,2026-02-28,revenue_growth,Revenue Growth — Fortress Colocation,Upsell opportunity converted. New workload onboarded.,373805.49,resolved,intervention_auto_recovery_440011_1
+440012,2026-03-13,expansion_opportunity,Expansion potential identified — NexGen AI Labs,Account showing strong expansion signals.,315000.0,open,intervention_sig_440012_1
+440012,2026-02-28,expansion_approved,Expansion Approved — NexGen AI Labs,Account approved additional capacity and new product modules.,325095.55,in_progress,intervention_auto_recovery_440012_1
+440013,2026-03-13,expansion_opportunity,Expansion potential identified — Redline Infrastructure,Account showing strong expansion signals.,270000.0,open,intervention_sig_440013_1
+440013,2026-02-28,revenue_growth,Revenue Growth — Redline Infrastructure,Upsell opportunity converted. New workload onboarded.,311778.56,resolved,intervention_auto_recovery_440013_1
+440014,2026-03-13,expansion_opportunity,Expansion potential identified — Cumulus Edge Computing,Account showing strong expansion signals.,225000.0,open,intervention_sig_440014_1
+440014,2026-03-22,renewal_secured,Renewal on track — Cumulus Edge Computing,Renewal discussion progressing positively.,75000.0,in_progress,intervention_sig_440014_1
+440014,2026-02-28,expansion_approved,Expansion Approved — Cumulus Edge Computing,Account approved additional capacity and new product modules.,403440.55,in_progress,intervention_auto_recovery_440014_1
+440015,2026-03-13,expansion_opportunity,Expansion potential identified — SkyBridge Networks,Account showing strong expansion signals.,180000.0,open,intervention_sig_440015_1
+440015,2026-03-20,renewal_secured,Renewal on track — SkyBridge Networks,Renewal discussion progressing positively.,60000.0,in_progress,intervention_sig_440015_1
+440015,2026-02-28,expansion_approved,Expansion Approved — SkyBridge Networks,Account approved additional capacity and new product modules.,261353.52,in_progress,intervention_auto_recovery_440015_1
+440016,2026-03-13,expansion_opportunity,Expansion potential identified — IronClad Systems,Account showing strong expansion signals.,285000.0,open,intervention_sig_440016_1
+440016,2026-03-06,renewal_secured,Renewal on track — IronClad Systems,Renewal discussion progressing positively.,95000.0,in_progress,intervention_sig_440016_1
+440016,2026-02-28,expansion_approved,Expansion Approved — IronClad Systems,Account approved additional capacity and new product modules.,384261.83,in_progress,intervention_auto_recovery_440016_1
+440017,2026-03-13,expansion_opportunity,Expansion potential identified — TerraScale Solutions,Account showing strong expansion signals.,240000.0,open,intervention_sig_440017_1
+440017,2026-03-08,renewal_secured,Renewal on track — TerraScale Solutions,Renewal discussion progressing positively.,80000.0,in_progress,intervention_sig_440017_1
+440017,2026-02-28,expansion_approved,Expansion Approved — TerraScale Solutions,Account approved additional capacity and new product modules.,257917.25,in_progress,intervention_auto_recovery_440017_1
+440018,2026-03-13,expansion_opportunity,Expansion potential identified — Velocity AI Compute,Account showing strong expansion signals.,165000.0,open,intervention_sig_440018_1
+440018,2026-02-28,revenue_growth,Revenue Growth — Velocity AI Compute,Upsell opportunity converted. New workload onboarded.,142554.79,resolved,intervention_auto_recovery_440018_1

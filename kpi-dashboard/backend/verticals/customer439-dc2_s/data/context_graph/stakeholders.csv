@@ -1,0 +1,48 @@
+account_id,stakeholder_name,role,title,department,email,influence_score,sentiment,engagement_frequency,last_contact_date
+439001,James Morrison,VP Infrastructure,VP of Infrastructure,Engineering,james.morrison@titanhyperscalelabs.com,9,departed,none,2026-01-13
+439001,Lisa Park,successor,Director of Infrastructure,Engineering,lisa.park@titanhyperscalelabs.com,7,negative,monthly,2026-03-24
+439001,David Chen,technical_lead,Sr. Systems Engineer,Operations,david.chen@titanhyperscalelabs.com,5,neutral,weekly,2026-03-31
+439001,Rachel Kim,finance,VP Finance,Finance,rachel.kim@titanhyperscalelabs.com,6,neutral,quarterly,2026-01-25
+439002,Michael Torres,champion,CTO,Technology,michael.torres@meridiancloudservices.com,9,frustrated,weekly,2026-01-13
+439002,Amanda Foster,operations,VP Operations,Operations,amanda.foster@meridiancloudservices.com,7,negative,daily,2026-03-30
+439002,Kevin Wright,technical_lead,Infrastructure Manager,Operations,kevin.wright@meridiancloudservices.com,6,negative,daily,2026-03-30
+439003,Robert Singh,champion,VP of AI Platform,Engineering,robert.singh@apexcomputeholdings.com,7,supportive_but_constrained,biweekly,2026-01-13
+439003,Patricia Huang,economic_buyer,CFO,Finance,patricia.huang@apexcomputeholdings.com,10,cost_focused,quarterly,2026-02-12
+439003,Thomas Lee,technical_lead,Sr. ML Engineer,AI/ML,thomas.lee@apexcomputeholdings.com,5,positive,weekly,2026-03-30
+439004,Jennifer Walsh,champion,Head of AI/ML,Engineering,jennifer.walsh@pacificdatasystems.com,8,concerned,biweekly,2025-12-12
+439004,Mark Anderson,technical_lead,Platform Engineer,Engineering,mark.anderson@pacificdatasystems.com,6,neutral,weekly,2026-03-21
+439004,Susan Miller,executive_sponsor,CIO,IT,susan.miller@pacificdatasystems.com,9,neutral,monthly,2026-02-25
+439005,Alex Nguyen,champion,Director of Infrastructure,Engineering,alex.nguyen@quantumedgenetworks.com,7,disengaged,none_recent,2025-12-12
+439005,Diana Patel,partner_contact,Channel Manager,Partnerships,diana.patel@quantumedgenetworks.com,6,neutral,monthly,2026-03-26
+439005,Chris Johnson,executive_sponsor,SVP Technology,Technology,chris.johnson@quantumedgenetworks.com,9,unknown,none_recent,2025-10-17
+439006,Emily Zhang,champion,VP of AI,AI/ML,emily.zhang@stratosaiinfrastructure.com,8,positive,biweekly,2025-12-12
+439006,George Martinez,economic_buyer,VP Finance,Finance,george.martinez@stratosaiinfrastructure.com,8,cautious,quarterly,2026-01-06
+439006,Nina Kowalski,technical_lead,ML Platform Lead,Engineering,nina.kowalski@stratosaiinfrastructure.com,6,positive,weekly,2026-03-31
+439007,Brian O'Connor,champion,Director of Operations,Operations,brian.o'connor@cybervaultdc.com,7,improving,weekly,2025-12-12
+439007,Laura Bennett,csm,Assigned CSM,Customer Success,laura.bennett@cybervaultdc.com,5,positive,weekly,2026-03-31
+439007,Ryan Murphy,executive_sponsor,VP Engineering,Engineering,ryan.murphy@cybervaultdc.com,8,cautiously_positive,biweekly,2026-03-29
+439008,Karen White,champion,VP of Technology,Technology,karen.white@atlascomputinggroup.com,8,positive,monthly,2026-02-05
+439008,Jason Brooks,technical_lead,Infrastructure Lead,Operations,jason.brooks@atlascomputinggroup.com,6,positive,biweekly,2026-03-25
+439008,Michelle Davis,executive_sponsor,CEO,Executive,michelle.davis@atlascomputinggroup.com,10,positive,quarterly,2026-01-31
+439009,Daniel Foster,champion,Head of ML,AI/ML,daniel.foster@pinnaclesystems.com,7,positive,biweekly,2026-02-05
+439009,Sarah Collins,executive_sponsor,CTO,Technology,sarah.collins@pinnaclesystems.com,9,positive,monthly,2026-02-27
+439010,Andrew Kim,champion,Director of Engineering,Engineering,andrew.kim@helixdatacorp.com,7,positive,biweekly,2026-02-05
+439010,Linda Chen,partner_contact,Partner Manager,Partnerships,linda.chen@helixdatacorp.com,6,positive,monthly,2026-03-30
+439011,Peter Hoffman,champion,VP Infrastructure,Infrastructure,peter.hoffman@fortresscolocation.com,8,very_positive,biweekly,2026-02-05
+439011,Grace Liu,economic_buyer,CFO,Finance,grace.liu@fortresscolocation.com,9,positive,quarterly,2026-02-04
+439011,Jake Roberts,technical_lead,AI Platform Lead,Engineering,jake.roberts@fortresscolocation.com,6,positive,weekly,2026-03-21
+439012,Victor Chang,champion,Head of AI Research,Research,victor.chang@nexgenailabs.com,7,very_positive,weekly,2026-02-05
+439012,Olivia Reyes,technical_lead,ML Engineer,Engineering,olivia.reyes@nexgenailabs.com,5,positive,weekly,2026-03-23
+439013,Tom Bradley,champion,Infrastructure Manager,Operations,tom.bradley@redlineinfrastructure.com,6,positive,monthly,2026-02-05
+439013,Maria Santos,executive_sponsor,CTO,Technology,maria.santos@redlineinfrastructure.com,8,positive,quarterly,2026-01-07
+439014,Scott Peterson,champion,Director of Edge Computing,Engineering,scott.peterson@cumulusedgecomputing.com,7,positive,biweekly,2026-02-05
+439014,Amy Taylor,technical_lead,Edge Platform Lead,Engineering,amy.taylor@cumulusedgecomputing.com,5,positive,weekly,2026-03-28
+439015,Nathan Young,champion,VP of Engineering,Engineering,nathan.young@skybridgenetworks.com,8,very_positive,monthly,2026-02-05
+439015,Jessica Moore,executive_sponsor,CEO,Executive,jessica.moore@skybridgenetworks.com,10,very_positive,quarterly,2026-01-03
+439016,William Harris,champion,CTO,Technology,william.harris@ironcladsystems.com,9,advocate,monthly,2026-02-05
+439016,Christine Lee,executive_sponsor,CEO,Executive,christine.lee@ironcladsystems.com,10,very_positive,quarterly,2026-01-25
+439016,Derek James,technical_lead,Principal Engineer,Engineering,derek.james@ironcladsystems.com,6,positive,weekly,2026-03-31
+439017,Frank Wilson,champion,Director of AI Platform,Engineering,frank.wilson@terrascalesolutions.com,7,very_positive,biweekly,2026-02-05
+439017,Helen Park,economic_buyer,VP Finance,Finance,helen.park@terrascalesolutions.com,7,positive,quarterly,2026-02-09
+439018,Angela Rivera,champion,Founder & CTO,Executive,angela.rivera@velocityaicompute.com,10,very_positive,weekly,2026-02-05
+439018,Carlos Mendez,technical_lead,Lead ML Engineer,Engineering,carlos.mendez@velocityaicompute.com,6,positive,daily,2026-03-28

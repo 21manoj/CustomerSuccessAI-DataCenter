@@ -1,0 +1,65 @@
+account_id,outcome_date,outcome_type,title,description,revenue_impact,status,linked_signal_id
+444001,2026-02-27,revenue_at_risk,Churn risk identified — Vertex Compute,Account showing signs of churn. ARR at risk.,-4100000.0,open,intervention_sig_444001_1
+444001,2026-03-02,engagement_decline,Engagement declining — Vertex Compute,Stakeholder engagement dropped significantly.,-820000.0,in_progress,intervention_sig_444001_1
+444001,2026-03-17,renewal_uncertainty,Renewal at risk — Vertex Compute,Renewal timeline uncertain due to unresolved issues.,-2460000.0,open,intervention_sig_444001_1
+444001,2026-02-12,churn_averted,Churn Risk Averted — Vertex Compute,Retention plan executed successfully. Account committed to 12-month renewal.,3556923.1,resolved,intervention_auto_recovery_444001_1
+444001,2026-02-28,engagement_recovery,Engagement Recovery — Vertex Compute,Stakeholder engagement restored to healthy levels after CSM intervention.,712586.91,resolved,intervention_auto_recovery_444001_1
+444001,2026-03-15,revenue_protected,Revenue Protected — Vertex Compute,Intervention protected ARR through executive engagement and service improvements.,1348637.92,resolved,intervention_auto_recovery_444001_1
+444002,2026-02-27,revenue_at_risk,Churn risk identified — Ironridge Manufacturing,Account showing signs of churn. ARR at risk.,-2900000.0,open,intervention_sig_444002_1
+444002,2026-03-02,engagement_decline,Engagement declining — Ironridge Manufacturing,Stakeholder engagement dropped significantly.,-580000.0,in_progress,intervention_sig_444002_1
+444002,2026-03-08,renewal_uncertainty,Renewal at risk — Ironridge Manufacturing,Renewal timeline uncertain due to unresolved issues.,-1740000.0,open,intervention_sig_444002_1
+444002,2026-03-19,capacity_constraint,Capacity issues — Ironridge Manufacturing,Infrastructure capacity constraints impacting service quality.,-870000.0,in_progress,intervention_sig_444002_1
+444002,2026-02-17,engagement_recovery,Engagement Recovery — Ironridge Manufacturing,Stakeholder engagement restored to healthy levels after CSM intervention.,484560.88,resolved,intervention_auto_recovery_444002_1
+444002,2026-03-10,revenue_protected,Revenue Protected — Ironridge Manufacturing,Intervention protected ARR through executive engagement and service improvements.,1268581.56,resolved,intervention_auto_recovery_444002_1
+444003,2026-02-27,revenue_at_risk,Churn risk identified — Sentinel Cybersecurity,Account showing signs of churn. ARR at risk.,-2100000.0,open,intervention_sig_444003_1
+444003,2026-03-02,engagement_decline,Engagement declining — Sentinel Cybersecurity,Stakeholder engagement dropped significantly.,-420000.0,in_progress,intervention_sig_444003_1
+444003,2026-03-10,renewal_uncertainty,Renewal at risk — Sentinel Cybersecurity,Renewal timeline uncertain due to unresolved issues.,-1260000.0,open,intervention_sig_444003_1
+444003,2026-03-20,capacity_constraint,Capacity issues — Sentinel Cybersecurity,Infrastructure capacity constraints impacting service quality.,-630000.0,in_progress,intervention_sig_444003_1
+444003,2026-02-12,engagement_recovery,Engagement Recovery — Sentinel Cybersecurity,Stakeholder engagement restored to healthy levels after CSM intervention.,312811.12,resolved,intervention_auto_recovery_444003_1
+444003,2026-02-28,churn_averted,Churn Risk Averted — Sentinel Cybersecurity,Retention plan executed successfully. Account committed to 12-month renewal.,1946359.01,resolved,intervention_auto_recovery_444003_1
+444003,2026-03-15,revenue_protected,Revenue Protected — Sentinel Cybersecurity,Intervention protected ARR through executive engagement and service improvements.,881190.72,resolved,intervention_auto_recovery_444003_1
+444004,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Meridian Financial Systems,Renewal discussion delayed pending resolution of concerns.,-1300000.0,in_progress,intervention_sig_444004_1
+444004,2026-03-13,engagement_decline,Engagement cooling — Meridian Financial Systems,Key stakeholder engagement frequency declining.,-650000.0,open,intervention_sig_444004_1
+444004,2026-03-19,partner_friction,Integration friction — Meridian Financial Systems,P4 partner integration issues causing workflow disruption.,-520000.0,in_progress,intervention_sig_444004_1
+444004,2026-02-17,revenue_protected,Revenue Protected — Meridian Financial Systems,Renewal secured after addressing platform concerns.,1356350.26,resolved,intervention_auto_recovery_444004_1
+444004,2026-03-10,engagement_recovery,Engagement Recovery — Meridian Financial Systems,Regular QBR cadence re-established with key stakeholders.,436031.49,resolved,intervention_auto_recovery_444004_1
+444005,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Clearwater Health Platform,Renewal discussion delayed pending resolution of concerns.,-1020000.0,in_progress,intervention_sig_444005_1
+444005,2026-03-13,engagement_decline,Engagement cooling — Clearwater Health Platform,Key stakeholder engagement frequency declining.,-510000.0,open,intervention_sig_444005_1
+444005,2026-03-29,partner_friction,Integration friction — Clearwater Health Platform,P4 partner integration issues causing workflow disruption.,-408000.0,in_progress,intervention_sig_444005_1
+444005,2026-02-17,engagement_recovery,Engagement Recovery — Clearwater Health Platform,Regular QBR cadence re-established with key stakeholders.,314954.45,resolved,intervention_auto_recovery_444005_1
+444005,2026-03-10,revenue_protected,Revenue Protected — Clearwater Health Platform,Renewal secured after addressing platform concerns.,629000.89,resolved,intervention_auto_recovery_444005_1
+444006,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Quantum Edge Networks,Renewal discussion delayed pending resolution of concerns.,-960000.0,in_progress,intervention_sig_444006_1
+444006,2026-03-13,engagement_decline,Engagement cooling — Quantum Edge Networks,Key stakeholder engagement frequency declining.,-480000.0,open,intervention_sig_444006_1
+444006,2026-03-23,partner_friction,Integration friction — Quantum Edge Networks,P4 partner integration issues causing workflow disruption.,-384000.0,in_progress,intervention_sig_444006_1
+444006,2026-02-17,revenue_protected,Revenue Protected — Quantum Edge Networks,Renewal secured after addressing platform concerns.,955706.62,resolved,intervention_auto_recovery_444006_1
+444006,2026-03-10,engagement_recovery,Engagement Recovery — Quantum Edge Networks,Regular QBR cadence re-established with key stakeholders.,340491.89,resolved,intervention_auto_recovery_444006_1
+444007,2026-02-27,expansion_opportunity,Expansion potential identified — Blackstone Analytics,Account showing strong expansion signals.,720000.0,open,intervention_sig_444007_1
+444007,2026-03-06,renewal_secured,Renewal on track — Blackstone Analytics,Renewal discussion progressing positively.,240000.0,in_progress,intervention_sig_444007_1
+444007,2026-02-28,expansion_approved,Expansion Approved — Blackstone Analytics,Account approved additional capacity and new product modules.,974671.66,in_progress,intervention_auto_recovery_444007_1
+444008,2026-03-13,expansion_opportunity,Expansion potential identified — Ridgeline Energy Systems,Account showing strong expansion signals.,690000.0,open,intervention_sig_444008_1
+444008,2026-03-02,renewal_secured,Renewal on track — Ridgeline Energy Systems,Renewal discussion progressing positively.,230000.0,in_progress,intervention_sig_444008_1
+444008,2026-02-28,expansion_approved,Expansion Approved — Ridgeline Energy Systems,Account approved additional capacity and new product modules.,1016575.8,in_progress,intervention_auto_recovery_444008_1
+444009,2026-03-13,expansion_opportunity,Expansion potential identified — Oakwood Retail Tech,Account showing strong expansion signals.,570000.0,open,intervention_sig_444009_1
+444009,2026-03-02,renewal_secured,Renewal on track — Oakwood Retail Tech,Renewal discussion progressing positively.,190000.0,in_progress,intervention_sig_444009_1
+444009,2026-02-28,expansion_approved,Expansion Approved — Oakwood Retail Tech,Account approved additional capacity and new product modules.,801667.96,in_progress,intervention_auto_recovery_444009_1
+444010,2026-02-27,expansion_opportunity,Expansion potential identified — Crestline Logistics,Account showing strong expansion signals.,525000.0,open,intervention_sig_444010_1
+444010,2026-02-28,revenue_growth,Revenue Growth — Crestline Logistics,Upsell opportunity converted. New workload onboarded.,370645.04,resolved,intervention_auto_recovery_444010_1
+444011,2026-03-13,expansion_opportunity,Expansion potential identified — Pinnacle Biotech,Account showing strong expansion signals.,480000.0,open,intervention_sig_444011_1
+444011,2026-03-17,renewal_secured,Renewal on track — Pinnacle Biotech,Renewal discussion progressing positively.,160000.0,in_progress,intervention_sig_444011_1
+444011,2026-02-28,revenue_growth,Revenue Growth — Pinnacle Biotech,Upsell opportunity converted. New workload onboarded.,588760.08,resolved,intervention_auto_recovery_444011_1
+444012,2026-03-13,expansion_opportunity,Expansion potential identified — Northstar Media Group,Account showing strong expansion signals.,420000.0,open,intervention_sig_444012_1
+444012,2026-02-28,expansion_approved,Expansion Approved — Northstar Media Group,Account approved additional capacity and new product modules.,697125.66,in_progress,intervention_auto_recovery_444012_1
+444013,2026-03-13,expansion_opportunity,Expansion potential identified — Apex Robotics,Account showing strong expansion signals.,375000.0,open,intervention_sig_444013_1
+444013,2026-02-28,expansion_approved,Expansion Approved — Apex Robotics,Account approved additional capacity and new product modules.,516444.73,in_progress,intervention_auto_recovery_444013_1
+444014,2026-03-13,expansion_opportunity,Expansion potential identified — Vanguard Legal Tech,Account showing strong expansion signals.,360000.0,open,intervention_sig_444014_1
+444014,2026-03-01,renewal_secured,Renewal on track — Vanguard Legal Tech,Renewal discussion progressing positively.,120000.0,in_progress,intervention_sig_444014_1
+444014,2026-02-28,expansion_approved,Expansion Approved — Vanguard Legal Tech,Account approved additional capacity and new product modules.,507209.06,in_progress,intervention_auto_recovery_444014_1
+444015,2026-03-13,expansion_opportunity,Expansion potential identified — Terraforge Mining,Account showing strong expansion signals.,315000.0,open,intervention_sig_444015_1
+444015,2026-02-28,revenue_growth,Revenue Growth — Terraforge Mining,Upsell opportunity converted. New workload onboarded.,303139.84,resolved,intervention_auto_recovery_444015_1
+444016,2026-03-13,expansion_opportunity,Expansion potential identified — Cascade Aerospace,Account showing strong expansion signals.,270000.0,open,intervention_sig_444016_1
+444016,2026-03-29,renewal_secured,Renewal on track — Cascade Aerospace,Renewal discussion progressing positively.,90000.0,in_progress,intervention_sig_444016_1
+444016,2026-02-28,revenue_growth,Revenue Growth — Cascade Aerospace,Upsell opportunity converted. New workload onboarded.,182525.69,resolved,intervention_auto_recovery_444016_1
+444017,2026-03-13,expansion_opportunity,Expansion potential identified — Horizon EdTech,Account showing strong expansion signals.,225000.0,open,intervention_sig_444017_1
+444017,2026-02-28,expansion_approved,Expansion Approved — Horizon EdTech,Account approved additional capacity and new product modules.,385839.24,in_progress,intervention_auto_recovery_444017_1
+444018,2026-03-13,expansion_opportunity,Expansion potential identified — Forge Financial,Account showing strong expansion signals.,165000.0,open,intervention_sig_444018_1
+444018,2026-02-28,expansion_approved,Expansion Approved — Forge Financial,Account approved additional capacity and new product modules.,183017.3,in_progress,intervention_auto_recovery_444018_1

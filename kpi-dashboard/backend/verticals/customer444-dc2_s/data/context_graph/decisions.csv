@@ -1,0 +1,52 @@
+account_id,decision_date,decision_id,title,decision_maker_role,chosen_option,outcome_description,risk_level,revenue_impact
+444001,2026-02-27,intervention_dec_444001_1,Escalation to executive sponsor — Vertex Compute,executive_sponsor,Escalate account risk,Risk review initiated,high,-820000.0
+444001,2026-03-06,intervention_dec_444001_2,Emergency retention plan — Vertex Compute,champion,Launch retention playbook,Retention plan in progress,critical,-820000.0
+444001,2026-02-12,intervention_auto_dec_444001_1,CSM resource allocation approved — Vertex Compute,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,766969.2
+444001,2026-02-28,intervention_auto_dec_444001_2,Executive QBR cadence established — Vertex Compute,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,728939.19
+444001,2026-03-15,intervention_auto_dec_444001_3,GPU optimization playbook initiated — Vertex Compute,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,1002193.93
+444002,2026-02-27,intervention_dec_444002_1,Escalation to executive sponsor — Ironridge Manufacturing,executive_sponsor,Escalate account risk,Risk review initiated,high,-580000.0
+444002,2026-03-06,intervention_dec_444002_2,Emergency retention plan — Ironridge Manufacturing,champion,Launch retention playbook,Retention plan in progress,critical,-580000.0
+444002,2026-02-12,intervention_auto_dec_444002_1,CSM resource allocation approved — Ironridge Manufacturing,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,843475.78
+444002,2026-02-28,intervention_auto_dec_444002_2,Executive QBR cadence established — Ironridge Manufacturing,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,571537.28
+444002,2026-03-15,intervention_auto_dec_444002_3,GPU optimization playbook initiated — Ironridge Manufacturing,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,523068.27
+444003,2026-02-27,intervention_dec_444003_1,Escalation to executive sponsor — Sentinel Cybersecurity,executive_sponsor,Escalate account risk,Risk review initiated,high,-420000.0
+444003,2026-03-06,intervention_dec_444003_2,Emergency retention plan — Sentinel Cybersecurity,champion,Launch retention playbook,Retention plan in progress,critical,-420000.0
+444003,2026-02-12,intervention_auto_dec_444003_1,CSM resource allocation approved — Sentinel Cybersecurity,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,366016.27
+444003,2026-02-28,intervention_auto_dec_444003_2,Executive QBR cadence established — Sentinel Cybersecurity,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,236995.53
+444003,2026-03-15,intervention_auto_dec_444003_3,GPU optimization playbook initiated — Sentinel Cybersecurity,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,260265.77
+444004,2026-02-27,intervention_dec_444004_1,Renewal strategy review — Meridian Financial Systems,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-325000.0
+444004,2026-03-09,intervention_dec_444004_2,Feature adoption push — Meridian Financial Systems,champion,Schedule training sessions,Training plan approved,medium,-325000.0
+444004,2026-02-17,intervention_auto_dec_444004_1,Renewal incentive package approved — Meridian Financial Systems,economic_buyer,Offer multi-year discount,Incentive approved,medium,644271.07
+444004,2026-03-10,intervention_auto_dec_444004_2,Technical remediation plan — Meridian Financial Systems,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,420327.05
+444005,2026-02-27,intervention_dec_444005_1,Renewal strategy review — Clearwater Health Platform,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-255000.0
+444005,2026-03-09,intervention_dec_444005_2,Feature adoption push — Clearwater Health Platform,champion,Schedule training sessions,Training plan approved,medium,-255000.0
+444005,2026-02-17,intervention_auto_dec_444005_1,Renewal incentive package approved — Clearwater Health Platform,economic_buyer,Offer multi-year discount,Incentive approved,medium,421131.91
+444005,2026-03-10,intervention_auto_dec_444005_2,Technical remediation plan — Clearwater Health Platform,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,640375.35
+444006,2026-02-27,intervention_dec_444006_1,Renewal strategy review — Quantum Edge Networks,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-240000.0
+444006,2026-03-09,intervention_dec_444006_2,Feature adoption push — Quantum Edge Networks,champion,Schedule training sessions,Training plan approved,medium,-240000.0
+444006,2026-02-17,intervention_auto_dec_444006_1,Renewal incentive package approved — Quantum Edge Networks,economic_buyer,Offer multi-year discount,Incentive approved,medium,634221.26
+444006,2026-03-10,intervention_auto_dec_444006_2,Technical remediation plan — Quantum Edge Networks,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,283210.91
+444007,2026-03-13,intervention_dec_444007_1,Expansion discussion — Blackstone Analytics,champion,Propose upsell package,Expansion opportunity identified,low,480000.0
+444007,2026-02-28,intervention_auto_dec_444007_1,Expansion proposal submitted — Blackstone Analytics,champion,Propose additional capacity,Expansion under review,low,269796.16
+444008,2026-02-27,intervention_dec_444008_1,Expansion discussion — Ridgeline Energy Systems,champion,Propose upsell package,Expansion opportunity identified,low,460000.0
+444008,2026-02-28,intervention_auto_dec_444008_1,Expansion proposal submitted — Ridgeline Energy Systems,champion,Propose additional capacity,Expansion under review,low,522086.69
+444009,2026-02-27,intervention_dec_444009_1,Expansion discussion — Oakwood Retail Tech,champion,Propose upsell package,Expansion opportunity identified,low,380000.0
+444009,2026-02-28,intervention_auto_dec_444009_1,Expansion proposal submitted — Oakwood Retail Tech,champion,Propose additional capacity,Expansion under review,low,193660.13
+444010,2026-03-13,intervention_dec_444010_1,Expansion discussion — Crestline Logistics,champion,Propose upsell package,Expansion opportunity identified,low,350000.0
+444010,2026-02-28,intervention_auto_dec_444010_1,Expansion proposal submitted — Crestline Logistics,champion,Propose additional capacity,Expansion under review,low,201019.27
+444011,2026-02-27,intervention_dec_444011_1,Expansion discussion — Pinnacle Biotech,champion,Propose upsell package,Expansion opportunity identified,low,320000.0
+444011,2026-02-28,intervention_auto_dec_444011_1,Expansion proposal submitted — Pinnacle Biotech,champion,Propose additional capacity,Expansion under review,low,308245.04
+444012,2026-02-27,intervention_dec_444012_1,Expansion discussion — Northstar Media Group,champion,Propose upsell package,Expansion opportunity identified,low,280000.0
+444012,2026-02-28,intervention_auto_dec_444012_1,Expansion proposal submitted — Northstar Media Group,champion,Propose additional capacity,Expansion under review,low,386339.73
+444013,2026-02-27,intervention_dec_444013_1,Expansion discussion — Apex Robotics,champion,Propose upsell package,Expansion opportunity identified,low,250000.0
+444013,2026-02-28,intervention_auto_dec_444013_1,Expansion proposal submitted — Apex Robotics,champion,Propose additional capacity,Expansion under review,low,239748.59
+444014,2026-02-27,intervention_dec_444014_1,Expansion discussion — Vanguard Legal Tech,champion,Propose upsell package,Expansion opportunity identified,low,240000.0
+444014,2026-02-28,intervention_auto_dec_444014_1,Expansion proposal submitted — Vanguard Legal Tech,champion,Propose additional capacity,Expansion under review,low,194088.77
+444015,2026-02-27,intervention_dec_444015_1,Expansion discussion — Terraforge Mining,champion,Propose upsell package,Expansion opportunity identified,low,210000.0
+444015,2026-02-28,intervention_auto_dec_444015_1,Expansion proposal submitted — Terraforge Mining,champion,Propose additional capacity,Expansion under review,low,199953.4
+444016,2026-02-27,intervention_dec_444016_1,Expansion discussion — Cascade Aerospace,champion,Propose upsell package,Expansion opportunity identified,low,180000.0
+444016,2026-02-28,intervention_auto_dec_444016_1,Expansion proposal submitted — Cascade Aerospace,champion,Propose additional capacity,Expansion under review,low,109354.34
+444017,2026-02-27,intervention_dec_444017_1,Expansion discussion — Horizon EdTech,champion,Propose upsell package,Expansion opportunity identified,low,150000.0
+444017,2026-02-28,intervention_auto_dec_444017_1,Expansion proposal submitted — Horizon EdTech,champion,Propose additional capacity,Expansion under review,low,107581.32
+444018,2026-02-27,intervention_dec_444018_1,Expansion discussion — Forge Financial,champion,Propose upsell package,Expansion opportunity identified,low,110000.0
+444018,2026-02-28,intervention_auto_dec_444018_1,Expansion proposal submitted — Forge Financial,champion,Propose additional capacity,Expansion under review,low,108919.25

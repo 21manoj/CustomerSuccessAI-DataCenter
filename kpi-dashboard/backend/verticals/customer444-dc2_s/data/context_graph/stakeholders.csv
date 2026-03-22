@@ -1,0 +1,99 @@
+account_id,stakeholder_name,role,title,department,email,influence_score,sentiment,engagement_frequency,last_contact_date
+444001,Alex Rivera,VP Infrastructure,VP of Infrastructure,Engineering,alex.rivera@vertexcompute.com,5,neutral,9,2026-03-13
+444001,Priya Sharma,successor,Director of Infrastructure,Engineering,priya.sharma@vertexcompute.com,5,negative,4,2026-03-20
+444001,Marcus Chen,technical_lead,Sr. ML Platform Engineer,Engineering,marcus.chen@vertexcompute.com,5,neutral,6,2026-03-21
+444001,Diana Walsh,finance,VP Finance,Finance,diana.walsh@vertexcompute.com,5,neutral,3,2026-03-19
+444001,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@vertexcompute.com,8,negative,weekly,2026-03-21
+444001,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@vertexcompute.com,9,negative,monthly,2026-03-03
+444002,Robert Kim,champion,VP of Operations,Operations,robert.kim@ironridgemanufacturing.com,5,negative,7,2026-03-13
+444002,Jennifer Brooks,executive_sponsor,CTO,Technology,jennifer.brooks@ironridgemanufacturing.com,5,negative,3,2026-03-01
+444002,Kevin Wright,technical_lead,Infrastructure Manager,Operations,kevin.wright@ironridgemanufacturing.com,5,neutral,8,2026-03-12
+444002,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@ironridgemanufacturing.com,9,negative,monthly,2026-03-01
+444002,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@ironridgemanufacturing.com,6,negative,daily,2026-03-30
+444003,Thomas Anderson,champion,CISO,Security,thomas.anderson@sentinelcybersecurity.com,5,neutral,6,2026-03-13
+444003,George Martinez,economic_buyer,CFO,Finance,george.martinez@sentinelcybersecurity.com,5,negative,2,2026-03-23
+444003,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@sentinelcybersecurity.com,7,negative,weekly,2026-03-29
+444003,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@sentinelcybersecurity.com,10,negative,monthly,2026-03-31
+444003,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@sentinelcybersecurity.com,6,negative,daily,2026-03-30
+444004,Sarah Chen,champion,VP of Engineering,Engineering,sarah.chen@meridianfinancialsystems.com,8,neutral,weekly,2026-03-11
+444004,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@meridianfinancialsystems.com,9,neutral,monthly,2026-03-09
+444004,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@meridianfinancialsystems.com,7,neutral,weekly,2026-03-27
+444004,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@meridianfinancialsystems.com,10,neutral,monthly,2026-03-14
+444004,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@meridianfinancialsystems.com,6,neutral,daily,2026-03-29
+444005,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@clearwaterhealthplatform.com,8,neutral,weekly,2026-03-11
+444005,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@clearwaterhealthplatform.com,9,neutral,monthly,2026-03-28
+444005,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@clearwaterhealthplatform.com,7,neutral,weekly,2026-03-23
+444005,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@clearwaterhealthplatform.com,10,neutral,monthly,2026-03-25
+444005,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@clearwaterhealthplatform.com,6,neutral,daily,2026-03-28
+444006,Priya Sharma,champion,VP of Engineering,Engineering,priya.sharma@quantumedgenetworks.com,8,neutral,weekly,2026-03-11
+444006,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@quantumedgenetworks.com,9,neutral,monthly,2026-03-03
+444006,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@quantumedgenetworks.com,7,neutral,weekly,2026-03-30
+444006,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@quantumedgenetworks.com,10,neutral,monthly,2026-03-27
+444006,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@quantumedgenetworks.com,6,neutral,daily,2026-03-30
+444006,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@quantumedgenetworks.com,5,neutral,quarterly,2026-01-20
+444007,James Wilson,champion,VP of Engineering,Engineering,james.wilson@blackstoneanalytics.com,8,positive,weekly,2026-03-04
+444007,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@blackstoneanalytics.com,9,positive,monthly,2026-02-28
+444007,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@blackstoneanalytics.com,7,positive,weekly,2026-03-27
+444007,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@blackstoneanalytics.com,10,positive,monthly,2026-03-14
+444007,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@blackstoneanalytics.com,6,positive,daily,2026-03-30
+444008,Sarah Chen,champion,VP of Engineering,Engineering,sarah.chen@ridgelineenergysystems.com,8,positive,weekly,2026-03-06
+444008,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@ridgelineenergysystems.com,9,positive,monthly,2026-03-21
+444008,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@ridgelineenergysystems.com,7,positive,weekly,2026-03-22
+444008,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@ridgelineenergysystems.com,10,positive,monthly,2026-03-14
+444008,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@ridgelineenergysystems.com,6,positive,daily,2026-03-29
+444009,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@oakwoodretailtech.com,8,positive,weekly,2026-03-06
+444009,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@oakwoodretailtech.com,9,positive,monthly,2026-03-20
+444009,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@oakwoodretailtech.com,7,positive,weekly,2026-03-28
+444009,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@oakwoodretailtech.com,10,positive,monthly,2026-03-11
+444009,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@oakwoodretailtech.com,6,positive,daily,2026-03-31
+444009,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@oakwoodretailtech.com,5,positive,quarterly,2026-02-17
+444010,Priya Sharma,champion,VP of Engineering,Engineering,priya.sharma@crestlinelogistics.com,8,positive,weekly,2026-03-04
+444010,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@crestlinelogistics.com,9,positive,monthly,2026-03-13
+444010,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@crestlinelogistics.com,7,positive,weekly,2026-03-22
+444010,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@crestlinelogistics.com,10,positive,monthly,2026-03-01
+444010,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@crestlinelogistics.com,6,positive,daily,2026-03-28
+444010,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@crestlinelogistics.com,5,positive,quarterly,2026-01-28
+444011,James Wilson,champion,VP of Engineering,Engineering,james.wilson@pinnaclebiotech.com,8,positive,weekly,2026-03-06
+444011,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@pinnaclebiotech.com,9,positive,monthly,2026-02-28
+444011,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@pinnaclebiotech.com,7,positive,weekly,2026-03-24
+444011,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@pinnaclebiotech.com,10,positive,monthly,2026-03-13
+444011,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@pinnaclebiotech.com,6,positive,daily,2026-03-29
+444011,Diana Walsh,procurement,Director of Procurement,Operations,diana.walsh@pinnaclebiotech.com,5,positive,quarterly,2026-02-12
+444012,Sarah Chen,champion,VP of Engineering,Engineering,sarah.chen@northstarmediagroup.com,8,positive,weekly,2026-03-06
+444012,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@northstarmediagroup.com,9,positive,monthly,2026-03-20
+444012,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@northstarmediagroup.com,7,positive,weekly,2026-03-25
+444012,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@northstarmediagroup.com,10,positive,monthly,2026-03-02
+444012,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@northstarmediagroup.com,6,positive,daily,2026-03-28
+444013,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@apexrobotics.com,8,positive,weekly,2026-03-06
+444013,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@apexrobotics.com,9,positive,monthly,2026-03-02
+444013,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@apexrobotics.com,7,positive,weekly,2026-03-29
+444013,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@apexrobotics.com,10,positive,monthly,2026-03-05
+444013,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@apexrobotics.com,6,positive,daily,2026-03-30
+444013,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@apexrobotics.com,5,positive,quarterly,2025-12-27
+444014,Priya Sharma,champion,VP of Engineering,Engineering,priya.sharma@vanguardlegaltech.com,8,positive,weekly,2026-03-06
+444014,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@vanguardlegaltech.com,9,positive,monthly,2026-03-08
+444014,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@vanguardlegaltech.com,7,positive,weekly,2026-03-23
+444014,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@vanguardlegaltech.com,10,positive,monthly,2026-03-24
+444014,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@vanguardlegaltech.com,6,positive,daily,2026-03-29
+444014,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@vanguardlegaltech.com,5,positive,quarterly,2026-02-03
+444015,James Wilson,champion,VP of Engineering,Engineering,james.wilson@terraforgemining.com,8,positive,weekly,2026-03-06
+444015,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@terraforgemining.com,9,positive,monthly,2026-03-14
+444015,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@terraforgemining.com,7,positive,weekly,2026-03-22
+444015,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@terraforgemining.com,10,positive,monthly,2026-02-25
+444015,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@terraforgemining.com,6,positive,daily,2026-03-31
+444016,Sarah Chen,champion,VP of Engineering,Engineering,sarah.chen@cascadeaerospace.com,8,positive,weekly,2026-03-06
+444016,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@cascadeaerospace.com,9,positive,monthly,2026-03-22
+444016,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@cascadeaerospace.com,7,positive,weekly,2026-03-23
+444016,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@cascadeaerospace.com,10,positive,monthly,2026-03-22
+444016,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@cascadeaerospace.com,6,positive,daily,2026-03-31
+444016,Brian Foster,procurement,Director of Procurement,Operations,brian.foster@cascadeaerospace.com,5,positive,quarterly,2026-01-30
+444017,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@horizonedtech.com,8,positive,weekly,2026-03-06
+444017,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@horizonedtech.com,9,positive,monthly,2026-03-06
+444017,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@horizonedtech.com,7,positive,weekly,2026-03-28
+444017,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@horizonedtech.com,10,positive,monthly,2026-03-06
+444017,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@horizonedtech.com,6,positive,daily,2026-03-28
+444018,Priya Sharma,champion,VP of Engineering,Engineering,priya.sharma@forgefinancial.com,8,positive,weekly,2026-03-06
+444018,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@forgefinancial.com,9,positive,monthly,2026-03-20
+444018,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@forgefinancial.com,7,positive,weekly,2026-03-29
+444018,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@forgefinancial.com,10,positive,monthly,2026-03-07
+444018,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@forgefinancial.com,6,positive,daily,2026-03-31
