@@ -11,8 +11,28 @@ Behind feature flag: ASK_AI_V2
 
 import json
 import logging
+import os
+import sys
 
 logger = logging.getLogger(__name__)
+
+# Ensure mcp_server dir is on path for imports
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+_mcp_dir = os.path.join(_backend_dir, 'mcp_server')
+if _mcp_dir not in sys.path:
+    sys.path.insert(0, _mcp_dir)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+# The MCP modules require fastmcp at import time. If not installed,
+# we fall back to calling the underlying utility functions directly.
+_MCP_AVAILABLE = False
+try:
+    # Test if fastmcp is available (needed by cs_pulse_mcp_server)
+    import fastmcp  # noqa: F401
+    _MCP_AVAILABLE = True
+except ImportError:
+    logger.info("fastmcp not installed — Ask AI tools will use direct DB queries")
 
 # ─── Tool Definitions (Claude tool_use format) ───────────────────────────────
 # Each mirrors an MCP tool but uses Claude's JSON Schema tool format.
@@ -68,7 +88,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_context_graph_mermaid",
-        "description": "Generate a Mermaid flowchart of the context graph for an account. Shows signals, decisions, outcomes with causal edges. Use when asked to visualize or show the context graph.",
+        "description": "Generate a Mermaid flowchart of the context graph for an account. Shows signals, decisions, outcomes with causal edges. Use when asked to visualize or show the context graph. IMPORTANT: You must first call list_accounts to get the correct account_id — account_ids are large integers like 444002, not small numbers.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -202,87 +222,219 @@ def execute_tool(tool_name: str, tool_input: dict, customer_id: int) -> dict:
     tool_input['customer_id'] = customer_id
 
     try:
-        if tool_name == 'list_accounts':
-            from mcp_server.cs_pulse_mcp_server import list_accounts
-            return list_accounts(customer_id=customer_id)
-
-        elif tool_name == 'get_account_health':
-            from mcp_server.cs_pulse_mcp_server import get_account_health
-            return get_account_health(customer_id=customer_id, account_id=tool_input['account_id'])
-
-        elif tool_name == 'get_at_risk_accounts':
-            from mcp_server.cs_pulse_mcp_server import get_at_risk_accounts
-            return get_at_risk_accounts(customer_id=customer_id, threshold=tool_input.get('threshold', 70.0))
-
-        elif tool_name == 'get_revenue_at_risk':
-            from mcp_server.cs_pulse_intelligence import get_revenue_at_risk
-            return get_revenue_at_risk(customer_id=customer_id, account_id=tool_input['account_id'])
-
-        elif tool_name == 'get_context_graph_mermaid':
-            from mcp_server.cs_pulse_intelligence import get_context_graph_mermaid
-            return get_context_graph_mermaid(
-                customer_id=customer_id,
-                account_id=tool_input['account_id'],
-                max_nodes=tool_input.get('max_nodes', 30)
-            )
-
-        elif tool_name == 'get_account_journey_timeline':
-            from mcp_server.cs_pulse_intelligence import get_account_journey_timeline
-            return get_account_journey_timeline(
-                customer_id=customer_id,
-                account_id=tool_input['account_id'],
-                limit=tool_input.get('limit', 50)
-            )
-
-        elif tool_name == 'search_signals':
-            from mcp_server.cs_pulse_intelligence import search_signals
-            return search_signals(
-                customer_id=customer_id,
-                account_id=tool_input['account_id'],
-                node_type=tool_input.get('node_type', 'SIGNAL'),
-                node_subtype=tool_input.get('node_subtype'),
-                limit=tool_input.get('limit', 20)
-            )
-
-        elif tool_name == 'get_stakeholder_map':
-            from mcp_server.cs_pulse_intelligence import get_stakeholder_map
-            return get_stakeholder_map(customer_id=customer_id, account_id=tool_input['account_id'])
-
-        elif tool_name == 'get_csm_daily_actions':
-            from mcp_server.cs_pulse_admin import get_csm_daily_actions
-            return get_csm_daily_actions(customer_id=customer_id)
-
-        elif tool_name == 'calculate_power_of_1':
-            from mcp_server.cs_pulse_revenue import calculate_power_of_1
-            return calculate_power_of_1(
-                customer_id=customer_id,
-                metric_id=tool_input['metric_id'],
-                improvement_pct=tool_input.get('improvement_pct', 1.0)
-            )
-
-        elif tool_name == 'get_outcome_roi_story':
-            from mcp_server.cs_pulse_revenue import get_outcome_roi_story
-            return get_outcome_roi_story(
-                customer_id=customer_id,
-                account_id=tool_input['account_id'],
-                target_improvement_pct=tool_input.get('target_improvement_pct', 10),
-                projection_months=tool_input.get('projection_months', 12)
-            )
-
-        elif tool_name == 'get_playbook_recommendations':
-            from mcp_server.cs_pulse_revenue import get_playbook_recommendations
-            return get_playbook_recommendations(customer_id=customer_id, account_id=tool_input['account_id'])
-
-        elif tool_name == 'get_portfolio_roi_summary':
-            from mcp_server.cs_pulse_revenue import get_portfolio_roi_summary
-            return get_portfolio_roi_summary(customer_id=customer_id)
-
+        logger.info(f"execute_tool: {tool_name} input={tool_input} customer={customer_id} mcp={_MCP_AVAILABLE}")
+        # Route to the appropriate implementation
+        if _MCP_AVAILABLE:
+            return _execute_via_mcp(tool_name, tool_input, customer_id)
         else:
-            return {"error": f"Unknown tool: {tool_name}"}
+            return _execute_direct(tool_name, tool_input, customer_id)
 
     except Exception as e:
         logger.error(f"Tool execution error [{tool_name}]: {e}", exc_info=True)
         return {"error": f"Tool {tool_name} failed: {str(e)}"}
+
+
+def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict:
+    """Execute via MCP module functions (when fastmcp is installed)."""
+    if tool_name == 'list_accounts':
+        from mcp_server.cs_pulse_mcp_server import list_accounts
+        return list_accounts(customer_id=customer_id)
+    elif tool_name == 'get_account_health':
+        from mcp_server.cs_pulse_mcp_server import get_account_health
+        return get_account_health(customer_id=customer_id, account_id=tool_input['account_id'])
+    elif tool_name == 'get_at_risk_accounts':
+        from mcp_server.cs_pulse_mcp_server import get_at_risk_accounts
+        return get_at_risk_accounts(customer_id=customer_id, threshold=tool_input.get('threshold', 70.0))
+    elif tool_name == 'get_revenue_at_risk':
+        from mcp_server.cs_pulse_intelligence import get_revenue_at_risk
+        return get_revenue_at_risk(customer_id=customer_id, account_id=tool_input['account_id'])
+    elif tool_name == 'get_context_graph_mermaid':
+        from mcp_server.cs_pulse_intelligence import get_context_graph_mermaid
+        return get_context_graph_mermaid(customer_id=customer_id, account_id=tool_input['account_id'], max_nodes=tool_input.get('max_nodes', 30))
+    elif tool_name == 'get_account_journey_timeline':
+        from mcp_server.cs_pulse_intelligence import get_account_journey_timeline
+        return get_account_journey_timeline(customer_id=customer_id, account_id=tool_input['account_id'], limit=tool_input.get('limit', 50))
+    elif tool_name == 'search_signals':
+        from mcp_server.cs_pulse_intelligence import search_signals
+        return search_signals(customer_id=customer_id, account_id=tool_input['account_id'], node_type=tool_input.get('node_type', 'SIGNAL'), node_subtype=tool_input.get('node_subtype'), limit=tool_input.get('limit', 20))
+    elif tool_name == 'get_stakeholder_map':
+        from mcp_server.cs_pulse_intelligence import get_stakeholder_map
+        return get_stakeholder_map(customer_id=customer_id, account_id=tool_input['account_id'])
+    elif tool_name == 'get_csm_daily_actions':
+        from mcp_server.cs_pulse_admin import get_csm_daily_actions
+        return get_csm_daily_actions(customer_id=customer_id)
+    elif tool_name == 'calculate_power_of_1':
+        from mcp_server.cs_pulse_revenue import calculate_power_of_1
+        return calculate_power_of_1(customer_id=customer_id, metric_id=tool_input['metric_id'], improvement_pct=tool_input.get('improvement_pct', 1.0))
+    elif tool_name == 'get_outcome_roi_story':
+        from mcp_server.cs_pulse_revenue import get_outcome_roi_story
+        return get_outcome_roi_story(customer_id=customer_id, account_id=tool_input['account_id'], target_improvement_pct=tool_input.get('target_improvement_pct', 10), projection_months=tool_input.get('projection_months', 12))
+    elif tool_name == 'get_playbook_recommendations':
+        from mcp_server.cs_pulse_revenue import get_playbook_recommendations
+        return get_playbook_recommendations(customer_id=customer_id, account_id=tool_input['account_id'])
+    elif tool_name == 'get_portfolio_roi_summary':
+        from mcp_server.cs_pulse_revenue import get_portfolio_roi_summary
+        return get_portfolio_roi_summary(customer_id=customer_id)
+    else:
+        return {"error": f"Unknown tool: {tool_name}"}
+
+
+def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
+    """Execute directly via DB queries (when fastmcp is NOT installed)."""
+    from models import Account, HealthScore, PillarScore, ContextNode, ContextEdge, db
+    import utils.health_thresholds as ht
+
+    if tool_name == 'list_accounts':
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        result = []
+        for a in accounts:
+            hs = HealthScore.query.filter_by(account_id=a.account_id).order_by(HealthScore.measurement_month.desc()).first()
+            score = float(hs.health_score) if hs else 0
+            result.append({
+                'account_id': a.account_id,
+                'account_name': a.account_name,
+                'health_score': round(score, 1),
+                'health_status': ht.classify(score),
+                'arr': float(a.revenue or 0),
+                'industry': a.industry or '',
+            })
+        return {'accounts': sorted(result, key=lambda x: x['health_score']), 'count': len(result)}
+
+    elif tool_name == 'get_account_health':
+        account_id = tool_input['account_id']
+        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
+        if not acct:
+            return {"error": f"Account {account_id} not found"}
+        hs = HealthScore.query.filter_by(account_id=account_id).order_by(HealthScore.measurement_month.desc()).first()
+        score = float(hs.health_score) if hs else 0
+        # Get pillar scores
+        pillars = PillarScore.query.filter_by(account_id=account_id).order_by(PillarScore.measurement_month.desc()).all()
+        seen = {}
+        for p in pillars:
+            if p.pillar_code not in seen:
+                seen[p.pillar_code] = round(float(p.pillar_score), 1)
+        return {
+            'account_id': account_id,
+            'account_name': acct.account_name,
+            'health_score': round(score, 1),
+            'health_status': ht.classify(score),
+            'arr': float(acct.revenue or 0),
+            'pillar_scores': seen,
+        }
+
+    elif tool_name == 'get_at_risk_accounts':
+        threshold = tool_input.get('threshold', 70.0)
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        result = []
+        for a in accounts:
+            hs = HealthScore.query.filter_by(account_id=a.account_id).order_by(HealthScore.measurement_month.desc()).first()
+            score = float(hs.health_score) if hs else 0
+            if score < threshold:
+                result.append({
+                    'account_id': a.account_id,
+                    'account_name': a.account_name,
+                    'health_score': round(score, 1),
+                    'health_status': ht.classify(score),
+                    'arr': float(a.revenue or 0),
+                })
+        return {'accounts': sorted(result, key=lambda x: x['health_score']), 'count': len(result), 'threshold': threshold}
+
+    elif tool_name == 'get_revenue_at_risk':
+        account_id = tool_input['account_id']
+        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='OUTCOME').all()
+        at_risk = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'at_risk')
+        protected = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'protected')
+        expansion = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'expansion')
+        lost = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'lost')
+        return {
+            'account_id': account_id,
+            'revenue_at_risk': at_risk,
+            'revenue_protected': protected,
+            'expansion_pipeline': expansion,
+            'lost': lost,
+        }
+
+    elif tool_name == 'get_context_graph_mermaid':
+        # Simplified mermaid generation
+        account_id = tool_input['account_id']
+        max_nodes = tool_input.get('max_nodes', 30)
+        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id).order_by(ContextNode.occurred_at.desc()).limit(max_nodes).all()
+        if not nodes:
+            return {'mermaid': 'flowchart TD\n    empty["No context graph data"]', 'node_count': 0, 'edge_count': 0}
+
+        node_ids = [n.node_id for n in nodes]
+        edges = ContextEdge.query.filter(ContextEdge.from_node_id.in_(node_ids), ContextEdge.to_node_id.in_(node_ids)).all()
+
+        type_styles = {'SIGNAL': 'signal', 'DECISION': 'decision', 'OUTCOME': 'outcome', 'STAKEHOLDER': 'stakeholder'}
+        lines = ['flowchart TD']
+        lines.append('    classDef signal fill:#FFA500,stroke:#FFA500,color:#000')
+        lines.append('    classDef decision fill:#4169E1,stroke:#4169E1,color:#fff')
+        lines.append('    classDef outcome fill:#2E8B57,stroke:#2E8B57,color:#fff')
+        lines.append('    classDef stakeholder fill:#8B5CF6,stroke:#8B5CF6,color:#fff')
+
+        for n in nodes:
+            label = (n.title or f"Node {n.node_id}")[:40]
+            cls = type_styles.get(n.node_type, 'signal')
+            lines.append(f'    n{n.node_id}["{label}"]:::{cls}')
+
+        for e in edges:
+            lines.append(f'    n{e.from_node_id} -->|{e.edge_type or ""}| n{e.to_node_id}')
+
+        return {'mermaid': '\n'.join(lines), 'node_count': len(nodes), 'edge_count': len(edges)}
+
+    elif tool_name == 'get_account_journey_timeline':
+        account_id = tool_input['account_id']
+        limit = tool_input.get('limit', 50)
+        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id).order_by(ContextNode.occurred_at.asc()).limit(limit).all()
+        timeline = [{
+            'node_id': n.node_id,
+            'node_type': n.node_type,
+            'node_subtype': n.node_subtype,
+            'title': n.title,
+            'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
+            'revenue_impact': float(n.revenue_impact) if n.revenue_impact else None,
+            'revenue_impact_type': n.revenue_impact_type,
+        } for n in nodes]
+        return {'account_id': account_id, 'timeline': timeline, 'event_count': len(timeline)}
+
+    elif tool_name == 'search_signals':
+        account_id = tool_input['account_id']
+        q = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type=tool_input.get('node_type', 'SIGNAL'))
+        if tool_input.get('node_subtype'):
+            q = q.filter_by(node_subtype=tool_input['node_subtype'])
+        nodes = q.order_by(ContextNode.occurred_at.desc()).limit(tool_input.get('limit', 20)).all()
+        return {'nodes': [{'node_id': n.node_id, 'title': n.title, 'node_type': n.node_type, 'node_subtype': n.node_subtype, 'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None, 'revenue_impact': float(n.revenue_impact) if n.revenue_impact else None} for n in nodes], 'count': len(nodes)}
+
+    elif tool_name == 'get_stakeholder_map':
+        account_id = tool_input['account_id']
+        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='STAKEHOLDER').all()
+        return {'stakeholders': [{'node_id': n.node_id, 'title': n.title, 'node_subtype': n.node_subtype, 'properties': n.properties or {}} for n in nodes], 'stakeholder_count': len(nodes)}
+
+    elif tool_name == 'get_csm_daily_actions':
+        # Simplified: return at-risk accounts as action items
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        actions = []
+        for a in accounts:
+            hs = HealthScore.query.filter_by(account_id=a.account_id).order_by(HealthScore.measurement_month.desc()).first()
+            score = float(hs.health_score) if hs else 50
+            if score < ht.healthy_min():
+                urgency = 'critical' if score < ht.at_risk_min() else 'high'
+                actions.append({
+                    'account_name': a.account_name,
+                    'account_id': a.account_id,
+                    'health_score': round(score, 1),
+                    'urgency': urgency,
+                    'action': f"Review health for {a.account_name} (score: {round(score, 1)})",
+                    'dollar_impact': f"${a.revenue or 0:,.0f}",
+                })
+        return {'actions': sorted(actions, key=lambda x: x['health_score'])[:10], 'count': len(actions)}
+
+    elif tool_name in ('calculate_power_of_1', 'get_outcome_roi_story', 'get_playbook_recommendations', 'get_portfolio_roi_summary'):
+        # These require complex business logic — return a helpful message
+        return {"note": f"Tool {tool_name} requires the full MCP server module. Install fastmcp for full functionality.", "data": {}}
+
+    else:
+        return {"error": f"Unknown tool: {tool_name}"}
 
 
 # ─── Artifact Extraction ─────────────────────────────────────────────────────

@@ -79,6 +79,7 @@ PORTFOLIO CONTEXT (lightweight summary — use tools for details):
 
 INSTRUCTIONS:
 - Use the provided tools to fetch specific data when needed. Do NOT guess numbers.
+- CRITICAL: Account IDs are large integers (e.g. 444001, 444002). ALWAYS call list_accounts first to get the correct account_id before calling any account-specific tool. Never guess account IDs.
 - When showing account-level data, always call the appropriate tool first.
 - Use markdown formatting: **bold** for key metrics, bullet points for lists.
 - Keep responses concise (200-500 words) unless the user asks for detail.
@@ -225,7 +226,7 @@ def ask_v2():
         for round_num in range(max_rounds):
             try:
                 response = client.messages.create(
-                    model="claude-sonnet-4-5-20250514",
+                    model="claude-sonnet-4-20250514",
                     system=system_prompt,
                     messages=messages,
                     tools=TOOL_DEFINITIONS,

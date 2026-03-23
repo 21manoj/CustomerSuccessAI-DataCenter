@@ -29,7 +29,7 @@ import {
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
-import AskAnythingDialog from './AskAnythingDialog';
+import AskAIPortal from '../ai/AskAIPortal';
 
 // ============================================================================
 // TYPES
@@ -1117,7 +1117,7 @@ const CEODashboard: React.FC = () => {
       </aside>
 
       {/* Floating AI Advisor */}
-      <AskAnythingDialog persona="ceo" />
+      <AskAIPortal persona="ceo" />
     </div>
   );
 };
