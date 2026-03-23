@@ -83,8 +83,11 @@ export interface CustomerDetail extends Customer {
 
 export interface VerticalInfo {
   vertical: string;
-  config_types: string[];
-  template_count: number;
+  label: string;
+  pillar_count: number;
+  kpi_count: number;
+  pillar_names: Record<string, string>;
+  default_weights: Record<string, number>;
 }
 
 export interface DashboardStats {
@@ -421,12 +424,8 @@ export async function fetchLicenseWarnings(): Promise<LicenseWarning[]> {
 // ---------------------------------------------------------------------------
 
 export async function fetchVerticals(): Promise<VerticalInfo[]> {
-  const raw = await request<{ verticals: Array<{ vertical: string; template_count: number }> }>('/verticals');
-  return (raw.verticals ?? []).map((v) => ({
-    vertical: v.vertical,
-    config_types: [],
-    template_count: v.template_count ?? 0,
-  }));
+  const raw = await request<{ verticals: VerticalInfo[] }>('/verticals');
+  return raw.verticals ?? [];
 }
 
 export async function fetchVerticalTemplates(vertical: string): Promise<VerticalTemplate[]> {

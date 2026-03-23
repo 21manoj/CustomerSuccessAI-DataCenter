@@ -822,20 +822,72 @@ def license_warnings():
 @admin_ui_api.route("/api/admin-ui/verticals", methods=["GET"])
 @super_admin_required
 def list_verticals():
-    """List available verticals."""
-    return jsonify({
-        "verticals": [
-            {"vertical": "dc2_s", "template_count": 5},
-            {"vertical": "saas", "template_count": 3},
-        ]
-    })
+    """List available verticals with KPI/pillar counts from the registry."""
+    from utils.vertical_registry import get_pillars, get_kpis, SUPPORTED_VERTICALS
+
+    verticals = []
+    for v in sorted(SUPPORTED_VERTICALS):
+        try:
+            pillars = get_pillars(v)
+            kpis = get_kpis(v)
+            label = {
+                'dc2_s': 'Data Center (DC2_S)',
+                'saas_premium': 'SaaS Premium',
+            }.get(v, v)
+            verticals.append({
+                "vertical": v,
+                "label": label,
+                "pillar_count": len(pillars),
+                "kpi_count": len(kpis),
+                "pillar_names": {pid: p.get('name', pid) for pid, p in pillars.items()},
+                "default_weights": {pid: p.get('weight_l2', 0.2) for pid, p in pillars.items()},
+            })
+        except Exception:
+            verticals.append({"vertical": v, "label": v, "pillar_count": 0, "kpi_count": 0})
+    return jsonify({"verticals": verticals})
 
 
 @admin_ui_api.route("/api/admin-ui/verticals/<vertical>/templates", methods=["GET"])
 @super_admin_required
 def get_vertical_templates(vertical):
-    """Get config templates for a vertical."""
-    return jsonify({"templates": []})
+    """Get KPI catalog and pillar config for a vertical."""
+    from utils.vertical_registry import get_pillars, get_kpis, normalize_vertical
+
+    v = normalize_vertical(vertical)
+    try:
+        pillars = get_pillars(v)
+        kpis = get_kpis(v)
+    except ValueError:
+        return jsonify({"error": f"Unknown vertical: {vertical}"}), 404
+
+    # Build pillar summary with KPI list per pillar
+    pillar_details = {}
+    for pid, pdata in pillars.items():
+        pillar_kpis = {k: kd for k, kd in kpis.items() if kd.get('pillar') == pid}
+        pillar_details[pid] = {
+            "name": pdata.get('name', pid),
+            "weight_l2": pdata.get('weight_l2', 0.2),
+            "kpi_count": len(pillar_kpis),
+            "kpis": {
+                code: {
+                    "name": kd.get('name', code),
+                    "weight_l1": kd.get('weight_l1', 0),
+                    "unit": kd.get('unit', 'numeric'),
+                    "higher_is_better": kd.get('higher_is_better', True),
+                    "target": kd.get('target', {}),
+                    "ranges": kd.get('ranges', {}),
+                    "frequency": kd.get('frequency', 'monthly'),
+                }
+                for code, kd in sorted(pillar_kpis.items())
+            },
+        }
+
+    return jsonify({
+        "vertical": v,
+        "pillar_count": len(pillars),
+        "kpi_count": len(kpis),
+        "pillars": pillar_details,
+    })
 
 
 # ---------------------------------------------------------------------------
