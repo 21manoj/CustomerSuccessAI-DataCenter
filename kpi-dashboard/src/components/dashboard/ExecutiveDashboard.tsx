@@ -517,7 +517,8 @@ const AccountHealthCard: React.FC<{
         {/* Pillar Scores */}
         <div className="space-y-2 mb-4">
           {pillars.map(pillar => {
-            const score = account.pillar_scores[pillar.key as keyof typeof account.pillar_scores];
+            const rawScore = account.pillar_scores[pillar.key as keyof typeof account.pillar_scores];
+            const score = Math.round((rawScore ?? 0) * 10) / 10;
             return (
               <div key={pillar.key} className="flex items-center">
                 <div className="w-24 flex items-center text-xs text-gray-600">
@@ -527,7 +528,7 @@ const AccountHealthCard: React.FC<{
                 <div className="flex-1 mx-2">
                   <ProgressBar value={score} color={getScoreColor(score)} />
                 </div>
-                <div className="w-8 text-right text-xs font-medium">{score}</div>
+                <div className="w-8 text-right text-xs font-medium">{score.toFixed(1)}</div>
               </div>
             );
           })}
@@ -1054,7 +1055,7 @@ const ExecutiveDashboard: React.FC = () => {
           const arrAtRisk = accountsArray
             .filter((acc: any) => {
               const accHealth = healthAccounts.find(a => String(a.account_id) === String(acc.account_id));
-              return accHealth && accHealth.health_score < 80;
+              return accHealth && accHealth.health_score < healthy_min;
             })
             .reduce((sum: number, acc: any) => sum + (acc.revenue || 0), 0);
           

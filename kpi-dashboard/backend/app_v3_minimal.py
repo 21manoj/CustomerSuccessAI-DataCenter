@@ -1195,6 +1195,18 @@ except ImportError as e:
 # Admin UI API (Super-Admin only) — already registered above (line ~1017)
 # ====================================================================
 
+# Ask AI v2 — Claude-powered assistant with tool_use (behind feature flag)
+try:
+    from feature_toggles import feature_toggles, FeatureToggle
+    if feature_toggles.is_enabled(FeatureToggle.ASK_AI_V2):
+        from ask_ai_endpoint import ask_ai_v2_api
+        app.register_blueprint(ask_ai_v2_api)
+        print("✅ Ask AI v2 enabled: /api/executive/ask-v2 (FEATURE_ASK_AI_V2=true)")
+    else:
+        print("ℹ️  Ask AI v2 disabled (set FEATURE_ASK_AI_V2=true to enable)")
+except Exception as _e:
+    print(f"⚠️  Ask AI v2 init error: {_e}")
+
 # MCP Server status (inbound — external LLMs call into CS Pulse)
 try:
     from feature_toggles import feature_toggles, FeatureToggle

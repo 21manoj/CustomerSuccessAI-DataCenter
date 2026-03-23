@@ -167,7 +167,7 @@ function ActionCard({ account, pillars, accentColor, onClick }: {
         <div className="flex items-center gap-4 mb-3">
           <div className="flex items-center gap-1.5">
             <Target className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-xs text-gray-400">Lowest: <span className="text-white font-medium">{PILLAR_SHORT[lowest.key]}: {lowest.score}</span></span>
+            <span className="text-xs text-gray-400">Lowest: <span className="text-white font-medium">{PILLAR_SHORT[lowest.key]}: {Math.round(lowest.score * 10) / 10}</span></span>
           </div>
           <div className="flex items-center gap-1.5">
             <BookOpen className="w-3.5 h-3.5 text-gray-500" />
@@ -193,7 +193,7 @@ function AccountGridCard({ account, pillars, onClick }: {
   const barColor = classifyColor(account.health_score);
 
   const lowest = pillars ? lowestPillar(pillars) : null;
-  const risk = lowest && lowest.score < thresholdValues().healthy_min ? `${PILLAR_SHORT[lowest.key]}: ${lowest.score}` : null;
+  const risk = lowest && lowest.score < thresholdValues().healthy_min ? `${PILLAR_SHORT[lowest.key]}: ${(Math.round(lowest.score * 10) / 10).toFixed(1)}` : null;
   return (
     <button type="button" onClick={onClick}
       className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 text-left hover:border-blue-500/50 transition-colors w-full">
@@ -215,9 +215,9 @@ function AccountGridCard({ account, pillars, onClick }: {
       {pillars && (
         <div className="mb-3 flex gap-1">
           {PILLAR_KEYS.map((key) => {
-            const val = pillars[key] ?? 0;
+            const val = Math.round((pillars[key] ?? 0) * 10) / 10;
             return (
-              <div key={key} className="flex-1" title={`${PILLAR_SHORT[key]}: ${val}`}>
+              <div key={key} className="flex-1" title={`${PILLAR_SHORT[key]}: ${val.toFixed(1)}`}>
                 <div className="w-full bg-gray-700 rounded-full h-1">
                   <div className="h-1 rounded-full" style={{ width: `${Math.min(val, 100)}%`, backgroundColor: classifyColor(val) }} />
                 </div>
@@ -659,12 +659,13 @@ export default function AccountsView() {
                             <span className="text-xs font-bold" style={{ color: classifyColor(acct.health_score) }}>{acct.health_score}</span>
                           </td>
                           {PILLAR_KEYS.map((k) => {
-                            const val = pScores?.[k] ?? 0;
+                            const rawVal = pScores?.[k] ?? 0;
+                            const val = Math.round(rawVal * 10) / 10;
                             const cc = classifyColor(val);
                             const op = classify(val) === 'critical' ? '30' : classify(val) === 'at_risk' ? '20' : '15';
                             return (
                               <td key={k} className="px-2 py-2.5 text-center" style={{ backgroundColor: `${cc}${op}` }}>
-                                <span className="text-xs font-semibold" style={{ color: cc }}>{pScores ? val : '--'}</span>
+                                <span className="text-xs font-semibold" style={{ color: cc }}>{pScores ? val.toFixed(1) : '--'}</span>
                               </td>
                             );
                           })}

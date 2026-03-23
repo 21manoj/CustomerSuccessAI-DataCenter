@@ -22,6 +22,7 @@ class FeatureToggle(Enum):
     CONTEXT_GRAPH = "context_graph"
     MCP_SERVER = "mcp_server"
     SIGNAL_ENGINE = "signal_engine"
+    ASK_AI_V2 = "ask_ai_v2"
 
 @dataclass
 class FeatureConfig:
@@ -114,6 +115,14 @@ class FeatureToggleManager:
                             "structural urgency classification, CG collision, composite scoring",
                 version="0.1.0",
                 dependencies=[FeatureToggle.CONTEXT_GRAPH],
+                environment_required=None
+            ),
+            FeatureToggle.ASK_AI_V2: FeatureConfig(
+                enabled=False,
+                description="Ask AI v2: Claude-powered intelligent assistant with tool_use, "
+                            "rich artifact rendering (Mermaid, charts, tables), persona-aware",
+                version="0.1.0",
+                dependencies=[],
                 environment_required=None
             ),
         }
