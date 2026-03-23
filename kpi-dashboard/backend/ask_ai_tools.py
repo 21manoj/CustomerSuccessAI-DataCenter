@@ -355,32 +355,111 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         }
 
     elif tool_name == 'get_context_graph_mermaid':
-        # Simplified mermaid generation
+        # Mermaid generation with subgraph grouping for proper vertical layout
         account_id = tool_input['account_id']
         max_nodes = tool_input.get('max_nodes', 30)
-        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id).order_by(ContextNode.occurred_at.desc()).limit(max_nodes).all()
-        if not nodes:
+
+        # Strategy: fetch ALL edges for this account first, then pull connected nodes
+        # This ensures we get causal chains, not random disconnected nodes
+        all_nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id).all()
+        if not all_nodes:
             return {'mermaid': 'flowchart TD\n    empty["No context graph data"]', 'node_count': 0, 'edge_count': 0}
 
-        node_ids = [n.node_id for n in nodes]
-        edges = ContextEdge.query.filter(ContextEdge.from_node_id.in_(node_ids), ContextEdge.to_node_id.in_(node_ids)).all()
+        all_node_ids = [n.node_id for n in all_nodes]
+        node_lookup = {n.node_id: n for n in all_nodes}
+
+        # Get all edges between this account's nodes
+        edges = ContextEdge.query.filter(
+            ContextEdge.from_node_id.in_(all_node_ids),
+            ContextEdge.to_node_id.in_(all_node_ids)
+        ).all()
+
+        # Prioritize connected nodes (they form causal chains)
+        connected_ids = set()
+        for e in edges:
+            connected_ids.add(e.from_node_id)
+            connected_ids.add(e.to_node_id)
+
+        # Build node list: connected nodes first, then fill with recent unconnected
+        nodes = [node_lookup[nid] for nid in connected_ids if nid in node_lookup]
+        remaining = [n for n in all_nodes if n.node_id not in connected_ids]
+        remaining.sort(key=lambda n: n.occurred_at or '', reverse=True)
+        nodes.extend(remaining[:max(0, max_nodes - len(nodes))])
+        nodes = nodes[:max_nodes]
+
+        node_ids = set(n.node_id for n in nodes)
+        # Filter edges to only included nodes
+        edges = [e for e in edges if e.from_node_id in node_ids and e.to_node_id in node_ids]
+
+        # Group nodes by type for subgraph layout
+        by_type = {'SIGNAL': [], 'DECISION': [], 'OUTCOME': [], 'STAKEHOLDER': []}
+        node_map = {}
+        for n in nodes:
+            ntype = n.node_type or 'SIGNAL'
+            by_type.setdefault(ntype, []).append(n)
+            node_map[n.node_id] = n
+
+        # Only include nodes that participate in edges, plus top 3 per type
+        connected_ids = set()
+        for e in edges:
+            connected_ids.add(e.from_node_id)
+            connected_ids.add(e.to_node_id)
+
+        def _safe_label(title):
+            """Escape quotes and limit length for Mermaid."""
+            s = (title or 'Unknown')[:35].replace('"', "'").replace('\n', ' ')
+            return s
 
         type_styles = {'SIGNAL': 'signal', 'DECISION': 'decision', 'OUTCOME': 'outcome', 'STAKEHOLDER': 'stakeholder'}
+        subgraph_labels = {
+            'SIGNAL': 'Signals & Events',
+            'DECISION': 'Decisions',
+            'OUTCOME': 'Outcomes',
+            'STAKEHOLDER': 'Stakeholders',
+        }
+
         lines = ['flowchart TD']
         lines.append('    classDef signal fill:#FFA500,stroke:#FFA500,color:#000')
         lines.append('    classDef decision fill:#4169E1,stroke:#4169E1,color:#fff')
         lines.append('    classDef outcome fill:#2E8B57,stroke:#2E8B57,color:#fff')
         lines.append('    classDef stakeholder fill:#8B5CF6,stroke:#8B5CF6,color:#fff')
 
-        for n in nodes:
-            label = (n.title or f"Node {n.node_id}")[:40]
-            cls = type_styles.get(n.node_type, 'signal')
-            lines.append(f'    n{n.node_id}["{label}"]:::{cls}')
+        included_ids = set()
+        # Emit subgraphs in causal order: Signals → Decisions → Outcomes
+        for ntype in ['SIGNAL', 'DECISION', 'OUTCOME', 'STAKEHOLDER']:
+            type_nodes = by_type.get(ntype, [])
+            if not type_nodes:
+                continue
+            # Include all nodes we already selected (they're already prioritized)
+            selected = type_nodes
+            if not selected:
+                continue
 
+            cls = type_styles.get(ntype, 'signal')
+            label = subgraph_labels.get(ntype, ntype)
+            lines.append(f'    subgraph {ntype}["{label}"]')
+            for n in selected[:8]:  # Cap per subgraph for readability
+                lbl = _safe_label(n.title)
+                lines.append(f'        n{n.node_id}["{lbl}"]:::{cls}')
+                included_ids.add(n.node_id)
+            lines.append('    end')
+
+        # Emit edges (only between included nodes)
         for e in edges:
-            lines.append(f'    n{e.from_node_id} -->|{e.edge_type or ""}| n{e.to_node_id}')
+            if e.from_node_id in included_ids and e.to_node_id in included_ids:
+                edge_label = (e.edge_type or '').replace('"', "'")[:20]
+                lines.append(f'    n{e.from_node_id} -->|{edge_label}| n{e.to_node_id}')
 
-        return {'mermaid': '\n'.join(lines), 'node_count': len(nodes), 'edge_count': len(edges)}
+        # If no edges, add invisible links between subgraphs for vertical flow
+        if not edges:
+            type_order = [t for t in ['SIGNAL', 'DECISION', 'OUTCOME', 'STAKEHOLDER'] if by_type.get(t)]
+            for i in range(len(type_order) - 1):
+                first_a = by_type[type_order[i]][0]
+                first_b = by_type[type_order[i + 1]][0]
+                if first_a.node_id in included_ids and first_b.node_id in included_ids:
+                    lines.append(f'    n{first_a.node_id} -.-> n{first_b.node_id}')
+
+        return {'mermaid': '\n'.join(lines), 'node_count': len(included_ids), 'edge_count': len(edges)}
 
     elif tool_name == 'get_account_journey_timeline':
         account_id = tool_input['account_id']

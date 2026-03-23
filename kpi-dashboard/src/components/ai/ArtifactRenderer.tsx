@@ -137,7 +137,7 @@ const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
           primaryTextColor: '#e6edf3',
           lineColor: '#484f58',
         },
-        flowchart: { curve: 'basis', padding: 10 },
+        flowchart: { curve: 'basis', padding: 15, nodeSpacing: 30, rankSpacing: 40 },
         securityLevel: 'strict',
       });
 
@@ -190,7 +190,7 @@ const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
     <div className="relative">
       <div
         ref={containerRef}
-        className="overflow-x-auto [&_svg]:mx-auto [&_svg]:max-w-full"
+        className="overflow-auto [&_svg]:mx-auto [&_svg]:min-h-[200px]"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
       <button
