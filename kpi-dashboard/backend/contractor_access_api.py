@@ -313,6 +313,7 @@ def create_api_key(cid):
                 allowed_account_ids=allowed_account_ids,
                 partner_tier=partner_tier,
             )
+            full_key, key_record = result
             desc = f"API key '{name}' created for customer #{cid}"
             if partner_tier:
                 desc += f" (partner_tier={partner_tier}, accounts={allowed_account_ids or 'ALL'})"
@@ -326,7 +327,20 @@ def create_api_key(cid):
                     "expires_at": expires_at.isoformat() if expires_at else "never",
                 })
 
-            return jsonify(result), 201
+            return jsonify({
+                "api_key": full_key,
+                "key_info": {
+                    "id": key_record.id,
+                    "key_prefix": key_record.key_prefix,
+                    "name": key_record.name,
+                    "scopes": key_record.scopes or [],
+                    "is_active": key_record.is_active,
+                    "created_at": key_record.created_at.isoformat() if key_record.created_at else None,
+                    "expires_at": key_record.expires_at.isoformat() if key_record.expires_at else None,
+                    "partner_tier": getattr(key_record, 'partner_tier', None),
+                    "allowed_account_ids": getattr(key_record, 'allowed_account_ids', None),
+                },
+            }), 201
         except ImportError:
             return jsonify({"error": "API key service not available on this branch"}), 501
 
