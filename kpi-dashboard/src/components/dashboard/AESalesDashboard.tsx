@@ -62,7 +62,7 @@ interface RenewalRiskAccount {
   arr_at_risk: number;
   days_to_renewal: number;
   risk_signal: string;
-  classification: 'critical' | 'at_risk';
+  classification: 'critical' | 'at_risk' | 'healthy';
 }
 
 interface ProductWhitespace {
@@ -396,9 +396,11 @@ const RenewalRiskTable: React.FC<{ accounts: RenewalRiskAccount[] }> = ({ accoun
                   <div className="flex items-center gap-2">
                     <span className="text-gray-300 text-xs font-medium">{account.account_name}</span>
                     <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                      account.classification === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
+                      account.classification === 'critical' ? 'bg-red-500/20 text-red-400'
+                      : account.classification === 'at_risk' ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-green-500/20 text-green-400'
                     }`}>
-                      {account.classification === 'critical' ? 'Critical' : 'At Risk'}
+                      {account.classification === 'critical' ? 'Critical' : account.classification === 'at_risk' ? 'At Risk' : 'Healthy'}
                     </span>
                   </div>
                 </td>
@@ -680,8 +682,10 @@ const AESalesDashboard: React.FC = () => {
               arr_at_risk: a.revenue || a.arr || 0,
               days_to_renewal: Math.floor(Math.random() * 80) + 15,
               risk_signal: (a.health_score || 0) < 50 ? 'Critical health decline, immediate attention needed'
-                : 'Usage declining, engagement gaps identified',
-              classification: ((a.health_score || 0) < 50 ? 'critical' : 'at_risk') as 'critical' | 'at_risk',
+                : (a.health_score || 0) < 70 ? 'Usage declining, engagement gaps identified'
+                : 'Account healthy, monitor for continued growth',
+              classification: ((a.health_score || 0) < 50 ? 'critical'
+                : (a.health_score || 0) < 70 ? 'at_risk' : 'healthy') as 'critical' | 'at_risk' | 'healthy',
             }));
 
           const expansionTotal = expansionCandidates.reduce((s: number, a: ExpansionAccount) => s + a.arr, 0);

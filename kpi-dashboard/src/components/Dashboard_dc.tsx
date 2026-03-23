@@ -8,6 +8,7 @@ import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
 import { Activity, AlertTriangle, Users, Zap, BarChart3, Upload, Target, MessageSquare, Settings, FileText, LogOut, ChevronDown, ChevronRight, TrendingDown, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { classify, classifyColor, classifyLabel } from '../utils/healthThresholds';
 import KPICard_dc from './KPICard_dc';
 import HealthScore_dc from './HealthScore_dc';
 import TenantList_dc from './TenantList_dc';
@@ -469,7 +470,7 @@ const Dashboard_dc: React.FC = () => {
                               {account.focus_areas.map((area, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-xs">
                                   <span className="text-gray-600 truncate mr-2">{area.category}</span>
-                                  <span className={`font-semibold ${area.score < 70 ? 'text-red-600' : 'text-yellow-600'}`}>{area.score.toFixed(0)}</span>
+                                  <span className={`font-semibold`} style={{ color: classifyColor(area.score) }}>{area.score.toFixed(0)}</span>
                                 </div>
                               ))}
                             </div>
@@ -589,8 +590,9 @@ const Dashboard_dc: React.FC = () => {
                               <div>
                                 <p className="text-xs text-gray-500 mb-1">Health Score</p>
                                 {(() => {
-                                  const healthStatus = tenant.health_score >= 80 ? { status: 'Healthy', color: 'green' } :
-                                                       tenant.health_score >= 60 ? { status: 'At Risk', color: 'yellow' } :
+                                  const cls = classify(tenant.health_score);
+                                  const healthStatus = cls === 'healthy' ? { status: 'Healthy', color: 'green' } :
+                                                       cls === 'at_risk' ? { status: 'At Risk', color: 'yellow' } :
                                                        { status: 'Critical', color: 'red' };
                                   return (
                                     <div className="flex items-center space-x-2">

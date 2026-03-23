@@ -645,9 +645,9 @@ const CSMCockpit: React.FC = () => {
     [accounts]
   );
 
-  const criticalCount = useMemo(() => accounts.filter((a) => a.health_score < 50).length, [accounts]);
-  const atRiskCount = useMemo(() => accounts.filter((a) => a.health_score >= 50 && a.health_score < 70).length, [accounts]);
-  const healthyCount = useMemo(() => accounts.filter((a) => a.health_score >= 70).length, [accounts]);
+  const criticalCount = useMemo(() => accounts.filter((a) => classify(a.health_score) === 'critical').length, [accounts]);
+  const atRiskCount = useMemo(() => accounts.filter((a) => classify(a.health_score) === 'at_risk').length, [accounts]);
+  const healthyCount = useMemo(() => accounts.filter((a) => classify(a.health_score) === 'healthy').length, [accounts]);
 
   // Column bucketing
   const actionsByAccount = useMemo(() => {
@@ -662,9 +662,9 @@ const CSMCockpit: React.FC = () => {
 
   const filteredAccounts = useMemo(() => {
     let list = [...accounts];
-    if (filterStatus === 'critical') list = list.filter((a) => a.health_score < 50);
-    else if (filterStatus === 'at_risk') list = list.filter((a) => a.health_score >= 50 && a.health_score < 70);
-    else if (filterStatus === 'healthy') list = list.filter((a) => a.health_score >= 70);
+    if (filterStatus === 'critical') list = list.filter((a) => classify(a.health_score) === 'critical');
+    else if (filterStatus === 'at_risk') list = list.filter((a) => classify(a.health_score) === 'at_risk');
+    else if (filterStatus === 'healthy') list = list.filter((a) => classify(a.health_score) === 'healthy');
     return list;
   }, [accounts, filterStatus]);
 
@@ -691,7 +691,7 @@ const CSMCockpit: React.FC = () => {
     () => filteredAccounts
       .filter((a) => {
         const act = actionsByAccount[a.id];
-        return a.health_score < 50 || act?.urgency === 'critical';
+        return classify(a.health_score) === 'critical' || act?.urgency === 'critical';
       })
       .sort(sortFn),
     [filteredAccounts, actionsByAccount, sortFn]
@@ -702,8 +702,7 @@ const CSMCockpit: React.FC = () => {
       .filter((a) => {
         const act = actionsByAccount[a.id];
         return (
-          a.health_score >= 50 &&
-          a.health_score < 70 &&
+          classify(a.health_score) === 'at_risk' &&
           !fireAccounts.some((f) => f.id === a.id)
         ) || (act?.urgency === 'high' && !fireAccounts.some((f) => f.id === a.id));
       })
@@ -715,7 +714,7 @@ const CSMCockpit: React.FC = () => {
     () => filteredAccounts
       .filter((a) => {
         return (
-          a.health_score >= 70 &&
+          classify(a.health_score) === 'healthy' &&
           !fireAccounts.some((f) => f.id === a.id) &&
           !weekAccounts.some((w) => w.id === a.id)
         );
