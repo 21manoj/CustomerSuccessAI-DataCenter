@@ -302,8 +302,11 @@ def create_api_key(cid):
         # Try using api_key_service if available
         try:
             from api_key_service import generate_api_key as gen_key
+            from flask_login import current_user
+            created_by = current_user.user_id if hasattr(current_user, 'user_id') else 0
             result = gen_key(
                 customer_id=cid,
+                created_by=created_by,
                 name=name,
                 scopes=scopes,
                 expires_at=expires_at,
@@ -520,8 +523,11 @@ def create_partner_key(cid):
         key_name = f"Partner: {partner_name}"
 
         from api_key_service import generate_api_key as gen_key
+        from flask_login import current_user
+        created_by = current_user.user_id if hasattr(current_user, 'user_id') else 0
         full_key, key_record = gen_key(
             customer_id=cid,
+            created_by=created_by,
             name=key_name,
             scopes=scopes,
             expires_at=expires_at,
