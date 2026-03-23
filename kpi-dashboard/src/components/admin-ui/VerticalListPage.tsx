@@ -95,14 +95,14 @@ const VerticalCard: React.FC<{ info: VerticalInfo }> = ({ info }) => {
       </button>
 
       {/* Summary row — always visible */}
-      {!expanded && (
+      {!expanded && info.pillar_names && (
         <div className="px-5 pb-4 flex flex-wrap gap-2">
           {Object.entries(info.pillar_names).sort().map(([pid, name]) => (
             <span key={pid} className="inline-flex items-center gap-1 text-xs text-gray-500">
               <span className="font-mono font-semibold text-gray-700">{pid}</span>
               {name}
-              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${weightColor(info.default_weights[pid] ?? 0.2)}`}>
-                {((info.default_weights[pid] ?? 0.2) * 100).toFixed(0)}%
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${weightColor((info.default_weights ?? {})[pid] ?? 0.2)}`}>
+                {(((info.default_weights ?? {})[pid] ?? 0.2) * 100).toFixed(0)}%
               </span>
             </span>
           ))}
