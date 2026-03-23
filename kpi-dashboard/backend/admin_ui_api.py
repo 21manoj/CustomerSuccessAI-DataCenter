@@ -197,6 +197,7 @@ def get_customer(cid):
                 "enabled_kpis": config.dc2s_enabled_kpis if config else None,
                 "pillar_weights": config.dc2s_pillar_weights if config else None,
                 "kpi_weights": config.dc2s_kpi_weights if config else None,
+                "kpi_overrides": config.dc2s_kpi_overrides if config else None,
                 "config_version": config.config_version if config else "1.0",
             } if config else None,
             "accounts": [{

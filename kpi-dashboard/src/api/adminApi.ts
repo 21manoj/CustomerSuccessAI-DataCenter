@@ -64,11 +64,21 @@ export interface ApiKeyInfo {
   allowed_account_ids: number[] | null;
 }
 
+export interface KpiConfig {
+  vertical: string;
+  pillar_weights: Record<string, number> | null;
+  enabled_kpis: string[] | null;
+  kpi_weights: Record<string, Record<string, number>> | null;
+  kpi_overrides: Record<string, unknown> | null;
+  config_version: string;
+}
+
 export interface CustomerDetail extends Customer {
   license: LicenseInfo;
   seat_usage: SeatUsage;
   users: UserInfo[];
   api_keys: ApiKeyInfo[];
+  kpi_config: KpiConfig | null;
 }
 
 export interface VerticalInfo {
@@ -294,6 +304,14 @@ export async function fetchCustomer(id: number): Promise<CustomerDetail> {
     },
     users: [],     // loaded lazily via fetchUsers
     api_keys: [],  // loaded lazily via fetchApiKeys
+    kpi_config: raw.config ? {
+      vertical: (raw.config.vertical as string) ?? 'dc2_s',
+      pillar_weights: (raw.config.pillar_weights as Record<string, number>) ?? null,
+      enabled_kpis: (raw.config.enabled_kpis as string[]) ?? null,
+      kpi_weights: (raw.config.kpi_weights as Record<string, Record<string, number>>) ?? null,
+      kpi_overrides: (raw.config.kpi_overrides as Record<string, unknown>) ?? null,
+      config_version: (raw.config.config_version as string) ?? '1.0',
+    } : null,
   };
 }
 

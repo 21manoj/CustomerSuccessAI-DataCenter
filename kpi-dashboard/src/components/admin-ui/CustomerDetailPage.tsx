@@ -178,7 +178,7 @@ const CustomerDetailPage: React.FC = () => {
           <InfoTab customer={customer} onUpdated={loadCustomer} />
         )}
         {activeTab === 'users' && <UsersTab customerId={customerId} />}
-        {activeTab === 'config' && <ConfigTab customerId={customerId} />}
+        {activeTab === 'config' && <ConfigTab customerId={customerId} kpiConfig={customer.kpi_config} onUpdated={loadCustomer} />}
         {activeTab === 'license' && <LicenseTab customerId={customerId} />}
         {activeTab === 'api-keys' && <ApiKeysTab customerId={customerId} />}
         {activeTab === 'partners' && <PartnersTab customerId={customerId} />}
@@ -577,170 +577,167 @@ const AddUserModal: React.FC<{
 // CONFIG TAB
 // ===========================================================================
 
-const ConfigTab: React.FC<{ customerId: number }> = ({ customerId }) => {
-  const [configs, setConfigs] = useState<CustomerConfig[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [resolved, setResolved] = useState<ResolvedConfig | null>(null);
-  const [editJson, setEditJson] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+const PILLAR_NAMES: Record<string, Record<string, string>> = {
+  dc2_s: { P1: 'Deployment Velocity', P2: 'Operational Stability', P3: 'AI Workload Performance', P4: 'Channel & Partner Health', P5: 'Expansion Readiness' },
+  saas_premium: { P1: 'Product Adoption & Usage', P2: 'Customer Engagement', P3: 'Customer Sentiment & Support', P4: 'Partner & Ecosystem Health', P5: 'Revenue & Growth' },
+};
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setConfigs(await fetchCustomerConfig(customerId));
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load config');
-    } finally {
-      setLoading(false);
-    }
-  }, [customerId]);
+const ConfigTab: React.FC<{ customerId: number; kpiConfig: { vertical: string; pillar_weights: Record<string, number> | null; enabled_kpis: string[] | null; kpi_weights: Record<string, Record<string, number>> | null; kpi_overrides: Record<string, unknown> | null; config_version: string } | null; onUpdated: () => void }> = ({ customerId, kpiConfig, onUpdated }) => {
+  const vertical = kpiConfig?.vertical ?? 'dc2_s';
+  const pNames = PILLAR_NAMES[vertical] ?? PILLAR_NAMES.dc2_s;
+  const pillarWeights = kpiConfig?.pillar_weights;
+  const enabledKpis = kpiConfig?.enabled_kpis;
+  const kpiWeights = kpiConfig?.kpi_weights;
+  const kpiOverrides = kpiConfig?.kpi_overrides;
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Group enabled KPIs by pillar
+  const kpisByPillar: Record<string, string[]> = {};
+  (enabledKpis ?? []).forEach((kpi: string) => {
+    const pillar = kpi.split('-')[0];
+    if (!kpisByPillar[pillar]) kpisByPillar[pillar] = [];
+    kpisByPillar[pillar].push(kpi);
+  });
 
-  const handleSelectConfig = async (configType: string) => {
-    setSelected(configType);
-    setSaveMsg(null);
-    try {
-      const res = await fetchResolvedConfig(customerId, configType);
-      setResolved(res);
-      setEditJson(JSON.stringify(res.config, null, 2));
-    } catch {
-      setResolved(null);
-      setEditJson('');
-    }
+  const statusColor = (weight: number) => {
+    if (weight >= 0.25) return 'bg-indigo-100 text-indigo-800';
+    if (weight >= 0.15) return 'bg-blue-50 text-blue-700';
+    return 'bg-gray-50 text-gray-600';
   };
 
-  const handleSave = async () => {
-    if (!selected) return;
-    setSaving(true);
-    setSaveMsg(null);
-    try {
-      const parsed = JSON.parse(editJson);
-      await updateCustomerConfig(customerId, selected, parsed);
-      setSaveMsg('Config saved');
-      load();
-    } catch (err: unknown) {
-      setSaveMsg(err instanceof Error ? err.message : 'Invalid JSON or save failed');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (configType: string) => {
-    if (!window.confirm(`Delete override for "${configType}"? The customer will fall back to the vertical template.`)) return;
-    try {
-      await deleteCustomerConfig(customerId, configType);
-      setSelected(null);
-      setResolved(null);
-      load();
-    } catch {
-      /* silent */
-    }
-  };
-
-  if (loading) return <TabLoading label="config" />;
-  if (error) return <TabError message={error} onRetry={load} />;
+  if (!kpiConfig) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">
+        No KPI configuration found for this customer.
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Config list */}
+    <div className="space-y-4">
+      {/* Vertical badge */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
+        <div>
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Vertical</span>
+          <p className="text-lg font-bold text-gray-900 mt-1">
+            {vertical === 'dc2_s' ? 'Data Center (DC2_S)' : vertical === 'saas_premium' ? 'SaaS Premium' : vertical}
+          </p>
+        </div>
+        <span className="text-xs text-gray-400">Config v{kpiConfig.config_version}</span>
+      </div>
+
+      {/* Pillar Weights */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
-          Config Overrides ({configs.length})
+          Pillar Weights (L2)
         </h3>
-        {configs.length === 0 ? (
-          <p className="text-sm text-gray-400">No overrides. Using vertical templates.</p>
-        ) : (
-          <ul className="space-y-1">
-            {configs.map((c) => (
-              <li key={c.config_type}>
-                <button
-                  onClick={() => handleSelectConfig(c.config_type)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selected === c.config_type
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {c.config_type}
-                </button>
-              </li>
+        {pillarWeights && Object.keys(pillarWeights).length > 0 ? (
+          <div className="space-y-2">
+            {Object.entries(pillarWeights).sort().map(([pillar, weight]: [string, number]) => (
+              <div key={pillar} className="flex items-center gap-3">
+                <span className="text-sm font-mono font-semibold text-gray-700 w-8">{pillar}</span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-600">{pNames[pillar] ?? pillar}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor(weight)}`}>
+                      {(weight * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className="bg-indigo-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(weight * 100 * 2, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
+            <p className="text-xs text-gray-400 mt-2">
+              Total: {Object.values(pillarWeights).reduce((a: number, b: number) => a + b, 0).toFixed(2)} (should be 1.00)
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No pillar weights configured. Using vertical defaults.</p>
         )}
       </div>
 
-      {/* Editor + diff */}
-      <div className="lg:col-span-2 space-y-4">
-        {selected && resolved ? (
-          <>
-            {/* Side-by-side diff */}
-            {resolved.template_config && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                    Template (base)
-                  </h4>
-                  <pre className="text-xs text-gray-600 overflow-auto max-h-64 bg-gray-50 rounded-lg p-3">
-                    {JSON.stringify(resolved.template_config, null, 2)}
-                  </pre>
+      {/* Enabled KPIs */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+          Enabled KPIs ({enabledKpis?.length ?? 0})
+        </h3>
+        {enabledKpis && enabledKpis.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {['P1', 'P2', 'P3', 'P4', 'P5'].map((pillar) => {
+              const kpis = kpisByPillar[pillar] ?? [];
+              if (kpis.length === 0) return null;
+              return (
+                <div key={pillar} className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                    {pillar}: {pNames[pillar] ?? pillar} ({kpis.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {kpis.sort().map((kpi) => (
+                      <span key={kpi} className="inline-block text-xs font-mono bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-700">
+                        {kpi}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                    Customer Override
-                  </h4>
-                  <pre className="text-xs text-gray-600 overflow-auto max-h-64 bg-gray-50 rounded-lg p-3">
-                    {JSON.stringify(resolved.config, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* JSON editor */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold text-gray-700">
-                  Edit: {selected}
-                </h4>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    Save
-                  </button>
-                  <button
-                    onClick={() => handleDelete(selected)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
-                  >
-                    <Trash2 size={14} /> Delete Override
-                  </button>
-                </div>
-              </div>
-              <textarea
-                value={editJson}
-                onChange={(e) => setEditJson(e.target.value)}
-                rows={16}
-                spellCheck={false}
-                className="w-full font-mono text-xs p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-y"
-              />
-              {saveMsg && (
-                <p className="text-sm mt-2 text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">{saveMsg}</p>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">
-            Select a config override from the list to view and edit.
+              );
+            })}
           </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No KPI filter set. All vertical KPIs are active.</p>
+        )}
+      </div>
+
+      {/* KPI Weights (L1) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+          KPI Weights (L1) &mdash; Per Pillar
+        </h3>
+        {kpiWeights && Object.keys(kpiWeights).length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(kpiWeights).sort().map(([pillar, weights]) => (
+              <div key={pillar} className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  {pillar}: {pNames[pillar] ?? pillar}
+                </p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-400">
+                      <th className="text-left pb-1">KPI</th>
+                      <th className="text-right pb-1">Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(weights as Record<string, number>).sort().map(([kpi, w]) => (
+                      <tr key={kpi} className="border-t border-gray-100">
+                        <td className="py-1 font-mono text-gray-700">{kpi}</td>
+                        <td className="py-1 text-right font-semibold text-gray-600">{(w * 100).toFixed(0)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No custom KPI weights. Using catalog defaults (weight_l1 from vertical definition).</p>
+        )}
+      </div>
+
+      {/* KPI Overrides / Ranges */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+          KPI Overrides &amp; Custom Ranges
+        </h3>
+        {kpiOverrides && Object.keys(kpiOverrides).length > 0 ? (
+          <pre className="text-xs text-gray-600 overflow-auto max-h-64 bg-gray-50 rounded-lg p-3 font-mono">
+            {JSON.stringify(kpiOverrides, null, 2)}
+          </pre>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No custom overrides. Using vertical catalog ranges and targets.</p>
         )}
       </div>
     </div>
