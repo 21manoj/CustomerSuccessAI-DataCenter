@@ -525,6 +525,10 @@ export async function revokeApiKey(keyId: number): Promise<void> {
   return request(`/api-keys/${keyId}/revoke`, { method: 'POST' });
 }
 
+export async function reinstateApiKey(keyId: number): Promise<void> {
+  return request(`/api-keys/${keyId}/reinstate`, { method: 'POST' });
+}
+
 // ---------------------------------------------------------------------------
 // Partner Key Management
 // ---------------------------------------------------------------------------

@@ -368,6 +368,27 @@ def revoke_api_key_endpoint(key_id):
         return jsonify({"error": str(e)}), 500
 
 
+@contractor_access_bp.route("/api/admin-ui/api-keys/<int:key_id>/reinstate", methods=["POST"])
+@super_admin_required
+def reinstate_api_key_endpoint(key_id):
+    """Reinstate a previously revoked API key."""
+    try:
+        from models import CustomerApiKey
+        key = db.session.get(CustomerApiKey, key_id)
+        if not key:
+            return jsonify({"error": f"Key {key_id} not found"}), 404
+        if key.is_active:
+            return jsonify({"status": "already_active", "message": f"Key {key_id} is already active"})
+        key.is_active = True
+        db.session.commit()
+        _log("api_key_reinstate", f"API key #{key_id} '{key.name}' reinstated",
+             customer_id=key.customer_id, resource_type="api_key", resource_id=key_id)
+        return jsonify({"status": "success", "message": f"Key {key_id} reinstated"})
+    except Exception as e:
+        logger.exception("reinstate_api_key failed")
+        return jsonify({"error": str(e)}), 500
+
+
 # ===================================================================
 # Security Log
 # ===================================================================

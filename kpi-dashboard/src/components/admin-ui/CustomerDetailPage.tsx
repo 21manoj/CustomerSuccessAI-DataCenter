@@ -34,6 +34,7 @@ import {
   fetchApiKeys,
   generateApiKey,
   revokeApiKey,
+  reinstateApiKey,
   fetchCustomerConfig,
   fetchResolvedConfig,
   updateCustomerConfig,
@@ -1014,9 +1015,19 @@ const ApiKeysTab: React.FC<{ customerId: number }> = ({ customerId }) => {
   }, [load]);
 
   const handleRevoke = async (keyId: number) => {
-    if (!window.confirm('Revoke this API key? This cannot be undone.')) return;
+    if (!window.confirm('Revoke this API key? MCP access will be immediately blocked.')) return;
     try {
       await revokeApiKey(keyId);
+      load();
+    } catch {
+      /* silent */
+    }
+  };
+
+  const handleReinstate = async (keyId: number) => {
+    if (!window.confirm('Reinstate this API key? MCP access will be restored.')) return;
+    try {
+      await reinstateApiKey(keyId);
       load();
     } catch {
       /* silent */
@@ -1079,12 +1090,19 @@ const ApiKeysTab: React.FC<{ customerId: number }> = ({ customerId }) => {
                   {new Date(k.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3">
-                  {k.is_active && (
+                  {k.is_active ? (
                     <button
                       onClick={() => handleRevoke(k.id)}
                       className="text-xs font-medium px-2 py-1 rounded text-red-600 bg-red-50 hover:bg-red-100"
                     >
                       Revoke
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleReinstate(k.id)}
+                      className="text-xs font-medium px-2 py-1 rounded text-green-600 bg-green-50 hover:bg-green-100"
+                    >
+                      Reinstate
                     </button>
                   )}
                 </td>
