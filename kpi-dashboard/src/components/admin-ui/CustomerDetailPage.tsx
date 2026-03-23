@@ -204,6 +204,22 @@ const InfoTab: React.FC<{ customer: CustomerDetail; onUpdated: () => void }> = (
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [activityLog, setActivityLog] = useState<Array<{ id: number; timestamp: string; action: string; description: string; status: string }>>([]);
+  const [logLoading, setLogLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLogLoading(true);
+      try {
+        const result = await fetchActivityLog({ customer_id: customer.customer_id, limit: 15 });
+        setActivityLog(result.entries);
+      } catch {
+        setActivityLog([]);
+      } finally {
+        setLogLoading(false);
+      }
+    })();
+  }, [customer.customer_id]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -321,6 +337,61 @@ const InfoTab: React.FC<{ customer: CustomerDetail; onUpdated: () => void }> = (
 
         {msg && (
           <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">{msg}</p>
+        )}
+      </div>
+
+      {/* Admin Actions Log for this customer */}
+      <div className="mt-6 pt-6 border-t border-gray-100">
+        <h3 className="text-base font-semibold text-gray-900 mb-3">Admin Actions Log</h3>
+        <p className="text-xs text-gray-400 mb-3">
+          License changes, API key generation, config updates, data uploads, and other admin actions for this customer.
+        </p>
+        {logLoading ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm py-4">
+            <Loader2 size={14} className="animate-spin" /> Loading activity...
+          </div>
+        ) : activityLog.length === 0 ? (
+          <p className="text-sm text-gray-400 italic py-4">No admin actions recorded for this customer yet.</p>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-gray-100">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-left">
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Time</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Action</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Description</th>
+                  <th className="px-3 py-2 text-xs font-medium text-gray-500 uppercase w-16">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {activityLog.map((log) => (
+                  <tr key={log.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                      {log.timestamp ? new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${
+                        log.action.includes('key') ? 'bg-yellow-50 text-yellow-700' :
+                        log.action.includes('license') ? 'bg-purple-50 text-purple-700' :
+                        log.action.includes('upload') ? 'bg-blue-50 text-blue-700' :
+                        log.action.includes('config') ? 'bg-indigo-50 text-indigo-700' :
+                        log.action.includes('delete') || log.action.includes('purge') ? 'bg-red-50 text-red-700' :
+                        'bg-gray-50 text-gray-700'
+                      }`}>
+                        {log.action.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate">{log.description}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-xs font-medium ${log.status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                        {log.status === 'success' ? '\u2713' : '\u2717'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
