@@ -71,8 +71,9 @@ interface RiskAccount {
   account_name: string;
   health_score: number;
   arr: number;
-  classification: 'critical' | 'at_risk';
+  classification: 'critical' | 'at_risk' | 'healthy';
   signal_count: number;
+  pillar_scores?: Record<string, number>;
 }
 
 interface ROIScalingPoint {
@@ -449,10 +450,12 @@ const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void }> =
         </div>
         <span
           className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
-            cls === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'
+            cls === 'critical' ? 'bg-red-500/20 text-red-400'
+            : cls === 'at_risk' ? 'bg-yellow-500/20 text-yellow-400'
+            : 'bg-green-500/20 text-green-400'
           }`}
         >
-          {cls === 'critical' ? 'Critical' : 'At Risk'}
+          {cls === 'critical' ? 'Critical' : cls === 'at_risk' ? 'At Risk' : 'Healthy'}
         </span>
       </div>
       {/* Health bar */}
@@ -652,14 +655,21 @@ const CRODashboard: React.FC = () => {
               revenue_impact: arc.revenue_impact || 0,
               impact_type: arc.impact_type || 'risk',
             })),
-            risk_accounts: (json.highest_risk_accounts || []).map((a: any) => ({
-              account_id: a.account_id,
-              account_name: a.account_name,
-              health_score: a.health_score || 0,
-              arr: a.revenue || a.arr || 0,
-              classification: (a.health_score || 0) < 50 ? 'critical' as const : 'at_risk' as const,
-              signal_count: a.signal_count || 0,
-            })),
+            risk_accounts: (json.highest_risk_accounts || []).map((a: any) => {
+              const score = a.health_score || 0;
+              const cls = score < 50 ? 'critical' as const
+                        : score < 70 ? 'at_risk' as const
+                        : 'healthy' as const;
+              return {
+                account_id: a.account_id,
+                account_name: a.account_name,
+                health_score: score,
+                arr: a.revenue || a.arr || 0,
+                classification: cls,
+                signal_count: a.signal_count || 0,
+                pillar_scores: a.pillar_scores || {},
+              };
+            }),
             roi_summary: {
               roi_pct: json.playbook_roi_pct || 0,
               invested: json.cs_investment || 578000,
@@ -711,8 +721,8 @@ const CRODashboard: React.FC = () => {
     navigate(path);
   }, [navigate]);
 
-  // Sidebar badge data
-  const accountCount = data?.risk_accounts?.length || 0;
+  // Sidebar badge data — show count of truly at-risk/critical accounts, not array length
+  const accountCount = data?.risk_accounts?.filter(a => (a.health_score || 0) < 70).length || 0;
   const signalCount = data?.story_arcs?.reduce((s, a) => s + (a.account_count || 0), 0) || 0;
   const roiPct = data?.roi_summary?.roi_pct || 0;
 

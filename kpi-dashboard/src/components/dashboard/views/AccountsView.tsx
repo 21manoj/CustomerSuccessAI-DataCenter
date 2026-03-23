@@ -297,20 +297,27 @@ export default function AccountsView() {
         setAccounts(acctList);
 
         // Fetch pillar scores for each account in parallel
+        // Uses /api/dc2s/scores/account/<id>/latest which returns
+        // health_score.contributing_pillars with P1-P5 values
         const pillarEntries = await Promise.allSettled(
           acctList.map(async (acct) => {
             const pRes = await apiCall(
-              `/api/dc2s/scores/pillar?account_id=${acct.account_id}`,
+              `/api/dc2s/scores/account/${acct.account_id}/latest`,
               { headers: { 'X-Customer-ID': customerId } },
             );
             if (!pRes.ok) return null;
             const pData = await pRes.json();
+            // contributing_pillars lives inside the health_score object
+            const cp = pData.health_score?.contributing_pillars
+                    ?? pData.contributing_pillars
+                    ?? pData.pillar_scores
+                    ?? {};
             const scores: PillarScores = {
-              P1: pData.P1 ?? pData.p1 ?? pData.pillar_scores?.P1 ?? 0,
-              P2: pData.P2 ?? pData.p2 ?? pData.pillar_scores?.P2 ?? 0,
-              P3: pData.P3 ?? pData.p3 ?? pData.pillar_scores?.P3 ?? 0,
-              P4: pData.P4 ?? pData.p4 ?? pData.pillar_scores?.P4 ?? 0,
-              P5: pData.P5 ?? pData.p5 ?? pData.pillar_scores?.P5 ?? 0,
+              P1: cp.P1 ?? cp.p1 ?? 0,
+              P2: cp.P2 ?? cp.p2 ?? 0,
+              P3: cp.P3 ?? cp.p3 ?? 0,
+              P4: cp.P4 ?? cp.p4 ?? 0,
+              P5: cp.P5 ?? cp.p5 ?? 0,
             };
             return [String(acct.account_id), scores] as const;
           }),

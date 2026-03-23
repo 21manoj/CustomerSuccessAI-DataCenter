@@ -108,10 +108,15 @@ def _current_quarter_label():
 
 
 def _get_customer_accounts(customer_id):
-    """Get all active accounts for a customer."""
+    """Get all accounts for a customer (regardless of account_status).
+
+    Note: account_status may be 'active', 'at_risk', 'healthy', etc. —
+    these are health-based labels set by the data loader, NOT business
+    lifecycle states.  We must include all accounts so the CRO dashboard
+    shows the complete portfolio including truly at-risk accounts.
+    """
     return Account.query.filter_by(
         customer_id=customer_id,
-        account_status='active',
     ).all()
 
 
@@ -175,10 +180,15 @@ def _get_previous_health_scores(customer_id, account_ids):
 
 
 def _get_latest_pillar_scores(account_ids):
-    """Get latest pillar scores per account."""
+    """Get latest pillar scores per account.
+
+    Tries PillarScore table first, then falls back to
+    HealthScore.contributing_pillars JSON field.
+    """
     if not account_ids:
         return {}
 
+    # ── Try PillarScore table first ──
     latest_month_sub = (
         db.session.query(
             PillarScore.account_id,
@@ -204,6 +214,36 @@ def _get_latest_pillar_scores(account_ids):
     result = defaultdict(dict)
     for ps in scores:
         result[ps.account_id][ps.pillar_code] = _safe_float(ps.pillar_score)
+
+    # ── Fallback: HealthScore.contributing_pillars for any missing accounts ──
+    missing_ids = [aid for aid in account_ids if aid not in result]
+    if missing_ids:
+        hs_latest_sub = (
+            db.session.query(
+                HealthScore.account_id,
+                db.func.max(HealthScore.measurement_month).label('max_month'),
+            )
+            .filter(HealthScore.account_id.in_(missing_ids))
+            .group_by(HealthScore.account_id)
+            .subquery()
+        )
+        hs_rows = (
+            db.session.query(HealthScore)
+            .join(
+                hs_latest_sub,
+                db.and_(
+                    HealthScore.account_id == hs_latest_sub.c.account_id,
+                    HealthScore.measurement_month == hs_latest_sub.c.max_month,
+                ),
+            )
+            .all()
+        )
+        for hs in hs_rows:
+            pillars = hs.contributing_pillars or {}
+            if pillars:
+                result[hs.account_id] = {
+                    k: round(_safe_float(v), 1) for k, v in pillars.items()
+                }
 
     return dict(result)
 
