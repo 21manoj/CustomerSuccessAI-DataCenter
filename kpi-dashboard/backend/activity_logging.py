@@ -239,8 +239,9 @@ class ActivityLogger:
         status: str = 'success',
         error_message: Optional[str] = None,
     ) -> Optional[int]:
-        """Log user login"""
-        description = f"User #{user_id} logged in" if status == 'success' else f"Login failed for user #{user_id}"
+        """Log user login with resolved user name and email."""
+        user_label = ActivityLogger._resolve_user_label(user_id)
+        description = f"{user_label} logged in" if status == 'success' else f"Login failed for {user_label}"
         return ActivityLogger.log_activity(
             customer_id=customer_id,
             action_type='login',
@@ -249,20 +250,37 @@ class ActivityLogger:
             status=status,
             error_message=error_message,
         )
-    
+
     @staticmethod
     def log_logout(
         customer_id: int,
         user_id: int,
     ) -> Optional[int]:
-        """Log user logout"""
-        description = f"User #{user_id} logged out"
+        """Log user logout with resolved user name and email."""
+        user_label = ActivityLogger._resolve_user_label(user_id)
+        description = f"{user_label} logged out"
         return ActivityLogger.log_activity(
             customer_id=customer_id,
             action_type='logout',
             action_description=description,
             user_id=user_id,
         )
+
+    @staticmethod
+    def _resolve_user_label(user_id) -> str:
+        """Resolve user_id to 'Name (email)' or fallback to 'User #id'."""
+        if not user_id:
+            return "Unknown user"
+        try:
+            from models import User
+            user = User.query.get(user_id)
+            if user:
+                name = user.user_name or "User"
+                email = user.email or ""
+                return f"{name} ({email})" if email else name
+        except Exception:
+            pass
+        return f"User #{user_id}"
     
     @staticmethod
     def log_export(
