@@ -1,0 +1,16 @@
+---
+description: EC2-bound Docker images must be built with buildx for linux/amd64 (not plain docker compose build on Apple Silicon).
+alwaysApply: true
+---
+
+# EC2 Docker images: always use buildx (amd64)
+
+CS Pulse EC2 instances (e.g. `t3.*`) run **linux/amd64**. Developers on **Apple Silicon** produce **arm64** images with plain `docker compose build` or `docker build`, which **must not** be pushed to ECR for those hosts.
+
+**When building or pushing images intended for EC2 (ECR → pull on EC2):**
+
+- Use **`docker buildx build --platform linux/amd64`** (or an equivalent explicit amd64 target).
+- Push with **`--push`** to ECR after `aws ecr get-login-password` + `docker login`, or use **`--load`** only for local amd64 testing (single-platform).
+- Do **not** rely on `docker compose build` alone for EC2 deployment artifacts unless the environment is already amd64 and you have confirmed the image architecture.
+
+Reference: `docs/DEPLOYMENT_PATTERN_REGISTRY.md` (build → push → pull → run).
