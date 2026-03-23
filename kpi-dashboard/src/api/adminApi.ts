@@ -513,10 +513,12 @@ export async function generateApiKey(
     partner_tier?: string | null;
   },
 ): Promise<{ key: string; key_info: ApiKeyInfo }> {
-  return request(`/customers/${customerId}/api-keys`, {
+  const result = await request(`/customers/${customerId}/api-keys`, {
     method: 'POST',
     body: JSON.stringify(data),
-  });
+  }) as { api_key?: string; key?: string; key_info: ApiKeyInfo };
+  // Backend returns { api_key, key_info } — normalize to { key, key_info }
+  return { key: (result.api_key || result.key) as string, key_info: result.key_info };
 }
 
 export async function revokeApiKey(keyId: number): Promise<void> {
