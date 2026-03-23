@@ -844,11 +844,15 @@ const LicenseTab: React.FC<{ customerId: number }> = ({ customerId }) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">License Type</label>
-                <input
-                  value={form.license_type ?? ''}
+                <select
+                  value={form.license_type ?? 'starter'}
                   onChange={(e) => setForm((f) => ({ ...f, license_type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                >
+                  <option value="starter">Starter</option>
+                  <option value="professional">Professional</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Max Seats</label>
