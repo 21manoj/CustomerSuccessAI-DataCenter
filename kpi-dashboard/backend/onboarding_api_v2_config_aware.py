@@ -2324,6 +2324,23 @@ def process_data():
                         })
                         health_rows_written += 1
 
+                        # Also write pillar_scores table (needed by ROI engine)
+                        if pillar_scores:
+                            for pcode, pscore in pillar_scores.items():
+                                p_status = ht.classify(pscore)
+                                conn.execute(text("""
+                                    INSERT INTO pillar_scores (account_id, measurement_month, pillar_code, pillar_score, pillar_status, calculated_at)
+                                    VALUES (:aid, :month, :pcode, :pscore, :pstatus, now())
+                                    ON CONFLICT (account_id, pillar_code, measurement_month) DO UPDATE
+                                    SET pillar_score = :pscore, pillar_status = :pstatus, calculated_at = now()
+                                """), {
+                                    "aid": aid,
+                                    "month": month_key,
+                                    "pcode": pcode,
+                                    "pscore": round(pscore, 2),
+                                    "pstatus": p_status,
+                                })
+
                     # Compute change_from_last_month
                     conn.execute(text("""
                         UPDATE health_scores hs
