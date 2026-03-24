@@ -1150,6 +1150,313 @@ def parse_csv_to_catalog():
     })
 
 
+@admin_ui_api.route("/api/admin-ui/verticals/parse-source-csv", methods=["POST"])
+@super_admin_required
+def parse_source_csv():
+    """Parse a foreign CSV (Gainsight, ChurnZero, etc.) and auto-detect KPI definitions.
+
+    Unlike parse-csv which expects our template format, this endpoint accepts
+    ANY CSV format and tries to infer KPI definitions from column names, values,
+    and optional source_system hint.
+
+    Returns detected KPIs with suggested mappings + the raw columns for manual mapping.
+    """
+    import csv
+    import io
+    import re
+
+    source_system = request.form.get('source_system', request.args.get('source_system', 'auto'))
+
+    if 'file' not in request.files:
+        csv_content = request.data.decode('utf-8', errors='replace') if request.data else ''
+        if not csv_content:
+            return jsonify({"error": "No CSV file or content provided"}), 400
+    else:
+        csv_content = request.files['file'].read().decode('utf-8', errors='replace')
+
+    try:
+        reader = csv.DictReader(io.StringIO(csv_content))
+        headers = list(reader.fieldnames or [])
+        if not headers:
+            return jsonify({"error": "CSV has no headers"}), 400
+
+        # Read all rows for value analysis
+        rows = list(reader)
+
+        # ─── Source system detection ───
+        if source_system == 'auto':
+            header_str = ' '.join(headers).lower()
+            if 'churnscore' in header_str or 'churnzero' in header_str or 'churn_score' in header_str:
+                source_system = 'churnzero'
+            elif 'scorecard' in header_str or 'measure group' in header_str or 'gainsight' in header_str or 'csm name' in header_str:
+                source_system = 'gainsight'
+            elif 'hubspot' in header_str or 'hs_object_id' in header_str:
+                source_system = 'hubspot'
+            else:
+                source_system = 'unknown'
+
+        # ─── Detect long-format (pivoted) CSV ───
+        # Long format: one row per measure per account (e.g., Gainsight Scorecard Mass Edit)
+        # Columns like "Measure Name" + "Score" + "Weight" + "Measure Group"
+        headers_lower = [h.lower().strip() for h in headers]
+        is_long_format = (
+            any(h in headers_lower for h in ['measure name', 'measure', 'kpi name', 'metric name']) and
+            any(h in headers_lower for h in ['score', 'value', 'measure value'])
+        )
+
+        if is_long_format:
+            # Pivot: extract unique measure names as KPI candidates
+            measure_col = next((h for h in headers if h.lower().strip() in ('measure name', 'measure', 'kpi name', 'metric name')), None)
+            score_col = next((h for h in headers if h.lower().strip() in ('score', 'value', 'measure value')), None)
+            weight_col = next((h for h in headers if h.lower().strip() in ('weight',)), None)
+            group_col = next((h for h in headers if h.lower().strip() in ('measure group', 'group', 'pillar', 'category')), None)
+
+            measures = {}  # measure_name → {scores: [], weights: [], group: str}
+            for row in rows:
+                mname = (row.get(measure_col, '') or '').strip()
+                if not mname:
+                    continue
+                if mname not in measures:
+                    measures[mname] = {'scores': [], 'weights': [], 'group': ''}
+                try:
+                    measures[mname]['scores'].append(float(str(row.get(score_col, 0)).replace('%', '').replace('$', '').replace(',', '')))
+                except (ValueError, TypeError):
+                    pass
+                if weight_col:
+                    try:
+                        measures[mname]['weights'].append(float(str(row.get(weight_col, 0)).replace('%', '')))
+                    except (ValueError, TypeError):
+                        pass
+                if group_col:
+                    measures[mname]['group'] = (row.get(group_col, '') or '').strip()
+
+            # Build KPI candidates from pivoted measures
+            kpi_candidates = []
+            groups = set()
+            for mname, mdata in measures.items():
+                scores = mdata['scores']
+                if not scores:
+                    continue
+                groups.add(mdata['group'])
+                val_min, val_max = min(scores), max(scores)
+                val_avg = sum(scores) / len(scores)
+                avg_weight = sum(mdata['weights']) / len(mdata['weights']) if mdata['weights'] else 0
+
+                col_lower = mname.lower()
+                lower_keywords = ['time', 'days', 'tickets', 'churn', 'inactive', 'latency', 'complaints']
+                is_lower = any(kw in col_lower for kw in lower_keywords)
+
+                kpi_candidates.append({
+                    'source_column': mname,
+                    'suggested_kpi_code': re.sub(r'[^a-z0-9]', '_', col_lower).strip('_'),
+                    'suggested_name': mname,
+                    'unit': 'score',
+                    'higher_is_better': not is_lower,
+                    'suggested_target': round(val_avg + (val_max - val_avg) * 0.3, 1) if not is_lower else round(val_avg - (val_avg - val_min) * 0.3, 1),
+                    'suggested_ranges': {
+                        'healthy': {'min': round(val_avg, 1), 'max': round(val_max * 1.1, 1)},
+                        'risk': {'min': round(val_min + (val_avg - val_min) * 0.3, 1), 'max': round(val_avg, 1)},
+                        'critical': {'min': round(val_min * 0.8, 1), 'max': round(val_min + (val_avg - val_min) * 0.3, 1)},
+                    } if not is_lower else {
+                        'healthy': {'min': round(val_min * 0.8, 1), 'max': round(val_avg, 1)},
+                        'risk': {'min': round(val_avg, 1), 'max': round(val_avg + (val_max - val_avg) * 0.5, 1)},
+                        'critical': {'min': round(val_avg + (val_max - val_avg) * 0.5, 1), 'max': round(val_max * 1.2, 1)},
+                    },
+                    'pillar_hint': mdata['group'],
+                    'suggested_weight': round(avg_weight / 100, 3) if avg_weight > 1 else round(avg_weight, 3),
+                })
+
+            # Detect metadata columns
+            meta_cols = [h for h in headers if h != measure_col and h != score_col and h != weight_col and h != group_col]
+            detected_columns = [{'column_name': h, 'is_metadata': True, 'mapped_to': '_metadata'} for h in meta_cols]
+
+            return jsonify({
+                'source_system': source_system,
+                'format': 'long',
+                'total_columns': len(headers),
+                'total_rows': len(rows),
+                'unique_measures': len(measures),
+                'pillar_groups': sorted(g for g in groups if g),
+                'detected_columns': detected_columns,
+                'kpi_candidates': kpi_candidates,
+                'metadata_columns': detected_columns,
+                'unmapped_columns': [],
+            })
+
+        # ─── Known column mappings per source system ───
+        GAINSIGHT_MAPPINGS = {
+            'company name': '_account_name',
+            'account name': '_account_name',
+            'overall score': '_health_score',
+            'overall health': '_health_score',
+            'csm name': '_csm',
+            'csm': '_csm',
+            'measure group': '_pillar_hint',
+            'group': '_pillar_hint',
+            'measure name': '_kpi_name',
+            'measure': '_kpi_name',
+            'score': '_kpi_value',
+            'weight': '_weight',
+            'trend': '_trend',
+            'lifecycle stage': '_lifecycle',
+            'arr': '_arr',
+            'renewal date': '_renewal_date',
+            'nps score': 'nps',
+            'csat score': 'csat',
+            'product usage score': 'product_usage',
+            'feature adoption': 'feature_adoption',
+            'support tickets': 'support_tickets',
+            'time to value': 'ttfv',
+            'onboarding completion': 'onboarding',
+            'executive sponsor engaged': 'exec_sponsor',
+            'champion strength': 'champion_strength',
+        }
+
+        CHURNZERO_MAPPINGS = {
+            'account': '_account_name',
+            'account name': '_account_name',
+            'churnscore': '_health_score',
+            'churn score': '_health_score',
+            'health score': '_health_score',
+            'health color': '_health_color',
+            'segment': '_segment',
+            'last activity': '_last_activity',
+            'days since last login': 'days_inactive',
+            'dau': 'dau',
+            'daily active users': 'dau',
+            'wau': 'wau',
+            'weekly active users': 'wau',
+            'license utilization': 'license_util',
+            'license utilization %': 'license_util',
+            'logins last 30d': 'login_frequency',
+            'login frequency': 'login_frequency',
+            'total events last 30d': 'event_volume',
+            'support tickets open': 'open_tickets',
+            'nps': 'nps',
+            'nps score': 'nps',
+            'csat': 'csat',
+            'contract value': '_arr',
+            'arr': '_arr',
+            'renewal date': '_renewal_date',
+            'next renewal': '_renewal_date',
+            'usage score': 'usage_score',
+            'engagement score': 'engagement_score',
+            'outcome score': 'outcome_score',
+            'sentiment score': 'sentiment_score',
+            'roi score': 'roi_score',
+        }
+
+        mappings = GAINSIGHT_MAPPINGS if source_system == 'gainsight' else CHURNZERO_MAPPINGS if source_system == 'churnzero' else {}
+
+        # ─── Analyze each column ───
+        detected_columns = []
+        kpi_candidates = []
+
+        for col in headers:
+            col_lower = col.strip().lower()
+            mapped_to = mappings.get(col_lower, '')
+
+            # Analyze values to infer type
+            values = [r.get(col, '') for r in rows if r.get(col, '').strip()]
+            numeric_count = 0
+            sample_vals = []
+            for v in values[:20]:
+                cleaned = v.replace('%', '').replace('$', '').replace(',', '').strip()
+                try:
+                    float(cleaned)
+                    numeric_count += 1
+                    sample_vals.append(float(cleaned))
+                except (ValueError, TypeError):
+                    pass
+
+            is_numeric = numeric_count > len(values) * 0.7 if values else False
+            val_min = min(sample_vals) if sample_vals else 0
+            val_max = max(sample_vals) if sample_vals else 0
+            val_avg = sum(sample_vals) / len(sample_vals) if sample_vals else 0
+
+            col_info = {
+                'column_name': col,
+                'mapped_to': mapped_to,
+                'is_numeric': is_numeric,
+                'is_metadata': mapped_to.startswith('_') if mapped_to else False,
+                'sample_values': [str(v) for v in values[:3]],
+                'value_range': {'min': round(val_min, 2), 'max': round(val_max, 2), 'avg': round(val_avg, 2)} if is_numeric else None,
+                'row_count': len(values),
+            }
+            detected_columns.append(col_info)
+
+            # If it's a numeric non-metadata column, it's a KPI candidate
+            if is_numeric and not mapped_to.startswith('_'):
+                # Infer direction: if values look like percentages (0-100) and name suggests positive, higher_is_better
+                higher_keywords = ['score', 'rate', 'adoption', 'usage', 'utilization', 'engagement', 'nps', 'csat', 'strength', 'frequency']
+                lower_keywords = ['time', 'days', 'tickets', 'churn', 'inactive', 'latency', 'complaints', 'escalation']
+
+                higher = any(kw in col_lower for kw in higher_keywords)
+                lower = any(kw in col_lower for kw in lower_keywords)
+                direction = 'lower_is_better' if (lower and not higher) else 'higher_is_better'
+
+                # Infer unit
+                if '%' in col or 'pct' in col_lower or 'rate' in col_lower or 'utilization' in col_lower:
+                    unit = 'percentage'
+                elif 'days' in col_lower or 'time' in col_lower:
+                    unit = 'days'
+                elif 'hours' in col_lower:
+                    unit = 'hours'
+                elif 'score' in col_lower or 'nps' in col_lower:
+                    unit = 'score'
+                elif 'count' in col_lower or 'tickets' in col_lower or 'events' in col_lower or 'logins' in col_lower:
+                    unit = 'count'
+                else:
+                    unit = 'numeric'
+
+                # Infer ranges from data
+                if direction == 'higher_is_better':
+                    healthy_min = round(val_avg + (val_max - val_avg) * 0.3, 1)
+                    risk_min = round(val_avg - (val_avg - val_min) * 0.3, 1)
+                    kpi_candidates.append({
+                        'source_column': col,
+                        'suggested_kpi_code': mapped_to or re.sub(r'[^a-z0-9]', '_', col_lower).strip('_'),
+                        'suggested_name': col.strip(),
+                        'unit': unit,
+                        'higher_is_better': True,
+                        'suggested_target': round(healthy_min, 1),
+                        'suggested_ranges': {
+                            'healthy': {'min': round(healthy_min, 1), 'max': round(val_max * 1.1, 1)},
+                            'risk': {'min': round(risk_min, 1), 'max': round(healthy_min, 1)},
+                            'critical': {'min': round(val_min * 0.8, 1), 'max': round(risk_min, 1)},
+                        },
+                    })
+                else:
+                    healthy_max = round(val_avg - (val_avg - val_min) * 0.3, 1)
+                    risk_max = round(val_avg + (val_max - val_avg) * 0.3, 1)
+                    kpi_candidates.append({
+                        'source_column': col,
+                        'suggested_kpi_code': mapped_to or re.sub(r'[^a-z0-9]', '_', col_lower).strip('_'),
+                        'suggested_name': col.strip(),
+                        'unit': unit,
+                        'higher_is_better': False,
+                        'suggested_target': round(healthy_max, 1),
+                        'suggested_ranges': {
+                            'healthy': {'min': round(val_min * 0.8, 1), 'max': round(healthy_max, 1)},
+                            'risk': {'min': round(healthy_max, 1), 'max': round(risk_max, 1)},
+                            'critical': {'min': round(risk_max, 1), 'max': round(val_max * 1.2, 1)},
+                        },
+                    })
+
+        return jsonify({
+            'source_system': source_system,
+            'total_columns': len(headers),
+            'total_rows': len(rows),
+            'detected_columns': detected_columns,
+            'kpi_candidates': kpi_candidates,
+            'metadata_columns': [c for c in detected_columns if c.get('is_metadata')],
+            'unmapped_columns': [c['column_name'] for c in detected_columns if not c.get('mapped_to') and c.get('is_numeric')],
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"Source CSV parsing failed: {str(e)}"}), 400
+
+
 @admin_ui_api.route("/api/admin-ui/verticals/csv-template", methods=["GET"])
 @super_admin_required
 def download_csv_template():
