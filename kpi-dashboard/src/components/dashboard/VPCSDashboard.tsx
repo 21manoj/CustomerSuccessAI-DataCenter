@@ -796,9 +796,9 @@ const VPCSDashboard: React.FC = () => {
 
         if (cancelled) return;
 
-        // If no API data at all, use fallback
+        // If no API data at all, show error
         if (!accountsData && !actionsData && !healthData && !roiData) {
-          setData(FALLBACK_DATA);
+          setError('No data available. Upload your data to get started.');
           setLoading(false);
           return;
         }
@@ -873,7 +873,7 @@ const VPCSDashboard: React.FC = () => {
             { label: 'Renewals This Qtr', value: String(renewalCount), subtitle: `${formatCompact(renewalArr)} ARR renewing`, accent: 'cyan', icon: <Calendar className="w-4 h-4" /> },
           ],
           health_buckets: healthBuckets,
-          actions: actions.length > 0 ? actions : FALLBACK_DATA.actions,
+          actions: actions,
           accounts,
           renewals_90d: renewals,
           renewal_count_90d: renewalCount,
@@ -895,9 +895,8 @@ const VPCSDashboard: React.FC = () => {
 
         setData(transformed);
       } catch {
-        // Use fallback data when APIs are unavailable
         if (!cancelled) {
-          setData(FALLBACK_DATA);
+          setError('Unable to load VP CS dashboard data. Please check your connection and try again.');
         }
       } finally {
         if (!cancelled) setLoading(false);

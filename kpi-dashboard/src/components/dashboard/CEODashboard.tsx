@@ -860,13 +860,11 @@ const CEODashboard: React.FC = () => {
             last_updated: 'just now',
           });
         } else if (!cancelled) {
-          // No companies returned — use fallback
-          setData(FALLBACK_DATA);
+          setError('No portfolio data available. Upload your data to get started.');
         }
       } catch {
-        // Use fallback data when API is unavailable
         if (!cancelled) {
-          setData(FALLBACK_DATA);
+          setError('Unable to load CEO dashboard data. Please check your connection and try again.');
         }
       } finally {
         if (!cancelled) setLoading(false);

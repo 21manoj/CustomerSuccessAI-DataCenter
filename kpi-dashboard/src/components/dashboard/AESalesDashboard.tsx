@@ -737,12 +737,11 @@ const AESalesDashboard: React.FC = () => {
           };
           setData(transformed);
         } else if (!cancelled) {
-          // Fallback when no API data available
-          setData(FALLBACK_DATA);
+          setError('No sales data available. Upload your data to get started.');
         }
       } catch {
         if (!cancelled) {
-          setData(FALLBACK_DATA);
+          setError('Unable to load AE dashboard data. Please check your connection and try again.');
         }
       } finally {
         if (!cancelled) setLoading(false);

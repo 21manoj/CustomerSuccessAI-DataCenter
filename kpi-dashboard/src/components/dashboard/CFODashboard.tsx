@@ -771,9 +771,8 @@ const CFODashboard: React.FC = () => {
           setData(transformed);
         }
       } catch {
-        // Use fallback data when API is unavailable
         if (!cancelled) {
-          setData(FALLBACK_DATA);
+          setError('Unable to load CFO dashboard data. Please check your connection and try again.');
         }
       } finally {
         if (!cancelled) setLoading(false);

@@ -686,9 +686,8 @@ const CRODashboard: React.FC = () => {
           setData(transformed);
         }
       } catch {
-        // Use fallback data when API is unavailable
         if (!cancelled) {
-          setData(FALLBACK_DATA);
+          setError('Unable to load dashboard data. Please check your connection and try again.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -795,6 +794,26 @@ const CRODashboard: React.FC = () => {
           <SkeletonCard className="h-72 mb-4" />
           <SkeletonCard className="h-64" />
         </aside>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+        <SidebarNav activeId="cro-overview" onViewChange={handleViewChange} onNavigate={handleNav} />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h3>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <button onClick={() => window.location.reload()} className="px-6 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-colors">
+              Retry
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
