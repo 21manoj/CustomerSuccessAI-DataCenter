@@ -1131,13 +1131,17 @@ def _process_data_impl(customer_id: int) -> dict:
 
         # ----------------------------------------------------------
         # ALWAYS: Recalculate health scores from DB data
+        # Per-month: group KPIs by month, compute health per month
+        # per account. This enables ROI engine to see historical
+        # deltas (e.g. Phase 1 baseline vs Phase 2 intervention).
         # ----------------------------------------------------------
         try:
-            calculate_fn, get_kpi_vals, _ = _get_health_functions(vertical)
+            calculate_fn, _, _ = _get_health_functions(vertical)
             import utils.health_thresholds as ht
             from datetime import date as _date
             from sqlalchemy import create_engine, text as _text
             import json as _json, logging
+            from collections import defaultdict
             _logger = logging.getLogger(__name__)
 
             database_url = os.environ.get('DATABASE_URL')
@@ -1147,43 +1151,80 @@ def _process_data_impl(customer_id: int) -> dict:
                 database_url = os.environ.get('DATABASE_URL')
 
             acct_list = Account.query.filter_by(customer_id=customer_id).all()
-            measurement_date = _date.today().replace(day=1)
 
+            # Fetch ALL KPI measurements for this customer, grouped by account+month
+            from models import DC2SKPI
+            all_kpis = DC2SKPI.query.filter(
+                DC2SKPI.account_id.in_([a.account_id for a in acct_list])
+            ).all()
+
+            # Group by (account_id, month) → {kpi_code: [values]}
+            account_month_kpis = defaultdict(lambda: defaultdict(list))
+            for k in all_kpis:
+                if k.measured_at:
+                    month_key = k.measured_at.date().replace(day=1) if hasattr(k.measured_at, 'date') else k.measured_at.replace(day=1)
+                else:
+                    month_key = _date.today().replace(day=1)
+                account_month_kpis[(k.account_id, month_key)][k.kpi_code].append(float(k.value))
+
+            # For each (account, month), average the KPI values and compute health
             score_rows = []
             scores_skipped = 0
-            for acct in acct_list:
+            for (account_id, month), kpi_groups in account_month_kpis.items():
                 try:
-                    kpi_vals = get_kpi_vals(acct.account_id)
+                    # Average multiple measurements per KPI within the same month
+                    kpi_vals = {code: sum(vals) / len(vals) for code, vals in kpi_groups.items()}
                     if not kpi_vals:
                         scores_skipped += 1
                         continue
                     health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
                     score_rows.append({
-                        "aid": acct.account_id,
-                        "month": measurement_date,
+                        "aid": account_id,
+                        "month": month,
                         "score": round(health, 2),
                         "status": ht.classify(health),
                         "pillars": _json.dumps({k: round(v, 2) for k, v in pillars.items()}) if pillars else None,
                     })
                 except Exception as calc_err:
-                    _logger.warning(f"Health score calc failed for account {acct.account_id}: {calc_err}")
+                    _logger.warning(f"Health score calc failed for account {account_id} month {month}: {calc_err}")
+
+            _logger.info(f"Per-month health calc: {len(score_rows)} rows for {len(set(r['aid'] for r in score_rows))} accounts, "
+                         f"{len(set(r['month'] for r in score_rows))} distinct months")
 
             scores_written = 0
             if database_url and score_rows:
                 engine = create_engine(database_url)
                 with engine.begin() as conn:
-                    conn.execute(_text("""
-                        DELETE FROM health_scores WHERE account_id IN
-                        (SELECT account_id FROM accounts WHERE customer_id = :cid)
-                    """), {"cid": customer_id})
-
+                    # UPSERT: preserve historical months, update only matching (account_id, measurement_month).
+                    # This is critical for 2-phase loads where Phase 1 and Phase 2 produce different months.
+                    # Old behavior (DELETE all) destroyed historical data needed by ROI engine.
                     for row in score_rows:
                         conn.execute(_text("""
                             INSERT INTO health_scores
                                 (account_id, measurement_month, health_score, health_status, contributing_pillars)
                             VALUES (:aid, :month, :score, :status, :pillars)
+                            ON CONFLICT (account_id, measurement_month)
+                            DO UPDATE SET
+                                health_score = EXCLUDED.health_score,
+                                health_status = EXCLUDED.health_status,
+                                contributing_pillars = EXCLUDED.contributing_pillars
                         """), row)
                         scores_written += 1
+
+                    # Compute change_from_last_month for all this customer's health scores
+                    conn.execute(_text("""
+                        UPDATE health_scores hs
+                        SET change_from_last_month = hs.health_score - prev.health_score
+                        FROM (
+                            SELECT account_id, measurement_month, health_score,
+                                   LAG(health_score) OVER (PARTITION BY account_id ORDER BY measurement_month) AS prev_score
+                            FROM health_scores
+                            WHERE account_id IN (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                        ) prev
+                        WHERE hs.account_id = prev.account_id
+                          AND hs.measurement_month = prev.measurement_month
+                          AND prev.prev_score IS NOT NULL
+                    """), {"cid": customer_id})
                 engine.dispose()
             elif not database_url:
                 _logger.error("DATABASE_URL not set — cannot write health scores")

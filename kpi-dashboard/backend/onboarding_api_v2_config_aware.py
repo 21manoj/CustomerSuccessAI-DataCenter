@@ -2268,48 +2268,47 @@ def process_data():
                     current_app.logger.debug(traceback.format_exc())
 
             # ── Step 2c: Compute and store health_scores (cache for API / MCP) ──
+            # Per-month: group KPIs by (account, month), compute health per month.
+            # This preserves historical health scores needed by ROI engine.
             try:
                 from verticals.dc2_s.api_routes import calculate_kpi_health
                 from models import Account
+                import utils.health_thresholds as ht
+                from collections import defaultdict
+                from datetime import date
+
                 hs_accounts = Account.query.filter_by(customer_id=customer_id).all()
+                account_ids = [a.account_id for a in hs_accounts]
                 health_rows_written = 0
+
                 with engine.begin() as conn:
-                    # Clear old scores for this customer's accounts
-                    conn.execute(text("""
-                        DELETE FROM health_scores WHERE account_id IN
-                        (SELECT account_id FROM accounts WHERE customer_id = :cid)
-                    """), {"cid": customer_id})
+                    # Fetch ALL KPI measurements for this customer
+                    all_kpi_rows = conn.execute(text("""
+                        SELECT account_id, kpi_code, value, measured_at
+                        FROM dc2s_kpis
+                        WHERE account_id = ANY(:aids)
+                        ORDER BY account_id, measured_at
+                    """), {"aids": account_ids}).fetchall()
 
-                    for acct in hs_accounts:
-                        # Get latest KPI values for this account
-                        kpi_rows = conn.execute(text("""
-                            SELECT kpi_code, value FROM dc2s_kpis
-                            WHERE account_id = :aid
-                            ORDER BY measured_at DESC
-                        """), {"aid": acct.account_id}).fetchall()
+                    # Group by (account_id, month) → {kpi_code: [values]}
+                    account_month_kpis = defaultdict(lambda: defaultdict(list))
+                    for row in all_kpi_rows:
+                        aid, kpi_code, value, measured_at = row
+                        if measured_at:
+                            month_key = measured_at.date().replace(day=1) if hasattr(measured_at, 'date') else measured_at.replace(day=1)
+                        else:
+                            month_key = date.today().replace(day=1)
+                        account_month_kpis[(aid, month_key)][kpi_code].append(float(value))
 
-                        if not kpi_rows:
+                    # Compute health per (account, month) and UPSERT
+                    for (aid, month_key), kpi_groups in account_month_kpis.items():
+                        kpi_values = {code: sum(vals) / len(vals) for code, vals in kpi_groups.items()}
+                        if not kpi_values:
                             continue
 
-                        # Deduplicate to latest value per KPI
-                        seen = set()
-                        kpi_values = {}
-                        for row in kpi_rows:
-                            if row[0] not in seen:
-                                seen.add(row[0])
-                                kpi_values[row[0]] = float(row[1])
-
                         overall_health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
+                        hs_status = ht.classify(overall_health)
 
-                        # Classify using standard thresholds
-                        if overall_health >= 70:
-                            hs_status = 'healthy'
-                        elif overall_health >= 50:
-                            hs_status = 'at_risk'
-                        else:
-                            hs_status = 'critical'
-
-                        from datetime import date
                         conn.execute(text("""
                             INSERT INTO health_scores (account_id, measurement_month, health_score, health_status, contributing_pillars)
                             VALUES (:aid, :month, :score, :status, :pillars)
@@ -2317,15 +2316,30 @@ def process_data():
                             SET health_score = :score, health_status = :status,
                                 contributing_pillars = :pillars, calculated_at = now()
                         """), {
-                            "aid": acct.account_id,
-                            "month": date.today().replace(day=1),
+                            "aid": aid,
+                            "month": month_key,
                             "score": round(overall_health, 2),
                             "status": hs_status,
                             "pillars": json.dumps(pillar_scores) if pillar_scores else None,
                         })
                         health_rows_written += 1
 
-                current_app.logger.info(f"✅ Wrote {health_rows_written} health_scores rows")
+                    # Compute change_from_last_month
+                    conn.execute(text("""
+                        UPDATE health_scores hs
+                        SET change_from_last_month = hs.health_score - prev.prev_score
+                        FROM (
+                            SELECT account_id, measurement_month,
+                                   LAG(health_score) OVER (PARTITION BY account_id ORDER BY measurement_month) AS prev_score
+                            FROM health_scores
+                            WHERE account_id = ANY(:aids)
+                        ) prev
+                        WHERE hs.account_id = prev.account_id
+                          AND hs.measurement_month = prev.measurement_month
+                          AND prev.prev_score IS NOT NULL
+                    """), {"aids": account_ids})
+
+                current_app.logger.info(f"✅ Wrote {health_rows_written} health_scores rows ({len(set(k[1] for k in account_month_kpis.keys()))} months)")
                 execution_state['health_scores_written'] = health_rows_written
                 execution_state['steps_completed'].append('health_scores')
             except Exception as e:
