@@ -547,6 +547,9 @@ def cro_dashboard():
             })
 
         avg_health = round(total_weighted_score / total_revenue, 1) if total_revenue > 0 else 0.0
+        # Simple (unweighted) average — matches MCP list_accounts for consistency
+        all_scores = [_safe_float(latest_health[aid].health_score) for aid in latest_health]
+        avg_health_simple = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0.0
 
         # Health score change: compare weighted avg of latest vs previous
         prev_weighted = 0.0
@@ -602,7 +605,10 @@ def cro_dashboard():
             'accounts_recovered_count': recovered,
             'expansion_candidates_count': expansion_candidates,
             'avg_health_score': avg_health,
+            'avg_health_score_simple': avg_health_simple,
             'health_score_change': health_change,
+            'total_accounts': len(accounts),
+            'total_arr': total_revenue,
             'early_warning_days': early_warning_days,
             'playbook_roi_pct': playbook_roi_pct,
             'nrr_projection': nrr_projection,
