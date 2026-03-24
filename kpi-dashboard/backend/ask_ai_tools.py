@@ -24,15 +24,10 @@ if _mcp_dir not in sys.path:
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-# The MCP modules require fastmcp at import time. If not installed,
-# we fall back to calling the underlying utility functions directly.
+# Always use direct DB queries. The MCP module functions are @mcp.tool-decorated
+# FunctionTool objects (not callable as plain functions). Direct DB queries are
+# faster (same process, no transport) and avoid the FunctionTool issue.
 _MCP_AVAILABLE = False
-try:
-    # Test if fastmcp is available (needed by cs_pulse_mcp_server)
-    import fastmcp  # noqa: F401
-    _MCP_AVAILABLE = True
-except ImportError:
-    logger.info("fastmcp not installed — Ask AI tools will use direct DB queries")
 
 # ─── Tool Definitions (Claude tool_use format) ───────────────────────────────
 # Each mirrors an MCP tool but uses Claude's JSON Schema tool format.
