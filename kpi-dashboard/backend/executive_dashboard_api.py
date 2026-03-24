@@ -450,7 +450,7 @@ def _get_roi_snapshot(customer_id):
     snapshot = (
         ROISnapshot.query
         .filter_by(customer_id=customer_id)
-        .order_by(ROISnapshot.snapshot_date.desc())
+        .order_by(ROISnapshot.snapshot_date.desc(), ROISnapshot.created_at.desc())
         .first()
     )
     return snapshot
