@@ -605,11 +605,13 @@ def cro_dashboard():
                     nrr_baseline = nrr_detail.get('baseline', nrr_projection)
                     nrr_change = round(nrr_projection - nrr_baseline, 0)
 
-        # ── Highest risk accounts (top 10 by lowest health) ──
+        # ── Highest risk accounts (only at-risk/critical, sorted by lowest health) ──
         pillar_scores_map = _get_latest_pillar_scores(account_ids)
         account_details.sort(key=lambda a: a['health_score'])
         highest_risk = []
-        for ad in account_details[:10]:
+        for ad in account_details:
+            if ad['health_score'] >= healthy_min_val:
+                continue  # Skip healthy accounts — only show truly at-risk
             pillars = pillar_scores_map.get(ad['account_id'], {})
             ad['pillar_scores'] = pillars
             highest_risk.append(ad)
