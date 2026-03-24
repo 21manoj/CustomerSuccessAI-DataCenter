@@ -338,19 +338,34 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         return {'accounts': sorted(result, key=lambda x: x['health_score']), 'count': len(result), 'threshold': threshold}
 
     elif tool_name == 'get_revenue_at_risk':
+        # Use the real get_revenue_at_risk from utils/context_graph.py
+        # This has de-duplication logic and correct revenue counting rules
+        # that the simplified OUTCOME-only query misses
         account_id = tool_input['account_id']
-        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='OUTCOME').all()
-        at_risk = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'at_risk')
-        protected = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'protected')
-        expansion = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'expansion')
-        lost = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'lost')
-        return {
-            'account_id': account_id,
-            'revenue_at_risk': at_risk,
-            'revenue_protected': protected,
-            'expansion_pipeline': expansion,
-            'lost': lost,
-        }
+        try:
+            from utils.context_graph import get_revenue_at_risk as _cg_revenue
+            result = _cg_revenue(account_id)
+            result['account_id'] = account_id
+            # Normalize field names to match what artifact extractor expects
+            result.setdefault('revenue_at_risk', result.get('at_risk', 0))
+            result.setdefault('revenue_protected', result.get('protected', 0))
+            result.setdefault('expansion_pipeline', result.get('expansion', 0))
+            return result
+        except Exception as e:
+            logger.warning(f"context_graph.get_revenue_at_risk failed, falling back: {e}")
+            # Fallback to simple query
+            nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='OUTCOME').all()
+            at_risk = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'at_risk')
+            protected = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'protected')
+            expansion = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'expansion')
+            lost = sum(float(n.revenue_impact or 0) for n in nodes if n.revenue_impact_type == 'lost')
+            return {
+                'account_id': account_id,
+                'revenue_at_risk': at_risk,
+                'revenue_protected': protected,
+                'expansion_pipeline': expansion,
+                'lost': lost,
+            }
 
     elif tool_name == 'get_context_graph_mermaid':
         # Mermaid generation with subgraph grouping for proper vertical layout
