@@ -890,6 +890,282 @@ def get_vertical_templates(vertical):
 
 
 # ---------------------------------------------------------------------------
+# Custom Vertical Management
+# ---------------------------------------------------------------------------
+
+@admin_ui_api.route("/api/admin-ui/verticals", methods=["POST"])
+@super_admin_required
+def create_vertical():
+    """Create a new custom vertical from a KPI catalog JSON."""
+    import json as _json
+    data = request.json
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    slug = (data.get('vertical_slug') or '').strip().lower().replace(' ', '_').replace('-', '_')
+    if not slug or len(slug) < 3:
+        return jsonify({"error": "vertical_slug must be at least 3 characters"}), 400
+
+    label = data.get('label', slug.replace('_', ' ').title())
+    description = data.get('description', '')
+    scope = data.get('scope', 'platform')  # 'platform' or 'customer'
+    customer_id = data.get('customer_id')
+    catalog = data.get('catalog', {})
+
+    if not catalog or not catalog.get('kpis'):
+        return jsonify({"error": "catalog with kpis is required"}), 400
+
+    # Validate catalog using generic scorer
+    try:
+        from utils.generic_scorer import load_catalog_from_dict
+        kpi_cat, pillar_cat = load_catalog_from_dict(catalog)
+        if not kpi_cat:
+            return jsonify({"error": "No valid KPIs found in catalog"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Catalog validation failed: {str(e)}"}), 400
+
+    kpi_count = len(catalog.get('kpis', {}))
+    pillar_count = len(catalog.get('pillars', {}))
+
+    if scope == 'customer' and customer_id:
+        # Store in CustomerConfig.dc2s_kpi_definitions (hot-reload, no restart)
+        from models import CustomerConfig, db
+        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        if not config:
+            return jsonify({"error": f"Customer {customer_id} not found"}), 404
+        config.dc2s_kpi_definitions = catalog
+        config.vertical = slug
+        db.session.commit()
+        # Clear registry cache so it picks up new definitions
+        from utils.vertical_registry import _kpis_cache, _pillars_cache
+        _kpis_cache.pop(slug, None)
+        _pillars_cache.pop(slug, None)
+        return jsonify({
+            "status": "created",
+            "vertical": slug,
+            "label": label,
+            "kpi_count": kpi_count,
+            "pillar_count": pillar_count,
+            "scope": "customer",
+            "customer_id": customer_id,
+        }), 201
+    else:
+        # Write JSON catalog file to config/ directory (platform-level)
+        import os
+        config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config')
+        catalog_path = os.path.join(config_dir, f'{slug}_kpi_catalog.json')
+
+        # Don't overwrite existing catalogs
+        if os.path.exists(catalog_path):
+            return jsonify({"error": f"Vertical '{slug}' already exists. Use a different slug or delete the existing one first."}), 409
+
+        # Add metadata
+        full_catalog = {
+            "version": "1.0",
+            "vertical": slug,
+            "description": description,
+            **catalog,
+        }
+
+        with open(catalog_path, 'w') as f:
+            _json.dump(full_catalog, f, indent=2)
+
+        # Clear registry cache and re-discover
+        from utils.vertical_registry import _kpis_cache, _pillars_cache, SUPPORTED_VERTICALS, VERTICAL_ALIASES
+        _kpis_cache.pop(slug, None)
+        _pillars_cache.pop(slug, None)
+        SUPPORTED_VERTICALS.add(slug)
+        VERTICAL_ALIASES[slug] = slug
+
+        return jsonify({
+            "status": "created",
+            "vertical": slug,
+            "label": label,
+            "kpi_count": kpi_count,
+            "pillar_count": pillar_count,
+            "scope": "platform",
+            "catalog_path": f"config/{slug}_kpi_catalog.json",
+        }), 201
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/validate", methods=["POST"])
+@super_admin_required
+def validate_vertical_catalog():
+    """Validate a KPI catalog without saving it."""
+    catalog = (request.json or {}).get('catalog', {})
+    if not catalog:
+        return jsonify({"valid": False, "errors": ["Empty catalog"]}), 400
+
+    errors = []
+    warnings = []
+
+    # Check pillars
+    pillars = catalog.get('pillars', {})
+    kpis = catalog.get('kpis', {})
+
+    if not pillars:
+        errors.append("No pillars defined")
+    if not kpis:
+        errors.append("No KPIs defined")
+    if len(pillars) < 3:
+        errors.append(f"At least 3 pillars required (got {len(pillars)})")
+    if len(pillars) > 7:
+        errors.append(f"Maximum 7 pillars allowed (got {len(pillars)})")
+
+    # Check pillar weights sum
+    pillar_weights = [p.get('weight_l2', 0) for p in pillars.values()]
+    if pillar_weights and abs(sum(pillar_weights) - 1.0) > 0.01:
+        errors.append(f"Pillar weights must sum to 1.0 (got {sum(pillar_weights):.3f})")
+
+    # Check KPIs per pillar
+    pillar_codes = set(pillars.keys())
+    kpis_by_pillar = {}
+    for kcode, kdata in kpis.items():
+        p = kdata.get('pillar', '')
+        if p not in pillar_codes:
+            errors.append(f"KPI {kcode} references unknown pillar '{p}'")
+        kpis_by_pillar.setdefault(p, []).append(kcode)
+
+    for pc in pillar_codes:
+        if pc not in kpis_by_pillar:
+            errors.append(f"Pillar {pc} has no KPIs")
+        else:
+            weights = [kpis[k].get('weight_l1', 0) for k in kpis_by_pillar[pc]]
+            if weights and abs(sum(weights) - 1.0) > 0.05:
+                warnings.append(f"KPI weights for {pc} sum to {sum(weights):.3f} (will be auto-normalized)")
+
+    # Check ranges
+    for kcode, kdata in kpis.items():
+        ranges = kdata.get('ranges', {})
+        if not ranges:
+            errors.append(f"KPI {kcode} has no ranges defined")
+        elif not all(k in ranges for k in ('healthy', 'risk', 'critical')):
+            errors.append(f"KPI {kcode} missing range bands (need healthy, risk, critical)")
+
+    # Try generic scorer validation
+    try:
+        from utils.generic_scorer import load_catalog_from_dict
+        load_catalog_from_dict(catalog)
+    except Exception as e:
+        errors.append(f"Scorer validation failed: {str(e)}")
+
+    return jsonify({
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "kpi_count": len(kpis),
+        "pillar_count": len(pillars),
+    })
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/parse-csv", methods=["POST"])
+@super_admin_required
+def parse_csv_to_catalog():
+    """Parse an uploaded CSV file into a KPI catalog JSON structure."""
+    import csv
+    import io
+
+    if 'file' not in request.files:
+        # Try raw CSV in body
+        csv_content = request.data.decode('utf-8', errors='replace') if request.data else ''
+        if not csv_content:
+            return jsonify({"error": "No CSV file or content provided"}), 400
+    else:
+        csv_content = request.files['file'].read().decode('utf-8', errors='replace')
+
+    parse_errors = []
+    pillars = {}
+    kpis = {}
+
+    try:
+        reader = csv.DictReader(io.StringIO(csv_content))
+        required_cols = {'kpi_code', 'name', 'pillar'}
+        if not required_cols.issubset(set(reader.fieldnames or [])):
+            missing = required_cols - set(reader.fieldnames or [])
+            return jsonify({"error": f"Missing required columns: {missing}"}), 400
+
+        for i, row in enumerate(reader, 1):
+            try:
+                kpi_code = row.get('kpi_code', '').strip()
+                pillar_code = row.get('pillar', '').strip()
+                kpi_name = row.get('name', '').strip()
+
+                if not kpi_code or not pillar_code or not kpi_name:
+                    parse_errors.append(f"Row {i}: missing kpi_code, name, or pillar")
+                    continue
+
+                # Auto-create pillar if not exists
+                if pillar_code not in pillars:
+                    pillar_name = row.get('pillar_name', pillar_code).strip()
+                    weight_l2 = float(row.get('pillar_weight', 0) or 0)
+                    pillars[pillar_code] = {
+                        "name": pillar_name or pillar_code,
+                        "weight_l2": weight_l2,
+                        "kpi_count": 0,
+                    }
+
+                pillars[pillar_code]['kpi_count'] = pillars[pillar_code].get('kpi_count', 0) + 1
+
+                higher = row.get('higher_is_better', 'true').strip().lower() in ('true', '1', 'yes', 'y')
+                kpis[kpi_code] = {
+                    "name": kpi_name,
+                    "pillar": pillar_code,
+                    "weight_l1": float(row.get('weight_l1', 0) or 0),
+                    "unit": row.get('unit', 'percentage').strip() or 'percentage',
+                    "higher_is_better": higher,
+                    "frequency": row.get('frequency', 'monthly').strip() or 'monthly',
+                    "target": {"operator": ">" if higher else "<", "value": float(row.get('target', 0) or 0)},
+                    "ranges": {
+                        "healthy": {"min": float(row.get('healthy_min', 0) or 0), "max": float(row.get('healthy_max', 100) or 100)},
+                        "risk": {"min": float(row.get('risk_min', 0) or 0), "max": float(row.get('risk_max', 0) or 0)},
+                        "critical": {"min": float(row.get('critical_min', 0) or 0), "max": float(row.get('critical_max', 0) or 0)},
+                    },
+                }
+            except (ValueError, TypeError) as e:
+                parse_errors.append(f"Row {i}: {str(e)}")
+
+        # Auto-normalize pillar weights if they don't sum to 1
+        total_pw = sum(p.get('weight_l2', 0) for p in pillars.values())
+        if total_pw > 0 and abs(total_pw - 1.0) > 0.01:
+            for p in pillars.values():
+                p['weight_l2'] = round(p['weight_l2'] / total_pw, 4)
+        elif total_pw == 0:
+            # Equal distribution
+            n = len(pillars)
+            for p in pillars.values():
+                p['weight_l2'] = round(1.0 / n, 4)
+
+    except Exception as e:
+        return jsonify({"error": f"CSV parsing failed: {str(e)}"}), 400
+
+    return jsonify({
+        "catalog": {"pillars": pillars, "kpis": kpis},
+        "parse_errors": parse_errors,
+        "kpi_count": len(kpis),
+        "pillar_count": len(pillars),
+    })
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/csv-template", methods=["GET"])
+@super_admin_required
+def download_csv_template():
+    """Return a CSV template for KPI catalog upload."""
+    import io
+    output = io.StringIO()
+    output.write("kpi_code,name,pillar,pillar_name,pillar_weight,weight_l1,unit,higher_is_better,target,frequency,healthy_min,healthy_max,risk_min,risk_max,critical_min,critical_max\n")
+    output.write("P1-KPI1,Daily Active Users,P1,Product Adoption,0.30,0.20,percentage,true,60,daily,60,95,35,60,0,35\n")
+    output.write("P1-KPI2,Feature Adoption Breadth,P1,Product Adoption,0.30,0.15,percentage,true,45,weekly,45,90,25,45,0,25\n")
+    output.write("P2-KPI1,QBR Frequency,P2,Customer Engagement,0.25,0.25,count,true,4,quarterly,4,12,2,4,0,2\n")
+
+    from flask import Response
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=kpi_catalog_template.csv'}
+    )
+
+
+# ---------------------------------------------------------------------------
 # Customer Config
 # ---------------------------------------------------------------------------
 

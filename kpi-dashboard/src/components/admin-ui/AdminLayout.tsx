@@ -11,6 +11,7 @@ import {
   X,
   LogOut,
   ChevronLeft,
+  PlusCircle,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin', icon: <LayoutDashboard size={18} /> },
   { label: 'Customers', to: '/admin/customers', icon: <Users size={18} /> },
   { label: 'Verticals', to: '/admin/verticals', icon: <Layers size={18} /> },
+  { label: 'Custom Vertical', to: '/admin/custom-vertical', icon: <PlusCircle size={18} /> },
   { label: 'Licenses', to: '/admin/licenses', icon: <Key size={18} /> },
   { label: 'Activity Log', to: '/admin/activity', icon: <Activity size={18} /> },
 ];
