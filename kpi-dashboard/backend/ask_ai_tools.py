@@ -307,12 +307,15 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
             return {"error": f"Account {account_id} not found"}
         hs = HealthScore.query.filter_by(account_id=account_id).order_by(HealthScore.measurement_month.desc()).first()
         score = float(hs.health_score) if hs else 0
-        # Get pillar scores
+        # Get pillar scores: try PillarScore table, fallback to HealthScore.contributing_pillars
         pillars = PillarScore.query.filter_by(account_id=account_id).order_by(PillarScore.measurement_month.desc()).all()
         seen = {}
         for p in pillars:
             if p.pillar_code not in seen:
                 seen[p.pillar_code] = round(float(p.pillar_score), 1)
+        # Fallback: HealthScore.contributing_pillars JSON field
+        if not seen and hs and hs.contributing_pillars:
+            seen = {k: round(float(v), 1) for k, v in hs.contributing_pillars.items()}
         return {
             'account_id': account_id,
             'account_name': acct.account_name,
