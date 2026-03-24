@@ -100,6 +100,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Days from hardware arrival to first AI workload running in production",
         "pillar": "P1",
         "weight_l1": 0.20,  # 20% of P1 score
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Project milestone — measured per deployment event
         "saas_kpi_code": "TTFV",
         "saas_category": "Product Usage & Onboarding",
@@ -121,6 +122,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of planned hardware successfully installed on first attempt",
         "pillar": "P1",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Rolled up from installation events each month
         "saas_kpi_code": "ONBOARDING_COMPLETION",
         "saas_category": "Product Usage & Onboarding",
@@ -142,6 +144,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of servers configured correctly without rework",
         "pillar": "P1",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Validated after each config batch
         "saas_kpi_code": "SETUP_ACCURACY",
         "saas_category": "Product Usage & Onboarding",
@@ -163,6 +166,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Average days to complete full deployment (all phases)",
         "pillar": "P1",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Per-project, averaged monthly
         "saas_kpi_code": "TIME_TO_VALUE",
         "saas_category": "Product Usage & Onboarding",
@@ -184,6 +188,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Days from rack delivery to operational status",
         "pillar": "P1",
         "weight_l1": 0.13,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Per-rack event, aggregated monthly
         "saas_kpi_code": "ACTIVATION_TIME",
         "saas_category": "Product Usage & Onboarding",
@@ -204,6 +209,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of network requirements met at deployment",
         "pillar": "P1",
         "weight_l1": 0.10,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Checked weekly during deployment phases
         "saas_kpi_code": "INFRASTRUCTURE_READINESS",
         "saas_category": "Product Usage & Onboarding",
@@ -223,6 +229,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Servers deployed per day per field engineer",
         "pillar": "P1",
         "weight_l1": 0.08,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Reviewed in weekly ops standups
         "saas_kpi_code": "TEAM_PRODUCTIVITY",
         "saas_category": "Product Usage & Onboarding",
@@ -242,6 +249,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of deployment docs completed and validated",
         "pillar": "P1",
         "weight_l1": 0.07,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Reviewed at project milestones
         "saas_kpi_code": "ONBOARDING_DOCS_COMPLETE",
         "saas_category": "Product Usage & Onboarding",
@@ -265,6 +273,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of hardware requiring RMA (return/replacement) ⭐ CRITICAL",
         "pillar": "P2",
         "weight_l1": 0.20,  # Highest weight in P2
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # RMA events tracked weekly by ops
         "saas_kpi_code": "CRITICAL_ISSUES",
         "saas_category": "Support Engagement",
@@ -288,6 +297,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Average hours between hardware failures",
         "pillar": "P2",
         "weight_l1": 0.18,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Recalculated weekly from failure events
         "saas_kpi_code": "SYSTEM_UPTIME",
         "saas_category": "Support Engagement",
@@ -308,6 +318,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Count of P1/P2 incidents in last 30 days",
         "pillar": "P2",
         "weight_l1": 0.17,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Incident count updated daily from ticketing system
         "saas_kpi_code": "CRITICAL_TICKETS",
         "saas_category": "Support Engagement",
@@ -328,6 +339,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of time systems are operational (30d)",
         "pillar": "P2",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Computed daily from monitoring telemetry
         "saas_kpi_code": "PLATFORM_UPTIME",
         "saas_category": "Support Engagement",
@@ -347,6 +359,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of time temps within optimal range",
         "pillar": "P2",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "realtime",  # Continuous sensor telemetry, aggregated daily
         "saas_kpi_code": "ENVIRONMENTAL_HEALTH",
         "saas_category": "Support Engagement",
@@ -366,6 +379,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Power Usage Effectiveness ratio",
         "pillar": "P2",
         "weight_l1": 0.08,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "realtime",  # Continuous power monitoring, aggregated daily
         "saas_kpi_code": "RESOURCE_EFFICIENCY",
         "saas_category": "Support Engagement",
@@ -385,6 +399,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Average hours to resolve hardware failures",
         "pillar": "P2",
         "weight_l1": 0.06,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Recalculated weekly from repair logs
         "saas_kpi_code": "RESOLUTION_TIME",
         "saas_category": "Support Engagement",
@@ -404,6 +419,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of scheduled maintenance completed on time",
         "pillar": "P2",
         "weight_l1": 0.04,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Monthly maintenance schedule compliance
         "saas_kpi_code": "MAINTENANCE_COMPLIANCE",
         "saas_category": "Support Engagement",
@@ -427,6 +443,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Average GPU utilization percentage ⭐ TOP EXPANSION DRIVER",
         "pillar": "P3",
         "weight_l1": 0.22,  # Highest weight in P3
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "realtime",  # Continuous GPU monitoring, aggregated daily
         "saas_kpi_code": "FEATURE_USAGE",
         "saas_category": "Product Usage & Onboarding",
@@ -449,6 +466,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of AI training jobs completing successfully",
         "pillar": "P3",
         "weight_l1": 0.20,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Computed daily from job scheduler logs
         "saas_kpi_code": "TASK_SUCCESS_RATE",
         "saas_category": "Product Usage & Onboarding",
@@ -468,6 +486,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "95th percentile inference response time",
         "pillar": "P3",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "realtime",  # Continuous latency monitoring, aggregated daily
         "saas_kpi_code": "RESPONSE_TIME",
         "saas_category": "Product Usage & Onboarding",
@@ -487,6 +506,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Average time to train standard benchmark model",
         "pillar": "P3",
         "weight_l1": 0.14,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Per-job completion, aggregated daily
         "saas_kpi_code": "PROCESSING_TIME",
         "saas_category": "Product Usage & Onboarding",
@@ -506,6 +526,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of GPU memory effectively utilized",
         "pillar": "P3",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "realtime",  # Continuous GPU memory monitoring
         "saas_kpi_code": "RESOURCE_UTILIZATION",
         "saas_category": "Product Usage & Onboarding",
@@ -525,6 +546,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Scaling efficiency across multiple GPUs",
         "pillar": "P3",
         "weight_l1": 0.09,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Computed daily from multi-GPU job metrics
         "saas_kpi_code": "PARALLEL_EFFICIENCY",
         "saas_category": "Product Usage & Onboarding",
@@ -544,6 +566,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Number of distinct AI workload types running",
         "pillar": "P3",
         "weight_l1": 0.05,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Reviewed weekly — new workload types change slowly
         "saas_kpi_code": "FEATURE_BREADTH",
         "saas_category": "Product Usage & Onboarding",
@@ -563,6 +586,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Samples processed per hour",
         "pillar": "P3",
         "weight_l1": 0.03,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Aggregated daily from batch job scheduler
         "saas_kpi_code": "THROUGHPUT",
         "saas_category": "Product Usage & Onboarding",
@@ -586,6 +610,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Composite score of partner interaction quality",
         "pillar": "P4",
         "weight_l1": 0.22,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Composite score updated monthly from CRM
         "saas_kpi_code": "EXECUTIVE_ENGAGEMENT",
         "saas_category": "Relationship Strength",
@@ -606,6 +631,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Value-added reseller satisfaction and performance",
         "pillar": "P4",
         "weight_l1": 0.20,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Partner performance review cadence
         "saas_kpi_code": "PARTNER_SATISFACTION",
         "saas_category": "Relationship Strength",
@@ -625,6 +651,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Quarterly business reviews with partners (annual)",
         "pillar": "P4",
         "weight_l1": 0.18,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",  # QBRs are quarterly by definition
         "saas_kpi_code": "EXECUTIVE_TOUCHPOINTS",
         "saas_category": "Relationship Strength",
@@ -644,6 +671,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Reverse score - lower is better (0-100)",
         "pillar": "P4",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Channel conflict assessed monthly
         "saas_kpi_code": "PARTNER_HEALTH",
         "saas_category": "Relationship Strength",
@@ -663,6 +691,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Active joint sales opportunities with partners",
         "pillar": "P4",
         "weight_l1": 0.13,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Pipeline reviewed monthly
         "saas_kpi_code": "EXPANSION_PIPELINE",
         "saas_category": "Relationship Strength",
@@ -682,6 +711,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Net Promoter Score from channel partners",
         "pillar": "P4",
         "weight_l1": 0.12,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",  # NPS surveys sent quarterly
         "saas_kpi_code": "NPS",
         "saas_category": "Relationship Strength",
@@ -705,6 +735,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Percentage of deployed capacity currently in use",
         "pillar": "P5",
         "weight_l1": 0.18,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",  # Computed daily from resource monitoring
         "saas_kpi_code": "RESOURCE_CONSUMPTION",
         "saas_category": "Business Outcomes",
@@ -725,6 +756,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Month-over-month change in capacity utilization",
         "pillar": "P5",
         "weight_l1": 0.18,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # MoM comparison requires monthly cadence
         "saas_kpi_code": "GROWTH_RATE",
         "saas_category": "Business Outcomes",
@@ -745,6 +777,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Rate of increase in AI workloads (MoM)",
         "pillar": "P5",
         "weight_l1": 0.18,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # MoM comparison requires monthly cadence
         "saas_kpi_code": "USAGE_GROWTH",
         "saas_category": "Business Outcomes",
@@ -764,6 +797,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Change in total compute hours consumed (30d)",
         "pillar": "P5",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # Computed weekly from daily consumption data
         "saas_kpi_code": "CONSUMPTION_TREND",
         "saas_category": "Business Outcomes",
@@ -783,6 +817,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Indicators of expansion budget availability",
         "pillar": "P5",
         "weight_l1": 0.10,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Budget signals gathered monthly from CRM + meetings
         "saas_kpi_code": "EXPANSION_READINESS",
         "saas_category": "Business Outcomes",
@@ -802,6 +837,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "New AI use cases adopted in last 90 days",
         "pillar": "P5",
         "weight_l1": 0.05,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Tracked monthly — new use cases roll out slowly
         "saas_kpi_code": "FEATURE_ADOPTION",
         "saas_category": "Business Outcomes",
@@ -821,6 +857,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "ML-predicted probability of expansion in next 90 days",
         "pillar": "P5",
         "weight_l1": 0.13,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",  # ML model re-scored weekly with latest signals
         "saas_kpi_code": "EXPANSION_LIKELIHOOD",
         "saas_category": "Business Outcomes",
@@ -841,6 +878,7 @@ DC2S_KPIS: Dict[str, Dict[str, Any]] = {
         "description": "Engagement score of technical decision makers",
         "pillar": "P5",
         "weight_l1": 0.03,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",  # Engagement assessed monthly from touchpoints
         "saas_kpi_code": "CHAMPION_ENGAGEMENT",
         "saas_category": "Business Outcomes",
