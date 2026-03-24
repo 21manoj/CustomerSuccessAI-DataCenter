@@ -1,0 +1,52 @@
+account_id,decision_date,decision_id,title,decision_maker_role,chosen_option,outcome_description,risk_level,revenue_impact
+445001,2026-02-27,intervention_dec_445001_1,Escalation to executive sponsor — Zermatt Analytics,executive_sponsor,Escalate account risk,Risk review initiated,high,-850000.0
+445001,2026-03-06,intervention_dec_445001_2,Emergency retention plan — Zermatt Analytics,champion,Launch retention playbook,Retention plan in progress,critical,-850000.0
+445001,2026-02-12,intervention_auto_dec_445001_1,CSM resource allocation approved — Zermatt Analytics,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,657567.68
+445001,2026-02-28,intervention_auto_dec_445001_2,Executive QBR cadence established — Zermatt Analytics,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,1196251.94
+445001,2026-03-15,intervention_auto_dec_445001_3,GPU optimization playbook initiated — Zermatt Analytics,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,889364.94
+445002,2026-02-27,intervention_dec_445002_1,Escalation to executive sponsor — Eiger Cloud Services,executive_sponsor,Escalate account risk,Risk review initiated,high,-620000.0
+445002,2026-03-06,intervention_dec_445002_2,Emergency retention plan — Eiger Cloud Services,champion,Launch retention playbook,Retention plan in progress,critical,-620000.0
+445002,2026-02-12,intervention_auto_dec_445002_1,CSM resource allocation approved — Eiger Cloud Services,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,346296.85
+445002,2026-02-28,intervention_auto_dec_445002_2,Executive QBR cadence established — Eiger Cloud Services,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,383135.34
+445002,2026-03-15,intervention_auto_dec_445002_3,GPU optimization playbook initiated — Eiger Cloud Services,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,846491.82
+445003,2026-02-27,intervention_dec_445003_1,Escalation to executive sponsor — Jungfrau Fintech,executive_sponsor,Escalate account risk,Risk review initiated,high,-450000.0
+445003,2026-03-06,intervention_dec_445003_2,Emergency retention plan — Jungfrau Fintech,champion,Launch retention playbook,Retention plan in progress,critical,-450000.0
+445003,2026-02-12,intervention_auto_dec_445003_1,CSM resource allocation approved — Jungfrau Fintech,executive_sponsor,Assign dedicated senior CSM,Resource reallocation approved,high,615055.33
+445003,2026-02-28,intervention_auto_dec_445003_2,Executive QBR cadence established — Jungfrau Fintech,executive_sponsor,Weekly executive check-ins for 90 days,Cadence approved,high,666636.31
+445003,2026-03-15,intervention_auto_dec_445003_3,GPU optimization playbook initiated — Jungfrau Fintech,technical_lead,Deploy PB-03 optimization playbook,Playbook execution started,medium,280288.93
+445004,2026-02-27,intervention_dec_445004_1,Renewal strategy review — Matterhorn Digital,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-340000.0
+445004,2026-03-09,intervention_dec_445004_2,Feature adoption push — Matterhorn Digital,champion,Schedule training sessions,Training plan approved,medium,-340000.0
+445004,2026-02-17,intervention_auto_dec_445004_1,Renewal incentive package approved — Matterhorn Digital,economic_buyer,Offer multi-year discount,Incentive approved,medium,348785.77
+445004,2026-03-10,intervention_auto_dec_445004_2,Technical remediation plan — Matterhorn Digital,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,930201.72
+445005,2026-02-27,intervention_dec_445005_1,Renewal strategy review — Bernina Health Systems,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-270000.0
+445005,2026-03-09,intervention_dec_445005_2,Feature adoption push — Bernina Health Systems,champion,Schedule training sessions,Training plan approved,medium,-270000.0
+445005,2026-02-17,intervention_auto_dec_445005_1,Renewal incentive package approved — Bernina Health Systems,economic_buyer,Offer multi-year discount,Incentive approved,medium,289557.27
+445005,2026-03-10,intervention_auto_dec_445005_2,Technical remediation plan — Bernina Health Systems,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,596223.96
+445006,2026-02-27,intervention_dec_445006_1,Renewal strategy review — Pilatus Enterprise,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-250000.0
+445006,2026-03-09,intervention_dec_445006_2,Feature adoption push — Pilatus Enterprise,champion,Schedule training sessions,Training plan approved,medium,-250000.0
+445006,2026-02-17,intervention_auto_dec_445006_1,Renewal incentive package approved — Pilatus Enterprise,economic_buyer,Offer multi-year discount,Incentive approved,medium,728261.72
+445006,2026-03-10,intervention_auto_dec_445006_2,Technical remediation plan — Pilatus Enterprise,technical_lead,Address top 3 platform concerns,Remediation in progress,medium,428483.89
+445007,2026-03-13,intervention_dec_445007_1,Expansion discussion — Grindelwald Commerce,champion,Propose upsell package,Expansion opportunity identified,low,490000.0
+445007,2026-02-28,intervention_auto_dec_445007_1,Expansion proposal submitted — Grindelwald Commerce,champion,Propose additional capacity,Expansion under review,low,515281.71
+445008,2026-02-27,intervention_dec_445008_1,Expansion discussion — Davos Security,champion,Propose upsell package,Expansion opportunity identified,low,460000.0
+445008,2026-02-28,intervention_auto_dec_445008_1,Expansion proposal submitted — Davos Security,champion,Propose additional capacity,Expansion under review,low,249139.88
+445009,2026-02-27,intervention_dec_445009_1,Expansion discussion — Lucerne Media,champion,Propose upsell package,Expansion opportunity identified,low,390000.0
+445009,2026-02-28,intervention_auto_dec_445009_1,Expansion proposal submitted — Lucerne Media,champion,Propose additional capacity,Expansion under review,low,399597.0
+445010,2026-03-13,intervention_dec_445010_1,Expansion discussion — Interlaken Logistics,champion,Propose upsell package,Expansion opportunity identified,low,360000.0
+445010,2026-02-28,intervention_auto_dec_445010_1,Expansion proposal submitted — Interlaken Logistics,champion,Propose additional capacity,Expansion under review,low,494019.08
+445011,2026-02-27,intervention_dec_445011_1,Expansion discussion — Montreux EdTech,champion,Propose upsell package,Expansion opportunity identified,low,320000.0
+445011,2026-02-28,intervention_auto_dec_445011_1,Expansion proposal submitted — Montreux EdTech,champion,Propose additional capacity,Expansion under review,low,471936.59
+445012,2026-02-27,intervention_dec_445012_1,Expansion discussion — Verbier Pharma,champion,Propose upsell package,Expansion opportunity identified,low,280000.0
+445012,2026-02-28,intervention_auto_dec_445012_1,Expansion proposal submitted — Verbier Pharma,champion,Propose additional capacity,Expansion under review,low,402067.68
+445013,2026-02-27,intervention_dec_445013_1,Expansion discussion — St. Moritz Retail,champion,Propose upsell package,Expansion opportunity identified,low,250000.0
+445013,2026-02-28,intervention_auto_dec_445013_1,Expansion proposal submitted — St. Moritz Retail,champion,Propose additional capacity,Expansion under review,low,277171.64
+445014,2026-02-27,intervention_dec_445014_1,Expansion discussion — Lausanne Insurance,champion,Propose upsell package,Expansion opportunity identified,low,220000.0
+445014,2026-02-28,intervention_auto_dec_445014_1,Expansion proposal submitted — Lausanne Insurance,champion,Propose additional capacity,Expansion under review,low,147112.14
+445015,2026-02-27,intervention_dec_445015_1,Expansion discussion — Geneva Legal Tech,champion,Propose upsell package,Expansion opportunity identified,low,190000.0
+445015,2026-02-28,intervention_auto_dec_445015_1,Expansion proposal submitted — Geneva Legal Tech,champion,Propose additional capacity,Expansion under review,low,109782.41
+445016,2026-02-27,intervention_dec_445016_1,Expansion discussion — Bern Healthcare AI,champion,Propose upsell package,Expansion opportunity identified,low,160000.0
+445016,2026-02-28,intervention_auto_dec_445016_1,Expansion proposal submitted — Bern Healthcare AI,champion,Propose additional capacity,Expansion under review,low,226501.35
+445017,2026-02-27,intervention_dec_445017_1,Expansion discussion — Basel Biotech Platform,champion,Propose upsell package,Expansion opportunity identified,low,130000.0
+445017,2026-02-28,intervention_auto_dec_445017_1,Expansion proposal submitted — Basel Biotech Platform,champion,Propose additional capacity,Expansion under review,low,72845.54
+445018,2026-02-27,intervention_dec_445018_1,Expansion discussion — Zurich FinOps,champion,Propose upsell package,Expansion opportunity identified,low,75000.0
+445018,2026-02-28,intervention_auto_dec_445018_1,Expansion proposal submitted — Zurich FinOps,champion,Propose additional capacity,Expansion under review,low,66289.15

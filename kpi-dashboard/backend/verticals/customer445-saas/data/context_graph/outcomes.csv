@@ -1,0 +1,63 @@
+account_id,outcome_date,outcome_type,title,description,revenue_impact,status,linked_signal_id
+445001,2026-02-27,revenue_at_risk,Churn risk identified — Zermatt Analytics,Account showing signs of churn. ARR at risk.,-4250000.0,open,intervention_sig_445001_1
+445001,2026-03-02,engagement_decline,Engagement declining — Zermatt Analytics,Stakeholder engagement dropped significantly.,-850000.0,in_progress,intervention_sig_445001_1
+445001,2026-03-24,renewal_uncertainty,Renewal at risk — Zermatt Analytics,Renewal timeline uncertain due to unresolved issues.,-2550000.0,open,intervention_sig_445001_1
+445001,2026-03-15,capacity_constraint,Capacity issues — Zermatt Analytics,Infrastructure capacity constraints impacting service quality.,-1275000.0,in_progress,intervention_sig_445001_1
+445001,2026-02-17,churn_averted,Churn Risk Averted — Zermatt Analytics,Retention plan executed successfully. Account committed to 12-month renewal.,2744703.59,resolved,intervention_auto_recovery_445001_1
+445001,2026-03-10,engagement_recovery,Engagement Recovery — Zermatt Analytics,Stakeholder engagement restored to healthy levels after CSM intervention.,550391.53,resolved,intervention_auto_recovery_445001_1
+445002,2026-02-27,revenue_at_risk,Churn risk identified — Eiger Cloud Services,Account showing signs of churn. ARR at risk.,-3100000.0,open,intervention_sig_445002_1
+445002,2026-03-02,engagement_decline,Engagement declining — Eiger Cloud Services,Stakeholder engagement dropped significantly.,-620000.0,in_progress,intervention_sig_445002_1
+445002,2026-03-25,renewal_uncertainty,Renewal at risk — Eiger Cloud Services,Renewal timeline uncertain due to unresolved issues.,-1860000.0,open,intervention_sig_445002_1
+445002,2026-03-21,capacity_constraint,Capacity issues — Eiger Cloud Services,Infrastructure capacity constraints impacting service quality.,-930000.0,in_progress,intervention_sig_445002_1
+445002,2026-02-12,revenue_protected,Revenue Protected — Eiger Cloud Services,Intervention protected ARR through executive engagement and service improvements.,865456.12,resolved,intervention_auto_recovery_445002_1
+445002,2026-02-28,churn_averted,Churn Risk Averted — Eiger Cloud Services,Retention plan executed successfully. Account committed to 12-month renewal.,2904478.95,resolved,intervention_auto_recovery_445002_1
+445002,2026-03-15,engagement_recovery,Engagement Recovery — Eiger Cloud Services,Stakeholder engagement restored to healthy levels after CSM intervention.,414442.11,resolved,intervention_auto_recovery_445002_1
+445003,2026-02-27,revenue_at_risk,Churn risk identified — Jungfrau Fintech,Account showing signs of churn. ARR at risk.,-2250000.0,open,intervention_sig_445003_1
+445003,2026-03-02,engagement_decline,Engagement declining — Jungfrau Fintech,Stakeholder engagement dropped significantly.,-450000.0,in_progress,intervention_sig_445003_1
+445003,2026-03-04,renewal_uncertainty,Renewal at risk — Jungfrau Fintech,Renewal timeline uncertain due to unresolved issues.,-1350000.0,open,intervention_sig_445003_1
+445003,2026-03-29,capacity_constraint,Capacity issues — Jungfrau Fintech,Infrastructure capacity constraints impacting service quality.,-675000.0,in_progress,intervention_sig_445003_1
+445003,2026-02-17,churn_averted,Churn Risk Averted — Jungfrau Fintech,Retention plan executed successfully. Account committed to 12-month renewal.,1882586.32,resolved,intervention_auto_recovery_445003_1
+445003,2026-03-10,revenue_protected,Revenue Protected — Jungfrau Fintech,Intervention protected ARR through executive engagement and service improvements.,944551.89,resolved,intervention_auto_recovery_445003_1
+445004,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Matterhorn Digital,Renewal discussion delayed pending resolution of concerns.,-1360000.0,in_progress,intervention_sig_445004_1
+445004,2026-03-13,engagement_decline,Engagement cooling — Matterhorn Digital,Key stakeholder engagement frequency declining.,-680000.0,open,intervention_sig_445004_1
+445004,2026-03-28,partner_friction,Integration friction — Matterhorn Digital,P4 partner integration issues causing workflow disruption.,-544000.0,in_progress,intervention_sig_445004_1
+445004,2026-02-17,engagement_recovery,Engagement Recovery — Matterhorn Digital,Regular QBR cadence re-established with key stakeholders.,531767.94,resolved,intervention_auto_recovery_445004_1
+445004,2026-03-10,revenue_protected,Revenue Protected — Matterhorn Digital,Renewal secured after addressing platform concerns.,768180.84,resolved,intervention_auto_recovery_445004_1
+445005,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Bernina Health Systems,Renewal discussion delayed pending resolution of concerns.,-1080000.0,in_progress,intervention_sig_445005_1
+445005,2026-03-13,engagement_decline,Engagement cooling — Bernina Health Systems,Key stakeholder engagement frequency declining.,-540000.0,open,intervention_sig_445005_1
+445005,2026-03-13,partner_friction,Integration friction — Bernina Health Systems,P4 partner integration issues causing workflow disruption.,-432000.0,in_progress,intervention_sig_445005_1
+445005,2026-02-17,engagement_recovery,Engagement Recovery — Bernina Health Systems,Regular QBR cadence re-established with key stakeholders.,388508.62,resolved,intervention_auto_recovery_445005_1
+445005,2026-03-10,revenue_protected,Revenue Protected — Bernina Health Systems,Renewal secured after addressing platform concerns.,751142.82,resolved,intervention_auto_recovery_445005_1
+445006,2026-02-27,renewal_uncertainty,Renewal discussion stalled — Pilatus Enterprise,Renewal discussion delayed pending resolution of concerns.,-1000000.0,in_progress,intervention_sig_445006_1
+445006,2026-03-13,engagement_decline,Engagement cooling — Pilatus Enterprise,Key stakeholder engagement frequency declining.,-500000.0,open,intervention_sig_445006_1
+445006,2026-02-17,engagement_recovery,Engagement Recovery — Pilatus Enterprise,Regular QBR cadence re-established with key stakeholders.,310184.56,resolved,intervention_auto_recovery_445006_1
+445006,2026-03-10,revenue_protected,Revenue Protected — Pilatus Enterprise,Renewal secured after addressing platform concerns.,657319.34,resolved,intervention_auto_recovery_445006_1
+445007,2026-02-27,expansion_opportunity,Expansion potential identified — Grindelwald Commerce,Account showing strong expansion signals.,735000.0,open,intervention_sig_445007_1
+445007,2026-02-28,revenue_growth,Revenue Growth — Grindelwald Commerce,Upsell opportunity converted. New workload onboarded.,950097.94,resolved,intervention_auto_recovery_445007_1
+445008,2026-03-13,expansion_opportunity,Expansion potential identified — Davos Security,Account showing strong expansion signals.,690000.0,open,intervention_sig_445008_1
+445008,2026-02-28,expansion_approved,Expansion Approved — Davos Security,Account approved additional capacity and new product modules.,750564.11,in_progress,intervention_auto_recovery_445008_1
+445009,2026-03-13,expansion_opportunity,Expansion potential identified — Lucerne Media,Account showing strong expansion signals.,585000.0,open,intervention_sig_445009_1
+445009,2026-02-28,revenue_growth,Revenue Growth — Lucerne Media,Upsell opportunity converted. New workload onboarded.,461157.7,resolved,intervention_auto_recovery_445009_1
+445010,2026-02-27,expansion_opportunity,Expansion potential identified — Interlaken Logistics,Account showing strong expansion signals.,540000.0,open,intervention_sig_445010_1
+445010,2026-02-28,revenue_growth,Revenue Growth — Interlaken Logistics,Upsell opportunity converted. New workload onboarded.,497581.04,resolved,intervention_auto_recovery_445010_1
+445011,2026-03-13,expansion_opportunity,Expansion potential identified — Montreux EdTech,Account showing strong expansion signals.,480000.0,open,intervention_sig_445011_1
+445011,2026-03-05,renewal_secured,Renewal on track — Montreux EdTech,Renewal discussion progressing positively.,160000.0,in_progress,intervention_sig_445011_1
+445011,2026-02-28,expansion_approved,Expansion Approved — Montreux EdTech,Account approved additional capacity and new product modules.,746539.63,in_progress,intervention_auto_recovery_445011_1
+445012,2026-03-13,expansion_opportunity,Expansion potential identified — Verbier Pharma,Account showing strong expansion signals.,420000.0,open,intervention_sig_445012_1
+445012,2026-02-28,revenue_growth,Revenue Growth — Verbier Pharma,Upsell opportunity converted. New workload onboarded.,497711.33,resolved,intervention_auto_recovery_445012_1
+445013,2026-03-13,expansion_opportunity,Expansion potential identified — St. Moritz Retail,Account showing strong expansion signals.,375000.0,open,intervention_sig_445013_1
+445013,2026-03-13,renewal_secured,Renewal on track — St. Moritz Retail,Renewal discussion progressing positively.,125000.0,in_progress,intervention_sig_445013_1
+445013,2026-02-28,revenue_growth,Revenue Growth — St. Moritz Retail,Upsell opportunity converted. New workload onboarded.,442581.9,resolved,intervention_auto_recovery_445013_1
+445014,2026-03-13,expansion_opportunity,Expansion potential identified — Lausanne Insurance,Account showing strong expansion signals.,330000.0,open,intervention_sig_445014_1
+445014,2026-03-14,renewal_secured,Renewal on track — Lausanne Insurance,Renewal discussion progressing positively.,110000.0,in_progress,intervention_sig_445014_1
+445014,2026-02-28,revenue_growth,Revenue Growth — Lausanne Insurance,Upsell opportunity converted. New workload onboarded.,415563.93,resolved,intervention_auto_recovery_445014_1
+445015,2026-03-13,expansion_opportunity,Expansion potential identified — Geneva Legal Tech,Account showing strong expansion signals.,285000.0,open,intervention_sig_445015_1
+445015,2026-02-28,renewal_secured,Renewal on track — Geneva Legal Tech,Renewal discussion progressing positively.,95000.0,in_progress,intervention_sig_445015_1
+445015,2026-02-28,expansion_approved,Expansion Approved — Geneva Legal Tech,Account approved additional capacity and new product modules.,293366.39,in_progress,intervention_auto_recovery_445015_1
+445016,2026-03-13,expansion_opportunity,Expansion potential identified — Bern Healthcare AI,Account showing strong expansion signals.,240000.0,open,intervention_sig_445016_1
+445016,2026-02-28,revenue_growth,Revenue Growth — Bern Healthcare AI,Upsell opportunity converted. New workload onboarded.,167465.82,resolved,intervention_auto_recovery_445016_1
+445017,2026-03-13,expansion_opportunity,Expansion potential identified — Basel Biotech Platform,Account showing strong expansion signals.,195000.0,open,intervention_sig_445017_1
+445017,2026-02-28,expansion_approved,Expansion Approved — Basel Biotech Platform,Account approved additional capacity and new product modules.,346050.61,in_progress,intervention_auto_recovery_445017_1
+445018,2026-03-13,expansion_opportunity,Expansion potential identified — Zurich FinOps,Account showing strong expansion signals.,112500.0,open,intervention_sig_445018_1
+445018,2026-03-02,renewal_secured,Renewal on track — Zurich FinOps,Renewal discussion progressing positively.,37500.0,in_progress,intervention_sig_445018_1
+445018,2026-02-28,expansion_approved,Expansion Approved — Zurich FinOps,Account approved additional capacity and new product modules.,215073.88,in_progress,intervention_auto_recovery_445018_1

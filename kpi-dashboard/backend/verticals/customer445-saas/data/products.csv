@@ -1,0 +1,76 @@
+account_id,product_name,product_category,quantity,unit_price,deployment_date,status
+445001,Managed Kubernetes,platform,152,79590.68,2025-03-22,active
+445001,Monitoring & Observability,ops,24,82277.4,2025-04-23,active
+445001,Edge Computing Nodes,edge,132,26358.51,2025-03-24,active
+445001,Network Fabric,networking,168,44728.63,2025-04-07,active
+445001,Disaster Recovery,resilience,56,64588.3,2025-03-18,active
+445002,Edge Computing Nodes,edge,123,26470.55,2025-06-19,active
+445002,AI Training Pipeline,ml_ops,147,88811.08,2025-06-13,active
+445002,Disaster Recovery,resilience,24,13224.54,2025-11-28,active
+445002,High-Performance Storage,storage,144,29818.21,2025-07-30,active
+445002,Managed Kubernetes,platform,99,33325.94,2025-07-27,active
+445003,Managed Kubernetes,platform,12,23970.46,2025-11-02,active
+445003,Monitoring & Observability,ops,36,38167.93,2025-08-05,active
+445003,Disaster Recovery,resilience,98,99246.76,2025-04-22,active
+445003,Edge Computing Nodes,edge,80,13517.8,2025-07-18,active
+445004,Network Fabric,networking,72,29028.94,2025-02-01,active
+445004,Edge Computing Nodes,edge,114,26310.17,2025-09-01,active
+445004,AI Training Pipeline,ml_ops,51,94488.79,2025-12-18,active
+445004,High-Performance Storage,storage,144,64959.07,2025-12-14,active
+445004,Managed Kubernetes,platform,108,48729.95,2025-08-19,active
+445005,Edge Computing Nodes,edge,78,24934.02,2025-10-17,active
+445005,GPU Compute Cluster,compute,76,60549.74,2025-10-04,active
+445005,Monitoring & Observability,ops,70,69852.89,2025-06-27,active
+445005,High-Performance Storage,storage,100,17220.36,2025-07-23,active
+445006,Disaster Recovery,resilience,88,84520.56,2025-11-02,active
+445006,Network Fabric,networking,48,26841.88,2025-08-27,active
+445006,AI Training Pipeline,ml_ops,100,15444.72,2025-06-29,active
+445006,Edge Computing Nodes,edge,18,64556.71,2025-03-12,active
+445006,GPU Compute Cluster,compute,76,44685.14,2025-03-08,active
+445007,Managed Kubernetes,platform,58,67787.79,2025-03-20,active
+445007,Monitoring & Observability,ops,46,12020.59,2025-03-04,active
+445007,High-Performance Storage,storage,22,31293.6,2025-10-11,active
+445008,Edge Computing Nodes,edge,88,60906.38,2025-07-04,active
+445008,AI Training Pipeline,ml_ops,34,89832.49,2025-10-02,active
+445008,High-Performance Storage,storage,62,91663.05,2025-11-01,active
+445008,Disaster Recovery,resilience,54,37100.54,2025-12-04,active
+445009,AI Training Pipeline,ml_ops,26,64228.23,2025-11-17,active
+445009,Monitoring & Observability,ops,16,63794.85,2025-03-16,active
+445009,Managed Kubernetes,platform,28,45108.11,2025-10-21,active
+445009,Disaster Recovery,resilience,17,86556.49,2025-02-24,active
+445009,High-Performance Storage,storage,10,29719.88,2025-10-29,active
+445010,High-Performance Storage,storage,10,91788.6,2025-12-13,active
+445010,Edge Computing Nodes,edge,43,82486.25,2025-08-08,active
+445010,GPU Compute Cluster,compute,28,30071.23,2025-10-10,active
+445010,Monitoring & Observability,ops,30,13698.24,2025-03-04,active
+445010,Managed Kubernetes,platform,38,56620.13,2025-09-13,active
+445011,Managed Kubernetes,platform,9,39878.53,2025-06-19,active
+445011,High-Performance Storage,storage,43,73259.99,2025-03-02,active
+445011,GPU Compute Cluster,compute,27,61124.73,2025-07-02,active
+445012,Network Fabric,networking,44,22744.03,2025-09-11,active
+445012,Managed Kubernetes,platform,49,11596.45,2025-05-22,active
+445012,GPU Compute Cluster,compute,36,85060.37,2025-09-02,active
+445012,Edge Computing Nodes,edge,15,75445.81,2025-03-17,active
+445013,AI Training Pipeline,ml_ops,32,82402.34,2025-12-17,active
+445013,Network Fabric,networking,35,99288.49,2025-12-29,active
+445013,High-Performance Storage,storage,36,78193.63,2025-07-31,active
+445014,Network Fabric,networking,48,32666.63,2025-12-16,active
+445014,Disaster Recovery,resilience,14,45761.82,2025-12-22,active
+445014,Edge Computing Nodes,edge,6,30385.82,2025-06-09,active
+445014,High-Performance Storage,storage,5,12408.67,2025-08-31,active
+445014,Managed Kubernetes,platform,17,41424.95,2025-06-20,active
+445015,High-Performance Storage,storage,23,85628.19,2025-05-20,active
+445015,GPU Compute Cluster,compute,36,19820.9,2025-12-04,active
+445015,Managed Kubernetes,platform,39,33544.05,2025-10-24,active
+445015,AI Training Pipeline,ml_ops,33,23067.1,2025-03-10,active
+445016,Disaster Recovery,resilience,36,74299.66,2025-10-25,active
+445016,High-Performance Storage,storage,35,63142.74,2025-08-10,active
+445016,Network Fabric,networking,47,20980.67,2025-08-25,active
+445016,Monitoring & Observability,ops,23,37570.78,2025-08-07,active
+445017,Monitoring & Observability,ops,10,26658.68,2025-07-23,active
+445017,Network Fabric,networking,38,38062.25,2025-04-16,active
+445017,Disaster Recovery,resilience,32,62393.57,2025-09-04,active
+445017,High-Performance Storage,storage,49,29977.1,2025-12-23,active
+445018,AI Training Pipeline,ml_ops,8,92108.51,2025-02-03,active
+445018,Network Fabric,networking,41,76176.73,2025-09-09,active
+445018,Disaster Recovery,resilience,22,45624.31,2025-09-16,active

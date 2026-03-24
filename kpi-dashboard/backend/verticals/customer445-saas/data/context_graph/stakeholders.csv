@@ -1,0 +1,102 @@
+account_id,stakeholder_name,role,title,department,email,influence_score,sentiment,engagement_frequency,last_contact_date
+445001,Marco Bianchi,VP Product,VP of Product,Product,marco.bianchi@zermattanalytics.com,5,neutral,9,2026-03-13
+445001,Lena Hofmann,successor,Director of Engineering,Engineering,lena.hofmann@zermattanalytics.com,5,neutral,2,2026-03-20
+445001,Stefan Keller,executive_sponsor,CTO,Technology,stefan.keller@zermattanalytics.com,5,neutral,3,2026-03-08
+445001,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@zermattanalytics.com,8,negative,weekly,2026-03-23
+445001,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@zermattanalytics.com,9,negative,monthly,2026-03-31
+445001,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@zermattanalytics.com,7,negative,weekly,2026-03-23
+445002,Thomas Brunner,decision_maker,VP Engineering,Engineering,thomas.brunner@eigercloudservices.com,5,neutral,4,2026-03-13
+445002,Anna Weber,champion,Platform Lead,DevOps,anna.weber@eigercloudservices.com,5,neutral,7,2026-03-22
+445002,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@eigercloudservices.com,9,negative,monthly,2026-03-07
+445002,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@eigercloudservices.com,7,negative,weekly,2026-03-27
+445002,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@eigercloudservices.com,10,negative,monthly,2026-02-25
+445003,Claire Dupont,decision_maker,CFO,Finance,claire.dupont@jungfraufintech.com,5,neutral,2,2026-03-13
+445003,Jean-Pierre Martin,champion,Head of Product,Product,jean-pierre.martin@jungfraufintech.com,5,neutral,5,2026-03-11
+445003,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@jungfraufintech.com,9,negative,monthly,2026-02-25
+445003,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@jungfraufintech.com,7,negative,weekly,2026-03-23
+445003,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@jungfraufintech.com,10,negative,monthly,2026-03-09
+445004,Sarah Chen,champion,VP Marketing Tech,Marketing,sarah.chen@matterhorndigital.com,5,neutral,6,2026-03-11
+445004,David Park,decision_maker,CMO,Executive,david.park@matterhorndigital.com,5,neutral,3,2026-03-19
+445004,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@matterhorndigital.com,9,neutral,monthly,2026-02-24
+445004,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@matterhorndigital.com,7,neutral,weekly,2026-03-28
+445004,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@matterhorndigital.com,10,neutral,monthly,2026-03-22
+445005,Robert Kim,champion,Director of Digital Health,Digital,robert.kim@berninahealthsystems.com,5,neutral,8,2026-03-11
+445005,Dr. Maria Santos,executive_sponsor,Chief Digital Officer,Executive,dr..maria.santos@berninahealthsystems.com,5,neutral,2,2026-03-11
+445005,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@berninahealthsystems.com,9,neutral,monthly,2026-03-16
+445005,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@berninahealthsystems.com,7,neutral,weekly,2026-03-21
+445005,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@berninahealthsystems.com,6,neutral,daily,2026-03-30
+445006,Michael Torres,champion,VP Customer Experience,CX,michael.torres@pilatusenterprise.com,5,neutral,4,2026-03-11
+445006,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@pilatusenterprise.com,9,neutral,monthly,2026-03-30
+445006,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@pilatusenterprise.com,7,neutral,weekly,2026-03-27
+445006,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@pilatusenterprise.com,10,neutral,monthly,2026-03-09
+445006,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@pilatusenterprise.com,6,neutral,daily,2026-03-29
+445006,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@pilatusenterprise.com,5,neutral,quarterly,2026-02-11
+445007,Jessica Wong,champion,VP Commerce Platform,Technology,jessica.wong@grindelwaldcommerce.com,5,neutral,10,2026-03-04
+445007,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@grindelwaldcommerce.com,9,positive,monthly,2026-03-23
+445007,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@grindelwaldcommerce.com,7,positive,weekly,2026-03-23
+445007,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@grindelwaldcommerce.com,10,positive,monthly,2026-02-24
+445007,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@grindelwaldcommerce.com,6,positive,daily,2026-03-31
+445007,Diana Walsh,procurement,Director of Procurement,Operations,diana.walsh@grindelwaldcommerce.com,5,positive,quarterly,2026-02-05
+445008,Tom Anderson,champion,Security Platform Lead,Security,tom.anderson@davossecurity.com,5,neutral,5,2026-03-06
+445008,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@davossecurity.com,9,positive,monthly,2026-03-15
+445008,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@davossecurity.com,7,positive,weekly,2026-03-24
+445008,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@davossecurity.com,10,positive,monthly,2026-03-03
+445008,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@davossecurity.com,6,positive,daily,2026-03-28
+445008,Brian Foster,procurement,Director of Procurement,Operations,brian.foster@davossecurity.com,5,positive,quarterly,2026-02-28
+445009,Pierre Lambert,champion,Head of Platforms,Technology,pierre.lambert@lucernemedia.com,5,neutral,6,2026-03-06
+445009,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@lucernemedia.com,9,positive,monthly,2026-03-11
+445009,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@lucernemedia.com,7,positive,weekly,2026-03-29
+445009,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@lucernemedia.com,10,positive,monthly,2026-03-03
+445009,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@lucernemedia.com,6,positive,daily,2026-03-29
+445009,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@lucernemedia.com,5,positive,quarterly,2026-01-29
+445010,Klaus Müller,champion,VP Supply Chain,Operations,klaus.müller@interlakenlogistics.com,5,neutral,7,2026-03-04
+445010,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@interlakenlogistics.com,9,positive,monthly,2026-02-24
+445010,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@interlakenlogistics.com,7,positive,weekly,2026-03-21
+445010,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@interlakenlogistics.com,10,positive,monthly,2026-03-30
+445010,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@interlakenlogistics.com,6,positive,daily,2026-03-29
+445010,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@interlakenlogistics.com,5,positive,quarterly,2026-02-01
+445011,Amy Richards,champion,Director of Digital Learning,Curriculum,amy.richards@montreuxedtech.com,5,neutral,5,2026-03-06
+445011,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@montreuxedtech.com,9,positive,monthly,2026-03-18
+445011,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@montreuxedtech.com,7,positive,weekly,2026-03-25
+445011,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@montreuxedtech.com,10,positive,monthly,2026-03-01
+445011,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@montreuxedtech.com,6,positive,daily,2026-03-30
+445012,Dr. Hans Fischer,champion,Head of Data Science,R&D,dr..hans.fischer@verbierpharma.com,5,neutral,4,2026-03-06
+445012,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@verbierpharma.com,9,positive,monthly,2026-02-27
+445012,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@verbierpharma.com,7,positive,weekly,2026-03-21
+445012,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@verbierpharma.com,10,positive,monthly,2026-03-23
+445012,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@verbierpharma.com,6,positive,daily,2026-03-29
+445012,Brian Foster,procurement,Director of Procurement,Operations,brian.foster@verbierpharma.com,5,positive,quarterly,2026-01-03
+445013,Isabella Rossi,champion,VP Digital Commerce,Digital,isabella.rossi@st.moritzretail.com,5,neutral,5,2026-03-06
+445013,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@st.moritzretail.com,9,positive,monthly,2026-03-01
+445013,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@st.moritzretail.com,7,positive,weekly,2026-03-30
+445013,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@st.moritzretail.com,10,positive,monthly,2026-03-18
+445013,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@st.moritzretail.com,6,positive,daily,2026-03-31
+445014,François Leroux,champion,VP Digital Insurance,Digital Transformation,françois.leroux@lausanneinsurance.com,5,neutral,4,2026-03-06
+445014,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@lausanneinsurance.com,9,positive,monthly,2026-03-29
+445014,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@lausanneinsurance.com,7,positive,weekly,2026-03-29
+445014,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@lausanneinsurance.com,10,positive,monthly,2026-03-20
+445014,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@lausanneinsurance.com,6,positive,daily,2026-03-28
+445014,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@lausanneinsurance.com,5,positive,quarterly,2026-01-06
+445015,Catherine Blanc,champion,Head of Legal Tech,Technology,catherine.blanc@genevalegaltech.com,5,neutral,6,2026-03-06
+445015,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@genevalegaltech.com,9,positive,monthly,2026-03-22
+445015,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@genevalegaltech.com,7,positive,weekly,2026-03-30
+445015,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@genevalegaltech.com,10,positive,monthly,2026-03-01
+445015,Maya Johnson,csm,Customer Success Manager,Customer Success,maya.johnson@genevalegaltech.com,6,positive,daily,2026-03-28
+445016,Dr. Eva Schneider,champion,Chief Medical Officer,Clinical,dr..eva.schneider@bernhealthcareai.com,5,neutral,5,2026-03-06
+445016,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@bernhealthcareai.com,9,positive,monthly,2026-03-31
+445016,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@bernhealthcareai.com,7,positive,weekly,2026-03-30
+445016,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@bernhealthcareai.com,10,positive,monthly,2026-03-25
+445016,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@bernhealthcareai.com,6,positive,daily,2026-03-28
+445016,Brian Foster,procurement,Director of Procurement,Operations,brian.foster@bernhealthcareai.com,5,positive,quarterly,2025-12-26
+445017,Dr. Martin Huber,champion,VP Data Sciences,Research,dr..martin.huber@baselbiotechplatform.com,5,neutral,4,2026-03-06
+445017,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@baselbiotechplatform.com,9,positive,monthly,2026-03-04
+445017,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@baselbiotechplatform.com,7,positive,weekly,2026-03-31
+445017,Jennifer Brooks,executive_sponsor,CTO,Executive,jennifer.brooks@baselbiotechplatform.com,10,positive,monthly,2026-03-31
+445017,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@baselbiotechplatform.com,6,positive,daily,2026-03-28
+445017,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@baselbiotechplatform.com,5,positive,quarterly,2026-01-17
+445018,Yuki Tanaka,champion,Head of FinOps,Finance,yuki.tanaka@zurichfinops.com,5,neutral,8,2026-03-06
+445018,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@zurichfinops.com,9,positive,monthly,2026-03-07
+445018,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@zurichfinops.com,7,positive,weekly,2026-03-28
+445018,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@zurichfinops.com,10,positive,monthly,2026-03-08
+445018,Chris Davis,csm,Customer Success Manager,Customer Success,chris.davis@zurichfinops.com,6,positive,daily,2026-03-30
+445018,Marcus Chen,procurement,Director of Procurement,Operations,marcus.chen@zurichfinops.com,5,positive,quarterly,2026-01-06
