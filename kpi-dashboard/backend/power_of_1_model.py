@@ -525,11 +525,11 @@ def _scale_scenarios(arr_scale: float) -> Dict:
     scaled = {}
     for key, scenario in SCALING_SCENARIOS.items():
         s = dict(scenario)  # shallow copy
-        for dollar_field in ("direct_impact", "compounding_impact", "total_impact", "three_year_net"):
+        for dollar_field in ("direct_impact", "compounding_impact", "total_impact", "investment", "three_year_net"):
             if s.get(dollar_field) is not None:
                 s[dollar_field] = round(s[dollar_field] * arr_scale, 0)
         # Recalculate year_1_roi with scaled impact and investment
-        investment = s.get("investment", 247000)
+        investment = s.get("investment", round(247000 * arr_scale, 0))
         total = s.get("total_impact", 0) or 0
         if investment and total:
             s["year_1_roi"] = round((total - investment) / investment, 2)

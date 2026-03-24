@@ -385,9 +385,9 @@
       "direct_impact": 349250,
       "compounding_impact": 52388,
       "total_impact": 401638,
-      "investment": 247000,
-      "year_1_roi": 0.63,
-      "payback_months": 7.4,
+      "investment": 95000,
+      "year_1_roi": 3.23,
+      "payback_months": 2.8,
       "three_year_net": null
     },
     "4_pct": {
@@ -407,9 +407,9 @@
       "direct_impact": 2095650,
       "compounding_impact": 314348,
       "total_impact": 2410000,
-      "investment": 247000,
-      "year_1_roi": 8.76,
-      "payback_months": 1.2,
+      "investment": 370000,
+      "year_1_roi": 5.51,
+      "payback_months": 1.8,
       "three_year_net": 7000000
     }
   },
