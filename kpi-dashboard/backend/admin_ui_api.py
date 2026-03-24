@@ -909,6 +909,7 @@ def create_vertical():
     label = data.get('label', slug.replace('_', ' ').title())
     description = data.get('description', '')
     scope = data.get('scope', 'platform')  # 'platform' or 'customer'
+    field_mapping = data.get('field_mapping')  # Optional migration mapping template
     customer_id = data.get('customer_id')
     catalog = data.get('catalog', {})
 
@@ -966,6 +967,9 @@ def create_vertical():
             "description": description,
             **catalog,
         }
+        # Include field mapping template if provided (for migration reuse)
+        if field_mapping and field_mapping.get('mappings'):
+            full_catalog['field_mapping'] = field_mapping
 
         with open(catalog_path, 'w') as f:
             _json.dump(full_catalog, f, indent=2)

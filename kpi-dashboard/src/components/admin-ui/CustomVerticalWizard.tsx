@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Upload, Download, Plus, Trash2,
-  AlertTriangle, Layers, BarChart3, FileSpreadsheet, Eye,
+  AlertTriangle, Layers, BarChart3, FileSpreadsheet, Eye, ArrowRight, Save,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -27,6 +27,17 @@ interface KpiDef {
   risk_max: number;
   critical_min: number;
   critical_max: number;
+}
+
+interface FieldMapping {
+  source_column: string;
+  target_kpi_code: string;
+  transform: 'none' | 'invert' | 'scale_100' | 'days_to_hours';
+}
+
+interface MappingTemplate {
+  source_system: string;  // e.g., "gainsight", "churnzero", "custom"
+  mappings: FieldMapping[];
 }
 
 interface ValidationResult {
@@ -416,6 +427,233 @@ const StepKpis: React.FC<{
   );
 };
 
+const TRANSFORMS = [
+  { value: 'none', label: 'As-is (no transform)' },
+  { value: 'invert', label: 'Invert (100 - value)' },
+  { value: 'scale_100', label: 'Scale to 100 (× 100)' },
+  { value: 'days_to_hours', label: 'Days → Hours (× 24)' },
+];
+
+const SOURCE_SYSTEMS = ['gainsight', 'churnzero', 'hubspot', 'salesforce', 'zendesk', 'custom'];
+
+const StepFieldMapping: React.FC<{
+  kpis: KpiDef[];
+  mapping: MappingTemplate;
+  onChange: (mapping: MappingTemplate) => void;
+}> = ({ kpis, mapping, onChange }) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [sourceColumns, setSourceColumns] = useState<string[]>([]);
+  const [sampleData, setSampleData] = useState<Record<string, string>[]>([]);
+
+  const handleSourceCsvUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 1) return;
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      setSourceColumns(headers);
+
+      // Parse first 3 data rows for preview
+      const samples: Record<string, string>[] = [];
+      for (let i = 1; i < Math.min(4, lines.length); i++) {
+        const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const row: Record<string, string> = {};
+        headers.forEach((h, j) => { row[h] = vals[j] || ''; });
+        samples.push(row);
+      }
+      setSampleData(samples);
+
+      // Auto-map: fuzzy match source columns to KPI names
+      const autoMappings: FieldMapping[] = [];
+      for (const col of headers) {
+        const colLower = col.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let bestMatch = '';
+        let bestScore = 0;
+        for (const k of kpis) {
+          const kpiLower = k.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          // Simple substring match score
+          let score = 0;
+          if (colLower.includes(kpiLower) || kpiLower.includes(colLower)) score = 3;
+          else {
+            const words = k.name.toLowerCase().split(/\s+/);
+            score = words.filter(w => colLower.includes(w) && w.length > 2).length;
+          }
+          if (score > bestScore) { bestScore = score; bestMatch = k.code; }
+        }
+        if (bestScore > 0) {
+          autoMappings.push({ source_column: col, target_kpi_code: bestMatch, transform: 'none' });
+        }
+      }
+      onChange({ ...mapping, mappings: autoMappings });
+    };
+    reader.readAsText(file);
+  };
+
+  const addMapping = () => {
+    onChange({
+      ...mapping,
+      mappings: [...mapping.mappings, { source_column: '', target_kpi_code: '', transform: 'none' }],
+    });
+  };
+
+  const removeMapping = (idx: number) => {
+    onChange({ ...mapping, mappings: mapping.mappings.filter((_, i) => i !== idx) });
+  };
+
+  const updateMapping = (idx: number, field: keyof FieldMapping, val: string) => {
+    const next = [...mapping.mappings];
+    (next[idx] as any)[field] = val;
+    onChange({ ...mapping, mappings: next });
+  };
+
+  const unmappedKpis = kpis.filter(k => !mapping.mappings.some(m => m.target_kpi_code === k.code));
+
+  return (
+    <div className="space-y-5">
+      <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+        <ArrowRight size={22} className="text-indigo-500" /> Field Mapping (Migration)
+      </h2>
+      <p className="text-sm text-gray-500">
+        Map columns from your source system (Gainsight, ChurnZero, etc.) to the KPIs you defined.
+        This mapping template is saved and reused for ongoing data syncs via n8n.
+      </p>
+
+      {/* Source system selector */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-700">Source System:</label>
+        <select
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          value={mapping.source_system}
+          onChange={e => onChange({ ...mapping, source_system: e.target.value })}
+        >
+          {SOURCE_SYSTEMS.map(s => (
+            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Upload source CSV for column detection */}
+      <div
+        className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-indigo-400 transition-colors cursor-pointer"
+        onClick={() => fileRef.current?.click()}
+        onDrop={e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleSourceCsvUpload(e.dataTransfer.files[0]); }}
+        onDragOver={e => e.preventDefault()}
+      >
+        <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+        <p className="text-sm text-gray-600">Upload a sample CSV from your source system to auto-detect columns</p>
+        <p className="text-xs text-gray-400 mt-1">We'll fuzzy-match column names to your KPI definitions</p>
+        <input ref={fileRef} type="file" accept=".csv" className="hidden"
+          onChange={e => { if (e.target.files?.[0]) handleSourceCsvUpload(e.target.files[0]); }} />
+      </div>
+
+      {sourceColumns.length > 0 && (
+        <div className="text-sm text-green-600 flex items-center gap-1">
+          <CheckCircle2 size={14} />
+          Detected {sourceColumns.length} columns, auto-mapped {mapping.mappings.length} fields
+        </div>
+      )}
+
+      {/* Mapping table */}
+      {mapping.mappings.length > 0 && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[1fr,auto,1fr,auto,auto] gap-2 text-xs font-medium text-gray-500 px-2">
+            <span>Source Column</span>
+            <span></span>
+            <span>Target KPI</span>
+            <span>Transform</span>
+            <span></span>
+          </div>
+          {mapping.mappings.map((m, i) => (
+            <div key={i} className="grid grid-cols-[1fr,auto,1fr,auto,auto] gap-2 items-center bg-gray-50 rounded-lg p-2">
+              <select
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                value={m.source_column}
+                onChange={e => updateMapping(i, 'source_column', e.target.value)}
+              >
+                <option value="">-- Select source column --</option>
+                {sourceColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                {!sourceColumns.length && <option value={m.source_column}>{m.source_column}</option>}
+              </select>
+              <ArrowRight size={14} className="text-gray-400" />
+              <select
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                value={m.target_kpi_code}
+                onChange={e => updateMapping(i, 'target_kpi_code', e.target.value)}
+              >
+                <option value="">-- Select KPI --</option>
+                {kpis.map(k => <option key={k.code} value={k.code}>{k.code}: {k.name}</option>)}
+              </select>
+              <select
+                className="border border-gray-300 rounded px-1 py-1 text-xs"
+                value={m.transform}
+                onChange={e => updateMapping(i, 'transform', e.target.value)}
+              >
+                {TRANSFORMS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+              <button onClick={() => removeMapping(i)} className="text-red-400 hover:text-red-600">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          <button onClick={addMapping}
+            className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800">
+            <Plus size={14} /> Add Mapping
+          </button>
+        </div>
+      )}
+
+      {/* Sample data preview */}
+      {sampleData.length > 0 && mapping.mappings.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Preview (first 3 rows)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border border-gray-200 rounded">
+              <thead className="bg-gray-50">
+                <tr>
+                  {mapping.mappings.filter(m => m.source_column && m.target_kpi_code).map(m => (
+                    <th key={m.target_kpi_code} className="px-2 py-1 text-left">
+                      <div className="text-gray-400">{m.source_column}</div>
+                      <div className="text-indigo-600 font-bold">{m.target_kpi_code}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sampleData.map((row, i) => (
+                  <tr key={i} className="border-t border-gray-100">
+                    {mapping.mappings.filter(m => m.source_column && m.target_kpi_code).map(m => (
+                      <td key={m.target_kpi_code} className="px-2 py-1">
+                        {row[m.source_column] || '—'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Unmapped KPIs warning */}
+      {unmappedKpis.length > 0 && mapping.mappings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+          <div className="flex items-center gap-2 text-amber-700 font-medium mb-1">
+            <AlertTriangle size={14} /> {unmappedKpis.length} KPI{unmappedKpis.length > 1 ? 's' : ''} not mapped
+          </div>
+          <div className="text-amber-600 text-xs">
+            {unmappedKpis.map(k => k.code).join(', ')} — these won't receive data from the source system
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-gray-400 flex items-center gap-1">
+        <Save size={12} /> This mapping template will be saved with the vertical for reuse in n8n data syncs.
+      </p>
+    </div>
+  );
+};
+
 const StepReview: React.FC<{
   name: string; slug: string; description: string; scope: string;
   pillars: PillarDef[]; kpis: KpiDef[];
@@ -523,7 +761,7 @@ const StepReview: React.FC<{
 
 // ─── Main Wizard ─────────────────────────────────────────────────────────────
 
-const STEPS = ['Identity', 'Pillars', 'KPIs', 'Review'];
+const STEPS = ['Identity', 'Pillars', 'KPIs', 'Field Mapping', 'Review'];
 
 const CustomVerticalWizard: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -539,6 +777,7 @@ const CustomVerticalWizard: React.FC = () => {
     { code: 'P5', name: '', weight_l2: 0.2 },
   ]);
   const [kpis, setKpis] = useState<KpiDef[]>([]);
+  const [fieldMapping, setFieldMapping] = useState<MappingTemplate>({ source_system: 'custom', mappings: [] });
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
@@ -548,6 +787,7 @@ const CustomVerticalWizard: React.FC = () => {
     if (step === 0) return name.trim().length >= 3 && slug.trim().length >= 3;
     if (step === 1) return pillars.length >= 3 && pillars.every(p => p.name.trim());
     if (step === 2) return kpis.length >= 3;
+    if (step === 3) return true;  // Field mapping is optional (skip if not migrating)
     return true;
   }, [step, name, slug, pillars, kpis]);
 
@@ -570,17 +810,22 @@ const CustomVerticalWizard: React.FC = () => {
     setCreating(true);
     setError('');
     const catalog = buildCatalogJson(pillars, kpis);
+    // Include field mapping template if any mappings were defined
+    const payload: any = {
+      vertical_slug: slug,
+      label: name,
+      description,
+      scope,
+      catalog,
+    };
+    if (fieldMapping.mappings.length > 0) {
+      payload.field_mapping = fieldMapping;
+    }
     try {
       const resp = await fetch('/api/admin-ui/verticals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vertical_slug: slug,
-          label: name,
-          description,
-          scope,
-          catalog,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await resp.json();
       if (resp.ok) {
@@ -649,7 +894,8 @@ const CustomVerticalWizard: React.FC = () => {
           onName={setName} onSlug={setSlug} onDescription={setDescription} onScope={setScope} />}
         {step === 1 && <StepPillars pillars={pillars} onChange={setPillars} />}
         {step === 2 && <StepKpis pillars={pillars} kpis={kpis} onChange={setKpis} onCsvParsed={handleCsvParsed} />}
-        {step === 3 && <StepReview name={name} slug={slug} description={description} scope={scope}
+        {step === 3 && <StepFieldMapping kpis={kpis} mapping={fieldMapping} onChange={setFieldMapping} />}
+        {step === 4 && <StepReview name={name} slug={slug} description={description} scope={scope}
           pillars={pillars} kpis={kpis} validation={validation}
           onValidate={handleValidate} onCreate={handleCreate} creating={creating} />}
       </div>
@@ -661,10 +907,10 @@ const CustomVerticalWizard: React.FC = () => {
           <ChevronLeft size={16} /> Back
         </button>
         {error && <span className="text-sm text-red-600">{error}</span>}
-        {step < 3 && (
+        {step < 4 && (
           <button onClick={() => { setStep(s => s + 1); setValidation(null); }} disabled={!canNext()}
             className="flex items-center gap-1 px-5 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-            Next <ChevronRight size={16} />
+            {step === 3 ? 'Skip / Next' : 'Next'} <ChevronRight size={16} />
           </button>
         )}
       </div>
