@@ -64,6 +64,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Daily Active Users (DAU) Rate",
         "pillar": "P1",
         "weight_l1": 0.16,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",
         "unit": "percentage",
         "higher_is_better": True,
@@ -79,6 +80,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Feature Adoption Breadth",
         "pillar": "P1",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -94,6 +96,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Time-to-First-Value (TTFV)",
         "pillar": "P1",
         "weight_l1": 0.14,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "days",
         "higher_is_better": False,
@@ -109,6 +112,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Login Frequency",
         "pillar": "P1",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",
         "unit": "sessions/user/week",
         "higher_is_better": True,
@@ -124,6 +128,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Onboarding Completion Rate",
         "pillar": "P1",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -139,6 +144,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Workflow Completion Rate",
         "pillar": "P1",
         "weight_l1": 0.09,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -154,6 +160,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Module Activation Rate",
         "pillar": "P1",
         "weight_l1": 0.08,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -169,6 +176,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "API Integration Usage",
         "pillar": "P1",
         "weight_l1": 0.07,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "weekly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -184,6 +192,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Knowledge Base Usage",
         "pillar": "P1",
         "weight_l1": 0.07,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -204,6 +213,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Executive Sponsor Engagement",
         "pillar": "P2",
         "weight_l1": 0.22,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "score",
         "higher_is_better": True,
@@ -219,6 +229,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "QBR Attendance Rate",
         "pillar": "P2",
         "weight_l1": 0.18,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -234,6 +245,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Training Completion Rate",
         "pillar": "P2",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -249,6 +261,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Community Participation Score",
         "pillar": "P2",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "score",
         "higher_is_better": True,
@@ -264,6 +277,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "CSM Interaction Frequency",
         "pillar": "P2",
         "weight_l1": 0.13,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "interactions/month",
         "higher_is_better": True,
@@ -279,6 +293,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Webinar/Event Attendance",
         "pillar": "P2",
         "weight_l1": 0.1,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -294,6 +309,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Customer Advocacy Score",
         "pillar": "P2",
         "weight_l1": 0.1,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "score",
         "higher_is_better": True,
@@ -314,6 +330,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Ticket Resolution Time",
         "pillar": "P3",
         "weight_l1": 0.13,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "daily",
         "unit": "hours",
         "higher_is_better": False,
@@ -329,6 +346,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Customer Complaints Rate",
         "pillar": "P3",
         "weight_l1": 0.07,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "per_1000_users",
         "higher_is_better": False,
@@ -344,6 +362,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "CSAT Score",
         "pillar": "P3",
         "weight_l1": 0.14,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "score",
         "higher_is_better": True,
@@ -359,6 +378,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Net Promoter Score (NPS)",
         "pillar": "P3",
         "weight_l1": 0.14,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "score",
         "higher_is_better": True,
@@ -374,6 +394,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Escalation Rate",
         "pillar": "P3",
         "weight_l1": 0.1,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": False,
@@ -389,6 +410,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "First Contact Resolution Rate",
         "pillar": "P3",
         "weight_l1": 0.1,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -404,6 +426,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "SLA Compliance Rate",
         "pillar": "P3",
         "weight_l1": 0.08,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -419,6 +442,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Support Ticket Volume Trend",
         "pillar": "P3",
         "weight_l1": 0.07,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage_mom",
         "higher_is_better": False,
@@ -434,6 +458,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Customer Effort Score (CES)",
         "pillar": "P3",
         "weight_l1": 0.1,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "score",
         "higher_is_better": True,
@@ -449,6 +474,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Case Deflection Rate",
         "pillar": "P3",
         "weight_l1": 0.07,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -469,6 +495,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Partner-Sourced Revenue Rate",
         "pillar": "P4",
         "weight_l1": 0.2,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -484,6 +511,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Partner Certification Level",
         "pillar": "P4",
         "weight_l1": 0.16,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "score",
         "higher_is_better": True,
@@ -499,6 +527,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Partner Deal Registration Rate",
         "pillar": "P4",
         "weight_l1": 0.15,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -514,6 +543,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Channel Conflict Resolution Time",
         "pillar": "P4",
         "weight_l1": 0.13,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "days",
         "higher_is_better": False,
@@ -529,6 +559,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Partner Satisfaction Score",
         "pillar": "P4",
         "weight_l1": 0.14,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "score",
         "higher_is_better": True,
@@ -544,6 +575,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Co-Marketing Campaign ROI",
         "pillar": "P4",
         "weight_l1": 0.12,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -559,6 +591,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Partner Technical Enablement Score",
         "pillar": "P4",
         "weight_l1": 0.1,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "score",
         "higher_is_better": True,
@@ -579,6 +612,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Net Revenue Retention (NRR)",
         "pillar": "P5",
         "weight_l1": 0.2,
+        "impact": "high",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -594,6 +628,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Gross Revenue Retention (GRR)",
         "pillar": "P5",
         "weight_l1": 0.16,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -609,6 +644,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Expansion Revenue Rate",
         "pillar": "P5",
         "weight_l1": 0.13,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -624,6 +660,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Annual Contract Value (ACV) Growth",
         "pillar": "P5",
         "weight_l1": 0.1,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -639,6 +676,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Renewal Probability (90d)",
         "pillar": "P5",
         "weight_l1": 0.14,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": True,
@@ -654,6 +692,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Churn Risk Score",
         "pillar": "P5",
         "weight_l1": 0.09,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "monthly",
         "unit": "percentage",
         "higher_is_better": False,
@@ -669,6 +708,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Customer Lifetime Value Trend",
         "pillar": "P5",
         "weight_l1": 0.08,
+        "impact": "low",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "ratio",
         "higher_is_better": True,
@@ -684,6 +724,7 @@ SAAS_KPIS: Dict[str, Dict[str, Any]] = {
         "name": "Share of Wallet",
         "pillar": "P5",
         "weight_l1": 0.1,
+        "impact": "medium",  # derived from weight_l1 relative to pillar avg
         "frequency": "quarterly",
         "unit": "percentage",
         "higher_is_better": True,
