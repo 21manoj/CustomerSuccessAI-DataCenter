@@ -229,7 +229,12 @@ const SignalTimelineView: React.FC = () => {
         const acctRes = await apiCall('/api/accounts', { headers });
         if (!acctRes.ok) throw new Error(`Accounts API returned ${acctRes.status}`);
         const acctData = await acctRes.json();
-        const acctList: Account[] = Array.isArray(acctData) ? acctData : acctData.accounts ?? [];
+        const rawAccts = Array.isArray(acctData) ? acctData : acctData.accounts ?? [];
+        const acctList: Account[] = rawAccts.map((a: any) => ({
+          id: a.account_id ?? a.id,
+          name: a.account_name ?? a.name ?? `Account ${a.account_id ?? a.id}`,
+          arr: a.arr ?? a.revenue ?? 0,
+        }));
         if (cancelled) return;
         setAccounts(acctList);
 
