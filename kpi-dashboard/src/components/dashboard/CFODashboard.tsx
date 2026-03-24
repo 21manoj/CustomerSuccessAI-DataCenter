@@ -927,8 +927,8 @@ const CFODashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="cfo" />
-    </div>{/* end flex row */}
-    </div>{/* end flex col */}
+    </div>
+    </div>
   );
 };
 

@@ -1119,8 +1119,8 @@ const CEODashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="ceo" />
-    </div>{/* end flex row */}
-    </div>{/* end flex col */}
+    </div>
+    </div>
   );
 };
 

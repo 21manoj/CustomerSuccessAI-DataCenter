@@ -1060,8 +1060,8 @@ const VPCSDashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="vpcs" />
-    </div>{/* end flex row */}
-    </div>{/* end flex col */}
+    </div>
+    </div>
   );
 };
 

@@ -1054,8 +1054,8 @@ const CRODashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="cro" />
-    </div>{/* end flex row */}
-    </div>{/* end flex col */}
+    </div>
+    </div>
   );
 };
 
