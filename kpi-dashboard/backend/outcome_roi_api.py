@@ -167,7 +167,7 @@ def get_forward_roi():
     Query params:
         months: Projection months (default: 6)
         mode: 'velocity' (default, data-driven) or 'flat' (legacy flat %)
-        improvement_pct: Flat improvement % when mode=flat (default: 4.0)
+        improvement_pct: Flat improvement % when mode=flat (default: 1.0)
 
     JSON body (POST) or query params for pillar_boost:
         pillar_boost: {"P2": 1.5, "P3": 2.0}  — multipliers on velocity
@@ -262,7 +262,7 @@ def get_forward_roi():
                 data_source = vel_source
             else:
                 # Fallback to flat if no velocity data
-                improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
+                improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
                 result = calculate_forward_roi(
                     current_values=current_values,
                     target_improvement_pct=improvement_pct,
@@ -274,7 +274,7 @@ def get_forward_roi():
                 velocity_detail = {}
         else:
             # Legacy flat mode
-            improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
+            improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
             result = calculate_forward_roi(
                 current_values=current_values,
                 target_improvement_pct=improvement_pct,
@@ -317,7 +317,7 @@ def get_outcome_story():
     Combined outcome story: historical proof + forward projection.
 
     Query params:
-        improvement_pct: Forward target (default: 4.0, used when mode=flat)
+        improvement_pct: Forward target (default: 1.0, used when mode=flat)
         months: Forward projection months (default: 6)
         mode: 'velocity' (default, data-driven) or 'flat' (legacy)
 
@@ -336,7 +336,7 @@ def get_outcome_story():
     try:
         from outcome_roi_engine import calculate_outcome_story
 
-        improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
+        improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
         projection_months = request.args.get('months', 6, type=int)
         mode = request.args.get('mode', 'velocity')
 
@@ -555,14 +555,14 @@ def get_demo_outcome_story():
     Perfect for presentations and demos.
 
     Query params:
-        improvement_pct: Forward target (default: 4.0)
+        improvement_pct: Forward target (default: 1.0)
         months: Forward projection months (default: 6)
         arr: ARR in dollars (default: 10000000)
     """
     try:
         from outcome_roi_engine import calculate_outcome_story
 
-        improvement_pct = request.args.get('improvement_pct', 4.0, type=float)
+        improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
         projection_months = request.args.get('months', 6, type=int)
         arr = request.args.get('arr', DEMO_ARR, type=float)
 

@@ -247,7 +247,7 @@ def register_all_tools(registry: Optional[AgentToolRegistry] = None) -> AgentToo
         requires_customer_id=False,
     ))
 
-    def _outcome_roi_story(metric_actuals: Dict, target_improvement_pct: float = 4.0,
+    def _outcome_roi_story(metric_actuals: Dict, target_improvement_pct: float = 1.0,
                            account_arr: Optional[float] = None,
                            projection_months: int = 6) -> Dict:
         from outcome_roi_engine import calculate_outcome_story
@@ -265,7 +265,7 @@ def register_all_tools(registry: Optional[AgentToolRegistry] = None) -> AgentToo
         callable=_outcome_roi_story,
         input_schema={
             "metric_actuals": "Dict of metric_id → {baseline, current}",
-            "target_improvement_pct": "Forward target % (default 4.0)",
+            "target_improvement_pct": "Forward target % (default 1.0 — Power of 1)",
             "account_arr": "Optional ARR for scaling",
             "projection_months": "Forward projection months (default 6)",
         },

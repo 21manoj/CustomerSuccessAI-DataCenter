@@ -568,7 +568,7 @@ def calculate_historical_roi(
 
 def calculate_forward_roi(
     current_values: Dict[str, float],
-    target_improvement_pct: float = 4.0,
+    target_improvement_pct: float = 1.0,
     account_arr: Optional[float] = None,
     investment_override: Optional[float] = None,
     projection_months: int = 6,
@@ -765,7 +765,7 @@ def calculate_forward_roi(
 
 def calculate_outcome_story(
     metric_actuals: Dict[str, Dict],
-    target_improvement_pct: float = 4.0,
+    target_improvement_pct: float = 1.0,
     account_arr: Optional[float] = None,
     investment_override: Optional[float] = None,
     projection_months: int = 6,

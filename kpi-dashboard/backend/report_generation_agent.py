@@ -154,7 +154,7 @@ def _build_roi_section(registry, account_arr) -> Dict:
     roi_result = registry.invoke(
         "outcome_roi_story",
         metric_actuals=DEMO_HISTORICAL_ACTUALS,
-        target_improvement_pct=4.0,
+        target_improvement_pct=1.0,
         account_arr=account_arr,
     )
 

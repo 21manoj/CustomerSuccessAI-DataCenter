@@ -268,7 +268,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
 
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
-            target_improvement_pct=4.0,
+            target_improvement_pct=1.0,
             account_arr=total_arr,
             projection_months=6,
             accounts_at_risk=accounts_at_risk,
