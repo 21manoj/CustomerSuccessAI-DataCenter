@@ -10,7 +10,7 @@
 
 set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KEY_FILE="${REPO_ROOT}/cspulse-v6-key.pem"
+KEY_FILE="${CSPULSE_SSH_KEY_FILE:-${REPO_ROOT}/cspulse-v6-key.pem}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 DEFAULT_ECR_REGISTRY="822824391150.dkr.ecr.us-east-1.amazonaws.com"
 

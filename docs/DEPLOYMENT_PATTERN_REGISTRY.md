@@ -65,6 +65,16 @@ No building on EC2 and no S3 tarballs for images. The registry is the single sou
    docker push YOUR_DOCKERHUB_USER/cspulse-postgres:latest
    ```
 
+### GitHub Actions (native `linux/amd64`, recommended for EC2)
+
+Use the workflow **`.github/workflows/cspulse-ecr-build-push.yml`**. It runs on **`ubuntu-latest`** (real x86_64), so you avoid slow **QEMU/`amd64` emulation on Apple Silicon**.
+
+1. Add repository **secrets**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (IAM user or role with **ECR push** permissions to `cspulse-platform`, `cspulse-postgres`, `cspulse-load-driver`).
+2. **Push to `main`** (with changes under `kpi-dashboard/` or `load-driver/`) or run **Actions → CS Pulse — ECR build → Run workflow**.
+3. Optional: enable **Deploy to EC2** on manual run and set **`CSPULSE_SSH_PRIVATE_KEY`** (full PEM for `ec2-user`). That runs `scripts/rehydrate-ec2-ecr.sh` after the push. The IAM user also needs **EC2 describe/start** if the instance can be stopped.
+
+For SSH-only rehydrate after a successful workflow, run `./scripts/rehydrate-ec2-ecr.sh` from your laptop as before.
+
 ---
 
 ## 2. EC2: Pull and run
@@ -148,8 +158,8 @@ sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loa
 
 | Step   | Where      | Action |
 |--------|------------|--------|
-| Build  | Local      | `docker build` (use `buildx --platform linux/amd64` on Apple Silicon) |
-| Push   | Local      | `docker push` to ECR or Docker Hub |
+| Build  | Local **or** **GitHub Actions** (`ubuntu-latest`) | `docker build` / `buildx` — on Apple Silicon use **CI** or `buildx --platform linux/amd64` |
+| Push   | Local or CI | `docker push` to ECR |
 | Pull   | EC2        | `docker compose pull` (images from registry) |
 | Run    | EC2        | `docker compose up -d` |
 
