@@ -475,8 +475,10 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         return {'mermaid': '\n'.join(lines), 'node_count': len(included_ids), 'edge_count': len(edges)}
 
     elif tool_name == 'get_account_journey_timeline':
+        # REAL: includes revenue_summary (matches MCP output)
         account_id = tool_input['account_id']
         limit = tool_input.get('limit', 50)
+        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
         nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id).order_by(ContextNode.occurred_at.asc()).limit(limit).all()
         timeline = [{
             'node_id': n.node_id,
@@ -487,7 +489,25 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
             'revenue_impact': float(n.revenue_impact) if n.revenue_impact else None,
             'revenue_impact_type': n.revenue_impact_type,
         } for n in nodes]
-        return {'account_id': account_id, 'timeline': timeline, 'event_count': len(timeline)}
+        # Add revenue_summary (same as MCP version)
+        try:
+            from utils.context_graph import get_revenue_at_risk as _cg_rev
+            rev = _cg_rev(account_id)
+        except Exception:
+            rev = {}
+        counts = {}
+        for n in nodes:
+            counts[n.node_type] = counts.get(n.node_type, 0) + 1
+        return {
+            'scope': 'account',
+            'account_id': account_id,
+            'account_name': acct.account_name if acct else str(account_id),
+            'arr': float(acct.revenue or 0) if acct else 0,
+            'event_count': len(timeline),
+            'counts_by_type': counts,
+            'revenue_summary': rev,
+            'timeline': timeline,
+        }
 
     elif tool_name == 'search_signals':
         account_id = tool_input['account_id']
@@ -498,32 +518,250 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         return {'nodes': [{'node_id': n.node_id, 'title': n.title, 'node_type': n.node_type, 'node_subtype': n.node_subtype, 'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None, 'revenue_impact': float(n.revenue_impact) if n.revenue_impact else None} for n in nodes], 'count': len(nodes)}
 
     elif tool_name == 'get_stakeholder_map':
+        # REAL: includes influenced_decisions and influenced_outcomes (matches MCP)
         account_id = tool_input['account_id']
-        nodes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='STAKEHOLDER').all()
-        return {'stakeholders': [{'node_id': n.node_id, 'title': n.title, 'node_subtype': n.node_subtype, 'properties': n.properties or {}} for n in nodes], 'stakeholder_count': len(nodes)}
+        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
+        stakeholders = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='STAKEHOLDER').all()
+        decisions = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='DECISION').all()
+        outcomes = ContextNode.query.filter_by(customer_id=customer_id, account_id=account_id, node_type='OUTCOME').all()
+        # Find INVOLVES edges from stakeholders to decisions/outcomes
+        stk_ids = [s.node_id for s in stakeholders]
+        dec_out_ids = [n.node_id for n in decisions + outcomes]
+        involves_edges = []
+        if stk_ids and dec_out_ids:
+            involves_edges = ContextEdge.query.filter(
+                ContextEdge.from_node_id.in_(stk_ids),
+                ContextEdge.to_node_id.in_(dec_out_ids)
+            ).all()
+        # Build influence map
+        stk_decisions = {}
+        stk_outcomes = {}
+        dec_ids_set = set(n.node_id for n in decisions)
+        out_ids_set = set(n.node_id for n in outcomes)
+        for e in involves_edges:
+            if e.to_node_id in dec_ids_set:
+                stk_decisions.setdefault(e.from_node_id, []).append(e.to_node_id)
+            if e.to_node_id in out_ids_set:
+                stk_outcomes.setdefault(e.from_node_id, []).append(e.to_node_id)
+        result_stk = []
+        for s in stakeholders:
+            result_stk.append({
+                'node_id': s.node_id,
+                'title': s.title,
+                'node_subtype': s.node_subtype,
+                'properties': s.properties or {},
+                'influenced_decisions': stk_decisions.get(s.node_id, []),
+                'influenced_outcomes': stk_outcomes.get(s.node_id, []),
+            })
+        return {
+            'scope': 'account',
+            'account_id': account_id,
+            'account_name': acct.account_name if acct else str(account_id),
+            'stakeholder_count': len(result_stk),
+            'stakeholders': result_stk,
+        }
 
     elif tool_name == 'get_csm_daily_actions':
-        # Simplified: return at-risk accounts as action items
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
-        actions = []
-        for a in accounts:
-            hs = HealthScore.query.filter_by(account_id=a.account_id).order_by(HealthScore.measurement_month.desc()).first()
-            score = float(hs.health_score) if hs else 50
-            if score < ht.healthy_min():
-                urgency = 'critical' if score < ht.at_risk_min() else 'high'
-                actions.append({
-                    'account_name': a.account_name,
-                    'account_id': a.account_id,
-                    'health_score': round(score, 1),
-                    'urgency': urgency,
-                    'action': f"Review health for {a.account_name} (score: {round(score, 1)})",
-                    'dollar_impact': f"${a.revenue or 0:,.0f}",
-                })
-        return {'actions': sorted(actions, key=lambda x: x['health_score'])[:10], 'count': len(actions)}
+        # REAL: uses the same priority formula as MCP (impact × 0.6 × arr_weight - effort × 0.4)
+        from _ask_ai_helpers import _resolve_customer_vertical, _get_health_functions, _get_playbook_config, _get_kpi_definitions
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+        PLAYBOOK_CONFIG, should_trigger_playbook = _get_playbook_config(vertical)
+        KPI_DEFS = _get_kpi_definitions(vertical)
+        try:
+            from verticals.dc2_s.api_routes import (
+                _normalize_kpi_code_for_health, _compute_impact_score,
+                _compute_effort_score, _determine_urgency, _get_roi_context,
+            )
+        except ImportError:
+            # Minimal fallback if dc2_s not available
+            return {"actions": [], "summary": {"total_actions": 0}}
 
-    elif tool_name in ('calculate_power_of_1', 'get_outcome_roi_story', 'get_playbook_recommendations', 'get_portfolio_roi_summary'):
-        # These require complex business logic — return a helpful message
-        return {"note": f"Tool {tool_name} requires the full MCP server module. Install fastmcp for full functionality.", "data": {}}
+        from datetime import datetime as _dt
+        accounts = Account.query.filter(Account.customer_id == int(customer_id)).all()
+        all_actions = []
+        for account in accounts:
+            precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account.account_id)
+            trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
+            if precalc_health is not None:
+                overall_health = precalc_health
+                pillar_averages = precalc_pillars or {}
+            else:
+                overall_health, pillar_averages = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
+            normalized_kpis = {}
+            for code, val in trailing_kpis.items():
+                norm = _normalize_kpi_code_for_health(code)
+                if norm:
+                    normalized_kpis[norm] = val
+            normalized_kpis['OVERALL_HEALTH'] = overall_health
+            arr = float(account.revenue or 0)
+            arr_weight = 1.5 if arr > 10_000_000 else (1.3 if arr > 5_000_000 else (1.1 if arr > 2_000_000 else (1.0 if arr > 0 else 0.8)))
+            h_cls = ht.classify(overall_health)
+            churn_prob = 80 if h_cls == 'critical' else (40 if h_cls == 'at_risk' else 15)
+            expansion_prob = 75 if h_cls == 'healthy' else (30 if h_cls == 'at_risk' else 5)
+            for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+                if should_trigger_playbook(pb_id, normalized_kpis):
+                    impact = _compute_impact_score(overall_health, churn_prob, expansion_prob, pillar_averages)
+                    effort = _compute_effort_score(pb_cfg)
+                    priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                    total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+                    roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                    all_actions.append({
+                        'account_id': account.account_id,
+                        'account_name': account.account_name,
+                        'action_title': f"Start {pb_cfg['name']} Playbook",
+                        'action_type': 'playbook',
+                        'related_playbook_id': pb_id,
+                        'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob),
+                        'impact_score': impact,
+                        'effort_score': effort,
+                        'priority_index': priority_index,
+                        'account_health': round(overall_health, 1),
+                        'estimated_hours': total_hours,
+                        **roi_ctx,
+                    })
+        all_actions.sort(key=lambda x: x.get('priority_index', 0), reverse=True)
+        top = all_actions[:10]
+        return {
+            'scope': 'portfolio',
+            'date': _dt.utcnow().strftime('%Y-%m-%d'),
+            'actions': top,
+            'summary': {
+                'total_actions': len(top),
+                'critical_count': sum(1 for a in top if a.get('urgency') == 'critical'),
+                'high_count': sum(1 for a in top if a.get('urgency') == 'high'),
+                'opportunity_count': sum(1 for a in top if a.get('urgency') == 'opportunity'),
+                'total_estimated_hours': sum(a.get('estimated_hours', 0) for a in top),
+                'total_roi_projected_impact': sum(a.get('projected_dollar_impact', 0) for a in top),
+            },
+        }
+
+    elif tool_name == 'calculate_power_of_1':
+        # REAL: calls power_of_1_model.calculate_power_of_1_impact()
+        from power_of_1_model import calculate_power_of_1_impact
+        metric_id = tool_input['metric_id']
+        improvement_pct = tool_input.get('improvement_pct', 1.0)
+        account_arr = tool_input.get('account_arr')
+        if not account_arr:
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
+            account_arr = sum(float(a.revenue or 0) for a in accounts)
+        result = calculate_power_of_1_impact(metric_id, improvement_pct, account_arr)
+        if not result:
+            return {"error": f"Unknown metric: {metric_id}"}
+        return {
+            'scope': 'portfolio',
+            'metric_id': metric_id,
+            'improvement_pct': improvement_pct,
+            'arr_basis': account_arr,
+            **result,
+        }
+
+    elif tool_name == 'get_outcome_roi_story':
+        # REAL: calls outcome_roi_engine.calculate_outcome_story()
+        account_id = tool_input['account_id']
+        target_pct = tool_input.get('target_improvement_pct', 1.0)
+        projection_months = tool_input.get('projection_months', 6)
+        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
+        if not acct:
+            return {"error": f"Account {account_id} not found"}
+        arr = float(acct.revenue or 0)
+        try:
+            from outcome_roi_api import _extract_historical_actuals
+            metric_actuals = _extract_historical_actuals(customer_id, account_id)
+        except Exception:
+            metric_actuals = {}
+        try:
+            from outcome_roi_engine import calculate_outcome_story
+            result = calculate_outcome_story(
+                customer_id=customer_id,
+                account_arr=arr,
+                metric_actuals=metric_actuals,
+                target_improvement_pct=target_pct,
+                projection_months=projection_months,
+            )
+            from outcome_roi_engine import _result_to_dict
+            return _result_to_dict(result) if not isinstance(result, dict) else result
+        except Exception as e:
+            logger.warning(f"ROI story failed: {e}")
+            return {"error": f"ROI calculation failed: {str(e)}"}
+
+    elif tool_name == 'get_playbook_recommendations':
+        # REAL: uses playbook trigger logic + health data
+        account_id = tool_input['account_id']
+        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
+        if not acct:
+            return {"error": f"Account {account_id} not found"}
+        from _ask_ai_helpers import _resolve_customer_vertical, _get_health_functions, _get_playbook_config
+        vertical = _resolve_customer_vertical(customer_id)
+        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores = _get_health_functions(vertical)
+        PLAYBOOK_CONFIG, should_trigger_playbook = _get_playbook_config(vertical)
+        precalc_health, _, precalc_pillars = get_precalculated_scores(account_id)
+        trailing = _get_trailing_kpi_values(account_id, days=30)
+        if precalc_health is not None:
+            health = precalc_health
+            pillars = precalc_pillars or {}
+        else:
+            health, pillars = calculate_kpi_health(trailing, customer_id=customer_id)
+        try:
+            from verticals.dc2_s.api_routes import _normalize_kpi_code_for_health
+        except ImportError:
+            _normalize_kpi_code_for_health = lambda c: c
+        normalized = {}
+        for code, val in trailing.items():
+            norm = _normalize_kpi_code_for_health(code)
+            if norm:
+                normalized[norm] = val
+        normalized['OVERALL_HEALTH'] = health
+        recs = []
+        for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+            if should_trigger_playbook(pb_id, normalized):
+                triggers = []
+                for tk in pb_cfg.get('trigger_kpis', []):
+                    if tk in normalized:
+                        triggers.append({'kpi': tk, 'value': round(normalized[tk], 1)})
+                recs.append({
+                    'playbook_id': pb_id,
+                    'playbook_name': pb_cfg.get('name', pb_id),
+                    'priority': pb_cfg.get('priority', 'medium'),
+                    'estimated_impact': pb_cfg.get('estimated_impact', ''),
+                    'triggers': triggers,
+                })
+        return {
+            'scope': 'account',
+            'account_id': account_id,
+            'account_name': acct.account_name,
+            'health_score': round(health, 1),
+            'recommendations': recs,
+            'recommendation_count': len(recs),
+        }
+
+    elif tool_name == 'get_portfolio_roi_summary':
+        # REAL: calls outcome_roi_engine for portfolio-level ROI story
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        total_arr = sum(float(a.revenue or 0) for a in accounts)
+        try:
+            from outcome_roi_api import _extract_historical_actuals
+            metric_actuals = _extract_historical_actuals(customer_id)
+        except Exception:
+            metric_actuals = {}
+        try:
+            from outcome_roi_engine import calculate_outcome_story, _result_to_dict
+            result = calculate_outcome_story(
+                customer_id=customer_id,
+                account_arr=total_arr,
+                metric_actuals=metric_actuals,
+                target_improvement_pct=1.0,
+                projection_months=6,
+            )
+            d = _result_to_dict(result) if not isinstance(result, dict) else result
+            d['scope'] = 'portfolio'
+            d['customer_id'] = customer_id
+            d['total_arr'] = total_arr
+            d['account_count'] = len(accounts)
+            return d
+        except Exception as e:
+            logger.warning(f"Portfolio ROI failed: {e}")
+            return {"error": f"Portfolio ROI calculation failed: {str(e)}"}
 
     else:
         return {"error": f"Unknown tool: {tool_name}"}
