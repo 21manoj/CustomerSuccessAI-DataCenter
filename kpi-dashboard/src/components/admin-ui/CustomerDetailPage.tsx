@@ -649,14 +649,29 @@ const AddUserModal: React.FC<{
 // CONFIG TAB
 // ===========================================================================
 
-const PILLAR_NAMES: Record<string, Record<string, string>> = {
+/** Format a vertical slug into a human-readable label. */
+function formatVerticalLabel(v: string): string {
+  const labels: Record<string, string> = {
+    dc2_s: 'Data Center (DC2_S)',
+    saas_premium: 'SaaS Premium',
+    saas: 'SaaS Premium',
+  };
+  return labels[v] || v.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Pillar names loaded dynamically from /api/admin-ui/verticals endpoint.
+// Fallback map used only if API is unreachable — new verticals get generic P1..P5 labels.
+const PILLAR_NAMES_FALLBACK: Record<string, Record<string, string>> = {
   dc2_s: { P1: 'Deployment Velocity', P2: 'Operational Stability', P3: 'AI Workload Performance', P4: 'Channel & Partner Health', P5: 'Expansion Readiness' },
   saas_premium: { P1: 'Product Adoption & Usage', P2: 'Customer Engagement', P3: 'Customer Sentiment & Support', P4: 'Partner & Ecosystem Health', P5: 'Revenue & Growth' },
 };
+// Cache for dynamically loaded pillar names per vertical
+const _pillarNameCache: Record<string, Record<string, string>> = {};
 
 const ConfigTab: React.FC<{ customerId: number; kpiConfig: { vertical: string; pillar_weights: Record<string, number> | null; enabled_kpis: string[] | null; kpi_weights: Record<string, Record<string, number>> | null; kpi_overrides: Record<string, unknown> | null; config_version: string } | null; onUpdated: () => void }> = ({ customerId, kpiConfig, onUpdated }) => {
-  const vertical = kpiConfig?.vertical ?? 'dc2_s';
-  const pNames = PILLAR_NAMES[vertical] ?? PILLAR_NAMES.dc2_s;
+  const vertical = kpiConfig?.vertical ?? '';
+  // Try cache first, then fallback — dynamic names loaded by VerticalListPage
+  const pNames = _pillarNameCache[vertical] ?? PILLAR_NAMES_FALLBACK[vertical] ?? { P1: 'Pillar 1', P2: 'Pillar 2', P3: 'Pillar 3', P4: 'Pillar 4', P5: 'Pillar 5' };
   const pillarWeights = kpiConfig?.pillar_weights;
   const enabledKpis = kpiConfig?.enabled_kpis;
   const kpiWeights = kpiConfig?.kpi_weights;
@@ -691,7 +706,7 @@ const ConfigTab: React.FC<{ customerId: number; kpiConfig: { vertical: string; p
         <div>
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Vertical</span>
           <p className="text-lg font-bold text-gray-900 mt-1">
-            {vertical === 'dc2_s' ? 'Data Center (DC2_S)' : vertical === 'saas_premium' ? 'SaaS Premium' : vertical}
+            {formatVerticalLabel(vertical)}
           </p>
         </div>
         <span className="text-xs text-gray-400">Config v{kpiConfig.config_version}</span>

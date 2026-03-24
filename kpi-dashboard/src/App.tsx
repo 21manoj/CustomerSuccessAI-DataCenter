@@ -26,6 +26,7 @@ import AdminDashboardPage from './components/admin-ui/AdminDashboardPage';
 import CustomerListPage from './components/admin-ui/CustomerListPage';
 import CustomerDetailPage from './components/admin-ui/CustomerDetailPage';
 import VerticalListPage from './components/admin-ui/VerticalListPage';
+import CustomVerticalWizard from './components/admin-ui/CustomVerticalWizard';
 import LicenseManagerPage from './components/admin-ui/LicenseManagerPage';
 import ActivityLogPage from './components/admin-ui/ActivityLogPage';
 
@@ -453,6 +454,7 @@ const AppRoutes: React.FC = () => {
           <Route path="customers" element={<CustomerListPage />} />
           <Route path="customers/:id" element={<CustomerDetailPage />} />
           <Route path="verticals" element={<VerticalListPage />} />
+          <Route path="custom-vertical" element={<CustomVerticalWizard />} />
           <Route path="licenses" element={<LicenseManagerPage />} />
           <Route path="activity" element={<ActivityLogPage />} />
         </Route>

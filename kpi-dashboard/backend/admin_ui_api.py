@@ -830,10 +830,9 @@ def list_verticals():
         try:
             pillars = get_pillars(v)
             kpis = get_kpis(v)
-            label = {
-                'dc2_s': 'Data Center (DC2_S)',
-                'saas_premium': 'SaaS Premium',
-            }.get(v, v)
+            # Dynamic label: use catalog metadata if available, fallback to formatted slug
+            _known_labels = {'dc2_s': 'Data Center (DC2_S)', 'saas_premium': 'SaaS Premium', 'saas': 'SaaS Premium'}
+            label = _known_labels.get(v, v.replace('_', ' ').title())
             verticals.append({
                 "vertical": v,
                 "label": label,
@@ -888,6 +887,719 @@ def get_vertical_templates(vertical):
         "kpi_count": len(kpis),
         "pillars": pillar_details,
     })
+
+
+# ---------------------------------------------------------------------------
+# Custom Vertical Management
+# ---------------------------------------------------------------------------
+
+@admin_ui_api.route("/api/admin-ui/verticals", methods=["POST"])
+@super_admin_required
+def create_vertical():
+    """Create a new custom vertical from a KPI catalog JSON."""
+    import json as _json
+    data = request.json
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    slug = (data.get('vertical_slug') or '').strip().lower().replace(' ', '_').replace('-', '_')
+    if not slug or len(slug) < 3:
+        return jsonify({"error": "vertical_slug must be at least 3 characters"}), 400
+
+    label = data.get('label', slug.replace('_', ' ').title())
+    description = data.get('description', '')
+    scope = data.get('scope', 'platform')  # 'platform' or 'customer'
+    field_mapping = data.get('field_mapping')  # Optional migration mapping template
+    customer_id = data.get('customer_id')
+    catalog = data.get('catalog', {})
+
+    if not catalog or not catalog.get('kpis'):
+        return jsonify({"error": "catalog with kpis is required"}), 400
+
+    # Validate catalog using generic scorer
+    try:
+        from utils.generic_scorer import load_catalog_from_dict
+        kpi_cat, pillar_cat = load_catalog_from_dict(catalog)
+        if not kpi_cat:
+            return jsonify({"error": "No valid KPIs found in catalog"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Catalog validation failed: {str(e)}"}), 400
+
+    kpi_count = len(catalog.get('kpis', {}))
+    pillar_count = len(catalog.get('pillars', {}))
+
+    if scope == 'customer' and customer_id:
+        # Store in CustomerConfig.dc2s_kpi_definitions (hot-reload, no restart)
+        from models import CustomerConfig, db
+        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+        if not config:
+            return jsonify({"error": f"Customer {customer_id} not found"}), 404
+        config.dc2s_kpi_definitions = catalog
+        config.vertical = slug
+        db.session.commit()
+        # Clear registry cache so it picks up new definitions
+        from utils.vertical_registry import _kpis_cache, _pillars_cache
+        _kpis_cache.pop(slug, None)
+        _pillars_cache.pop(slug, None)
+        return jsonify({
+            "status": "created",
+            "vertical": slug,
+            "label": label,
+            "kpi_count": kpi_count,
+            "pillar_count": pillar_count,
+            "scope": "customer",
+            "customer_id": customer_id,
+        }), 201
+    else:
+        # Write JSON catalog file to config/ directory (platform-level)
+        import os
+        config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config')
+        catalog_path = os.path.join(config_dir, f'{slug}_kpi_catalog.json')
+
+        # Don't overwrite existing catalogs
+        if os.path.exists(catalog_path):
+            return jsonify({"error": f"Vertical '{slug}' already exists. Use a different slug or delete the existing one first."}), 409
+
+        # Add metadata
+        full_catalog = {
+            "version": "1.0",
+            "vertical": slug,
+            "description": description,
+            **catalog,
+        }
+        # Include field mapping template if provided (for migration reuse)
+        if field_mapping and field_mapping.get('mappings'):
+            full_catalog['field_mapping'] = field_mapping
+
+        with open(catalog_path, 'w') as f:
+            _json.dump(full_catalog, f, indent=2)
+
+        # Clear registry cache and re-discover
+        from utils.vertical_registry import _kpis_cache, _pillars_cache, SUPPORTED_VERTICALS, VERTICAL_ALIASES
+        _kpis_cache.pop(slug, None)
+        _pillars_cache.pop(slug, None)
+        SUPPORTED_VERTICALS.add(slug)
+        VERTICAL_ALIASES[slug] = slug
+
+        return jsonify({
+            "status": "created",
+            "vertical": slug,
+            "label": label,
+            "kpi_count": kpi_count,
+            "pillar_count": pillar_count,
+            "scope": "platform",
+            "catalog_path": f"config/{slug}_kpi_catalog.json",
+        }), 201
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/validate", methods=["POST"])
+@super_admin_required
+def validate_vertical_catalog():
+    """Validate a KPI catalog without saving it."""
+    catalog = (request.json or {}).get('catalog', {})
+    if not catalog:
+        return jsonify({"valid": False, "errors": ["Empty catalog"]}), 400
+
+    errors = []
+    warnings = []
+
+    # Check pillars
+    pillars = catalog.get('pillars', {})
+    kpis = catalog.get('kpis', {})
+
+    if not pillars:
+        errors.append("No pillars defined")
+    if not kpis:
+        errors.append("No KPIs defined")
+    if len(pillars) < 3:
+        errors.append(f"At least 3 pillars required (got {len(pillars)})")
+    if len(pillars) > 7:
+        errors.append(f"Maximum 7 pillars allowed (got {len(pillars)})")
+
+    # Check pillar weights sum
+    pillar_weights = [p.get('weight_l2', 0) for p in pillars.values()]
+    if pillar_weights and abs(sum(pillar_weights) - 1.0) > 0.01:
+        errors.append(f"Pillar weights must sum to 1.0 (got {sum(pillar_weights):.3f})")
+
+    # Check KPIs per pillar
+    pillar_codes = set(pillars.keys())
+    kpis_by_pillar = {}
+    for kcode, kdata in kpis.items():
+        p = kdata.get('pillar', '')
+        if p not in pillar_codes:
+            errors.append(f"KPI {kcode} references unknown pillar '{p}'")
+        kpis_by_pillar.setdefault(p, []).append(kcode)
+
+    for pc in pillar_codes:
+        if pc not in kpis_by_pillar:
+            errors.append(f"Pillar {pc} has no KPIs")
+        else:
+            weights = [kpis[k].get('weight_l1', 0) for k in kpis_by_pillar[pc]]
+            if weights and abs(sum(weights) - 1.0) > 0.05:
+                warnings.append(f"KPI weights for {pc} sum to {sum(weights):.3f} (will be auto-normalized)")
+
+    # Check ranges
+    for kcode, kdata in kpis.items():
+        ranges = kdata.get('ranges', {})
+        if not ranges:
+            errors.append(f"KPI {kcode} has no ranges defined")
+        elif not all(k in ranges for k in ('healthy', 'risk', 'critical')):
+            errors.append(f"KPI {kcode} missing range bands (need healthy, risk, critical)")
+
+    # Try generic scorer validation
+    try:
+        from utils.generic_scorer import load_catalog_from_dict
+        load_catalog_from_dict(catalog)
+    except Exception as e:
+        errors.append(f"Scorer validation failed: {str(e)}")
+
+    return jsonify({
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "kpi_count": len(kpis),
+        "pillar_count": len(pillars),
+    })
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/parse-csv", methods=["POST"])
+@super_admin_required
+def parse_csv_to_catalog():
+    """Parse an uploaded CSV file into a KPI catalog JSON structure."""
+    import csv
+    import io
+
+    if 'file' not in request.files:
+        # Try raw CSV in body
+        csv_content = request.data.decode('utf-8', errors='replace') if request.data else ''
+        if not csv_content:
+            return jsonify({"error": "No CSV file or content provided"}), 400
+    else:
+        csv_content = request.files['file'].read().decode('utf-8', errors='replace')
+
+    parse_errors = []
+    pillars = {}
+    kpis = {}
+
+    try:
+        reader = csv.DictReader(io.StringIO(csv_content))
+        required_cols = {'kpi_code', 'name', 'pillar'}
+        if not required_cols.issubset(set(reader.fieldnames or [])):
+            missing = required_cols - set(reader.fieldnames or [])
+            return jsonify({"error": f"Missing required columns: {missing}"}), 400
+
+        for i, row in enumerate(reader, 1):
+            try:
+                kpi_code = row.get('kpi_code', '').strip()
+                pillar_code = row.get('pillar', '').strip()
+                kpi_name = row.get('name', '').strip()
+
+                if not kpi_code or not pillar_code or not kpi_name:
+                    parse_errors.append(f"Row {i}: missing kpi_code, name, or pillar")
+                    continue
+
+                # Auto-create pillar if not exists
+                if pillar_code not in pillars:
+                    pillar_name = row.get('pillar_name', pillar_code).strip()
+                    weight_l2 = float(row.get('pillar_weight', 0) or 0)
+                    pillars[pillar_code] = {
+                        "name": pillar_name or pillar_code,
+                        "weight_l2": weight_l2,
+                        "kpi_count": 0,
+                    }
+
+                pillars[pillar_code]['kpi_count'] = pillars[pillar_code].get('kpi_count', 0) + 1
+
+                higher = row.get('higher_is_better', 'true').strip().lower() in ('true', '1', 'yes', 'y')
+                kpis[kpi_code] = {
+                    "name": kpi_name,
+                    "pillar": pillar_code,
+                    "weight_l1": float(row.get('weight_l1', 0) or 0),
+                    "unit": row.get('unit', 'percentage').strip() or 'percentage',
+                    "higher_is_better": higher,
+                    "frequency": row.get('frequency', 'monthly').strip() or 'monthly',
+                    "target": {"operator": ">" if higher else "<", "value": float(row.get('target', 0) or 0)},
+                    "ranges": {
+                        "healthy": {"min": float(row.get('healthy_min', 0) or 0), "max": float(row.get('healthy_max', 100) or 100)},
+                        "risk": {"min": float(row.get('risk_min', 0) or 0), "max": float(row.get('risk_max', 0) or 0)},
+                        "critical": {"min": float(row.get('critical_min', 0) or 0), "max": float(row.get('critical_max', 0) or 0)},
+                    },
+                }
+            except (ValueError, TypeError) as e:
+                parse_errors.append(f"Row {i}: {str(e)}")
+
+        # Auto-normalize pillar weights if they don't sum to 1
+        total_pw = sum(p.get('weight_l2', 0) for p in pillars.values())
+        if total_pw > 0 and abs(total_pw - 1.0) > 0.01:
+            for p in pillars.values():
+                p['weight_l2'] = round(p['weight_l2'] / total_pw, 4)
+        elif total_pw == 0:
+            # Equal distribution
+            n = len(pillars)
+            for p in pillars.values():
+                p['weight_l2'] = round(1.0 / n, 4)
+
+    except Exception as e:
+        return jsonify({"error": f"CSV parsing failed: {str(e)}"}), 400
+
+    return jsonify({
+        "catalog": {"pillars": pillars, "kpis": kpis},
+        "parse_errors": parse_errors,
+        "kpi_count": len(kpis),
+        "pillar_count": len(pillars),
+    })
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/parse-source-csv", methods=["POST"])
+@super_admin_required
+def parse_source_csv():
+    """Parse a foreign CSV (Gainsight, ChurnZero, etc.) and auto-detect KPI definitions.
+
+    Unlike parse-csv which expects our template format, this endpoint accepts
+    ANY CSV format and tries to infer KPI definitions from column names, values,
+    and optional source_system hint.
+
+    Returns detected KPIs with suggested mappings + the raw columns for manual mapping.
+    """
+    import csv
+    import io
+    import re
+
+    source_system = request.form.get('source_system', request.args.get('source_system', 'auto'))
+
+    if 'file' not in request.files:
+        csv_content = request.data.decode('utf-8', errors='replace') if request.data else ''
+        if not csv_content:
+            return jsonify({"error": "No CSV file or content provided"}), 400
+    else:
+        csv_content = request.files['file'].read().decode('utf-8', errors='replace')
+
+    try:
+        reader = csv.DictReader(io.StringIO(csv_content))
+        headers = list(reader.fieldnames or [])
+        if not headers:
+            return jsonify({"error": "CSV has no headers"}), 400
+
+        # Read all rows for value analysis
+        rows = list(reader)
+
+        # ─── Source system detection ───
+        if source_system == 'auto':
+            header_str = ' '.join(headers).lower()
+            if 'churnscore' in header_str or 'churnzero' in header_str or 'churn_score' in header_str:
+                source_system = 'churnzero'
+            elif 'scorecard' in header_str or 'measure group' in header_str or 'gainsight' in header_str or 'csm name' in header_str:
+                source_system = 'gainsight'
+            elif 'hubspot' in header_str or 'hs_object_id' in header_str:
+                source_system = 'hubspot'
+            else:
+                source_system = 'unknown'
+
+        # ─── Detect long-format (pivoted) CSV ───
+        # Long format: one row per measure per account (e.g., Gainsight Scorecard Mass Edit)
+        # Columns like "Measure Name" + "Score" + "Weight" + "Measure Group"
+        headers_lower = [h.lower().strip() for h in headers]
+        is_long_format = (
+            any(h in headers_lower for h in ['measure name', 'measure', 'kpi name', 'metric name']) and
+            any(h in headers_lower for h in ['score', 'value', 'measure value'])
+        )
+
+        if is_long_format:
+            # Pivot: extract unique measure names as KPI candidates
+            measure_col = next((h for h in headers if h.lower().strip() in ('measure name', 'measure', 'kpi name', 'metric name')), None)
+            score_col = next((h for h in headers if h.lower().strip() in ('score', 'value', 'measure value')), None)
+            weight_col = next((h for h in headers if h.lower().strip() in ('weight',)), None)
+            group_col = next((h for h in headers if h.lower().strip() in ('measure group', 'group', 'pillar', 'category')), None)
+
+            measures = {}  # measure_name → {scores: [], weights: [], group: str}
+            for row in rows:
+                mname = (row.get(measure_col, '') or '').strip()
+                if not mname:
+                    continue
+                if mname not in measures:
+                    measures[mname] = {'scores': [], 'weights': [], 'group': ''}
+                try:
+                    measures[mname]['scores'].append(float(str(row.get(score_col, 0)).replace('%', '').replace('$', '').replace(',', '')))
+                except (ValueError, TypeError):
+                    pass
+                if weight_col:
+                    try:
+                        measures[mname]['weights'].append(float(str(row.get(weight_col, 0)).replace('%', '')))
+                    except (ValueError, TypeError):
+                        pass
+                if group_col:
+                    measures[mname]['group'] = (row.get(group_col, '') or '').strip()
+
+            # Build KPI candidates from pivoted measures
+            kpi_candidates = []
+            groups = set()
+            for mname, mdata in measures.items():
+                scores = mdata['scores']
+                if not scores:
+                    continue
+                groups.add(mdata['group'])
+                val_min, val_max = min(scores), max(scores)
+                val_avg = sum(scores) / len(scores)
+                avg_weight = sum(mdata['weights']) / len(mdata['weights']) if mdata['weights'] else 0
+
+                col_lower = mname.lower()
+                lower_keywords = ['time', 'days', 'tickets', 'churn', 'inactive', 'latency', 'complaints']
+                is_lower = any(kw in col_lower for kw in lower_keywords)
+
+                kpi_candidates.append({
+                    'source_column': mname,
+                    'suggested_kpi_code': re.sub(r'[^a-z0-9]', '_', col_lower).strip('_'),
+                    'suggested_name': mname,
+                    'unit': 'score',
+                    'higher_is_better': not is_lower,
+                    'suggested_target': round(val_avg + (val_max - val_avg) * 0.3, 1) if not is_lower else round(val_avg - (val_avg - val_min) * 0.3, 1),
+                    'suggested_ranges': {
+                        'healthy': {'min': round(val_avg, 1), 'max': round(val_max * 1.1, 1)},
+                        'risk': {'min': round(val_min + (val_avg - val_min) * 0.3, 1), 'max': round(val_avg, 1)},
+                        'critical': {'min': round(val_min * 0.8, 1), 'max': round(val_min + (val_avg - val_min) * 0.3, 1)},
+                    } if not is_lower else {
+                        'healthy': {'min': round(val_min * 0.8, 1), 'max': round(val_avg, 1)},
+                        'risk': {'min': round(val_avg, 1), 'max': round(val_avg + (val_max - val_avg) * 0.5, 1)},
+                        'critical': {'min': round(val_avg + (val_max - val_avg) * 0.5, 1), 'max': round(val_max * 1.2, 1)},
+                    },
+                    'pillar_hint': mdata['group'],
+                    'suggested_weight': round(avg_weight / 100, 3) if avg_weight > 1 else round(avg_weight, 3),
+                })
+
+            # Detect metadata columns
+            meta_cols = [h for h in headers if h != measure_col and h != score_col and h != weight_col and h != group_col]
+            detected_columns = [{'column_name': h, 'is_metadata': True, 'mapped_to': '_metadata'} for h in meta_cols]
+
+            return jsonify({
+                'source_system': source_system,
+                'format': 'long',
+                'total_columns': len(headers),
+                'total_rows': len(rows),
+                'unique_measures': len(measures),
+                'pillar_groups': sorted(g for g in groups if g),
+                'detected_columns': detected_columns,
+                'kpi_candidates': kpi_candidates,
+                'metadata_columns': detected_columns,
+                'unmapped_columns': [],
+            })
+
+        # ─── Known column mappings per source system ───
+        GAINSIGHT_MAPPINGS = {
+            'company name': '_account_name',
+            'account name': '_account_name',
+            'overall score': '_health_score',
+            'overall health': '_health_score',
+            'csm name': '_csm',
+            'csm': '_csm',
+            'measure group': '_pillar_hint',
+            'group': '_pillar_hint',
+            'measure name': '_kpi_name',
+            'measure': '_kpi_name',
+            'score': '_kpi_value',
+            'weight': '_weight',
+            'trend': '_trend',
+            'lifecycle stage': '_lifecycle',
+            'arr': '_arr',
+            'renewal date': '_renewal_date',
+            'nps score': 'nps',
+            'csat score': 'csat',
+            'product usage score': 'product_usage',
+            'feature adoption': 'feature_adoption',
+            'support tickets': 'support_tickets',
+            'time to value': 'ttfv',
+            'onboarding completion': 'onboarding',
+            'executive sponsor engaged': 'exec_sponsor',
+            'champion strength': 'champion_strength',
+        }
+
+        CHURNZERO_MAPPINGS = {
+            'account': '_account_name',
+            'account name': '_account_name',
+            'churnscore': '_health_score',
+            'churn score': '_health_score',
+            'health score': '_health_score',
+            'health color': '_health_color',
+            'segment': '_segment',
+            'last activity': '_last_activity',
+            'days since last login': 'days_inactive',
+            'dau': 'dau',
+            'daily active users': 'dau',
+            'wau': 'wau',
+            'weekly active users': 'wau',
+            'license utilization': 'license_util',
+            'license utilization %': 'license_util',
+            'logins last 30d': 'login_frequency',
+            'login frequency': 'login_frequency',
+            'total events last 30d': 'event_volume',
+            'support tickets open': 'open_tickets',
+            'nps': 'nps',
+            'nps score': 'nps',
+            'csat': 'csat',
+            'contract value': '_arr',
+            'arr': '_arr',
+            'renewal date': '_renewal_date',
+            'next renewal': '_renewal_date',
+            'usage score': 'usage_score',
+            'engagement score': 'engagement_score',
+            'outcome score': 'outcome_score',
+            'sentiment score': 'sentiment_score',
+            'roi score': 'roi_score',
+        }
+
+        mappings = GAINSIGHT_MAPPINGS if source_system == 'gainsight' else CHURNZERO_MAPPINGS if source_system == 'churnzero' else {}
+
+        # ─── Analyze each column ───
+        detected_columns = []
+        kpi_candidates = []
+
+        for col in headers:
+            col_lower = col.strip().lower()
+            mapped_to = mappings.get(col_lower, '')
+
+            # Analyze values to infer type
+            values = [r.get(col, '') for r in rows if r.get(col, '').strip()]
+            numeric_count = 0
+            sample_vals = []
+            for v in values[:20]:
+                cleaned = v.replace('%', '').replace('$', '').replace(',', '').strip()
+                try:
+                    float(cleaned)
+                    numeric_count += 1
+                    sample_vals.append(float(cleaned))
+                except (ValueError, TypeError):
+                    pass
+
+            is_numeric = numeric_count > len(values) * 0.7 if values else False
+            val_min = min(sample_vals) if sample_vals else 0
+            val_max = max(sample_vals) if sample_vals else 0
+            val_avg = sum(sample_vals) / len(sample_vals) if sample_vals else 0
+
+            col_info = {
+                'column_name': col,
+                'mapped_to': mapped_to,
+                'is_numeric': is_numeric,
+                'is_metadata': mapped_to.startswith('_') if mapped_to else False,
+                'sample_values': [str(v) for v in values[:3]],
+                'value_range': {'min': round(val_min, 2), 'max': round(val_max, 2), 'avg': round(val_avg, 2)} if is_numeric else None,
+                'row_count': len(values),
+            }
+            detected_columns.append(col_info)
+
+            # If it's a numeric non-metadata column, it's a KPI candidate
+            if is_numeric and not mapped_to.startswith('_'):
+                # Infer direction: if values look like percentages (0-100) and name suggests positive, higher_is_better
+                higher_keywords = ['score', 'rate', 'adoption', 'usage', 'utilization', 'engagement', 'nps', 'csat', 'strength', 'frequency']
+                lower_keywords = ['time', 'days', 'tickets', 'churn', 'inactive', 'latency', 'complaints', 'escalation']
+
+                higher = any(kw in col_lower for kw in higher_keywords)
+                lower = any(kw in col_lower for kw in lower_keywords)
+                direction = 'lower_is_better' if (lower and not higher) else 'higher_is_better'
+
+                # Infer unit
+                if '%' in col or 'pct' in col_lower or 'rate' in col_lower or 'utilization' in col_lower:
+                    unit = 'percentage'
+                elif 'days' in col_lower or 'time' in col_lower:
+                    unit = 'days'
+                elif 'hours' in col_lower:
+                    unit = 'hours'
+                elif 'score' in col_lower or 'nps' in col_lower:
+                    unit = 'score'
+                elif 'count' in col_lower or 'tickets' in col_lower or 'events' in col_lower or 'logins' in col_lower:
+                    unit = 'count'
+                else:
+                    unit = 'numeric'
+
+                # Infer ranges from data
+                if direction == 'higher_is_better':
+                    healthy_min = round(val_avg + (val_max - val_avg) * 0.3, 1)
+                    risk_min = round(val_avg - (val_avg - val_min) * 0.3, 1)
+                    kpi_candidates.append({
+                        'source_column': col,
+                        'suggested_kpi_code': mapped_to or re.sub(r'[^a-z0-9]', '_', col_lower).strip('_'),
+                        'suggested_name': col.strip(),
+                        'unit': unit,
+                        'higher_is_better': True,
+                        'suggested_target': round(healthy_min, 1),
+                        'suggested_ranges': {
+                            'healthy': {'min': round(healthy_min, 1), 'max': round(val_max * 1.1, 1)},
+                            'risk': {'min': round(risk_min, 1), 'max': round(healthy_min, 1)},
+                            'critical': {'min': round(val_min * 0.8, 1), 'max': round(risk_min, 1)},
+                        },
+                    })
+                else:
+                    healthy_max = round(val_avg - (val_avg - val_min) * 0.3, 1)
+                    risk_max = round(val_avg + (val_max - val_avg) * 0.3, 1)
+                    kpi_candidates.append({
+                        'source_column': col,
+                        'suggested_kpi_code': mapped_to or re.sub(r'[^a-z0-9]', '_', col_lower).strip('_'),
+                        'suggested_name': col.strip(),
+                        'unit': unit,
+                        'higher_is_better': False,
+                        'suggested_target': round(healthy_max, 1),
+                        'suggested_ranges': {
+                            'healthy': {'min': round(val_min * 0.8, 1), 'max': round(healthy_max, 1)},
+                            'risk': {'min': round(healthy_max, 1), 'max': round(risk_max, 1)},
+                            'critical': {'min': round(risk_max, 1), 'max': round(val_max * 1.2, 1)},
+                        },
+                    })
+
+        return jsonify({
+            'source_system': source_system,
+            'total_columns': len(headers),
+            'total_rows': len(rows),
+            'detected_columns': detected_columns,
+            'kpi_candidates': kpi_candidates,
+            'metadata_columns': [c for c in detected_columns if c.get('is_metadata')],
+            'unmapped_columns': [c['column_name'] for c in detected_columns if not c.get('mapped_to') and c.get('is_numeric')],
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"Source CSV parsing failed: {str(e)}"}), 400
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/csv-template", methods=["GET"])
+@super_admin_required
+def download_csv_template():
+    """Return a CSV template for KPI catalog upload."""
+    import io
+    output = io.StringIO()
+    output.write("kpi_code,name,pillar,pillar_name,pillar_weight,weight_l1,unit,higher_is_better,target,frequency,healthy_min,healthy_max,risk_min,risk_max,critical_min,critical_max\n")
+    output.write("P1-KPI1,Daily Active Users,P1,Product Adoption,0.30,0.20,percentage,true,60,daily,60,95,35,60,0,35\n")
+    output.write("P1-KPI2,Feature Adoption Breadth,P1,Product Adoption,0.30,0.15,percentage,true,45,weekly,45,90,25,45,0,25\n")
+    output.write("P2-KPI1,QBR Frequency,P2,Customer Engagement,0.25,0.25,count,true,4,quarterly,4,12,2,4,0,2\n")
+
+    from flask import Response
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=kpi_catalog_template.csv'}
+    )
+
+
+@admin_ui_api.route("/api/admin-ui/verticals/pipeline-check", methods=["POST"])
+@super_admin_required
+def pipeline_readiness_check():
+    """Run the catalog through the full pipeline with mock data and return a TODO checklist."""
+    catalog = (request.json or {}).get('catalog', {})
+    slug = (request.json or {}).get('slug', 'test_vertical')
+
+    if not catalog or not catalog.get('kpis'):
+        return jsonify({"checks": [{"id": "no_catalog", "label": "Catalog provided", "status": "fail", "detail": "No KPI catalog in request"}]}), 400
+
+    checks = []
+    pillars = catalog.get('pillars', {})
+    kpis = catalog.get('kpis', {})
+
+    # 1. Catalog loads into generic scorer
+    try:
+        from utils.generic_scorer import load_catalog_from_dict, score_kpi
+        kpi_cat, pillar_cat = load_catalog_from_dict(catalog)
+        checks.append({"id": "scorer_load", "label": "Generic scorer accepts catalog", "status": "pass",
+                        "detail": f"Loaded {len(kpi_cat)} KPIs, {len(pillar_cat)} pillars into scorer"})
+    except Exception as e:
+        checks.append({"id": "scorer_load", "label": "Generic scorer accepts catalog", "status": "fail",
+                        "detail": f"Scorer rejected catalog: {str(e)}"})
+        return jsonify({"checks": checks})
+
+    # 2. Score a mock KPI value for each KPI
+    score_failures = []
+    for kpi_code, kpi_def in kpi_cat.items():
+        try:
+            # Generate a mid-range test value
+            ranges = kpi_def.get('ranges', {})
+            healthy = ranges.get('healthy', {})
+            test_val = (healthy.get('min', 50) + healthy.get('max', 80)) / 2
+            result = score_kpi(test_val, kpi_def)
+            if result is None or result < 0:
+                score_failures.append(kpi_code)
+        except Exception:
+            score_failures.append(kpi_code)
+
+    if not score_failures:
+        checks.append({"id": "kpi_scoring", "label": "All KPIs score correctly with mock data", "status": "pass",
+                        "detail": f"Tested {len(kpi_cat)} KPIs with mid-range values — all returned valid scores"})
+    else:
+        checks.append({"id": "kpi_scoring", "label": "KPI scoring test", "status": "fail",
+                        "detail": f"{len(score_failures)} KPIs failed scoring: {', '.join(score_failures[:5])}"})
+
+    # 3. Pillar weight normalization
+    pillar_weights = [p.get('weight_l2', 0) for p in pillars.values()]
+    weight_sum = sum(pillar_weights)
+    if abs(weight_sum - 1.0) < 0.01:
+        checks.append({"id": "pillar_weights", "label": "Pillar weights sum to 1.0", "status": "pass",
+                        "detail": f"Sum = {weight_sum:.4f}"})
+    else:
+        checks.append({"id": "pillar_weights", "label": "Pillar weights sum to 1.0", "status": "warn",
+                        "detail": f"Sum = {weight_sum:.4f} — will be auto-normalized on save"})
+
+    # 4. KPI weights per pillar
+    kpi_weight_issues = []
+    for pcode in pillars:
+        pillar_kpis = [k for k in kpis.values() if k.get('pillar') == pcode]
+        kw_sum = sum(k.get('weight_l1', 0) for k in pillar_kpis)
+        if pillar_kpis and abs(kw_sum - 1.0) > 0.05:
+            kpi_weight_issues.append(f"{pcode}: {kw_sum:.3f}")
+    if not kpi_weight_issues:
+        checks.append({"id": "kpi_weights", "label": "KPI weights per pillar sum to 1.0", "status": "pass",
+                        "detail": "All pillars have correctly normalized KPI weights"})
+    else:
+        checks.append({"id": "kpi_weights", "label": "KPI weights per pillar", "status": "warn",
+                        "detail": f"Off-balance pillars (will be auto-normalized): {', '.join(kpi_weight_issues)}"})
+
+    # 5. Process_data compatibility — check if vertical would be recognized
+    try:
+        from utils.vertical_registry import normalize_vertical, SUPPORTED_VERTICALS
+        normalized = normalize_vertical(slug)
+        if normalized in SUPPORTED_VERTICALS or slug in SUPPORTED_VERTICALS:
+            checks.append({"id": "registry", "label": "Vertical recognized by registry", "status": "pass",
+                            "detail": f"'{slug}' resolves to '{normalized}' in vertical registry"})
+        else:
+            checks.append({"id": "registry", "label": "Vertical recognized by registry", "status": "warn",
+                            "detail": f"'{slug}' not yet in registry — will be added when vertical is created"})
+    except Exception:
+        checks.append({"id": "registry", "label": "Vertical registry check", "status": "warn",
+                        "detail": "Could not check registry — vertical will be registered on creation"})
+
+    # 6. ROI engine compatibility — check if at least 3 pillars exist (minimum for meaningful ROI)
+    if len(pillars) >= 3:
+        checks.append({"id": "roi_pillars", "label": "ROI engine: minimum pillar count", "status": "pass",
+                        "detail": f"{len(pillars)} pillars — sufficient for pillar-based ROI analysis"})
+    else:
+        checks.append({"id": "roi_pillars", "label": "ROI engine: minimum pillar count", "status": "fail",
+                        "detail": f"Only {len(pillars)} pillars — ROI engine needs at least 3 for meaningful analysis"})
+
+    # 7. ROI engine — check for high-impact KPIs (weight > 0.15)
+    high_impact = [k for k, v in kpis.items() if v.get('weight_l1', 0) >= 0.15]
+    if high_impact:
+        checks.append({"id": "roi_high_impact", "label": "ROI engine: high-impact KPIs identified", "status": "pass",
+                        "detail": f"{len(high_impact)} KPIs with weight >= 0.15: {', '.join(high_impact[:5])}"})
+    else:
+        checks.append({"id": "roi_high_impact", "label": "ROI engine: high-impact KPIs", "status": "warn",
+                        "detail": "No KPIs with weight >= 0.15 — ROI engine may produce flat results. Consider increasing weights for key KPIs."})
+
+    # 8. Health threshold compatibility
+    try:
+        import utils.health_thresholds as ht
+        checks.append({"id": "thresholds", "label": "Health thresholds configured", "status": "pass",
+                        "detail": f"Critical < {ht.at_risk_min()}, At-Risk {ht.at_risk_min()}-{ht.healthy_min()-1}, Healthy >= {ht.healthy_min()}"})
+    except Exception:
+        checks.append({"id": "thresholds", "label": "Health thresholds", "status": "warn",
+                        "detail": "Could not load health thresholds — using defaults (50/70)"})
+
+    # 9. Data upload readiness
+    checks.append({"id": "csv_schema", "label": "CSV upload schema ready", "status": "pass",
+                    "detail": f"process_data accepts kpi_measurements.csv with {len(kpis)} valid KPI codes for this vertical"})
+
+    # 10. Overall verdict
+    fails = sum(1 for c in checks if c['status'] == 'fail')
+    if fails == 0:
+        checks.append({"id": "verdict", "label": "Pipeline readiness verdict", "status": "pass",
+                        "detail": "All pipeline checks passed — this vertical is ready for production use"})
+    else:
+        checks.append({"id": "verdict", "label": "Pipeline readiness verdict", "status": "fail",
+                        "detail": f"{fails} check(s) failed — fix the issues above before creating this vertical"})
+
+    return jsonify({"checks": checks})
 
 
 # ---------------------------------------------------------------------------

@@ -113,29 +113,35 @@ def list_verticals() -> dict:
                 v_info['kpi_count'] = len(kpi_defs)
             except Exception:
                 pass
-            if v_key == 'dc2_s':
-                v_info['description'] = 'Data Center Infrastructure vertical — AI/ML, infra reliability, cloud & DevOps, customer engagement, expansion'
-            elif v_key in ('saas_premium', 'saas'):
-                v_info['description'] = 'SaaS Premium vertical — product adoption, operational resilience, growth efficiency, partner ecosystem, strategic value'
+            # Auto-generate description from pillar names if not already set
+            if not v_info.get('description'):
+                try:
+                    from utils.vertical_registry import get_pillars
+                    pillar_names = [p.get('name', pid) for pid, p in get_pillars(v_key).items()]
+                    v_info['description'] = f"{v_key.replace('_', ' ').title()} vertical — {', '.join(pillar_names)}"
+                except Exception:
+                    v_info['description'] = f"{v_key.replace('_', ' ').title()} vertical"
 
         if not verticals:
-            known_verticals = {
-                'dc2_s': ('Data Center Infrastructure vertical', 38),
-                'saas_premium': ('SaaS Premium vertical — product adoption, engagement, support quality, partner ecosystem, revenue & growth', 35),
-            }
-            for v_slug, (v_desc, v_default_count) in known_verticals.items():
-                try:
-                    kpi_defs = _get_kpi_definitions(v_slug)
-                    kpi_count = len(kpi_defs)
-                except Exception:
-                    kpi_count = v_default_count
-                verticals[v_slug] = {
-                    'vertical': v_slug,
-                    'config_types': [],
-                    'config_type_count': 0,
-                    'kpi_count': kpi_count,
-                    'description': v_desc,
-                }
+            # Auto-discover from registry instead of hardcoding
+            try:
+                from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars, get_kpis
+                for v_slug in sorted(SUPPORTED_VERTICALS):
+                    try:
+                        kpi_defs = get_kpis(v_slug)
+                        pillar_defs = get_pillars(v_slug)
+                        pillar_names = [p.get('name', pid) for pid, p in pillar_defs.items()]
+                        verticals[v_slug] = {
+                            'vertical': v_slug,
+                            'config_types': [],
+                            'config_type_count': 0,
+                            'kpi_count': len(kpi_defs),
+                            'description': f"{v_slug.replace('_', ' ').title()} vertical — {', '.join(pillar_names)}",
+                        }
+                    except Exception:
+                        pass
+            except Exception:
+                pass  # Registry not available — return empty
 
         try:
             from models import Customer, Account
