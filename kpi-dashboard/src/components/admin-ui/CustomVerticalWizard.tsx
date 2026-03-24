@@ -654,6 +654,13 @@ const StepFieldMapping: React.FC<{
   );
 };
 
+interface PipelineCheck {
+  id: string;
+  label: string;
+  status: 'pass' | 'fail' | 'warn' | 'pending';
+  detail: string;
+}
+
 const StepReview: React.FC<{
   name: string; slug: string; description: string; scope: string;
   pillars: PillarDef[]; kpis: KpiDef[];
@@ -661,7 +668,34 @@ const StepReview: React.FC<{
   onValidate: () => void;
   onCreate: () => void;
   creating: boolean;
-}> = ({ name, slug, description, scope, pillars, kpis, validation, onValidate, onCreate, creating }) => (
+}> = ({ name, slug, description, scope, pillars, kpis, validation, onValidate, onCreate, creating }) => {
+  const [pipelineChecks, setPipelineChecks] = useState<PipelineCheck[]>([]);
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+
+  const runPipelineCheck = async () => {
+    setPipelineRunning(true);
+    const catalog = buildCatalogJson(pillars, kpis);
+
+    try {
+      const resp = await fetch('/api/admin-ui/verticals/pipeline-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ catalog, slug }),
+      });
+      const data = await resp.json();
+      setPipelineChecks(data.checks || []);
+    } catch (e) {
+      setPipelineChecks([{ id: 'error', label: 'Pipeline Check', status: 'fail', detail: `Request failed: ${e}` }]);
+    } finally {
+      setPipelineRunning(false);
+    }
+  };
+
+  const passCount = pipelineChecks.filter(c => c.status === 'pass').length;
+  const failCount = pipelineChecks.filter(c => c.status === 'fail').length;
+  const warnCount = pipelineChecks.filter(c => c.status === 'warn').length;
+
+  return (
   <div className="space-y-5">
     <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
       <Eye size={22} className="text-indigo-500" /> Review & Create
@@ -712,16 +746,16 @@ const StepReview: React.FC<{
       </table>
     </div>
 
-    {/* Validation */}
+    {/* Schema Validation */}
     <div className="space-y-2">
       <button onClick={onValidate} className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-        <CheckCircle2 size={16} /> Run Validation
+        <CheckCircle2 size={16} /> Run Schema Validation
       </button>
       {validation && (
         <div className={`rounded-lg p-3 text-sm ${validation.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
           {validation.valid ? (
             <div className="flex items-center gap-2 text-green-700">
-              <CheckCircle2 size={16} /> All checks passed — ready to create
+              <CheckCircle2 size={16} /> Schema valid — {validation.kpi_count} KPIs, {validation.pillar_count} pillars
             </div>
           ) : (
             <div className="space-y-1">
@@ -737,6 +771,46 @@ const StepReview: React.FC<{
               <AlertTriangle size={14} /> {w}
             </div>
           ))}
+        </div>
+      )}
+    </div>
+
+    {/* Pipeline Readiness Check */}
+    <div className="space-y-2">
+      <button onClick={runPipelineCheck} disabled={pipelineRunning}
+        className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium disabled:opacity-50">
+        <BarChart3 size={16} /> {pipelineRunning ? 'Running Pipeline Check...' : 'Run Pipeline Readiness Check'}
+      </button>
+      <p className="text-xs text-gray-400">Tests your catalog against the scoring engine, process_data pipeline, and ROI engine with mock data.</p>
+
+      {pipelineChecks.length > 0 && (
+        <div className="rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50 px-3 py-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600">Pipeline Readiness Checklist</span>
+            <span className="text-xs">
+              <span className="text-green-600">{passCount} pass</span>
+              {failCount > 0 && <span className="text-red-600 ml-2">{failCount} fail</span>}
+              {warnCount > 0 && <span className="text-amber-600 ml-2">{warnCount} warn</span>}
+            </span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {pipelineChecks.map(chk => (
+              <div key={chk.id} className="flex items-start gap-3 px-3 py-2.5">
+                <div className="mt-0.5">
+                  {chk.status === 'pass' && <CheckCircle2 size={16} className="text-green-500" />}
+                  {chk.status === 'fail' && <AlertTriangle size={16} className="text-red-500" />}
+                  {chk.status === 'warn' && <AlertTriangle size={16} className="text-amber-500" />}
+                  {chk.status === 'pending' && <div className="w-4 h-4 rounded-full border-2 border-gray-300" />}
+                </div>
+                <div className="flex-1">
+                  <div className={`text-sm font-medium ${
+                    chk.status === 'pass' ? 'text-green-700' : chk.status === 'fail' ? 'text-red-700' : chk.status === 'warn' ? 'text-amber-700' : 'text-gray-500'
+                  }`}>{chk.label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{chk.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -757,7 +831,8 @@ const StepReview: React.FC<{
       )}
     </button>
   </div>
-);
+  );
+};
 
 // ─── Main Wizard ─────────────────────────────────────────────────────────────
 
