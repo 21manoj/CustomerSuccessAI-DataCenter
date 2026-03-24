@@ -235,10 +235,12 @@ def _get_health_functions(vertical: str):
     """Return (calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores)
     for the given vertical.
 
-    Tries to load the vertical-specific module first. If not installed,
-    falls back to generic DB-reading functions (precalculated scores still work;
-    live recalculation returns 0).
+    Priority:
+    1. Try vertical-specific Python module (legacy DC2_S / SaaS Premium)
+    2. Fall back to generic scorer (works with any JSON-catalog-defined vertical)
+    3. Last resort: noop scorer (returns 0)
     """
+    # 1. Try vertical-specific modules (legacy)
     if vertical in ('saas_premium', 'saas'):
         try:
             from verticals.saas_premium.api_routes import (
@@ -246,14 +248,30 @@ def _get_health_functions(vertical: str):
             )
             return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
         except ImportError:
-            def _noop_calculate(kpi_values, customer_id=None):
-                return 0.0, {}
-            return _noop_calculate, _get_trailing_kpi_values_generic, _get_precalculated_scores
+            pass  # Fall through to generic
 
-    from verticals.dc2_s.api_routes import (
-        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
-    )
-    return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
+    if vertical in ('dc2_s', 'dc2s', 'datacenter'):
+        try:
+            from verticals.dc2_s.api_routes import (
+                calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
+            )
+            return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
+        except ImportError:
+            pass  # Fall through to generic
+
+    # 2. Generic scorer — works with any JSON-catalog-defined vertical
+    try:
+        from utils.generic_scorer import calculate_health_generic
+        def _generic_calculate(kpi_values, customer_id=None):
+            return calculate_health_generic(kpi_values, vertical)
+        return _generic_calculate, _get_trailing_kpi_values_generic, _get_precalculated_scores
+    except ImportError:
+        pass
+
+    # 3. Last resort: noop
+    def _noop_calculate(kpi_values, customer_id=None):
+        return 0.0, {}
+    return _noop_calculate, _get_trailing_kpi_values_generic, _get_precalculated_scores
 
 
 def _get_kpi_definitions(vertical: str) -> dict:

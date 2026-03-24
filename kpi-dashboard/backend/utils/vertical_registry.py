@@ -41,7 +41,24 @@ VERTICAL_ALIASES = {
     'saas_premium': 'saas_premium',
 }
 
-SUPPORTED_VERTICALS = {'dc2_s', 'saas_premium'}
+# Auto-discover supported verticals from JSON catalogs on disk + hardcoded known ones
+def _discover_verticals() -> set:
+    """Discover verticals from JSON catalog files + known legacy verticals."""
+    found = {'dc2_s', 'saas_premium'}  # Always include legacy verticals
+    try:
+        import glob
+        for f in glob.glob(os.path.join(_CATALOG_DIR, '*_kpi_catalog.json')):
+            basename = os.path.basename(f)
+            # e.g., dc2s_kpi_catalog.json → dc2s, saas_premium_kpi_catalog.json → saas_premium
+            slug = basename.replace('_kpi_catalog.json', '')
+            # Map back through aliases
+            canonical = VERTICAL_ALIASES.get(slug, slug)
+            found.add(canonical)
+    except Exception:
+        pass
+    return found
+
+SUPPORTED_VERTICALS = _discover_verticals()
 
 
 def normalize_vertical(vertical: str) -> str:

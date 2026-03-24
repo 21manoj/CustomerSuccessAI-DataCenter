@@ -37,7 +37,7 @@ const CreateCustomerModal: React.FC<CreateModalProps> = ({ verticals, onClose, o
     admin_email: '',
     admin_name: '',
     password: '',
-    vertical: verticals[0] ?? 'dc2_s',
+    vertical: verticals[0] ?? '',
     tier: 'enterprise',
     domain: '',
   });
@@ -556,7 +556,7 @@ const CustomerListPage: React.FC = () => {
       {/* Modals */}
       {showCreate && (
         <CreateCustomerModal
-          verticals={verticals.length > 0 ? verticals : ['dc2_s', 'saas_premium']}
+          verticals={verticals}
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
         />

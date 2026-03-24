@@ -830,10 +830,9 @@ def list_verticals():
         try:
             pillars = get_pillars(v)
             kpis = get_kpis(v)
-            label = {
-                'dc2_s': 'Data Center (DC2_S)',
-                'saas_premium': 'SaaS Premium',
-            }.get(v, v)
+            # Dynamic label: use catalog metadata if available, fallback to formatted slug
+            _known_labels = {'dc2_s': 'Data Center (DC2_S)', 'saas_premium': 'SaaS Premium', 'saas': 'SaaS Premium'}
+            label = _known_labels.get(v, v.replace('_', ' ').title())
             verticals.append({
                 "vertical": v,
                 "label": label,
