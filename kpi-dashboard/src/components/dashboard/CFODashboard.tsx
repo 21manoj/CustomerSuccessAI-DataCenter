@@ -24,6 +24,7 @@ import {
   Users, Eye, Zap, GitBranch, Clock, AlertTriangle
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
+import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
@@ -835,7 +836,9 @@ const CFODashboard: React.FC = () => {
   const d = data!;
 
   return (
-    <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+    <div className="flex flex-col h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+      <DashboardTopBar accent="emerald" />
+      <div className="flex flex-1 overflow-hidden">
       {/* ---- Left Sidebar ---- */}
       <SidebarNav activeId="cfo-overview" onNavigate={handleNav} />
 
@@ -924,7 +927,8 @@ const CFODashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="cfo" />
-    </div>
+    </div>{/* end flex row */}
+    </div>{/* end flex col */}
   );
 };
 

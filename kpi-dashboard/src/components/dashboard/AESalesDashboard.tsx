@@ -28,6 +28,7 @@ import {
   FileText, Layers, Activity, Star
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
+import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
@@ -812,7 +813,9 @@ const AESalesDashboard: React.FC = () => {
   const totalAccountCount = d.expansion_accounts.length + d.renewal_risk_accounts.length;
 
   return (
-    <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+    <div className="flex flex-col h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+      <DashboardTopBar accent="amber" />
+      <div className="flex flex-1 overflow-hidden">
       {/* ---- Left Sidebar ---- */}
       <SidebarNav activeId="ae-overview" onNavigate={handleNav} />
 
@@ -918,7 +921,8 @@ const AESalesDashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="cro" />
-    </div>
+    </div>{/* end flex row */}
+    </div>{/* end flex col */}
   );
 };
 

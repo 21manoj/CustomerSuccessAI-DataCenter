@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python production deps + Cython
+# Install Python production deps + Cython (requirements-core includes fastmcp>=2.2.0 for MCP / port 8001)
 COPY kpi-dashboard/backend/requirements-core.txt ./requirements-core.txt
 RUN pip install --no-cache-dir -r requirements-core.txt
 RUN pip install --no-cache-dir Cython>=3.0.0

@@ -68,6 +68,6 @@ ssh -o StrictHostKeyChecking=no -i "$KEY_FILE" "ec2-user@${EC2_HOST}" "cd ~/cspu
   mv .env.tmp .env && \
   rm -f .env.api-keys.new && \
   echo 'Restarting platform container only...' && \
-  sudo docker compose -f docker-compose.ec2-from-s3.yml up -d --force-recreate cs-pulse"
+  sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml up -d --force-recreate cs-pulse"
 
 echo "Done. Check health: curl -s http://${EC2_HOST}/api/health"

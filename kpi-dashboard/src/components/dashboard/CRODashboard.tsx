@@ -21,9 +21,10 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Shield, Zap,
   Target, DollarSign, Users, BarChart3, Clock,
   ChevronRight, Eye, Activity, GitBranch, Sparkles,
-  ArrowRight, Briefcase
+  ArrowRight, Briefcase, Info
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
+import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
@@ -54,6 +55,7 @@ interface MetricCard {
   change: string;
   trend: 'up' | 'down' | 'flat';
   accent?: string;
+  tooltip?: string;
 }
 
 interface StoryArc {
@@ -387,10 +389,34 @@ const MetricCardComponent: React.FC<{ metric: MetricCard }> = ({ metric }) => {
   const TrendIcon = isUp ? TrendingUp : TrendingDown;
   const trendColor = isUp ? 'text-green-400' : 'text-red-400';
   const accent = metric.accent ? ACCENT_MAP[metric.accent] : undefined;
+  const [showTip, setShowTip] = React.useState(false);
 
   return (
-    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 hover:border-gray-600/50 transition-all">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{metric.label}</p>
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 hover:border-gray-600/50 transition-all relative">
+      <div className="flex items-center gap-1.5 mb-2">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{metric.label}</p>
+        {metric.tooltip && (
+          <button
+            className="text-gray-600 hover:text-gray-400 transition-colors"
+            onMouseEnter={() => setShowTip(true)}
+            onMouseLeave={() => setShowTip(false)}
+            onClick={() => setShowTip(!showTip)}
+          >
+            <Info className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      {showTip && metric.tooltip && (
+        <div className="absolute z-50 top-full left-0 mt-1 w-72 p-3 bg-gray-900 border border-gray-600 rounded-lg shadow-xl text-xs text-gray-300 leading-relaxed">
+          <div className="flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-400 mb-1">Methodology</p>
+              <p>{metric.tooltip}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <p className="text-2xl font-bold mb-1" style={{ color: accent || '#ffffff' }}>
         {metric.value}
       </p>
@@ -641,10 +667,10 @@ const CRODashboard: React.FC = () => {
               { label: 'Expansion Pipeline', amount: json.expansion_pipeline || 0, subtitle: 'Stakeholder maps confirmed', account_count: json.expansion_candidates_count || 0, accent: 'cyan' },
             ],
             metrics: [
-              { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down' },
-              { label: 'Early Warning Lead', value: `${json.early_warning_days || 0}d`, change: '↑ 12d vs Q3', trend: 'up' },
-              { label: 'Playbook ROI', value: `${json.playbook_roi_pct || 0}%`, change: `↑ 41pp vs Q3`, trend: 'up' },
-              { label: 'NRR Projection', value: `${json.nrr_projection || 100}%`, change: `↑ ${json.nrr_change || 0}pp vs Q3`, trend: 'up', accent: 'cyan' },
+              { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down', tooltip: 'Revenue-weighted average across all accounts. Larger accounts (by ARR) have proportionally more influence on this score.' },
+              { label: 'Early Warning Lead', value: `${json.early_warning_days || 0}d`, change: '↑ 12d vs Q3', trend: 'up', tooltip: 'Average number of days between first risk signal detection and health score decline. Higher = more lead time to intervene.' },
+              { label: 'Playbook ROI', value: `${json.playbook_roi_pct || 0}%`, change: `↑ 41pp vs Q3`, trend: 'up', tooltip: 'Estimated ROI based on industry benchmarks (TSIA, Gainsight Pulse, KeyBanc SaaS Metrics). Pillar score improvements are real; dollar multipliers are benchmark-scaled to your ARR. Not yet traceable to individual playbook costs.' },
+              { label: 'NRR Projection', value: `${json.nrr_projection || 100}%`, change: `↑ ${json.nrr_change || 0}pp vs Q3`, trend: 'up', accent: 'cyan', tooltip: 'Projected Net Revenue Retention derived from pillar score trends. Based on historical correlation between health improvements and retention outcomes across the portfolio.' },
             ],
             story_arcs: (json.story_arcs || []).map((arc: any) => ({
               id: arc.id || arc.name?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
@@ -840,7 +866,9 @@ const CRODashboard: React.FC = () => {
   const d = data!;
 
   return (
-    <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+    <div className="flex flex-col h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
+      <DashboardTopBar accent="red" />
+      <div className="flex flex-1 overflow-hidden">
       {/* ---- Left Sidebar ---- */}
       <SidebarNav
         activeId="cro-overview"
@@ -969,17 +997,27 @@ const CRODashboard: React.FC = () => {
             <p className="text-5xl font-bold text-cyan-400 tracking-tight">
               {d.roi_summary.roi_pct}%
             </p>
-            <p className="text-xs text-gray-500 mt-1">Portfolio ROI</p>
+            <p className="text-xs text-gray-500 mt-1">Estimated Portfolio ROI</p>
+          </div>
+
+          {/* Methodology badge */}
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
+            <div className="flex items-start gap-2">
+              <Info className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
+              <p className="text-[10px] text-amber-300/80 leading-relaxed">
+                Based on real pillar score improvements scaled with industry benchmarks (TSIA Research, Gainsight Pulse, KeyBanc SaaS Metrics). Investment and impact estimates are ARR-proportional projections, not actual cost tracking.
+              </p>
+            </div>
           </div>
 
           {/* Investment stats */}
           <div className="space-y-1.5 mb-4">
             <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Historical investment</span>
+              <span className="text-gray-500">Estimated investment</span>
               <span className="text-gray-300 font-medium">{formatCompact(d.roi_summary.invested)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Impact generated</span>
+              <span className="text-gray-500">Estimated impact</span>
               <span className="text-green-400 font-medium">
                 {formatCompact(d.roi_summary.invested)} &rarr; {formatCompact(d.roi_summary.impact)}
               </span>
@@ -1016,7 +1054,8 @@ const CRODashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="cro" />
-    </div>
+    </div>{/* end flex row */}
+    </div>{/* end flex col */}
   );
 };
 

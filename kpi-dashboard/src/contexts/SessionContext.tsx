@@ -4,6 +4,7 @@ export type Tier = 'starter' | 'professional' | 'enterprise';
 
 type Session = {
   customer_id: number;
+  customer_name?: string;
   user_id: string;
   user_name: string;
   email: string;
