@@ -582,10 +582,28 @@ def cro_dashboard():
         nrr_projection = 100
         nrr_change = 0
         if roi_snap and roi_snap.metric_details:
-            nrr_detail = roi_snap.metric_details.get('NRR', {})
-            nrr_projection = round(nrr_detail.get('current', 100), 0)
-            nrr_baseline = nrr_detail.get('baseline', nrr_projection)
-            nrr_change = round(nrr_projection - nrr_baseline, 0)
+            details = roi_snap.metric_details
+            # Format B: {forward_metrics: [{id, impact, pct}, ...]}
+            forward_metrics = details.get('forward_metrics', [])
+            if isinstance(forward_metrics, list) and forward_metrics:
+                default_baselines = {'NRR': 105, 'GRR': 85, 'TTFV': 30,
+                                     'ticket_resolution_time': 48, 'product_adoption': 65,
+                                     'expansion_rate': 20}
+                for fm in forward_metrics:
+                    mid = fm.get('id', '')
+                    if mid == 'NRR':
+                        pct = _safe_float(fm.get('pct', 0))
+                        baseline = default_baselines.get('NRR', 105)
+                        nrr_projection = round(baseline * (1 + pct / 100.0))
+                        nrr_change = round(nrr_projection - baseline)
+                        break
+            else:
+                # Format A: {NRR: {baseline, current, ...}}
+                nrr_detail = details.get('NRR', {})
+                if isinstance(nrr_detail, dict):
+                    nrr_projection = round(nrr_detail.get('current', 100), 0)
+                    nrr_baseline = nrr_detail.get('baseline', nrr_projection)
+                    nrr_change = round(nrr_projection - nrr_baseline, 0)
 
         # ── Highest risk accounts (top 10 by lowest health) ──
         pillar_scores_map = _get_latest_pillar_scores(account_ids)
