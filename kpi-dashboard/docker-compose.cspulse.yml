@@ -68,6 +68,7 @@ services:
       # MCP Server — enable HTTP transport on port 8001
       FEATURE_MCP_SERVER: "true"
       FEATURE_CONTEXT_GRAPH: "true"
+      FEATURE_ASK_AI_V2: "true"
 
       # Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
