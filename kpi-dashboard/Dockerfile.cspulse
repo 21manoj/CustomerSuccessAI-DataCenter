@@ -132,6 +132,11 @@ RUN chmod +x /docker-entrypoint.sh
 RUN mkdir -p /app/backend/uploads /app/backend/instance /app/backend/verticals \
              /app/load-driver/results/ui-runs
 
+# Build stamp — always know which commit is running
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+RUN echo "${GIT_COMMIT}" > /app/.git-commit && echo "${BUILD_DATE}" > /app/.build-date
+
 # Environment defaults
 ENV FLASK_APP=app_v3_minimal.py
 ENV FLASK_ENV=production
