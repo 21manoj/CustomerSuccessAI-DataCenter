@@ -1,70 +1,27 @@
 # ================================================================
-# Load Driver — Standalone (EC2-B)
-# Run on a separate host from the platform. Targets EC2-A via HTTPS.
+# DEPRECATED — March 24, 2026
 #
-# Usage on EC2-B:
-#   export CS_PULSE_BASE_URL=https://<ec2-a-host-or-alb>
-#   docker compose -f docker-compose.loaddriver-standalone.yml up -d --build
+# This standalone Docker load driver is DEPRECATED.
+# Use the main load driver directly instead:
 #
-# No dependency on cs-pulse or cspulse network.
+#   cd load-driver/
+#   python3 cs_pulse_driver.py --manifest manifests/granite_peak_dc2s.json --register --seed 42
+#   python3 cs_pulse_driver.py --manifest manifests/granite_peak_dc2s.json -c 444 --phase baseline
+#   python3 cs_pulse_driver.py --manifest manifests/granite_peak_dc2s.json -c 444 --phase intervention
+#
+# Why deprecated:
+# - Old scenario-based CLI (1-9) replaced by manifest-driven V3 driver
+# - Old credentials don't match current setup
+# - Missing context graph scenarios (7/8) and 2-phase support
+# - Main load-driver/ works locally and against any remote server via --base-url
+#
+# Available manifests:
+#   manifests/granite_peak_dc2s.json    — 18 accounts, $68.7M ARR (DC2_S)
+#   manifests/sandalwood_capital_dc2s.json — 18 accounts, $68.7M ARR (DC2_S)
+#   manifests/novastar_dc2s.json        — 18 accounts, $62M ARR (DC2_S)
+#   manifests/mont_blanc_saas.json      — 15 accounts, $42M ARR (SaaS Premium)
 # ================================================================
 
 version: '3.8'
-
-services:
-  load-driver-customer-1:
-    build:
-      context: ./load-driver
-      dockerfile: Dockerfile
-    container_name: cspulse-load-driver-cust-1
-    environment:
-      CS_PULSE_BASE_URL: ${CS_PULSE_BASE_URL:?Set CS_PULSE_BASE_URL to your EC2-A URL (e.g. https://platform.example.com)}
-      CS_PULSE_ADMIN_EMAIL: ${CS_PULSE_ADMIN_EMAIL:-dc2s_super@test.com}
-      CS_PULSE_ADMIN_PASSWORD: ${CS_PULSE_ADMIN_PASSWORD:-DC2_Super_2024!}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      QDRANT_URL: ${QDRANT_URL:-}
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
-      LOG_LEVEL: INFO
-      PYTHONUNBUFFERED: 1
-    volumes:
-      - ./results/customer-1:/app/results
-    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "1", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
-    restart: "no"
-
-  load-driver-customer-2:
-    build:
-      context: ./load-driver
-      dockerfile: Dockerfile
-    container_name: cspulse-load-driver-cust-2
-    environment:
-      CS_PULSE_BASE_URL: ${CS_PULSE_BASE_URL:?Set CS_PULSE_BASE_URL}
-      CS_PULSE_ADMIN_EMAIL: admin+cust2@cspulse.test
-      CS_PULSE_ADMIN_PASSWORD: ${CS_PULSE_ADMIN_PASSWORD:-LoadDriver2026!}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      QDRANT_URL: ${QDRANT_URL:-}
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
-      LOG_LEVEL: INFO
-      PYTHONUNBUFFERED: 1
-    volumes:
-      - ./results/customer-2:/app/results
-    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "2", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
-    restart: "no"
-
-  load-driver-customer-3:
-    build:
-      context: ./load-driver
-      dockerfile: Dockerfile
-    container_name: cspulse-load-driver-cust-3
-    environment:
-      CS_PULSE_BASE_URL: ${CS_PULSE_BASE_URL:?Set CS_PULSE_BASE_URL}
-      CS_PULSE_ADMIN_EMAIL: admin+cust3@cspulse.test
-      CS_PULSE_ADMIN_PASSWORD: ${CS_PULSE_ADMIN_PASSWORD:-LoadDriver2026!}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      QDRANT_URL: ${QDRANT_URL:-}
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
-      LOG_LEVEL: INFO
-      PYTHONUNBUFFERED: 1
-    volumes:
-      - ./results/customer-3:/app/results
-    command: ["--scenarios", "1,2a,2b,2c,2d,2e,3,4,5,6,7,8,9", "--customers", "3", "--base-url", "${CS_PULSE_BASE_URL}", "--results-dir", "/app/results"]
-    restart: "no"
+# No services — file kept for reference only
+services: {}
