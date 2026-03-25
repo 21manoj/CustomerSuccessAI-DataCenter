@@ -1432,9 +1432,15 @@ class ManifestCSVGenerator:
                 if oi < len(planned_outcomes):
                     outcome_date = planned_outcomes[oi].date_str
                 else:
-                    # Spread outcomes across the latter half of the time range
-                    day_offset = int(total_days * 0.5) + acct_rng.randint(0, int(total_days * 0.5))
-                    outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+                    if cls in ('at_risk', 'critical'):
+                        # Anchor outcomes near the end of the period so they fall
+                        # AFTER decisions (end_date - 10..45 days), satisfying the
+                        # temporal ordering check for LED_TO causal edges.
+                        outcome_date = (self.end_date - timedelta(days=acct_rng.randint(0, 9))).strftime('%Y-%m-%d')
+                    else:
+                        # Spread healthy outcomes across the latter half of the time range
+                        day_offset = int(total_days * 0.5) + acct_rng.randint(0, int(total_days * 0.5))
+                        outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
 
                 w.writerow([
                     aid,
