@@ -84,7 +84,7 @@ def dashboard_stats():
         verticals = db.session.query(
             Customer.vertical, db.func.count(Customer.customer_id)
         ).group_by(Customer.vertical).all()
-        vertical_dist = [{"vertical": v or "saas", "customer_count": c} for v, c in verticals]
+        vertical_dist = [{"vertical": v or "saas_premium", "customer_count": c} for v, c in verticals]
 
         # Seat warnings (customers with >80% seat usage) — simplified
         seat_warnings = []

@@ -43,8 +43,7 @@ def register_customer():
         phone = data.get('phone', '').strip()
 
         # Optional: vertical for multi-vertical UUID support
-        # Defaults to 'saas' for backward compatibility
-        vertical = data.get('vertical', 'saas').strip().lower()
+        vertical = data.get('vertical', 'saas_premium').strip().lower()
         try:
             vertical_prefix = resolve_vertical_prefix(vertical)
         except ValueError:
@@ -259,7 +258,7 @@ def add_user_to_customer():
             return jsonify({'error': f'Username {user_name} already exists for this customer'}), 409
         
         # Determine vertical from parent customer
-        cust_vertical = getattr(customer, 'vertical', None) or 'saas'
+        cust_vertical = getattr(customer, 'vertical', None) or 'saas_premium'
         cust_uuid = getattr(customer, 'uuid', None)
 
         # Create user with UUID dual-write

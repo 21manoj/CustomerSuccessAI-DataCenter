@@ -138,9 +138,8 @@ def analyze_account():
 
         account_id = str(account_id_int)  # Convert to string for consistency
         
-        # Get vertical type from customer or default to 'saas'
-        # Check customer config for vertical
-        vertical = 'saas'  # Default
+        # Get vertical type from customer
+        vertical = 'saas_premium'  # Default
         try:
             from models import CustomerConfig
             config = CustomerConfig.query.filter_by(customer_id=customer_id).first()

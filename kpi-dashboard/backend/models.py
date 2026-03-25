@@ -79,7 +79,7 @@ class CustomerConfig(db.Model):
     # ============================================================
     
     # Vertical identifier
-    vertical = db.Column(db.String(50), default='saas')  # 'saas' or 'dc2_s'
+    vertical = db.Column(db.String(50), default='saas_premium')  # 'saas_premium' or 'dc2_s'
     
     # DC2_S Configuration (JSON blobs)
     dc2s_pillar_weights = db.Column(db.JSON, nullable=True)     # {"P1": 0.15, "P2": 0.20, ...}

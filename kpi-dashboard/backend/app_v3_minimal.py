@@ -692,11 +692,11 @@ def login():
             user_vertical_normalized = user_vertical.lower().replace('-', '_').replace(' ', '_')
             if user_vertical_normalized in ['dc2_s', 'dc2s', 'dc', 'datacenter']:
                 frontend_vertical = 'datacenter'
-            elif user_vertical_normalized == 'saas':
-                frontend_vertical = 'saas'
+            elif user_vertical_normalized in ['saas', 'saas_premium']:
+                frontend_vertical = 'saas_premium'
             else:
                 # Default to datacenter if it looks like a DC vertical variant
-                frontend_vertical = 'datacenter' if 'dc' in user_vertical_normalized or 'datacenter' in user_vertical_normalized else 'saas'
+                frontend_vertical = 'datacenter' if 'dc' in user_vertical_normalized or 'datacenter' in user_vertical_normalized else 'saas_premium'
         else:
             # If no vertical set in DB, default to datacenter
             # (vertical dropdown removed from login screen — backend auto-resolves)

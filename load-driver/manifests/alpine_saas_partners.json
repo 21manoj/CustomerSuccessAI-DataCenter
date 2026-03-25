@@ -1,7 +1,7 @@
 {
   "customer": {
     "name": "Alpine SaaS Partners",
-    "vertical": "saas",
+    "vertical": "saas_premium",
     "admin_email": "admin@alpinesaas.com",
     "admin_name": "Elena Marchetti",
     "domain": "alpinesaas.com"
