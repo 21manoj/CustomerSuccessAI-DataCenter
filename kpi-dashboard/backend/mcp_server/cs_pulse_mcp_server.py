@@ -254,13 +254,21 @@ def _get_health_functions(vertical: str):
             pass  # Fall through to generic
 
     # 2. Generic scorer — works with any JSON-catalog-defined vertical
+    # Resolve alias first (e.g. 'saas' → 'saas_premium')
     try:
-        from utils.generic_scorer import calculate_health_generic
-        def _generic_calculate(kpi_values, customer_id=None):
-            return calculate_health_generic(kpi_values, vertical)
-        return _generic_calculate, _get_trailing_kpi_values_generic, _get_precalculated_scores
+        from utils.vertical_registry import VERTICAL_ALIASES
+        resolved = VERTICAL_ALIASES.get(vertical, vertical)
     except ImportError:
-        pass
+        resolved = vertical
+
+    try:
+        from utils.vertical_health import _make_generic_calculator
+        _generic_calc = _make_generic_calculator(resolved, customer_id=None)
+        if _generic_calc is not None:
+            return _generic_calc, _get_trailing_kpi_values_generic, _get_precalculated_scores
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Generic scorer failed for {resolved}: {e}")
 
     # 3. Last resort: noop
     def _noop_calculate(kpi_values, customer_id=None):
