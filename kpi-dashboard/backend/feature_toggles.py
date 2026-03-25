@@ -38,54 +38,56 @@ class FeatureToggleManager:
     
     def __init__(self):
         self.features = {
+            # Enterprise Edition: all features enabled by default.
+            # Individual features can still be disabled via FEATURE_{NAME}=false env var.
             FeatureToggle.FORMAT_DETECTION: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Auto-detect and validate file formats",
                 version="1.0.0",
                 dependencies=[],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.EVENT_DRIVEN_RAG: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Automatic RAG rebuilds on data changes",
                 version="1.0.0",
                 dependencies=[FeatureToggle.REAL_TIME_INGESTION],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.CONTINUOUS_LEARNING: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Continuous learning and model updates",
                 version="1.0.0",
                 dependencies=[FeatureToggle.EVENT_DRIVEN_RAG],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.REAL_TIME_INGESTION: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Real-time data ingestion APIs",
                 version="1.0.0",
                 dependencies=[],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.ENHANCED_UPLOAD: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Enhanced upload with format detection",
                 version="1.0.0",
                 dependencies=[FeatureToggle.FORMAT_DETECTION],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.TEMPORAL_ANALYSIS: FeatureConfig(
-                enabled=True,  # Keep existing functionality
+                enabled=True,
                 description="Temporal analysis and historical trends",
                 version="1.0.0",
                 dependencies=[],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.MULTI_FORMAT_SUPPORT: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Support for multiple file formats",
                 version="1.0.0",
                 dependencies=[FeatureToggle.FORMAT_DETECTION],
-                environment_required="production"
+                environment_required=None
             ),
             FeatureToggle.REVENUE_INTELLIGENCE: FeatureConfig(
                 enabled=True,
@@ -103,25 +105,25 @@ class FeatureToggleManager:
                 environment_required=None
             ),
             FeatureToggle.MCP_SERVER: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Expose CS Pulse as MCP tool provider for external LLMs (Claude, Copilot, ChatGPT)",
                 version="1.0.0",
                 dependencies=[],
                 environment_required=None
             ),
             FeatureToggle.SIGNAL_ENGINE: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="QSIM Signal Engine: qualitative signal ingestion, LLM enrichment, "
                             "structural urgency classification, CG collision, composite scoring",
-                version="0.1.0",
+                version="1.0.0",
                 dependencies=[FeatureToggle.CONTEXT_GRAPH],
                 environment_required=None
             ),
             FeatureToggle.ASK_AI_V2: FeatureConfig(
-                enabled=False,
+                enabled=True,
                 description="Ask AI v2: Claude-powered intelligent assistant with tool_use, "
                             "rich artifact rendering (Mermaid, charts, tables), persona-aware",
-                version="0.1.0",
+                version="1.0.0",
                 dependencies=[],
                 environment_required=None
             ),
@@ -231,14 +233,14 @@ class FeatureNotEnabledException(Exception):
 #   decision_lifecycle, outcome_economics, industry_benchmarks
 # ============================================================
 
-# Default sub-toggle config (all off)
+# Default sub-toggle config — Enterprise Edition: all ON
 CONTEXT_GRAPH_DEFAULT_CONFIG = {
-    "story_arcs": False,
-    "signal_edges": False,
-    "stakeholder_tracking": False,
-    "decision_lifecycle": False,
-    "outcome_economics": False,
-    "industry_benchmarks": False,
+    "story_arcs": True,
+    "signal_edges": True,
+    "stakeholder_tracking": True,
+    "decision_lifecycle": True,
+    "outcome_economics": True,
+    "industry_benchmarks": True,
 }
 
 
@@ -266,9 +268,10 @@ def is_context_graph_enabled(customer_id: int) -> bool:
             customer_id=customer_id,
             feature_name='context_graph'
         ).first()
-        return toggle.enabled if toggle else False
+        # Enterprise Edition: default to enabled if no per-customer toggle exists
+        return toggle.enabled if toggle else True
     except Exception:
-        return False
+        return True
 
 
 def get_context_graph_config(customer_id: int) -> dict:
