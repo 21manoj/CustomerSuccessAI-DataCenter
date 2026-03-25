@@ -908,17 +908,21 @@ def _process_data_impl(customer_id: int) -> dict:
                                     break
                             except (ValueError, TypeError):
                                 pass
+                        # Store outcome_type as source_event_id for edge resolution
+                        outcome_type = str(row.get('outcome_type', 'revenue'))
+                        outcome_src_id = f"outcome:{outcome_type}" if outcome_type else None
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
-                            node_subtype=str(row.get('outcome_type', 'revenue')),
+                            node_subtype=outcome_type,
                             title=str(row.get('title', row.get('outcome_name', ''))),
                             revenue_impact=rev_impact,
-                            revenue_impact_type=str(row.get('outcome_type', 'expansion')),
+                            revenue_impact_type=outcome_type,
                             properties={'evidence': str(row.get('evidence', '')),
                                         'confidence': str(row.get('confidence', ''))},
                             tier=1, occurred_at=_dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
+                            source_event_id=outcome_src_id,
                         ))
                     _db.session.flush()
                     steps_completed.append('outcomes_loaded')
@@ -931,6 +935,9 @@ def _process_data_impl(customer_id: int) -> dict:
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
                             continue
+                        # Store decision_id as source_event_id for edge resolution
+                        dec_id = str(row.get('decision_id', ''))
+                        dec_src_id = f"decision:{dec_id}" if dec_id else None
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
@@ -938,9 +945,11 @@ def _process_data_impl(customer_id: int) -> dict:
                             title=str(row.get('title', row.get('decision_name', ''))),
                             properties={'chosen_option': str(row.get('chosen_option', '')),
                                         'outcome_description': str(row.get('outcome_description', '')),
-                                        'risk_level': str(row.get('risk_level', ''))},
+                                        'risk_level': str(row.get('risk_level', '')),
+                                        'decision_id': dec_id},
                             tier=1, occurred_at=_dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
+                            source_event_id=dec_src_id,
                         ))
                     _db.session.flush()
                     steps_completed.append('decisions_loaded')
@@ -1060,21 +1069,38 @@ def _process_data_impl(customer_id: int) -> dict:
                     df_se = pd.read_csv(str(se_path))
                     all_nodes = ContextNode.query.filter_by(customer_id=customer_id).all()
                     title_to_node, sigref_to_node, srcid_to_node = {}, {}, {}
+                    # Per-account lookup for refs shared across accounts (e.g. outcome:revenue_at_risk)
+                    acct_srcid_to_node = {}  # (account_id, ref) → node_id
                     for n in all_nodes:
                         if n.title:
                             title_to_node[n.title.strip()] = n.node_id
                             title_to_node[n.title.strip()[:60]] = n.node_id
                         if n.source_event_id:
                             srcid_to_node[n.source_event_id] = n.node_id
+                            acct_srcid_to_node[(n.account_id, n.source_event_id)] = n.node_id
                         if n.properties and isinstance(n.properties, dict):
                             sr = n.properties.get('signal_ref')
                             if sr:
                                 sigref_to_node[str(sr)] = n.node_id
+                                acct_srcid_to_node[(n.account_id, str(sr))] = n.node_id
 
-                    def _resolve_edge_ref(ref_str):
+                    def _resolve_edge_ref(ref_str, account_id=None):
                         if not ref_str or str(ref_str) == 'nan':
                             return None
                         ref_str = str(ref_str).strip()
+
+                        # Strategy 0: Per-account scoped lookup (handles outcome:type refs)
+                        if account_id:
+                            nid = acct_srcid_to_node.get((account_id, ref_str))
+                            if nid:
+                                return nid
+
+                        # Strategy 1: Direct signal_ref or source_event_id
+                        nid = sigref_to_node.get(ref_str) or srcid_to_node.get(ref_str)
+                        if nid:
+                            return nid
+
+                        # Strategy 2: Split on separator, try phase_ref + title
                         phase_ref, title_part = None, None
                         for sep in [' \u2014 ', ' \u2013 ', ' - ']:
                             if sep in ref_str:
@@ -1082,6 +1108,10 @@ def _process_data_impl(customer_id: int) -> dict:
                                 title_part = ref_str.split(sep, 1)[1].strip()
                                 break
                         if phase_ref:
+                            if account_id:
+                                nid = acct_srcid_to_node.get((account_id, phase_ref))
+                                if nid:
+                                    return nid
                             nid = sigref_to_node.get(phase_ref) or srcid_to_node.get(phase_ref)
                             if nid:
                                 return nid
@@ -1090,12 +1120,14 @@ def _process_data_impl(customer_id: int) -> dict:
                                 nid = title_to_node.get(t)
                                 if nid:
                                     return nid
-                        return title_to_node.get(ref_str) or srcid_to_node.get(ref_str)
+
+                        return title_to_node.get(ref_str)
 
                     edges_created = 0
                     for _, row in df_se.iterrows():
-                        from_id = _resolve_edge_ref(row.get('from_signal_ref'))
-                        to_id = _resolve_edge_ref(row.get('to_signal_ref'))
+                        edge_acct = _resolve_acct_id(row)
+                        from_id = _resolve_edge_ref(row.get('from_signal_ref'), account_id=edge_acct)
+                        to_id = _resolve_edge_ref(row.get('to_signal_ref'), account_id=edge_acct)
                         if from_id and to_id and from_id != to_id:
                             edge = ContextEdge(
                                 customer_id=customer_id,
