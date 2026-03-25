@@ -895,8 +895,8 @@ class ManifestCSVGenerator:
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
-        counter = 0
         for idx, acct in enumerate(self.accounts):
+            counter = 0  # reset per account so sig_N counter is always 1-based
             aid = self._account_id(idx)
             arc = acct.get('story_arc', '')
 
