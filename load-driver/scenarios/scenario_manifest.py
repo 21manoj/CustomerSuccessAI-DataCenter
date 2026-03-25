@@ -1633,8 +1633,15 @@ class ManifestCSVGenerator:
                     (f'decision:{phase_prefix}dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
                 ]
             elif cls == 'at_risk':
+                # at_risk uses crisis_recovery arc: decisions land at month 2 (Dec).
+                # Manifest key_signals are often dated Feb-Mar, which postdate the
+                # decision → temporal check (from > to) would skip the TRIGGERED edge.
+                # Use the first narrative-planned signal instead (Dec 1 critical_incident),
+                # which is always dated BEFORE the Dec 10 decision.
+                ks_count = len(acct.get('key_signals', []))
+                trigger_sig_ref = f'{phase_prefix}narrative_sig_{aid}_{ks_count + 1}'
                 edges = [
-                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
+                    (trigger_sig_ref, f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
                     (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:renewal_uncertainty', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
                 ]
             else:
