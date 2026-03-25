@@ -1,21 +1,64 @@
 #!/usr/bin/env python3
 """
-Catalog Loader — Reads DC2_S KPI definitions from the shared JSON catalog.
+Catalog Loader — Reads KPI definitions from the shared JSON catalog.
 
-Single source of truth: dc2s_kpi_catalog.json (generated from kpi_definitions.py).
+Vertical-aware: loads the correct catalog based on set_vertical().
+- dc2_s / dc / datacenter → dc2s_kpi_catalog.json
+- saas / saas_premium → saas_premium_kpi_catalog.json
+- Any other → looks for {vertical}_kpi_catalog.json
+
 All load-driver modules should use this instead of hardcoded weights/targets/ranges.
 """
 import json
 import os
+import logging
 
-_CATALOG_PATH = os.path.join(os.path.dirname(__file__), 'dc2s_kpi_catalog.json')
+_logger = logging.getLogger(__name__)
+_DIR = os.path.dirname(__file__)
 _cached = None
+_active_vertical = 'dc2_s'
+
+# Vertical → catalog filename mapping
+_CATALOG_FILES = {
+    'dc2_s': 'dc2s_kpi_catalog.json',
+    'dc': 'dc2s_kpi_catalog.json',
+    'dc2s': 'dc2s_kpi_catalog.json',
+    'datacenter': 'dc2s_kpi_catalog.json',
+    'saas': 'saas_premium_kpi_catalog.json',
+    'saas_premium': 'saas_premium_kpi_catalog.json',
+}
+
+
+def set_vertical(vertical: str):
+    """Set the active vertical for catalog loading. Call before get_kpis()."""
+    global _active_vertical, _cached
+    resolved = vertical.lower().strip() if vertical else 'dc2_s'
+    if resolved != _active_vertical:
+        _active_vertical = resolved
+        _cached = None  # Force reload
+        _logger.info(f"catalog_loader: vertical set to '{resolved}'")
+
+
+def _get_catalog_path() -> str:
+    """Resolve catalog JSON path for the active vertical."""
+    filename = _CATALOG_FILES.get(_active_vertical)
+    if not filename:
+        # Try generic pattern: {vertical}_kpi_catalog.json
+        filename = f"{_active_vertical}_kpi_catalog.json"
+
+    path = os.path.join(_DIR, filename)
+    if not os.path.exists(path):
+        _logger.warning(f"catalog_loader: {filename} not found, falling back to dc2s_kpi_catalog.json")
+        path = os.path.join(_DIR, 'dc2s_kpi_catalog.json')
+    return path
 
 
 def _load():
     global _cached
     if _cached is None:
-        with open(_CATALOG_PATH, 'r') as f:
+        catalog_path = _get_catalog_path()
+        _logger.info(f"catalog_loader: loading {os.path.basename(catalog_path)} for vertical '{_active_vertical}'")
+        with open(catalog_path, 'r') as f:
             content = f.read()
         # Handle preamble text before JSON (e.g. stdout from kpi_definitions.py)
         brace_pos = content.find('{')

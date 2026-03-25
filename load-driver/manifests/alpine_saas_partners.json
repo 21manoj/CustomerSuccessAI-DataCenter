@@ -9,7 +9,7 @@
   "accounts": [
     {
       "name": "Zermatt Analytics",
-      "arr": 8500000,
+      "arr": 11500000,
       "target_health": 35,
       "classification": "critical",
       "story_arc": "champion_loss",
@@ -21,27 +21,72 @@
       "industry": "Analytics",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "Marco Bianchi", "role": "VP Product", "title": "VP of Product", "department": "Product", "engagement_frequency": 9, "status": "departed"},
-        {"name": "Lena Hofmann", "role": "successor", "title": "Director of Engineering", "department": "Engineering", "engagement_frequency": 2, "status": "new_contact"},
-        {"name": "Stefan Keller", "role": "executive_sponsor", "title": "CTO", "department": "Technology", "engagement_frequency": 3, "status": "passive"}
+        {
+          "name": "Marco Bianchi",
+          "role": "VP Product",
+          "title": "VP of Product",
+          "department": "Product",
+          "engagement_frequency": 9,
+          "status": "departed"
+        },
+        {
+          "name": "Lena Hofmann",
+          "role": "successor",
+          "title": "Director of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 2,
+          "status": "new_contact"
+        },
+        {
+          "name": "Stefan Keller",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 3,
+          "status": "passive"
+        }
       ],
       "key_signals": [
-        {"type": "champion_departure", "date": "2026-01-15", "content": "VP Product Marco Bianchi departed, key platform champion"},
-        {"type": "usage_decline", "date": "2026-01-28", "content": "DAU rate dropped from 72% to 28% in 2 weeks"},
-        {"type": "competitor_mention", "date": "2026-02-10", "content": "New engineering lead evaluating competitor SaaS platform"}
+        {
+          "type": "champion_departure",
+          "date": "2026-01-15",
+          "content": "VP Product Marco Bianchi departed, key platform champion"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-01-28",
+          "content": "DAU rate dropped from 72% to 28% in 2 weeks"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-02-10",
+          "content": "New engineering lead evaluating competitor SaaS platform"
+        }
       ],
       "intervention": {
         "playbook": "PB-03",
         "actions": [
-          {"date": "2026-02-20", "action": "Emergency stakeholder mapping", "outcome": "Identified Lena Hofmann as new champion candidate"},
-          {"date": "2026-03-01", "action": "Executive business review with CTO", "outcome": "Secured 90-day commitment to evaluate platform value"},
-          {"date": "2026-03-10", "action": "Custom onboarding for new engineering team", "outcome": "DAU recovering to 45%"}
+          {
+            "date": "2026-02-20",
+            "action": "Emergency stakeholder mapping",
+            "outcome": "Identified Lena Hofmann as new champion candidate"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Executive business review with CTO",
+            "outcome": "Secured 90-day commitment to evaluate platform value"
+          },
+          {
+            "date": "2026-03-10",
+            "action": "Custom onboarding for new engineering team",
+            "outcome": "DAU recovering to 45%"
+          }
         ]
       }
     },
     {
       "name": "Eiger Cloud Services",
-      "arr": 6200000,
+      "arr": 8000000,
       "target_health": 38,
       "classification": "critical",
       "story_arc": "infrastructure_decay",
@@ -53,25 +98,59 @@
       "industry": "Cloud Infrastructure",
       "region": "EU-Central",
       "stakeholders": [
-        {"name": "Thomas Brunner", "role": "decision_maker", "title": "VP Engineering", "department": "Engineering", "engagement_frequency": 4, "status": "frustrated"},
-        {"name": "Anna Weber", "role": "champion", "title": "Platform Lead", "department": "DevOps", "engagement_frequency": 7, "status": "active"}
+        {
+          "name": "Thomas Brunner",
+          "role": "decision_maker",
+          "title": "VP Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 4,
+          "status": "frustrated"
+        },
+        {
+          "name": "Anna Weber",
+          "role": "champion",
+          "title": "Platform Lead",
+          "department": "DevOps",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
       ],
       "key_signals": [
-        {"type": "feature_adoption_drop", "date": "2026-01-10", "content": "Feature adoption breadth dropped from 62% to 22%"},
-        {"type": "support_spike", "date": "2026-01-20", "content": "Support tickets up 3x after migration"},
-        {"type": "nps_decline", "date": "2026-02-15", "content": "NPS dropped from 45 to 12"}
+        {
+          "type": "feature_adoption_drop",
+          "date": "2026-01-10",
+          "content": "Feature adoption breadth dropped from 62% to 22%"
+        },
+        {
+          "type": "support_spike",
+          "date": "2026-01-20",
+          "content": "Support tickets up 3x after migration"
+        },
+        {
+          "type": "nps_decline",
+          "date": "2026-02-15",
+          "content": "NPS dropped from 45 to 12"
+        }
       ],
       "intervention": {
         "playbook": "PB-02",
         "actions": [
-          {"date": "2026-02-25", "action": "Dedicated support pod assigned", "outcome": "Ticket backlog reduced 60%"},
-          {"date": "2026-03-05", "action": "Feature re-adoption workshop", "outcome": "Adoption breadth recovering to 40%"}
+          {
+            "date": "2026-02-25",
+            "action": "Dedicated support pod assigned",
+            "outcome": "Ticket backlog reduced 60%"
+          },
+          {
+            "date": "2026-03-05",
+            "action": "Feature re-adoption workshop",
+            "outcome": "Adoption breadth recovering to 40%"
+          }
         ]
       }
     },
     {
       "name": "Jungfrau Fintech",
-      "arr": 4500000,
+      "arr": 5800000,
       "target_health": 42,
       "classification": "critical",
       "story_arc": "budget_pressure",
@@ -83,24 +162,54 @@
       "industry": "Financial Technology",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "Claire Dupont", "role": "decision_maker", "title": "CFO", "department": "Finance", "engagement_frequency": 2, "status": "cost_focused"},
-        {"name": "Jean-Pierre Martin", "role": "champion", "title": "Head of Product", "department": "Product", "engagement_frequency": 5, "status": "advocate"}
+        {
+          "name": "Claire Dupont",
+          "role": "decision_maker",
+          "title": "CFO",
+          "department": "Finance",
+          "engagement_frequency": 2,
+          "status": "cost_focused"
+        },
+        {
+          "name": "Jean-Pierre Martin",
+          "role": "champion",
+          "title": "Head of Product",
+          "department": "Product",
+          "engagement_frequency": 5,
+          "status": "advocate"
+        }
       ],
       "key_signals": [
-        {"type": "budget_review", "date": "2026-02-01", "content": "CFO initiated SaaS spend audit across all platforms"},
-        {"type": "login_decline", "date": "2026-02-20", "content": "Login frequency dropped 55% in 3 weeks"},
-        {"type": "renewal_risk", "date": "2026-03-01", "content": "Procurement flagged renewal for competitive bid"}
+        {
+          "type": "budget_review",
+          "date": "2026-02-01",
+          "content": "CFO initiated SaaS spend audit across all platforms"
+        },
+        {
+          "type": "login_decline",
+          "date": "2026-02-20",
+          "content": "Login frequency dropped 55% in 3 weeks"
+        },
+        {
+          "type": "renewal_risk",
+          "date": "2026-03-01",
+          "content": "Procurement flagged renewal for competitive bid"
+        }
       ],
       "intervention": {
         "playbook": "PB-05",
         "actions": [
-          {"date": "2026-03-08", "action": "ROI presentation to CFO", "outcome": "Demonstrated 3.2x ROI, renewal extended to annual review"}
+          {
+            "date": "2026-03-08",
+            "action": "ROI presentation to CFO",
+            "outcome": "Demonstrated 3.2x ROI, renewal extended to annual review"
+          }
         ]
       }
     },
     {
       "name": "Matterhorn Digital",
-      "arr": 6800000,
+      "arr": 8800000,
       "target_health": 55,
       "classification": "at_risk",
       "story_arc": "competitor_evaluation",
@@ -112,23 +221,49 @@
       "industry": "Digital Marketing",
       "region": "US-East",
       "stakeholders": [
-        {"name": "Sarah Chen", "role": "champion", "title": "VP Marketing Tech", "department": "Marketing", "engagement_frequency": 6, "status": "active"},
-        {"name": "David Park", "role": "decision_maker", "title": "CMO", "department": "Executive", "engagement_frequency": 3, "status": "evaluating"}
+        {
+          "name": "Sarah Chen",
+          "role": "champion",
+          "title": "VP Marketing Tech",
+          "department": "Marketing",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "David Park",
+          "role": "decision_maker",
+          "title": "CMO",
+          "department": "Executive",
+          "engagement_frequency": 3,
+          "status": "evaluating"
+        }
       ],
       "key_signals": [
-        {"type": "competitor_evaluation", "date": "2026-02-05", "content": "CMO requested competitive analysis vs HubSpot Enterprise"},
-        {"type": "engagement_drop", "date": "2026-02-28", "content": "QBR attendance dropped, 2 meetings rescheduled"}
+        {
+          "type": "competitor_evaluation",
+          "date": "2026-02-05",
+          "content": "CMO requested competitive analysis vs HubSpot Enterprise"
+        },
+        {
+          "type": "engagement_drop",
+          "date": "2026-02-28",
+          "content": "QBR attendance dropped, 2 meetings rescheduled"
+        }
       ],
       "intervention": {
         "playbook": "PB-06",
         "actions": [
-          {"date": "2026-03-12", "action": "Competitive displacement playbook activated", "outcome": "Feature gap roadmap shared, CMO committed to next QBR"}
+          {
+            "date": "2026-03-12",
+            "action": "Competitive displacement playbook activated",
+            "outcome": "Feature gap roadmap shared, CMO committed to next QBR"
+          }
         ]
       }
     },
     {
       "name": "Bernina Health Systems",
-      "arr": 5400000,
+      "arr": 7000000,
       "target_health": 52,
       "classification": "at_risk",
       "story_arc": "stalled_deployment",
@@ -140,23 +275,49 @@
       "industry": "Healthcare SaaS",
       "region": "US-Central",
       "stakeholders": [
-        {"name": "Robert Kim", "role": "champion", "title": "Director of Digital Health", "department": "Digital", "engagement_frequency": 8, "status": "active"},
-        {"name": "Dr. Maria Santos", "role": "executive_sponsor", "title": "Chief Digital Officer", "department": "Executive", "engagement_frequency": 2, "status": "concerned"}
+        {
+          "name": "Robert Kim",
+          "role": "champion",
+          "title": "Director of Digital Health",
+          "department": "Digital",
+          "engagement_frequency": 8,
+          "status": "active"
+        },
+        {
+          "name": "Dr. Maria Santos",
+          "role": "executive_sponsor",
+          "title": "Chief Digital Officer",
+          "department": "Executive",
+          "engagement_frequency": 2,
+          "status": "concerned"
+        }
       ],
       "key_signals": [
-        {"type": "onboarding_delay", "date": "2026-01-25", "content": "Onboarding completion at 42% after 90 days (target: 85%)"},
-        {"type": "ttfv_exceeded", "date": "2026-02-15", "content": "TTFV at 78 days vs 21-day target"}
+        {
+          "type": "onboarding_delay",
+          "date": "2026-01-25",
+          "content": "Onboarding completion at 42% after 90 days (target: 85%)"
+        },
+        {
+          "type": "ttfv_exceeded",
+          "date": "2026-02-15",
+          "content": "TTFV at 78 days vs 21-day target"
+        }
       ],
       "intervention": {
         "playbook": "PB-01",
         "actions": [
-          {"date": "2026-03-01", "action": "Dedicated onboarding accelerator assigned", "outcome": "Completion jumped to 68% in 2 weeks"}
+          {
+            "date": "2026-03-01",
+            "action": "Dedicated onboarding accelerator assigned",
+            "outcome": "Completion jumped to 68% in 2 weeks"
+          }
         ]
       }
     },
     {
       "name": "Pilatus Enterprise",
-      "arr": 5000000,
+      "arr": 6500000,
       "target_health": 58,
       "classification": "at_risk",
       "story_arc": "engagement_decline",
@@ -168,22 +329,41 @@
       "industry": "Enterprise Software",
       "region": "US-West",
       "stakeholders": [
-        {"name": "Michael Torres", "role": "champion", "title": "VP Customer Experience", "department": "CX", "engagement_frequency": 4, "status": "passive"}
+        {
+          "name": "Michael Torres",
+          "role": "champion",
+          "title": "VP Customer Experience",
+          "department": "CX",
+          "engagement_frequency": 4,
+          "status": "passive"
+        }
       ],
       "key_signals": [
-        {"type": "engagement_decline", "date": "2026-01-30", "content": "Weekly active users down 25% over 8 weeks"},
-        {"type": "csat_drop", "date": "2026-02-20", "content": "CSAT dropped from 4.2 to 3.5"}
+        {
+          "type": "engagement_decline",
+          "date": "2026-01-30",
+          "content": "Weekly active users down 25% over 8 weeks"
+        },
+        {
+          "type": "csat_drop",
+          "date": "2026-02-20",
+          "content": "CSAT dropped from 4.2 to 3.5"
+        }
       ],
       "intervention": {
         "playbook": "PB-04",
         "actions": [
-          {"date": "2026-03-05", "action": "Customer health check call", "outcome": "Identified training gaps, scheduled workshops"}
+          {
+            "date": "2026-03-05",
+            "action": "Customer health check call",
+            "outcome": "Identified training gaps, scheduled workshops"
+          }
         ]
       }
     },
     {
       "name": "Grindelwald Commerce",
-      "arr": 4900000,
+      "arr": 6300000,
       "target_health": 72,
       "classification": "healthy",
       "story_arc": "expansion_champion",
@@ -195,16 +375,31 @@
       "industry": "E-Commerce",
       "region": "US-East",
       "stakeholders": [
-        {"name": "Jessica Wong", "role": "champion", "title": "VP Commerce Platform", "department": "Technology", "engagement_frequency": 10, "status": "advocate"}
+        {
+          "name": "Jessica Wong",
+          "role": "champion",
+          "title": "VP Commerce Platform",
+          "department": "Technology",
+          "engagement_frequency": 10,
+          "status": "advocate"
+        }
       ],
       "key_signals": [
-        {"type": "expansion_signal", "date": "2026-02-01", "content": "3 new departments requesting platform access"},
-        {"type": "nps_increase", "date": "2026-03-01", "content": "NPS increased from 52 to 71"}
+        {
+          "type": "expansion_signal",
+          "date": "2026-02-01",
+          "content": "3 new departments requesting platform access"
+        },
+        {
+          "type": "nps_increase",
+          "date": "2026-03-01",
+          "content": "NPS increased from 52 to 71"
+        }
       ]
     },
     {
       "name": "Davos Security",
-      "arr": 4600000,
+      "arr": 5900000,
       "target_health": 75,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -216,13 +411,20 @@
       "industry": "Cybersecurity",
       "region": "US-East",
       "stakeholders": [
-        {"name": "Tom Anderson", "role": "champion", "title": "Security Platform Lead", "department": "Security", "engagement_frequency": 5, "status": "active"}
+        {
+          "name": "Tom Anderson",
+          "role": "champion",
+          "title": "Security Platform Lead",
+          "department": "Security",
+          "engagement_frequency": 5,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Lucerne Media",
-      "arr": 3900000,
+      "arr": 5000000,
       "target_health": 78,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -234,13 +436,20 @@
       "industry": "Media & Entertainment",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "Pierre Lambert", "role": "champion", "title": "Head of Platforms", "department": "Technology", "engagement_frequency": 6, "status": "active"}
+        {
+          "name": "Pierre Lambert",
+          "role": "champion",
+          "title": "Head of Platforms",
+          "department": "Technology",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Interlaken Logistics",
-      "arr": 3600000,
+      "arr": 4600000,
       "target_health": 80,
       "classification": "healthy",
       "story_arc": "expansion_champion",
@@ -252,15 +461,26 @@
       "industry": "Logistics & Supply Chain",
       "region": "EU-Central",
       "stakeholders": [
-        {"name": "Klaus Müller", "role": "champion", "title": "VP Supply Chain", "department": "Operations", "engagement_frequency": 7, "status": "advocate"}
+        {
+          "name": "Klaus M\u00fcller",
+          "role": "champion",
+          "title": "VP Supply Chain",
+          "department": "Operations",
+          "engagement_frequency": 7,
+          "status": "advocate"
+        }
       ],
       "key_signals": [
-        {"type": "expansion_signal", "date": "2026-02-15", "content": "2 new warehouse locations requesting platform rollout"}
+        {
+          "type": "expansion_signal",
+          "date": "2026-02-15",
+          "content": "2 new warehouse locations requesting platform rollout"
+        }
       ]
     },
     {
       "name": "Montreux EdTech",
-      "arr": 3200000,
+      "arr": 4100000,
       "target_health": 76,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -272,13 +492,20 @@
       "industry": "Education Technology",
       "region": "US-Central",
       "stakeholders": [
-        {"name": "Amy Richards", "role": "champion", "title": "Director of Digital Learning", "department": "Curriculum", "engagement_frequency": 5, "status": "active"}
+        {
+          "name": "Amy Richards",
+          "role": "champion",
+          "title": "Director of Digital Learning",
+          "department": "Curriculum",
+          "engagement_frequency": 5,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Verbier Pharma",
-      "arr": 2800000,
+      "arr": 3600000,
       "target_health": 82,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -290,13 +517,20 @@
       "industry": "Pharmaceuticals",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "Dr. Hans Fischer", "role": "champion", "title": "Head of Data Science", "department": "R&D", "engagement_frequency": 4, "status": "active"}
+        {
+          "name": "Dr. Hans Fischer",
+          "role": "champion",
+          "title": "Head of Data Science",
+          "department": "R&D",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "St. Moritz Retail",
-      "arr": 2500000,
+      "arr": 3200000,
       "target_health": 79,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -308,13 +542,20 @@
       "industry": "Retail Technology",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "Isabella Rossi", "role": "champion", "title": "VP Digital Commerce", "department": "Digital", "engagement_frequency": 5, "status": "active"}
+        {
+          "name": "Isabella Rossi",
+          "role": "champion",
+          "title": "VP Digital Commerce",
+          "department": "Digital",
+          "engagement_frequency": 5,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Lausanne Insurance",
-      "arr": 2200000,
+      "arr": 2800000,
       "target_health": 77,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -326,13 +567,20 @@
       "industry": "Insurance Technology",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "François Leroux", "role": "champion", "title": "VP Digital Insurance", "department": "Digital Transformation", "engagement_frequency": 4, "status": "active"}
+        {
+          "name": "Fran\u00e7ois Leroux",
+          "role": "champion",
+          "title": "VP Digital Insurance",
+          "department": "Digital Transformation",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Geneva Legal Tech",
-      "arr": 1900000,
+      "arr": 2400000,
       "target_health": 81,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -344,13 +592,20 @@
       "industry": "Legal Technology",
       "region": "EU-West",
       "stakeholders": [
-        {"name": "Catherine Blanc", "role": "champion", "title": "Head of Legal Tech", "department": "Technology", "engagement_frequency": 6, "status": "active"}
+        {
+          "name": "Catherine Blanc",
+          "role": "champion",
+          "title": "Head of Legal Tech",
+          "department": "Technology",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Bern Healthcare AI",
-      "arr": 1600000,
+      "arr": 2000000,
       "target_health": 83,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -362,13 +617,20 @@
       "industry": "Healthcare AI",
       "region": "EU-Central",
       "stakeholders": [
-        {"name": "Dr. Eva Schneider", "role": "champion", "title": "Chief Medical Officer", "department": "Clinical", "engagement_frequency": 5, "status": "active"}
+        {
+          "name": "Dr. Eva Schneider",
+          "role": "champion",
+          "title": "Chief Medical Officer",
+          "department": "Clinical",
+          "engagement_frequency": 5,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Basel Biotech Platform",
-      "arr": 1300000,
+      "arr": 1600000,
       "target_health": 84,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -380,13 +642,20 @@
       "industry": "Biotechnology",
       "region": "EU-Central",
       "stakeholders": [
-        {"name": "Dr. Martin Huber", "role": "champion", "title": "VP Data Sciences", "department": "Research", "engagement_frequency": 4, "status": "active"}
+        {
+          "name": "Dr. Martin Huber",
+          "role": "champion",
+          "title": "VP Data Sciences",
+          "department": "Research",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
       ],
       "key_signals": []
     },
     {
       "name": "Zurich FinOps",
-      "arr": 750000,
+      "arr": 900000,
       "target_health": 85,
       "classification": "healthy",
       "story_arc": "steady_performer",
@@ -398,22 +667,104 @@
       "industry": "FinOps",
       "region": "EU-Central",
       "stakeholders": [
-        {"name": "Yuki Tanaka", "role": "champion", "title": "Head of FinOps", "department": "Finance", "engagement_frequency": 8, "status": "advocate"}
+        {
+          "name": "Yuki Tanaka",
+          "role": "champion",
+          "title": "Head of FinOps",
+          "department": "Finance",
+          "engagement_frequency": 8,
+          "status": "advocate"
+        }
       ],
       "key_signals": []
+    },
+    {
+      "name": "Pilatus GovTech",
+      "arr": 4200000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "stable",
+      "partner_tier": "partner",
+      "renewal_date": "2026-09-15",
+      "narrative": "Government procurement analytics. Contract lifecycle management driving efficiency across 3 cantons.",
+      "kpi_trajectory": "stable",
+      "industry": "Government",
+      "region": "EMEA",
+      "stakeholders": [
+        {
+          "name": "Martin Frei",
+          "role": "champion",
+          "title": "Director of Procurement",
+          "department": "Procurement",
+          "engagement_frequency": 5,
+          "sentiment": "positive"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Titlis Smart Cities",
+      "arr": 5800000,
+      "target_health": 81,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-01",
+      "narrative": "IoT city management platform. Traffic and waste management modules adopted. Expanding to 2 new municipalities.",
+      "kpi_trajectory": "improving",
+      "industry": "Smart Cities",
+      "region": "EMEA",
+      "stakeholders": [
+        {
+          "name": "Lena Bachmann",
+          "role": "champion",
+          "title": "Chief Innovation Officer",
+          "department": "Innovation",
+          "engagement_frequency": 8,
+          "sentiment": "positive"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_signal",
+          "month": 2,
+          "description": "CIO requesting platform extension for 2 neighboring municipalities."
+        }
+      ]
     }
   ],
   "kpis": {
     "selection": "top_4_per_pillar",
     "count": 20,
     "codes": [
-      "P1-KPI1", "P1-KPI2", "P1-KPI3", "P1-KPI4",
-      "P2-KPI1", "P2-KPI2", "P2-KPI3", "P2-KPI4",
-      "P3-KPI1", "P3-KPI2", "P3-KPI3", "P3-KPI4",
-      "P4-KPI1", "P4-KPI2", "P4-KPI3", "P4-KPI4",
-      "P5-KPI1", "P5-KPI2", "P5-KPI3", "P5-KPI4"
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI3",
+      "P1-KPI4",
+      "P2-KPI1",
+      "P2-KPI2",
+      "P2-KPI3",
+      "P2-KPI4",
+      "P3-KPI1",
+      "P3-KPI2",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P4-KPI1",
+      "P4-KPI2",
+      "P4-KPI3",
+      "P4-KPI4",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3",
+      "P5-KPI4"
     ],
-    "pillars": ["P1", "P2", "P3", "P4", "P5"]
+    "pillars": [
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5"
+    ]
   },
   "time_range": {
     "start": "2025-10-01",

@@ -435,6 +435,12 @@ class ManifestCSVGenerator:
         self.vertical = self.customer_info.get('vertical', 'dc2_s')
         random.seed(seed)
 
+        # Set vertical in catalog loader so KPI ranges match the vertical
+        if _catalog_available:
+            from catalog_loader import set_vertical
+            set_vertical(self.vertical)
+            logger.info("  Catalog vertical set to '%s'", self.vertical)
+
         # Parse time range
         raw_dp = int(self.time_range.get('data_points_per_kpi', 26))
         self.start_date = datetime.strptime(self.time_range['start'], '%Y-%m-%d')
@@ -464,7 +470,7 @@ class ManifestCSVGenerator:
         # Build measurement dates
         self.dates = self._build_dates()
 
-        # Load KPI catalog metadata
+        # Load KPI catalog metadata (now vertical-aware via set_vertical above)
         self.kpi_catalog = {}
         if _catalog_available:
             full_catalog = get_kpis()
