@@ -67,7 +67,7 @@ ENTITY_PREFIXES = {
 }
 
 # Valid verticals for validation
-VALID_VERTICALS = {'saas', 'dc', 'msp'}
+VALID_VERTICALS = {'saas', 'saas_premium', 'dc', 'dc2_s', 'datacenter', 'msp'}
 
 
 def _generate_uuid7() -> str:
