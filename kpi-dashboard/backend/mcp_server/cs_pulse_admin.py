@@ -37,18 +37,72 @@ from cs_pulse_mcp_server import (
 # ---------------------------------------------------------------------------
 
 def _get_account_profile(account) -> dict:
-    """Safely extract profile_metadata fields with defaults."""
+    """Safely extract profile_metadata fields with defaults.
+    Falls back to context graph STAKEHOLDER nodes for champion data
+    when profile_metadata is empty (common for load-driver provisioned accounts).
+    """
     meta = account.profile_metadata if isinstance(account.profile_metadata, dict) else {}
+
+    champion_name = meta.get("primary_champion_name", "")
+    champion_title = meta.get("champion_title", "")
+    champion_email = meta.get("champion_email", "")
+    champion_status = meta.get("champion_status", "Unknown")
+    executive_sponsor = meta.get("executive_sponsor", "")
+    assigned_csm = meta.get("assigned_csm", "Unassigned")
+
+    # Fall back to context graph stakeholder nodes if champion is empty
+    if not champion_name:
+        try:
+            from models import ContextNode
+            stakeholders = ContextNode.query.filter_by(
+                account_id=account.account_id,
+                node_type='STAKEHOLDER',
+            ).all()
+            for s in stakeholders:
+                props = s.properties if isinstance(s.properties, dict) else {}
+                role = s.node_subtype or props.get('role', '')
+                if role in ('champion', 'executive_sponsor', 'VP Product', 'primary_contact'):
+                    champion_name = s.title or ''
+                    # Title is stored as "Name (Job Title)" — extract job title
+                    if '(' in champion_name and ')' in champion_name:
+                        champion_title = champion_name.split('(')[1].rstrip(')')
+                        champion_name = champion_name.split('(')[0].strip()
+                    else:
+                        champion_title = props.get('job_title', role)
+                    champion_email = props.get('email', '')
+                    champion_status = 'Active' if role != 'departed' else 'Departed'
+                    break
+            # Also find executive sponsor
+            if not executive_sponsor:
+                for s in stakeholders:
+                    role = s.node_subtype or ''
+                    if role == 'executive_sponsor':
+                        executive_sponsor = s.title or ''
+                        if '(' in executive_sponsor:
+                            executive_sponsor = executive_sponsor.split('(')[0].strip()
+            # Find CSM from engagement signals
+            if assigned_csm == "Unassigned":
+                for s in stakeholders:
+                    props = s.properties if isinstance(s.properties, dict) else {}
+                    role = s.node_subtype or ''
+                    if role == 'csm':
+                        assigned_csm = s.title or ''
+                        if '(' in assigned_csm:
+                            assigned_csm = assigned_csm.split('(')[0].strip()
+                        break
+        except Exception:
+            pass
+
     return {
-        "assigned_csm": meta.get("assigned_csm", "Unassigned"),
-        "executive_sponsor": meta.get("executive_sponsor", ""),
+        "assigned_csm": assigned_csm,
+        "executive_sponsor": executive_sponsor,
         "contract_start_date": meta.get("contract_start_date", ""),
         "contract_end_date": meta.get("contract_end_date", ""),
         "renewal_date": meta.get("renewal_date", ""),
-        "champion_name": meta.get("primary_champion_name", ""),
-        "champion_title": meta.get("champion_title", ""),
-        "champion_email": meta.get("champion_email", ""),
-        "champion_status": meta.get("champion_status", "Unknown"),
+        "champion_name": champion_name,
+        "champion_title": champion_title,
+        "champion_email": champion_email,
+        "champion_status": champion_status,
         "champion_influence_level": meta.get("champion_influence_level", ""),
         "economic_buyer": meta.get("economic_buyer_name", ""),
         "industry": meta.get("industry", ""),
@@ -233,9 +287,11 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
         resolution_sla_met = mttr_hours <= resolution_target_hours
         sla_breaches = max(0, math.ceil((mttr_hours - resolution_target_hours) * 2)) if not resolution_sla_met else 0
 
+        from datetime import date
         recent_signals = QualitativeSignal.query.filter(
-            QualitativeSignal.account_id == str(account_id),
+            QualitativeSignal.account_id == int(account_id),
             QualitativeSignal.sentiment == 'negative',
+            QualitativeSignal.signal_date <= date.today(),
         ).order_by(QualitativeSignal.signal_date.desc()).limit(10).all()
 
         escalation_entries = []
@@ -314,7 +370,7 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
             health_status = ht.classify(health)
 
         signals = QualitativeSignal.query.filter(
-            QualitativeSignal.account_id == str(account_id),
+            QualitativeSignal.account_id == int(account_id),
         ).order_by(QualitativeSignal.signal_date.desc()).limit(20).all()
 
         partner_nps = kpi_values.get("P4-KPI6")

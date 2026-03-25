@@ -963,15 +963,22 @@ def _process_data_impl(customer_id: int) -> dict:
                         if not acct_id:
                             continue
                         evt_date = row.get('event_date')
+                        # Title: prefer 'title', fall back to 'description', then construct from event_type
+                        ee_title = str(row.get('title', '') or row.get('description', '') or '')
+                        if not ee_title or ee_title == 'nan':
+                            ee_type = str(row.get('event_type', 'engagement'))
+                            ee_title = ee_type.replace('_', ' ').title()
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='SIGNAL', node_subtype='engagement',
-                            title=str(row.get('description', ''))[:200],
+                            title=ee_title[:200],
                             properties={
                                 'event_type': str(row.get('event_type', '')),
                                 'channel': str(row.get('channel', '')),
                                 'duration_minutes': str(row.get('duration_minutes', '')),
                                 'outcome': str(row.get('outcome', '')),
+                                'participants': str(row.get('participants', '')),
+                                'notes': str(row.get('notes', '')),
                                 'stakeholder_name': str(row.get('stakeholder_name', '')),
                                 'sentiment_shift': str(row.get('sentiment_shift', '')),
                             },
