@@ -101,7 +101,7 @@ def register_customer():
         if hasattr(Customer, 'uuid'):
             customer.uuid = customer_uuid
         if hasattr(Customer, 'vertical'):
-            customer.vertical = vertical_prefix
+            customer.vertical = vertical  # Store canonical name (saas_premium), not prefix (saas)
         db.session.add(customer)
         db.session.flush()
 

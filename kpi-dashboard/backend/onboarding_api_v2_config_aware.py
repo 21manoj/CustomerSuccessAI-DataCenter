@@ -1989,10 +1989,12 @@ def process_data():
         
         # Get customer directory (detect vertical from customer record)
         vertical = getattr(customer, 'vertical', None) or 'dc2_s'
+        try:
+            from utils.vertical_registry import normalize_vertical
+            vertical = normalize_vertical(vertical)
+        except Exception:
+            pass
         customer_dir = get_customer_directory(customer_id, vertical)
-        if not customer_dir.exists():
-            # Fallback: try dc2_s if vertical-specific dir not found
-            customer_dir = get_customer_directory(customer_id, 'dc2_s')
         if not customer_dir.exists():
             return jsonify({
                 "status": "error",
@@ -3157,12 +3159,11 @@ def upload_onboarding_csv():
         try:
             cust = db.session.get(Customer, customer_id)
             if cust and getattr(cust, 'vertical', None):
-                upload_vertical = cust.vertical
+                from utils.vertical_registry import normalize_vertical
+                upload_vertical = normalize_vertical(cust.vertical)
         except Exception:
             pass
         customer_dir = get_customer_directory(customer_id, upload_vertical)
-        if not customer_dir.exists():
-            customer_dir = get_customer_directory(customer_id, 'dc2_s')
         data_dir = customer_dir / "data"
 
         # Auto-create customer directory if customer exists in DB but dir is missing
