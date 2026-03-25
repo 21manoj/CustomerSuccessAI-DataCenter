@@ -5,26 +5,12 @@ echo "=== CS Pulse Platform Starting ==="
 
 # Run database migrations if DATABASE_URL is set
 if [ -n "$DATABASE_URL" ]; then
-    echo "Running database migrations..."
+    echo "Running database schema sync..."
     cd /app/backend
-    flask db upgrade 2>/dev/null || echo "Note: Migrations skipped (run manually if needed)"
+    python3 scripts/migrate_schema_sync.py 2>&1 || echo "Note: Schema sync completed with warnings (non-fatal)"
 
-    # Ensure UUID columns exist (idempotent ALTER TABLE IF NOT EXISTS)
-    echo "Ensuring UUID columns exist..."
-    python -c "
-from app_v3_minimal import app
-from extensions import db
-with app.app_context():
-    with db.engine.connect() as conn:
-        conn.execute(db.text(\"ALTER TABLE customers ADD COLUMN IF NOT EXISTS uuid VARCHAR(60) UNIQUE\"))
-        conn.execute(db.text(\"ALTER TABLE customers ADD COLUMN IF NOT EXISTS vertical VARCHAR(20)\"))
-        conn.execute(db.text(\"ALTER TABLE accounts ADD COLUMN IF NOT EXISTS uuid VARCHAR(60) UNIQUE\"))
-        conn.execute(db.text(\"ALTER TABLE accounts ADD COLUMN IF NOT EXISTS customer_uuid VARCHAR(60)\"))
-        conn.execute(db.text(\"ALTER TABLE users ADD COLUMN IF NOT EXISTS uuid VARCHAR(60) UNIQUE\"))
-        conn.execute(db.text(\"ALTER TABLE users ADD COLUMN IF NOT EXISTS customer_uuid VARCHAR(60)\"))
-        conn.commit()
-    print('UUID columns ensured.')
-" 2>/dev/null || echo "Note: UUID column check skipped"
+    # Legacy: flask db upgrade for Alembic migrations (if any)
+    flask db upgrade 2>/dev/null || true
 
     # Backfill UUIDs for existing records (idempotent)
     echo "Running UUID backfill..."
