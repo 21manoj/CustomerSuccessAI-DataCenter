@@ -213,7 +213,7 @@ def _get_precalculated_scores(account_id: int):
         return None, None, None
 
 
-def _get_trailing_kpi_values_generic(account_id: int) -> dict:
+def _get_trailing_kpi_values_generic(account_id: int, days: int = 30) -> dict:
     """Vertical-agnostic: read latest KPI values from KpiScore table.
 
     Returns dict of {kpi_code: score_value}.
