@@ -1621,20 +1621,20 @@ class ManifestCSVGenerator:
 
             if cls == 'critical':
                 edges = [
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
-                    (f'decision:dec_{aid}_1', 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_2', 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
-                    (f'decision:dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
+                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
+                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
+                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_2', 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
+                    (f'decision:{phase_prefix}dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
                 ]
             elif cls == 'at_risk':
                 edges = [
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
-                    (f'decision:dec_{aid}_1', 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
+                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
+                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
                 ]
             else:
                 edges = [
-                    (f'sig_{aid}_1', f'decision:dec_{aid}_1', 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
-                    (f'decision:dec_{aid}_1', 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
+                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
+                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
                 ]
 
             for from_ref, to_ref, etype, label, conf, lag in edges:

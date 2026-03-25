@@ -967,6 +967,13 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     )
                     if decision_id:
                         decision_ref_map.setdefault(decision_id, {})[account_id_val] = nid
+                        # Also index by stripped-prefix version for backward compat
+                        for _pfx in ('baseline_', 'intervention_',
+                                     'baseline_auto_', 'intervention_auto_'):
+                            if decision_id.startswith(_pfx):
+                                _bare = decision_id[len(_pfx):]
+                                decision_ref_map.setdefault(_bare, {})[account_id_val] = nid
+                                break
                     result['nodes_inserted'] += 1
             result['files_loaded'].append('decisions.csv')
             current_app.logger.info(f"✅ Loaded {len(df)} decision nodes")
@@ -1099,6 +1106,19 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     )
                     if sig_ref:
                         signal_ref_map.setdefault(sig_ref, {})[account_id_val] = nid
+                        # Also index by stripped-prefix version so signal_edges.csv
+                        # generated without phase prefix still resolves (e.g. old
+                        # signal_edges.csv has 'sig_424001_1' but signals file has
+                        # 'baseline_sig_424001_1').
+                        for _pfx in ('baseline_', 'intervention_',
+                                     'baseline_narrative_', 'intervention_narrative_',
+                                     'baseline_recovery_', 'intervention_recovery_',
+                                     'baseline_csm_action_', 'intervention_csm_action_',
+                                     'baseline_auto_recovery_', 'intervention_auto_recovery_'):
+                            if sig_ref.startswith(_pfx):
+                                _bare = sig_ref[len(_pfx):]
+                                signal_ref_map.setdefault(_bare, {})[account_id_val] = nid
+                                break
                     result['nodes_inserted'] += 1
             result['files_loaded'].append('enhanced_qualitative_signals.csv')
             current_app.logger.info(f"✅ Loaded {len(df)} enhanced signal nodes")

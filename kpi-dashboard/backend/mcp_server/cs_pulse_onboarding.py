@@ -893,6 +893,8 @@ def _process_data_impl(customer_id: int) -> dict:
 
                 # Outcomes
                 outcomes_path = data_dir / 'outcomes.csv'
+                if not outcomes_path.exists():
+                    outcomes_path = data_dir / 'context_graph' / 'outcomes.csv'
                 if outcomes_path.exists():
                     df_o = pd.read_csv(str(outcomes_path))
                     for _, row in df_o.iterrows():
@@ -929,15 +931,18 @@ def _process_data_impl(customer_id: int) -> dict:
 
                 # Decisions
                 decisions_path = data_dir / 'decisions.csv'
+                if not decisions_path.exists():
+                    decisions_path = data_dir / 'context_graph' / 'decisions.csv'
                 if decisions_path.exists():
                     df_d = pd.read_csv(str(decisions_path))
                     for _, row in df_d.iterrows():
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
                             continue
-                        # Store decision_id as source_event_id for edge resolution
-                        dec_id = str(row.get('decision_id', ''))
-                        dec_src_id = f"decision:{dec_id}" if dec_id else None
+                        dec_id = str(row.get('decision_id', '')).strip()
+                        # source_event_id uses 'decision:<id>' prefix so _resolve_edge_ref
+                        # can find this node via srcid_to_node lookup
+                        src_eid = f'decision:{dec_id}' if dec_id and dec_id != 'nan' else None
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
@@ -949,7 +954,7 @@ def _process_data_impl(customer_id: int) -> dict:
                                         'decision_id': dec_id},
                             tier=1, occurred_at=_dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
-                            source_event_id=dec_src_id,
+                            source_event_id=src_eid,
                         ))
                     _db.session.flush()
                     steps_completed.append('decisions_loaded')
@@ -1072,6 +1077,8 @@ def _process_data_impl(customer_id: int) -> dict:
 
                 # Signal Edges (must run last — needs all nodes)
                 se_path = data_dir / 'signal_edges.csv'
+                if not se_path.exists():
+                    se_path = data_dir / 'context_graph' / 'signal_edges.csv'
                 if se_path.exists():
                     df_se = pd.read_csv(str(se_path))
                     all_nodes = ContextNode.query.filter_by(customer_id=customer_id).all()
