@@ -335,11 +335,15 @@ def validate_csv_against_config(customer_id: int, csv_file: Path, strict_mode: b
         # Read CSV
         df = pd.read_csv(csv_file)
         
+        # Normalize source_account_id → account_id (load driver uses source_account_id)
+        if 'source_account_id' in df.columns and 'account_id' not in df.columns:
+            df.rename(columns={'source_account_id': 'account_id'}, inplace=True)
+
         # Validate columns - match generator output (measured_at, target) or database schema (measurement_month, target_value)
         # Accept either format for flexibility
         required_cols_base = ['account_id', 'kpi_code', 'value']
         missing_base = [col for col in required_cols_base if col not in df.columns]
-        
+
         if missing_base:
             return {
                 "valid": False,
@@ -430,6 +434,9 @@ def validate_kpi_csv_schema(df: pd.DataFrame) -> Tuple[bool, List[str]]:
     Returns (True, []) if valid, (False, list of errors) otherwise.
     """
     errors = []
+    # Normalize source_account_id → account_id
+    if 'source_account_id' in df.columns and 'account_id' not in df.columns:
+        df.rename(columns={'source_account_id': 'account_id'}, inplace=True)
     required_cols = ['account_id', 'kpi_code', 'value']
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
@@ -3155,12 +3162,23 @@ def upload_onboarding_csv():
             customer_dir = get_customer_directory(customer_id, 'dc2_s')
         data_dir = customer_dir / "data"
 
-        # Check if customer directory exists
+        # Auto-create customer directory if customer exists in DB but dir is missing
         if not customer_dir.exists():
-            return jsonify({
-                'status': 'error',
-                'message': f'Customer directory not found. Please provision customer first: POST /api/onboarding/complete'
-            }), 404
+            try:
+                cust_check = db.session.get(Customer, customer_id)
+                if cust_check:
+                    customer_dir.mkdir(parents=True, exist_ok=True)
+                    current_app.logger.info(f"Auto-created customer directory: {customer_dir}")
+                else:
+                    return jsonify({
+                        'status': 'error',
+                        'message': f'Customer {customer_id} not found. Provision first: POST /api/onboarding/complete'
+                    }), 404
+            except Exception:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Customer directory not found. Please provision customer first: POST /api/onboarding/complete'
+                }), 404
         
         # Create data directory if it doesn't exist
         data_dir.mkdir(parents=True, exist_ok=True)

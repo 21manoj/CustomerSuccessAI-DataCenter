@@ -815,6 +815,8 @@ def _process_data_impl(customer_id: int) -> dict:
                                 )
                                 _db.session.add(kpi)
                         steps_completed.append('kpis_loaded')
+                        # Commit KPIs immediately so a signals error can't roll them back
+                        _db.session.commit()
 
                     elif csv_file in ('enhanced_qualitative_signals.csv', 'qualitative_signals.csv'):
                         import uuid as _uuid
