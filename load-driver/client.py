@@ -456,9 +456,27 @@ class CSPulseClient:
         return response
 
     def get_accounts(self) -> Optional[list]:
-        """List all accounts for current customer"""
+        """List all accounts for current customer.
+
+        Tries /api/dc2s/accounts first (DC2S dashboard endpoint),
+        then falls back to /api/onboarding/status/{customer_id}
+        (vertical-agnostic, works for saas_premium too).
+        """
         response = self.get('/api/dc2s/accounts')
-        return response.get('accounts', []) if response else None
+        accounts = response.get('accounts', []) if response else []
+        if accounts:
+            return accounts
+
+        # Fallback: onboarding status (vertical-agnostic)
+        if self.customer_id:
+            status_resp = self.get(
+                f'/api/onboarding/status/{self.customer_id}',
+                skip_auth_check=True,
+            )
+            if status_resp and status_resp.get('accounts'):
+                return status_resp['accounts']
+
+        return accounts
 
     def get_account_scores(self, account_id: int) -> Optional[Dict[str, Any]]:
         """Get latest health, pillar, and KPI scores for account"""
