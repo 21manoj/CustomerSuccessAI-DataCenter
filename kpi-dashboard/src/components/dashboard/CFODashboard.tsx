@@ -142,56 +142,8 @@ const NAV_ITEMS = {
   ],
 };
 
-// Fallback data when API is unavailable
-const FALLBACK_DATA: CFODashboardData = {
-  summary_cards: [
-    { label: 'Total ARR', value: '$21.2M', subtitle: '15 active accounts', accent: 'white' },
-    { label: 'CS Investment', value: '$578K', subtitle: 'Playbook execution cost', tag: '37% automated', accent: 'emerald' },
-    { label: 'Revenue Protected', value: '$1.8M', subtitle: 'GRR: 88%', accent: 'green' },
-    { label: 'Portfolio ROI', value: '294%', subtitle: '$578K → $2.28M', accent: 'cyan' },
-  ],
-  power_of_1: [
-    { metric: 'Net Revenue Retention (NRR)', baseline: '103%', current: '118%', improvement: '+15pp', improvement_direction: 'up', dollar_impact: 3180000, color: '#06b6d4' },
-    { metric: 'Gross Revenue Retention (GRR)', baseline: '82%', current: '88%', improvement: '+6pp', improvement_direction: 'up', dollar_impact: 1272000, color: '#22c55e' },
-    { metric: 'Time to First Value (TTFV)', baseline: '42 days', current: '28 days', improvement: '-33%', improvement_direction: 'down', dollar_impact: 460000, color: '#a855f7' },
-    { metric: 'Ticket Resolution Time', baseline: '18 hrs', current: '11 hrs', improvement: '-39%', improvement_direction: 'down', dollar_impact: 310000, color: '#f97316' },
-    { metric: 'Product Adoption Score', baseline: '61%', current: '74%', improvement: '+13pp', improvement_direction: 'up', dollar_impact: 890000, color: '#eab308' },
-    { metric: 'Expansion Rate', baseline: '8%', current: '14%', improvement: '+6pp', improvement_direction: 'up', dollar_impact: 1420000, color: '#10b981' },
-  ],
-  power_of_1_total: 7532000,
-  pillar_investments: [
-    { pillar: 'Onboarding Success', pillar_code: 'P1', investment: 112000, impact: 460000, roi_multiplier: 4.1 },
-    { pillar: 'Adoption & Engagement', pillar_code: 'P2', investment: 134000, impact: 890000, roi_multiplier: 6.6 },
-    { pillar: 'Support Experience', pillar_code: 'P3', investment: 89000, impact: 310000, roi_multiplier: 3.5 },
-    { pillar: 'Customer Health', pillar_code: 'P4', investment: 156000, impact: 1272000, roi_multiplier: 8.2 },
-    { pillar: 'Growth & Expansion', pillar_code: 'P5', investment: 87000, impact: 1420000, roi_multiplier: 16.3 },
-  ],
-  investment_timeline: [
-    { month: 'Oct', investment: 78000, returns: 42000 },
-    { month: 'Nov', investment: 92000, returns: 168000 },
-    { month: 'Dec', investment: 101000, returns: 312000 },
-    { month: 'Jan', investment: 96000, returns: 480000 },
-    { month: 'Feb', investment: 108000, returns: 620000 },
-    { month: 'Mar', investment: 103000, returns: 658000 },
-  ],
-  roi_scaling: [
-    { accounts: 10, label: '10 Accounts', roi: 294, growth_bar: 30 },
-    { accounts: 50, label: '50 Accounts', roi: 717, growth_bar: 65 },
-    { accounts: 200, label: '200 Accounts', roi: 1114, growth_bar: 100 },
-  ],
-  efficiency_score: 82,
-  automation_rate: 37,
-  time_saved_hours: 142,
-  cost_per_protected_dollar: 0.32,
-  financial_ratios: [
-    { label: 'CS Investment as % of ARR', value: '2.7%' },
-    { label: 'Revenue protected per CS $', value: '$3.11' },
-    { label: 'Payback period', value: '4.1 months' },
-    { label: 'NRR impact per playbook', value: '+0.8pp' },
-  ],
-  period: 'Q1 2026',
-  last_updated: '2m ago',
-};
+// No fallback data — dashboard requires live API data.
+// If API is unavailable, error state is shown instead of fake numbers.
 
 // ============================================================================
 // SKELETON COMPONENTS
@@ -538,6 +490,11 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
       <p className="text-[11px] text-gray-500 mb-5">
         Same playbooks. Same platform. Non-linear returns.
       </p>
+      {tiers.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-sm text-gray-500">No ROI scaling data available</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-3 gap-4 mb-4">
         {tiers.map((tier, i) => (
           <div
@@ -568,6 +525,7 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
           </div>
         ))}
       </div>
+      )}
       <p className="text-[10px] text-gray-600 text-center leading-relaxed">
         CS Pulse platform costs remain fixed while revenue impact compounds across accounts.
         Each additional account adds marginal cost but full playbook value.
@@ -730,13 +688,7 @@ const CFODashboard: React.FC = () => {
             roi: s.roi,
             growth_bar: i === 0 ? 30 : i === 1 ? 60 : 90,
           }));
-          if (roiScaling.length === 0) {
-            roiScaling.push(
-              { accounts: 10, label: '10 accts', roi: Math.abs(roiPct), growth_bar: 30 },
-              { accounts: 50, label: '50 accts', roi: Math.abs(roiPct) * 2.4, growth_bar: 60 },
-              { accounts: 200, label: '200 accts', roi: Math.abs(roiPct) * 3.8, growth_bar: 90 },
-            );
-          }
+          // If API returns no scaling projections, leave empty — UI handles gracefully
 
           const csPercent = totalArr > 0 ? ((csInvestment / totalArr) * 100).toFixed(2) : '0';
           const revPerDollar = csInvestment > 0 ? ((json.revenue_protected || 0) / csInvestment).toFixed(1) : '0';
@@ -744,8 +696,8 @@ const CFODashboard: React.FC = () => {
 
           const transformed: CFODashboardData = {
             summary_cards: [
-              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.roi_scaling?.current_accounts || 15} active accounts`, accent: 'white' },
-              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Playbook execution cost', tag: '37% automated', accent: 'emerald' },
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.roi_scaling?.current_accounts || json.account_count || '—'} active accounts`, accent: 'white' },
+              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Playbook execution cost', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald' },
               { label: 'Revenue Protected', value: formatCompact(json.revenue_protected || 0), subtitle: `GRR: ${grr}%`, accent: 'green' },
               { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan' },
             ],
@@ -754,9 +706,9 @@ const CFODashboard: React.FC = () => {
             pillar_investments: pillarInvs,
             investment_timeline: invTimeline,
             roi_scaling: roiScaling,
-            efficiency_score: 73,
-            automation_rate: 37,
-            time_saved_hours: 144,
+            efficiency_score: json.efficiency_score || 0,
+            automation_rate: json.automation_rate || 0,
+            time_saved_hours: json.time_saved_hours || 0,
             cost_per_protected_dollar: csInvestment > 0 && (json.revenue_protected || 0) > 0
               ? parseFloat((csInvestment / (json.revenue_protected || 1)).toFixed(3))
               : 0.05,
@@ -815,13 +767,13 @@ const CFODashboard: React.FC = () => {
   }
 
   // ---- Error state ----
-  if (error && !data) {
+  if (error || !data) {
     return (
       <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif] items-center justify-center">
         <div className="text-center max-w-md">
           <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-400 text-sm mb-4">{error}</p>
+          <p className="text-gray-400 text-sm mb-4">{error || 'No data available. Please refresh or check your connection.'}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition-colors"
@@ -833,7 +785,7 @@ const CFODashboard: React.FC = () => {
     );
   }
 
-  const d = data!;
+  const d = data;
 
   return (
     <div className="flex flex-col h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">

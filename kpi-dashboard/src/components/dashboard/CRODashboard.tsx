@@ -177,60 +177,7 @@ const NAV_ITEMS = {
   ],
 };
 
-// Fallback data when API is unavailable
-const FALLBACK_DATA: CRODashboardData = {
-  revenue_cards: [
-    { label: 'Revenue at Risk', amount: 4200000, subtitle: 'Causal evidence chains active', account_count: 23, accent: 'red' },
-    { label: 'Revenue Protected', amount: 1800000, subtitle: 'Playbook interventions proven', account_count: 11, accent: 'green' },
-    { label: 'Expansion Pipeline', amount: 2100000, subtitle: 'Stakeholder maps confirmed', account_count: 18, accent: 'cyan' },
-  ],
-  metrics: [
-    { label: 'Avg Health Score', value: '71.4', change: '↓ 2.3 vs Q3', trend: 'down' },
-    { label: 'Early Warning Lead', value: '67d', change: '↑ 12d vs Q3', trend: 'up' },
-    { label: 'Playbook ROI', value: '294%', change: '↑ 41pp vs Q3', trend: 'up' },
-    { label: 'NRR Projection', value: '118%', change: '↑ 5pp vs Q3', trend: 'up', accent: 'cyan' },
-  ],
-  story_arcs: [
-    { id: 'arc_silent_churn', name: 'Silent Churn', icon: 'silent_churn', description: 'Usage declining without complaint signals', account_count: 8, revenue_impact: 1400000, impact_type: 'risk' },
-    { id: 'arc_expansion', name: 'Expansion Champion', icon: 'expansion_champion', description: 'Multi-threaded stakeholder engagement growing', account_count: 12, revenue_impact: 2100000, impact_type: 'opportunity' },
-    { id: 'arc_crisis', name: 'Crisis Recovery', icon: 'crisis_recovery', description: 'Active intervention reversing health decline', account_count: 5, revenue_impact: 890000, impact_type: 'recovery' },
-    { id: 'arc_competitive', name: 'Competitive Displacement', icon: 'competitive_displacement', description: 'Competitor signals detected in accounts', account_count: 4, revenue_impact: 720000, impact_type: 'threat' },
-    { id: 'arc_land_expand', name: 'Land & Expand', icon: 'land_and_expand', description: 'New accounts with expansion indicators', account_count: 9, revenue_impact: 1600000, impact_type: 'growth' },
-  ],
-  risk_accounts: [
-    { account_id: 'A101', account_name: 'TechFlow Systems', health_score: 34, arr: 580000, classification: 'critical', signal_count: 7 },
-    { account_id: 'A102', account_name: 'DataPrime Inc', health_score: 42, arr: 420000, classification: 'critical', signal_count: 5 },
-    { account_id: 'A103', account_name: 'CloudScale Corp', health_score: 28, arr: 890000, classification: 'critical', signal_count: 9 },
-    { account_id: 'A104', account_name: 'NetVault Solutions', health_score: 55, arr: 340000, classification: 'at_risk', signal_count: 4 },
-    { account_id: 'A105', account_name: 'Meridian Analytics', health_score: 61, arr: 270000, classification: 'at_risk', signal_count: 3 },
-    { account_id: 'A106', account_name: 'Apex Infrastructure', health_score: 38, arr: 1200000, classification: 'critical', signal_count: 8 },
-  ],
-  roi_summary: {
-    roi_pct: 294,
-    invested: 578000,
-    impact: 2280000,
-    scaling: [
-      { accounts: 10, label: '10 accts', roi: 294 },
-      { accounts: 50, label: '50 accts', roi: 717 },
-      { accounts: 200, label: '200 accts', roi: 1114 },
-    ],
-  },
-  period: 'Q1 2026',
-  last_updated: '2m ago',
-};
-
-const FALLBACK_TIMELINE: RevenueTimeline = {
-  account_name: 'Apex Infrastructure',
-  arr: 1200000,
-  events: [
-    { month: 'OCT', date: '2025-10-03', type: 'signal', color: 'yellow', title: 'Usage Decline Detected', description: 'API call volume dropped 34% over 2 weeks' },
-    { month: 'OCT', date: '2025-10-15', type: 'signal', color: 'red', title: 'Champion Contact Left', description: 'VP Engineering role changed on LinkedIn' },
-    { month: 'NOV', date: '2025-11-02', type: 'intervention', color: 'cyan', title: 'EBR Scheduled', description: 'CSM triggered executive business review' },
-    { month: 'NOV', date: '2025-11-18', type: 'intervention', color: 'green', title: 'Playbook PB-03 Activated', description: 'Stakeholder re-engagement playbook launched' },
-    { month: 'DEC', date: '2025-12-05', type: 'outcome', color: 'green', title: 'New Champion Identified', description: 'CTO engaged, usage recovery began' },
-    { month: 'DEC', date: '2025-12-20', type: 'outcome', color: 'green', title: 'Renewal Confirmed', description: '$1.2M ARR renewed with 8% expansion' },
-  ],
-};
+// No fallback data — dashboard requires live API connection
 
 // ============================================================================
 // SKELETON COMPONENTS
@@ -558,7 +505,18 @@ const RevenueTimelineWidget: React.FC<{ timeline: RevenueTimeline | null; loadin
     );
   }
 
-  if (!timeline) return null;
+  if (!timeline) {
+    return (
+      <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
+        <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-3">
+          Revenue Timeline
+        </h3>
+        <p className="text-xs text-gray-500 text-center py-4">
+          Click a risk account to view its revenue timeline.
+        </p>
+      </div>
+    );
+  }
 
   const typeColors: Record<string, string> = {
     signal: 'text-yellow-400',
@@ -629,7 +587,7 @@ const CRODashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [timeline, setTimeline] = useState<RevenueTimeline | null>(FALLBACK_TIMELINE);
+  const [timeline, setTimeline] = useState<RevenueTimeline | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | number | null>(null);
 
@@ -736,7 +694,7 @@ const CRODashboard: React.FC = () => {
       const json = await resp.json();
       setTimeline(json);
     } catch {
-      // Keep existing timeline on error
+      setTimeline(null);
     } finally {
       setTimelineLoading(false);
     }

@@ -9,7 +9,7 @@ Endpoints:
   GET  /api/outcome-roi/historical          — "We proved it works"
   GET  /api/outcome-roi/forward             — "Here's what's next"
   GET  /api/outcome-roi/story               — Combined side-by-side for demo
-  GET  /api/outcome-roi/demo                — Pre-loaded demo data (no DB needed)
+  GET  /api/outcome-roi/demo                — Baseline projection (no DB needed, uses Power-of-1 defaults)
   GET  /api/outcome-roi/historical-details  — Per-account evidence drill-down
 
 Feature flag: 'revenue_intelligence'
@@ -62,30 +62,29 @@ def _is_revenue_intelligence_enabled(customer_id):
 
 
 # ============================================================
-# DEMO DATA — Pre-loaded realistic scenario
+# BASELINE DEFAULTS — "no change" state from Power-of-1 model
+# Used when DB has no historical data yet. Shows baseline=current
+# (zero improvement), never fabricated numbers.
 # ============================================================
 
-# Realistic historical actuals: what a customer achieved after 6 months
-DEMO_HISTORICAL_ACTUALS = {
-    "TTFV": {"baseline": 30.0, "current": 27.5},           # 30→27.5 days
-    "NRR": {"baseline": 105.0, "current": 108.2},          # 105→108.2%
-    "GRR": {"baseline": 85.0, "current": 87.1},            # 85→87.1%
-    "ticket_resolution_time": {"baseline": 48.0, "current": 43.0},  # 48→43 hrs
-    "product_adoption": {"baseline": 65.0, "current": 68.5},        # 65→68.5%
-    "expansion_rate": {"baseline": 20.0, "current": 22.8},          # 20→22.8%
-}
+def _get_baseline_actuals():
+    """Return baseline-only actuals (no improvement) from Power-of-1 model."""
+    try:
+        from power_of_1_model import POWER_OF_1_METRICS
+        return {
+            mid: {"baseline": m.baseline, "current": m.baseline}
+            for mid, m in POWER_OF_1_METRICS.items()
+        }
+    except Exception:
+        return {}
 
-# After 6 months, where they currently stand (for forward projection baseline)
-DEMO_CURRENT_VALUES = {
-    "TTFV": 27.5,
-    "NRR": 108.2,
-    "GRR": 87.1,
-    "ticket_resolution_time": 43.0,
-    "product_adoption": 68.5,
-    "expansion_rate": 22.8,
-}
-
-DEMO_ARR = 10_000_000  # $10M ARR
+def _get_baseline_current_values():
+    """Return baseline current values from Power-of-1 model."""
+    try:
+        from power_of_1_model import POWER_OF_1_METRICS
+        return {mid: m.baseline for mid, m in POWER_OF_1_METRICS.items()}
+    except Exception:
+        return {}
 
 
 # ============================================================
@@ -564,10 +563,10 @@ def get_demo_outcome_story():
 
         improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
         projection_months = request.args.get('months', 6, type=int)
-        arr = request.args.get('arr', DEMO_ARR, type=float)
+        arr = request.args.get('arr', 10_000_000, type=float)
 
         story = calculate_outcome_story(
-            metric_actuals=DEMO_HISTORICAL_ACTUALS,
+            metric_actuals=_get_baseline_actuals(),
             target_improvement_pct=improvement_pct,
             account_arr=arr,
             projection_months=projection_months,
@@ -606,7 +605,7 @@ def _extract_historical_actuals(accounts, months):
     from power_of_1_model import POWER_OF_1_METRICS
 
     if not accounts:
-        return DEMO_HISTORICAL_ACTUALS, 'demo_fallback'
+        return _get_baseline_actuals(), 'baseline_defaults'
 
     account_ids = [a.account_id for a in accounts]
 
@@ -697,7 +696,7 @@ def _extract_historical_actuals(accounts, months):
     ).filter(PillarScore.account_id.in_(account_ids)).scalar()
 
     if not earliest_month or not latest_month:
-        return DEMO_HISTORICAL_ACTUALS, 'demo_fallback'
+        return _get_baseline_actuals(), 'baseline_defaults'
 
     # Average pillar scores across all accounts for earliest and latest months
     earliest_scores = PillarScore.query.filter(
@@ -711,7 +710,7 @@ def _extract_historical_actuals(accounts, months):
     ).all()
 
     if not earliest_scores or not latest_scores:
-        return DEMO_HISTORICAL_ACTUALS, 'demo_fallback'
+        return _get_baseline_actuals(), 'baseline_defaults'
 
     def _avg_by_pillar(scores):
         """Average pillar scores across accounts."""
@@ -919,7 +918,7 @@ def _extract_current_values(accounts):
     from power_of_1_model import POWER_OF_1_METRICS
 
     if not accounts:
-        return DEMO_CURRENT_VALUES, 'demo_fallback'
+        return _get_baseline_current_values(), 'baseline_defaults'
 
     account_ids = [a.account_id for a in accounts]
 
@@ -969,7 +968,7 @@ def _extract_current_values(accounts):
     ).filter(PillarScore.account_id.in_(account_ids)).scalar()
 
     if not latest_month:
-        return DEMO_CURRENT_VALUES, 'demo_fallback'
+        return _get_baseline_current_values(), 'baseline_defaults'
 
     latest_scores = PillarScore.query.filter(
         PillarScore.account_id.in_(account_ids),
@@ -977,7 +976,7 @@ def _extract_current_values(accounts):
     ).all()
 
     if not latest_scores:
-        return DEMO_CURRENT_VALUES, 'demo_fallback'
+        return _get_baseline_current_values(), 'baseline_defaults'
 
     # Average pillar scores across accounts
     totals = {}
