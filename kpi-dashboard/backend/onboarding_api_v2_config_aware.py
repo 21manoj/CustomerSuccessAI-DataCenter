@@ -2075,6 +2075,9 @@ def process_data():
                 current_app.logger.info(f"Loading {accounts_file} into accounts table...")
                 df_acc = pd.read_csv(accounts_file)
                 df_acc['customer_id'] = customer_id  # tenant isolation
+                # Normalize source_account_id → account_id (load driver format)
+                if 'source_account_id' in df_acc.columns and 'account_id' not in df_acc.columns:
+                    df_acc.rename(columns={'source_account_id': 'account_id'}, inplace=True)
                 if 'account_id' not in df_acc.columns or 'account_name' not in df_acc.columns:
                     current_app.logger.warning("accounts.csv missing account_id or account_name; skipping")
                 else:
