@@ -9,6 +9,10 @@ if [ -n "$DATABASE_URL" ]; then
     cd /app/backend
     python3 scripts/migrate_schema_sync.py 2>&1 || echo "Note: Schema sync completed with warnings (non-fatal)"
 
+    # Named migrations (idempotent, safe to re-run)
+    echo "Running named migrations..."
+    python3 migrations/add_customer_id_to_wizard_learnings.py 2>&1 || echo "Note: wizard_learnings migration skipped (non-fatal)"
+
     # Legacy: flask db upgrade for Alembic migrations (if any)
     flask db upgrade 2>/dev/null || true
 

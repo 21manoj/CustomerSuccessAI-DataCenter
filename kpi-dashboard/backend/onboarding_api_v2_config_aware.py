@@ -2808,6 +2808,12 @@ def process_data():
                 # No journey data yet — non-fatal, skip gracefully
                 current_app.logger.warning(f"Wizard B skipped: {ve}")
             except Exception as wb_err:
+                # Roll back any partial DB writes so downstream steps (Wizard C,
+                # CustomerConfig update) get a clean session.
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
                 execution_state['errors'].append(f"Pattern analysis error: {wb_err}")
                 current_app.logger.warning(f"Pattern analysis failed (non-fatal): {wb_err}")
         

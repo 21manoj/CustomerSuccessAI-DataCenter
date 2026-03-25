@@ -60,9 +60,8 @@ RUN python setup_cython.py build_ext --inplace 2>&1 | tail -5
 # Remove .py source ONLY from dirs that are never imported at runtime.
 # KEEP: agents/, verticals/, mcp_server/ — all excluded from Cython but imported at runtime.
 # KEEP: scripts/generate_synthetic_*.py — needed at runtime for demo-mode onboarding
-RUN for dir in migrations templates; do \
-      find "./$dir" -name "*.py" -delete 2>/dev/null || true; \
-    done && \
+RUN find ./templates -name "*.py" -delete 2>/dev/null || true && \
+    find ./migrations -name "*.py" ! -name "add_customer_id_to_wizard_learnings.py" -delete 2>/dev/null || true && \
     find ./scripts -name "*.py" ! -name "generate_synthetic_*.py" ! -name "migrate_schema_sync.py" -delete 2>/dev/null || true
 
 # Clean up build artifacts
