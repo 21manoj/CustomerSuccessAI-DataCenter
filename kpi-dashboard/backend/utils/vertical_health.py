@@ -97,8 +97,9 @@ def _try_python_module_calculator(vertical: str, customer_id: int = None):
             from verticals.dc2_s.api_routes import calculate_kpi_health
             return calculate_kpi_health
         elif vertical == 'saas_premium':
-            from verticals.saas_premium.api_routes import calculate_kpi_health
-            return calculate_kpi_health
+            # SaaS Premium Python scorer is a stub (returns 50 for all KPIs).
+            # Skip it — generic JSON-catalog scorer handles SaaS Premium correctly.
+            return None
         else:
             # Try dynamic import
             import importlib
