@@ -1,0 +1,24 @@
+account_id,product_name,product_category,quantity,unit_price,deployment_date,status
+446001,Managed Kubernetes,platform,112,45761.82,2025-08-25,active
+446001,Monitoring & Observability,ops,48,30385.82,2025-02-10,active
+446001,GPU Compute Cluster,compute,40,12408.67,2025-05-04,active
+446001,Network Fabric,networking,136,41424.95,2025-02-21,active
+446002,High-Performance Storage,storage,48,52406.44,2025-04-08,active
+446002,GPU Compute Cluster,compute,78,90353.22,2024-12-12,active
+446002,Managed Kubernetes,platform,216,76226.93,2025-04-01,active
+446002,AI Training Pipeline,ml_ops,102,75751.86,2025-01-18,active
+446002,Edge Computing Nodes,edge,84,71855.25,2024-10-24,active
+446003,Disaster Recovery,resilience,24,31340.43,2024-12-26,active
+446003,High-Performance Storage,storage,124,28489.55,2024-10-23,active
+446003,Network Fabric,networking,40,31877.36,2025-06-07,active
+446003,Monitoring & Observability,ops,132,37565.05,2025-03-10,active
+446003,AI Training Pipeline,ml_ops,92,81388.6,2025-06-06,active
+446004,Monitoring & Observability,ops,114,64706.57,2025-07-16,active
+446004,Network Fabric,networking,162,16372.1,2024-12-07,active
+446004,Disaster Recovery,resilience,258,68268.68,2025-01-27,active
+446004,High-Performance Storage,storage,60,98982.75,2025-04-20,active
+446004,Edge Computing Nodes,edge,204,57858.36,2025-04-29,active
+446005,AI Training Pipeline,ml_ops,205,76176.73,2025-05-13,active
+446005,Network Fabric,networking,110,45624.31,2025-05-20,active
+446005,Disaster Recovery,resilience,75,7597.8,2025-08-24,active
+446005,GPU Compute Cluster,compute,135,72184.81,2025-08-25,active

@@ -1,0 +1,11 @@
+account_id,decision_date,decision_id,title,decision_maker_role,chosen_option,outcome_description,risk_level,revenue_impact
+446001,2026-01-29,dec_446001_1,Escalation to executive sponsor — Zermatt Analytics,executive_sponsor,Escalate account risk,Risk review initiated,high,-1725000.0
+446001,2026-02-05,dec_446001_2,Emergency retention plan — Zermatt Analytics,champion,Launch retention playbook,Retention plan in progress,critical,-1725000.0
+446002,2026-01-29,dec_446002_1,Escalation to executive sponsor — Eiger Cloud Services,executive_sponsor,Escalate account risk,Risk review initiated,high,-1200000.0
+446002,2026-02-05,dec_446002_2,Emergency retention plan — Eiger Cloud Services,champion,Launch retention playbook,Retention plan in progress,critical,-1200000.0
+446003,2026-01-29,dec_446003_1,Escalation to executive sponsor — Jungfrau Fintech,executive_sponsor,Escalate account risk,Risk review initiated,high,-870000.0
+446003,2026-02-05,dec_446003_2,Emergency retention plan — Jungfrau Fintech,champion,Launch retention playbook,Retention plan in progress,critical,-870000.0
+446004,2025-12-10,dec_446004_1,Renewal strategy review — Matterhorn Digital,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-660000.0
+446004,2025-12-30,dec_446004_2,Feature adoption push — Matterhorn Digital,champion,Schedule training sessions,Training plan approved,medium,-660000.0
+446005,2025-12-10,dec_446005_1,Renewal strategy review — Bernina Health Systems,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-525000.0
+446005,2025-12-30,dec_446005_2,Feature adoption push — Bernina Health Systems,champion,Schedule training sessions,Training plan approved,medium,-525000.0

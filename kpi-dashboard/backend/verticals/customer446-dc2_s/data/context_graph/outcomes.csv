@@ -1,0 +1,16 @@
+account_id,outcome_date,outcome_type,title,description,revenue_impact,status,linked_signal_id
+446001,2026-02-28,revenue_at_risk,Churn risk identified — Zermatt Analytics,Account showing signs of churn. ARR at risk.,-8625000.0,open,sig_446001_1
+446001,2026-03-03,engagement_decline,Engagement declining — Zermatt Analytics,Stakeholder engagement dropped significantly.,-1725000.0,in_progress,sig_446001_1
+446001,2026-02-19,renewal_uncertainty,Renewal at risk — Zermatt Analytics,Renewal timeline uncertain due to unresolved issues.,-5175000.0,open,sig_446001_1
+446002,2026-02-28,revenue_at_risk,Churn risk identified — Eiger Cloud Services,Account showing signs of churn. ARR at risk.,-6000000.0,open,sig_446002_1
+446002,2026-03-03,engagement_decline,Engagement declining — Eiger Cloud Services,Stakeholder engagement dropped significantly.,-1200000.0,in_progress,sig_446002_1
+446002,2026-01-14,renewal_uncertainty,Renewal at risk — Eiger Cloud Services,Renewal timeline uncertain due to unresolved issues.,-3600000.0,open,sig_446002_1
+446003,2026-02-28,revenue_at_risk,Churn risk identified — Jungfrau Fintech,Account showing signs of churn. ARR at risk.,-4350000.0,open,sig_446003_1
+446003,2026-03-03,engagement_decline,Engagement declining — Jungfrau Fintech,Stakeholder engagement dropped significantly.,-870000.0,in_progress,sig_446003_1
+446003,2026-01-14,renewal_uncertainty,Renewal at risk — Jungfrau Fintech,Renewal timeline uncertain due to unresolved issues.,-2610000.0,open,sig_446003_1
+446003,2026-03-25,capacity_constraint,Capacity issues — Jungfrau Fintech,Infrastructure capacity constraints impacting service quality.,-1305000.0,in_progress,sig_446003_1
+446004,2026-01-29,renewal_uncertainty,Renewal discussion stalled — Matterhorn Digital,Renewal discussion delayed pending resolution of concerns.,-2640000.0,in_progress,sig_446004_1
+446004,2026-02-12,engagement_decline,Engagement cooling — Matterhorn Digital,Key stakeholder engagement frequency declining.,-1320000.0,open,sig_446004_1
+446005,2026-01-29,renewal_uncertainty,Renewal discussion stalled — Bernina Health Systems,Renewal discussion delayed pending resolution of concerns.,-2100000.0,in_progress,sig_446005_1
+446005,2026-02-12,engagement_decline,Engagement cooling — Bernina Health Systems,Key stakeholder engagement frequency declining.,-1050000.0,open,sig_446005_1
+446005,2026-03-19,partner_friction,Integration friction — Bernina Health Systems,P4 partner integration issues causing workflow disruption.,-840000.0,in_progress,sig_446005_1

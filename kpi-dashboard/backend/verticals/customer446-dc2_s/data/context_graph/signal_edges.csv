@@ -1,0 +1,17 @@
+account_id,from_signal_ref,to_signal_ref,edge_type,label,confidence,lag_days
+446001,sig_446001_1,decision:dec_446001_1,TRIGGERED,Signal triggered escalation,0.9,7
+446001,decision:dec_446001_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+446001,sig_446001_1,decision:dec_446001_2,TRIGGERED,Signal triggered retention plan,0.85,10
+446001,decision:dec_446001_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+446002,sig_446002_1,decision:dec_446002_1,TRIGGERED,Signal triggered escalation,0.9,7
+446002,decision:dec_446002_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+446002,sig_446002_1,decision:dec_446002_2,TRIGGERED,Signal triggered retention plan,0.85,10
+446002,decision:dec_446002_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+446003,sig_446003_1,decision:dec_446003_1,TRIGGERED,Signal triggered escalation,0.9,7
+446003,decision:dec_446003_1,outcome:revenue_at_risk,LED_TO,Escalation revealed risk,0.85,14
+446003,sig_446003_1,decision:dec_446003_2,TRIGGERED,Signal triggered retention plan,0.85,10
+446003,decision:dec_446003_2,outcome:engagement_decline,LED_TO,Retention plan in response to decline,0.8,21
+446004,sig_446004_1,decision:dec_446004_1,TRIGGERED,Signal triggered renewal review,0.8,14
+446004,decision:dec_446004_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21
+446005,sig_446005_1,decision:dec_446005_1,TRIGGERED,Signal triggered renewal review,0.8,14
+446005,decision:dec_446005_1,outcome:renewal_risk,LED_TO,Review surfaced renewal risk,0.75,21

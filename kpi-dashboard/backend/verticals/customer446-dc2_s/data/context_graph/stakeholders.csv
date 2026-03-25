@@ -1,0 +1,28 @@
+account_id,stakeholder_name,role,title,department,email,influence_score,sentiment,engagement_frequency,last_contact_date
+446001,Marco Bianchi,VP Product,VP of Product,Product,marco.bianchi@zermattanalytics.com,5,neutral,9,2026-01-13
+446001,Lena Hofmann,successor,Director of Engineering,Engineering,lena.hofmann@zermattanalytics.com,5,neutral,2,2026-03-07
+446001,Stefan Keller,executive_sponsor,CTO,Technology,stefan.keller@zermattanalytics.com,5,neutral,3,2026-03-15
+446001,Michael Torres,champion,VP of Engineering,Engineering,michael.torres@zermattanalytics.com,8,negative,weekly,2026-03-29
+446001,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@zermattanalytics.com,9,negative,monthly,2026-03-31
+446002,Thomas Brunner,decision_maker,VP Engineering,Engineering,thomas.brunner@eigercloudservices.com,5,neutral,4,2026-01-13
+446002,Anna Weber,champion,Platform Lead,DevOps,anna.weber@eigercloudservices.com,5,neutral,7,2026-02-25
+446002,Robert Kim,economic_buyer,VP of Finance,Finance,robert.kim@eigercloudservices.com,9,negative,monthly,2026-03-20
+446002,David Park,technical_lead,Sr. Systems Engineer,Engineering,david.park@eigercloudservices.com,7,negative,weekly,2026-03-25
+446002,Raj Patel,executive_sponsor,CTO,Executive,raj.patel@eigercloudservices.com,10,negative,monthly,2026-03-11
+446003,Claire Dupont,decision_maker,CFO,Finance,claire.dupont@jungfraufintech.com,5,neutral,2,2026-01-13
+446003,Jean-Pierre Martin,champion,Head of Product,Product,jean-pierre.martin@jungfraufintech.com,5,neutral,5,2026-03-31
+446003,Lisa Wang,economic_buyer,VP of Finance,Finance,lisa.wang@jungfraufintech.com,9,negative,monthly,2026-03-28
+446003,Elena Rossi,technical_lead,Sr. Systems Engineer,Engineering,elena.rossi@jungfraufintech.com,7,negative,weekly,2026-03-28
+446003,Maria Santos,executive_sponsor,CTO,Executive,maria.santos@jungfraufintech.com,10,negative,monthly,2026-03-16
+446004,Sarah Chen,champion,VP Marketing Tech,Marketing,sarah.chen@matterhorndigital.com,5,neutral,6,2025-12-12
+446004,David Park,decision_maker,CMO,Executive,david.park@matterhorndigital.com,5,neutral,3,2026-03-18
+446004,George Martinez,economic_buyer,VP of Finance,Finance,george.martinez@matterhorndigital.com,9,neutral,monthly,2026-03-26
+446004,Kevin Wright,technical_lead,Sr. Systems Engineer,Engineering,kevin.wright@matterhorndigital.com,7,neutral,weekly,2026-03-30
+446004,Thomas Anderson,executive_sponsor,CTO,Executive,thomas.anderson@matterhorndigital.com,10,neutral,monthly,2026-02-27
+446004,Alex Thompson,csm,Customer Success Manager,Customer Success,alex.thompson@matterhorndigital.com,6,neutral,daily,2026-03-30
+446005,Robert Kim,champion,Director of Digital Health,Digital,robert.kim@berninahealthsystems.com,5,neutral,8,2025-12-12
+446005,Dr. Maria Santos,executive_sponsor,Chief Digital Officer,Executive,dr..maria.santos@berninahealthsystems.com,5,neutral,2,2026-03-24
+446005,Amanda Foster,economic_buyer,VP of Finance,Finance,amanda.foster@berninahealthsystems.com,9,neutral,monthly,2026-03-22
+446005,Nina Kowalski,technical_lead,Sr. Systems Engineer,Engineering,nina.kowalski@berninahealthsystems.com,7,neutral,weekly,2026-03-28
+446005,Rachel Kim,csm,Customer Success Manager,Customer Success,rachel.kim@berninahealthsystems.com,6,neutral,daily,2026-03-31
+446005,Samantha Lee,procurement,Director of Procurement,Operations,samantha.lee@berninahealthsystems.com,5,neutral,quarterly,2026-02-01

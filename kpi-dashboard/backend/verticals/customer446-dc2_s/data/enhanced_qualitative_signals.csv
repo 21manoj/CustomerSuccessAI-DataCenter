@@ -1,0 +1,84 @@
+signal_id,account_id,signal_date,signal_type,content,sentiment,sentiment_score,arc_id,story_phase,linked_node_id,signal_ref
+sig_446001_1,446001,2026-01-15,champion_departure,"VP Product Marco Bianchi departed, key platform champion",neutral,0.1,champion_loss,,,sig_446001_1
+sig_446001_2,446001,2026-01-28,usage_decline,DAU rate dropped from 72% to 28% in 2 weeks,neutral,0.1,champion_loss,,,sig_446001_2
+sig_446001_3,446001,2026-02-10,competitor_mention,New engineering lead evaluating competitor SaaS platform,neutral,0.1,champion_loss,,,sig_446001_3
+narrative_sig_446001_4,446001,2025-12-30,kpi_decline,KPI metrics declining below threshold,negative,-0.62,champion_loss,warning,,narrative_sig_446001_4
+narrative_sig_446001_5,446001,2026-01-06,support_escalation,Support ticket escalated to management,negative,-0.67,champion_loss,warning,,narrative_sig_446001_5
+sig_446001_6,446001,2025-10-06,meeting,Escalation review meeting conducted,negative,-0.34,champion_loss,,,sig_446001_6
+sig_446001_7,446001,2025-10-13,health_check,Support ticket volume above normal,neutral,0.15,champion_loss,,,sig_446001_7
+sig_446001_8,446001,2025-11-07,observation,Support ticket volume above normal,negative,-0.52,champion_loss,,,sig_446001_8
+sig_446001_9,446001,2025-11-18,health_check,Performance metrics under review,neutral,0.16,champion_loss,,,sig_446001_9
+sig_446001_10,446001,2025-12-22,health_check,Performance metrics under review,neutral,0.17,champion_loss,,,sig_446001_10
+sig_446001_11,446001,2025-12-26,meeting,Escalation review meeting conducted,neutral,0.17,champion_loss,,,sig_446001_11
+sig_446001_12,446001,2026-01-19,observation,Support ticket volume above normal,negative,-0.59,champion_loss,,,sig_446001_12
+sig_446001_13,446001,2026-01-25,health_check,Performance metrics under review,negative,-0.62,champion_loss,,,sig_446001_13
+sig_446001_14,446001,2026-02-21,meeting,Performance metrics under review,neutral,0.16,champion_loss,,,sig_446001_14
+sig_446001_15,446001,2026-01-30,observation,Stakeholder alignment meeting scheduled,negative,-0.34,champion_loss,,,sig_446001_15
+sig_446001_16,446001,2026-03-14,meeting,Performance metrics under review,negative,-0.42,champion_loss,,,sig_446001_16
+sig_446001_17,446001,2026-03-26,observation,Stakeholder alignment meeting scheduled,negative,-0.59,champion_loss,,,sig_446001_17
+sig_446002_18,446002,2026-01-10,feature_adoption_drop,Feature adoption breadth dropped from 62% to 22%,neutral,0.1,infrastructure_decay,,,sig_446002_18
+sig_446002_19,446002,2026-01-20,support_spike,Support tickets up 3x after migration,neutral,0.1,infrastructure_decay,,,sig_446002_19
+sig_446002_20,446002,2026-02-15,nps_decline,NPS dropped from 45 to 12,neutral,0.1,infrastructure_decay,,,sig_446002_20
+narrative_sig_446002_21,446002,2025-12-30,kpi_decline,KPI metrics declining below threshold,negative,-0.77,infrastructure_decay,warning,,narrative_sig_446002_21
+narrative_sig_446002_22,446002,2026-01-06,support_escalation,Support ticket escalated to management,negative,-0.62,infrastructure_decay,warning,,narrative_sig_446002_22
+sig_446002_23,446002,2025-10-25,customer_feedback,Escalation review meeting conducted,negative,-0.65,infrastructure_decay,,,sig_446002_23
+sig_446002_24,446002,2025-10-11,observation,Escalation review meeting conducted,negative,-0.53,infrastructure_decay,,,sig_446002_24
+sig_446002_25,446002,2025-11-29,meeting,Escalation review meeting conducted,neutral,-0.02,infrastructure_decay,,,sig_446002_25
+sig_446002_26,446002,2025-11-01,observation,Performance metrics under review,negative,-0.33,infrastructure_decay,,,sig_446002_26
+sig_446002_27,446002,2025-12-02,health_check,Support ticket volume above normal,negative,-0.42,infrastructure_decay,,,sig_446002_27
+sig_446002_28,446002,2025-11-30,health_check,Escalation review meeting conducted,neutral,0.23,infrastructure_decay,,,sig_446002_28
+sig_446002_29,446002,2026-01-27,meeting,Performance metrics under review,neutral,0.11,infrastructure_decay,,,sig_446002_29
+sig_446002_30,446002,2026-01-01,customer_feedback,Escalation review meeting conducted,neutral,0.22,infrastructure_decay,,,sig_446002_30
+sig_446002_31,446002,2026-01-29,meeting,Performance metrics under review,neutral,-0.01,infrastructure_decay,,,sig_446002_31
+sig_446002_32,446002,2026-02-03,meeting,Stakeholder alignment meeting scheduled,negative,-0.46,infrastructure_decay,,,sig_446002_32
+sig_446002_33,446002,2026-03-09,health_check,Stakeholder alignment meeting scheduled,neutral,0.18,infrastructure_decay,,,sig_446002_33
+sig_446002_34,446002,2026-03-23,customer_feedback,Performance metrics under review,neutral,0.22,infrastructure_decay,,,sig_446002_34
+sig_446003_35,446003,2026-02-01,budget_review,CFO initiated SaaS spend audit across all platforms,neutral,0.1,budget_pressure,,,sig_446003_35
+sig_446003_36,446003,2026-02-20,login_decline,Login frequency dropped 55% in 3 weeks,neutral,0.1,budget_pressure,,,sig_446003_36
+sig_446003_37,446003,2026-03-01,renewal_risk,Procurement flagged renewal for competitive bid,neutral,0.1,budget_pressure,,,sig_446003_37
+narrative_sig_446003_38,446003,2025-12-30,kpi_decline,KPI metrics declining below threshold,negative,-0.61,budget_pressure,warning,,narrative_sig_446003_38
+narrative_sig_446003_39,446003,2026-01-06,support_escalation,Support ticket escalated to management,negative,-0.7,budget_pressure,warning,,narrative_sig_446003_39
+sig_446003_40,446003,2025-10-25,health_check,Escalation review meeting conducted,negative,-0.39,budget_pressure,,,sig_446003_40
+sig_446003_41,446003,2025-10-19,observation,Stakeholder alignment meeting scheduled,negative,-0.49,budget_pressure,,,sig_446003_41
+sig_446003_42,446003,2025-11-02,meeting,Support ticket volume above normal,negative,-0.52,budget_pressure,,,sig_446003_42
+sig_446003_43,446003,2025-11-29,customer_feedback,Performance metrics under review,negative,-0.66,budget_pressure,,,sig_446003_43
+sig_446003_44,446003,2025-12-28,health_check,Performance metrics under review,neutral,0.18,budget_pressure,,,sig_446003_44
+sig_446003_45,446003,2025-12-08,observation,Performance metrics under review,negative,-0.48,budget_pressure,,,sig_446003_45
+sig_446003_46,446003,2026-01-18,observation,Stakeholder alignment meeting scheduled,neutral,0.29,budget_pressure,,,sig_446003_46
+sig_446003_47,446003,2026-01-24,health_check,Stakeholder alignment meeting scheduled,neutral,-0.04,budget_pressure,,,sig_446003_47
+sig_446003_48,446003,2026-02-27,customer_feedback,Support ticket volume above normal,negative,-0.31,budget_pressure,,,sig_446003_48
+sig_446003_49,446003,2026-01-31,customer_feedback,Stakeholder alignment meeting scheduled,negative,-0.56,budget_pressure,,,sig_446003_49
+sig_446003_50,446003,2026-03-16,customer_feedback,Escalation review meeting conducted,negative,-0.57,budget_pressure,,,sig_446003_50
+sig_446003_51,446003,2026-03-09,observation,Performance metrics under review,neutral,0.13,budget_pressure,,,sig_446003_51
+sig_446004_52,446004,2026-02-05,competitor_evaluation,CMO requested competitive analysis vs HubSpot Enterprise,neutral,0.1,competitor_evaluation,,,sig_446004_52
+sig_446004_53,446004,2026-02-28,engagement_drop,"QBR attendance dropped, 2 meetings rescheduled",neutral,0.1,competitor_evaluation,,,sig_446004_53
+narrative_sig_446004_54,446004,2025-11-30,critical_incident,Critical service incident reported,negative,-0.55,competitor_evaluation,crisis,,narrative_sig_446004_54
+narrative_sig_446004_55,446004,2025-12-03,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.5,competitor_evaluation,crisis,,narrative_sig_446004_55
+sig_446004_56,446004,2025-10-22,health_check,Usage patterns reviewed with team,neutral,0.09,competitor_evaluation,,,sig_446004_56
+sig_446004_57,446004,2025-10-09,health_check,Technical review session held,neutral,-0.21,competitor_evaluation,,,sig_446004_57
+sig_446004_58,446004,2025-11-27,health_check,Technical review session held,neutral,0.03,competitor_evaluation,,,sig_446004_58
+sig_446004_59,446004,2025-11-01,observation,Renewal discussion in progress,neutral,0.05,competitor_evaluation,,,sig_446004_59
+sig_446004_60,446004,2025-12-18,health_check,Technical review session held,negative,-0.6,competitor_evaluation,,,sig_446004_60
+sig_446004_61,446004,2025-12-05,health_check,Usage patterns reviewed with team,neutral,0.11,competitor_evaluation,,,sig_446004_61
+sig_446004_62,446004,2026-01-01,customer_feedback,Quarterly check-in completed,neutral,0.17,competitor_evaluation,,,sig_446004_62
+sig_446004_63,446004,2025-12-31,observation,Technical review session held,negative,-0.49,competitor_evaluation,,,sig_446004_63
+sig_446004_64,446004,2026-02-20,observation,Technical review session held,neutral,0.07,competitor_evaluation,,,sig_446004_64
+sig_446004_65,446004,2026-02-02,health_check,Quarterly check-in completed,negative,-0.3,competitor_evaluation,,,sig_446004_65
+sig_446004_66,446004,2026-03-14,meeting,Quarterly check-in completed,neutral,0.05,competitor_evaluation,,,sig_446004_66
+sig_446004_67,446004,2026-03-21,observation,Quarterly check-in completed,neutral,0.09,competitor_evaluation,,,sig_446004_67
+sig_446005_68,446005,2026-01-25,onboarding_delay,Onboarding completion at 42% after 90 days (target: 85%),neutral,0.1,stalled_deployment,,,sig_446005_68
+sig_446005_69,446005,2026-02-15,ttfv_exceeded,TTFV at 78 days vs 21-day target,neutral,0.1,stalled_deployment,,,sig_446005_69
+narrative_sig_446005_70,446005,2025-11-30,critical_incident,Critical service incident reported,negative,-0.57,stalled_deployment,crisis,,narrative_sig_446005_70
+narrative_sig_446005_71,446005,2025-12-03,stakeholder_escalation,Stakeholder escalated concerns,negative,-0.71,stalled_deployment,crisis,,narrative_sig_446005_71
+sig_446005_72,446005,2025-10-22,meeting,Quarterly check-in completed,neutral,0.08,stalled_deployment,,,sig_446005_72
+sig_446005_73,446005,2025-10-30,customer_feedback,Quarterly check-in completed,negative,-0.43,stalled_deployment,,,sig_446005_73
+sig_446005_74,446005,2025-11-15,health_check,Technical review session held,neutral,0.11,stalled_deployment,,,sig_446005_74
+sig_446005_75,446005,2025-11-13,meeting,Usage patterns reviewed with team,neutral,0.03,stalled_deployment,,,sig_446005_75
+sig_446005_76,446005,2025-12-08,observation,Quarterly check-in completed,neutral,0.06,stalled_deployment,,,sig_446005_76
+sig_446005_77,446005,2025-12-15,health_check,Technical review session held,neutral,0.01,stalled_deployment,,,sig_446005_77
+sig_446005_78,446005,2026-01-11,customer_feedback,Usage patterns reviewed with team,neutral,0.2,stalled_deployment,,,sig_446005_78
+sig_446005_79,446005,2026-01-09,meeting,Renewal discussion in progress,neutral,0.06,stalled_deployment,,,sig_446005_79
+sig_446005_80,446005,2026-02-21,observation,Usage patterns reviewed with team,neutral,-0.06,stalled_deployment,,,sig_446005_80
+sig_446005_81,446005,2026-02-09,customer_feedback,Renewal discussion in progress,neutral,0.1,stalled_deployment,,,sig_446005_81
+sig_446005_82,446005,2026-03-11,health_check,Usage patterns reviewed with team,neutral,-0.01,stalled_deployment,,,sig_446005_82
+sig_446005_83,446005,2026-03-26,customer_feedback,Renewal discussion in progress,neutral,0.3,stalled_deployment,,,sig_446005_83
