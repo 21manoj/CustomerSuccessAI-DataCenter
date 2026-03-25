@@ -42,7 +42,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const parsed = stored ? JSON.parse(stored) : null;
     // Ensure vertical is loaded from localStorage if not in session
     if (parsed && !parsed.vertical) {
-      const vertical = localStorage.getItem('vertical') || 'saas';
+      const vertical = localStorage.getItem('vertical') || 'saas_premium';
       parsed.vertical = vertical;
     }
     return parsed;

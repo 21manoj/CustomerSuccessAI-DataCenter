@@ -29,7 +29,7 @@ def migrate_phase1():
             existing_columns = {col['name'] for col in inspector.get_columns('customer_configs')}
             
             new_columns = {
-                'vertical': "VARCHAR(50) DEFAULT 'saas'",
+                'vertical': "VARCHAR(50) DEFAULT 'saas_premium'",
                 'dc2s_pillar_weights': "JSON",
                 'dc2s_enabled_kpis': "JSON",
                 'dc2s_kpi_overrides': "JSON",

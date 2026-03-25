@@ -52,6 +52,7 @@ services:
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       FEATURE_MCP_SERVER: ${FEATURE_MCP_SERVER:-true}
       FEATURE_CONTEXT_GRAPH: ${FEATURE_CONTEXT_GRAPH:-true}
+      FEATURE_ASK_AI_V2: ${FEATURE_ASK_AI_V2:-true}
     volumes:
       - uploads:/app/backend/uploads
       - verticals:/app/backend/verticals

@@ -459,7 +459,7 @@ def build_saas_config() -> VerticalConfig:
     Most SaaS values ARE the platform defaults, so fewer overrides.
     """
     cfg = copy.deepcopy(PLATFORM_DEFAULTS)
-    cfg.vertical_id = "saas"
+    cfg.vertical_id = "saas_premium"
     cfg.vertical_name = "SaaS Customer Success"
 
     # SaaS has faster onboarding
@@ -496,7 +496,8 @@ def build_saas_config() -> VerticalConfig:
 VERTICAL_REGISTRY: Dict[str, VerticalConfig] = {
     "datacenter": build_datacenter_config(),
     "dc2_s":      build_datacenter_config(),   # alias
-    "saas":       build_saas_config(),
+    "saas":       build_saas_config(),          # alias
+    "saas_premium": build_saas_config(),
     "platform":   PLATFORM_DEFAULTS,
 }
 
@@ -676,7 +677,7 @@ def get_config_for_customer_from_db(customer_id: int) -> VerticalConfig:
         if not cc:
             return get_config(customer_id=customer_id, vertical="platform")
 
-        vertical = cc.vertical or "saas"
+        vertical = cc.vertical or "saas_premium"
         overrides = cc.config if isinstance(cc.config, dict) else {}
 
         return get_config(

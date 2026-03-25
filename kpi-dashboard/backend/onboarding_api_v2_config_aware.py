@@ -2172,12 +2172,9 @@ def process_data():
                 # This enables ROI endpoints to use real actuals instead of demo_fallback
                 # -----------------------------------------------------------------
                 try:
-                    # Use vertical-appropriate health calculator
-                    customer_vertical = vertical or 'dc2_s'
-                    if customer_vertical == 'saas_premium':
-                        from verticals.saas_premium.api_routes import calculate_kpi_health
-                    else:
-                        from verticals.dc2_s.api_routes import calculate_kpi_health
+                    # Use vertical-appropriate health calculator (generic scorer for any vertical)
+                    from utils.vertical_health import get_health_calculator
+                    calculate_kpi_health = get_health_calculator(customer_id)
 
                     # Group by account_id × measurement_month
                     if 'measured_at' in df_kpis.columns:
@@ -2271,7 +2268,8 @@ def process_data():
             # Per-month: group KPIs by (account, month), compute health per month.
             # This preserves historical health scores needed by ROI engine.
             try:
-                from verticals.dc2_s.api_routes import calculate_kpi_health
+                from utils.vertical_health import get_health_calculator
+                calculate_kpi_health = get_health_calculator(customer_id)
                 from models import Account
                 import utils.health_thresholds as ht
                 from collections import defaultdict

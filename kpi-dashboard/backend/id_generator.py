@@ -33,6 +33,7 @@ import struct
 # ============================================================
 VERTICAL_PREFIXES = {
     'saas': 'saas',
+    'saas_premium': 'saas',
     'datacenter': 'dc',
     'data_center': 'dc',
     'dc': 'dc',

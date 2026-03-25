@@ -752,7 +752,7 @@ def analyze_with_agentic_loop():
         )
 
         # Build input data (simplified — uses Qdrant signals)
-        vertical = 'saas'
+        vertical = 'saas_premium'
         try:
             from models import CustomerConfig
             config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
@@ -944,8 +944,8 @@ def test_analysis_with_mock_data():
         except (ValueError, TypeError):
             return jsonify({'error': 'time_horizon_days must be a number'}), 400
         
-        # Get vertical (default to saas)
-        vertical = 'saas'
+        # Get vertical (default to saas_premium)
+        vertical = 'saas_premium'
         agent_vertical_type = map_vertical_to_agent_type(vertical)
         
         # Create mock signals
