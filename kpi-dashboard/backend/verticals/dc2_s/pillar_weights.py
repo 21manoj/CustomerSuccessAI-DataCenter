@@ -405,7 +405,8 @@ def get_weights_for_customer(customer_id: Optional[int]) -> Dict[str, Any]:
     try:
         from models import CustomerConfig
         config = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
-        if not config or config.vertical != "dc2_s":
+        from utils.vertical_registry import normalize_vertical
+        if not config or normalize_vertical(config.vertical or '') != "dc2_s":
             log.info(
                 "FALLBACK: Using code default L2 weights (no CustomerConfig or vertical != dc2_s). "
                 "customer_id=%s, config_exists=%s, vertical=%s",

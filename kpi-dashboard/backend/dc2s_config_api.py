@@ -99,7 +99,8 @@ def get_config():
     
     config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
     
-    if not config or config.vertical != 'dc2_s':
+    from utils.vertical_registry import normalize_vertical
+    if not config or normalize_vertical(config.vertical or '') != 'dc2_s':
         bootstrap = _load_bootstrap_full(customer_id)
         return jsonify({
             'customer_id': customer_id,

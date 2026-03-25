@@ -82,7 +82,8 @@ class ConfigLoader:
         if self._customer_config is None:
             config = CustomerConfig.query.filter_by(customer_id=self.customer_id).first()
             
-            if config and config.vertical == 'dc2_s':
+            from utils.vertical_registry import normalize_vertical
+            if config and normalize_vertical(config.vertical or '') == 'dc2_s':
                 self._customer_config = {
                     'pillar_weights': config.dc2s_pillar_weights or self._get_default_pillar_weights(),
                     'enabled_kpis': config.dc2s_enabled_kpis or self._get_default_enabled_kpis(),

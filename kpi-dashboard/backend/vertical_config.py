@@ -677,7 +677,8 @@ def get_config_for_customer_from_db(customer_id: int) -> VerticalConfig:
         if not cc:
             return get_config(customer_id=customer_id, vertical="platform")
 
-        vertical = cc.vertical or "saas_premium"
+        from utils.vertical_registry import normalize_vertical
+        vertical = normalize_vertical(cc.vertical or "saas_premium")
         overrides = cc.config if isinstance(cc.config, dict) else {}
 
         return get_config(
