@@ -1629,7 +1629,7 @@ class ManifestCSVGenerator:
             elif cls == 'at_risk':
                 edges = [
                     (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
-                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:renewal_risk', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
+                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:renewal_uncertainty', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
                 ]
             else:
                 edges = [
