@@ -63,7 +63,7 @@ RUN python setup_cython.py build_ext --inplace 2>&1 | tail -5
 RUN for dir in migrations templates; do \
       find "./$dir" -name "*.py" -delete 2>/dev/null || true; \
     done && \
-    find ./scripts -name "*.py" ! -name "generate_synthetic_*.py" -delete 2>/dev/null || true
+    find ./scripts -name "*.py" ! -name "generate_synthetic_*.py" ! -name "migrate_schema_sync.py" -delete 2>/dev/null || true
 
 # Clean up build artifacts
 RUN rm -rf build/ *.egg-info/ setup_cython.py
