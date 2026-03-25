@@ -36,6 +36,7 @@ _CATALOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'c
 VERTICAL_ALIASES = {
     'dc2_s': 'dc2_s',
     'dc2s': 'dc2_s',
+    'dc': 'dc2_s',
     'datacenter': 'dc2_s',
     'saas': 'saas_premium',
     'saas_premium': 'saas_premium',

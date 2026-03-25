@@ -85,7 +85,7 @@ def _get_health_functions(vertical: str):
         except ImportError:
             pass
 
-    if vertical in ('dc2_s', 'dc2s', 'datacenter'):
+    if vertical in ('dc2_s', 'dc2s', 'dc', 'datacenter'):
         try:
             from verticals.dc2_s.api_routes import (
                 calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,

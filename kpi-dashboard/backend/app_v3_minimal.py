@@ -690,7 +690,7 @@ def login():
         # Handle case-insensitive mapping: DC2_S, dc2_s, dc2-s -> datacenter
         if user_vertical:
             user_vertical_normalized = user_vertical.lower().replace('-', '_').replace(' ', '_')
-            if user_vertical_normalized in ['dc2_s', 'dc2s', 'datacenter']:
+            if user_vertical_normalized in ['dc2_s', 'dc2s', 'dc', 'datacenter']:
                 frontend_vertical = 'datacenter'
             elif user_vertical_normalized == 'saas':
                 frontend_vertical = 'saas'
