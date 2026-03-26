@@ -839,6 +839,7 @@ def _process_data_impl(customer_id: int) -> dict:
                                     sig_node = CN_(
                                         customer_id=customer_id, account_id=acct_id,
                                         node_type='SIGNAL',
+                                        source='customer',
                                         node_subtype=str(row.get('signal_type', 'signal') or 'signal'),
                                         title=str(row.get('content') if str(row.get('content', '')).lower() not in ('nan', '', 'none') else row.get('signal_type', 'Signal'))[:200],
                                         properties={'signal_ref': str(sig_ref),
@@ -875,6 +876,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='STAKEHOLDER',
+                            source='customer',
                             node_subtype=str(row.get('role', 'contact')),
                             title=str(row.get('stakeholder_name', row.get('name', ''))),
                             properties={
@@ -916,6 +918,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
+                            source='customer',
                             node_subtype=outcome_type,
                             title=str(row.get('title', row.get('outcome_name', ''))),
                             revenue_impact=rev_impact,
@@ -946,6 +949,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
+                            source='customer',
                             node_subtype=str(row.get('decision_maker_role', 'action')),
                             title=str(row.get('title', row.get('decision_name', ''))),
                             properties={'chosen_option': str(row.get('chosen_option', '')),
@@ -976,6 +980,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='SIGNAL', node_subtype='engagement',
+                            source='customer',
                             title=ee_title[:200],
                             properties={
                                 'event_type': str(row.get('event_type', '')),
@@ -1057,6 +1062,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=first_acct_id,
                             node_type='EXTERNAL_CONTEXT', node_subtype='industry_benchmark',
+                            source='customer',
                             title=f'Benchmark: {kpi_code}',
                             properties={
                                 'kpi_code': str(kpi_code),
@@ -1313,6 +1319,74 @@ def _process_data_impl(customer_id: int) -> dict:
             _log_wa2.getLogger(__name__).warning(
                 f"Wizard A failed (non-fatal): {_wa_err}", exc_info=True
             )
+
+        # ----------------------------------------------------------
+        # Layer A: Proactive signal analysis on significant health drops
+        # Runs after health scores are written so we can compare to the
+        # previous month's score.  All errors are non-fatal.
+        # ----------------------------------------------------------
+        try:
+            import logging as _log_sa
+            _sa_logger = _log_sa.getLogger(__name__)
+            from utils.signal_analyst import check_and_analyze
+            from models import HealthScore as _HS
+            from sqlalchemy import desc as _desc
+
+            # For each account, compare latest two health scores
+            _acct_list_for_signals = Account.query.filter_by(customer_id=customer_id).all()
+            for _acct in _acct_list_for_signals:
+                try:
+                    last_two = (
+                        _HS.query
+                        .filter_by(account_id=_acct.account_id)
+                        .order_by(_desc(_HS.measurement_month))
+                        .limit(2)
+                        .all()
+                    )
+                    if len(last_two) >= 2:
+                        _health_after  = float(last_two[0].health_score)
+                        _health_before = float(last_two[1].health_score)
+                        check_and_analyze(
+                            customer_id=customer_id,
+                            account_id=_acct.account_id,
+                            health_before=_health_before,
+                            health_after=_health_after,
+                        )
+                except Exception as _acct_e:
+                    _sa_logger.debug(
+                        f"signal_analyst: skipped account {_acct.account_id}: {_acct_e}"
+                    )
+        except Exception as e:
+            import logging as _log_sa2
+            _log_sa2.getLogger(__name__).warning(f"Signal analyst trigger failed (non-fatal): {e}")
+
+        # ----------------------------------------------------------
+        # Layer C: Urgent signal scanning — revenue risk pre-emption
+        # Runs for every account; all errors are non-fatal.
+        # ----------------------------------------------------------
+        try:
+            import logging as _log_uss
+            _uss_logger = _log_uss.getLogger(__name__)
+            from utils.urgent_signal_scanner import scan_for_urgent_signals
+
+            _acct_list_for_urgent = Account.query.filter_by(customer_id=customer_id).all()
+            _urgent_total = 0
+            for _acct in _acct_list_for_urgent:
+                try:
+                    alerts = scan_for_urgent_signals(
+                        customer_id=customer_id,
+                        account_id=_acct.account_id,
+                    )
+                    _urgent_total += len(alerts)
+                except Exception as _ue:
+                    _uss_logger.debug(
+                        f"urgent_signal_scanner: skipped account {_acct.account_id}: {_ue}"
+                    )
+            if _urgent_total:
+                steps_completed.append(f'urgent_alerts_created_{_urgent_total}')
+        except Exception as e:
+            import logging as _log_uss2
+            _log_uss2.getLogger(__name__).warning(f"Urgent signal scanner failed (non-fatal): {e}")
 
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
@@ -1847,6 +1921,7 @@ def clone_customer(
             new_node = ContextNode(
                 customer_id=new_cid, account_id=new_account_id,
                 node_type=node.node_type, node_subtype=node.node_subtype, tier=node.tier,
+                source=node.source,
                 title=node.title, properties=node.properties,
                 revenue_impact=node.revenue_impact, revenue_impact_type=node.revenue_impact_type,
                 confidence=node.confidence, source_platform=node.source_platform,

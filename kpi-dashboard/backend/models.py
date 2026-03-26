@@ -514,6 +514,9 @@ class ContextNode(db.Model):
     node_subtype = db.Column(db.String(50), index=True)
     # e.g. SIGNAL→kpi_change|ticket|nps; DECISION→playbook|escalation|exec_engagement
 
+    # Node origin: 'customer' = CSV upload; 'system' = Wizard A / signal_analyst / urgent_scanner
+    source = db.Column(db.String(20), nullable=False, default='customer')
+
     # Storage tier: 1=permanent, 2=decaying, 3=ephemeral
     tier = db.Column(db.SmallInteger, nullable=False, default=2)
 
@@ -556,6 +559,7 @@ class ContextNode(db.Model):
             'account_id': self.account_id,
             'node_type': self.node_type,
             'node_subtype': self.node_subtype,
+            'source': self.source,
             'tier': self.tier,
             'title': self.title,
             'properties': self.properties,
@@ -1637,3 +1641,88 @@ class JourneyData(db.Model):
     __table_args__ = (
         db.UniqueConstraint('customer_id', 'account_id', name='uq_journey_data_customer_account'),
     )
+
+
+# ============================================================
+# ACTIONS PIPELINE PUSH — Notification + PlaybookTask models
+# ============================================================
+
+class Notification(db.Model):
+    """
+    Push notification record for signal insights, playbook triggers, and urgent alerts.
+
+    type values: signal_insight | playbook_triggered | urgent_alert
+    priority values: normal | high | critical
+    """
+    __tablename__ = 'notifications'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id  = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=True, index=True)
+    type        = db.Column(db.String(50), nullable=False, index=True)   # signal_insight | playbook_triggered | urgent_alert
+    priority    = db.Column(db.String(20), default='normal', index=True) # normal | high | critical
+    payload     = db.Column(db.JSON, default=dict)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    read_at     = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.Index('idx_notification_customer_unread', 'customer_id', 'read_at'),
+        db.Index('idx_notification_customer_type', 'customer_id', 'type'),
+        db.Index('idx_notification_priority_created', 'priority', 'created_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'customer_id': self.customer_id,
+            'account_id': self.account_id,
+            'type': self.type,
+            'priority': self.priority,
+            'payload': self.payload,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'read_at': self.read_at.isoformat() if self.read_at else None,
+            'is_read': self.read_at is not None,
+        }
+
+
+class PlaybookTask(db.Model):
+    """
+    System-triggered playbook task queued for CSM action.
+
+    Created by signal_analyst (wizard_a arc) or health_threshold crossings.
+    Surfaced in get_csm_daily_actions() with source='system_triggered'.
+
+    trigger_source values: wizard_a | health_threshold | manual
+    status values:         pending  | active | done | dismissed
+    """
+    __tablename__ = 'playbook_tasks'
+
+    id             = db.Column(db.Integer, primary_key=True)
+    customer_id    = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id     = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+    playbook_id    = db.Column(db.String(20), nullable=False, index=True)   # PB-04
+    trigger_reason = db.Column(db.String(200))                              # 'arc_assigned:champion_loss'
+    trigger_source = db.Column(db.String(50))                               # 'wizard_a' | 'health_threshold' | 'manual'
+    assigned_csm   = db.Column(db.String(100))
+    due_date       = db.Column(db.DateTime)
+    status         = db.Column(db.String(20), default='pending', index=True) # pending|active|done|dismissed
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.Index('idx_playbook_task_customer_status', 'customer_id', 'status'),
+        db.Index('idx_playbook_task_account_status', 'account_id', 'status'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'customer_id': self.customer_id,
+            'account_id': self.account_id,
+            'playbook_id': self.playbook_id,
+            'trigger_reason': self.trigger_reason,
+            'trigger_source': self.trigger_source,
+            'assigned_csm': self.assigned_csm,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

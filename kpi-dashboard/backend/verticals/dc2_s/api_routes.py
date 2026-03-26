@@ -2041,6 +2041,64 @@ def get_csm_daily_actions():
 
         all_actions = []
 
+        # ── Prepend system-triggered PlaybookTask records (status='pending') ──
+        # These are created by signal_analyst / urgent_signal_scanner and take
+        # precedence over generated recommendations.
+        try:
+            from models import PlaybookTask
+            from .vertical_config import PLAYBOOK_CONFIG as _PB_CFG
+
+            pending_tasks = (
+                PlaybookTask.query
+                .filter_by(customer_id=int(customer_id), status='pending')
+                .order_by(PlaybookTask.created_at.desc())
+                .limit(20)
+                .all()
+            )
+
+            for task in pending_tasks:
+                # Fetch account name and ARR for context
+                task_account = next(
+                    (a for a in accounts if a.account_id == task.account_id), None
+                )
+                task_account_name = task_account.account_name if task_account else f"Account {task.account_id}"
+                task_arr = 0
+                if task_account:
+                    meta = task_account.profile_metadata or {}
+                    task_arr = meta.get('arr', 0) or float(task_account.revenue or 0)
+
+                pb_cfg = _PB_CFG.get(task.playbook_id, {})
+                total_hours = sum(
+                    s.get('estimated_hours', 0)
+                    for s in pb_cfg.get('sub_components', [])
+                ) or 4
+
+                all_actions.append({
+                    'account_id':               task.account_id,
+                    'account_name':             task_account_name,
+                    'action_title':             f"[System] {pb_cfg.get('name', task.playbook_id)} Playbook",
+                    'action_description':       task.trigger_reason or f"System-triggered: {task.trigger_source}",
+                    'action_type':              'playbook',
+                    'related_playbook_id':      task.playbook_id,
+                    'urgency':                  'critical',
+                    'impact_score':             90,
+                    'effort_score':             30,
+                    'priority_index':           999.0,  # always sorted to top
+                    'account_health':           0.0,    # will be overwritten by account-level loop below if same account
+                    'estimated_hours':          total_hours,
+                    'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                    'source':                   'system_triggered',
+                    'playbook_task_id':         task.id,
+                    'trigger_source':           task.trigger_source,
+                    'assigned_csm':             task.assigned_csm,
+                    'due_date':                 task.due_date.isoformat() if task.due_date else None,
+                    'roi_metric_name':          None,
+                    'roi_projected_impact':     0,
+                    'roi_explanation':          'System-triggered task — see signal analysis for ROI context.',
+                })
+        except Exception as _pt_err:
+            logger.warning(f"PlaybookTask prepend failed (non-fatal): {_pt_err}")
+
         for account in accounts:
             # 2. Trailing 30-day weighted average for stable health scores
             trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)

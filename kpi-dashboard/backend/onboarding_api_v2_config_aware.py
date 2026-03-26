@@ -809,18 +809,19 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     def _insert_node(conn, customer_id, account_id, node_type, node_subtype,
                      label, properties, tier=1, source_platform='csv_import',
                      source_event_id=None, event_time=None,
-                     revenue_impact=None, revenue_impact_type=None):
+                     revenue_impact=None, revenue_impact_type=None,
+                     source='customer'):
         # occurred_at is NOT NULL — always provide a value
         resolved_etime = _clean_val(event_time) or datetime.utcnow().strftime('%Y-%m-%d')
         row = conn.execute(text("""
             INSERT INTO context_nodes
                 (customer_id, account_id, node_type, node_subtype, title,
                  properties, tier, source_platform, source_event_id,
-                 occurred_at, revenue_impact, revenue_impact_type)
+                 occurred_at, revenue_impact, revenue_impact_type, source)
             VALUES
                 (:cid, :aid, :ntype, :nsub, :title,
                  :props, :tier, :src, :src_eid,
-                 :etime, :rev, :rev_type)
+                 :etime, :rev, :rev_type, :node_source)
             RETURNING node_id
         """), {
             'cid': customer_id, 'aid': int(account_id),
@@ -828,7 +829,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             'title': label, 'props': json.dumps(_sanitize_props(properties)) if properties else None,
             'tier': tier, 'src': _clean_val(source_platform), 'src_eid': _clean_val(source_event_id),
             'etime': resolved_etime, 'rev': _clean_val(revenue_impact),
-            'rev_type': _clean_val(revenue_impact_type)
+            'rev_type': _clean_val(revenue_impact_type), 'node_source': source
         })
         return row.scalar()
 
@@ -1353,6 +1354,40 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             exc_info=True,
         )
 
+    # ------------------------------------------------------------------
+    # Layer C: Urgent signal scanner — run per-account after edges are
+    # committed so that to_node revenue_impact values are readable.
+    # All errors are non-fatal; scanner result is appended to result dict.
+    # ------------------------------------------------------------------
+    urgent_alerts_total = 0
+    try:
+        from utils.urgent_signal_scanner import scan_for_urgent_signals
+        from models import Account as _Account
+
+        accounts_to_scan = _Account.query.filter_by(customer_id=customer_id).all()
+        for _acct in accounts_to_scan:
+            try:
+                alerts = scan_for_urgent_signals(
+                    customer_id=customer_id,
+                    account_id=_acct.account_id,
+                )
+                urgent_alerts_total += len(alerts)
+            except Exception as _ae:
+                current_app.logger.debug(
+                    f"urgent_signal_scanner: skipped account {_acct.account_id}: {_ae}"
+                )
+
+        if urgent_alerts_total:
+            current_app.logger.info(
+                f"urgent_signal_scanner: created {urgent_alerts_total} urgent alert(s) "
+                f"for customer {customer_id}"
+            )
+    except Exception as _scanner_err:
+        current_app.logger.warning(
+            f"urgent_signal_scanner failed (non-fatal) for customer {customer_id}: {_scanner_err}"
+        )
+
+    result['urgent_alerts_created'] = urgent_alerts_total
     return result
 
 

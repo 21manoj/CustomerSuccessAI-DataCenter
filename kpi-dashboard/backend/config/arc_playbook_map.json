@@ -1,0 +1,20 @@
+{
+  "_comment": "Arc type → recommended playbook IDs in priority order. Used by Layer B auto-trigger.",
+  "_branch": "feature/actions-pipeline-push",
+  "_plan": "backend/docs/ACTIONS_PIPELINE_PLAN.md — Layer B",
+
+  "crisis_recovery":       ["PB-02", "PB-01"],
+  "champion_loss":         ["PB-04", "PB-01"],
+  "budget_pressure":       ["PB-06", "PB-03"],
+  "stalled_deployment":    ["PB-01", "PB-05"],
+  "competitor_evaluation": ["PB-03", "PB-04"],
+  "infrastructure_decay":  ["PB-05", "PB-02"],
+  "steady_performer":      ["PB-07"],
+  "land_and_expand":       ["PB-08"],
+  "engagement_decline":    ["PB-06", "PB-04"],
+
+  "_health_boundary_triggers": {
+    "healthy_to_at_risk":  ["PB-06"],
+    "at_risk_to_critical": ["PB-02", "PB-01"]
+  }
+}

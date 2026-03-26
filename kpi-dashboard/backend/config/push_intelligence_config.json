@@ -1,0 +1,37 @@
+{
+  "_comment": "Push intelligence thresholds. Tunable via GET/PUT /api/config/push-intelligence. Reload is immediate — no restart needed.",
+  "_version": "1.0",
+
+  "layer_a_signal_analyst": {
+    "health_drop_trigger_pts": 10,
+    "max_signals_context": 5,
+    "enabled": true
+  },
+
+  "layer_c_urgent_scanner": {
+    "confidence_min": 0.85,
+    "revenue_risk_min_usd": 50000,
+    "urgency_threshold": 5000,
+    "renewal_window_days": 60,
+    "enabled": true
+  },
+
+  "wizard_a_arc_classifier": {
+    "min_confidence_to_store_node": 0.55,
+    "slope_window_days": 30,
+    "slope_window_days_long": 60,
+    "health_drop_crisis_threshold": 50,
+    "enabled": true
+  },
+
+  "layer_b_playbook_trigger": {
+    "auto_trigger_on_arc": true,
+    "auto_trigger_on_boundary_cross": true,
+    "enabled": true
+  },
+
+  "notifications": {
+    "unread_ttl_days": 30,
+    "urgent_alert_escalate_after_hours": 4
+  }
+}
