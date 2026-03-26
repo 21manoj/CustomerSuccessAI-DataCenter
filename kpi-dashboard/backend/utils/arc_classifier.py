@@ -6,6 +6,17 @@ Reads HealthScore history + ContextNode signals + Account data from DB.
 Returns: arc_type (str), confidence (float 0-1), phase ('baseline'|'intervention')
 
 Priority cascade: first matching rule wins.
+
+SLOPE UNITS: all slope values are pts/MONTH (not pts/day).
+  -3 = 3-point decline per month  (mild decline)
+  -8 = 8-point decline per month  (severe decline)
+  Monthly resolution because health scores are stored monthly.
+
+SIGNAL TYPES: we match both:
+  (a) Load-driver arc subtypes (e.g. 'stakeholder_escalation', 'expansion_signal')
+  (b) CRM-native field values  (e.g. 'stakeholder_departure', 'budget_freeze')
+  (c) Title/description keyword hits injected as synthetic signal types during
+      feature extraction.
 """
 
 from __future__ import annotations
@@ -20,60 +31,204 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Signal-type keyword sets — include both load-driver subtypes AND
+# CRM-native values so the classifier works for both synthetic and real data.
+# ---------------------------------------------------------------------------
+
+# Champion / stakeholder departure signals
+_CHAMPION_LOSS_SIGNALS = frozenset([
+    # load-driver subtypes
+    'stakeholder_escalation',    # champion_loss + crisis_recovery arc
+    'champion_disengagement',    # ignored_churn arc
+    'executive_engagement',      # champion_loss intervention (exec brought in)
+    # CRM / Gainsight
+    'champion_departure', 'champion_loss',
+    'stakeholder_departure', 'executive_departure',
+    # synthetic (injected by title scan below)
+    '_champion_departure_detected',
+])
+
+# Infrastructure / technical incident signals
+_INFRA_SIGNALS = frozenset([
+    # load-driver subtypes
+    'critical_incident',         # infrastructure_decay + crisis_recovery
+    'support_escalation',        # infrastructure_decay (also appears in others)
+    # CRM / Gainsight
+    'performance_degradation', 'system_outage', 'sla_breach',
+    'infrastructure_issue', 'technical_blocker',
+])
+
+# Stakeholder-driven crisis signals (differentiates crisis_recovery from infra_decay)
+_STAKEHOLDER_CRISIS_SIGNALS = frozenset([
+    'stakeholder_escalation',    # load-driver crisis_recovery arc
+    'escalation_to_exec',        # decision subtype (may appear in signal nodes)
+    'executive_sponsor_engaged',
+])
+
+# Budget / cost pressure signals
+_BUDGET_SIGNALS = frozenset([
+    # CRM / Gainsight (not in load-driver — load-driver budget_pressure uses kpi_decline)
+    'budget_freeze', 'budget_cut', 'cost_reduction',
+    'financial_concern', 'contract_risk',
+    # synthetic
+    '_budget_concern_detected',
+])
+
+# Competitor / evaluation signals
+_COMPETITOR_SIGNALS = frozenset([
+    # CRM / Gainsight
+    'competitor', 'rfp', 'evaluation',
+    'competitive_threat', 'vendor_review', 'competitive_analysis',
+    # synthetic
+    '_competitor_detected',
+])
+
+# Deployment / technical blocker signals
+_STALLED_SIGNALS = frozenset([
+    # load-driver subtypes
+    'kpi_decline',               # stalled_deployment baseline
+    'deployment_improvement',    # stalled_deployment intervention
+    # CRM / Gainsight
+    'deployment_blocked', 'technical_blocker', 'integration_failure',
+    # synthetic
+    '_deployment_blocked_detected',
+])
+
+# Growth / expansion signals
+_EXPANSION_SIGNALS = frozenset([
+    # load-driver subtypes
+    'expansion_signal',          # proactive_growth arc
+    'champion_advocacy',         # expansion_champion arc
+    'usage_spike',               # expansion_champion arc
+    'advocacy',                  # multiple healthy arcs
+    'champion_engages',          # stakeholder subtype — healthy arcs
+    # CRM / Gainsight
+    'expansion', 'upsell', 'growth', 'upsell_signal',
+    # synthetic
+    '_expansion_detected',
+])
+
+
+# ---------------------------------------------------------------------------
 # Arc classification rules — (arc_type, base_confidence, condition_fn)
 # Evaluated in order; first match wins.
 # ---------------------------------------------------------------------------
+
+def _has(signal_types: Counter, keyword_set: frozenset) -> bool:
+    """Return True if any key in signal_types intersects keyword_set."""
+    return bool(signal_types.keys() & keyword_set)
+
+
 ARC_RULES: list[tuple[str, float, object]] = [
+    # 1. Champion Loss — stakeholder departure signal + declining health
+    #    Load-driver: stakeholder_escalation + kpi_decline → champion_loss arc
     (
         'champion_loss', 0.85,
-        lambda f: f['has_stakeholder_departure'] and f['slope_30d'] < -3,
+        lambda f: (
+            f['has_stakeholder_departure']
+            and f['slope_30d'] < -3            # > 3 pts/month decline
+        ),
     ),
+    # 2. Crisis Recovery — critical incident that is stakeholder-driven
+    #    Load-driver: critical_incident + stakeholder_escalation → crisis_recovery arc
     (
         'crisis_recovery', 0.80,
-        lambda f: f['health_now'] < ht.at_risk_min() and 'critical_incident' in f['signal_types'],
+        lambda f: (
+            f['health_now'] < ht.at_risk_min()
+            and _has(f['signal_types'], frozenset(['critical_incident']))
+            and _has(f['signal_types'], _STAKEHOLDER_CRISIS_SIGNALS)
+        ),
     ),
+    # 2b. Crisis Recovery (relaxed) — critical incident without stakeholder signal but very low health
+    (
+        'crisis_recovery', 0.75,
+        lambda f: (
+            f['health_now'] < ht.at_risk_min() - 10   # health < 40 — clearly critical
+            and _has(f['signal_types'], frozenset(['critical_incident']))
+        ),
+    ),
+    # 3. Infrastructure Decay — technical/infra signals driving prolonged decline
+    #    Load-driver: critical_incident + support_escalation (NO stakeholder_escalation)
+    #    Distinct from crisis_recovery: infra-driven not stakeholder-driven
     (
         'infrastructure_decay', 0.75,
         lambda f: (
-            f['slope_60d'] < -8
+            f['slope_60d'] < -8                        # > 8 pts/month decline over 2 months
             and f['health_now'] < 65
-            and 'critical_incident' not in f['signal_types']
+            and _has(f['signal_types'], _INFRA_SIGNALS)
+            and not _has(f['signal_types'], _STAKEHOLDER_CRISIS_SIGNALS)
         ),
     ),
+    # 4. Budget Pressure (high confidence) — explicit budget signals in CRM data
     (
         'budget_pressure', 0.75,
         lambda f: (
-            any(t in f['signal_types'] for t in ('budget_freeze', 'budget_cut', 'cost_reduction'))
+            _has(f['signal_types'], _BUDGET_SIGNALS)
             and f['slope_60d'] < -3
         ),
     ),
+    # 5. Stalled Deployment — P1 infra KPI decline with flat overall slope
+    #    (declining infra metrics but account not yet in freefall)
     (
         'stalled_deployment', 0.70,
-        lambda f: f['p1_delta_30d'] < -15 and abs(f['slope_30d']) < 2,
+        lambda f: (
+            f['p1_delta_30d'] < -5             # P1 infra pillar declining (lowered from -15)
+            and abs(f['slope_30d']) < 3        # overall health relatively flat
+            and f['health_now'] < ht.healthy_min()
+        ),
     ),
+    # 6. Competitor Evaluation — competitor signals + approaching renewal
     (
         'competitor_evaluation', 0.70,
         lambda f: (
-            any(t in f['signal_types'] for t in ('competitor', 'evaluation', 'rfp'))
+            _has(f['signal_types'], _COMPETITOR_SIGNALS)
             and f['days_to_renewal'] < 90
         ),
     ),
+    # 7. Ignored Churn — declining engagement, no critical incident, moderate health drop
+    #    Load-driver: kpi_decline + support_escalation + champion_disengagement
+    (
+        'ignored_churn', 0.65,
+        lambda f: (
+            f['slope_30d'] < -5                # > 5 pts/month rapid decline
+            and f['health_now'] < ht.at_risk_min() + 15   # <85 but not necessarily critical
+            and not _has(f['signal_types'], frozenset(['critical_incident']))
+            and not f['has_stakeholder_departure']
+        ),
+    ),
+    # 8. Engagement Decline — mild decline in at-risk range, no crisis signals
     (
         'engagement_decline', 0.65,
-        lambda f: f['slope_30d'] < -5 and f['health_now'] >= ht.at_risk_min(),
+        lambda f: (
+            f['slope_30d'] < -3
+            and f['health_now'] >= ht.at_risk_min()
+            and f['health_now'] < ht.healthy_min()
+        ),
     ),
+    # 9. Land and Expand — healthy account with expansion signals
+    #    Load-driver: expansion_signal / champion_advocacy / usage_spike
     (
         'land_and_expand', 0.75,
         lambda f: (
-            f['health_now'] >= ht.healthy_min() + 10
-            and any(t in f['signal_types'] for t in ('expansion', 'upsell', 'growth'))
+            f['health_now'] >= ht.healthy_min()
+            and _has(f['signal_types'], _EXPANSION_SIGNALS)
         ),
     ),
+    # 10. Proactive Growth — healthy, expanding, high confidence
+    (
+        'proactive_growth', 0.70,
+        lambda f: (
+            f['health_now'] >= ht.healthy_min() + 10      # health >= 80
+            and f['slope_30d'] >= 0
+            and _has(f['signal_types'], _EXPANSION_SIGNALS)
+        ),
+    ),
+    # 11. Steady Performer — healthy, stable
     (
         'steady_performer', 0.60,
         lambda f: f['health_now'] >= ht.healthy_min() and f['slope_30d'] >= -2,
     ),
-    # Fallback — always matches
+    # 12. Fallback — always matches (at-risk default)
     (
         'budget_pressure', 0.55,
         lambda f: True,
@@ -91,10 +246,11 @@ def extract_features(account_id: int, db_session) -> dict:
 
     Returns a dict with keys:
       health_now         : most recent health score (float, default 50.0)
-      slope_30d          : pts/day change over last 30 days (negative = declining)
-      slope_60d          : pts/day change over last 60 days
-      signal_types       : Counter of signal subtypes (from ContextNode SIGNAL rows)
+      slope_30d          : pts/MONTH change over last 30 days (negative = declining)
+      slope_60d          : pts/MONTH change over last 60 days
+      signal_types       : Counter of signal subtypes + synthetic _*_detected tags
       has_stakeholder_departure : bool — any STAKEHOLDER node with departure-related title
+                                  OR matching SIGNAL node subtype
       p1_delta_30d       : pillar P1 delta pts over last 30 days (from DC2SKPI)
       days_to_renewal    : days until renewal (from profile_metadata, default 365)
     """
@@ -125,7 +281,13 @@ def extract_features(account_id: int, db_session) -> dict:
     health_now = health_series[-1][1] if health_series else 50.0
 
     def _slope(days: int) -> float:
-        """Compute health change per day over the last `days` days."""
+        """
+        Compute health change per MONTH over the last `days` days.
+
+        Returns pts/month so thresholds like -3 mean "3-point monthly decline".
+        Health scores are stored monthly, so raw pts/day would be tiny fractions.
+        Multiply raw pts/day by 30 to get pts/month.
+        """
         if len(health_series) < 2:
             return 0.0
         cutoff = now - timedelta(days=days)
@@ -138,7 +300,8 @@ def extract_features(account_id: int, db_session) -> dict:
         earliest_ts, earliest_sc = in_window[0]
         latest_ts, latest_sc = in_window[-1]
         delta_days = (latest_ts - earliest_ts).days or 1
-        return (latest_sc - earliest_sc) / delta_days
+        pts_per_day = (latest_sc - earliest_sc) / delta_days
+        return pts_per_day * 30  # convert to pts/month
 
     slope_30d = _slope(30)
     slope_60d = _slope(60)
@@ -165,6 +328,43 @@ def extract_features(account_id: int, db_session) -> dict:
         if st:
             signal_types[st] += 1
 
+    # ── 2b. Title/description keyword scan (secondary signal source) ─────────
+    # Many real-customer nodes have rich text but narrow subtype values.
+    # Inject synthetic signal type tags so rules can match on semantics.
+    _all_nodes = signal_nodes + (
+        db_session.query(ContextNode)
+        .filter(
+            ContextNode.account_id == account_id,
+            ContextNode.node_type.in_(['DECISION', 'OUTCOME', 'STAKEHOLDER']),
+        )
+        .all()
+    )
+
+    _TITLE_CHAMPION_KW = ('champion', 'executive left', 'executive depart',
+                          'sponsor left', 'sponsor depart', 'key contact left',
+                          'disengag', 'no longer', 'resigned')
+    _TITLE_BUDGET_KW = ('budget', 'cost cut', 'cost reduction', 'freeze',
+                        'financial constraint', 'headcount', 'procurement hold')
+    _TITLE_COMPETITOR_KW = ('competitor', 'competing vendor', 'rfp', 'evaluation',
+                             'bake-off', 'competitive', 'vendor review')
+    _TITLE_DEPLOY_KW = ('deployment blocked', 'deploy stuck', 'integration fail',
+                        'blocker', 'technical issue', 'implementation stall')
+    _TITLE_EXPANSION_KW = ('expansion', 'upsell', 'growth opportunity', 'new use case',
+                           'additional license', 'upgrade')
+
+    for node in _all_nodes:
+        text = ((node.title or '') + ' ' + str(node.properties or '')).lower()
+        if any(kw in text for kw in _TITLE_CHAMPION_KW):
+            signal_types['_champion_departure_detected'] += 1
+        if any(kw in text for kw in _TITLE_BUDGET_KW):
+            signal_types['_budget_concern_detected'] += 1
+        if any(kw in text for kw in _TITLE_COMPETITOR_KW):
+            signal_types['_competitor_detected'] += 1
+        if any(kw in text for kw in _TITLE_DEPLOY_KW):
+            signal_types['_deployment_blocked_detected'] += 1
+        if any(kw in text for kw in _TITLE_EXPANSION_KW):
+            signal_types['_expansion_detected'] += 1
+
     # ── 3. Stakeholder departure ─────────────────────────────────────────────
     stakeholder_nodes = (
         db_session.query(ContextNode)
@@ -176,7 +376,8 @@ def extract_features(account_id: int, db_session) -> dict:
     )
 
     departure_keywords = ('departed', 'left', 'resignation', 'champion_loss',
-                          'champion_departure', 'disengaged', 'churned')
+                          'champion_departure', 'disengaged', 'churned',
+                          'no longer at', 'left the company', 'stepped down')
 
     has_stakeholder_departure = False
     for sn in stakeholder_nodes:
@@ -188,11 +389,8 @@ def extract_features(account_id: int, db_session) -> dict:
 
     # Also check SIGNAL nodes for champion/departure type signals
     if not has_stakeholder_departure:
-        departure_signal_types = ('champion_departure', 'champion_loss', 'stakeholder_escalation')
-        for st in departure_signal_types:
-            if signal_types.get(st, 0) > 0:
-                has_stakeholder_departure = True
-                break
+        if _has(signal_types, _CHAMPION_LOSS_SIGNALS):
+            has_stakeholder_departure = True
 
     # ── 4. Pillar P1 delta from DC2SKPI ─────────────────────────────────────
     cutoff_30d = now - timedelta(days=30)
