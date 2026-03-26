@@ -135,9 +135,10 @@ async function fetchLabels(vertical?: string): Promise<VerticalNomenclature> {
     .then(async (res) => {
       if (!res.ok) return DEFAULT_LABELS;
       const data = await res.json();
-      _cache = { ...DEFAULT_LABELS, ...data };
+      const merged: VerticalNomenclature = { ...DEFAULT_LABELS, ...data };
+      _cache = merged;
       _cacheVertical = vertical || 'auto';
-      return _cache;
+      return merged;
     })
     .catch(() => DEFAULT_LABELS)
     .finally(() => { _fetchPromise = null; });
