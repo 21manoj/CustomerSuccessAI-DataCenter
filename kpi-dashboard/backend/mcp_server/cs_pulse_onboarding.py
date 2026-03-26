@@ -858,7 +858,7 @@ def _process_data_impl(customer_id: int) -> dict:
                     if df.empty:
                         continue
 
-                    if csv_file == 'kpi_measurements.csv':
+                    if 'kpi_measurements' in csv_file:
                         _kpi_added = 0
                         _kpi_skipped = 0
                         for _, row in df.iterrows():
@@ -897,7 +897,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         # Commit KPIs immediately so a signals error can't roll them back
                         _db.session.commit()
 
-                    elif csv_file in ('enhanced_qualitative_signals.csv', 'qualitative_signals.csv'):
+                    elif 'qualitative_signals' in csv_file:
                         import uuid as _uuid
                         for _, row in df.iterrows():
                             acct_id = _resolve_acct_id(row)
