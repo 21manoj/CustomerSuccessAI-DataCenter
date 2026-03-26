@@ -225,16 +225,26 @@ Be specific and action-oriented. Avoid generic advice."""
 # Signal types that should trigger IMMEDIATE analysis — these are leading
 # indicators that predict health score drops BEFORE they show up in KPIs.
 HIGH_RISK_SIGNAL_TYPES = {
-    'champion_change':    {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Champion departed or changed'},
-    'champion_loss':      {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Key champion lost'},
-    'executive_change':   {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Executive sponsor changed'},
-    'budget_cut':         {'priority': 'high',     'playbook': 'PB-DC-03', 'label': 'Budget reduction signaled'},
-    'budget_pressure':    {'priority': 'high',     'playbook': 'PB-DC-03', 'label': 'Budget pressure detected'},
-    'contract_dispute':   {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Contract dispute escalated'},
-    'escalation':         {'priority': 'high',     'playbook': 'PB-DC-01', 'label': 'Issue escalated'},
-    'competitor_mention': {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Competitor mentioned by customer'},
-    'downgrade_request':  {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Downgrade or cancellation request'},
-    'stakeholder_departure': {'priority': 'high',  'playbook': 'PB-DC-02', 'label': 'Key stakeholder departed'},
+    # Champion / stakeholder changes
+    'champion_change':        {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Champion departed or changed'},
+    'champion_loss':          {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Key champion lost'},
+    'executive_change':       {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Executive sponsor changed'},
+    'stakeholder_departure':  {'priority': 'high',     'playbook': 'PB-DC-02', 'label': 'Key stakeholder departed'},
+    'stakeholder_escalation': {'priority': 'high',     'playbook': 'PB-DC-02', 'label': 'Stakeholder escalated concern'},
+    # Budget / commercial
+    'budget_cut':             {'priority': 'high',     'playbook': 'PB-DC-03', 'label': 'Budget reduction signaled'},
+    'budget_pressure':        {'priority': 'high',     'playbook': 'PB-DC-03', 'label': 'Budget pressure detected'},
+    'contract_dispute':       {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Contract dispute escalated'},
+    'downgrade_request':      {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Downgrade or cancellation request'},
+    # Escalation (all variants from CSV data)
+    'escalation':             {'priority': 'high',     'playbook': 'PB-DC-01', 'label': 'Issue escalated'},
+    'support_escalation':     {'priority': 'high',     'playbook': 'PB-DC-01', 'label': 'Support ticket escalated'},
+    'executive_escalation':   {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Executive-level escalation'},
+    'critical_incident':      {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Critical incident reported'},
+    # Competitive / churn
+    'competitor_mention':     {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Competitor mentioned by customer'},
+    'usage_decline':          {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Product usage declining'},
+    'engagement_gap':         {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Customer engagement gap detected'},
 }
 
 
