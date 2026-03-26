@@ -20,7 +20,11 @@ import {
   Activity,
   Users,
   Mail,
+  Wand2,
 } from 'lucide-react';
+import ContextGraphSettings from '../dc/settings/ContextGraphSettings';
+import WizardsTab from '../dc/settings/WizardsTab';
+import HealthThresholdsCard from '../dc/settings/HealthThresholdsCard';
 import {
   fetchCustomer,
   updateCustomer,
@@ -61,7 +65,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-type TabKey = 'info' | 'users' | 'config' | 'license' | 'api-keys' | 'partners' | 'activity';
+type TabKey = 'info' | 'users' | 'config' | 'license' | 'api-keys' | 'partners' | 'activity' | 'intelligence';
 
 interface TabDef {
   key: TabKey;
@@ -73,6 +77,7 @@ const TABS: TabDef[] = [
   { key: 'info', label: 'Info', icon: <FileText size={16} /> },
   { key: 'users', label: 'Users', icon: <User size={16} /> },
   { key: 'config', label: 'Config', icon: <Settings size={16} /> },
+  { key: 'intelligence', label: 'Intelligence', icon: <Wand2 size={16} /> },
   { key: 'license', label: 'License', icon: <Shield size={16} /> },
   { key: 'api-keys', label: 'API Keys', icon: <Key size={16} /> },
   { key: 'partners', label: 'Partners', icon: <Users size={16} /> },
@@ -180,6 +185,22 @@ const CustomerDetailPage: React.FC = () => {
         )}
         {activeTab === 'users' && <UsersTab customerId={customerId} />}
         {activeTab === 'config' && <ConfigTab customerId={customerId} kpiConfig={customer.kpi_config} onUpdated={loadCustomer} />}
+        {activeTab === 'intelligence' && (
+          <div className="space-y-8 p-1">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Health Thresholds</h3>
+              <HealthThresholdsCard customerId={customerId} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Context Graph</h3>
+              <ContextGraphSettings customerId={customerId} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Wizard Controls</h3>
+              <WizardsTab customerId={customerId} />
+            </div>
+          </div>
+        )}
         {activeTab === 'license' && <LicenseTab customerId={customerId} />}
         {activeTab === 'api-keys' && <ApiKeysTab customerId={customerId} />}
         {activeTab === 'partners' && <PartnersTab customerId={customerId} />}

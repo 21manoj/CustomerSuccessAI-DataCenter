@@ -28,6 +28,8 @@ import {
   User,
   Shield,
   Lock,
+  Network,
+  Wand2,
 } from 'lucide-react';
 import { useEntitlements, getRequiredTier, tierLabel } from '../../../hooks/useEntitlement';
 import { KPIConfigurationSettings } from '../../settings/dc2s/KPIConfigurationSettings';
@@ -37,12 +39,15 @@ import { SystemEventsAndLogManagement } from './SystemEventsAndLogManagement';
 import DataQualitySection from './DataQualitySection';
 import EntitlementsAdmin from './EntitlementsAdmin';
 import SecurityKeysPanel from './SecurityKeysPanel';
+import ContextGraphSettings from './ContextGraphSettings';
+import WizardsTab from './WizardsTab';
+import HealthThresholdsCard from './HealthThresholdsCard';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-type SubTab = 'weights' | 'kpi-ranges' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements' | 'security';
+type SubTab = 'weights' | 'kpi-ranges' | 'context-graph' | 'wizards' | 'system-events' | 'general' | 'data' | 'integrations' | 'users' | 'entitlements' | 'security';
 
 interface PillarWeight {
   pillar: string;
@@ -172,6 +177,8 @@ const DCSettings: React.FC = () => {
   const subTabLabels: Record<string, string> = isStarter ? {
     'weights': 'Score Weights',
     'kpi-ranges': 'Score Boundaries',
+    'context-graph': 'Context Graph',
+    'wizards': 'Wizards',
     'system-events': 'System Events',
     'general': 'KPI Definitions',
     'data': 'Data & Upload',
@@ -300,6 +307,8 @@ const DCSettings: React.FC = () => {
           {([
             { id: 'weights' as SubTab, label: 'Weights', icon: Sliders, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'kpi-ranges' as SubTab, label: 'KPI Ranges', icon: Target, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'context-graph' as SubTab, label: 'Context Graph', icon: Network, requiredFeature: undefined as string | undefined, adminOnly: false },
+            { id: 'wizards' as SubTab, label: 'Wizards', icon: Wand2, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'system-events' as SubTab, label: 'System Events', icon: Activity, requiredFeature: 'signal_analyst' as string | undefined, adminOnly: false },
             { id: 'general' as SubTab, label: 'General Config', icon: Settings, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'data' as SubTab, label: 'Data Management', icon: Database, requiredFeature: undefined as string | undefined, adminOnly: false },
@@ -346,14 +355,27 @@ const DCSettings: React.FC = () => {
             <KPIRangesTab />
           )}
 
+          {/* Context Graph Settings */}
+          {activeSubTab === 'context-graph' && (
+            <ContextGraphSettings />
+          )}
+
+          {/* Wizards */}
+          {activeSubTab === 'wizards' && (
+            <WizardsTab />
+          )}
+
           {/* System Events and Log Management */}
           {activeSubTab === 'system-events' && (
             <SystemEventsAndLogManagement />
           )}
 
-          {/* General Configuration - KPI Configuration Settings */}
+          {/* General Configuration - KPI Configuration Settings + Health Thresholds */}
           {activeSubTab === 'general' && (
-            <KPIConfigurationSettings />
+            <div className="space-y-6">
+              <HealthThresholdsCard />
+              <KPIConfigurationSettings />
+            </div>
           )}
 
           {/* Data Management */}
