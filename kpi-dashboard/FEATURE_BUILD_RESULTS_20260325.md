@@ -276,8 +276,68 @@ rich signal text but narrow subtype values).
 
 ### Next Steps Before Sprint 1 Merge
 
-1. **Fix arc_classifier.py** — expand keyword sets, add title/description text scan
+1. ~~**Fix arc_classifier.py** — expand keyword sets, add title/description text scan~~ ✅ DONE (see Sprint 1.1 below)
 2. **Run true simulation** — reload granite_peak WITHOUT signal_edges.csv, verify
    Wizard A regenerates equivalent edges independently
 3. **Verify edge counts** — query ContextEdge counts per account to confirm
    arc_edge_generator fired (separate from load-driver edges)
+
+---
+
+## Sprint 1.1 — Arc Classifier Keyword Fix
+
+**Branch:** `feature/wizard-arc-predictive-engine`
+**Date:** 2026-03-25
+
+### Root Causes Fixed
+
+**Fix 1 — Slope units (critical)**
+
+`_slope()` was returning pts/day. All threshold comparisons assumed pts/month.
+- `slope_30d < -3` with pts/day = 3 pts/day × 30 = 90 pts/month — impossible for any account.
+- Fixed: multiply pts/day × 30 → returns pts/month.
+- After fix: `-3` means 3-point decline per month (reasonable), `-8` means 8 pts/2months (reasonable).
+
+**Fix 2 — Signal type keyword mismatch**
+
+Load-driver stores actual event subtypes; classifier looked for CRM-native labels that never appear.
+
+| Arc | Old (broken) match | New (correct) match |
+|---|---|---|
+| champion_loss | `stakeholder_departure` | `stakeholder_escalation` ✓ (load-driver subtype) |
+| land_and_expand | `expansion` | `expansion_signal`, `champion_advocacy`, `usage_spike` ✓ |
+| infrastructure_decay | slope only + `NOT critical_incident` | infra signals + `NOT stakeholder_escalation` |
+| budget_pressure (r4) | `budget_freeze` | unchanged (aspirational for CRM data); fallback handles load-driver |
+| competitor_evaluation | `competitor` | unchanged + synthetic `_competitor_detected` |
+
+**Fix 3 — Infrastructure decay condition (logic error)**
+
+Old condition: `slope_60d < -8 AND health < 65 AND critical_incident NOT in signals`
+Problem: infrastructure_decay arc CONTAINS `critical_incident` → rule could never fire.
+New condition: `slope_60d < -8 AND health < 65 AND infra_signals present AND NOT stakeholder_escalation`
+Distinguishes: infra-driven (support_escalation + critical_incident) vs stakeholder-driven (stakeholder_escalation).
+
+**Fix 4 — Title/description text scan (secondary signal source)**
+
+Added keyword scan across all ContextNode titles + properties JSON.
+Injects synthetic `_*_detected` tags into signal_types Counter:
+- `_champion_departure_detected`: title contains 'champion', 'executive left', 'disengag', etc.
+- `_budget_concern_detected`: title contains 'budget', 'cost cut', 'freeze', etc.
+- `_competitor_detected`: title contains 'competitor', 'rfp', 'evaluation', etc.
+- `_expansion_detected`: title contains 'expansion', 'upsell', 'upgrade', etc.
+
+**Fix 5 — Added missing arcs**
+
+- Added `ignored_churn` rule (was in ARC_TEMPLATES but missing from classifier cascade)
+- Added `proactive_growth` rule (distinct from land_and_expand: ≥80 health + positive slope + expansion signals)
+- Total rules: 12 (was 10)
+
+### Expected Re-Run Results
+
+| Arc Type | Before Fix | After Fix |
+|---|---|---|
+| champion_loss | ❌ never fires (slope threshold impossible) | ✅ fires when stakeholder_escalation + slope_30d < -3 pts/month |
+| infrastructure_decay | ❌ never fires (excluded by critical_incident presence) | ✅ fires when critical_incident + support_escalation + steep slope + NO stakeholder signal |
+| land_and_expand | ❌ never fires (looks for 'expansion' not 'expansion_signal') | ✅ fires for expansion_signal / champion_advocacy / usage_spike |
+| budget_pressure fallback | 40% of accounts | Target: < 25% |
+| Arc variety | 2 types firing | Target: ≥ 5 types firing |
