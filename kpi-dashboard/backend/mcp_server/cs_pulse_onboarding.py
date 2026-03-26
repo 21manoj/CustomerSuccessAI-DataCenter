@@ -784,7 +784,8 @@ def _process_data_impl(customer_id: int) -> dict:
                             has_new_csvs = True
                             break
             except Exception as _inc_err:
-                _logger.debug(f"Incremental CSV detection error (non-fatal): {_inc_err}")
+                import logging as _log_inc
+                _log_inc.getLogger(__name__).debug(f"Incremental CSV detection error (non-fatal): {_inc_err}")
 
         # ----------------------------------------------------------
         # Path 2: Load CSVs into DB
@@ -955,7 +956,8 @@ def _process_data_impl(customer_id: int) -> dict:
                 _skip_cg_reload = has_new_csvs and ContextNode.query.filter_by(
                     customer_id=customer_id).first() is not None
                 if _skip_cg_reload:
-                    _logger.info(
+                    import logging as _log_cg
+                    _log_cg.getLogger(__name__).info(
                         f"Incremental load: skipping CG node re-loading for customer {customer_id} "
                         f"(CG nodes already exist, will regenerate via event subscriber)"
                     )
