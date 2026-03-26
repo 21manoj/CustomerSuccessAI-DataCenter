@@ -78,9 +78,11 @@ def check_and_analyze(
 
         pillar_delta_text = ""
         if len(last_two_scores) >= 2:
-            import json as _json
-            current_pillars = _json.loads(last_two_scores[0].contributing_pillars or '{}') if last_two_scores[0].contributing_pillars else {}
-            previous_pillars = _json.loads(last_two_scores[1].contributing_pillars or '{}') if last_two_scores[1].contributing_pillars else {}
+            # contributing_pillars is a JSON column — already a dict from SQLAlchemy
+            _cp0 = last_two_scores[0].contributing_pillars
+            _cp1 = last_two_scores[1].contributing_pillars
+            current_pillars = _cp0 if isinstance(_cp0, dict) else ({} if not _cp0 else __import__('json').loads(_cp0))
+            previous_pillars = _cp1 if isinstance(_cp1, dict) else ({} if not _cp1 else __import__('json').loads(_cp1))
             if current_pillars and previous_pillars:
                 lines = []
                 for pillar, cur_val in current_pillars.items():
