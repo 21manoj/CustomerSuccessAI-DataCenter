@@ -443,29 +443,22 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
 
     triggered = []
     try:
-        from models import QualitativeSignal, db
+        from models import Account, ContextNode, db
         from datetime import timedelta
 
-        # Look at signals loaded in the last hour (covers this process_data run)
-        cutoff = datetime.utcnow() - timedelta(hours=1)
-        recent = (
-            QualitativeSignal.query
-            .filter(
-                QualitativeSignal.account_id.in_(
-                    db.session.query(db.text('account_id'))
-                    .select_from(db.text('accounts'))
-                    .filter(db.text(f'customer_id = {customer_id}'))
-                ),
-            )
-            .all()
-        )
+        # Get account IDs for this customer
+        acct_ids = [a.account_id for a in Account.query.filter_by(customer_id=customer_id).all()]
+        if not acct_ids:
+            return []
 
-        # Also scan ContextNode SIGNAL nodes loaded recently
-        from models import ContextNode
+        # Scan ContextNode SIGNAL nodes loaded recently (last hour)
+        # Scan signals with recent occurred_at (last 7 days covers batch uploads)
+        cutoff = datetime.utcnow() - timedelta(days=7)
         recent_cg = (
             ContextNode.query
             .filter(
                 ContextNode.customer_id == customer_id,
+                ContextNode.account_id.in_(acct_ids),
                 ContextNode.node_type == 'SIGNAL',
                 ContextNode.source == 'customer',
                 ContextNode.occurred_at >= cutoff,
