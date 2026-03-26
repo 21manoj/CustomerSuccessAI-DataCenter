@@ -207,45 +207,77 @@ with app.app_context():
 
 ---
 
-### 9e. Validation Results
+### 9e. Validation Results — EC2 Run 2026-03-26 03:00 UTC
 
-#### Test 1: denali_dc2s (customer 424, DC2_S, 15 accounts)
+**Manifests tested:** 424 (mount_peak_saas), 425 (dr1_ai_dc2s), 427 (granite_peak_dc2s), 428 (alpine_saas_partners)
+**Total accounts:** 58 across 4 customers
 
-| Account | arc_type | confidence | phase | edges (Wizard A) | pass |
+#### Arc Assignment Results (all 58 accounts)
+
+| Customer | Account | arc_type | confidence | phase | Note |
 |---|---|---|---|---|---|
-| TBD | TBD | TBD | TBD | TBD | PENDING |
-
-#### Test 2: mont_blanc_saas (customer 425, SaaS, 15 accounts)
-
-| Account | arc_type | confidence | phase | edges (Wizard A) | pass |
-|---|---|---|---|---|---|
-| TBD | TBD | TBD | TBD | TBD | PENDING |
+| 424 | Zermatt Analytics | budget_pressure | 0.55 | baseline | Fallback |
+| 424 | Eiger Cloud Services | crisis_recovery | 0.80 | baseline | ✓ Rule match |
+| 424 | Jungfrau, Matterhorn, Bernina | budget_pressure | 0.55 | baseline | Fallback |
+| 424 | Pilatus–Interlaken (5 accts) | steady_performer | 0.60 | baseline | ✓ Rule match |
+| 425 | Titan Hyperscale Labs | budget_pressure | 0.55 | baseline | ⚠ Expected champion_loss |
+| 425 | Meridian Cloud Services | crisis_recovery | 0.80 | baseline | ✓ Rule match |
+| 425 | Apex–Quantum (3 accts) | budget_pressure | 0.55 | baseline | Fallback |
+| 425 | Stratos–Helix (5 accts) | steady_performer | 0.60 | baseline | ✓ Rule match |
+| 427 | Ironridge Manufacturing | crisis_recovery | 0.80 | baseline | ✓ Rule match |
+| 427 | Vertex, Sentinel, Meridian FS, Clearwater, Quantum (5) | budget_pressure | 0.55 | baseline | Fallback |
+| 427 | Blackstone–Forge (12 accts) | steady_performer | 0.60 | baseline | ✓ Rule match |
+| 428 | Eiger Cloud Services | crisis_recovery | 0.80 | baseline | ✓ Rule match |
+| 428 | Zermatt, Jungfrau, Matterhorn, Bernina, Pilatus (5) | budget_pressure | 0.55 | baseline | Fallback |
+| 428 | Grindelwald–Titlis (14 accts) | steady_performer | 0.60 | baseline | ✓ Rule match |
 
 #### Overall Pass/Fail
 
-| Acceptance Criterion | Status |
-|---|---|
-| denali_dc2s: all accounts have arc_type set | PENDING |
-| mont_blanc_saas: all accounts have arc_type set | PENDING |
-| All customers: >= 2 edges per account (where nodes exist) | PENDING |
-| No temporal violations in Wizard A logs | PENDING |
-| No unresolved ref warnings (acceptable if nodes not yet loaded) | PENDING |
-| arc_type persisted to accounts.arc_type column | PENDING |
-| process_data step list includes wizard_a_N_accounts | PENDING |
-| ingest_context_graph_csvs result includes wizard_a key | PENDING |
+| Acceptance Criterion | Status | Notes |
+|---|---|---|
+| All 58 accounts have arc_type set | ✅ PASS | 58/58 rows populated |
+| arc_type persisted to accounts.arc_type | ✅ PASS | DB confirmed |
+| arc_phase persisted | ✅ PASS | All `baseline` — correct for these manifests |
+| arc_confidence persisted | ✅ PASS | 0.55 / 0.60 / 0.80 values stored |
+| Wizard A wired into process_data (non-fatal) | ✅ PASS | No pipeline crashes across 4 runs |
+| crisis_recovery correctly fires | ✅ PASS | 1 per customer where health<50 + critical_incident |
+| steady_performer correctly fires | ✅ PASS | Healthy accounts (≥70, slope≥-2) correctly identified |
+| champion_loss fires for Titan Hyperscale | ❌ FAIL | Falls to budget_pressure fallback (0.55) |
+| Arc variety > 2 types (excl. fallback) | ❌ FAIL | Only crisis_recovery + steady_performer firing from rules |
+| budget_pressure fallback < 30% of accounts | ❌ FAIL | ~40% hit fallback — classifier too narrow |
+| True simulation (no signal_edges.csv) | ⏳ NOT RUN | All 4 runs uploaded WITH signal_edges.csv |
+| Zero 404 in post-validation | ⚠ PARTIAL | 404s in post-check only (scope bug), loads succeeded |
 
 ---
 
-### Notes
+### Root Cause — Arc Classifier Too Narrow
 
-- **Temporal violations are expected** when context graph CSVs have not been loaded
-  (no ContextNode rows = InDBRefRegistry resolves 0 refs, generates 0 edges).
-  Run the load driver with context graph manifests (Scenario 8 or granite_peak_dc2s)
-  to populate nodes before edge generation is meaningful.
+**Problem**: 40% of accounts fall to `budget_pressure` fallback (confidence 0.55).
+Only `crisis_recovery` and `steady_performer` fire from explicit rules.
+`champion_loss`, `infrastructure_decay`, `stalled_deployment`, `competitor_evaluation` never fire.
 
-- **arc_type fallback**: accounts with no HealthScore history default to `health_now=50.0`,
-  `slope_30d=0`, matching the `budget_pressure` fallback rule (confidence 0.55).
+**Why**: Classifier reads `signal_subtype` / `node_subtype` from ContextNode rows and builds
+a Counter. Rules match against specific strings like `'champion_loss'`, `'stakeholder_departure'`,
+`'budget_freeze'`. But ContextNode stores load-driver subtype values (`'stakeholder_escalation'`,
+`'kpi_recovery'`, `'critical_incident'`) which don't match classifier's expected strings.
 
-- **EC2 rebuild not required** for this sprint — files can be `docker cp`'d directly
-  into the running container. A full `docker compose build --no-cache` is only needed
-  when Python dependencies change.
+**Fix required in `arc_classifier.py`**:
+
+| Rule | Current match string | Should also match |
+|---|---|---|
+| champion_loss | `'champion_loss'`, `'stakeholder_departure'` | `'stakeholder_escalation'`, `'executive_departure'`, title contains 'champion'/'executive left' |
+| budget_pressure | `'budget_freeze'`, `'budget_cut'` | `'financial_concern'`, `'cost_reduction'`, `'contract_risk'` |
+| infrastructure_decay | (slope only) | `'performance_degradation'`, `'system_outage'`, `'sla_breach'` |
+| stalled_deployment | (p1_delta only) | `'deployment_blocked'`, `'technical_blocker'`, `'integration_failure'` |
+| competitor_evaluation | `'competitor'`, `'rfp'` | `'evaluation'`, `'vendor_review'`, `'competitive_threat'` |
+
+Also: add fuzzy title/description scan as secondary signal source (many accounts have
+rich signal text but narrow subtype values).
+
+### Next Steps Before Sprint 1 Merge
+
+1. **Fix arc_classifier.py** — expand keyword sets, add title/description text scan
+2. **Run true simulation** — reload granite_peak WITHOUT signal_edges.csv, verify
+   Wizard A regenerates equivalent edges independently
+3. **Verify edge counts** — query ContextEdge counts per account to confirm
+   arc_edge_generator fired (separate from load-driver edges)
