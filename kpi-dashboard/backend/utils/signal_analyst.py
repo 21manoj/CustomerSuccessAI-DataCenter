@@ -9,7 +9,7 @@ severity=critical signal lands.
 Flow:
     1. check_and_analyze() checks the drop threshold.
     2. If triggered, collect last-N SIGNAL ContextNodes + pillar deltas.
-    3. Build a concise prompt and call OpenAI (same key pattern as RAG).
+    3. Build a concise prompt and call LLM (Anthropic Claude first, OpenAI fallback).
     4. Store result as Notification(type='signal_insight').
     5. Write system ContextNode (source='system') and edge to most recent customer signal.
     6. Return payload dict — or None if analysis was not triggered.
@@ -118,7 +118,7 @@ In 3-4 concise bullet points, explain:
 Be specific and action-oriented. Avoid generic advice."""
 
         # ── 5. Call OpenAI ──
-        analysis_text = _call_openai(customer_id, prompt)
+        analysis_text = _call_llm(customer_id, prompt)
         if not analysis_text:
             logger.warning(
                 f"signal_analyst: OpenAI returned empty response for account {account_id}"
@@ -216,13 +216,38 @@ Be specific and action-oriented. Avoid generic advice."""
         return None
 
 
-def _call_openai(customer_id: int, prompt: str) -> Optional[str]:
+def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
     """
-    Call OpenAI chat completions using the customer-specific API key.
+    Call an LLM for signal analysis.
 
-    Follows the same key-retrieval pattern as enhanced_rag_openai.py.
+    Priority: Anthropic (Claude) → OpenAI (GPT-4o-mini) → None.
     Returns the assistant message text, or None on failure.
     """
+    # ── Try Anthropic first ──
+    try:
+        import os
+        anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
+        if anthropic_key:
+            import anthropic
+            client = anthropic.Anthropic(api_key=anthropic_key)
+            response = client.messages.create(
+                model='claude-sonnet-4-20250514',
+                max_tokens=400,
+                system=(
+                    'You are an expert Customer Success analyst. '
+                    'You produce concise, actionable insights from account health data. '
+                    'Always respond with bullet points. Keep each bullet under 30 words.'
+                ),
+                messages=[{'role': 'user', 'content': prompt}],
+            )
+            text = response.content[0].text.strip() if response.content else None
+            if text:
+                logger.info(f"signal_analyst: Anthropic call succeeded for customer {customer_id}")
+                return text
+    except Exception as e:
+        logger.debug(f"signal_analyst: Anthropic call failed, trying OpenAI: {e}")
+
+    # ── Fallback to OpenAI ──
     try:
         from openai_key_utils import get_openai_api_key
         import openai
@@ -230,12 +255,11 @@ def _call_openai(customer_id: int, prompt: str) -> Optional[str]:
         api_key = get_openai_api_key(customer_id)
         if not api_key:
             logger.warning(
-                f"signal_analyst: no OpenAI API key for customer {customer_id} — skipping LLM call"
+                f"signal_analyst: no LLM API key for customer {customer_id} — skipping"
             )
             return None
 
         client = openai.OpenAI(api_key=api_key)
-
         response = client.chat.completions.create(
             model='gpt-4o-mini',
             messages=[
@@ -252,9 +276,12 @@ def _call_openai(customer_id: int, prompt: str) -> Optional[str]:
             max_tokens=400,
             temperature=0.3,
         )
-
         return response.choices[0].message.content.strip()
 
     except Exception as e:
-        logger.error(f"signal_analyst: OpenAI call failed: {e}", exc_info=True)
+        logger.error(f"signal_analyst: LLM call failed: {e}", exc_info=True)
         return None
+
+
+# Keep old name as alias for backward compatibility
+_call_openai = _call_llm
