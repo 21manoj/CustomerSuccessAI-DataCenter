@@ -465,6 +465,57 @@ Injects synthetic `_*_detected` tags into signal_types Counter:
 
 ---
 
+## Sprint 1.2 — EC2 Validation Results (Post Arc-Classifier Fix)
+
+**Run date:** 2026-03-26
+**Wizard A triggered via MCP tool** on customers 424, 425, 427, 428
+**Total accounts:** 58
+
+### Arc Distribution
+
+| Arc Type | Confidence | Count | % | vs Sprint 1 |
+|---|---|---|---|---|
+| `land_and_expand` | 0.75 | 36 | 62% | ✅ NEW (was 0) |
+| `budget_pressure` fallback | 0.55 | 14 | 24% | ✅ DOWN from 40% |
+| `crisis_recovery` | 0.75 | 4 | 7% | ✅ retained |
+| `budget_pressure` rule 4 | 0.75 | 2 | 3% | ✅ NEW — title scan firing |
+| `infrastructure_decay` | 0.75 | 2 | 3% | ✅ NEW (was 0) |
+
+### Per-Customer Results
+
+| Customer | Accounts | Edges | land_and_expand | crisis_recovery | infrastructure_decay | budget_pressure(r4) | fallback(0.55) |
+|---|---|---|---|---|---|---|---|
+| 424 | 10 | 19 | 5 | 1 | — | 1 | 3 |
+| 425 | 10 | 18 | 5 | 1 | 2 | — | 2 |
+| 427 | 18 | 30 | 12 | 1 | — | — | 5 |
+| 428 | 20 | 32 | 14 | 1 | — | 1 | 4 |
+| **Total** | **58** | **99** | **36** | **4** | **2** | **2** | **14** |
+
+### Acceptance Criteria — Final Status
+
+| Criterion | Sprint 1 | Sprint 1.2 | Status |
+|---|---|---|---|
+| All accounts have arc_type set | ✅ 58/58 | ✅ 58/58 | PASS |
+| arc_type persisted to DB | ✅ | ✅ | PASS |
+| Wizard A non-fatal wiring | ✅ | ✅ | PASS |
+| crisis_recovery correctly fires | ✅ | ✅ (at 0.75 via rule 2b) | PASS |
+| infrastructure_decay fires | ❌ never | ✅ 2 accounts (cust 425) | PASS |
+| land_and_expand fires | ❌ never | ✅ 36 accounts | PASS |
+| budget_pressure title scan fires | ❌ never | ✅ 2 accounts (0.75 conf) | PASS |
+| Arc variety ≥ 4 types | ❌ 2 types | ✅ 4 types | PASS |
+| budget_pressure fallback < 25% | ❌ 40% | ✅ 24% | PASS |
+| champion_loss fires | ❌ | ❌ borderline slope | INVESTIGATE |
+| True simulation (no signal_edges) | ⏳ not run | ⏳ not run | PENDING |
+
+### Notes
+
+- **crisis_recovery at 0.75 (not 0.80)**: rule 2b fires (health < 40 + critical_incident only). The 4 crisis accounts don't have `stakeholder_escalation` paired with the incident — rule 2 requires both. Correct behaviour.
+- **budget_pressure/0.75 on 2 accounts**: title scan working — node titles contain 'budget'/'freeze' text → `_budget_concern_detected` synthetic tag → rule 4 fires at higher confidence.
+- **champion_loss still missing**: 425001 (expected Titan Hyperscale Labs) still hitting fallback. Likely slope_30d is between -2 and -3 pts/month — borderline. Need to check actual slope value for that account.
+- **Edges created: 99 total** across 58 accounts — arc_edge_generator firing correctly for each arc type assignment.
+
+---
+
 ### Open items / Assumptions (feature/actions-pipeline-push)
 
 1. **`HealthScore` model** — assumed to have `account_id`, `measurement_month`, `health_score`, `contributing_pillars` columns. The health score write in `_process_data_impl` uses a raw SQL upsert, so the SQLAlchemy model must match the actual table schema. Verify with `\d health_scores` in psql.
