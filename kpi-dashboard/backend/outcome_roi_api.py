@@ -1480,3 +1480,46 @@ def get_historical_details():
         import traceback
         print(f"Historical details error: {e}\n{traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
+
+
+# ─── Playbook Economics ──────────────────────────────────────────────────────
+
+@outcome_roi_api.route('/api/outcome-roi/playbook-economics', methods=['GET'])
+def playbook_economics():
+    """
+    Playbook cost bridge economics — investment breakdown, hours, ROI per playbook.
+
+    Query params:
+        account_arr  (optional, defaults to portfolio ARR sum)
+
+    Returns per-metric and per-playbook economics from Power-of-1 benchmarks,
+    PLAYBOOK_CONFIG hours, and CSM hourly rate.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from playbook_cost_bridge import calculate_cost_bridge, bridge_to_dict
+
+        account_arr = request.args.get('account_arr', type=float)
+        if not account_arr:
+            accounts = Account.query.filter(
+                Account.customer_id == customer_id,
+            ).all()
+            account_arr = float(sum(
+                float(a.revenue) if a.revenue else 0 for a in accounts
+            )) if accounts else 10_000_000
+
+        result = calculate_cost_bridge(account_arr=account_arr)
+        return jsonify({
+            'status': 'success',
+            'customer_id': customer_id,
+            'effective_arr': account_arr,
+            **bridge_to_dict(result),
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Playbook economics error: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500

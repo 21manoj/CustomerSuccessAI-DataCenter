@@ -881,3 +881,116 @@ def _get_investment_summary(config):
         'total_hours': INVESTMENT_SUMMARY['total_hours'],
         'total_fte': INVESTMENT_SUMMARY['total_fte'],
     }
+
+
+# ============================================================
+# CROSS-CUSTOMER COMPARISON (CEO-level)
+# ============================================================
+
+@portfolio_api.route('/api/portfolio/<int:portfolio_id>/cross-customer-comparison', methods=['GET'])
+def cross_customer_comparison(portfolio_id):
+    """
+    Compare all customers in a portfolio side-by-side: health, ARR, risk, expansion.
+
+    Returns:
+        portfolio_name, comparisons[] with health, ARR, pillar scores, revenue intelligence
+    """
+    try:
+        import utils.health_thresholds as ht
+
+        portfolio = Portfolio.query.filter_by(
+            portfolio_id=portfolio_id, enabled=True,
+        ).first()
+        if not portfolio:
+            return jsonify({'error': f'Portfolio {portfolio_id} not found or disabled'}), 404
+
+        memberships = PortfolioMembership.query.filter_by(
+            portfolio_id=portfolio_id,
+        ).all()
+
+        comparisons = []
+        for mem in memberships:
+            customer = Customer.query.filter_by(customer_id=mem.customer_id).first()
+            if not customer:
+                continue
+
+            accounts = Account.query.filter(
+                Account.customer_id == mem.customer_id,
+            ).all()
+
+            total_arr = sum(float(a.revenue) if a.revenue else 0 for a in accounts)
+
+            # Get pre-calculated health scores from HealthScore table
+            from models import HealthScore
+            health_scores = []
+            pillar_totals = {}
+            statuses = {'healthy': 0, 'at_risk': 0, 'critical': 0}
+
+            for acct in accounts:
+                hs = (
+                    HealthScore.query
+                    .filter_by(account_id=acct.account_id)
+                    .order_by(HealthScore.calculated_at.desc())
+                    .first()
+                )
+                if hs and hs.overall_score is not None:
+                    score = float(hs.overall_score)
+                    health_scores.append(score)
+                    cls = ht.classify(score)
+                    statuses[cls] = statuses.get(cls, 0) + 1
+                    if hs.pillar_scores:
+                        for k, v in hs.pillar_scores.items():
+                            pillar_totals.setdefault(k, []).append(float(v))
+
+            avg_health = round(
+                sum(health_scores) / len(health_scores), 1,
+            ) if health_scores else 0
+
+            avg_pillars = {
+                k: round(sum(v) / len(v), 1) for k, v in pillar_totals.items()
+            } if pillar_totals else {}
+
+            weakest_pillar = min(avg_pillars, key=avg_pillars.get) if avg_pillars else None
+
+            # Context graph revenue (if enabled)
+            revenue_data = None
+            try:
+                from feature_toggles import is_context_graph_enabled
+                if is_context_graph_enabled(mem.customer_id):
+                    from utils.context_graph import get_revenue_at_risk
+                    total_rev = {'at_risk': 0, 'protected': 0, 'expansion': 0, 'net_impact': 0}
+                    for acct in accounts:
+                        rev = get_revenue_at_risk(acct.account_id)
+                        if rev.get('node_count', 0) > 0:
+                            for k in total_rev:
+                                total_rev[k] += rev.get(k, 0)
+                    revenue_data = {k: round(v, 2) for k, v in total_rev.items()}
+            except Exception:
+                pass
+
+            comparisons.append({
+                'customer_id': mem.customer_id,
+                'customer_name': getattr(customer, 'customer_name', None) or getattr(customer, 'company_name', 'Unknown'),
+                'total_arr': round(total_arr, 2),
+                'avg_health_score': avg_health,
+                'account_distribution': statuses,
+                'total_accounts': len(accounts),
+                'avg_pillar_scores': avg_pillars,
+                'weakest_pillar': weakest_pillar,
+                'revenue_intelligence': revenue_data,
+            })
+
+        comparisons.sort(key=lambda x: x['avg_health_score'])
+
+        return jsonify({
+            'status': 'success',
+            'scope': 'portfolio',
+            'portfolio_id': portfolio_id,
+            'portfolio_name': portfolio.portfolio_name,
+            'comparisons': comparisons,
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Cross-customer comparison error: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500

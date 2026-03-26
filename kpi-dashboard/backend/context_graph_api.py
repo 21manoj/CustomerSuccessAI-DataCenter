@@ -604,3 +604,276 @@ def graph_ingest():
         db.session.rollback()
         logger.error(f"Error in graph_ingest: {e}", exc_info=True)
         return jsonify({'error': f'Ingest failed: {str(e)}'}), 500
+
+
+# ─── 8. Journey Timeline ─────────────────────────────────────────────────────
+
+@context_graph_api.route('/api/context-graph/journey-timeline', methods=['GET'])
+def graph_journey_timeline():
+    """
+    Chronological timeline of ALL context graph events for an account.
+    Replaces multiple search_signals calls with a single unified endpoint.
+
+    Query params:
+        account_id (required)
+        limit      (optional, default 50, max 200)
+
+    Returns:
+        account info, date_range, counts_by_type, revenue_summary, timeline[]
+    """
+    try:
+        customer_id = get_current_customer_id()
+        account_id, err = _require_account_id()
+        if err:
+            return err
+
+        fail = _guard(customer_id, account_id)
+        if fail[0] is not None:
+            return fail
+
+        account = Account.query.filter_by(
+            account_id=account_id, customer_id=customer_id,
+        ).first()
+
+        limit = min(max(request.args.get('limit', 50, type=int), 1), 200)
+        now = datetime.utcnow()
+
+        nodes = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == account_id,
+                db.or_(
+                    ContextNode.expires_at.is_(None),
+                    ContextNode.expires_at > now,
+                ),
+            )
+            .order_by(ContextNode.occurred_at.asc())
+            .limit(limit)
+            .all()
+        )
+
+        rev = get_revenue_at_risk(account_id)
+
+        if not nodes:
+            return jsonify({
+                'status': 'success',
+                'scope': 'account',
+                'account_id': account_id,
+                'account_name': account.account_name if account else None,
+                'event_count': 0,
+                'timeline': [],
+                'revenue_summary': rev,
+            })
+
+        counts = {}
+        for n in nodes:
+            counts[n.node_type] = counts.get(n.node_type, 0) + 1
+
+        timeline = []
+        for n in nodes:
+            props = n.properties or {}
+            entry = {
+                'node_id': n.node_id,
+                'node_type': n.node_type,
+                'node_subtype': n.node_subtype,
+                'title': n.title,
+                'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
+            }
+            sentiment = props.get('sentiment') or props.get('sentiment_score')
+            if sentiment is not None:
+                entry['sentiment'] = sentiment
+            sname = props.get('stakeholder_name') or props.get('stakeholder_title')
+            if sname:
+                entry['stakeholder'] = sname
+            if n.revenue_impact is not None:
+                entry['revenue_impact'] = float(n.revenue_impact)
+                entry['revenue_impact_type'] = n.revenue_impact_type
+            timeline.append(entry)
+
+        arr = float(account.revenue) if account and account.revenue else 0
+
+        return jsonify({
+            'status': 'success',
+            'scope': 'account',
+            'account_id': account_id,
+            'account_name': account.account_name if account else None,
+            'arr': arr,
+            'date_range': {
+                'start': nodes[0].occurred_at.isoformat() if nodes[0].occurred_at else None,
+                'end': nodes[-1].occurred_at.isoformat() if nodes[-1].occurred_at else None,
+            },
+            'event_count': len(nodes),
+            'counts_by_type': counts,
+            'revenue_summary': rev,
+            'timeline': timeline,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in graph_journey_timeline: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ─── 9. Stakeholder Map ──────────────────────────────────────────────────────
+
+@context_graph_api.route('/api/context-graph/stakeholder-map', methods=['GET'])
+def graph_stakeholder_map():
+    """
+    Stakeholder network for an account — who influenced which decisions/outcomes.
+
+    Query params:
+        account_id (required)
+
+    Returns:
+        stakeholder_count, stakeholders[] with connected decisions/outcomes,
+        influence_summary
+    """
+    try:
+        customer_id = get_current_customer_id()
+        account_id, err = _require_account_id()
+        if err:
+            return err
+
+        fail = _guard(customer_id, account_id)
+        if fail[0] is not None:
+            return fail
+
+        account = Account.query.filter_by(
+            account_id=account_id, customer_id=customer_id,
+        ).first()
+        now = datetime.utcnow()
+
+        # Fetch stakeholder, decision, and outcome nodes
+        stakeholder_nodes = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == account_id,
+                ContextNode.node_type == 'STAKEHOLDER',
+                db.or_(ContextNode.expires_at.is_(None), ContextNode.expires_at > now),
+            )
+            .order_by(ContextNode.occurred_at.asc())
+            .all()
+        )
+
+        decision_nodes = {
+            n.node_id: n
+            for n in ContextNode.query.filter(
+                ContextNode.account_id == account_id,
+                ContextNode.node_type == 'DECISION',
+            ).all()
+        }
+        outcome_nodes = {
+            n.node_id: n
+            for n in ContextNode.query.filter(
+                ContextNode.account_id == account_id,
+                ContextNode.node_type == 'OUTCOME',
+            ).all()
+        }
+
+        # Find INVOLVES edges connected to stakeholders
+        stakeholder_ids = [s.node_id for s in stakeholder_nodes]
+        involves_edges = []
+        if stakeholder_ids:
+            involves_edges = (
+                ContextEdge.query
+                .filter(
+                    ContextEdge.edge_type == 'INVOLVES',
+                    db.or_(
+                        ContextEdge.from_node_id.in_(stakeholder_ids),
+                        ContextEdge.to_node_id.in_(stakeholder_ids),
+                    ),
+                )
+                .all()
+            )
+
+        # Build adjacency map
+        connections = {s.node_id: set() for s in stakeholder_nodes}
+        for e in involves_edges:
+            if e.from_node_id in connections:
+                connections[e.from_node_id].add(e.to_node_id)
+            if e.to_node_id in connections:
+                connections[e.to_node_id].add(e.from_node_id)
+
+        # Also match via decision_maker_role in decision properties
+        for dec in decision_nodes.values():
+            maker_role = (dec.properties or {}).get('decision_maker_role', '')
+            if maker_role:
+                for s in stakeholder_nodes:
+                    if (
+                        maker_role.lower() in (s.node_subtype or '').lower()
+                        or maker_role.lower() in (s.title or '').lower()
+                    ):
+                        connections[s.node_id].add(dec.node_id)
+
+        total_decisions = 0
+        total_outcomes = 0
+        total_revenue = 0.0
+        stakeholders = []
+
+        for s in stakeholder_nodes:
+            props = s.properties or {}
+            connected = connections.get(s.node_id, set())
+
+            connected_decs = []
+            connected_outs = []
+            for cid in connected:
+                if cid in decision_nodes:
+                    d = decision_nodes[cid]
+                    connected_decs.append({
+                        'node_id': d.node_id,
+                        'title': d.title,
+                        'occurred_at': d.occurred_at.isoformat() if d.occurred_at else None,
+                    })
+                if cid in outcome_nodes:
+                    o = outcome_nodes[cid]
+                    rev = float(o.revenue_impact) if o.revenue_impact else 0
+                    connected_outs.append({
+                        'node_id': o.node_id,
+                        'title': o.title,
+                        'revenue_impact': rev,
+                        'revenue_impact_type': o.revenue_impact_type,
+                    })
+                    total_revenue += abs(rev)
+
+            total_decisions += len(connected_decs)
+            total_outcomes += len(connected_outs)
+
+            stakeholders.append({
+                'node_id': s.node_id,
+                'name': s.title,
+                'role': s.node_subtype,
+                'engagement_frequency': props.get('engagement_frequency'),
+                'department': props.get('department'),
+                'is_active': props.get('is_active', True),
+                'sentiment': props.get('sentiment'),
+                'connected_decisions': connected_decs,
+                'connected_outcomes': connected_outs,
+                'edge_count': len(connected),
+            })
+
+        stakeholders.sort(key=lambda x: x['edge_count'], reverse=True)
+
+        def _fmt_rev(v):
+            if v >= 1_000_000:
+                return f'${v / 1_000_000:.1f}M'
+            if v >= 1_000:
+                return f'${v / 1_000:.0f}K'
+            return f'${v:.0f}'
+
+        return jsonify({
+            'status': 'success',
+            'scope': 'account',
+            'account_id': account_id,
+            'account_name': account.account_name if account else None,
+            'stakeholder_count': len(stakeholders),
+            'stakeholders': stakeholders,
+            'influence_summary': (
+                f"{len(stakeholders)} stakeholders, "
+                f"{total_decisions} decision links, "
+                f"{total_outcomes} outcome links, "
+                f"{_fmt_rev(total_revenue)} total revenue influenced"
+            ),
+        })
+
+    except Exception as e:
+        logger.error(f"Error in graph_stakeholder_map: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
