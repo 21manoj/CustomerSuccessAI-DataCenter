@@ -1295,6 +1295,25 @@ def _process_data_impl(customer_id: int) -> dict:
                 f"Health score recalculation failed for customer {customer_id}: {e}", exc_info=True
             )
 
+        # ── Wizard A: arc classification + context graph edge generation ──
+        try:
+            import logging as _log_wa
+            _logger_wa = _log_wa.getLogger(__name__)
+            from wizards.wizard_a_journey_db import run_wizard_a
+            wizard_a_result = run_wizard_a(customer_id)
+            _logger_wa.info(
+                f"Wizard A complete: {wizard_a_result.get('processed', 0)} accounts, "
+                f"{wizard_a_result.get('edges_created', 0)} edges created"
+            )
+            steps_completed.append(
+                f"wizard_a_{wizard_a_result.get('processed', 0)}_accounts"
+            )
+        except Exception as _wa_err:
+            import logging as _log_wa2
+            _log_wa2.getLogger(__name__).warning(
+                f"Wizard A failed (non-fatal): {_wa_err}", exc_info=True
+            )
+
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
         return {

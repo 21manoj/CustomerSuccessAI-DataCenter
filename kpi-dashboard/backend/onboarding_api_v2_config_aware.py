@@ -1333,6 +1333,26 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     # merged into signal_edges.csv by _auto_generate_context_graph_files() before
     # this function is called.
 
+    # ── Wizard A: arc classification + context graph edge generation ──
+    try:
+        from wizards.wizard_a_journey_db import run_wizard_a
+        wizard_a_result = run_wizard_a(customer_id)
+        current_app.logger.info(
+            f"Wizard A complete (post-ingest): "
+            f"{wizard_a_result.get('processed', 0)} accounts, "
+            f"{wizard_a_result.get('edges_created', 0)} edges created"
+        )
+        result['wizard_a'] = {
+            'processed':     wizard_a_result.get('processed', 0),
+            'edges_created': wizard_a_result.get('edges_created', 0),
+            'arcs':          wizard_a_result.get('arcs', {}),
+        }
+    except Exception as _wa_err:
+        current_app.logger.warning(
+            f"Wizard A failed (non-fatal) in ingest_context_graph_csvs: {_wa_err}",
+            exc_info=True,
+        )
+
     return result
 
 

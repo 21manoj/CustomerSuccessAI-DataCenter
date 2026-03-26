@@ -1,31 +1,122 @@
 """
-Wizard A — DB-Native Journey Generation
-=========================================
+Wizard A — Arc Intelligence Engine (rebuilt Sprint 1).
+=======================================================
 
-Reads KPI time-series from ``dc2s_kpis`` and health scores from
-``health_scores``, builds a journey summary per account, classifies
-trajectory, and stores the result in ``journey_data``.
+Two responsibilities:
+1. Arc Classification: assigns arc_type, arc_phase, arc_confidence to each
+   account by reading HealthScore history + ContextNode signals + DC2SKPI data.
+2. Arc Edge Generation: generates ContextEdge rows from the arc's edge_topology.
+
+Also preserves the original DB-native journey generation logic
+(_run_journey_generation) for backward compatibility with Wizard B / UI.
 
 No filesystem access — everything comes from / goes to PostgreSQL.
 """
 
 from __future__ import annotations
 
+import logging
 import statistics
 from collections import defaultdict
 from datetime import datetime
 
 import utils.health_thresholds as ht
 
+logger = logging.getLogger(__name__)
+
 
 def run_wizard_a(customer_id: int) -> dict:
     """
-    Top-level entrypoint for DB-native Wizard A.
+    Top-level entrypoint for Wizard A Arc Intelligence Engine.
 
     Must be called inside a Flask app context.
 
+    Two steps per account:
+      1. classify_arc()    → arc_type, confidence, phase
+      2. generate_edges()  → ContextEdge rows in DB
+
+    Also runs legacy journey generation for backward compatibility.
+
     Returns:
-        dict with ``accounts_processed``, ``journeys_created``, ``patterns``.
+        dict with arc classification results and edge counts.
+    """
+    from models import Account
+    from extensions import db
+    from utils.arc_classifier import classify_arc
+    from utils.arc_edge_generator import generate_edges
+
+    accounts = Account.query.filter_by(customer_id=customer_id).all()
+    if not accounts:
+        return {
+            'status': 'skipped',
+            'reason': f'No accounts found for customer {customer_id}.',
+            'processed': 0,
+            'edges_created': 0,
+            'arcs': {},
+        }
+
+    results: dict = {
+        'status': 'completed',
+        'processed': 0,
+        'edges_created': 0,
+        'arcs': {},
+    }
+
+    for account in accounts:
+        try:
+            arc_type, confidence, phase = classify_arc(account.account_id)
+
+            # Persist arc assignment to Account model
+            account.arc_type       = arc_type
+            account.arc_phase      = phase
+            account.arc_confidence = confidence
+            db.session.commit()
+
+            # Generate causal edges
+            edges = generate_edges(account.account_id, arc_type, phase)
+
+            results['processed'] += 1
+            results['edges_created'] += edges
+            results['arcs'][account.account_id] = {
+                'arc_type':   arc_type,
+                'phase':      phase,
+                'confidence': confidence,
+                'edges':      edges,
+            }
+            logger.info(
+                f"Wizard A: account={account.account_id} ({account.account_name}) "
+                f"arc={arc_type} phase={phase} confidence={confidence:.2f} edges={edges}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Wizard A failed for account {account.account_id} "
+                f"({account.account_name}): {e}",
+                exc_info=True,
+            )
+            # Continue with next account — never abort the loop
+            continue
+
+    # Run legacy journey generation (non-fatal)
+    try:
+        journey_result = _run_journey_generation(customer_id)
+        results['journeys_created'] = journey_result.get('journeys_created', 0)
+        results['patterns'] = journey_result.get('patterns', {})
+    except Exception as e:
+        logger.warning(f"Wizard A legacy journey generation failed (non-fatal): {e}")
+
+    logger.info(
+        f"Wizard A complete: customer={customer_id} "
+        f"processed={results['processed']} edges={results['edges_created']}"
+    )
+    return results
+
+
+def _run_journey_generation(customer_id: int) -> dict:
+    """
+    Legacy journey generation logic — preserved for backward compatibility.
+
+    Builds journey timeline per account from KPI + health data and upserts
+    into the journey_data table for the Journey Visualizer UI.
     """
     from models import Account, DC2SKPI, HealthScore, JourneyData
     from extensions import db

@@ -119,7 +119,12 @@ class Account(db.Model):
     customer_uuid = db.Column(db.String(60), nullable=True)  # FK to customers.uuid
     created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
-    
+
+    # Arc Intelligence Engine columns (added by add_arc_fields_to_accounts.py)
+    arc_type       = db.Column(db.String(50),  nullable=True)   # crisis_recovery, champion_loss, etc.
+    arc_phase      = db.Column(db.String(20),  nullable=True)   # baseline | intervention
+    arc_confidence = db.Column(db.Float,       nullable=True)   # 0.0 - 1.0
+
     # Composite indexes for common query patterns
     __table_args__ = (
         db.Index('idx_account_customer_status', 'customer_id', 'account_status'),
