@@ -1250,8 +1250,9 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                                         and from_row[0] > to_row[0]):
                                     current_app.logger.warning(
                                         f"signal_edges: skipping backward {edge_type} edge "
-                                        f"({from_row[0]} → {to_row[0]}) "
-                                        f"(from_ref={from_ref!r} to_ref={to_ref!r})"
+                                        f"from_ref={from_ref!r} (occurred_at={from_row[0]}) "
+                                        f"to_ref={to_ref!r} (occurred_at={to_row[0]}) "
+                                        f"acct_id={acct_id}"
                                     )
                                     continue
 
@@ -1278,11 +1279,21 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                             })
                             result['edges_inserted'] += 1
                         else:
+                            # Log the exact ref that failed so diagnosis is immediate —
+                            # None on from_nid = signal/decision ref not found in DB for this account
+                            # None on to_nid   = decision/outcome ref not found in DB for this account
+                            current_app.logger.warning(
+                                f"signal_edges: unresolved ref "
+                                f"acct_id={acct_id} edge_type={edge_type!r} | "
+                                f"from_ref={from_ref!r} → node_id={from_nid} | "
+                                f"to_ref={to_ref!r} → node_id={to_nid}"
+                            )
                             unresolved += 1
 
             if unresolved:
                 current_app.logger.warning(
-                    f"signal_edges: {unresolved} edge-account pairs could not be resolved"
+                    f"signal_edges: {unresolved} edge-account pairs could not be resolved "
+                    f"(see per-edge warnings above for exact refs)"
                 )
             result['files_loaded'].append('signal_edges.csv')
             current_app.logger.info(

@@ -88,89 +88,276 @@ class NarrativeTimelinePlanner:
     # Arc templates define phases with ordered events.
     # 'month' is relative to data start (0-indexed).
     # 'offset_days' is relative to the phase month start.
-    ARC_TEMPLATES: Dict[str, List[Dict[str, Any]]] = {
-        'ignored_churn': [
-            {'phase': 'baseline', 'months': (0, 2), 'events': []},
-            {'phase': 'warning', 'month': 3, 'events': [
-                {'type': 'signal', 'subtype': 'kpi_decline', 'offset_days': 0},
-                {'type': 'signal', 'subtype': 'support_escalation', 'offset_days': 7},
-                {'type': 'stakeholder', 'subtype': 'champion_disengagement', 'offset_days': 14},
-            ]},
-            {'phase': 'crisis', 'month': 4, 'events': [
-                {'type': 'decision', 'subtype': 'escalation_to_exec', 'offset_days': 0},
-                {'type': 'decision', 'subtype': 'emergency_retention', 'offset_days': 7},
-            ]},
-            {'phase': 'outcome', 'month': 5, 'events': [
-                {'type': 'outcome', 'subtype': 'churn_risk', 'offset_days': 0},
-                {'type': 'outcome', 'subtype': 'engagement_decline', 'offset_days': 3},
-            ]},
-        ],
-        'proactive_growth': [
-            {'phase': 'baseline', 'months': (0, 2), 'events': []},
-            {'phase': 'expansion', 'month': 3, 'events': [
-                {'type': 'signal', 'subtype': 'expansion_signal', 'offset_days': 0},
-                {'type': 'stakeholder', 'subtype': 'champion_engages', 'offset_days': 7},
-            ]},
-            {'phase': 'invest', 'month': 4, 'events': [
-                {'type': 'decision', 'subtype': 'invest_expansion', 'offset_days': 0},
-                {'type': 'decision', 'subtype': 'upsell_proposal', 'offset_days': 10},
-            ]},
-            {'phase': 'outcome', 'month': 5, 'events': [
-                {'type': 'outcome', 'subtype': 'expansion_opportunity', 'offset_days': 0},
-                {'type': 'outcome', 'subtype': 'revenue_growth', 'offset_days': 7},
-            ]},
-        ],
-        'crisis_recovery': [
-            {'phase': 'baseline', 'months': (0, 1), 'events': []},
-            {'phase': 'crisis', 'month': 2, 'events': [
-                {'type': 'signal', 'subtype': 'critical_incident', 'offset_days': 0},
-                {'type': 'signal', 'subtype': 'stakeholder_escalation', 'offset_days': 3},
-            ]},
-            {'phase': 'response', 'month': 2, 'events': [
-                {'type': 'decision', 'subtype': 'emergency_response', 'offset_days': 10},
-                {'type': 'stakeholder', 'subtype': 'exec_sponsor_engaged', 'offset_days': 12},
-            ]},
-            {'phase': 'recovery', 'month': 3, 'events': [
-                {'type': 'decision', 'subtype': 'recovery_plan', 'offset_days': 0},
-            ]},
-            {'phase': 'outcome', 'month': 4, 'events': [
-                {'type': 'outcome', 'subtype': 'partial_recovery', 'offset_days': 0},
-                {'type': 'outcome', 'subtype': 'revenue_protected', 'offset_days': 14},
-            ]},
-        ],
-        'expansion_champion': [
-            {'phase': 'baseline', 'months': (0, 1), 'events': []},
-            {'phase': 'champion_active', 'month': 2, 'events': [
-                {'type': 'signal', 'subtype': 'champion_advocacy', 'offset_days': 0},
-                {'type': 'stakeholder', 'subtype': 'champion_promotes', 'offset_days': 5},
-            ]},
-            {'phase': 'expansion', 'month': 3, 'events': [
-                {'type': 'signal', 'subtype': 'usage_spike', 'offset_days': 0},
-                {'type': 'decision', 'subtype': 'expand_contract', 'offset_days': 14},
-            ]},
-            {'phase': 'outcome', 'month': 4, 'events': [
-                {'type': 'outcome', 'subtype': 'expansion_closed', 'offset_days': 0},
-                {'type': 'outcome', 'subtype': 'revenue_growth', 'offset_days': 7},
-            ]},
-        ],
-        'steady_performer': [
-            {'phase': 'baseline', 'months': (0, 3), 'events': []},
-            {'phase': 'review', 'month': 4, 'events': [
-                {'type': 'signal', 'subtype': 'routine_review', 'offset_days': 0},
-                {'type': 'stakeholder', 'subtype': 'regular_qbr', 'offset_days': 7},
-            ]},
-            {'phase': 'outcome', 'month': 5, 'events': [
-                {'type': 'decision', 'subtype': 'renewal_confirmed', 'offset_days': 0},
-                {'type': 'outcome', 'subtype': 'renewal_secured', 'offset_days': 14},
-            ]},
-        ],
+    # Arc templates: each arc owns its full story across all phases.
+    #
+    # Structure per arc:
+    #   'baseline'     : flat list of {type, subtype, month, offset_days}
+    #   'intervention' : same, for the recovery/intervention window
+    #   'edge_topology': causal chain [{phase, from, to, type, confidence, lag_days, label}]
+    #                    'from'/'to' use symbolic refs resolved via RefRegistry:
+    #                      'signal:N'          → Nth registered signal for this account
+    #                      'decision:N'        → Nth registered decision for this account
+    #                      'outcome:type_name' → outcome by type for this account
+    #
+    # Adding a new arc: add ONE entry here. Signals, decisions, outcomes, and
+    # edges all derive from it — no other files need changing.
+    ARC_TEMPLATES: Dict[str, Dict[str, Any]] = {
+        'ignored_churn': {
+            'classification': 'critical',
+            'baseline': [
+                {'type': 'signal',      'subtype': 'kpi_decline',              'month': 3, 'offset_days': 0},
+                {'type': 'signal',      'subtype': 'support_escalation',       'month': 3, 'offset_days': 7},
+                {'type': 'stakeholder', 'subtype': 'champion_disengagement',   'month': 3, 'offset_days': 14},
+                {'type': 'decision',    'subtype': 'escalation_to_exec',       'month': 4, 'offset_days': 0},
+                {'type': 'decision',    'subtype': 'emergency_retention',      'month': 4, 'offset_days': 7},
+                {'type': 'outcome',     'subtype': 'churn_risk',               'month': 5, 'offset_days': 0},
+                {'type': 'outcome',     'subtype': 'engagement_decline',       'month': 5, 'offset_days': 3},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'csm_intervention',  'month': 0, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 1, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'recovery_plan',     'month': 0, 'offset_days': 14},
+                {'type': 'decision', 'subtype': 'executive_qbr',     'month': 1, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'churn_averted',     'month': 2, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 14},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI decline triggered escalation'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:churn_risk',      'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Escalation surfaced churn risk'},
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:2',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Decline triggered retention plan'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention plan addressed engagement decline'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Recovery signal triggered intervention plan'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted',   'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Intervention plan averted churn'},
+                {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+            ],
+        },
+        'proactive_growth': {
+            'classification': 'healthy',
+            'baseline': [
+                {'type': 'signal',      'subtype': 'expansion_signal',       'month': 3, 'offset_days': 0},
+                {'type': 'stakeholder', 'subtype': 'champion_engages',       'month': 3, 'offset_days': 7},
+                {'type': 'decision',    'subtype': 'invest_expansion',       'month': 4, 'offset_days': 0},
+                {'type': 'decision',    'subtype': 'upsell_proposal',        'month': 4, 'offset_days': 10},
+                {'type': 'outcome',     'subtype': 'expansion_opportunity',  'month': 5, 'offset_days': 0},
+                {'type': 'outcome',     'subtype': 'revenue_growth',         'month': 5, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'advocacy',           'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'expansion_proposal', 'month': 1, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'expansion_approved', 'month': 2, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'revenue_growth',     'month': 2, 'offset_days': 14},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',                   'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Expansion signal triggered investment'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:expansion_opportunity', 'type': 'LED_TO',   'confidence': 0.8,  'lag_days': 14, 'label': 'Investment identified expansion'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:revenue_growth',        'type': 'LED_TO',   'confidence': 0.8,  'lag_days': 14, 'label': 'Upsell proposal drove revenue growth'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',                   'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Advocacy triggered expansion proposal'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_approved',   'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Proposal secured expansion approval'},
+            ],
+        },
+        'crisis_recovery': {
+            'classification': 'critical',
+            'baseline': [
+                {'type': 'signal',      'subtype': 'critical_incident',      'month': 2, 'offset_days': 0},
+                {'type': 'signal',      'subtype': 'stakeholder_escalation', 'month': 2, 'offset_days': 3},
+                {'type': 'decision',    'subtype': 'emergency_response',     'month': 2, 'offset_days': 10},
+                {'type': 'stakeholder', 'subtype': 'exec_sponsor_engaged',   'month': 2, 'offset_days': 12},
+                {'type': 'decision',    'subtype': 'recovery_plan',          'month': 3, 'offset_days': 0},
+                {'type': 'outcome',     'subtype': 'partial_recovery',       'month': 4, 'offset_days': 0},
+                {'type': 'outcome',     'subtype': 'revenue_protected',      'month': 4, 'offset_days': 14},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'recovery_plan',     'month': 0, 'offset_days': 14},
+                {'type': 'decision', 'subtype': 'executive_qbr',     'month': 1, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'churn_averted',     'month': 1, 'offset_days': 21},
+                {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 0},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Critical incident triggered emergency response'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:partial_recovery', 'type': 'LED_TO',   'confidence': 0.85, 'lag_days': 14, 'label': 'Emergency response led to partial recovery'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Escalation triggered recovery plan'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.8,  'lag_days': 21, 'label': 'Recovery plan protected revenue'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI recovery signal triggered plan'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted',   'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Recovery plan averted churn'},
+                {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+            ],
+        },
+        'expansion_champion': {
+            'classification': 'healthy',
+            'baseline': [
+                {'type': 'signal',      'subtype': 'champion_advocacy',  'month': 2, 'offset_days': 0},
+                {'type': 'stakeholder', 'subtype': 'champion_promotes',  'month': 2, 'offset_days': 5},
+                {'type': 'signal',      'subtype': 'usage_spike',        'month': 3, 'offset_days': 0},
+                {'type': 'decision',    'subtype': 'expand_contract',    'month': 3, 'offset_days': 14},
+                {'type': 'outcome',     'subtype': 'expansion_closed',   'month': 4, 'offset_days': 0},
+                {'type': 'outcome',     'subtype': 'revenue_growth',     'month': 4, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'advocacy',           'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'expansion_proposal', 'month': 0, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'expansion_approved', 'month': 1, 'offset_days': 21},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Champion advocacy triggered expansion'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Usage spike reinforced expansion decision'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:expansion_closed', 'type': 'LED_TO', 'confidence': 0.9,  'lag_days': 14, 'label': 'Contract expansion executed'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:revenue_growth', 'type': 'LED_TO',   'confidence': 0.85, 'lag_days': 21, 'label': 'Expansion drove revenue growth'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Advocacy triggered expansion proposal'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_approved', 'type': 'LED_TO', 'confidence': 0.9, 'lag_days': 21, 'label': 'Proposal secured approval'},
+            ],
+        },
+        'steady_performer': {
+            'classification': 'healthy',
+            'baseline': [
+                {'type': 'signal',      'subtype': 'routine_review',    'month': 4, 'offset_days': 0},
+                {'type': 'stakeholder', 'subtype': 'regular_qbr',       'month': 4, 'offset_days': 7},
+                {'type': 'decision',    'subtype': 'renewal_confirmed', 'month': 5, 'offset_days': 0},
+                {'type': 'outcome',     'subtype': 'renewal_secured',   'month': 5, 'offset_days': 14},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'advocacy',           'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'expansion_proposal', 'month': 1, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'expansion_approved', 'month': 2, 'offset_days': 0},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.8,  'lag_days': 7,  'label': 'Routine review prompted renewal decision'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:renewal_secured', 'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Renewal confirmed and secured'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Advocacy triggered expansion proposal'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_approved', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 21, 'label': 'Proposal secured expansion'},
+            ],
+        },
+        # ── at_risk arcs (specific story types, all fall back to budget_pressure) ──
+        'budget_pressure': {
+            'classification': 'at_risk',
+            'baseline': [
+                {'type': 'signal',   'subtype': 'kpi_decline',          'month': 2, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'support_escalation',   'month': 2, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'renewal_strategy',     'month': 3, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'feature_adoption_push','month': 3, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'renewal_uncertainty',  'month': 4, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'engagement_decline',   'month': 4, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'champion_reengagement','month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'renewal_incentive',    'month': 0, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'renewal_secured',      'month': 1, 'offset_days': 21},
+                {'type': 'outcome',  'subtype': 'revenue_protected',    'month': 2, 'offset_days': 0},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.8,  'lag_days': 14, 'label': 'KPI decline triggered renewal review'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:renewal_uncertainty', 'type': 'LED_TO', 'confidence': 0.75, 'lag_days': 21, 'label': 'Review surfaced renewal uncertainty'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',               'type': 'TRIGGERED', 'confidence': 0.75, 'lag_days': 14, 'label': 'Escalation triggered adoption push'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO',  'confidence': 0.7,  'lag_days': 21, 'label': 'Training surfaced engagement decline'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Re-engagement triggered incentive'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_secured',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Incentive secured renewal'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:revenue_protected','type': 'LED_TO',    'confidence': 0.8,  'lag_days': 28, 'label': 'Renewal protected revenue'},
+            ],
+        },
+        'stalled_deployment': {
+            'classification': 'at_risk',
+            'baseline': [
+                {'type': 'signal',   'subtype': 'kpi_decline',           'month': 1, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'renewal_strategy',      'month': 2, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'feature_adoption_push', 'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_uncertainty',   'month': 4, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'partner_friction',      'month': 4, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'deployment_improvement', 'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'technical_remediation',  'month': 0, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'renewal_secured',        'month': 1, 'offset_days': 21},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.8,  'lag_days': 14, 'label': 'KPI decline triggered renewal strategy'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:renewal_uncertainty', 'type': 'LED_TO', 'confidence': 0.75, 'lag_days': 21, 'label': 'Renewal review surfaced uncertainty'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:partner_friction',  'type': 'LED_TO',   'confidence': 0.7,  'lag_days': 21, 'label': 'Adoption push revealed partner friction'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Improvement signal triggered remediation'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_secured',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Remediation secured renewal'},
+            ],
+        },
+        'competitor_evaluation': {
+            'classification': 'at_risk',
+            'baseline': [
+                {'type': 'signal',   'subtype': 'support_escalation',   'month': 2, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'kpi_decline',          'month': 2, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'renewal_strategy',     'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_uncertainty',  'month': 4, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'engagement_decline',   'month': 4, 'offset_days': 14},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'champion_reengagement', 'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'renewal_incentive',     'month': 1, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_secured',       'month': 2, 'offset_days': 0},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.8,  'lag_days': 14, 'label': 'Escalation triggered renewal review'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:renewal_uncertainty', 'type': 'LED_TO', 'confidence': 0.75, 'lag_days': 21, 'label': 'Review surfaced renewal uncertainty'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'outcome:engagement_decline', 'type': 'CAUSED_BY', 'confidence': 0.7, 'lag_days': 7, 'label': 'KPI decline causing engagement drop'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Re-engagement triggered incentive'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_secured',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Incentive secured renewal'},
+            ],
+        },
+        'champion_loss': {
+            'classification': 'critical',
+            'baseline': [
+                {'type': 'signal',   'subtype': 'stakeholder_escalation', 'month': 1, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'kpi_decline',            'month': 2, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'escalation_to_exec',     'month': 2, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'emergency_retention',    'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'revenue_at_risk',        'month': 4, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'engagement_decline',     'month': 4, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'executive_engagement',   'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'recovery_plan',          'month': 0, 'offset_days': 14},
+                {'type': 'decision', 'subtype': 'executive_qbr',          'month': 1, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'churn_averted',          'month': 1, 'offset_days': 21},
+                {'type': 'outcome',  'subtype': 'revenue_protected',      'month': 2, 'offset_days': 7},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Stakeholder loss triggered escalation'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 14, 'label': 'Escalation revealed revenue risk'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'KPI decline triggered retention plan'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention plan addressed engagement decline'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Exec engagement triggered recovery plan'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Recovery plan averted churn'},
+                {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+            ],
+        },
+        'infrastructure_decay': {
+            'classification': 'critical',
+            'baseline': [
+                {'type': 'signal',   'subtype': 'critical_incident',    'month': 1, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'support_escalation',   'month': 1, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'emergency_response',   'month': 2, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'emergency_retention',  'month': 3, 'offset_days': 7},
+                {'type': 'outcome',  'subtype': 'revenue_at_risk',      'month': 4, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'capacity_constraint',  'month': 4, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 0, 'offset_days': 0},
+                {'type': 'decision', 'subtype': 'recovery_plan',     'month': 0, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'churn_averted',     'month': 1, 'offset_days': 21},
+                {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 0},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Critical incident triggered emergency response'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 14, 'label': 'Response revealed revenue at risk'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Escalation triggered retention plan'},
+                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:capacity_constraint', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention surfaced capacity constraints'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI recovery triggered remediation plan'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Remediation averted churn'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:revenue_protected', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 28, 'label': 'Remediation protected revenue'},
+            ],
+        },
     }
 
-    # Fallback: maps classification to a default arc
+    # Fallback: maps classification to a default arc when story_arc is unset/unrecognised
     CLASSIFICATION_TO_ARC = {
-        'critical': 'ignored_churn',
-        'at_risk': 'crisis_recovery',
-        'healthy': 'steady_performer',
+        'critical': 'crisis_recovery',
+        'at_risk':  'budget_pressure',
+        'healthy':  'steady_performer',
     }
 
     def __init__(self, seed: int = 42):
@@ -184,61 +371,57 @@ class NarrativeTimelinePlanner:
         start_date: datetime,
         total_months: int = 6,
         classification: str = 'healthy',
+        phase: str = 'baseline',
     ) -> List[PlannedEvent]:
         """
         Generate ordered events with concrete dates for one account.
 
+        Reads the arc's spine for the requested phase (baseline or intervention)
+        and converts each event definition into a PlannedEvent with a real date.
+        Dates are computed from start_date + month * 30 + offset_days, so signals
+        always precede decisions which always precede outcomes within an arc spine.
+
         Args:
-            account_id: The account's numeric ID
-            arc_type: Story arc key (e.g. 'ignored_churn')
-            start_date: First date of the data range
-            total_months: Total months of data
-            classification: Account classification fallback
+            account_id:    The account's numeric ID
+            arc_type:      Story arc key (e.g. 'crisis_recovery')
+            start_date:    First date of the data range
+            total_months:  Total months of data (caps month references)
+            classification: Fallback classification when arc_type is unrecognised
+            phase:         'baseline' or 'intervention' — selects which spine to use
 
         Returns:
             Chronologically sorted list of PlannedEvent
         """
-        # Resolve arc template
-        template = self.ARC_TEMPLATES.get(arc_type)
-        if not template:
-            # Fall back to classification-based arc
+        # Resolve arc definition (with classification fallback)
+        arc_def = self.ARC_TEMPLATES.get(arc_type)
+        if not arc_def:
             fallback = self.CLASSIFICATION_TO_ARC.get(classification, 'steady_performer')
-            template = self.ARC_TEMPLATES.get(fallback, self.ARC_TEMPLATES['steady_performer'])
+            arc_def = self.ARC_TEMPLATES.get(fallback, self.ARC_TEMPLATES['steady_performer'])
+
+        # Select spine for this phase; fall back to baseline if intervention not defined
+        spine = arc_def.get(phase) or arc_def.get('baseline', [])
 
         events: List[PlannedEvent] = []
-
-        for phase_def in template:
-            phase_name = phase_def['phase']
-            phase_events = phase_def.get('events', [])
-
-            if not phase_events:
+        for evt_def in spine:
+            # Stakeholder events are handled by generate_stakeholders_csv, not here
+            if evt_def['type'] == 'stakeholder':
                 continue
 
-            # Determine the month for this phase
-            month = phase_def.get('month')
-            if month is None:
-                months_range = phase_def.get('months', (0, 0))
-                month = months_range[1]  # end of range
+            month = min(evt_def.get('month', 0), max(total_months - 1, 0))
+            evt_date = start_date + timedelta(days=month * 30 + evt_def.get('offset_days', 0))
 
-            # Cap month to total_months - 1
-            month = min(month, max(total_months - 1, 0))
-            phase_start = start_date + timedelta(days=month * 30)
+            events.append(PlannedEvent(
+                account_id=account_id,
+                phase=phase,
+                event_type=evt_def['type'],
+                event_subtype=evt_def['subtype'],
+                date=evt_date,
+                offset_days=evt_def.get('offset_days', 0),
+            ))
 
-            for evt_def in phase_events:
-                evt_date = phase_start + timedelta(days=evt_def.get('offset_days', 0))
-                events.append(PlannedEvent(
-                    account_id=account_id,
-                    phase=phase_name,
-                    event_type=evt_def['type'],
-                    event_subtype=evt_def['subtype'],
-                    date=evt_date,
-                    offset_days=evt_def.get('offset_days', 0),
-                ))
-
-        # Sort by date to enforce causal ordering
+        # Sort by date — arc spines are ordered but sort ensures correctness
         events.sort(key=lambda e: e.date)
 
-        # Cache the plan
         self._plans[account_id] = events
         return events
 
@@ -269,6 +452,111 @@ class NarrativeTimelinePlanner:
     def has_plan(self, account_id: int) -> bool:
         """Check if a plan exists for this account."""
         return account_id in self._plans
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# RefRegistry — shared ref map built by generators, consumed by edges
+# ═══════════════════════════════════════════════════════════════════════
+
+class RefRegistry:
+    """
+    Single source of truth for ref_str → (ref_str, date_str) mappings.
+
+    Generators call register_* as they write each CSV row.
+    generate_signal_edges_csv() calls resolve() to get actual ref strings
+    and dates — no reconstruction, no re-derived counters.
+
+    Symbolic ref formats understood by resolve():
+        'signal:N'          → Nth registered signal for account (1-indexed)
+        'decision:N'        → Nth registered decision for account (1-indexed)
+        'outcome:type_name' → outcome by type for account
+
+    Example:
+        registry.register_signal(424003, 'baseline_sig_424003_1', '2025-12-10')
+        registry.register_decision(424003, 'baseline_dec_424003_1', '2026-01-15')
+        registry.register_outcome(424003, 'renewal_uncertainty', ..., '2026-02-20')
+
+        registry.resolve(424003, 'signal:1')
+        # → ('baseline_sig_424003_1', '2025-12-10')
+        registry.resolve(424003, 'outcome:renewal_uncertainty')
+        # → (..., '2026-02-20')
+    """
+
+    def __init__(self):
+        # aid → [(ref_str, date_str), ...]  — 1-indexed ordinals
+        self._signals: Dict[int, List[Tuple[str, str]]] = {}
+        self._decisions: Dict[int, List[Tuple[str, str]]] = {}
+        # (aid, outcome_type) → (ref_str, date_str)
+        self._outcomes: Dict[Tuple[int, str], Tuple[str, str]] = {}
+
+    def reset(self):
+        """Clear all registered refs (call before re-generating a customer)."""
+        self._signals.clear()
+        self._decisions.clear()
+        self._outcomes.clear()
+
+    def register_signal(self, aid: int, ref_str: str, date_str: str) -> int:
+        """Register a signal. Returns its 1-based ordinal for this account."""
+        if aid not in self._signals:
+            self._signals[aid] = []
+        self._signals[aid].append((ref_str, date_str))
+        return len(self._signals[aid])
+
+    def register_decision(self, aid: int, ref_str: str, date_str: str) -> int:
+        """Register a decision. Returns its 1-based ordinal for this account."""
+        if aid not in self._decisions:
+            self._decisions[aid] = []
+        self._decisions[aid].append((ref_str, date_str))
+        return len(self._decisions[aid])
+
+    def register_outcome(self, aid: int, outcome_type: str, ref_str: str, date_str: str):
+        """Register an outcome by type for an account."""
+        self._outcomes[(aid, outcome_type)] = (ref_str, date_str)
+
+    def resolve(self, aid: int, symbolic: str) -> Optional[Tuple[str, str]]:
+        """
+        Resolve a symbolic ref to (ref_str, date_str), or None if not found.
+
+        Logs a warning on miss so callers get immediate diagnostic context.
+        """
+        if symbolic.startswith('signal:'):
+            try:
+                n = int(symbolic[7:])
+            except ValueError:
+                return None
+            sigs = self._signals.get(aid, [])
+            if 1 <= n <= len(sigs):
+                return sigs[n - 1]
+            logger.warning("  RefRegistry miss: %s for aid=%d (have %d signals)", symbolic, aid, len(sigs))
+            return None
+
+        if symbolic.startswith('decision:'):
+            try:
+                n = int(symbolic[9:])
+            except ValueError:
+                return None
+            decs = self._decisions.get(aid, [])
+            if 1 <= n <= len(decs):
+                return decs[n - 1]
+            logger.warning("  RefRegistry miss: %s for aid=%d (have %d decisions)", symbolic, aid, len(decs))
+            return None
+
+        if symbolic.startswith('outcome:'):
+            otype = symbolic[8:]
+            result = self._outcomes.get((aid, otype))
+            if result is None:
+                logger.warning("  RefRegistry miss: outcome:%s for aid=%d", otype, aid)
+            return result
+
+        logger.warning("  RefRegistry: unrecognised symbolic format %r for aid=%d", symbolic, aid)
+        return None
+
+    def summary(self, aid: int) -> str:
+        """One-line diagnostic for an account's registered refs."""
+        ns = len(self._signals.get(aid, []))
+        nd = len(self._decisions.get(aid, []))
+        no = sum(1 for (a, _) in self._outcomes if a == aid)
+        return f"aid={aid}: {ns} signals, {nd} decisions, {no} outcomes registered"
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -388,22 +676,44 @@ class ManifestCSVGenerator:
         ],
     }
 
-    PHASE1_OUTCOME_TEMPLATES = {
-        'critical': [
-            ('revenue_at_risk', 'Churn risk identified', 'Account showing signs of churn. ARR at risk.', -0.5, 'open'),
-            ('engagement_decline', 'Engagement declining', 'Stakeholder engagement dropped significantly.', -0.1, 'in_progress'),
-            ('renewal_uncertainty', 'Renewal at risk', 'Renewal timeline uncertain due to unresolved issues.', -0.3, 'open'),
-            ('capacity_constraint', 'Capacity issues', 'Infrastructure capacity constraints impacting service quality.', -0.15, 'in_progress'),
-        ],
-        'at_risk': [
-            ('renewal_uncertainty', 'Renewal discussion stalled', 'Renewal discussion delayed pending resolution of concerns.', -0.2, 'in_progress'),
-            ('engagement_decline', 'Engagement cooling', 'Key stakeholder engagement frequency declining.', -0.1, 'open'),
-            ('partner_friction', 'Integration friction', 'P4 partner integration issues causing workflow disruption.', -0.08, 'in_progress'),
-        ],
-        'healthy': [
-            ('expansion_opportunity', 'Expansion potential identified', 'Account showing strong expansion signals.', 0.15, 'open'),
-            ('renewal_secured', 'Renewal on track', 'Renewal discussion progressing positively.', 0.05, 'in_progress'),
-        ],
+    # ── Outcome metadata: type → (title_template, description, arr_impact_pct, status)
+    # Used by generate_outcomes_csv() — arc spine defines WHICH outcome types appear.
+    # Adding a new outcome type: add one entry here + reference it in an arc's spine.
+    OUTCOME_METADATA: Dict[str, Tuple[str, str, float, str]] = {
+        'revenue_at_risk':       ('Revenue at Risk',           'Account showing signs of churn. ARR at risk.',                              -0.5,  'open'),
+        'engagement_decline':    ('Engagement Declining',      'Stakeholder engagement dropped significantly.',                             -0.1,  'in_progress'),
+        'renewal_uncertainty':   ('Renewal at Risk',           'Renewal timeline uncertain due to unresolved issues.',                      -0.2,  'in_progress'),
+        'capacity_constraint':   ('Capacity Issues',           'Infrastructure capacity constraints impacting service quality.',            -0.15, 'in_progress'),
+        'churn_risk':            ('Churn Risk Identified',     'Account at high risk of churn without intervention.',                       -0.4,  'open'),
+        'partner_friction':      ('Integration Friction',      'P4 partner integration issues causing workflow disruption.',                -0.08, 'in_progress'),
+        'partial_recovery':      ('Partial Recovery',          'Services stabilizing following initial response.',                         -0.1,  'in_progress'),
+        'expansion_opportunity': ('Expansion Potential',       'Account showing strong expansion signals.',                                 0.15, 'open'),
+        'revenue_growth':        ('Revenue Growth',            'Upsell opportunity converted. New workload onboarded.',                     0.1,  'in_progress'),
+        'renewal_secured':       ('Renewal Secured',           'Renewal confirmed. Account committed for next term.',                       0.05, 'resolved'),
+        'expansion_closed':      ('Expansion Closed',          'Contract expansion executed. New capacity provisioned.',                    0.2,  'resolved'),
+        'churn_averted':         ('Churn Risk Averted',        'Retention plan executed. Account committed to renewal.',                    0.4,  'resolved'),
+        'revenue_protected':     ('Revenue Protected',         'Intervention protected ARR through engagement and service improvements.',   0.05, 'resolved'),
+        'expansion_approved':    ('Expansion Approved',        'Account approved additional capacity and new product modules.',             0.2,  'in_progress'),
+        'engagement_recovery':   ('Engagement Recovery',       'Stakeholder engagement restored after CSM intervention.',                   0.05, 'resolved'),
+    }
+
+    # ── Decision metadata: subtype → (title_template, maker_role, chosen_option, outcome_desc, risk_level)
+    # Used by generate_decisions_csv() — arc spine defines WHICH decisions appear.
+    DECISION_METADATA: Dict[str, Tuple[str, str, str, str, str]] = {
+        'escalation_to_exec':    ('Escalation to Executive Sponsor', 'executive_sponsor', 'Escalate account risk',        'Risk review initiated',              'high'),
+        'emergency_retention':   ('Emergency Retention Plan',        'champion',          'Launch retention playbook',    'Retention plan in progress',         'critical'),
+        'emergency_response':    ('Emergency Response Plan',         'executive_sponsor', 'Activate emergency plan',      'Emergency response underway',        'high'),
+        'recovery_plan':         ('Recovery Plan Approved',          'executive_sponsor', 'Execute recovery plan',        'Recovery plan execution started',    'medium'),
+        'renewal_strategy':      ('Renewal Strategy Review',         'executive_sponsor', 'Adjust contract terms',        'Renewal discussion underway',        'medium'),
+        'feature_adoption_push': ('Feature Adoption Push',           'champion',          'Schedule training sessions',   'Training plan approved',             'medium'),
+        'invest_expansion':      ('Expansion Investment Approved',   'economic_buyer',    'Approve expansion budget',     'Expansion investment approved',      'low'),
+        'upsell_proposal':       ('Upsell Proposal Submitted',       'champion',          'Propose upsell package',       'Expansion opportunity identified',   'low'),
+        'expand_contract':       ('Contract Expansion',              'economic_buyer',    'Execute expansion contract',   'New capacity provisioned',           'low'),
+        'renewal_confirmed':     ('Renewal Confirmed',               'champion',          'Confirm renewal terms',        'Renewal locked in',                  'low'),
+        'renewal_incentive':     ('Renewal Incentive Approved',      'economic_buyer',    'Offer multi-year discount',    'Incentive approved',                 'medium'),
+        'technical_remediation': ('Technical Remediation Plan',      'technical_lead',    'Address platform concerns',    'Remediation in progress',            'medium'),
+        'expansion_proposal':    ('Expansion Proposal Submitted',    'champion',          'Propose additional capacity',  'Expansion under review',             'low'),
+        'executive_qbr':         ('Executive QBR Established',       'executive_sponsor', 'Weekly executive check-ins',   'Cadence approved',                   'high'),
     }
 
     def __init__(
@@ -485,9 +795,15 @@ class ManifestCSVGenerator:
         self.planner = NarrativeTimelinePlanner(seed=seed)
         self._build_narrative_plans()
 
+        # Shared ref registry — populated by signal/decision/outcome generators,
+        # consumed by generate_signal_edges_csv(). Reset here so generate_all()
+        # calls are idempotent.
+        self._registry = RefRegistry()
+
     def _build_narrative_plans(self):
         """Create narrative timeline plans for all accounts."""
         total_months = max(1, int((self.end_date - self.start_date).days / 30))
+        arc_phase = self.phase or 'baseline'
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             arc_type = acct.get('story_arc', '')
@@ -498,7 +814,20 @@ class ManifestCSVGenerator:
                 start_date=self.start_date,
                 total_months=total_months,
                 classification=classification,
+                phase=arc_phase,
             )
+
+    def _get_arc_def(self, acct: Dict[str, Any]) -> Dict[str, Any]:
+        """Return the arc definition dict for an account (with classification fallback)."""
+        arc_type = acct.get('story_arc', '')
+        arc_def = NarrativeTimelinePlanner.ARC_TEMPLATES.get(arc_type)
+        if not arc_def:
+            cls = acct.get('classification', 'healthy')
+            fallback = NarrativeTimelinePlanner.CLASSIFICATION_TO_ARC.get(cls, 'steady_performer')
+            arc_def = NarrativeTimelinePlanner.ARC_TEMPLATES.get(
+                fallback, NarrativeTimelinePlanner.ARC_TEMPLATES['steady_performer']
+            )
+        return arc_def
 
     def _build_dates(self) -> List[str]:
         """Build list of measurement date strings based on frequency."""
@@ -738,31 +1067,44 @@ class ManifestCSVGenerator:
     # ═══════════════════════════════════════════════════════════════════
 
     def generate_all(self, output_dir: str) -> Dict[str, str]:
-        """Generate all CSV files to output_dir. Returns {filename: path}."""
+        """
+        Generate all CSV files to output_dir. Returns {filename: path}.
+
+        Call order matters for the RefRegistry pipeline:
+          1. generate_signals_csv()   — resets registry, registers signal ordinals
+          2. generate_decisions_csv() — registers decision ordinals
+          3. generate_outcomes_csv()  — registers outcome types
+          4. generate_signal_edges_csv() — resolves all refs from the registry
+
+        Other generators are independent and can run in any order.
+        """
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        files = {}
-        generators = {
-            'accounts.csv': self.generate_accounts_csv,
-            'kpi_measurements.csv': self.generate_kpi_measurements_csv,
-            'enhanced_qualitative_signals.csv': self.generate_signals_csv,
-            'products.csv': self.generate_products_csv,
-            'stakeholders.csv': self.generate_stakeholders_csv,
-            'engagement_events.csv': self.generate_engagement_events_csv,
+        # Registry-independent generators (order irrelevant)
+        independent = {
+            'accounts.csv':                  self.generate_accounts_csv,
+            'kpi_measurements.csv':          self.generate_kpi_measurements_csv,
+            'products.csv':                  self.generate_products_csv,
+            'stakeholders.csv':              self.generate_stakeholders_csv,
+            'engagement_events.csv':         self.generate_engagement_events_csv,
             'account_business_profiles.csv': self.generate_profiles_csv,
-            'outcomes.csv': self.generate_outcomes_csv,
-            'decisions.csv': self.generate_decisions_csv,
-            'signal_edges.csv': self.generate_signal_edges_csv,
         }
+        # Registry pipeline — order is fixed
+        pipeline = [
+            ('enhanced_qualitative_signals.csv', self.generate_signals_csv),
+            ('decisions.csv',                    self.generate_decisions_csv),
+            ('outcomes.csv',                     self.generate_outcomes_csv),
+            ('signal_edges.csv',                 self.generate_signal_edges_csv),
+        ]
 
-        for filename, gen_fn in generators.items():
+        files = {}
+        for filename, gen_fn in {**independent, **dict(pipeline)}.items():
             content = gen_fn()
             fpath = output_path / filename
             fpath.write_text(content)
             files[filename] = str(fpath)
-            lines = content.count('\n')
-            logger.info(f"  {filename}: {lines} lines")
+            logger.info("  %s: %d lines", filename, content.count('\n'))
 
         return files
 
@@ -885,7 +1227,16 @@ class ManifestCSVGenerator:
         return out.getvalue()
 
     def generate_signals_csv(self) -> str:
-        """Generate enhanced_qualitative_signals.csv with narrative timeline dates."""
+        """
+        Generate enhanced_qualitative_signals.csv with narrative timeline dates.
+
+        Resets self._registry and registers every written signal so that
+        generate_signal_edges_csv() can resolve 'signal:N' symbolic refs
+        without any counter reconstruction.
+        """
+        # Registry reset — ensures generate_all() calls are idempotent
+        self._registry.reset()
+
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -895,39 +1246,43 @@ class ManifestCSVGenerator:
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
+        score_map = {
+            'very_positive': 0.9, 'positive': 0.7,
+            'neutral': 0.1,
+            'negative': -0.6, 'very_negative': -0.9,
+        }
+        content_map = {
+            'kpi_decline':            'KPI metrics declining below threshold',
+            'support_escalation':     'Support ticket escalated to management',
+            'expansion_signal':       'Account showing expansion readiness',
+            'critical_incident':      'Critical service incident reported',
+            'stakeholder_escalation': 'Stakeholder escalated concerns',
+            'champion_advocacy':      'Champion actively advocating for platform',
+            'usage_spike':            'Significant usage increase detected',
+            'routine_review':         'Routine quarterly review completed',
+            'csm_intervention':       'New CSM assigned and onboarding completed',
+            'kpi_recovery':           'KPI metrics recovering toward target',
+            'champion_reengagement':  'Champion re-engaged after outreach',
+            'deployment_improvement': 'Deployment velocity improving after intervention',
+            'executive_engagement':   'Executive sponsor re-engaged in account review',
+            'advocacy':               'Account champion actively advocating for platform',
+        }
+
         for idx, acct in enumerate(self.accounts):
-            counter = 0  # reset per account so sig_N counter is always 1-based
+            counter = 0  # reset per account — ordinals are 1-based per account
             aid = self._account_id(idx)
             arc = acct.get('story_arc', '')
 
             # Get planned signal events for narrative-aligned dates
             planned_signals = self.planner.get_events(aid, 'signal')
 
-            # Manifest-defined signals (curated)
-            for sig in acct.get('key_signals', []):
-                counter += 1
-                sentiment = sig.get('sentiment', 'neutral')
-                score_map = {
-                    'very_positive': 0.9, 'positive': 0.7,
-                    'neutral': 0.1,
-                    'negative': -0.6, 'very_negative': -0.9,
-                }
-                sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
-                w.writerow([
-                    sig_ref,
-                    aid,
-                    sig.get('date', '2026-01-01'),
-                    sig.get('type', 'observation'),
-                    sig.get('content', ''),
-                    sentiment.replace('very_', ''),
-                    score_map.get(sentiment, 0.0),
-                    arc,
-                    '',
-                    '',
-                    sig_ref,
-                ])
+            # ── Registration order matters for arc edge topology ──
+            # Narrative-planned signals register FIRST so that 'signal:1' in
+            # edge_topology refers to the arc's own causally-ordered signal
+            # (which precedes decisions by arc design). Key_signals are
+            # supplementary context and register after narrative signals.
 
-            # Narrative-planned signals (from NarrativeTimelinePlanner)
+            # 1. Narrative-planned signals (arc-spine aligned dates)
             for pe in planned_signals:
                 counter += 1
                 sig_ref = f'{phase_prefix}narrative_sig_{aid}_{counter}'
@@ -936,29 +1291,31 @@ class ManifestCSVGenerator:
                     'stakeholder_escalation',
                 ) else 'positive'
                 score = -0.6 if sentiment == 'negative' else 0.7
-                content_map = {
-                    'kpi_decline': 'KPI metrics declining below threshold',
-                    'support_escalation': 'Support ticket escalated to management',
-                    'expansion_signal': 'Account showing expansion readiness',
-                    'critical_incident': 'Critical service incident reported',
-                    'stakeholder_escalation': 'Stakeholder escalated concerns',
-                    'champion_advocacy': 'Champion actively advocating for platform',
-                    'usage_spike': 'Significant usage increase detected',
-                    'routine_review': 'Routine quarterly review completed',
-                }
                 w.writerow([
-                    sig_ref,
-                    aid,
-                    pe.date_str,
+                    sig_ref, aid, pe.date_str,
                     pe.event_subtype,
                     content_map.get(pe.event_subtype, f'Signal: {pe.event_subtype}'),
                     sentiment,
                     round(score + random.gauss(0, 0.1), 2),
-                    arc,
-                    pe.phase,
-                    '',
-                    sig_ref,
+                    arc, pe.phase, '', sig_ref,
                 ])
+                self._registry.register_signal(aid, sig_ref, pe.date_str)
+
+            # 2. Manifest-defined key signals (supplementary; higher ordinals)
+            for sig in acct.get('key_signals', []):
+                counter += 1
+                sentiment = sig.get('sentiment', 'neutral')
+                sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
+                date_str = sig.get('date', '2026-01-01')
+                w.writerow([
+                    sig_ref, aid, date_str,
+                    sig.get('type', 'observation'),
+                    sig.get('content', ''),
+                    sentiment.replace('very_', ''),
+                    score_map.get(sentiment, 0.0),
+                    arc, '', '', sig_ref,
+                ])
+                self._registry.register_signal(aid, sig_ref, date_str)
 
             # Auto-generated filler signals (2 per month for 6 months)
             cls = acct.get('classification', 'healthy')
@@ -994,19 +1351,16 @@ class ManifestCSVGenerator:
 
                     score = {'positive': 0.6, 'neutral': 0.1, 'negative': -0.5}[sentiment]
                     sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
+                    date_str = date.strftime('%Y-%m-%d')
                     w.writerow([
-                        sig_ref,
-                        aid,
-                        date.strftime('%Y-%m-%d'),
+                        sig_ref, aid, date_str,
                         random.choice(['meeting', 'health_check', 'observation', 'customer_feedback']),
                         random.choice(templates),
                         sentiment,
                         round(score + random.gauss(0, 0.1), 2),
-                        arc,
-                        '',
-                        '',
-                        sig_ref,
+                        arc, '', '', sig_ref,
                     ])
+                    self._registry.register_signal(aid, sig_ref, date_str)
 
             # Intervention-phase recovery signals (from V2 — manifest-defined)
             intervention = acct.get('intervention', {})
@@ -1014,37 +1368,30 @@ class ManifestCSVGenerator:
                 for rs in intervention['recovery_signals']:
                     counter += 1
                     sig_ref = f'{phase_prefix}recovery_{aid}_{counter}'
+                    date_str = rs.get('date', '2026-03-01')
                     w.writerow([
-                        sig_ref,
-                        aid,
-                        rs.get('date', '2026-03-01'),
+                        sig_ref, aid, date_str,
                         rs.get('type', 'recovery_signal'),
                         rs.get('content', ''),
                         rs.get('sentiment', 'positive'),
                         0.7 if rs.get('sentiment') == 'positive' else 0.1,
-                        arc,
-                        'recovery',
-                        '',
-                        sig_ref,
+                        arc, 'recovery', '', sig_ref,
                     ])
+                    self._registry.register_signal(aid, sig_ref, date_str)
 
             if self.phase == 'intervention' and intervention.get('csm_actions'):
                 for ca in intervention['csm_actions']:
                     counter += 1
                     sig_ref = f'{phase_prefix}csm_action_{aid}_{counter}'
+                    date_str = ca.get('date', '2026-02-01')
                     w.writerow([
-                        sig_ref,
-                        aid,
-                        ca.get('date', '2026-02-01'),
+                        sig_ref, aid, date_str,
                         'csm_action',
                         f'{ca["action"]} -> {ca["outcome"]}',
-                        'positive',
-                        0.8,
-                        arc,
-                        'intervention',
-                        '',
-                        sig_ref,
+                        'positive', 0.8,
+                        arc, 'intervention', '', sig_ref,
                     ])
+                    self._registry.register_signal(aid, sig_ref, date_str)
 
             # V3.1: Auto-generated recovery signals for intervention phase
             if self.phase == 'intervention':
@@ -1081,24 +1428,21 @@ class ManifestCSVGenerator:
                         champion_name=champion_name,
                     )
                     sentiment = rtpl.get('sentiment', 'positive')
-                    score_map = {
+                    auto_score_map = {
                         'very_positive': 0.9, 'positive': 0.7,
                         'neutral': 0.1, 'negative': -0.6,
                     }
                     sig_ref = f'{phase_prefix}auto_recovery_{aid}_{counter}'
+                    date_str = sig_date.strftime('%Y-%m-%d')
                     w.writerow([
-                        sig_ref,
-                        aid,
-                        sig_date.strftime('%Y-%m-%d'),
+                        sig_ref, aid, date_str,
                         rtpl.get('type', 'recovery_signal'),
                         content,
                         sentiment.replace('very_', ''),
-                        round(score_map.get(sentiment, 0.7) + acct_rng.gauss(0, 0.05), 2),
-                        arc,
-                        'recovery',
-                        '',
-                        sig_ref,
+                        round(auto_score_map.get(sentiment, 0.7) + acct_rng.gauss(0, 0.05), 2),
+                        arc, 'recovery', '', sig_ref,
                     ])
+                    self._registry.register_signal(aid, sig_ref, date_str)
 
         return out.getvalue()
 
@@ -1390,7 +1734,14 @@ class ManifestCSVGenerator:
         return out.getvalue()
 
     def generate_outcomes_csv(self) -> str:
-        """Generate outcomes.csv with narrative-aligned dates (V3.1: richer outcomes + Phase 2 recovery)."""
+        """
+        Generate outcomes.csv deriving outcome types from the arc spine.
+
+        Outcome types come from the arc's baseline/intervention spine events
+        (via OUTCOME_METADATA for labels/descriptions) rather than hardcoded
+        classification branches. Every outcome is registered into self._registry
+        so generate_signal_edges_csv() can resolve 'outcome:type_name'.
+        """
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1399,80 +1750,73 @@ class ManifestCSVGenerator:
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
-        counter = 0
+        arc_phase = self.phase or 'baseline'
+
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
             arr = acct['arr']
             acct_rng = random.Random(self.seed + aid + 8000)
+            arc_def = self._get_arc_def(acct)
 
-            # Get planned outcome events for narrative-aligned dates
+            # Outcome events from the arc spine for this phase
+            arc_outcome_events = [
+                e for e in arc_def.get(arc_phase, arc_def.get('baseline', []))
+                if e['type'] == 'outcome'
+            ]
+
+            # Narrative-planned dates for outcomes
             planned_outcomes = self.planner.get_events(aid, 'outcome')
-
-            # V3.1: Use richer outcome templates
-            outcome_templates = self.PHASE1_OUTCOME_TEMPLATES.get(cls, self.PHASE1_OUTCOME_TEMPLATES['healthy'])
-            # Determine how many outcomes: 3-4 critical, 2-3 at_risk, 1-2 healthy
-            if cls == 'critical':
-                n_outcomes = acct_rng.randint(3, min(4, len(outcome_templates)))
-            elif cls == 'at_risk':
-                n_outcomes = acct_rng.randint(2, min(3, len(outcome_templates)))
-            else:
-                n_outcomes = acct_rng.randint(1, min(2, len(outcome_templates)))
-
-            selected_outcomes = outcome_templates[:n_outcomes]
             total_days = max(1, (self.end_date - self.start_date).days)
 
-            for oi, (otype, title_tpl, desc_tpl, impact_pct, status) in enumerate(selected_outcomes):
-                counter += 1
-                impact = arr * impact_pct
-                title = f'{title_tpl} — {acct["name"]}'
-                desc = desc_tpl
+            # Get first signal ref for linked_signal_id (always present after generate_signals_csv)
+            first_sig = self._registry._signals.get(aid, [('', '')])[0][0] or f'{phase_prefix}sig_{aid}_1'
 
-                # Use narrative-planned date if available, else spread across range
+            for oi, evt in enumerate(arc_outcome_events):
+                otype = evt['subtype']
+                meta = self.OUTCOME_METADATA.get(otype, (
+                    otype.replace('_', ' ').title(), 'Outcome recorded.', 0.0, 'open'
+                ))
+                title_tpl, desc_tpl, impact_pct, status = meta
+                impact = arr * impact_pct
+
+                # Prefer narrative-planned date; anchored fallback preserves temporal order
                 if oi < len(planned_outcomes):
                     outcome_date = planned_outcomes[oi].date_str
+                elif cls in ('at_risk', 'critical'):
+                    outcome_date = (self.end_date - timedelta(days=acct_rng.randint(0, 9))).strftime('%Y-%m-%d')
                 else:
-                    if cls in ('at_risk', 'critical'):
-                        # Anchor outcomes near the end of the period so they fall
-                        # AFTER decisions (end_date - 10..45 days), satisfying the
-                        # temporal ordering check for LED_TO causal edges.
-                        outcome_date = (self.end_date - timedelta(days=acct_rng.randint(0, 9))).strftime('%Y-%m-%d')
-                    else:
-                        # Spread healthy outcomes across the latter half of the time range
-                        day_offset = int(total_days * 0.5) + acct_rng.randint(0, int(total_days * 0.5))
-                        outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
+                    day_offset = int(total_days * 0.5) + acct_rng.randint(0, int(total_days * 0.5))
+                    outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
 
                 w.writerow([
-                    aid,
-                    outcome_date,
-                    otype,
-                    title,
-                    desc,
+                    aid, outcome_date, otype,
+                    f'{title_tpl} — {acct["name"]}',
+                    desc_tpl,
                     round(impact, 2),
                     status,
-                    f'{phase_prefix}sig_{aid}_1',
+                    first_sig,
                 ])
+                self._registry.register_outcome(aid, otype, otype, outcome_date)
 
             # Intervention revenue outcome (from V2 — manifest-defined)
             intervention = acct.get('intervention', {})
             if self.phase == 'intervention' and intervention.get('revenue_outcome'):
                 ro = intervention['revenue_outcome']
-                counter += 1
+                ro_date = self.end_date.strftime('%Y-%m-%d')
                 w.writerow([
-                    aid,
-                    self.end_date.strftime('%Y-%m-%d'),
-                    ro['type'],
+                    aid, ro_date, ro['type'],
                     f'{ro["type"].replace("_", " ").title()} — {acct["name"]}',
                     ro.get('description', ''),
                     round(ro['amount'], 2),
                     'resolved',
-                    f'{phase_prefix}sig_{aid}_1',
+                    first_sig,
                 ])
+                self._registry.register_outcome(aid, ro['type'], ro['type'], ro_date)
 
-            # V3.1: Auto-generated recovery outcomes for intervention phase
+            # Auto-generated recovery outcomes for intervention phase (V3.1)
             if self.phase == 'intervention':
                 recovery_outcome_templates = self.RECOVERY_OUTCOME_TEMPLATES.get(cls, [])
-                # Pick 2-3 for critical, 2 for at_risk, 1 for healthy
                 if cls == 'critical':
                     n_recovery_outcomes = acct_rng.randint(2, min(3, len(recovery_outcome_templates)))
                 elif cls == 'at_risk':
@@ -1486,8 +1830,6 @@ class ManifestCSVGenerator:
                 )
 
                 for ri, (ro_type, ro_title, ro_desc, ro_status) in enumerate(selected_recovery):
-                    counter += 1
-                    # Positive revenue impact for recovery outcomes
                     if ro_type == 'churn_averted':
                         rev_impact = arr * acct_rng.uniform(0.3, 0.5)
                     elif ro_type in ('revenue_protected', 'renewal_secured'):
@@ -1499,25 +1841,29 @@ class ManifestCSVGenerator:
                     else:
                         rev_impact = arr * acct_rng.uniform(0.05, 0.1)
 
-                    # Spread recovery outcomes across the intervention window
                     day_offset = int(total_days * (ri + 1) / (n_recovery_outcomes + 1))
                     outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
-
+                    auto_sig_ref = f'{phase_prefix}auto_recovery_{aid}_1'
                     w.writerow([
-                        aid,
-                        outcome_date,
-                        ro_type,
+                        aid, outcome_date, ro_type,
                         f'{ro_title} — {acct["name"]}',
                         ro_desc,
                         round(rev_impact, 2),
                         ro_status,
-                        f'{phase_prefix}auto_recovery_{aid}_1',
+                        auto_sig_ref,
                     ])
+                    self._registry.register_outcome(aid, ro_type, ro_type, outcome_date)
 
         return out.getvalue()
 
     def generate_decisions_csv(self) -> str:
-        """Generate decisions.csv with narrative-aligned dates."""
+        """
+        Generate decisions.csv with arc-derived decision subtypes and narrative dates.
+
+        Derives decision types from the arc spine (via DECISION_METADATA) rather
+        than hardcoded classification branches. Registers every written decision
+        into self._registry so generate_signal_edges_csv() can resolve 'decision:N'.
+        """
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1527,57 +1873,57 @@ class ManifestCSVGenerator:
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
-
-        decision_templates = {
-            'critical': [
-                ('Escalation to executive sponsor', 'executive_sponsor', 'Escalate account risk', 'Risk review initiated', 'high'),
-                ('Emergency retention plan', 'champion', 'Launch retention playbook', 'Retention plan in progress', 'critical'),
-            ],
-            'at_risk': [
-                ('Renewal strategy review', 'executive_sponsor', 'Adjust contract terms', 'Renewal discussion underway', 'medium'),
-                ('Feature adoption push', 'champion', 'Schedule training sessions', 'Training plan approved', 'medium'),
-            ],
-            'healthy': [
-                ('Expansion discussion', 'champion', 'Propose upsell package', 'Expansion opportunity identified', 'low'),
-            ],
-        }
+        arc_phase = self.phase or 'baseline'
 
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             cls = acct.get('classification', 'healthy')
             arr = acct['arr']
-            templates = decision_templates.get(cls, decision_templates['healthy'])
+            arc_def = self._get_arc_def(acct)
 
-            # Get planned decision events for narrative-aligned dates
+            # Get decision events from the arc spine for this phase
+            arc_decision_events = [
+                e for e in arc_def.get(arc_phase, arc_def.get('baseline', []))
+                if e['type'] == 'decision'
+            ]
+
+            # Get narrative-planned dates for decisions
             planned_decisions = self.planner.get_events(aid, 'decision')
 
-            for di, (title, role, chosen, outcome_desc, risk) in enumerate(templates):
-                # Use narrative-planned date if available
+            rev_impact = -arr * 0.1 if cls == 'critical' else (-arr * 0.05 if cls == 'at_risk' else arr * 0.1)
+
+            for di, evt in enumerate(arc_decision_events):
+                subtype = evt['subtype']
+                meta = self.DECISION_METADATA.get(subtype, (
+                    subtype.replace('_', ' ').title(),
+                    'executive_sponsor', 'Action taken', 'Outcome pending', 'medium',
+                ))
+                title_tpl, role, chosen, outcome_desc, risk = meta
+
+                # Prefer narrative-planned date; fall back to end_date minus random offset
                 if di < len(planned_decisions):
                     decision_date = planned_decisions[di].date_str
                 else:
-                    decision_date = (self.end_date - timedelta(days=random.randint(10, 45))).strftime('%Y-%m-%d')
-                rev_impact = -arr * 0.1 if cls == 'critical' else (-arr * 0.05 if cls == 'at_risk' else arr * 0.1)
+                    decision_date = (
+                        self.end_date - timedelta(days=random.randint(10, 45))
+                    ).strftime('%Y-%m-%d')
+
+                dec_id = f'{phase_prefix}dec_{aid}_{di + 1}'
                 w.writerow([
-                    aid,
-                    decision_date,
-                    f'{phase_prefix}dec_{aid}_{di+1}',
-                    f'{title} — {acct["name"]}',
-                    role,
-                    chosen,
-                    outcome_desc,
-                    risk,
+                    aid, decision_date, dec_id,
+                    f'{title_tpl} — {acct["name"]}',
+                    role, chosen, outcome_desc, risk,
                     round(rev_impact, 2),
                 ])
+                self._registry.register_decision(aid, dec_id, decision_date)
 
-            # Intervention decisions (from V2 — manifest-defined)
+            # Intervention decisions from manifest (V2 — manifest-defined overrides)
             intervention = acct.get('intervention', {})
             if self.phase == 'intervention' and intervention.get('decisions'):
                 for di, dec in enumerate(intervention['decisions']):
+                    dec_id = f'int_dec_{aid}_{di + 1}'
                     w.writerow([
-                        aid,
-                        dec['date'],
-                        f'int_dec_{aid}_{di+1}',
+                        aid, dec['date'], dec_id,
                         dec['title'],
                         dec.get('decision_maker', 'executive_sponsor'),
                         dec.get('rationale', ''),
@@ -1585,8 +1931,9 @@ class ManifestCSVGenerator:
                         dec.get('impact', 'high'),
                         round(arr * 0.1, 2),
                     ])
+                    self._registry.register_decision(aid, dec_id, dec['date'])
 
-            # V3.1: Auto-generated recovery decisions for intervention phase
+            # Auto-generated recovery decisions for intervention phase (V3.1)
             if self.phase == 'intervention':
                 acct_rng = random.Random(self.seed + aid + 9000)
                 recovery_decision_templates = self.RECOVERY_DECISION_TEMPLATES.get(cls, [])
@@ -1595,23 +1942,35 @@ class ManifestCSVGenerator:
                 for rdi, (rd_title, rd_role, rd_chosen, rd_outcome, rd_risk) in enumerate(recovery_decision_templates):
                     day_offset = int(total_days * (rdi + 1) / (len(recovery_decision_templates) + 1))
                     decision_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
-                    rev_impact = arr * acct_rng.uniform(0.05, 0.15)
+                    rev_impact_rec = arr * acct_rng.uniform(0.05, 0.15)
+                    dec_id = f'{phase_prefix}auto_dec_{aid}_{rdi + 1}'
                     w.writerow([
-                        aid,
-                        decision_date,
-                        f'{phase_prefix}auto_dec_{aid}_{rdi+1}',
+                        aid, decision_date, dec_id,
                         f'{rd_title} — {acct["name"]}',
-                        rd_role,
-                        rd_chosen,
-                        rd_outcome,
-                        rd_risk,
-                        round(rev_impact, 2),
+                        rd_role, rd_chosen, rd_outcome, rd_risk,
+                        round(rev_impact_rec, 2),
                     ])
+                    self._registry.register_decision(aid, dec_id, decision_date)
 
         return out.getvalue()
 
     def generate_signal_edges_csv(self) -> str:
-        """Generate signal_edges.csv — causal links between signals, decisions, outcomes."""
+        """
+        Generate signal_edges.csv from arc-defined edge topology.
+
+        Reads each arc's 'edge_topology' list, resolves symbolic refs
+        ('signal:N', 'decision:N', 'outcome:type') against self._registry
+        (populated by the signal/decision/outcome generators), and writes
+        only edges where both refs resolve and temporal ordering is valid.
+
+        No ref reconstruction — if a ref doesn't resolve, RefRegistry.resolve()
+        already logged the exact miss. Temporal violations are also logged.
+
+        NOTE: generate_signals_csv() must be called before this method because
+        it resets the registry and populates signal ordinals.
+        generate_decisions_csv() and generate_outcomes_csv() must also precede this.
+        generate_all() guarantees the correct call order.
+        """
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
@@ -1619,102 +1978,51 @@ class ManifestCSVGenerator:
             'edge_type', 'label', 'confidence', 'lag_days',
         ])
 
-        phase_prefix = f'{self.phase}_' if self.phase else ''
+        arc_phase = self.phase or 'baseline'
+        causal_edge_types = {'LED_TO', 'TRIGGERED', 'CAUSED_BY'}
 
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
-            cls = acct.get('classification', 'healthy')
+            arc_def = self._get_arc_def(acct)
+            edge_topology = arc_def.get('edge_topology', [])
 
-            if cls == 'critical':
-                edges = [
-                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered escalation', 0.9, 7),
-                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:revenue_at_risk', 'LED_TO', 'Escalation revealed risk', 0.85, 14),
-                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_2', 'TRIGGERED', 'Signal triggered retention plan', 0.85, 10),
-                    (f'decision:{phase_prefix}dec_{aid}_2', 'outcome:engagement_decline', 'LED_TO', 'Retention plan in response to decline', 0.8, 21),
-                ]
-            elif cls == 'at_risk':
-                # at_risk uses crisis_recovery arc: decisions land at month 2 (Dec).
-                # Manifest key_signals are often dated Feb-Mar, which postdate the
-                # decision → temporal check (from > to) would skip the TRIGGERED edge.
-                # Use the first narrative-planned signal instead (Dec 1 critical_incident),
-                # which is always dated BEFORE the Dec 10 decision.
-                ks_count = len(acct.get('key_signals', []))
-                trigger_sig_ref = f'{phase_prefix}narrative_sig_{aid}_{ks_count + 1}'
-                edges = [
-                    (trigger_sig_ref, f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Signal triggered renewal review', 0.8, 14),
-                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:renewal_uncertainty', 'LED_TO', 'Review surfaced renewal risk', 0.75, 21),
-                ]
-            else:
-                edges = [
-                    (f'{phase_prefix}sig_{aid}_1', f'decision:{phase_prefix}dec_{aid}_1', 'TRIGGERED', 'Positive signal prompted expansion', 0.85, 7),
-                    (f'decision:{phase_prefix}dec_{aid}_1', 'outcome:expansion_opportunity', 'LED_TO', 'Discussion identified expansion', 0.8, 14),
-                ]
+            edges_written = 0
+            for edge_def in edge_topology:
+                # Only emit edges for the current phase
+                if edge_def.get('phase', 'baseline') != arc_phase:
+                    continue
 
-            for from_ref, to_ref, etype, label, conf, lag in edges:
-                w.writerow([aid, from_ref, to_ref, etype, label, conf, lag])
+                from_resolved = self._registry.resolve(aid, edge_def['from'])
+                to_resolved = self._registry.resolve(aid, edge_def['to'])
 
-            # Intervention edges (from V2)
-            intervention = acct.get('intervention', {})
-            if self.phase == 'intervention' and intervention.get('decisions'):
-                n_decisions = len(intervention['decisions'])
-                n_recovery = len(intervention.get('recovery_signals', []))
+                if from_resolved is None or to_resolved is None:
+                    # RefRegistry.resolve() already logged the specific miss
+                    continue
 
-                for di in range(min(n_decisions, n_recovery)):
-                    w.writerow([
-                        aid,
-                        f'decision:int_dec_{aid}_{di+1}',
-                        f'intervention_recovery_{aid}_{di+100}',
-                        'LED_TO',
-                        f'Intervention: {intervention["decisions"][di]["title"]}',
-                        0.9,
-                        14,
-                    ])
+                from_ref, from_date = from_resolved
+                to_ref, to_date = to_resolved
 
-                if intervention.get('revenue_outcome'):
-                    amt = intervention['revenue_outcome']['amount']
-                    w.writerow([
-                        aid,
-                        f'decision:int_dec_{aid}_{n_decisions}',
-                        'outcome:revenue_protected',
-                        'LED_TO',
-                        f'Intervention protected ${amt/1e6:.1f}M ARR',
-                        0.95,
-                        30,
-                    ])
+                # Temporal check: causal edges must not flow backward in time
+                edge_type = edge_def['type']
+                if edge_type in causal_edge_types and from_date > to_date:
+                    logger.warning(
+                        "  Temporal violation skipped: %s edge %s (%s) → %s (%s) for aid=%d",
+                        edge_type, from_ref, from_date, to_ref, to_date, aid,
+                    )
+                    continue
 
-            # V3.1: Auto-generated recovery edges for intervention phase
-            if self.phase == 'intervention':
-                recovery_decision_templates = self.RECOVERY_DECISION_TEMPLATES.get(cls, [])
-                recovery_outcome_templates = self.RECOVERY_OUTCOME_TEMPLATES.get(cls, [])
+                w.writerow([
+                    aid,
+                    from_ref,
+                    to_ref,
+                    edge_type,
+                    edge_def.get('label', f'{edge_def["from"]} {edge_type} {edge_def["to"]}'),
+                    edge_def.get('confidence', 0.8),
+                    edge_def.get('lag_days', 14),
+                ])
+                edges_written += 1
 
-                # Link recovery signals -> recovery decisions
-                for rdi in range(len(recovery_decision_templates)):
-                    w.writerow([
-                        aid,
-                        f'{phase_prefix}auto_recovery_{aid}_1',
-                        f'decision:{phase_prefix}auto_dec_{aid}_{rdi+1}',
-                        'TRIGGERED',
-                        f'Recovery signal triggered intervention decision',
-                        0.85,
-                        7,
-                    ])
-
-                # Link recovery decisions -> recovery outcomes
-                n_dec = len(recovery_decision_templates)
-                n_out = min(len(recovery_outcome_templates), 3 if cls == 'critical' else (2 if cls == 'at_risk' else 1))
-                for roi in range(n_out):
-                    dec_idx = min(roi, n_dec - 1) if n_dec > 0 else 0
-                    if n_dec > 0:
-                        ro_type = recovery_outcome_templates[roi][0] if roi < len(recovery_outcome_templates) else 'revenue_protected'
-                        w.writerow([
-                            aid,
-                            f'decision:{phase_prefix}auto_dec_{aid}_{dec_idx+1}',
-                            f'outcome:{ro_type}',
-                            'LED_TO',
-                            f'Intervention led to {ro_type.replace("_", " ")}',
-                            0.9,
-                            21,
-                        ])
+            logger.debug("  aid=%d: %d edges written (%s)", aid, edges_written, arc_phase)
 
         return out.getvalue()
 
@@ -1756,18 +2064,26 @@ class ManifestCSVGenerator:
         """
         Generate all CSVs in memory and return {file_type: csv_content}.
         Headers are normalized with account_id (not source_account_id).
+
+        Registry pipeline order is preserved: signals → decisions → outcomes → edges.
         """
+        H = self._header_use_account_id
+        # Run registry pipeline in fixed order first
+        signals_csv   = H(self.generate_signals_csv())    # resets + populates registry
+        decisions_csv = H(self.generate_decisions_csv())  # registers decisions
+        outcomes_csv  = H(self.generate_outcomes_csv())   # registers outcomes
+        edges_csv     = H(self.generate_signal_edges_csv()) # resolves from registry
         return {
-            'accounts': self._header_use_account_id(self.generate_accounts_csv()),
-            'kpi_measurements': self._header_use_account_id(self.generate_kpi_measurements_csv()),
-            'enhanced_signals': self._header_use_account_id(self.generate_signals_csv()),
-            'products': self._header_use_account_id(self.generate_products_csv()),
-            'stakeholders': self._header_use_account_id(self.generate_stakeholders_csv()),
-            'engagement_events': self._header_use_account_id(self.generate_engagement_events_csv()),
-            'account_business_profiles': self._header_use_account_id(self.generate_profiles_csv()),
-            'outcomes': self._header_use_account_id(self.generate_outcomes_csv()),
-            'decisions': self._header_use_account_id(self.generate_decisions_csv()),
-            'signal_edges': self._header_use_account_id(self.generate_signal_edges_csv()),
+            'accounts':                H(self.generate_accounts_csv()),
+            'kpi_measurements':        H(self.generate_kpi_measurements_csv()),
+            'enhanced_signals':        signals_csv,
+            'products':                H(self.generate_products_csv()),
+            'stakeholders':            H(self.generate_stakeholders_csv()),
+            'engagement_events':       H(self.generate_engagement_events_csv()),
+            'account_business_profiles': H(self.generate_profiles_csv()),
+            'outcomes':                outcomes_csv,
+            'decisions':               decisions_csv,
+            'signal_edges':            edges_csv,
         }
 
 
