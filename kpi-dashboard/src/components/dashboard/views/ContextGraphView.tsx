@@ -101,6 +101,7 @@ interface LayoutNode {
   id: string;
   nodeId: number;
   type: string;
+  styleKey: string;
   subtype: string | null;
   label: string;
   sub: string;
@@ -129,12 +130,27 @@ const HEADER_H = 40;
 const PADDING = 20;
 
 const SVG_NODE_STYLES: Record<string, { bg: string; border: string; text: string }> = {
-  SIGNAL:           { bg: '#22d3ee', border: '#06b6d4', text: '#000' },
+  SIGNAL:           { bg: '#f59e0b', border: '#d97706', text: '#000' },  // amber — user-uploaded
+  SIGNAL_SYSTEM:    { bg: '#22d3ee', border: '#06b6d4', text: '#000' },  // cyan — system-generated
   DECISION:         { bg: '#eab308', border: '#ca8a04', text: '#000' },
   OUTCOME:          { bg: '#22c55e', border: '#16a34a', text: '#000' },
   STAKEHOLDER:      { bg: '#a855f7', border: '#7c3aed', text: '#fff' },
   EXTERNAL_CONTEXT: { bg: '#6b7280', border: '#4b5563', text: '#fff' },
 };
+
+/** Detect system-generated signal nodes (Wizard A / arc classifier) */
+function isSystemSignal(n: ContextNodeDTO): boolean {
+  if (n.node_type !== 'SIGNAL') return false;
+  if ((n as any).source === 'system') return true;
+  if (n.node_subtype === 'arc_detection') return true;
+  if (n.properties?.triggered_by) return true;
+  return false;
+}
+
+function getStyleKey(n: ContextNodeDTO): string {
+  if (isSystemSignal(n)) return 'SIGNAL_SYSTEM';
+  return n.node_type || 'SIGNAL';
+}
 
 const TYPE_PRIORITY: Record<string, number> = {
   STAKEHOLDER: 0,
@@ -157,7 +173,8 @@ function formatCompact(value: number): string {
 }
 
 const NODE_TYPE_COLORS: Record<string, { bg: string; text: string; border: string; dot: string; hex: string }> = {
-  SIGNAL:           { bg: 'bg-cyan-500/15',    text: 'text-cyan-400',    border: 'border-cyan-500/40',    dot: 'bg-cyan-400',    hex: '#22d3ee' },
+  SIGNAL:           { bg: 'bg-amber-500/15',   text: 'text-amber-400',   border: 'border-amber-500/40',   dot: 'bg-amber-400',   hex: '#f59e0b' },
+  SIGNAL_SYSTEM:    { bg: 'bg-cyan-500/15',    text: 'text-cyan-400',    border: 'border-cyan-500/40',    dot: 'bg-cyan-400',    hex: '#22d3ee' },
   STAKEHOLDER:      { bg: 'bg-purple-500/15',  text: 'text-purple-400',  border: 'border-purple-500/40',  dot: 'bg-purple-400',  hex: '#a855f7' },
   DECISION:         { bg: 'bg-yellow-500/15',  text: 'text-yellow-400',  border: 'border-yellow-500/40',  dot: 'bg-yellow-400',  hex: '#eab308' },
   OUTCOME:          { bg: 'bg-green-500/15',   text: 'text-green-400',   border: 'border-green-500/40',   dot: 'bg-green-400',   hex: '#22c55e' },
@@ -243,6 +260,7 @@ function makeLayoutNode(n: ContextNodeDTO, x: number, y: number): LayoutNode {
     id: `n${n.node_id}`,
     nodeId: n.node_id,
     type: n.node_type,
+    styleKey: getStyleKey(n),
     subtype: n.node_subtype,
     label,
     sub: revSub,
@@ -277,7 +295,8 @@ const NodeShape: React.FC<{
   dimmed: boolean;
   onClick: (node: LayoutNode) => void;
 }> = ({ node, dimmed, onClick }) => {
-  const s = SVG_NODE_STYLES[node.type] || SVG_NODE_STYLES.SIGNAL;
+  const s = SVG_NODE_STYLES[node.styleKey] || SVG_NODE_STYLES.SIGNAL;
+  const isSysSignal = node.styleKey === 'SIGNAL_SYSTEM';
   const { x, y } = node;
   const cx = x + NW / 2;
   const cy = y + NH / 2;
@@ -370,6 +389,7 @@ const GraphLegend: React.FC = () => {
   const items: { type: string; label: string; shape: string }[] = [
     { type: 'STAKEHOLDER', label: 'Stakeholder', shape: 'circle' },
     { type: 'SIGNAL', label: 'Signal', shape: 'rect' },
+    { type: 'SIGNAL_SYSTEM', label: 'System Signal', shape: 'rect' },
     { type: 'DECISION', label: 'Decision', shape: 'diamond' },
     { type: 'OUTCOME', label: 'Outcome', shape: 'rect' },
     { type: 'EXTERNAL_CONTEXT', label: 'External', shape: 'rect' },
@@ -1038,7 +1058,7 @@ const ContextGraphView: React.FC = () => {
                 {svgSelected && (() => {
                   const activeNode = svgLayout.nodes.find(n => n.id === svgSelected);
                   if (!activeNode) return null;
-                  const s = SVG_NODE_STYLES[activeNode.type] || SVG_NODE_STYLES.SIGNAL;
+                  const s = SVG_NODE_STYLES[activeNode.styleKey] || SVG_NODE_STYLES.SIGNAL;
                   return (
                     <div className="px-4 py-3 border-t border-gray-700/50 bg-[#0f1419] flex items-start gap-4">
                       <div className="flex-1 min-w-0">
@@ -1397,7 +1417,9 @@ const ContextGraphView: React.FC = () => {
                   </thead>
                   <tbody>
                     {sortedNodes.map(node => {
-                      const color = getNodeColor(node.node_type);
+                      const sk = getStyleKey(node);
+                      const color = getNodeColor(sk);
+                      const displayType = sk === 'SIGNAL_SYSTEM' ? 'SYS' : node.node_type.replace('_', ' ').slice(0, 6);
                       return (
                         <tr
                           key={node.node_id}
@@ -1406,7 +1428,7 @@ const ContextGraphView: React.FC = () => {
                           <td className="px-2 py-1.5">
                             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${color.bg} ${color.text}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
-                              {node.node_type.replace('_', ' ').slice(0, 6)}
+                              {displayType}
                             </span>
                           </td>
                           <td className="px-2 py-1.5 text-gray-300 max-w-[120px] truncate" title={node.title}>
