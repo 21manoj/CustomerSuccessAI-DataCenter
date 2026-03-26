@@ -209,11 +209,20 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
     with open(schemas_path, 'r') as f:
         schemas = _json.load(f)
 
+    def _flatten_model(model: dict) -> dict:
+        """Return {filename: schema} from a model section, handling both flat and nested layouts."""
+        result = {}
+        result.update(model.get('files', {}))
+        for sub_key in ('customer_provided', 'auto_generated', 'platform_curated'):
+            for k, v in model.get(sub_key, {}).items():
+                if k.endswith('.csv') and k not in result:
+                    result[k] = v
+        return result
+
     all_files = {}
     for model_key in ('regular_model', 'context_graph_model'):
         model = schemas.get(model_key, {})
-        files = model.get('files', {})
-        for fname, fschema in files.items():
+        for fname, fschema in _flatten_model(model).items():
             all_files[fname] = {
                 'file_type': fname,
                 'model': model_key,
@@ -582,9 +591,29 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
     with open(schemas_path, 'r') as f:
         schemas = _json.load(f)
 
+    def _all_files_in_model(model: dict) -> dict:
+        """Flatten a model section into {filename: schema} regardless of nesting style.
+
+        Supports both:
+          - flat:   model['files']['decisions.csv'] = {...}
+          - nested: model['customer_provided']['decisions.csv'] = {...}
+                    model['auto_generated']['decisions.csv'] = {...}
+                    model['platform_curated']['decisions.csv'] = {...}
+        """
+        result = {}
+        # Flat style (preferred — added by csv_schemas.json fix Mar 2026)
+        result.update(model.get('files', {}))
+        # Nested style (legacy — handles containers whose JSON wasn't hot-patched)
+        for sub_key in ('customer_provided', 'auto_generated', 'platform_curated'):
+            sub = model.get(sub_key, {})
+            for k, v in sub.items():
+                if k.endswith('.csv') and k not in result:
+                    result[k] = v
+        return result
+
     schema = None
     for model_key in ('regular_model', 'context_graph_model'):
-        files = schemas.get(model_key, {}).get('files', {})
+        files = _all_files_in_model(schemas.get(model_key, {}))
         if ft in files:
             schema = files[ft]
             break
@@ -592,7 +621,7 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
     if not schema:
         available = []
         for model_key in ('regular_model', 'context_graph_model'):
-            available.extend(schemas.get(model_key, {}).get('files', {}).keys())
+            available.extend(_all_files_in_model(schemas.get(model_key, {})).keys())
         raise ToolError(
             f"Unknown file_type '{file_type}'. Available: {sorted(available)}"
         )
