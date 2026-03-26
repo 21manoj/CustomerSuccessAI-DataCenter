@@ -39,11 +39,22 @@ interface GraphOverviewProps {
 
 const NODE_TYPE_CHART_COLORS: Record<string, string> = {
   SIGNAL: '#d97706',
+  SIGNAL_SYSTEM: '#06B6D4',
   DECISION: '#9333ea',
   OUTCOME: '#16a34a',
   STAKEHOLDER: '#2563eb',
   EXTERNAL_CONTEXT: '#6b7280',
   ACCOUNT: '#475569',
+};
+
+const NODE_TYPE_LABELS: Record<string, string> = {
+  SIGNAL: 'Signal',
+  SIGNAL_SYSTEM: 'System Signal',
+  DECISION: 'Decision',
+  OUTCOME: 'Outcome',
+  STAKEHOLDER: 'Stakeholder',
+  EXTERNAL_CONTEXT: 'External',
+  ACCOUNT: 'Account',
 };
 
 const GraphOverview: React.FC<GraphOverviewProps> = ({ accountId }) => {
@@ -95,9 +106,23 @@ const GraphOverview: React.FC<GraphOverviewProps> = ({ accountId }) => {
 
   const revenue = summary.revenue;
 
-  // Prepare chart data
-  const nodeTypeData = Object.entries(summary.nodes_by_type || {}).map(([type, count]) => ({
-    type: NODE_TYPE_CONFIG[type as NodeType]?.label || type,
+  // Prepare chart data — split SIGNAL into user-uploaded vs system-generated
+  const nodeTypeDataRaw: Record<string, number> = {};
+  for (const n of nodes) {
+    const src = (n as any).source;
+    const isSys = n.node_type === 'SIGNAL' && (
+      src === 'system' || n.node_subtype === 'arc_detection' || n.properties?.triggered_by
+    );
+    const key = isSys ? 'SIGNAL_SYSTEM' : n.node_type;
+    nodeTypeDataRaw[key] = (nodeTypeDataRaw[key] || 0) + 1;
+  }
+  for (const [type, count] of Object.entries(summary.nodes_by_type || {})) {
+    if (type !== 'SIGNAL' && !nodeTypeDataRaw[type]) {
+      nodeTypeDataRaw[type] = count || 0;
+    }
+  }
+  const nodeTypeData = Object.entries(nodeTypeDataRaw).map(([type, count]) => ({
+    type: NODE_TYPE_LABELS[type] || NODE_TYPE_CONFIG[type as NodeType]?.label || type,
     count: count || 0,
     fill: NODE_TYPE_CHART_COLORS[type] || '#6b7280',
   }));
@@ -246,14 +271,24 @@ const GraphOverview: React.FC<GraphOverviewProps> = ({ accountId }) => {
                   <p className="text-xs text-gray-400 italic">No {config.label.toLowerCase()} nodes</p>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2 min-w-0">
-                    {laneNodes.map((node) => (
+                    {laneNodes.map((node) => {
+                      const src = (node as any).source;
+                      const isSysNode = node.node_type === 'SIGNAL' && (
+                        src === 'system' || node.node_subtype === 'arc_detection' || node.properties?.triggered_by
+                      );
+                      return (
                       <button
                         key={node.node_id}
                         onClick={() => setSelectedNodeId(node.node_id)}
-                        className={`flex-shrink-0 bg-white rounded-lg border p-3 text-left transition-all hover:shadow-md hover:border-blue-300 min-w-[180px] max-w-[220px] ${
+                        className={`flex-shrink-0 rounded-lg border p-3 text-left transition-all hover:shadow-md min-w-[180px] max-w-[220px] ${
                           selectedNodeId === node.node_id ? 'ring-2 ring-blue-500 border-blue-400' : 'border-gray-200'
-                        }`}
+                        } ${isSysNode ? 'bg-cyan-50 border-cyan-300 border-dashed hover:border-cyan-400' : 'bg-white hover:border-blue-300'}`}
                       >
+                        {isSysNode && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded mb-1 inline-block">
+                            System
+                          </span>
+                        )}
                         <p className="text-sm font-medium text-gray-800 leading-tight">
                           {truncate(node.title, 40)}
                         </p>
@@ -278,7 +313,8 @@ const GraphOverview: React.FC<GraphOverviewProps> = ({ accountId }) => {
                           </span>
                         )}
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -24,11 +24,28 @@ const PADDING = 30;
 
 const STYLES: Record<string, { bg: string; border: string; text: string }> = {
   SIGNAL:           { bg: '#FFA500', border: '#cc8400', text: '#000' },
+  SIGNAL_SYSTEM:    { bg: '#06B6D4', border: '#0891B2', text: '#000' },  // cyan for system-generated
   DECISION:         { bg: '#4169E1', border: '#2a4db5', text: '#fff' },
   OUTCOME:          { bg: '#2E8B57', border: '#1e6b40', text: '#fff' },
   STAKEHOLDER:      { bg: '#8B5CF6', border: '#6d3fd4', text: '#fff' },
   EXTERNAL_CONTEXT: { bg: '#6B7280', border: '#4B5563', text: '#fff' },
 };
+
+/** Determine if a signal node is system-generated (Wizard A / arc classifier) */
+function isSystemSignal(n: ContextNodeDTO): boolean {
+  if (n.node_type !== 'SIGNAL') return false;
+  const src = (n as any).source;
+  if (src === 'system') return true;
+  if (n.node_subtype === 'arc_detection') return true;
+  if (n.properties?.triggered_by) return true;
+  return false;
+}
+
+/** Get the visual style key for a node (splits SIGNAL into two sub-types) */
+function getStyleKey(n: ContextNodeDTO): string {
+  if (isSystemSignal(n)) return 'SIGNAL_SYSTEM';
+  return n.node_type || 'SIGNAL';
+}
 
 // Column assignment: stakeholders at top, then chronological lanes by type
 const TYPE_PRIORITY: Record<string, number> = {
@@ -45,6 +62,7 @@ interface LayoutNode {
   id: string;
   nodeId: number;
   type: string;
+  styleKey: string;           // visual style key (e.g. 'SIGNAL_SYSTEM' for system-gen)
   subtype: string | null;
   label: string;
   sub: string;
@@ -151,6 +169,7 @@ function makeLayoutNode(n: ContextNodeDTO, x: number, y: number): LayoutNode {
     id: `n${n.node_id}`,
     nodeId: n.node_id,
     type: n.node_type,
+    styleKey: getStyleKey(n),
     subtype: n.node_subtype,
     label,
     sub: revSub,
@@ -189,11 +208,12 @@ function NodeShape({
   dimmed: boolean;
   onClick: (node: LayoutNode) => void;
 }) {
-  const s = STYLES[node.type] || STYLES.SIGNAL;
+  const s = STYLES[node.styleKey] || STYLES.SIGNAL;
   const { x, y } = node;
   const cx = x + NW / 2;
   const cy = y + NH / 2;
   const opacity = dimmed ? 0.2 : 1;
+  const isSysSignal = node.styleKey === 'SIGNAL_SYSTEM';
 
   return (
     <g
@@ -209,10 +229,17 @@ function NodeShape({
         />
       ) : (
         <rect
-          x={x} y={y} width={NW} height={NH} rx={7}
+          x={x} y={y} width={NW} height={NH} rx={isSysSignal ? 14 : 7}
           fill={s.bg} stroke={s.border}
           strokeWidth={node.type === 'OUTCOME' ? 3 : 2}
+          strokeDasharray={isSysSignal ? '6 3' : undefined}
         />
+      )}
+      {isSysSignal && (
+        <text x={x + NW - 6} y={y + 10} textAnchor="end"
+              fill="#000" fontSize={8} fontWeight={700} fontFamily="monospace" opacity={0.7}>
+          SYS
+        </text>
       )}
       <text
         x={cx} y={cy - 8} textAnchor="middle"
@@ -376,11 +403,12 @@ const ContextGraphExplorer: React.FC<ContextGraphExplorerProps> = ({ accountId }
   const isNodeDimmed = (id: string) => !!selected && !connectedIds.has(id);
   const isEdgeDimmed = (e: LayoutEdge) => !!selected && !connectedEdges.includes(e);
 
-  // ── Type counts for legend ──
+  // ── Type counts for legend (split signals into user vs system) ──
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const n of rawNodes) {
-      counts[n.node_type] = (counts[n.node_type] || 0) + 1;
+      const key = getStyleKey(n);
+      counts[key] = (counts[key] || 0) + 1;
     }
     return counts;
   }, [rawNodes]);
@@ -438,19 +466,29 @@ const ContextGraphExplorer: React.FC<ContextGraphExplorerProps> = ({ accountId }
             </div>
             <div style={{ fontSize: 18, fontWeight: 800 }}>Context Graph Explorer</div>
           </div>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
             {Object.entries(STYLES).map(([type, s]) => {
               const count = typeCounts[type];
               if (!count) return null;
+              const LEGEND_LABELS: Record<string, string> = {
+                SIGNAL: 'Signal',
+                SIGNAL_SYSTEM: 'System Signal',
+                DECISION: 'Decision',
+                OUTCOME: 'Outcome',
+                STAKEHOLDER: 'Stakeholder',
+                EXTERNAL_CONTEXT: 'External',
+              };
+              const isSys = type === 'SIGNAL_SYSTEM';
               return (
                 <span key={type} style={{ display: 'flex', alignItems: 'center', gap: 5,
                                           fontSize: 10, color: '#8b949e' }}>
                   <span style={{
                     width: 10, height: 10,
-                    borderRadius: type === 'STAKEHOLDER' ? '50%' : 2,
+                    borderRadius: type === 'STAKEHOLDER' ? '50%' : (isSys ? 5 : 2),
                     background: s.bg, display: 'inline-block',
+                    border: isSys ? '1px dashed #0891B2' : undefined,
                   }} />
-                  {type} ({count})
+                  {LEGEND_LABELS[type] || type} ({count})
                 </span>
               );
             })}
