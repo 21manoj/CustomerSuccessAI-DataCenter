@@ -464,7 +464,9 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
         # Scan TWO sources for high-risk signals:
         # 1. ContextNode SIGNAL nodes (if CG was loaded)
         # 2. QualitativeSignal table (always — covers incremental loads where CG skip is on)
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        # 90-day window covers initial onboarding batch + incremental loads
+        # In production, incremental signals arrive within 1-7 days
+        cutoff = datetime.utcnow() - timedelta(days=90)
 
         seen = set()  # (account_id, signal_type) to avoid duplicate triggers
 
