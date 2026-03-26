@@ -516,6 +516,60 @@ Injects synthetic `_*_detected` tags into signal_types Counter:
 
 ---
 
+## Sprint 1.3 — Champion Loss Fix + Final Validation
+
+**Date:** 2026-03-26
+**Fix:** `arc_classifier.py` — added `champion_change` subtype + rule 1a for bottomed accounts
+
+### Root Cause of champion_loss miss (confirmed via timeline inspection)
+
+`get_account_journey_timeline(425001)` revealed two issues:
+
+1. **Wrong subtype**: load-driver stores `champion_change` (not `champion_departure`) for VP/exec departures.
+   - Node 112750: *"VP of Infrastructure James Morrison has resigned. Lisa Park promoted as interim replacement."*
+   - `champion_change` was NOT in `_CHAMPION_LOSS_SIGNALS` → `has_stakeholder_departure = False`
+
+2. **Account already bottomed**: Titan Hyperscale health = 30.7. Drop happened Oct→Dec.
+   By March, health stabilized at floor. `slope_30d ≈ -1 pt/month` — well above `-3` threshold.
+   The slope condition was designed for active decline, not post-bottom accounts.
+
+### Fix applied
+
+- Added `champion_change` to `_CHAMPION_LOSS_SIGNALS` and new `_CHAMPION_CHANGE_SIGNALS` frozenset
+- Rule 1a (0.85): `champion_change in signals AND health < 50 AND NOT critical_incident` — no slope required
+- Rule 1b (0.80): original slope-based detection (unchanged) — catches early-stage champion loss
+
+### Final EC2 Results (Sprint 1.3)
+
+| Arc Type | Conf | 424 | 425 | 427 | 428 | Total | % |
+|---|---|---|---|---|---|---|---|
+| `land_and_expand` | 0.75 | 5 | 5 | 12 | 14 | **36** | 62% |
+| `champion_loss` | 0.85 | 3 | 3 | 3 | 3 | **12** | 21% |
+| `crisis_recovery` | 0.75 | 1 | 1 | 1 | 1 | **4** | 7% |
+| `budget_pressure` fallback | 0.55 | 1 | 1 | 2 | 2 | **6** | 10% |
+| **Total** | | **10** | **10** | **18** | **20** | **58** | 100% |
+
+### All Acceptance Criteria — FINAL STATUS
+
+| Criterion | Sprint 1 | Sprint 1.3 | |
+|---|---|---|---|
+| All 58 accounts have arc_type set | ✅ | ✅ | PASS |
+| arc_type/phase/confidence in DB | ✅ | ✅ | PASS |
+| Wizard A non-fatal in process_data | ✅ | ✅ | PASS |
+| crisis_recovery fires correctly | ✅ | ✅ | PASS |
+| champion_loss fires (incl. Titan Hyperscale) | ❌ | ✅ 12 accounts @ 0.85 | **PASS** |
+| land_and_expand fires | ❌ | ✅ 36 accounts @ 0.75 | **PASS** |
+| Arc variety ≥ 4 types | ❌ | ✅ 4 types | **PASS** |
+| budget_pressure fallback < 25% | ❌ 40% | ✅ **10%** | **PASS** |
+| True simulation (no signal_edges) | ⏳ | ⏳ | PENDING |
+
+### Notes
+- `infrastructure_decay` (2 accounts in Sprint 1.2) absorbed into `champion_loss` — those accounts had both `champion_change` AND infra signals. Rule 1a fires first. Correct priority: champion departure is the primary driver.
+- 6 fallback accounts are genuinely "at-risk unclear" — no champion_change, not healthy, no critical incident.
+- Edges created: 99 total (Sprint 1.3 idempotent re-run, same edge count).
+
+---
+
 ### Open items / Assumptions (feature/actions-pipeline-push)
 
 1. **`HealthScore` model** — assumed to have `account_id`, `measurement_month`, `health_score`, `contributing_pillars` columns. The health score write in `_process_data_impl` uses a raw SQL upsert, so the SQLAlchemy model must match the actual table schema. Verify with `\d health_scores` in psql.
