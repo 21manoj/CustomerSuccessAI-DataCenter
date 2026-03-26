@@ -11,6 +11,12 @@ from qdrant_client import QdrantClient
 from openai import OpenAI
 import anthropic
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 load_dotenv()
 
 # Output file
@@ -232,6 +238,14 @@ def analyze_account(ACCOUNT_ID, account):
     print("CALLING CLAUDE API...")
     print("-" * 70)
 
+    # Budget check (fail-open)
+    try:
+        if _budget_can_call and not _budget_can_call(0, 'signal_analyst'):
+            print("Budget limit reached — skipping LLM call")
+            return {'account_id': ACCOUNT_ID, 'success': False, 'error': 'budget_exceeded'}
+    except Exception:
+        pass
+
     response = claude_client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1500,
@@ -241,6 +255,15 @@ def analyze_account(ACCOUNT_ID, account):
     # Calculate costs
     input_tokens = response.usage.input_tokens
     output_tokens = response.usage.output_tokens
+
+    # Record usage (fail-open)
+    try:
+        if _budget_record:
+            _budget_record(0, 'signal_analyst',
+                           tokens_in=input_tokens, tokens_out=output_tokens,
+                           model='claude-sonnet-4-20250514')
+    except Exception:
+        pass
     claude_cost = (input_tokens * 0.000003) + (output_tokens * 0.000015)
     embedding_cost = (query_response.usage.total_tokens / 1_000_000) * 0.13
 

@@ -13,6 +13,12 @@ import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 governance_rag_api = Blueprint('governance_rag_api', __name__)
 
 def get_governance_context(customer_id: int, query_text: str, days: int = 90) -> str:
@@ -281,6 +287,13 @@ Format your responses clearly with dates, user names, and action details."""
 
 Please provide a comprehensive answer based on the governance data above."""
 
+        # Budget check (fail-open)
+        try:
+            if _budget_can_call and not _budget_can_call(customer_id, 'rag_query'):
+                return jsonify({'error': 'Daily AI budget reached', 'budget_exceeded': True}), 429
+        except Exception:
+            pass
+
         # Call OpenAI
         response = client.chat.completions.create(
             model="gpt-4",
@@ -291,14 +304,23 @@ Please provide a comprehensive answer based on the governance data above."""
             temperature=0.3,
             max_tokens=1500
         )
-        
+
         response_text = response.choices[0].message.content
         response_time_ms = int((time.time() - start_time) * 1000)
-        
+
         # Estimate cost (GPT-4 pricing: $0.03/1K input tokens, $0.06/1K output tokens)
         input_tokens = response.usage.prompt_tokens
         output_tokens = response.usage.completion_tokens
         estimated_cost = (input_tokens / 1000 * 0.03) + (output_tokens / 1000 * 0.06)
+
+        # Record usage (fail-open)
+        try:
+            if _budget_record:
+                _budget_record(customer_id, 'rag_query',
+                               tokens_in=input_tokens, tokens_out=output_tokens,
+                               model='gpt-4')
+        except Exception:
+            pass
         
         return jsonify({
             'response': response_text,

@@ -30,6 +30,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, Session, sessionmaker
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -539,12 +545,29 @@ class MemoryStore:
             if not oai_key:
                 return
 
+            _cid = getattr(entry, 'customer_id', 0) or 0
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(_cid, 'agent_memory'):
+                    return
+            except Exception:
+                pass
+
             client = _openai.OpenAI(api_key=oai_key)
             resp = client.embeddings.create(
                 model="text-embedding-3-small",
                 input=entry.content[:8000],
             )
             embedding = resp.data[0].embedding
+
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(_cid, 'agent_memory',
+                                   tokens_in=resp.usage.total_tokens, tokens_out=0,
+                                   model='text-embedding-3-small')
+            except Exception:
+                pass
 
             from qdrant_client.models import PointStruct
 

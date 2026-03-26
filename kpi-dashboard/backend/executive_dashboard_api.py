@@ -22,6 +22,13 @@ from flask import Blueprint, request, jsonify
 
 from auth_middleware import get_current_customer_id
 from extensions import db
+
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 from models import (
     Account, HealthScore, PillarScore, KPIScore,
     ContextNode, ContextEdge, PlaybookExecution, ROISnapshot,
@@ -1286,6 +1293,13 @@ Answer as the {persona_config['role']}'s AI advisor. Be specific, quantified, an
                 'message': 'Please configure your OpenAI API key in Settings.',
             }), 400
 
+        # Budget check (fail-open)
+        try:
+            if _budget_can_call and not _budget_can_call(customer_id, 'exec_dashboard'):
+                return jsonify({'error': 'Daily AI budget reached', 'budget_exceeded': True}), 429
+        except Exception:
+            pass
+
         client = openai.OpenAI(api_key=api_key)
         completion = client.chat.completions.create(
             model='gpt-4o',
@@ -1296,6 +1310,17 @@ Answer as the {persona_config['role']}'s AI advisor. Be specific, quantified, an
                 {'role': 'user', 'content': user_prompt},
             ],
         )
+
+        # Record usage (fail-open)
+        try:
+            if _budget_record:
+                _budget_record(customer_id, 'exec_dashboard',
+                               tokens_in=completion.usage.prompt_tokens,
+                               tokens_out=completion.usage.completion_tokens,
+                               model='gpt-4o')
+        except Exception:
+            pass
+
         response_text = completion.choices[0].message.content
 
         elapsed_ms = int((_time.time() - start_time) * 1000)

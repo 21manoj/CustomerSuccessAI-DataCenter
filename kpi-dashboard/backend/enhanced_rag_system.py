@@ -15,6 +15,12 @@ from dotenv import load_dotenv
 from utils.embedding_model import get_embedding_model
 from models import db, KPI, Account, KPIUpload, CustomerConfig
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 # Load environment variables
 load_dotenv()
 
@@ -247,6 +253,14 @@ class EnhancedRAGSystem:
         """
         
         try:
+            _cid = 0  # No customer_id in this class — platform-level tracking
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
+                    return "Daily AI budget reached — please try again tomorrow."
+            except Exception:
+                pass
+
             response = self.anthropic_client.messages.create(
                 model="claude-3-5-sonnet-20241022",
                 max_tokens=2000,
@@ -254,8 +268,24 @@ class EnhancedRAGSystem:
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}]
             )
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(_cid, 'rag_query',
+                                   tokens_in=response.usage.input_tokens,
+                                   tokens_out=response.usage.output_tokens,
+                                   model='claude-3-5-sonnet-20241022')
+            except Exception:
+                pass
             return response.content[0].text
         except Exception as e:
+            try:
+                if _budget_record:
+                    _budget_record(0, 'rag_query', 0, 0,
+                                   model='claude-3-5-sonnet-20241022',
+                                   success=False, error_message=str(e)[:200])
+            except Exception:
+                pass
             return f"Error generating response: {str(e)}"
     
     def _prepare_context(self, results: List[Dict]) -> str:

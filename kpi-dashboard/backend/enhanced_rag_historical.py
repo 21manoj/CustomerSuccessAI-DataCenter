@@ -13,6 +13,12 @@ import openai
 from dotenv import load_dotenv
 from utils.embedding_model import get_embedding_model
 from qdrant_client import QdrantClient
+
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from models import db, KPI, Account, KPIUpload, HealthTrend
@@ -516,6 +522,14 @@ class EnhancedRAGHistoricalSystem:
         """
         
         try:
+            _cid = getattr(self, 'customer_id', 0) or 0
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
+                    return "Daily AI budget reached — please try again tomorrow."
+            except Exception:
+                pass
+
             client = openai.OpenAI(api_key=openai.api_key)
             response = client.chat.completions.create(
                 model="gpt-4",
@@ -526,8 +540,23 @@ class EnhancedRAGHistoricalSystem:
                 max_tokens=2500,
                 temperature=0.3
             )
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(_cid, 'rag_query',
+                                   tokens_in=response.usage.prompt_tokens,
+                                   tokens_out=response.usage.completion_tokens,
+                                   model='gpt-4')
+            except Exception:
+                pass
             return response.choices[0].message.content
         except Exception as e:
+            try:
+                if _budget_record:
+                    _budget_record(getattr(self, 'customer_id', 0) or 0, 'rag_query',
+                                   0, 0, model='gpt-4', success=False, error_message=str(e)[:200])
+            except Exception:
+                pass
             return f"Error generating historical response: {str(e)}"
     
     def _prepare_historical_context(self, results: List[Dict]) -> str:

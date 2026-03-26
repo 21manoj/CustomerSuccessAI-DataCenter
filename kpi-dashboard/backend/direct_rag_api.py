@@ -13,6 +13,12 @@ import time
 from dotenv import load_dotenv
 from query_cache import get_cached_query_result, cache_query_result, get_cache_stats
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 # Load environment variables
 load_dotenv()
 
@@ -578,6 +584,13 @@ def direct_query():
             Provide a CONCISE, DIRECT answer in 2-3 sentences maximum. Be specific and actionable. No fluff, no general statements. Use bullet points if needed.
             """
             
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(customer_id, 'rag_query'):
+                    return jsonify({'error': 'Daily AI budget reached', 'budget_exceeded': True}), 429
+            except Exception:
+                pass
+
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
@@ -587,10 +600,26 @@ def direct_query():
                 max_tokens=1000,
                 temperature=0.3
             )
-            
+
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(customer_id, 'rag_query',
+                                   tokens_in=response.usage.prompt_tokens,
+                                   tokens_out=response.usage.completion_tokens,
+                                   model='gpt-4o')
+            except Exception:
+                pass
+
             ai_response = response.choices[0].message.content
-            
+
         except Exception as e:
+            try:
+                if _budget_record:
+                    _budget_record(customer_id, 'rag_query', 0, 0,
+                                   model='gpt-4o', success=False, error_message=str(e)[:200])
+            except Exception:
+                pass
             return jsonify({'error': f'Query failed: {str(e)}'}), 500
         
         # Create properly formatted relevant_results with metadata

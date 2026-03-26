@@ -13,6 +13,12 @@ import openai
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
 from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from models import db, KPI, Account, KPIUpload, CustomerConfig, KPITimeSeries, DC2SKPI, User, Product
 
@@ -1256,6 +1262,14 @@ class EnhancedRAGSystemQdrant:
                 # Try the specific key that was provided
                 api_key = "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"
             
+            _cid = getattr(self, 'customer_id', 0) or 0
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
+                    return "Daily AI budget reached — please try again tomorrow."
+            except Exception:
+                pass
+
             client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model="gpt-4",
@@ -1266,8 +1280,23 @@ class EnhancedRAGSystemQdrant:
                 max_tokens=2000,
                 temperature=0.3
             )
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(_cid, 'rag_query',
+                                   tokens_in=response.usage.prompt_tokens,
+                                   tokens_out=response.usage.completion_tokens,
+                                   model='gpt-4')
+            except Exception:
+                pass
             return response.choices[0].message.content
         except Exception as e:
+            try:
+                if _budget_record:
+                    _budget_record(getattr(self, 'customer_id', 0) or 0, 'rag_query',
+                                   0, 0, model='gpt-4', success=False, error_message=str(e)[:200])
+            except Exception:
+                pass
             return f"Error generating response: {str(e)}"
     
     def _infer_collection_from_query_type(self, query_type: str) -> str:

@@ -27,6 +27,12 @@ from auth_middleware import get_current_customer_id
 from anthropic_key_utils import get_anthropic_api_key
 from ask_ai_tools import TOOL_DEFINITIONS, execute_tool, extract_artifacts
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 logger = logging.getLogger(__name__)
 
 ask_ai_v2_api = Blueprint('ask_ai_v2', __name__)
@@ -217,6 +223,20 @@ def ask_v2():
         # Add current query
         messages.append({"role": "user", "content": query_text})
 
+        # ── Budget check ──────────────────────────────────────────────
+        _budget_blocked = False
+        try:
+            if _budget_can_call and not _budget_can_call(customer_id, 'ask_ai_v2'):
+                _budget_blocked = True
+        except Exception:
+            pass  # fail-open
+
+        if _budget_blocked:
+            return jsonify({
+                'response': 'Daily AI budget reached — please try again tomorrow or contact your admin.',
+                'budget_exceeded': True,
+            }), 429
+
         # ── Tool Use Loop ──────────────────────────────────────────────
         all_artifacts = []
         tools_called = []
@@ -235,11 +255,28 @@ def ask_v2():
                 )
             except anthropic.APIError as e:
                 logger.error(f"Anthropic API error: {e}")
+                try:
+                    if _budget_record:
+                        _budget_record(customer_id, 'ask_ai_v2', 0, 0,
+                                       model='claude-sonnet-4-20250514',
+                                       success=False, error_message=str(e))
+                except Exception:
+                    pass
                 return jsonify({
                     'error': 'AI service error',
                     'message': str(e),
                     'fallback': True,
                 }), 502
+
+            # Record usage for this round
+            try:
+                if _budget_record:
+                    _budget_record(customer_id, 'ask_ai_v2',
+                                   tokens_in=response.usage.input_tokens,
+                                   tokens_out=response.usage.output_tokens,
+                                   model='claude-sonnet-4-20250514')
+            except Exception:
+                pass
 
             # Collect text from this response
             text_parts = []

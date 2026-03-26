@@ -11,6 +11,12 @@ from sentence_transformers import SentenceTransformer
 import openai
 from models import db, KPI, Account, KPIUpload
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 class SimpleRAGSystem:
     def __init__(self):
         """Initialize simple RAG system"""
@@ -152,6 +158,24 @@ class SimpleRAGSystem:
                 Please provide a comprehensive analysis and answer based on the available data.
                 """
                 
+                _cid = getattr(self, 'customer_id', 0) or 0
+                # Budget check (fail-open)
+                try:
+                    if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
+                        ai_response = "Daily AI budget reached — please try again tomorrow."
+                        return {
+                            'customer_id': self.customer_id,
+                            'query': query_text,
+                            'query_type': query_type,
+                            'results_count': len(similarities),
+                            'relevant_results': relevant_results,
+                            'response': ai_response,
+                            'similarity_threshold': 0.3,
+                            'budget_exceeded': True,
+                        }
+                except Exception:
+                    pass
+
                 response = client.chat.completions.create(
                     model="gpt-4",
                     messages=[
@@ -161,10 +185,26 @@ class SimpleRAGSystem:
                     max_tokens=1000,
                     temperature=0.3
                 )
-                
+
+                # Record usage (fail-open)
+                try:
+                    if _budget_record:
+                        _budget_record(_cid, 'rag_query',
+                                       tokens_in=response.usage.prompt_tokens,
+                                       tokens_out=response.usage.completion_tokens,
+                                       model='gpt-4')
+                except Exception:
+                    pass
+
                 ai_response = response.choices[0].message.content
-                
+
             except Exception as e:
+                try:
+                    if _budget_record:
+                        _budget_record(getattr(self, 'customer_id', 0) or 0, 'rag_query',
+                                       0, 0, model='gpt-4', success=False, error_message=str(e)[:200])
+                except Exception:
+                    pass
                 ai_response = f"Error generating AI response: {str(e)}"
         else:
             ai_response = "I couldn't find relevant information to answer your query."

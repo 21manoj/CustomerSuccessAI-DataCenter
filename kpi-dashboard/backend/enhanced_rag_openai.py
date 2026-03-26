@@ -17,6 +17,12 @@ from utils.embedding_model import get_embedding_model
 from models import db, KPI, Account, KPIUpload, CustomerConfig, PlaybookReport, DC2SKPI, User
 from query_cache import get_query_cache, cache_query_result, get_cached_query_result
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 # Load environment variables
 load_dotenv()
 
@@ -402,6 +408,14 @@ class EnhancedRAGSystemOpenAI:
             if not api_key:
                 return "OpenAI API key is not configured. Please configure your OpenAI API key in Settings > OpenAI Key Settings."
             
+            _cid = getattr(self, 'customer_id', 0) or 0
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
+                    return "Daily AI budget reached — please try again tomorrow."
+            except Exception:
+                pass
+
             client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model="gpt-4",
@@ -412,6 +426,15 @@ class EnhancedRAGSystemOpenAI:
                 max_tokens=2000,
                 temperature=0.3
             )
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(_cid, 'rag_query',
+                                   tokens_in=response.usage.prompt_tokens,
+                                   tokens_out=response.usage.completion_tokens,
+                                   model='gpt-4')
+            except Exception:
+                pass
             return response.choices[0].message.content
         except openai.AuthenticationError as e:
             return "OpenAI API key is invalid or expired. Please update your API key in Settings > OpenAI Key Settings."
@@ -419,6 +442,12 @@ class EnhancedRAGSystemOpenAI:
             return f"OpenAI API error: {str(e)}. Please check your API key and account status."
         except Exception as e:
             error_msg = str(e)
+            try:
+                if _budget_record:
+                    _budget_record(getattr(self, 'customer_id', 0) or 0, 'rag_query',
+                                   0, 0, model='gpt-4', success=False, error_message=error_msg[:200])
+            except Exception:
+                pass
             if 'API key' in error_msg or '401' in error_msg or 'authentication' in error_msg.lower():
                 return "OpenAI API key is missing or invalid. Please configure your API key in Settings > OpenAI Key Settings."
             return f"Error generating response: {error_msg}"

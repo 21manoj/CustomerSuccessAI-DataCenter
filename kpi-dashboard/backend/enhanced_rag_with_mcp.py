@@ -14,6 +14,12 @@ from enhanced_rag_openai import EnhancedRAGSystemOpenAI
 from mcp_integration import MCPIntegration, get_mcp_config
 from models import Account
 
+try:
+    from utils.llm_budget_controller import can_call as _budget_can_call, record_usage as _budget_record
+except Exception:
+    _budget_can_call = None
+    _budget_record = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -245,6 +251,14 @@ Provide a comprehensive answer that:
 """
         
         try:
+            _cid = getattr(self, 'customer_id', 0) or 0
+            # Budget check (fail-open)
+            try:
+                if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
+                    return "Daily AI budget reached — please try again tomorrow."
+            except Exception:
+                pass
+
             client = openai.OpenAI(api_key=openai.api_key)
             response = client.chat.completions.create(
                 model="gpt-4",
@@ -255,11 +269,27 @@ Provide a comprehensive answer that:
                 max_tokens=1200,
                 temperature=0.3
             )
-            
+
+            # Record usage (fail-open)
+            try:
+                if _budget_record:
+                    _budget_record(_cid, 'rag_query',
+                                   tokens_in=response.usage.prompt_tokens,
+                                   tokens_out=response.usage.completion_tokens,
+                                   model='gpt-4')
+            except Exception:
+                pass
+
             return response.choices[0].message.content
-            
+
         except Exception as e:
             logger.error(f"Error generating enhanced response: {e}")
+            try:
+                if _budget_record:
+                    _budget_record(getattr(self, 'customer_id', 0) or 0, 'rag_query',
+                                   0, 0, model='gpt-4', success=False, error_message=str(e)[:200])
+            except Exception:
+                pass
             # Fall back to original response
             return local_result.get('response', 'Error generating response')
 
