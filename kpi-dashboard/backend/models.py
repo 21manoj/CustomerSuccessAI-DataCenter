@@ -1726,3 +1726,42 @@ class PlaybookTask(db.Model):
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class LLMUsageLog(db.Model):
+    """
+    Per-call LLM usage log for the centralized Budget Controller.
+
+    Tracks every LLM API call with token counts, cost, and module origin.
+    Used by utils/llm_budget_controller.py for daily/monthly budget checks.
+    """
+    __tablename__ = 'llm_usage_log'
+
+    log_id           = db.Column(db.Integer, primary_key=True)
+    customer_id      = db.Column(db.Integer, nullable=False, index=True)
+    module           = db.Column(db.String(50), nullable=False, index=True)  # signal_analyst, ask_ai_v2, rag_query, wizard_b
+    model            = db.Column(db.String(50))                               # claude-sonnet-4-20250514, gpt-4o-mini
+    tokens_in        = db.Column(db.Integer, default=0)
+    tokens_out       = db.Column(db.Integer, default=0)
+    cost_estimate_usd = db.Column(db.Numeric(10, 6), default=0)
+    success          = db.Column(db.Boolean, default=True)
+    error_message    = db.Column(db.Text)
+    created_at       = db.Column(db.DateTime, server_default=db.func.now())
+
+    __table_args__ = (
+        db.Index('idx_llm_usage_customer_date', 'customer_id', 'created_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'log_id': self.log_id,
+            'customer_id': self.customer_id,
+            'module': self.module,
+            'model': self.model,
+            'tokens_in': self.tokens_in,
+            'tokens_out': self.tokens_out,
+            'cost_estimate_usd': float(self.cost_estimate_usd) if self.cost_estimate_usd else 0,
+            'success': self.success,
+            'error_message': self.error_message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

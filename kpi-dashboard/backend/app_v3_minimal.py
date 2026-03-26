@@ -1203,6 +1203,14 @@ except ImportError as e:
 # Admin UI API (Super-Admin only) — already registered above (line ~1017)
 # ====================================================================
 
+# LLM Usage API — budget controller & usage summary
+try:
+    from llm_usage_api import llm_usage_api
+    app.register_blueprint(llm_usage_api)
+    print("✅ Registered LLM Usage API: /api/llm-usage/*")
+except ImportError as e:
+    print(f"⚠️  Warning: LLM Usage API not available: {e}")
+
 # Ask AI v2 — Claude-powered assistant with tool_use (behind feature flag)
 try:
     from feature_toggles import feature_toggles, FeatureToggle

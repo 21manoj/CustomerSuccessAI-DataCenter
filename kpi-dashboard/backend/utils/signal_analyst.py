@@ -451,6 +451,13 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
     if not pic.layer_a_enabled():
         return []
 
+    # ── Enforce max proactive calls per run ──
+    try:
+        from utils.llm_budget_controller import get_max_proactive_calls
+        max_proactive = get_max_proactive_calls(customer_id)
+    except Exception:
+        max_proactive = 50  # fallback default
+
     triggered = []
     try:
         from models import Account, ContextNode, db
@@ -483,6 +490,12 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
             .all()
         )
         for node in recent_cg:
+            if len(triggered) >= max_proactive:
+                logger.info(
+                    f"signal_analyst: proactive call cap reached ({max_proactive}) "
+                    f"for customer {customer_id} — stopping CG scan"
+                )
+                break
             st = node.node_subtype or ''
             props = node.properties or {}
             for sig_type in [st, props.get('signal_type', ''), props.get('event_type', '')]:
@@ -522,6 +535,12 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
                 f"{len(high_risk_qual)} high-risk matches for customer {customer_id}"
             )
             for qs in high_risk_qual:
+                if len(triggered) >= max_proactive:
+                    logger.info(
+                        f"signal_analyst: proactive call cap reached ({max_proactive}) "
+                        f"for customer {customer_id} — stopping QS scan"
+                    )
+                    break
                 sig_type = qs.signal_type or ''
                 key = (qs.account_id, sig_type)
                 if key not in seen:
@@ -561,7 +580,25 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
 
     Priority: Anthropic (Claude) → OpenAI (GPT-4o-mini) → None.
     Returns the assistant message text, or None on failure.
+
+    Budget controller integration:
+    - Checks can_call() before making the API request.
+    - Calls record_usage() after the call completes (success or failure).
+    - If budget is exhausted, returns None (no LLM call made).
     """
+    # ── Budget gate ──
+    try:
+        from utils.llm_budget_controller import can_call, record_usage
+        if not can_call(customer_id, 'signal_analyst', estimated_tokens=1000):
+            logger.warning(
+                f"signal_analyst: LLM call BLOCKED by budget controller for customer {customer_id}"
+            )
+            return None
+    except Exception as budget_err:
+        # Fail-open: if budget check fails, proceed with the call
+        logger.debug(f"signal_analyst: budget check error (proceeding): {budget_err}")
+        record_usage = None  # type: ignore[assignment]
+
     # ── Try Anthropic first ──
     try:
         import os
@@ -582,9 +619,25 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
             text = response.content[0].text.strip() if response.content else None
             if text:
                 logger.info(f"signal_analyst: Anthropic call succeeded for customer {customer_id}")
+                # Record usage
+                try:
+                    tokens_in = getattr(response.usage, 'input_tokens', 0) or 0
+                    tokens_out = getattr(response.usage, 'output_tokens', 0) or 0
+                    from utils.llm_budget_controller import record_usage as _record
+                    _record(customer_id, 'signal_analyst', tokens_in, tokens_out,
+                            model='claude-sonnet-4-20250514')
+                except Exception as rec_err:
+                    logger.debug(f"signal_analyst: usage recording failed: {rec_err}")
                 return text
     except Exception as e:
         logger.debug(f"signal_analyst: Anthropic call failed, trying OpenAI: {e}")
+        # Record failed Anthropic attempt
+        try:
+            from utils.llm_budget_controller import record_usage as _record
+            _record(customer_id, 'signal_analyst', 0, 0,
+                    model='claude-sonnet-4-20250514', success=False, error_message=str(e)[:200])
+        except Exception:
+            pass
 
     # ── Fallback to OpenAI ──
     try:
@@ -615,10 +668,27 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
             max_tokens=400,
             temperature=0.3,
         )
-        return response.choices[0].message.content.strip()
+        result_text = response.choices[0].message.content.strip()
+        # Record usage
+        try:
+            usage = response.usage
+            tokens_in = getattr(usage, 'prompt_tokens', 0) or 0
+            tokens_out = getattr(usage, 'completion_tokens', 0) or 0
+            from utils.llm_budget_controller import record_usage as _record
+            _record(customer_id, 'signal_analyst', tokens_in, tokens_out, model='gpt-4o-mini')
+        except Exception as rec_err:
+            logger.debug(f"signal_analyst: usage recording failed: {rec_err}")
+        return result_text
 
     except Exception as e:
         logger.error(f"signal_analyst: LLM call failed: {e}", exc_info=True)
+        # Record failed OpenAI attempt
+        try:
+            from utils.llm_budget_controller import record_usage as _record
+            _record(customer_id, 'signal_analyst', 0, 0,
+                    model='gpt-4o-mini', success=False, error_message=str(e)[:200])
+        except Exception:
+            pass
         return None
 
 
