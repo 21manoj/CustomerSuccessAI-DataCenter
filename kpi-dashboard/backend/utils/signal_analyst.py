@@ -492,32 +492,44 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
         # Source 2: QualitativeSignal table (catches incremental loads where CG skip is on)
         try:
             from models import QualitativeSignal
+            cutoff_date = cutoff.date() if hasattr(cutoff, 'date') else cutoff
             recent_qual = (
                 QualitativeSignal.query
                 .filter(
                     QualitativeSignal.account_id.in_(acct_ids),
-                    QualitativeSignal.signal_date >= cutoff.date() if hasattr(cutoff, 'date') else cutoff,
+                    QualitativeSignal.signal_date >= cutoff_date,
                 )
                 .all()
             )
-            for qs in recent_qual:
+            high_risk_qual = [
+                qs for qs in recent_qual
+                if (qs.signal_type or '') in HIGH_RISK_SIGNAL_TYPES
+            ]
+            logger.info(
+                f"signal_analyst: proactive scan — {len(recent_qual)} recent qualitative signals, "
+                f"{len(high_risk_qual)} high-risk matches for customer {customer_id}"
+            )
+            for qs in high_risk_qual:
                 sig_type = qs.signal_type or ''
-                if sig_type in HIGH_RISK_SIGNAL_TYPES:
-                    key = (qs.account_id, sig_type)
-                    if key not in seen:
-                        seen.add(key)
-                        content = qs.content or sig_type
-                        result = analyze_on_signal(
-                            customer_id=customer_id,
-                            account_id=qs.account_id,
-                            signal_type=sig_type,
-                            signal_content=str(content)[:500],
-                            signal_sentiment=qs.sentiment or 'negative',
-                        )
-                        if result:
-                            triggered.append((qs.account_id, sig_type, content))
+                key = (qs.account_id, sig_type)
+                if key not in seen:
+                    seen.add(key)
+                    content = qs.content or sig_type
+                    logger.info(
+                        f"signal_analyst: PROACTIVE trigger — account {qs.account_id} "
+                        f"signal_type={sig_type} content={str(content)[:80]}"
+                    )
+                    result = analyze_on_signal(
+                        customer_id=customer_id,
+                        account_id=qs.account_id,
+                        signal_type=sig_type,
+                        signal_content=str(content)[:500],
+                        signal_sentiment=qs.sentiment or 'negative',
+                    )
+                    if result:
+                        triggered.append((qs.account_id, sig_type, content))
         except Exception as qs_err:
-            logger.debug(f"QualitativeSignal scan failed (non-fatal): {qs_err}")
+            logger.error(f"QualitativeSignal proactive scan failed: {qs_err}", exc_info=True)
 
         if triggered:
             logger.info(
