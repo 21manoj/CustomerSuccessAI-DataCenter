@@ -760,9 +760,11 @@ def _process_data_impl(customer_id: int) -> dict:
             )
 
         # ----------------------------------------------------------
-        # Detect incremental CSVs: data in DB AND new CSVs on disk
+        # Detect incremental CSVs: data in DB AND new CSVs on disk.
         # Compare CSV file timestamps to last KPI upload timestamp.
         # If any CSV is newer, load them (Path 2) before recalculating.
+        # ----------------------------------------------------------
+        has_new_csvs = False  # default for fresh customers
         # ----------------------------------------------------------
         has_new_csvs = False
         if data_in_db and has_csv_dir:
@@ -948,10 +950,16 @@ def _process_data_impl(customer_id: int) -> dict:
             # On incremental loads (has_new_csvs), skip CG node re-loading if nodes
             # already exist — only load new KPIs/signals above. CG regeneration is
             # handled by the ContextGraphRegenerationSubscriber when health changes.
-            _skip_cg_reload = has_new_csvs and ContextNode.query.filter_by(
-                customer_id=customer_id).first() is not None
             try:
                 from models import ContextNode, ContextEdge
+                _skip_cg_reload = has_new_csvs and ContextNode.query.filter_by(
+                    customer_id=customer_id).first() is not None
+                if _skip_cg_reload:
+                    _logger.info(
+                        f"Incremental load: skipping CG node re-loading for customer {customer_id} "
+                        f"(CG nodes already exist, will regenerate via event subscriber)"
+                    )
+                    steps_completed.append('context_graph_incremental_skip')
 
                 # Stakeholders
                 stakeholder_path = data_dir / 'stakeholders.csv'
@@ -985,7 +993,7 @@ def _process_data_impl(customer_id: int) -> dict:
                 outcomes_path = data_dir / 'outcomes.csv'
                 if not outcomes_path.exists():
                     outcomes_path = data_dir / 'context_graph' / 'outcomes.csv'
-                if outcomes_path.exists():
+                if outcomes_path.exists() and not _skip_cg_reload:
                     df_o = pd.read_csv(str(outcomes_path))
                     for _, row in df_o.iterrows():
                         acct_id = _resolve_acct_id(row)
@@ -1024,7 +1032,7 @@ def _process_data_impl(customer_id: int) -> dict:
                 decisions_path = data_dir / 'decisions.csv'
                 if not decisions_path.exists():
                     decisions_path = data_dir / 'context_graph' / 'decisions.csv'
-                if decisions_path.exists():
+                if decisions_path.exists() and not _skip_cg_reload:
                     df_d = pd.read_csv(str(decisions_path))
                     for _, row in df_d.iterrows():
                         acct_id = _resolve_acct_id(row)
@@ -1053,7 +1061,7 @@ def _process_data_impl(customer_id: int) -> dict:
 
                 # Engagement Events
                 ee_path = data_dir / 'engagement_events.csv'
-                if ee_path.exists():
+                if ee_path.exists() and not _skip_cg_reload:
                     df_ee = pd.read_csv(str(ee_path))
                     for _, row in df_ee.iterrows():
                         acct_id = _resolve_acct_id(row)
