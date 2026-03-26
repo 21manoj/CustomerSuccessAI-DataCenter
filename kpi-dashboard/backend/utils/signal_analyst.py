@@ -218,6 +218,300 @@ Be specific and action-oriented. Avoid generic advice."""
         return None
 
 
+# ─────────────────────────────────────────────────────────────────────
+#  PROACTIVE: Trigger on leading qualitative signals (not health drops)
+# ─────────────────────────────────────────────────────────────────────
+
+# Signal types that should trigger IMMEDIATE analysis — these are leading
+# indicators that predict health score drops BEFORE they show up in KPIs.
+HIGH_RISK_SIGNAL_TYPES = {
+    'champion_change':    {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Champion departed or changed'},
+    'champion_loss':      {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Key champion lost'},
+    'executive_change':   {'priority': 'critical', 'playbook': 'PB-DC-02', 'label': 'Executive sponsor changed'},
+    'budget_cut':         {'priority': 'high',     'playbook': 'PB-DC-03', 'label': 'Budget reduction signaled'},
+    'budget_pressure':    {'priority': 'high',     'playbook': 'PB-DC-03', 'label': 'Budget pressure detected'},
+    'contract_dispute':   {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Contract dispute escalated'},
+    'escalation':         {'priority': 'high',     'playbook': 'PB-DC-01', 'label': 'Issue escalated'},
+    'competitor_mention': {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Competitor mentioned by customer'},
+    'downgrade_request':  {'priority': 'critical', 'playbook': 'PB-DC-01', 'label': 'Downgrade or cancellation request'},
+    'stakeholder_departure': {'priority': 'high',  'playbook': 'PB-DC-02', 'label': 'Key stakeholder departed'},
+}
+
+
+def analyze_on_signal(
+    customer_id: int,
+    account_id: int,
+    signal_type: str,
+    signal_content: str,
+    signal_sentiment: str = 'negative',
+) -> Optional[dict]:
+    """
+    Proactive analysis triggered by a leading qualitative signal.
+
+    Unlike check_and_analyze() which waits for a health score drop,
+    this function fires IMMEDIATELY when a high-risk signal arrives
+    (champion loss, budget cut, escalation, etc.).
+
+    Args:
+        customer_id:      Customer scope.
+        account_id:       Account that received the signal.
+        signal_type:      Signal type (must be in HIGH_RISK_SIGNAL_TYPES).
+        signal_content:   The signal text/description.
+        signal_sentiment: Sentiment (negative, neutral, positive).
+
+    Returns:
+        Notification payload dict if analysis ran, None otherwise.
+    """
+    if not pic.layer_a_enabled():
+        return None
+
+    risk_info = HIGH_RISK_SIGNAL_TYPES.get(signal_type)
+    if not risk_info:
+        return None  # Not a high-risk signal type — skip
+
+    try:
+        from models import ContextNode, HealthScore, Notification, db, Account
+
+        # ── 1. Get current health score for context ──
+        account = db.session.get(Account, account_id)
+        account_name = account.account_name if account else f"Account {account_id}"
+
+        latest_hs = (
+            HealthScore.query
+            .filter_by(account_id=account_id)
+            .order_by(HealthScore.measurement_month.desc())
+            .first()
+        )
+        current_health = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
+
+        # ── 2. Get pillar scores for context ──
+        pillar_text = ""
+        if latest_hs and latest_hs.contributing_pillars:
+            cp = latest_hs.contributing_pillars
+            pillars = cp if isinstance(cp, dict) else __import__('json').loads(cp)
+            pillar_text = "\n".join(f"  {k}: {v:.1f}" for k, v in pillars.items())
+
+        # ── 3. Get recent signals for broader context ──
+        recent_signals = (
+            ContextNode.query
+            .filter_by(account_id=account_id, node_type='SIGNAL')
+            .order_by(ContextNode.occurred_at.desc())
+            .limit(pic.max_signals_context())
+            .all()
+        )
+        signal_texts = [
+            f"- [{n.node_subtype or 'signal'}] {n.title or '(no title)'}"
+            for n in recent_signals
+        ]
+
+        # ── 4. Build proactive LLM prompt ──
+        health_line = f"Current health score: {current_health:.1f}/100" if current_health else "Health score: not yet calculated"
+        pillar_block = pillar_text if pillar_text else "  (not yet calculated)"
+        signal_block = "\n".join(signal_texts) if signal_texts else "  (no recent signals)"
+
+        prompt = f"""You are a Customer Success analyst. A HIGH-RISK leading signal has just arrived for an account. This is a PROACTIVE alert — the health score has NOT dropped yet, but this signal predicts it WILL.
+
+Account: {account_name} (ID {account_id})
+{health_line}
+
+⚠️ CRITICAL SIGNAL: {risk_info['label']}
+Signal type: {signal_type}
+Signal content: {signal_content}
+Sentiment: {signal_sentiment}
+
+Recent account signals:
+{signal_block}
+
+Current pillar scores:
+{pillar_block}
+
+In 3-4 concise bullet points, explain:
+1. The PREDICTED impact of this signal on account health over the next 30-60 days.
+2. Which KPI pillars will be most affected and by approximately how much.
+3. The single most urgent action the CSM should take THIS WEEK (before the score drops).
+4. What recovery looks like if we act now vs. wait for the score to drop.
+
+Be specific, predictive, and urgent. This is a pre-emptive intervention window."""
+
+        # ── 5. Call LLM ──
+        analysis_text = _call_llm(customer_id, prompt)
+        if not analysis_text:
+            logger.warning(f"signal_analyst: LLM returned empty for proactive signal on account {account_id}")
+            return None
+
+        # ── 6. Build payload ──
+        payload = {
+            'account_id': account_id,
+            'account_name': account_name,
+            'trigger': 'proactive_signal',
+            'signal_type': signal_type,
+            'signal_content': signal_content[:200],
+            'risk_label': risk_info['label'],
+            'recommended_playbook': risk_info['playbook'],
+            'current_health': current_health,
+            'analysis': analysis_text,
+            'signal_count': len(recent_signals),
+            'generated_at': datetime.utcnow().isoformat(),
+        }
+
+        # ── 7. Store as Notification ──
+        notification = Notification(
+            customer_id=customer_id,
+            account_id=account_id,
+            type='proactive_signal_insight',
+            priority=risk_info['priority'],
+            payload=payload,
+        )
+        db.session.add(notification)
+        db.session.commit()
+
+        logger.info(
+            f"signal_analyst: PROACTIVE analysis for account {account_id} "
+            f"(signal={signal_type}, playbook={risk_info['playbook']}, "
+            f"priority={risk_info['priority']})"
+        )
+
+        # ── 8. Write system signal to context graph ──
+        try:
+            from models import ContextEdge
+            insight_node = ContextNode(
+                account_id=account_id,
+                customer_id=customer_id,
+                node_type='SIGNAL',
+                source='system',
+                node_subtype='proactive_insight',
+                title=f'Proactive Alert: {risk_info["label"]}',
+                properties={
+                    'signal_type':     signal_type,
+                    'risk_label':      risk_info['label'],
+                    'playbook':        risk_info['playbook'],
+                    'current_health':  current_health,
+                    'notification_id': notification.id,
+                    'triggered_by':    'signal_analyst_proactive',
+                },
+                tier=2,
+                occurred_at=datetime.utcnow(),
+            )
+            db.session.add(insight_node)
+            db.session.flush()
+
+            # Link to the triggering customer signal
+            trigger_signal = (
+                ContextNode.query
+                .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
+                .order_by(ContextNode.occurred_at.desc())
+                .first()
+            )
+            if trigger_signal:
+                db.session.add(ContextEdge(
+                    from_node_id=trigger_signal.node_id,
+                    to_node_id=insight_node.node_id,
+                    edge_type='CAUSED_BY',  # causal — the signal CAUSED the insight
+                    confidence=1.0,
+                    customer_id=customer_id,
+                    properties={'label': f'Proactive detection: {signal_type}'},
+                ))
+            db.session.commit()
+        except Exception as graph_err:
+            logger.error(f"signal_analyst: proactive CG write failed: {graph_err}", exc_info=True)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        return payload
+
+    except Exception as e:
+        logger.error(f"signal_analyst: analyze_on_signal failed for account {account_id}: {e}", exc_info=True)
+        try:
+            from extensions import db as _db
+            _db.session.rollback()
+        except Exception:
+            pass
+        return None
+
+
+def scan_signals_for_proactive_triggers(customer_id: int) -> list:
+    """
+    Scan recently loaded qualitative signals for high-risk types.
+    Called from _process_data_impl() AFTER signals are loaded into DB.
+
+    Returns list of (account_id, signal_type, content) tuples that triggered.
+    """
+    if not pic.layer_a_enabled():
+        return []
+
+    triggered = []
+    try:
+        from models import QualitativeSignal, db
+        from datetime import timedelta
+
+        # Look at signals loaded in the last hour (covers this process_data run)
+        cutoff = datetime.utcnow() - timedelta(hours=1)
+        recent = (
+            QualitativeSignal.query
+            .filter(
+                QualitativeSignal.account_id.in_(
+                    db.session.query(db.text('account_id'))
+                    .select_from(db.text('accounts'))
+                    .filter(db.text(f'customer_id = {customer_id}'))
+                ),
+            )
+            .all()
+        )
+
+        # Also scan ContextNode SIGNAL nodes loaded recently
+        from models import ContextNode
+        recent_cg = (
+            ContextNode.query
+            .filter(
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_type == 'SIGNAL',
+                ContextNode.source == 'customer',
+                ContextNode.occurred_at >= cutoff,
+            )
+            .all()
+        )
+
+        # Check signal types against HIGH_RISK list
+        seen = set()  # (account_id, signal_type) to avoid duplicate triggers
+        for node in recent_cg:
+            st = node.node_subtype or ''
+            # Also check properties for signal_type
+            props = node.properties or {}
+            signal_type_candidates = [
+                st,
+                props.get('signal_type', ''),
+                props.get('event_type', ''),
+            ]
+            for sig_type in signal_type_candidates:
+                if sig_type in HIGH_RISK_SIGNAL_TYPES:
+                    key = (node.account_id, sig_type)
+                    if key not in seen:
+                        seen.add(key)
+                        content = node.title or props.get('content', sig_type)
+                        result = analyze_on_signal(
+                            customer_id=customer_id,
+                            account_id=node.account_id,
+                            signal_type=sig_type,
+                            signal_content=str(content)[:500],
+                            signal_sentiment=props.get('sentiment', 'negative'),
+                        )
+                        if result:
+                            triggered.append((node.account_id, sig_type, content))
+
+        if triggered:
+            logger.info(
+                f"signal_analyst: {len(triggered)} proactive trigger(s) for customer {customer_id}: "
+                + ", ".join(f"{a}:{s}" for a, s, _ in triggered)
+            )
+
+    except Exception as e:
+        logger.error(f"signal_analyst: scan_signals_for_proactive_triggers failed: {e}", exc_info=True)
+
+    return triggered
+
+
 def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
     """
     Call an LLM for signal analysis.

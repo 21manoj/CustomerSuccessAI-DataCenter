@@ -1288,6 +1288,24 @@ def _process_data_impl(customer_id: int) -> dict:
             )
 
         # ----------------------------------------------------------
+        # PROACTIVE: Scan newly loaded signals for leading indicators
+        # (champion loss, budget cut, etc.) BEFORE health scores drop.
+        # This is the "push" path — act on signals, don't wait for KPIs.
+        # ----------------------------------------------------------
+        try:
+            from utils.signal_analyst import scan_signals_for_proactive_triggers
+            proactive_results = scan_signals_for_proactive_triggers(customer_id)
+            if proactive_results:
+                steps_completed.append(
+                    f'proactive_signals_{len(proactive_results)}_triggered'
+                )
+        except Exception as _ps_err:
+            import logging as _log_ps
+            _log_ps.getLogger(__name__).warning(
+                f"Proactive signal scan failed (non-fatal): {_ps_err}"
+            )
+
+        # ----------------------------------------------------------
         # ALWAYS: Recalculate health scores from DB data
         # Per-month: group KPIs by month, compute health per month
         # per account. This enables ROI engine to see historical
