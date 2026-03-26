@@ -41,11 +41,22 @@ _CHAMPION_LOSS_SIGNALS = frozenset([
     'stakeholder_escalation',    # champion_loss + crisis_recovery arc
     'champion_disengagement',    # ignored_churn arc
     'executive_engagement',      # champion_loss intervention (exec brought in)
+    'champion_change',           # ACTUAL load-driver subtype for VP/exec departure
     # CRM / Gainsight
     'champion_departure', 'champion_loss',
     'stakeholder_departure', 'executive_departure',
     # synthetic (injected by title scan below)
     '_champion_departure_detected',
+])
+
+# Explicit champion change signals — strongest indicator, no slope required
+# These are direct "person left the account" events vs generic escalation
+_CHAMPION_CHANGE_SIGNALS = frozenset([
+    'champion_change',           # load-driver: "VP resigned, replaced by..."
+    'champion_disengagement',    # ignored_churn arc: champion pulling away
+    'champion_departure',        # CRM/Gainsight field value
+    'executive_departure',       # CRM/Gainsight field value
+    '_champion_departure_detected',  # title scan hit
 ])
 
 # Infrastructure / technical incident signals
@@ -120,13 +131,26 @@ def _has(signal_types: Counter, keyword_set: frozenset) -> bool:
 
 
 ARC_RULES: list[tuple[str, float, object]] = [
-    # 1. Champion Loss — stakeholder departure signal + declining health
-    #    Load-driver: stakeholder_escalation + kpi_decline → champion_loss arc
+    # 1a. Champion Loss (explicit) — champion_change signal present
+    #     Strongest indicator: a named person left the account.
+    #     No slope requirement — account may have already bottomed out.
+    #     Load-driver subtype: 'champion_change' (VP/exec resigned/replaced)
+    #     NOT fired if critical_incident present (that's crisis_recovery).
     (
         'champion_loss', 0.85,
         lambda f: (
+            _has(f['signal_types'], _CHAMPION_CHANGE_SIGNALS)
+            and f['health_now'] < ht.at_risk_min()
+            and not _has(f['signal_types'], frozenset(['critical_incident']))
+        ),
+    ),
+    # 1b. Champion Loss (slope-based) — departure signal + actively declining
+    #     Catches early-stage champion loss before account bottoms out.
+    (
+        'champion_loss', 0.80,
+        lambda f: (
             f['has_stakeholder_departure']
-            and f['slope_30d'] < -3            # > 3 pts/month decline
+            and f['slope_30d'] < -3            # > 3 pts/month active decline
         ),
     ),
     # 2. Crisis Recovery — critical incident that is stakeholder-driven
