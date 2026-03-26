@@ -1308,6 +1308,40 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     # merged into signal_edges.csv by _auto_generate_context_graph_files() before
     # this function is called.
 
+    # ------------------------------------------------------------------
+    # Layer C: Urgent signal scanner — run per-account after edges are
+    # committed so that to_node revenue_impact values are readable.
+    # All errors are non-fatal; scanner result is appended to result dict.
+    # ------------------------------------------------------------------
+    urgent_alerts_total = 0
+    try:
+        from utils.urgent_signal_scanner import scan_for_urgent_signals
+        from models import Account as _Account
+
+        accounts_to_scan = _Account.query.filter_by(customer_id=customer_id).all()
+        for _acct in accounts_to_scan:
+            try:
+                alerts = scan_for_urgent_signals(
+                    customer_id=customer_id,
+                    account_id=_acct.account_id,
+                )
+                urgent_alerts_total += len(alerts)
+            except Exception as _ae:
+                current_app.logger.debug(
+                    f"urgent_signal_scanner: skipped account {_acct.account_id}: {_ae}"
+                )
+
+        if urgent_alerts_total:
+            current_app.logger.info(
+                f"urgent_signal_scanner: created {urgent_alerts_total} urgent alert(s) "
+                f"for customer {customer_id}"
+            )
+    except Exception as _scanner_err:
+        current_app.logger.warning(
+            f"urgent_signal_scanner failed (non-fatal) for customer {customer_id}: {_scanner_err}"
+        )
+
+    result['urgent_alerts_created'] = urgent_alerts_total
     return result
 
 

@@ -461,6 +461,14 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Story Arc API not available: {e}")
 
+# Register Notifications API (Actions Pipeline Push)
+try:
+    from notifications_api import notifications_api
+    app.register_blueprint(notifications_api)
+    print("✅ Registered Notifications API: /api/notifications/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Notifications API not available: {e}")
+
 # Register Signal Analyst Agent API if available
 if HAS_SIGNAL_ANALYST_API:
     app.register_blueprint(signal_analyst_api)
