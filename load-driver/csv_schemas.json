@@ -2,7 +2,7 @@
   "_description": "Single source of truth for CSV column definitions. Both backend generate_synthetic_customer_data.py and load-driver csv_generator.py MUST use these exact column names. The onboarding API (onboarding_api_v2_config_aware.py) validates against these.",
   "_version": "2.0",
   "_updated": "2026-03-15",
-  "_consolidation_note": "Consolidated from 15 to 11 files. Customers provide 8 files; platform auto-generates 3 (decisions, signal_edges, industry_benchmarks).",
+  "_consolidation_note": "Consolidated from 15 to 11 files. Customers provide 8 files; platform auto-generates 2 (decisions, signal_edges) and seeds 1 curated file (industry_benchmarks from config/industry_benchmarks/{vertical}.csv).",
 
   "regular_model": {
     "_description": "4 CSVs that every customer provides (with or without context graph).",
@@ -58,7 +58,7 @@
       }
     },
     "auto_generated": {
-      "_description": "These 3 files are derived by the platform during process-data. If a customer uploads them, the upload is accepted and auto-generation is skipped for that file.",
+      "_description": "These 2 files are derived by the platform during process-data. If a customer uploads them, the upload is accepted and auto-generation is skipped.",
       "decisions.csv": {
         "required_columns": ["account_id", "decision_date", "title", "decision_maker_role", "chosen_option"],
         "optional_columns": ["decision_id", "options_considered", "revenue_impact", "risk_level", "evidence_refs", "outcome_description", "confidence"],
@@ -72,13 +72,17 @@
         "db_table": "context_edges",
         "auto_generated": true,
         "source": "Derived from temporal correlation between signals + story arc causal chains. Also includes SOURCED_FROM edges (merged from old decision_evidence.csv)."
-      },
+      }
+    },
+    "platform_curated": {
+      "_description": "Seeded from config/industry_benchmarks/{vertical}.csv. LLM-generated initial data, curated by domain experts. Customer can override by uploading their own.",
       "industry_benchmarks.csv": {
-        "required_columns": ["kpi_code", "benchmark_source", "industry_p50"],
-        "optional_columns": ["industry_p25", "industry_p75", "account_percentile", "sample_size", "benchmark_date"],
+        "required_columns": ["kpi_code", "kpi_name", "pillar", "unit", "p25", "p50", "p75", "p90"],
+        "optional_columns": ["pillar_name", "source", "methodology", "last_updated", "curated"],
         "db_table": "context_nodes (node_type=EXTERNAL_CONTEXT)",
-        "auto_generated": true,
-        "source": "Populated from platform benchmark database by industry vertical"
+        "platform_curated": true,
+        "seed_file": "config/industry_benchmarks/{vertical}.csv",
+        "source": "LLM-seeded from industry research (Uptime Institute, ITIC, Gartner, MLPerf, etc.), then curated by domain experts. curated=true means expert-reviewed."
       }
     }
   },

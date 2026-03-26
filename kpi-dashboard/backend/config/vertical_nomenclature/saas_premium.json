@@ -1,0 +1,158 @@
+{
+  "_description": "UI nomenclature mapping for SaaS Premium (B2B SaaS Customer Success) vertical. Used by frontend useVerticalLabels() hook and backend API responses to render vertical-specific terminology.",
+  "_version": "1.0.0",
+  "_curated": false,
+  "_last_updated": "2026-Q1",
+
+  "vertical_id": "saas_premium",
+  "vertical_display_name": "SaaS Premium",
+  "vertical_short_name": "SaaS",
+  "industry": "B2B SaaS Customer Success",
+
+  "entities": {
+    "customer": "Customer",
+    "customers": "Customers",
+    "account": "Account",
+    "accounts": "Accounts",
+    "user": "User",
+    "users": "Users",
+    "product": "Product",
+    "products": "Products",
+    "contract": "Subscription",
+    "contracts": "Subscriptions",
+    "renewal": "Subscription Renewal",
+    "expansion": "Expansion Opportunity",
+    "churn": "Churn Risk",
+    "onboarding": "Customer Onboarding"
+  },
+
+  "navigation": {
+    "main_dashboard": "Customer Success Performance Console",
+    "executive_dashboard": "Executive Dashboard",
+    "account_list": "Account Hub",
+    "account_details": "Account Details",
+    "account_health": "Account Health",
+    "product_health": "Product Health",
+    "data_integration": "Data Integration",
+    "analytics": "Customer Success Value Analytics",
+    "ai_insights": "AI Insights",
+    "signal_analyst": "CS AI Agents",
+    "playbooks": "Playbooks & Reports",
+    "settings": "Settings",
+    "roi_analysis": "ROI Analysis",
+    "portfolio_synergy": "Portfolio Synergy",
+    "journey_timeline": "Customer Journey",
+    "revenue_intelligence": "Revenue Intelligence"
+  },
+
+  "health_status": {
+    "healthy": "Healthy",
+    "at_risk": "At Risk",
+    "critical": "Critical",
+    "healthy_description": "Account engagement and metrics are on track",
+    "at_risk_description": "Declining engagement signals — proactive outreach recommended",
+    "critical_description": "Urgent intervention needed — high churn probability"
+  },
+
+  "pillars": {
+    "P1": {
+      "display_name": "Product Adoption & Usage",
+      "short_code": "PA",
+      "description": "How effectively customers adopt and use the product",
+      "icon": "bar-chart"
+    },
+    "P2": {
+      "display_name": "Customer Engagement",
+      "short_code": "CE",
+      "description": "Quality and frequency of customer interactions and advocacy",
+      "icon": "users"
+    },
+    "P3": {
+      "display_name": "Support & Service Health",
+      "short_code": "SH",
+      "description": "Support ticket health, CSAT, NPS, and SLA compliance",
+      "icon": "headphones"
+    },
+    "P4": {
+      "display_name": "Partner & Channel Management",
+      "short_code": "PC",
+      "description": "Partner revenue contribution, certification, and satisfaction",
+      "icon": "handshake"
+    },
+    "P5": {
+      "display_name": "Revenue & Growth",
+      "short_code": "RG",
+      "description": "NRR, GRR, expansion rate, and renewal probability",
+      "icon": "dollar-sign"
+    }
+  },
+
+  "playbooks": {
+    "section_title": "Playbooks & Automation",
+    "pb_prefix": "PB",
+    "labels": {
+      "PB-01": "Onboarding Acceleration",
+      "PB-02": "Support Stabilization",
+      "PB-03": "Product Adoption Sprint",
+      "PB-04": "Expansion Readiness",
+      "PB-05": "Renewal Safeguard",
+      "PB-06": "Executive Engagement",
+      "PB-07": "Churn Intervention"
+    }
+  },
+
+  "metrics": {
+    "arr": "ARR",
+    "mrr": "MRR",
+    "nps": "NPS",
+    "csat": "CSAT",
+    "csm": "Customer Success Manager",
+    "health_score": "Health Score",
+    "revenue": "Revenue",
+    "ttfv": "Time to Value",
+    "nrr": "Net Revenue Retention",
+    "grr": "Gross Revenue Retention"
+  },
+
+  "table_columns": {
+    "name": "Account Name",
+    "health": "Health Score",
+    "region": "Region",
+    "industry": "Industry",
+    "status": "Status",
+    "csm": "Assigned CSM",
+    "arr": "ARR",
+    "contract_end": "Renewal Date",
+    "last_activity": "Last Activity"
+  },
+
+  "search_placeholders": {
+    "account_search": "Search accounts...",
+    "kpi_search": "Search KPIs...",
+    "playbook_search": "Search playbooks..."
+  },
+
+  "empty_states": {
+    "no_accounts": "No Accounts Found",
+    "no_kpis": "No KPI Data Available",
+    "no_playbooks": "No Active Playbooks",
+    "no_signals": "No Signals Detected"
+  },
+
+  "actions": {
+    "add_account": "Add Account",
+    "edit_account": "Edit Account",
+    "view_details": "View Account Details",
+    "run_playbook": "Execute Playbook",
+    "upload_data": "Upload Data",
+    "export_report": "Export Report",
+    "calibrate_weights": "Calibrate Weights"
+  },
+
+  "tooltips": {
+    "health_score": "Weighted composite of all 5 pillars (0-100)",
+    "expansion_probability": "ML-predicted probability of subscription expansion in next 90 days",
+    "churn_risk": "Risk of non-renewal based on engagement and usage signals",
+    "pillar_weight": "Relative importance of this pillar in the overall health score"
+  }
+}

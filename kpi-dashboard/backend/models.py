@@ -87,7 +87,10 @@ class CustomerConfig(db.Model):
     dc2s_kpi_overrides = db.Column(db.JSON, nullable=True)      # {"P3-KPI1": {"target": 90}, ...}
     dc2s_kpi_weights = db.Column(db.JSON, nullable=True)        # {"P3": {"P3-KPI1": 0.4, ...}, ...}
     dc2s_kpi_definitions = db.Column(db.JSON, nullable=True)    # Custom KPI definitions
-    
+
+    # Vertical UI nomenclature overrides (customer-specific label customizations)
+    nomenclature_overrides = db.Column(db.JSON, nullable=True)  # Deep-merged on top of vertical defaults
+
     # Metadata
     config_version = db.Column(db.String(20), default='1.0')
     customized_by = db.Column(db.String(255))

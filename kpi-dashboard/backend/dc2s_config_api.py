@@ -562,3 +562,118 @@ def update_health_thresholds():
 
     logger.info(f"Health thresholds updated: healthy>={healthy_min}, at_risk>={at_risk_min}")
     return jsonify(thresholds)
+
+
+# ============================================================
+# VERTICAL NOMENCLATURE API
+# ============================================================
+
+@dc2s_config_api.route('/nomenclature', methods=['GET'])
+def get_nomenclature():
+    """Return vertical-specific UI nomenclature labels.
+
+    Resolves vertical from: query param > session customer > default (dc2_s).
+    Customer-level overrides (stored in CustomerConfig.nomenclature_overrides)
+    are merged on top of the vertical defaults.
+
+    GET /api/dc2s/config/nomenclature
+    GET /api/dc2s/config/nomenclature?vertical=saas_premium
+    """
+    from pathlib import Path
+
+    vertical = request.args.get('vertical')
+    if not vertical:
+        try:
+            customer_id = get_current_customer_id()
+            if customer_id:
+                cust = Customer.query.get(customer_id)
+                vertical = getattr(cust, 'vertical', None) or 'dc2_s'
+            else:
+                vertical = 'dc2_s'
+        except Exception:
+            vertical = 'dc2_s'
+
+    nomen_file = Path(__file__).parent / 'config' / 'vertical_nomenclature' / f'{vertical}.json'
+    if not nomen_file.exists():
+        return jsonify({'error': f'No nomenclature file for vertical: {vertical}'}), 404
+
+    with open(nomen_file) as f:
+        labels = json.load(f)
+
+    # Merge customer-level overrides if any
+    try:
+        customer_id = get_current_customer_id()
+        if customer_id:
+            config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+            if config:
+                overrides_raw = getattr(config, 'nomenclature_overrides', None)
+                if overrides_raw:
+                    overrides = json.loads(overrides_raw) if isinstance(overrides_raw, str) else overrides_raw
+                    labels = _deep_merge(labels, overrides)
+    except Exception as e:
+        logger.debug(f"No customer nomenclature overrides: {e}")
+
+    return jsonify(labels)
+
+
+@dc2s_config_api.route('/nomenclature', methods=['PUT'])
+def update_nomenclature_overrides():
+    """Save customer-level nomenclature overrides.
+
+    PUT /api/dc2s/config/nomenclature
+    Body: { "entities": { "account": "Site" }, "navigation": { ... } }
+
+    Only the provided keys are overridden; unset keys fall through to vertical defaults.
+    """
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    overrides = request.get_json()
+    if not overrides:
+        return jsonify({'error': 'Request body required'}), 400
+
+    config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+    if not config:
+        config = CustomerConfig(customer_id=customer_id)
+        db.session.add(config)
+
+    config.nomenclature_overrides = json.dumps(overrides)
+    db.session.commit()
+
+    logger.info(f"Nomenclature overrides saved for customer {customer_id}: {list(overrides.keys())}")
+    return jsonify({'status': 'ok', 'overrides_saved': list(overrides.keys())})
+
+
+@dc2s_config_api.route('/nomenclature/available', methods=['GET'])
+def list_available_nomenclatures():
+    """List all available vertical nomenclature files.
+
+    GET /api/dc2s/config/nomenclature/available
+    """
+    from pathlib import Path
+    nomen_dir = Path(__file__).parent / 'config' / 'vertical_nomenclature'
+    verticals = []
+    if nomen_dir.exists():
+        for f in sorted(nomen_dir.glob('*.json')):
+            with open(f) as fh:
+                data = json.load(fh)
+                verticals.append({
+                    'vertical_id': data.get('vertical_id', f.stem),
+                    'display_name': data.get('vertical_display_name', f.stem),
+                    'short_name': data.get('vertical_short_name', ''),
+                    'curated': data.get('_curated', False),
+                })
+    return jsonify({'verticals': verticals})
+
+
+def _deep_merge(base: dict, overrides: dict) -> dict:
+    """Recursively merge overrides into base dict (non-destructive)."""
+    import copy
+    result = copy.deepcopy(base)
+    for key, value in overrides.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result

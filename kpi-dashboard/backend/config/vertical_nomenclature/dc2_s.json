@@ -1,0 +1,157 @@
+{
+  "_description": "UI nomenclature mapping for Data Center Infrastructure (DC2S) vertical. Used by frontend useVerticalLabels() hook and backend API responses to render vertical-specific terminology.",
+  "_version": "1.0.0",
+  "_curated": false,
+  "_last_updated": "2026-Q1",
+
+  "vertical_id": "dc2_s",
+  "vertical_display_name": "Data Center Infrastructure",
+  "vertical_short_name": "DC",
+  "industry": "AI/GPU Data Center Operations",
+
+  "entities": {
+    "customer": "Customer",
+    "customers": "Customers",
+    "account": "Tenant",
+    "accounts": "Tenants",
+    "user": "Operator",
+    "users": "Operators",
+    "product": "Infrastructure",
+    "products": "Infrastructure Assets",
+    "contract": "Service Agreement",
+    "contracts": "Service Agreements",
+    "renewal": "Contract Renewal",
+    "expansion": "Capacity Expansion",
+    "churn": "Decommission Risk",
+    "onboarding": "Deployment Onboarding"
+  },
+
+  "navigation": {
+    "main_dashboard": "Data Center Operations Console",
+    "executive_dashboard": "Portfolio Overview",
+    "account_list": "Tenant Hub",
+    "account_details": "Tenant Details",
+    "account_health": "Tenant Health",
+    "product_health": "Infrastructure Health",
+    "data_integration": "Data Integration",
+    "analytics": "Tenant Performance Analytics",
+    "ai_insights": "AI Insights",
+    "signal_analyst": "Signal Analyst",
+    "playbooks": "Playbooks & Reports",
+    "settings": "Settings",
+    "roi_analysis": "ROI Analysis",
+    "portfolio_synergy": "Portfolio Synergy",
+    "journey_timeline": "Journey Timeline",
+    "revenue_intelligence": "Revenue Intelligence"
+  },
+
+  "health_status": {
+    "healthy": "HEALTHY",
+    "at_risk": "AT RISK",
+    "critical": "CRITICAL",
+    "healthy_description": "Operating within optimal parameters",
+    "at_risk_description": "Performance degradation detected — intervention recommended",
+    "critical_description": "Immediate action required — service impact imminent"
+  },
+
+  "pillars": {
+    "P1": {
+      "display_name": "Deployment Velocity",
+      "short_code": "DV",
+      "description": "Speed and efficiency of hardware deployment and configuration",
+      "icon": "rocket"
+    },
+    "P2": {
+      "display_name": "Operational Stability",
+      "short_code": "OS",
+      "description": "Hardware reliability, uptime, and failure prevention",
+      "icon": "shield"
+    },
+    "P3": {
+      "display_name": "AI Workload Performance",
+      "short_code": "AI",
+      "description": "GPU utilization and AI workload execution efficiency",
+      "icon": "cpu"
+    },
+    "P4": {
+      "display_name": "Channel & Partner Health",
+      "short_code": "CH",
+      "description": "Partner engagement and channel relationship strength",
+      "icon": "handshake"
+    },
+    "P5": {
+      "display_name": "Expansion Readiness",
+      "short_code": "EX",
+      "description": "Capacity utilization and expansion probability indicators",
+      "icon": "trending-up"
+    }
+  },
+
+  "playbooks": {
+    "section_title": "Playbooks & Automation",
+    "pb_prefix": "PB",
+    "labels": {
+      "PB-01": "Deployment Acceleration",
+      "PB-02": "RMA Prevention",
+      "PB-03": "GPU Optimization",
+      "PB-04": "Capacity Planning",
+      "PB-05": "Health Monitoring",
+      "PB-06": "Customer Engagement"
+    }
+  },
+
+  "metrics": {
+    "arr": "ARR",
+    "mrr": "MRR",
+    "nps": "Partner NPS",
+    "csat": "Service Satisfaction",
+    "csm": "Customer Success Manager",
+    "health_score": "Health Score",
+    "revenue": "Revenue",
+    "ttfv": "Time to First Workload",
+    "nrr": "Net Revenue Retention",
+    "grr": "Gross Revenue Retention"
+  },
+
+  "table_columns": {
+    "name": "Tenant Name",
+    "health": "Health Score",
+    "region": "Region",
+    "industry": "Industry",
+    "status": "Status",
+    "csm": "Assigned CSM",
+    "arr": "ARR",
+    "contract_end": "Agreement End Date",
+    "last_activity": "Last Activity"
+  },
+
+  "search_placeholders": {
+    "account_search": "Search tenants...",
+    "kpi_search": "Search KPIs...",
+    "playbook_search": "Search playbooks..."
+  },
+
+  "empty_states": {
+    "no_accounts": "No Tenants Found",
+    "no_kpis": "No KPI Data Available",
+    "no_playbooks": "No Active Playbooks",
+    "no_signals": "No Signals Detected"
+  },
+
+  "actions": {
+    "add_account": "Add Tenant",
+    "edit_account": "Edit Tenant",
+    "view_details": "View Tenant Details",
+    "run_playbook": "Execute Playbook",
+    "upload_data": "Upload Data",
+    "export_report": "Export Report",
+    "calibrate_weights": "Calibrate Weights"
+  },
+
+  "tooltips": {
+    "health_score": "Weighted composite of all 5 pillars (0-100)",
+    "expansion_probability": "ML-predicted probability of capacity expansion in next 90 days",
+    "churn_risk": "Risk of tenant decommissioning based on operational signals",
+    "pillar_weight": "Relative importance of this pillar in the overall health score"
+  }
+}
