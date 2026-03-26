@@ -11,11 +11,11 @@ Triggered:
   - Optionally after _process_data_impl() health score write
 
 Logic per account:
-  1. Fetch ContextEdge rows where confidence >= CONFIDENCE_MIN for the account.
-  2. For each edge, check if to_node is an OUTCOME node with revenue_impact < -REVENUE_RISK_MIN.
+  1. Fetch ContextEdge rows where confidence >= pic.confidence_min() for the account.
+  2. For each edge, check if to_node is an OUTCOME node with revenue_impact < -pic.revenue_risk_min().
   3. Check account.profile_metadata.renewal_date; skip gracefully if NULL.
   4. Compute urgency = abs(revenue_impact) * confidence / max(days_to_renewal, 1).
-  5. If urgency > URGENCY_THRESHOLD: create Notification(type='urgent_alert', priority='critical').
+  5. If urgency > pic.urgency_threshold(): create Notification(type='urgent_alert', priority='critical').
 
 Errors are fully contained — never crash the calling pipeline.
 """
@@ -24,13 +24,9 @@ import logging
 from datetime import datetime, date
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+import utils.push_intelligence_config as pic
 
-# ── Calibration constants ──
-URGENCY_THRESHOLD = 5_000   # urgency score above which we alert
-CONFIDENCE_MIN    = 0.85    # minimum edge confidence to consider
-REVENUE_RISK_MIN  = 50_000  # $50K minimum revenue_impact (absolute) to alert
-RENEWAL_WINDOW    = 60      # days — renewal within this window multiplies urgency
+logger = logging.getLogger(__name__)
 
 
 def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
@@ -45,6 +41,9 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
         List of alert payload dicts for each Notification created.
         Returns [] on any error (never raises).
     """
+    if not pic.layer_c_enabled():
+        return []
+
     alerts_created = []
 
     try:
@@ -74,7 +73,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
             ContextEdge.query
             .filter(
                 ContextEdge.customer_id == customer_id,
-                ContextEdge.confidence >= CONFIDENCE_MIN,
+                ContextEdge.confidence >= pic.confidence_min(),
             )
             .join(
                 ContextNode,
@@ -84,7 +83,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                 ContextNode.account_id == account_id,
                 ContextNode.node_type == 'OUTCOME',
                 ContextNode.revenue_impact.isnot(None),
-                ContextNode.revenue_impact < -REVENUE_RISK_MIN,
+                ContextNode.revenue_impact < -pic.revenue_risk_min(),
             )
             .all()
         )
@@ -102,12 +101,12 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                 confidence     = float(edge.confidence) if edge.confidence else 0.0
 
                 # ── 3. Urgency formula ──
-                # When renewal_date is unknown, use RENEWAL_WINDOW as denominator
+                # When renewal_date is unknown, use renewal_window_days() as denominator
                 # (treats account as "always in the renewal window").
-                denom = max(days_to_renewal, 1) if (days_to_renewal is not None) else RENEWAL_WINDOW
+                denom = max(days_to_renewal, 1) if (days_to_renewal is not None) else pic.renewal_window_days()
                 urgency = abs(revenue_impact) * confidence / denom
 
-                if urgency <= URGENCY_THRESHOLD:
+                if urgency <= pic.urgency_threshold():
                     continue
 
                 # ── 4. Build alert payload ──
@@ -148,6 +147,49 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                     f"days_to_renewal={days_to_renewal} "
                     f"urgency={urgency:.1f}"
                 )
+
+                # ── 6. Write system alert node to context graph ──
+                try:
+                    alert_node = ContextNode(
+                        account_id=account_id,
+                        customer_id=customer_id,
+                        node_type='SIGNAL',
+                        source='system',
+                        node_subtype='urgent_alert',
+                        title=f'Urgent Alert: ${abs(revenue_impact):,.0f} revenue at risk',
+                        properties={
+                            'urgency_score':   round(urgency, 1),
+                            'revenue_impact':  revenue_impact,
+                            'days_to_renewal': days_to_renewal,
+                            'edge_confidence': confidence,
+                            'notification_id': notification.id,
+                            'triggered_by':    'urgent_signal_scanner',
+                        },
+                        tier=1,
+                        occurred_at=datetime.utcnow(),
+                    )
+                    db.session.add(alert_node)
+                    db.session.flush()
+
+                    # CAUSED_BY ← the risky OUTCOME node that triggered this alert
+                    db.session.add(ContextEdge(
+                        from_node_id=to_node.node_id,
+                        to_node_id=alert_node.node_id,
+                        edge_type='CAUSED_BY',
+                        confidence=edge.confidence,
+                        properties={'label': 'Revenue risk triggered urgent alert'},
+                    ))
+                    db.session.commit()
+                except Exception as graph_err:
+                    logger.error(
+                        f"urgent_signal_scanner: context graph write failed for account "
+                        f"{account_id}: {graph_err}",
+                        exc_info=True,
+                    )
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
 
             except Exception as edge_err:
                 logger.error(

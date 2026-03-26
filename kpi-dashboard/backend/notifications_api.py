@@ -6,10 +6,15 @@ Notifications API
 Endpoints for the Actions Pipeline Push notification feed.
 
 Routes:
-    GET  /api/notifications/unread   — unread count + notification list
-    PUT  /api/notifications/<id>/read — mark a notification as read
-    GET  /api/notifications/         — paginated list with optional ?type= filter
+    GET  /api/notifications/unread              — unread count + notification list
+    PUT  /api/notifications/<id>/read           — mark a notification as read
+    GET  /api/notifications/                    — paginated list with optional ?type= filter
+    GET  /api/config/push-intelligence          — return push intelligence thresholds
+    PUT  /api/config/push-intelligence          — update thresholds (live reload, no restart)
 """
+
+import json
+import os
 
 from flask import Blueprint, jsonify, request
 from auth_middleware import get_current_customer_id
@@ -185,3 +190,59 @@ def list_notifications():
     except Exception as e:
         logger.error(f"Error listing notifications: {e}", exc_info=True)
         return jsonify({'error': 'Failed to list notifications'}), 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/config/push-intelligence
+# ---------------------------------------------------------------------------
+
+@notifications_api.route('/api/config/push-intelligence', methods=['GET'])
+def get_push_intelligence_config():
+    """Return current push intelligence thresholds."""
+    try:
+        import utils.push_intelligence_config as pic
+        return jsonify(pic._load())
+    except Exception as e:
+        logger.error(f"Error fetching push intelligence config: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to load push intelligence config'}), 500
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/config/push-intelligence
+# ---------------------------------------------------------------------------
+
+@notifications_api.route('/api/config/push-intelligence', methods=['PUT'])
+def update_push_intelligence_config():
+    """Update push intelligence thresholds and reload cache immediately."""
+    try:
+        import utils.push_intelligence_config as pic
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON body required'}), 400
+
+        # Deep merge incoming data into existing config
+        current = pic._load().copy()
+        for section, values in data.items():
+            if section.startswith('_'):
+                continue  # skip comment/version keys
+            if section in current and isinstance(current[section], dict):
+                current[section].update(values)
+            else:
+                current[section] = values
+
+        # Write back to file
+        config_path = os.path.join(
+            os.path.dirname(__file__), 'config', 'push_intelligence_config.json'
+        )
+        with open(config_path, 'w') as f:
+            json.dump(current, f, indent=2)
+
+        # Reload cache immediately — no restart needed
+        pic.reload()
+        logger.info(f"Push intelligence config updated: {list(data.keys())}")
+        return jsonify({'success': True, 'config': pic._load()})
+
+    except Exception as e:
+        logger.error(f"Error updating push intelligence config: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to update push intelligence config'}), 500

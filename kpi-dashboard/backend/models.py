@@ -506,6 +506,9 @@ class ContextNode(db.Model):
     node_subtype = db.Column(db.String(50), index=True)
     # e.g. SIGNAL→kpi_change|ticket|nps; DECISION→playbook|escalation|exec_engagement
 
+    # Node origin: 'customer' = CSV upload; 'system' = Wizard A / signal_analyst / urgent_scanner
+    source = db.Column(db.String(20), nullable=False, default='customer')
+
     # Storage tier: 1=permanent, 2=decaying, 3=ephemeral
     tier = db.Column(db.SmallInteger, nullable=False, default=2)
 
@@ -548,6 +551,7 @@ class ContextNode(db.Model):
             'account_id': self.account_id,
             'node_type': self.node_type,
             'node_subtype': self.node_subtype,
+            'source': self.source,
             'tier': self.tier,
             'title': self.title,
             'properties': self.properties,

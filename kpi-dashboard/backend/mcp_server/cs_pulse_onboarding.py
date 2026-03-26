@@ -839,6 +839,7 @@ def _process_data_impl(customer_id: int) -> dict:
                                     sig_node = CN_(
                                         customer_id=customer_id, account_id=acct_id,
                                         node_type='SIGNAL',
+                                        source='customer',
                                         node_subtype=str(row.get('signal_type', 'signal') or 'signal'),
                                         title=str(row.get('content') if str(row.get('content', '')).lower() not in ('nan', '', 'none') else row.get('signal_type', 'Signal'))[:200],
                                         properties={'signal_ref': str(sig_ref),
@@ -875,6 +876,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='STAKEHOLDER',
+                            source='customer',
                             node_subtype=str(row.get('role', 'contact')),
                             title=str(row.get('stakeholder_name', row.get('name', ''))),
                             properties={
@@ -916,6 +918,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
+                            source='customer',
                             node_subtype=outcome_type,
                             title=str(row.get('title', row.get('outcome_name', ''))),
                             revenue_impact=rev_impact,
@@ -946,6 +949,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
+                            source='customer',
                             node_subtype=str(row.get('decision_maker_role', 'action')),
                             title=str(row.get('title', row.get('decision_name', ''))),
                             properties={'chosen_option': str(row.get('chosen_option', '')),
@@ -976,6 +980,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='SIGNAL', node_subtype='engagement',
+                            source='customer',
                             title=ee_title[:200],
                             properties={
                                 'event_type': str(row.get('event_type', '')),
@@ -1057,6 +1062,7 @@ def _process_data_impl(customer_id: int) -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=first_acct_id,
                             node_type='EXTERNAL_CONTEXT', node_subtype='industry_benchmark',
+                            source='customer',
                             title=f'Benchmark: {kpi_code}',
                             properties={
                                 'kpi_code': str(kpi_code),
@@ -1896,6 +1902,7 @@ def clone_customer(
             new_node = ContextNode(
                 customer_id=new_cid, account_id=new_account_id,
                 node_type=node.node_type, node_subtype=node.node_subtype, tier=node.tier,
+                source=node.source,
                 title=node.title, properties=node.properties,
                 revenue_impact=node.revenue_impact, revenue_impact_type=node.revenue_impact_type,
                 confidence=node.confidence, source_platform=node.source_platform,

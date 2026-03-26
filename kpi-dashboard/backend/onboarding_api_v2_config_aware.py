@@ -790,18 +790,19 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     def _insert_node(conn, customer_id, account_id, node_type, node_subtype,
                      label, properties, tier=1, source_platform='csv_import',
                      source_event_id=None, event_time=None,
-                     revenue_impact=None, revenue_impact_type=None):
+                     revenue_impact=None, revenue_impact_type=None,
+                     source='customer'):
         # occurred_at is NOT NULL — always provide a value
         resolved_etime = _clean_val(event_time) or datetime.utcnow().strftime('%Y-%m-%d')
         row = conn.execute(text("""
             INSERT INTO context_nodes
                 (customer_id, account_id, node_type, node_subtype, title,
                  properties, tier, source_platform, source_event_id,
-                 occurred_at, revenue_impact, revenue_impact_type)
+                 occurred_at, revenue_impact, revenue_impact_type, source)
             VALUES
                 (:cid, :aid, :ntype, :nsub, :title,
                  :props, :tier, :src, :src_eid,
-                 :etime, :rev, :rev_type)
+                 :etime, :rev, :rev_type, :node_source)
             RETURNING node_id
         """), {
             'cid': customer_id, 'aid': int(account_id),
@@ -809,7 +810,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             'title': label, 'props': json.dumps(_sanitize_props(properties)) if properties else None,
             'tier': tier, 'src': _clean_val(source_platform), 'src_eid': _clean_val(source_event_id),
             'etime': resolved_etime, 'rev': _clean_val(revenue_impact),
-            'rev_type': _clean_val(revenue_impact_type)
+            'rev_type': _clean_val(revenue_impact_type), 'node_source': source
         })
         return row.scalar()
 

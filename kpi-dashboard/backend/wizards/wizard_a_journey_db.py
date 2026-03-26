@@ -16,6 +16,7 @@ from collections import defaultdict
 from datetime import datetime
 
 import utils.health_thresholds as ht
+import utils.push_intelligence_config as pic
 
 
 def run_wizard_a(customer_id: int) -> dict:
@@ -27,7 +28,7 @@ def run_wizard_a(customer_id: int) -> dict:
     Returns:
         dict with ``accounts_processed``, ``journeys_created``, ``patterns``.
     """
-    from models import Account, DC2SKPI, HealthScore, JourneyData
+    from models import Account, DC2SKPI, HealthScore, JourneyData, ContextNode, ContextEdge
     from extensions import db
     from sqlalchemy import func
 
@@ -99,8 +100,8 @@ def run_wizard_a(customer_id: int) -> dict:
         # Health scores as list of floats
         h_scores = [s for _, s in health_series] if health_series else []
 
-        # Classify trajectory
-        pattern = _classify_trajectory(h_scores)
+        # Classify trajectory and compute a rule-based confidence score
+        pattern, arc_confidence = _classify_trajectory_with_confidence(h_scores)
         pattern_counts[pattern] += 1
 
         # Build events list (one per month)
@@ -175,6 +176,57 @@ def run_wizard_a(customer_id: int) -> dict:
             db.session.add(jd)
         journeys_created += 1
 
+        # ── Write arc detection node to context graph ──
+        if pic.arc_classifier_enabled():
+            try:
+                phase = ht.classify(h_scores[-1]) if h_scores else 'unknown'
+                if arc_confidence >= pic.arc_min_confidence():
+                    arc_node = ContextNode(
+                        account_id=aid,
+                        customer_id=customer_id,
+                        node_type='SIGNAL',
+                        source='system',
+                        node_subtype='arc_detection',
+                        title=f'Arc Detected: {pattern}',
+                        properties={
+                            'arc_type':     pattern,
+                            'phase':        phase,
+                            'confidence':   arc_confidence,
+                            'triggered_by': 'wizard_a',
+                        },
+                        tier=2,
+                        occurred_at=datetime.utcnow(),
+                    )
+                    db.session.add(arc_node)
+                    db.session.flush()
+
+                    # Connect arc detection node to most recent customer signal
+                    recent_signal = (ContextNode.query
+                                     .filter_by(account_id=aid, node_type='SIGNAL',
+                                                source='customer')
+                                     .order_by(ContextNode.occurred_at.desc())
+                                     .first())
+                    if recent_signal:
+                        db.session.add(ContextEdge(
+                            from_node_id=recent_signal.node_id,
+                            to_node_id=arc_node.node_id,
+                            edge_type='TRIGGERED',
+                            confidence=arc_confidence,
+                            properties={
+                                'label': f'Signal pattern triggered {pattern} arc classification'
+                            },
+                        ))
+            except Exception as graph_err:
+                import logging as _log
+                _log.getLogger(__name__).error(
+                    f"wizard_a: context graph write failed for account {aid}: {graph_err}",
+                    exc_info=True,
+                )
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+
     db.session.commit()
 
     return {
@@ -185,31 +237,45 @@ def run_wizard_a(customer_id: int) -> dict:
     }
 
 
-def _classify_trajectory(scores: list[float]) -> str:
-    """Classify account trajectory from health score time-series."""
+def _classify_trajectory_with_confidence(scores: list[float]) -> tuple[str, float]:
+    """
+    Classify account trajectory and return a (pattern, confidence) tuple.
+
+    Confidence is a simple rule-based estimate (0.0–1.0) based on how clearly
+    the data fits the classified pattern.  Values >= pic.arc_min_confidence()
+    (default 0.55) are stored as system ContextNodes by Wizard A.
+    """
     if not scores:
-        return 'unknown'
+        return 'unknown', 0.0
 
     n = len(scores)
     if n < 2:
         if scores[0] < ht.at_risk_min():
-            return 'crisis'
-        return 'stable'
+            return 'crisis', 0.7
+        return 'stable', 0.6
 
-    # Split into first half and second half
     mid = max(1, n // 2)
     first_avg = statistics.mean(scores[:mid])
     last_avg = statistics.mean(scores[mid:])
+    delta = abs(last_avg - first_avg)
 
     has_crisis = any(s < ht.at_risk_min() for s in scores)
 
+    # Scale confidence by how large the delta is (capped at 1.0)
+    delta_confidence = min(delta / 20.0, 0.45)
+
     if has_crisis:
-        # Check if recovering from crisis
         if last_avg > first_avg + 5:
-            return 'recovery'
-        return 'crisis'
+            return 'recovery', 0.55 + delta_confidence
+        return 'crisis', 0.65 + delta_confidence
     if last_avg > first_avg + 5:
-        return 'improving'
+        return 'improving', 0.55 + delta_confidence
     if last_avg < first_avg - 5:
-        return 'declining'
-    return 'stable'
+        return 'declining', 0.60 + delta_confidence
+    return 'stable', 0.55
+
+
+def _classify_trajectory(scores: list[float]) -> str:
+    """Classify account trajectory from health score time-series."""
+    pattern, _ = _classify_trajectory_with_confidence(scores)
+    return pattern

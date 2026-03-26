@@ -8,10 +8,11 @@ severity=critical signal lands.
 
 Flow:
     1. check_and_analyze() checks the drop threshold.
-    2. If triggered, collect last-5 SIGNAL ContextNodes + pillar deltas.
+    2. If triggered, collect last-N SIGNAL ContextNodes + pillar deltas.
     3. Build a concise prompt and call OpenAI (same key pattern as RAG).
     4. Store result as Notification(type='signal_insight').
-    5. Return payload dict — or None if analysis was not triggered.
+    5. Write system ContextNode (source='system') and edge to most recent customer signal.
+    6. Return payload dict — or None if analysis was not triggered.
 
 Errors are caught at every layer; this function must NEVER crash process_data.
 """
@@ -19,6 +20,8 @@ Errors are caught at every layer; this function must NEVER crash process_data.
 import logging
 from datetime import datetime
 from typing import Optional
+
+import utils.push_intelligence_config as pic
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,7 @@ def check_and_analyze(
     arc_type: Optional[str] = None,
 ) -> Optional[dict]:
     """
-    Trigger LLM analysis if health dropped >10 pts.
+    Trigger LLM analysis if health dropped > health_drop_trigger() pts.
 
     Args:
         customer_id:   Customer scope for DB lookup.
@@ -44,19 +47,19 @@ def check_and_analyze(
         Notification payload dict if analysis ran, None otherwise.
     """
     delta = health_after - health_before
-    if delta > -10:
+    if not pic.layer_a_enabled() or delta > -pic.health_drop_trigger():
         return None  # Not a significant drop — skip
 
     try:
         # ── Lazy imports to avoid circular dependencies ──
         from models import ContextNode, HealthScore, Notification, db, Account
 
-        # ── 1. Collect last-5 SIGNAL ContextNodes for this account ──
+        # ── 1. Collect last-N SIGNAL ContextNodes for this account ──
         recent_signals = (
             ContextNode.query
             .filter_by(account_id=account_id, node_type='SIGNAL')
             .order_by(ContextNode.occurred_at.desc())
-            .limit(5)
+            .limit(pic.max_signals_context())
             .all()
         )
         signal_texts = [
@@ -100,7 +103,7 @@ def check_and_analyze(
 Account: {account_name} (ID {account_id})
 Health change: {health_before:.1f} → {health_after:.1f} (Δ{delta:+.1f}){arc_note}
 
-Recent signals (last 5):
+Recent signals (last {pic.max_signals_context()}):
 {signal_block}
 
 Pillar scores (current with delta from previous month):
@@ -150,6 +153,54 @@ Be specific and action-oriented. Avoid generic advice."""
             f"signal_analyst: analysis stored for account {account_id} "
             f"(Δ{delta:+.1f}, arc={arc_type})"
         )
+
+        # ── 8. Write system signal to context graph ──
+        try:
+            from models import ContextEdge
+            insight_node = ContextNode(
+                account_id=account_id,
+                customer_id=customer_id,
+                node_type='SIGNAL',
+                source='system',          # distinguishes from customer CSV signals
+                node_subtype='ai_insight',
+                title=f'AI Insight: health {health_before:.0f}→{health_after:.0f}',
+                properties={
+                    'health_before':   health_before,
+                    'health_after':    health_after,
+                    'arc_type':        arc_type,
+                    'notification_id': notification.id,
+                    'triggered_by':    'signal_analyst',
+                },
+                tier=2,
+                occurred_at=datetime.utcnow(),
+            )
+            db.session.add(insight_node)
+            db.session.flush()
+
+            # Connect to most recent customer signal (RELATES_TO — non-causal)
+            recent = (ContextNode.query
+                      .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
+                      .order_by(ContextNode.occurred_at.desc())
+                      .first())
+            if recent:
+                db.session.add(ContextEdge(
+                    from_node_id=recent.node_id,
+                    to_node_id=insight_node.node_id,
+                    edge_type='RELATES_TO',
+                    confidence=1.0,
+                    properties={'label': 'AI observation of health drop'},
+                ))
+            db.session.commit()
+        except Exception as graph_err:
+            logger.error(
+                f"signal_analyst: context graph write failed for account {account_id}: {graph_err}",
+                exc_info=True,
+            )
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
         return payload
 
     except Exception as e:
