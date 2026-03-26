@@ -25,6 +25,7 @@ import {
 import ContextGraphSettings from '../dc/settings/ContextGraphSettings';
 import WizardsTab from '../dc/settings/WizardsTab';
 import HealthThresholdsCard from '../dc/settings/HealthThresholdsCard';
+import LLMBudgetCard from '../dc/settings/LLMBudgetCard';
 import {
   fetchCustomer,
   updateCustomer,
@@ -198,6 +199,10 @@ const CustomerDetailPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Wizard Controls</h3>
               <WizardsTab customerId={customerId} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">AI Budget</h3>
+              <LLMBudgetCard customerId={customerId} />
             </div>
           </div>
         )}

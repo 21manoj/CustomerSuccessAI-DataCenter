@@ -42,6 +42,7 @@ import SecurityKeysPanel from './SecurityKeysPanel';
 import ContextGraphSettings from './ContextGraphSettings';
 import WizardsTab from './WizardsTab';
 import HealthThresholdsCard from './HealthThresholdsCard';
+import LLMBudgetCard from './LLMBudgetCard';
 
 // ============================================================
 // TYPES
@@ -370,10 +371,11 @@ const DCSettings: React.FC = () => {
             <SystemEventsAndLogManagement />
           )}
 
-          {/* General Configuration - KPI Configuration Settings + Health Thresholds */}
+          {/* General Configuration - KPI Configuration Settings + Health Thresholds + AI Budget */}
           {activeSubTab === 'general' && (
             <div className="space-y-6">
               <HealthThresholdsCard />
+              <LLMBudgetCard readOnly />
               <KPIConfigurationSettings />
             </div>
           )}
