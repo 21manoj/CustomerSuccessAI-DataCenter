@@ -451,9 +451,14 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
         if not acct_ids:
             return []
 
-        # Scan ContextNode SIGNAL nodes loaded recently (last hour)
-        # Scan signals with recent occurred_at (last 7 days covers batch uploads)
+        # Scan TWO sources for high-risk signals:
+        # 1. ContextNode SIGNAL nodes (if CG was loaded)
+        # 2. QualitativeSignal table (always — covers incremental loads where CG skip is on)
         cutoff = datetime.utcnow() - timedelta(days=7)
+
+        seen = set()  # (account_id, signal_type) to avoid duplicate triggers
+
+        # Source 1: ContextNode table
         recent_cg = (
             ContextNode.query
             .filter(
@@ -465,19 +470,10 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
             )
             .all()
         )
-
-        # Check signal types against HIGH_RISK list
-        seen = set()  # (account_id, signal_type) to avoid duplicate triggers
         for node in recent_cg:
             st = node.node_subtype or ''
-            # Also check properties for signal_type
             props = node.properties or {}
-            signal_type_candidates = [
-                st,
-                props.get('signal_type', ''),
-                props.get('event_type', ''),
-            ]
-            for sig_type in signal_type_candidates:
+            for sig_type in [st, props.get('signal_type', ''), props.get('event_type', '')]:
                 if sig_type in HIGH_RISK_SIGNAL_TYPES:
                     key = (node.account_id, sig_type)
                     if key not in seen:
@@ -492,6 +488,36 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
                         )
                         if result:
                             triggered.append((node.account_id, sig_type, content))
+
+        # Source 2: QualitativeSignal table (catches incremental loads where CG skip is on)
+        try:
+            from models import QualitativeSignal
+            recent_qual = (
+                QualitativeSignal.query
+                .filter(
+                    QualitativeSignal.account_id.in_(acct_ids),
+                    QualitativeSignal.signal_date >= cutoff.date() if hasattr(cutoff, 'date') else cutoff,
+                )
+                .all()
+            )
+            for qs in recent_qual:
+                sig_type = qs.signal_type or ''
+                if sig_type in HIGH_RISK_SIGNAL_TYPES:
+                    key = (qs.account_id, sig_type)
+                    if key not in seen:
+                        seen.add(key)
+                        content = qs.content or sig_type
+                        result = analyze_on_signal(
+                            customer_id=customer_id,
+                            account_id=qs.account_id,
+                            signal_type=sig_type,
+                            signal_content=str(content)[:500],
+                            signal_sentiment=qs.sentiment or 'negative',
+                        )
+                        if result:
+                            triggered.append((qs.account_id, sig_type, content))
+        except Exception as qs_err:
+            logger.debug(f"QualitativeSignal scan failed (non-fatal): {qs_err}")
 
         if triggered:
             logger.info(
