@@ -521,6 +521,39 @@ class EventManager:
         except ImportError as e:
             logger.warning(f"Agent event subscribers not available: {e}")
 
+        # ── Push intelligence: Layer B (arc→playbook) + Layer C (urgent scanner) ──
+        try:
+            from push_intelligence_subscriber import (
+                UrgentScannerSubscriber,
+                ArcPlaybookSubscriber,
+                DailyProcessDataScheduler,
+            )
+
+            self.urgent_scanner_subscriber = UrgentScannerSubscriber(cooldown_seconds=300)
+            self.arc_playbook_subscriber = ArcPlaybookSubscriber(cooldown_seconds=600)
+
+            # Layer C: immediate scan on health score changes
+            self.publisher.subscribe(
+                EventType.HEALTH_SCORES_UPDATED,
+                self.urgent_scanner_subscriber.handle_event,
+            )
+
+            # Layer B: arc → playbook auto-dispatch on health score changes
+            self.publisher.subscribe(
+                EventType.HEALTH_SCORES_UPDATED,
+                self.arc_playbook_subscriber.handle_event,
+            )
+
+            logger.info("✅ Push intelligence enabled (Layer B arc→playbook + Layer C urgent scanner)")
+
+            # Daily scheduler: process_data for all customers every 24h
+            self.daily_scheduler = DailyProcessDataScheduler(interval_hours=24)
+            self.daily_scheduler.start()
+            logger.info("✅ Daily process_data scheduler started (24h interval)")
+
+        except ImportError as e:
+            logger.warning(f"Push intelligence subscribers not available: {e}")
+
     def publish_kpi_upload(self, customer_id: int, upload_id: int, kpi_count: int):
         """Publish KPI upload event"""
         self.publisher.publish(

@@ -156,22 +156,8 @@ class AgenticLoop:
         start_time = time.time()
         state = LoopState(customer_id=customer_id, account_id=account_id)
 
-        # Entitlement check — only run the loop if the customer has access
-        try:
-            from entitlements import check_entitlement
-            if not check_entitlement(customer_id, 'agent_loop'):
-                logger.warning(
-                    f"Customer {customer_id} not entitled to 'agent_loop' — "
-                    f"returning early with analyze-only result"
-                )
-                state.decision = "rejected"
-                state.decision_reason = "Agentic loop not available on current plan"
-                state.current_step = LoopStep.COMPLETE
-                state.completed_at = datetime.utcnow().isoformat()
-                state.duration_ms = int((time.time() - start_time) * 1000)
-                return state
-        except ImportError:
-            pass  # Entitlements module not available — allow by default
+        # NOTE: Entitlement gates removed from backend processing (March 2026).
+        # All customers get full pipeline processing; tier controls UI visibility only.
 
         try:
             # Step 1: ANALYZE — run the core agent

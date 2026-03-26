@@ -933,13 +933,14 @@ def cross_customer_comparison(portfolio_id):
                     .order_by(HealthScore.calculated_at.desc())
                     .first()
                 )
-                if hs and hs.overall_score is not None:
-                    score = float(hs.overall_score)
+                if hs and hs.health_score is not None:
+                    score = float(hs.health_score)
                     health_scores.append(score)
                     cls = ht.classify(score)
                     statuses[cls] = statuses.get(cls, 0) + 1
-                    if hs.pillar_scores:
-                        for k, v in hs.pillar_scores.items():
+                    pillars = hs.contributing_pillars
+                    if pillars:
+                        for k, v in pillars.items():
                             pillar_totals.setdefault(k, []).append(float(v))
 
             avg_health = round(

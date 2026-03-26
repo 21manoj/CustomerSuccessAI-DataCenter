@@ -760,9 +760,36 @@ def _process_data_impl(customer_id: int) -> dict:
             )
 
         # ----------------------------------------------------------
-        # Path 2 ONLY: Fresh customer — load CSVs into DB
+        # Detect incremental CSVs: data in DB AND new CSVs on disk
+        # Compare CSV file timestamps to last KPI upload timestamp.
+        # If any CSV is newer, load them (Path 2) before recalculating.
         # ----------------------------------------------------------
-        if not data_in_db and has_csv_dir:
+        has_new_csvs = False
+        if data_in_db and has_csv_dir:
+            try:
+                import os
+                last_kpi_ts = _db.session.execute(_db.text(
+                    "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
+                    "JOIN accounts a ON k.account_id = a.account_id "
+                    "WHERE a.customer_id = :cid"
+                ), {"cid": customer_id}).scalar()
+
+                for f in data_dir.iterdir():
+                    if f.suffix == '.csv':
+                        csv_mtime = _dt.fromtimestamp(os.path.getmtime(str(f)))
+                        # CSV file modified after last process_data run
+                        if last_kpi_ts is None or csv_mtime > last_kpi_ts:
+                            has_new_csvs = True
+                            break
+            except Exception as _inc_err:
+                _logger.debug(f"Incremental CSV detection error (non-fatal): {_inc_err}")
+
+        # ----------------------------------------------------------
+        # Path 2: Load CSVs into DB
+        #   - Fresh customer: no data in DB
+        #   - Incremental: data in DB but newer CSVs on disk
+        # ----------------------------------------------------------
+        if (not data_in_db and has_csv_dir) or has_new_csvs:
             csv_files = [f.name for f in data_dir.iterdir()
                          if f.is_file() and f.suffix == '.csv']
 
@@ -829,21 +856,41 @@ def _process_data_impl(customer_id: int) -> dict:
                         continue
 
                     if csv_file == 'kpi_measurements.csv':
+                        _kpi_added = 0
+                        _kpi_skipped = 0
                         for _, row in df.iterrows():
                             acct_id = _resolve_acct_id(row)
                             if acct_id:
+                                kpi_code = row.get('kpi_code', row.get('kpi_id', ''))
+                                measured_at = row.get('measured_at', row.get('date'))
+
+                                # Dedup: skip if exact (account, kpi_code, measured_at) already exists
+                                if has_new_csvs:
+                                    exists = DC2SKPI.query.filter_by(
+                                        account_id=acct_id,
+                                        kpi_code=kpi_code,
+                                        measured_at=measured_at,
+                                    ).first()
+                                    if exists:
+                                        _kpi_skipped += 1
+                                        continue
+
                                 kpi = DC2SKPI(
                                     account_id=acct_id,
-                                    kpi_code=row.get('kpi_code', row.get('kpi_id', '')),
+                                    kpi_code=kpi_code,
                                     value=float(row.get('value', 0)),
                                     target=float(row.get('target', 100)),
                                     pillar=row.get('pillar', ''),
                                     weight=float(row.get('weight', 0)) if row.get('weight') else None,
                                     status=row.get('status', ''),
-                                    measured_at=row.get('measured_at', row.get('date')),
+                                    measured_at=measured_at,
                                 )
                                 _db.session.add(kpi)
-                        steps_completed.append('kpis_loaded')
+                                _kpi_added += 1
+                        if has_new_csvs and _kpi_skipped > 0:
+                            steps_completed.append(f'kpis_loaded_{_kpi_added}_new_{_kpi_skipped}_skipped')
+                        else:
+                            steps_completed.append('kpis_loaded')
                         # Commit KPIs immediately so a signals error can't roll them back
                         _db.session.commit()
 
@@ -853,6 +900,13 @@ def _process_data_impl(customer_id: int) -> dict:
                             acct_id = _resolve_acct_id(row)
                             if acct_id:
                                 sig_id = row.get('signal_id') or f"sig_{_uuid.uuid4().hex[:12]}"
+
+                                # Dedup: skip if signal_id already exists
+                                if has_new_csvs:
+                                    exists = QualitativeSignal.query.filter_by(signal_id=sig_id).first()
+                                    if exists:
+                                        continue
+
                                 sig = QualitativeSignal(
                                     signal_id=sig_id, account_id=acct_id,
                                     signal_type=row.get('signal_type', 'nps'),
@@ -891,12 +945,17 @@ def _process_data_impl(customer_id: int) -> dict:
                     pass
 
             # Steps 4-9: Context graph CSVs
+            # On incremental loads (has_new_csvs), skip CG node re-loading if nodes
+            # already exist — only load new KPIs/signals above. CG regeneration is
+            # handled by the ContextGraphRegenerationSubscriber when health changes.
+            _skip_cg_reload = has_new_csvs and ContextNode.query.filter_by(
+                customer_id=customer_id).first() is not None
             try:
                 from models import ContextNode, ContextEdge
 
                 # Stakeholders
                 stakeholder_path = data_dir / 'stakeholders.csv'
-                if stakeholder_path.exists():
+                if stakeholder_path.exists() and not _skip_cg_reload:
                     df_s = pd.read_csv(str(stakeholder_path))
                     for _, row in df_s.iterrows():
                         acct_id = _resolve_acct_id(row)
@@ -1323,6 +1382,47 @@ def _process_data_impl(customer_id: int) -> dict:
                 f"— customer {customer_id}"
             )
             steps_completed.append(f'health_scores_recalculated_{scores_written}_accounts')
+
+            # ── Publish ONE batched event per customer (not per account) ──
+            # This triggers CG regen, Layer B, Layer C, snapshots downstream.
+            # Batching avoids 18 individual events for an 18-account customer.
+            if scores_written > 0:
+                try:
+                    from event_system import event_manager, EventType
+                    # Collect account scores for the batch event
+                    _batch_accounts = []
+                    for _aid in existing_acct_ids:
+                        _latest = db.session.execute(db.text(
+                            "SELECT health_score FROM health_scores "
+                            "WHERE account_id = :aid ORDER BY measurement_month DESC LIMIT 1"
+                        ), {"aid": _aid}).fetchone()
+                        if _latest and _latest[0] is not None:
+                            _batch_accounts.append({
+                                'account_id': _aid,
+                                'score': float(_latest[0]),
+                            })
+
+                    # Publish per-account events (subscribers need account_id)
+                    # but with priority=2 so they queue up, and cooldowns
+                    # ensure downstream runs only once per customer.
+                    for _ba in _batch_accounts:
+                        event_manager.publisher.publish(
+                            EventType.HEALTH_SCORES_UPDATED,
+                            customer_id,
+                            {
+                                'account_id': _ba['account_id'],
+                                'score': _ba['score'],
+                                'source': 'process_data',
+                            },
+                            priority=2,
+                        )
+                    _logger.info(
+                        f"Published HEALTH_SCORES_UPDATED for {len(_batch_accounts)} accounts "
+                        f"(customer {customer_id}) — downstream subscribers will fire"
+                    )
+                except Exception as _evt_err:
+                    _logger.debug(f"Event publish failed (non-fatal): {_evt_err}")
+
         except Exception as e:
             errors.append(f"health_calc: {str(e)}")
             import logging as _log2
@@ -1416,6 +1516,45 @@ def _process_data_impl(customer_id: int) -> dict:
         except Exception as e:
             import logging as _log_uss2
             _log_uss2.getLogger(__name__).warning(f"Urgent signal scanner failed (non-fatal): {e}")
+
+        # ----------------------------------------------------------
+        # ROI Engine: auto-calculate portfolio ROI snapshot
+        # Runs once per process_data so dashboards have fresh numbers.
+        # All errors are non-fatal.
+        # ----------------------------------------------------------
+        try:
+            import logging as _log_roi
+            _roi_logger = _log_roi.getLogger(__name__)
+            from outcome_roi_engine import calculate_outcome_story
+            from outcome_roi_api import _extract_historical_actuals, _extract_accounts_at_risk
+
+            _roi_accounts = Account.query.filter_by(customer_id=customer_id).all()
+            if _roi_accounts:
+                _total_arr = sum(float(a.revenue) for a in _roi_accounts if a.revenue) or None
+                _acct_ids = [a.account_id for a in _roi_accounts]
+                _metric_actuals, _data_src = _extract_historical_actuals(_roi_accounts, 6)
+                _at_risk = _extract_accounts_at_risk(_roi_accounts, customer_id=customer_id)
+                _vertical = getattr(_roi_accounts[0], 'vertical', None)
+
+                _roi_story = calculate_outcome_story(
+                    metric_actuals=_metric_actuals,
+                    target_improvement_pct=1.0,
+                    account_arr=_total_arr,
+                    projection_months=6,
+                    accounts_at_risk=_at_risk,
+                    customer_id=customer_id,
+                    account_ids=_acct_ids,
+                    vertical=_vertical,
+                )
+                if _roi_story:
+                    _roi_logger.info(
+                        f"ROI Engine: portfolio ROI calculated for customer {customer_id} "
+                        f"({len(_roi_accounts)} accounts, ARR=${_total_arr or 0:,.0f})"
+                    )
+                    steps_completed.append('roi_engine_calculated')
+        except Exception as _roi_err:
+            import logging as _log_roi2
+            _log_roi2.getLogger(__name__).warning(f"ROI engine failed (non-fatal): {_roi_err}")
 
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 

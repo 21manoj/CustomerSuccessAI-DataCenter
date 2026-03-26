@@ -53,17 +53,9 @@ class OnboardingCompleteSubscriber:
             customer_id = event.customer_id
             data = event.data or {}
 
-            # Entitlement check — auto-trigger pipeline requires 'auto_trigger_pipeline'
-            try:
-                from entitlements import check_entitlement
-                if not check_entitlement(customer_id, 'auto_trigger_pipeline'):
-                    logger.info(
-                        f"[OnboardingCompleteSubscriber] Customer {customer_id} not entitled "
-                        f"to 'auto_trigger_pipeline' — skipping auto-analysis"
-                    )
-                    return
-            except ImportError:
-                pass  # Entitlements not available — allow by default
+            # NOTE: Entitlement gates removed from backend processing (March 2026).
+            # Entitlements only gate UI visibility, not backend pipelines.
+            # All customers get full processing; tier controls what they see.
 
             # Get account IDs from event
             account_ids = data.get('account_ids', [])
