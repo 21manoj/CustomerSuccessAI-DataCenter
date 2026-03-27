@@ -576,7 +576,7 @@ def cro_dashboard():
                     ContextNode.account_id.in_(account_ids),
                     ContextNode.node_type == 'SIGNAL',
                 )
-                .with_entities(ContextNode.account_id, sa_func.count(ContextNode.id))
+                .with_entities(ContextNode.account_id, sa_func.count(ContextNode.node_id))
                 .group_by(ContextNode.account_id)
                 .all()
             )
