@@ -1021,7 +1021,7 @@ def _build_cfo_account_details(customer_id, accounts, total_investment, total_im
     if total_arr <= 0:
         return []
 
-    latest_scores = _get_latest_health_scores([a.account_id for a in accounts])
+    latest_scores = _get_latest_health_scores(customer_id, [a.account_id for a in accounts])
     healthy_min_val = ht.healthy_min()
 
     result = []
@@ -1112,7 +1112,7 @@ def ceo_dashboard():
         # Health scores
         healthy_min_val = ht.healthy_min()
         at_risk_min_val = ht.at_risk_min()
-        latest_scores = _get_latest_health_scores(account_ids)
+        latest_scores = _get_latest_health_scores(customer_id, account_ids)
         healthy_count = 0
         at_risk_count = 0
         critical_count = 0
