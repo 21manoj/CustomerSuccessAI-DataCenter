@@ -867,39 +867,36 @@ def cfo_dashboard():
                 'roi': projected_roi,
             })
 
-        # ── Pillar investment breakdown ──
+        # ── Pillar investment breakdown (from Power-of-1 metrics) ──
+        # Map Po1 metrics to pillars for realistic per-pillar impact
+        pillar_metric_map = {
+            'P1': ['TTFV', 'product_adoption'],
+            'P2': ['ticket_resolution_time'],
+            'P3': ['NRR', 'GRR'],
+            'P4': [],  # partner — no direct Po1 metric
+            'P5': ['expansion_rate'],
+        }
+        # Pillar weights for investment allocation
+        pillar_weights = {'P1': 0.25, 'P2': 0.15, 'P3': 0.30, 'P4': 0.10, 'P5': 0.20}
+        po1_by_metric = {m['metric_id']: m.get('dollar_impact', 0) for m in power_of_1_metrics}
+
         pillar_investments = []
-        pillar_scores_map = _get_latest_pillar_scores(account_ids)
-
-        # Aggregate pillar scores across accounts
-        pillar_totals = defaultdict(lambda: {'total_score': 0, 'count': 0})
-        for acct_id, pillars in pillar_scores_map.items():
-            for pcode, pscore in pillars.items():
-                pillar_totals[pcode]['total_score'] += pscore
-                pillar_totals[pcode]['count'] += 1
-
         for pcode in ['P1', 'P2', 'P3', 'P4', 'P5']:
-            pt = pillar_totals.get(pcode, {'total_score': 0, 'count': 0})
-            avg_score = pt['total_score'] / pt['count'] if pt['count'] > 0 else 0
+            # Impact: sum of Power-of-1 dollar impacts for metrics in this pillar
+            mapped_metrics = pillar_metric_map.get(pcode, [])
+            pillar_impact = sum(po1_by_metric.get(m, 0) for m in mapped_metrics)
+            if pillar_impact == 0 and effective_investment > 0:
+                # Fallback: allocate by weight
+                pillar_impact = round(roi_impact * pillar_weights[pcode], 2)
 
-            # Estimate investment per pillar (proportional to playbook executions)
-            pillar_exec_count = (
-                PlaybookExecution.query
-                .filter(
-                    PlaybookExecution.customer_id == customer_id,
-                    PlaybookExecution.playbook_id.ilike(f'%{pcode.lower()}%'),
-                )
-                .count()
-            )
-            pillar_investment = pillar_exec_count * 2000.0 if pillar_exec_count > 0 else cs_investment / 5.0
-            pillar_impact = round(avg_score / 100.0 * total_arr * 0.02, 2) if avg_score > 0 else 0
+            pillar_investment = round(effective_investment * pillar_weights[pcode], 2)
             pillar_roi = round(pillar_impact / pillar_investment, 1) if pillar_investment > 0 else 0
 
             pillar_investments.append({
                 'pillar': pcode,
                 'name': DC2S_PILLAR_DISPLAY.get(pcode, pcode),
-                'investment': round(pillar_investment, 2),
-                'impact': pillar_impact,
+                'investment': pillar_investment,
+                'impact': round(pillar_impact, 2),
                 'roi': pillar_roi,
             })
 
