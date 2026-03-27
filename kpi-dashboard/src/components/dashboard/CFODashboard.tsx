@@ -438,9 +438,11 @@ const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = (
           />
           <Tooltip
             contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid #374151', borderRadius: 8, fontSize: 12, color: '#fff' }}
-            formatter={(value: number) => [`$${value}K`]}
+            formatter={(value: number, name: string) => [`$${value}K`, name === 'Investment' ? 'CS Investment' : 'Projected Return']}
           />
-            wrapperStyle={{ fontSize: 10, color: '#9ca3af' }}
+          <Legend
+            wrapperStyle={{ fontSize: 10, color: '#9ca3af', paddingTop: 4 }}
+            formatter={(value: string) => value === 'Investment' ? '● CS Investment (orange)' : '● Projected Return (green)'}
           />
           <Area
             type="monotone"
@@ -478,7 +480,7 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
         </div>
       </div>
       <p className="text-[11px] text-gray-500 mb-5">
-        Same playbooks. Same platform. Non-linear returns.
+        CS Pulse platform costs remain fixed while revenue impact compounds across accounts. Each additional account adds marginal cost but full playbook value.
       </p>
       {tiers.length === 0 ? (
         <div className="text-center py-8">
@@ -501,8 +503,11 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
               <p className="text-4xl font-bold mb-2" style={{ color: tierColors[i] }}>
                 {tier.roi}%
               </p>
+              <p className="text-[10px] text-gray-500 mt-1">
+                {i === 0 ? 'Current portfolio' : i === 1 ? 'Fixed cost, 5× accounts' : 'Fixed cost, 20× accounts'}
+              </p>
               {/* Growth bar */}
-              <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mt-2">
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
@@ -516,9 +521,8 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
         ))}
       </div>
       )}
-      <p className="text-[10px] text-gray-600 text-center leading-relaxed">
-        CS Pulse platform costs remain fixed while revenue impact compounds across accounts.
-        Each additional account adds marginal cost but full playbook value.
+      <p className="text-[10px] text-gray-600 text-center leading-relaxed mt-2">
+        ROI scales logarithmically: platform + playbook costs are fixed, revenue impact grows linearly with accounts.
       </p>
     </div>
   );
