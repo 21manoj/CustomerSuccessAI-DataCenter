@@ -45,7 +45,7 @@ interface RevenueCard {
   label: string;
   amount: number;
   subtitle: string;
-  account_count: number;
+  account_count?: number;
   accent: string;
 }
 
@@ -321,10 +321,12 @@ const RevenueCardComponent: React.FC<{ card: RevenueCard }> = ({ card }) => {
           {formatCompact(card.amount)}
         </p>
         <p className="text-xs text-gray-500 mb-3">{card.subtitle}</p>
+        {card.account_count != null && card.account_count > 0 && (
         <div className="flex items-center gap-1 text-xs text-gray-400">
           <Users className="w-3 h-3" />
           <span>{card.account_count} accounts</span>
         </div>
+        )}
       </div>
     </div>
   );
@@ -449,7 +451,7 @@ const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void }> =
       </div>
       <div className="flex items-center gap-1 text-xs text-gray-500">
         <AlertTriangle className="w-3 h-3" />
-        <span>{account.signal_count} active signals</span>
+        <span>{account.signal_count > 0 ? `${account.signal_count} active signals` : 'No recent signals'}</span>
       </div>
     </button>
   );
@@ -630,7 +632,7 @@ const CRODashboard: React.FC = () => {
               { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down', tooltip: 'Revenue-weighted average across all accounts. Larger accounts (by ARR) have proportionally more influence on this score.' },
               { label: 'Early Warning Lead', value: `${json.early_warning_days || 0}d`, change: '↑ 12d vs Q3', trend: 'up', tooltip: 'Average number of days between first risk signal detection and health score decline. Higher = more lead time to intervene.' },
               { label: 'Playbook ROI', value: `${json.playbook_roi_pct || 0}%`, change: roiLabel, trend: 'up', tooltip: isEstimatedRoi ? 'Projected ROI from Power-of-1 industry benchmarks (TSIA, Gainsight Pulse, KeyBanc). Shows what 1% improvement across all metrics would deliver at your ARR.' : 'ROI from tracked playbook executions and measured health score improvements.' },
-              { label: 'NRR Projection', value: `${json.nrr_projection || 100}%`, change: `↑ ${json.nrr_change || 0}pp vs Q3`, trend: 'up', accent: 'cyan', tooltip: 'Projected Net Revenue Retention derived from pillar score trends. Based on historical correlation between health improvements and retention outcomes across the portfolio.' },
+              { label: 'NRR Projection', value: `${json.nrr_projection || 100}%`, change: `${(json.nrr_change || 0) >= 0 ? '↑' : '↓'} ${Math.abs(json.nrr_change || 0)}pp vs baseline`, trend: (json.nrr_change || 0) >= 0 ? 'up' : 'down', accent: (json.nrr_projection || 100) >= 100 ? 'cyan' : undefined, tooltip: 'Projected Net Revenue Retention derived from health score correlation. Health ≥70 → expansion (NRR>100%). Health <70 → contraction (NRR<100%). Based on industry benchmarks (TSIA, KeyBanc).' },
             ],
             story_arcs: (json.story_arcs || []).map((arc: any) => ({
               id: arc.id || arc.name?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
