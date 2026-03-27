@@ -34,6 +34,7 @@ from models import (
     ContextNode, ContextEdge, PlaybookExecution, ROISnapshot,
 )
 import utils.health_thresholds as ht
+from utils.context_graph import aggregate_revenue_across_accounts
 
 logger = logging.getLogger(__name__)
 
@@ -256,47 +257,11 @@ def _get_latest_pillar_scores(account_ids):
 
 
 def _aggregate_revenue_from_context_graph(customer_id, account_ids):
-    """Aggregate revenue metrics across all accounts from context graph nodes."""
-    if not account_ids:
-        return {
-            'revenue_at_risk': 0, 'revenue_protected': 0,
-            'expansion_pipeline': 0, 'node_count': 0,
-        }
+    """Aggregate revenue metrics across all accounts from context graph nodes.
 
-    outcome_nodes = (
-        ContextNode.query
-        .filter(
-            ContextNode.customer_id == customer_id,
-            ContextNode.account_id.in_(account_ids),
-            ContextNode.node_type == 'OUTCOME',
-            ContextNode.revenue_impact.isnot(None),
-        )
-        .all()
-    )
-
-    at_risk = 0.0
-    protected = 0.0
-    expansion = 0.0
-
-    for node in outcome_nodes:
-        impact = _safe_float(node.revenue_impact)
-        impact_type = (node.revenue_impact_type or '').lower()
-
-        if impact_type == 'at_risk':
-            at_risk += abs(impact)
-        elif impact_type == 'protected':
-            protected += abs(impact)
-        elif impact_type == 'expansion':
-            expansion += abs(impact)
-        elif impact_type == 'lost':
-            at_risk += abs(impact)
-
-    return {
-        'revenue_at_risk': round(at_risk, 2),
-        'revenue_protected': round(protected, 2),
-        'expansion_pipeline': round(expansion, 2),
-        'node_count': len(outcome_nodes),
-    }
+    Delegates to the shared utils.context_graph.aggregate_revenue_across_accounts().
+    """
+    return aggregate_revenue_across_accounts(customer_id, account_ids)
 
 
 def _build_story_arcs(customer_id, account_ids):
@@ -623,16 +588,32 @@ def cro_dashboard():
             ad['pillar_scores'] = pillars
             highest_risk.append(ad)
 
+        # ARR Exposure = total ARR sitting in at-risk/critical accounts
+        arr_exposure = sum(
+            ad['revenue'] for ad in account_details
+            if ad['health_score'] < healthy_min_val
+        )
+
         return jsonify({
             'status': 'success',
+            # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
             'expansion_pipeline': revenue_data['expansion_pipeline'],
+            'revenue_risk_type': 'confirmed',
+            'revenue_risk_label': 'Confirmed Risk (Context Graph)',
+            # ARR Exposure — surface-level risk (health-score based)
+            'arr_exposure': round(arr_exposure, 2),
+            'arr_exposure_label': 'Exposure (ARR in at-risk accounts)',
+            # Accounts
             'accounts_at_risk_count': at_risk_count,
             'accounts_recovered_count': recovered,
             'expansion_candidates_count': expansion_candidates,
+            # Health scores
             'avg_health_score': avg_health,
             'avg_health_score_simple': avg_health_simple,
+            'health_avg_method': 'revenue_weighted',
+            'health_avg_method_label': 'Revenue-weighted average',
             'health_score_change': health_change,
             'total_accounts': len(accounts),
             'total_arr': total_revenue,
@@ -857,8 +838,11 @@ def cfo_dashboard():
         return jsonify({
             'status': 'success',
             'total_arr': round(total_arr, 2),
+            # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
+            'revenue_risk_type': 'confirmed',
+            'revenue_risk_label': 'Confirmed Risk (Context Graph)',
             'cs_investment': cs_investment,
             'roi_pct': roi_pct,
             'roi_investment': round(roi_investment, 2),

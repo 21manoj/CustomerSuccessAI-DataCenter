@@ -1263,13 +1263,33 @@ def get_dc2s_health_summary():
         else:
             avg_health = sum(h for h, _ in account_health) / len(account_health) if account_health else 0
 
+        # Also compute simple (unweighted) average for comparison
+        simple_avg = (
+            round(sum(h for h, _ in account_health) / len(account_health), 1)
+            if account_health else 0
+        )
+
+        # ARR Exposure = total ARR sitting in at-risk/critical accounts
+        arr_exposure = sum(
+            rev for h, rev in account_health
+            if h < ht.healthy_min()
+        )
+
         return jsonify({
             'total_accounts': len(accounts),
             'average_health': round(avg_health, 1),
+            'avg_health_simple': simple_avg,
+            'health_avg_method': 'revenue_weighted' if total_revenue > 0 else 'simple',
+            'health_avg_method_label': (
+                'Revenue-weighted average' if total_revenue > 0
+                else 'Simple average (no revenue data)'
+            ),
             'healthy_accounts': healthy_count,
             'risk_accounts': risk_count,
             'critical_accounts': critical_count,
             'total_arr': round(total_revenue),
+            'arr_exposure': round(arr_exposure, 2),
+            'arr_exposure_label': 'Exposure (ARR in at-risk accounts)',
             'health_distribution': {
                 'healthy': healthy_count,
                 'risk': risk_count,

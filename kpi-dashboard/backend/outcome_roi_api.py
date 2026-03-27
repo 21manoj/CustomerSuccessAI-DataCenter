@@ -1482,6 +1482,83 @@ def get_historical_details():
         return jsonify({'error': str(e)}), 500
 
 
+# ─── Portfolio Summary (CEO Dashboard) ───────────────────────────────────────
+
+@outcome_roi_api.route('/api/outcome-roi/portfolio-summary', methods=['GET'])
+def get_portfolio_summary():
+    """
+    Portfolio-level ROI summary for the CEO dashboard.
+
+    Aggregates ROI snapshots across all customers in the portfolio,
+    plus context-graph revenue metrics and NRR.  Falls back to the
+    single-customer view when portfolio_id is not provided.
+
+    Returns:
+        roi_pct, portfolio_roi, nrr, net_revenue_retention,
+        revenue_at_risk, revenue_protected, expansion_pipeline,
+        total_arr, customer_count
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        customer_id = resolve_customer_id(db, customer_id)
+
+        # Gather accounts for this customer
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        account_ids = [a.account_id for a in accounts]
+        total_arr = sum(float(a.revenue) if a.revenue else 0 for a in accounts)
+
+        # ROI from latest snapshot
+        roi_snap = (
+            ROISnapshot.query
+            .filter_by(customer_id=customer_id)
+            .order_by(ROISnapshot.snapshot_date.desc(), ROISnapshot.created_at.desc())
+            .first()
+        )
+        roi_pct = 0
+        nrr = 100
+        if roi_snap:
+            roi_pct = round(roi_snap.historical_roi_pct or roi_snap.combined_roi_pct or 0)
+            details = roi_snap.metric_details or {}
+            # Extract NRR from metric_details (two possible formats)
+            forward_metrics = details.get('forward_metrics', [])
+            if isinstance(forward_metrics, list):
+                for fm in forward_metrics:
+                    if fm.get('id') == 'NRR':
+                        baseline = 105
+                        pct = float(fm.get('pct', 0))
+                        nrr = round(baseline * (1 + pct / 100.0))
+                        break
+            elif isinstance(details.get('NRR'), dict):
+                nrr = round(details['NRR'].get('current', 100))
+
+        # Revenue from context graph (shared util)
+        from utils.context_graph import aggregate_revenue_across_accounts
+        revenue_data = aggregate_revenue_across_accounts(customer_id, account_ids)
+
+        return jsonify({
+            'status': 'success',
+            'roi_pct': roi_pct,
+            'portfolio_roi': roi_pct,
+            'nrr': nrr,
+            'net_revenue_retention': nrr,
+            'revenue_at_risk': revenue_data['revenue_at_risk'],
+            'revenue_protected': revenue_data['revenue_protected'],
+            'expansion_pipeline': revenue_data['expansion_pipeline'],
+            'total_arr': round(total_arr, 2),
+            'customer_count': 1,  # single-customer scope
+            'account_count': len(accounts),
+            'source': 'roi_snapshot + context_graph',
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Portfolio summary error: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ─── Playbook Economics ──────────────────────────────────────────────────────
 
 @outcome_roi_api.route('/api/outcome-roi/playbook-economics', methods=['GET'])

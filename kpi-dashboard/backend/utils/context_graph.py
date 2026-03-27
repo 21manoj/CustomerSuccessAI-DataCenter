@@ -5,7 +5,7 @@ Provides common graph traversal operations for the context graph.
 All functions are guarded by the context_graph feature toggle.
 
 Usage:
-    from utils.context_graph import get_nodes, get_edges, traverse_2hop, get_revenue_at_risk
+    from utils.context_graph import get_nodes, get_edges, traverse_2hop, get_revenue_at_risk, aggregate_revenue_across_accounts
 """
 
 import logging
@@ -404,6 +404,69 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         'lost':       round(lost, 2),
         'net_impact': round(protected + expansion - lost, 2),
         'node_count': node_count,
+    }
+
+
+def aggregate_revenue_across_accounts(
+    customer_id: int,
+    account_ids: List[int],
+) -> Dict[str, Any]:
+    """
+    Aggregate revenue metrics across multiple accounts from context graph OUTCOME nodes.
+
+    This is the multi-account counterpart of get_revenue_at_risk() (which is per-account).
+    Used by CRO, CFO, and CEO dashboards.  Imported from utils/context_graph to avoid
+    duplication across executive_dashboard_api and outcome_roi_api.
+
+    Returns:
+        {
+            'revenue_at_risk': float,
+            'revenue_protected': float,
+            'expansion_pipeline': float,
+            'node_count': int,
+        }
+    """
+    empty = {
+        'revenue_at_risk': 0, 'revenue_protected': 0,
+        'expansion_pipeline': 0, 'node_count': 0,
+    }
+    if not account_ids:
+        return empty
+
+    outcome_nodes = (
+        ContextNode.query
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.account_id.in_(account_ids),
+            ContextNode.node_type == 'OUTCOME',
+            ContextNode.revenue_impact.isnot(None),
+        )
+        .all()
+    )
+
+    at_risk = 0.0
+    protected = 0.0
+    expansion = 0.0
+
+    for node in outcome_nodes:
+        try:
+            impact = abs(float(node.revenue_impact))
+        except (TypeError, ValueError):
+            continue
+        impact_type = (node.revenue_impact_type or '').lower()
+
+        if impact_type in ('at_risk', 'lost'):
+            at_risk += impact
+        elif impact_type == 'protected':
+            protected += impact
+        elif impact_type == 'expansion':
+            expansion += impact
+
+    return {
+        'revenue_at_risk': round(at_risk, 2),
+        'revenue_protected': round(protected, 2),
+        'expansion_pipeline': round(expansion, 2),
+        'node_count': len(outcome_nodes),
     }
 
 
