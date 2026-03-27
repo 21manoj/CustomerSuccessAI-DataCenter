@@ -133,7 +133,7 @@ const NAV_ITEMS = {
   intelligence: [
     { id: 'cro-overview', label: 'CRO Overview', path: '/cro-dashboard', badge: null, icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'cfo-overview', label: 'CFO Overview', path: '/cfo-dashboard', badge: null, icon: <DollarSign className="w-4 h-4" /> },
-    { id: 'roi-engine', label: 'ROI Engine', path: '/cro-dashboard?view=roi-engine', badge: null, icon: <Zap className="w-4 h-4" /> },
+    // ROI Engine hidden — Power-of-1 table on CFO overview is sufficient
     { id: 'context-graph', label: 'Context Graph', path: '/cro-dashboard?view=context-graph', badge: null, icon: <GitBranch className="w-4 h-4" /> },
   ],
   operations: [
@@ -870,15 +870,7 @@ const CFODashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* Link to ROI Engine */}
-        <button
-          onClick={() => navigate('/dc-dashboard?tab=roi')}
-          className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-600/20 transition-colors"
-        >
-          <Zap className="w-3.5 h-3.5" />
-          Open ROI Engine
-          <ArrowUpRight className="w-3.5 h-3.5" />
-        </button>
+        {/* ROI Engine link removed — CFO overview has full Power-of-1 table */}
       </aside>
 
       {/* Floating AI Advisor */}

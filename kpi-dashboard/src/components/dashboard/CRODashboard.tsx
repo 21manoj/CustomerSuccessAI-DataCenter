@@ -168,7 +168,7 @@ const NAV_ITEMS = {
     { id: 'cro-overview' as ViewId, label: 'CRO Overview', badge: null, icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'signal-timeline' as ViewId, label: 'Signal Timeline', badge: null, icon: <Activity className="w-4 h-4" /> },
     { id: 'context-graph' as ViewId, label: 'Context Graph', badge: null, icon: <GitBranch className="w-4 h-4" /> },
-    { id: 'roi-engine' as ViewId, label: 'ROI Engine', badge: null, icon: <Zap className="w-4 h-4" /> },
+    // ROI Engine hidden — redundant with CFO Power-of-1 and sidebar widget
   ],
   operations: [
     { id: 'accounts' as ViewId, label: 'Accounts', badge: null, icon: <Users className="w-4 h-4" /> },
@@ -1004,14 +1004,7 @@ const CRODashboard: React.FC = () => {
         <RevenueTimelineWidget timeline={timeline} loading={timelineLoading} />
 
         {/* Quick action link */}
-        <button
-          onClick={() => handleViewChange('roi-engine')}
-          className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-600/20 transition-colors"
-        >
-          <Zap className="w-3.5 h-3.5" />
-          Open ROI Engine
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        {/* ROI Engine link removed — sidebar widget shows key metrics */}
       </aside>
 
       {/* Floating AI Advisor */}
