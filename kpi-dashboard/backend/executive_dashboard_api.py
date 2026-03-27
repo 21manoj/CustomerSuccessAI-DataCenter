@@ -1010,6 +1010,142 @@ def cfo_dashboard():
         return jsonify({'error': 'Internal server error'}), 500
 
 
+# ─── 2b. CEO Dashboard (single-customer fallback) ────────────────────────────
+
+@executive_dashboard_api.route('/api/executive/ceo-dashboard', methods=['GET'])
+def ceo_dashboard():
+    """
+    CEO-level portfolio view.  When the authenticated customer belongs to a
+    portfolio, delegates to the portfolio API.  Otherwise falls back to a
+    single-customer "portfolio of one" view — same data as CRO/CFO but
+    formatted for the CEO persona (cross-account summary, NRR, churn risk).
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from models import Customer, PortfolioMembership
+        customer = Customer.query.get(customer_id)
+        if not customer:
+            return jsonify({'error': 'Customer not found'}), 404
+
+        # Check if customer belongs to a portfolio
+        membership = PortfolioMembership.query.filter_by(customer_id=customer_id).first()
+        if membership:
+            # Has portfolio — return portfolio_id so frontend can call portfolio API
+            return jsonify({
+                'status': 'success',
+                'mode': 'portfolio',
+                'portfolio_id': membership.portfolio_id,
+            })
+
+        # ── Single-customer fallback: "portfolio of one" ──
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        account_ids = [a.account_id for a in accounts]
+        num_accounts = len(accounts)
+        total_arr = sum(a.revenue or 0 for a in accounts)
+
+        # Health scores
+        healthy_min_val = ht.healthy_min()
+        at_risk_min_val = ht.at_risk_min()
+        latest_scores = _get_latest_health_scores(account_ids)
+        healthy_count = 0
+        at_risk_count = 0
+        critical_count = 0
+        total_weighted = 0.0
+        total_rev = 0.0
+
+        account_details = []
+        for acct in accounts:
+            hs = latest_scores.get(acct.account_id)
+            score = float(hs.health_score) if hs else 0
+            rev = float(acct.revenue or 0)
+            total_weighted += score * rev
+            total_rev += rev
+            if score >= healthy_min_val:
+                healthy_count += 1
+            elif score >= at_risk_min_val:
+                at_risk_count += 1
+            else:
+                critical_count += 1
+            account_details.append({
+                'account_id': acct.account_id,
+                'account_name': acct.account_name,
+                'health_score': round(score, 1),
+                'revenue': rev,
+                'classification': ht.classify(score),
+            })
+
+        avg_health = round(total_weighted / total_rev, 1) if total_rev > 0 else 0
+
+        # Revenue from context graph
+        revenue_data = _aggregate_revenue_from_context_graph(customer_id, account_ids)
+
+        # NRR derived from health
+        if avg_health >= 70:
+            nrr = round(100 + (avg_health - 70) * 0.33)
+        elif avg_health >= 40:
+            nrr = round(90 + (avg_health - 40) * 0.33)
+        else:
+            nrr = round(85 + avg_health * 0.125)
+
+        # ROI from snapshot or Power-of-1 fallback
+        roi_snap = _get_roi_snapshot(customer_id)
+        roi_pct = 0
+        if roi_snap:
+            roi_pct = round(roi_snap.historical_roi_pct or roi_snap.combined_roi_pct or 0)
+        if roi_pct == 0 and total_arr > 0:
+            po1_metrics = _get_po1_benchmark_metrics(total_arr)
+            po1_inv = _get_po1_benchmark_investment(total_arr)
+            if po1_inv > 0:
+                po1_impact = sum(m.get('dollar_impact', 0) for m in po1_metrics)
+                roi_pct = round((po1_impact / po1_inv - 1) * 100)
+
+        # Sort by health ascending (worst first)
+        account_details.sort(key=lambda a: a['health_score'])
+
+        # Build single company entry (portfolio of one)
+        companies = [{
+            'customer_id': customer_id,
+            'name': customer.name,
+            'arr': round(total_arr, 2),
+            'health_score': avg_health,
+            'account_count': num_accounts,
+            'at_risk_count': at_risk_count + critical_count,
+            'nrr': nrr,
+            'trend': 'down' if avg_health < 60 else ('up' if avg_health >= 70 else 'flat'),
+            'trend_change': round(avg_health - 60, 1),
+            'vertical': customer.vertical or 'dc2_s',
+        }]
+
+        return jsonify({
+            'status': 'success',
+            'mode': 'single_customer',
+            'companies': companies,
+            'portfolio_summary': {
+                'total_arr': round(total_arr, 2),
+                'avg_health': avg_health,
+                'total_accounts': num_accounts,
+                'healthy': healthy_count,
+                'at_risk': at_risk_count,
+                'critical': critical_count,
+                'nrr': nrr,
+                'roi_pct': roi_pct,
+                'revenue_at_risk': revenue_data['revenue_at_risk'],
+                'revenue_protected': revenue_data['revenue_protected'],
+                'expansion_pipeline': revenue_data['expansion_pipeline'],
+            },
+            'highest_risk_accounts': account_details[:5],
+            'quarter_label': _current_quarter_label(),
+            'last_updated': datetime.utcnow().isoformat(),
+        })
+
+    except Exception as e:
+        logger.error(f"Error in ceo_dashboard: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 # ─── 3. Revenue Timeline ─────────────────────────────────────────────────────
 
 @executive_dashboard_api.route('/api/executive/revenue-timeline', methods=['GET'])

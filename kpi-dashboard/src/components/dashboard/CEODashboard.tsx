@@ -718,63 +718,80 @@ const CEODashboard: React.FC = () => {
         const customerId = getCustomerIdentifier(session);
         const headers = { 'X-Customer-ID': customerId };
 
-        // Fire all three API calls in parallel
-        const [portfolioResp, healthResp, roiResp] = await Promise.allSettled([
-          apiCall('/api/portfolio/1/customers', { headers }),
-          apiCall('/api/dc2s/health-summary', { headers }),
-          apiCall('/api/outcome-roi/portfolio-summary', { headers }),
-        ]);
-
-        // Extract portfolio customers
+        // ── Primary: new CEO endpoint (handles single-customer + portfolio) ──
+        const ceoResp = await apiCall('/api/executive/ceo-dashboard', { headers });
         let companies: PortfolioCompany[] = [];
-        if (portfolioResp.status === 'fulfilled' && portfolioResp.value.ok) {
-          const pJson = await portfolioResp.value.json();
-          const customerList = pJson.customers || pJson.data || pJson || [];
-          if (Array.isArray(customerList)) {
-            companies = customerList.map((c: any) => ({
-              customer_id: c.customer_id || c.id || 0,
-              name: c.name || c.customer_name || 'Unknown',
-              arr: c.total_arr || c.arr || 0,
-              health_score: c.avg_health_score || c.health_score || 0,
-              account_count: c.account_count || c.accounts || 0,
-              at_risk_count: c.at_risk_count || c.accounts_at_risk || 0,
-              nrr: c.nrr || c.net_revenue_retention || 100,
-              trend: (c.health_trend || c.trend || 'flat') as 'up' | 'down' | 'flat',
-              trend_change: c.trend_change || c.health_change || 0,
+        let healthDist: HealthBucket[] = [];
+        let avgHealth = 0;
+        let roiPct = 0;
+        let portfolioNrr = 100;
+        let totalArr = 0;
+        let totalAccounts = 0;
+        let totalAtRisk = 0;
+
+        if (ceoResp.ok) {
+          const ceoJson = await ceoResp.json();
+
+          if (ceoJson.mode === 'portfolio') {
+            // Portfolio mode — fetch from portfolio API
+            const [portfolioResp, roiResp] = await Promise.allSettled([
+              apiCall(`/api/portfolio/${ceoJson.portfolio_id}/companies`, { headers }),
+              apiCall('/api/outcome-roi/portfolio-summary', { headers }),
+            ]);
+            if (portfolioResp.status === 'fulfilled' && portfolioResp.value.ok) {
+              const pJson = await portfolioResp.value.json();
+              const customerList = pJson.companies || pJson.customers || pJson.data || [];
+              if (Array.isArray(customerList)) {
+                companies = customerList.map((c: any) => ({
+                  customer_id: c.customer_id || c.id || 0,
+                  name: c.name || c.customer_name || 'Unknown',
+                  arr: c.total_arr || c.arr || 0,
+                  health_score: c.avg_health_score || c.health_score || 0,
+                  account_count: c.account_count || c.accounts || 0,
+                  at_risk_count: c.at_risk_count || c.accounts_at_risk || 0,
+                  nrr: c.nrr || c.net_revenue_retention || 100,
+                  trend: (c.health_trend || c.trend || 'flat') as 'up' | 'down' | 'flat',
+                  trend_change: c.trend_change || c.health_change || 0,
+                  vertical: c.vertical || 'dc2_s',
+                }));
+              }
+            }
+            if (roiResp.status === 'fulfilled' && roiResp.value.ok) {
+              const rJson = await roiResp.value.json();
+              roiPct = rJson.roi_pct || rJson.portfolio_roi || 0;
+              portfolioNrr = rJson.nrr || rJson.net_revenue_retention || 100;
+            }
+          } else {
+            // Single-customer mode — all data from CEO endpoint
+            companies = (ceoJson.companies || []).map((c: any) => ({
+              customer_id: c.customer_id || 0,
+              name: c.name || 'Unknown',
+              arr: c.arr || 0,
+              health_score: c.health_score || 0,
+              account_count: c.account_count || 0,
+              at_risk_count: c.at_risk_count || 0,
+              nrr: c.nrr || 100,
+              trend: (c.trend || 'flat') as 'up' | 'down' | 'flat',
+              trend_change: c.trend_change || 0,
               vertical: c.vertical || 'dc2_s',
             }));
+            const ps = ceoJson.portfolio_summary || {};
+            avgHealth = ps.avg_health || 0;
+            roiPct = ps.roi_pct || 0;
+            portfolioNrr = ps.nrr || 100;
+
+            healthDist = [
+              { label: 'Healthy', count: ps.healthy || 0, color: HEALTH_COLORS.healthy, bgClass: 'bg-green-500/15', textClass: 'text-green-400' },
+              { label: 'At Risk', count: ps.at_risk || 0, color: HEALTH_COLORS.at_risk, bgClass: 'bg-yellow-500/15', textClass: 'text-yellow-400' },
+              { label: 'Critical', count: ps.critical || 0, color: HEALTH_COLORS.critical, bgClass: 'bg-red-500/15', textClass: 'text-red-400' },
+            ];
           }
         }
 
-        // Extract health distribution
-        let healthDist: HealthBucket[] = [];
-        let avgHealth = 0;
-        if (healthResp.status === 'fulfilled' && healthResp.value.ok) {
-          const hJson = await healthResp.value.json();
-          const healthy = hJson.healthy_count || hJson.healthy || 0;
-          const atRisk = hJson.at_risk_count || hJson.at_risk || 0;
-          const critical = hJson.critical_count || hJson.critical || 0;
-          avgHealth = hJson.avg_health_score || hJson.average || 0;
-          healthDist = [
-            { label: 'Healthy', count: healthy, color: HEALTH_COLORS.healthy, bgClass: 'bg-green-500/15', textClass: 'text-green-400' },
-            { label: 'At Risk', count: atRisk, color: HEALTH_COLORS.at_risk, bgClass: 'bg-yellow-500/15', textClass: 'text-yellow-400' },
-            { label: 'Critical', count: critical, color: HEALTH_COLORS.critical, bgClass: 'bg-red-500/15', textClass: 'text-red-400' },
-          ];
-        }
-
-        // Extract ROI data
-        let roiPct = 0;
-        let portfolioNrr = 100;
-        if (roiResp.status === 'fulfilled' && roiResp.value.ok) {
-          const rJson = await roiResp.value.json();
-          roiPct = rJson.roi_pct || rJson.portfolio_roi || 0;
-          portfolioNrr = rJson.nrr || rJson.net_revenue_retention || 100;
-        }
-
         // Build derived values
-        const totalArr = companies.reduce((sum, c) => sum + c.arr, 0);
-        const totalAccounts = companies.reduce((sum, c) => sum + c.account_count, 0);
-        const totalAtRisk = companies.reduce((sum, c) => sum + c.at_risk_count, 0);
+        totalArr = companies.reduce((sum, c) => sum + c.arr, 0);
+        totalAccounts = companies.reduce((sum, c) => sum + c.account_count, 0);
+        totalAtRisk = companies.reduce((sum, c) => sum + c.at_risk_count, 0);
         const weightedHealth = totalArr > 0
           ? companies.reduce((sum, c) => sum + c.health_score * c.arr, 0) / totalArr
           : avgHealth;
@@ -822,7 +839,7 @@ const CEODashboard: React.FC = () => {
 
         if (!cancelled && companies.length > 0) {
           setData({
-            portfolio_name: 'Apex Growth Partners',
+            portfolio_name: companies[0]?.name || 'Portfolio Overview',
             total_arr: totalArr,
             avg_health_score: weightedHealth || avgHealth,
             portfolio_nrr: weightedNrr || portfolioNrr,
