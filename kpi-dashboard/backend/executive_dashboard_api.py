@@ -279,28 +279,32 @@ def _build_story_arcs(customer_id, account_ids):
         .all()
     )
 
+    # Build account ARR lookup for revenue attribution
+    account_arr = {}
+    for acct in Account.query.filter(Account.account_id.in_(account_ids)).all():
+        account_arr[acct.account_id] = _safe_float(acct.revenue)
+
     # Group signals by subtype
     subtype_accounts = defaultdict(set)
-    subtype_revenue = defaultdict(float)
     subtype_dates = defaultdict(list)
 
     for node in signal_nodes:
         subtype = (node.node_subtype or 'unknown').lower()
         subtype_accounts[subtype].add(node.account_id)
-        subtype_revenue[subtype] += _safe_float(node.revenue_impact)
         if node.occurred_at:
             subtype_dates[subtype].append(node.occurred_at)
 
     arcs = []
     for arc_key, arc_def in STORY_ARC_PATTERNS.items():
         matching_accounts = set()
-        total_revenue = 0.0
         all_dates = []
 
         for st in arc_def['signal_subtypes']:
             matching_accounts |= subtype_accounts.get(st, set())
-            total_revenue += subtype_revenue.get(st, 0)
             all_dates.extend(subtype_dates.get(st, []))
+
+        # Revenue = ARR of affected accounts (not signal.revenue_impact which is null)
+        total_revenue = sum(account_arr.get(aid, 0) for aid in matching_accounts)
 
         if not matching_accounts:
             continue
