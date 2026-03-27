@@ -568,6 +568,93 @@ def filter_kpi_csv_by_config(df: pd.DataFrame, customer_id: int, strict_mode: bo
 # - industry_benchmarks.csv: seeded from curated config/industry_benchmarks/{vertical}.csv
 # ============================================================================
 
+def _auto_generate_involves_edges(customer_id: int, account_ids: list) -> int:
+    """
+    Auto-generate INVOLVES edges between STAKEHOLDER and DECISION nodes.
+
+    For each DECISION node that has a `decision_maker_role` property, find
+    STAKEHOLDER nodes in the same account whose node_subtype or title matches
+    the role, and create an INVOLVES edge.
+
+    Returns the number of edges created.
+    """
+    from models import ContextNode, ContextEdge
+
+    if not account_ids:
+        return 0
+
+    # Get all decision nodes with decision_maker_role
+    decisions = ContextNode.query.filter(
+        ContextNode.customer_id == customer_id,
+        ContextNode.account_id.in_(account_ids),
+        ContextNode.node_type == 'DECISION',
+    ).all()
+
+    # Get all stakeholder nodes
+    stakeholders = ContextNode.query.filter(
+        ContextNode.customer_id == customer_id,
+        ContextNode.account_id.in_(account_ids),
+        ContextNode.node_type == 'STAKEHOLDER',
+    ).all()
+
+    # Build stakeholder lookup: account_id → [stakeholder_nodes]
+    stakeholder_by_account = {}
+    for s in stakeholders:
+        stakeholder_by_account.setdefault(s.account_id, []).append(s)
+
+    # Check existing INVOLVES edges to avoid duplicates
+    existing_involves = set()
+    existing_edges = ContextEdge.query.filter(
+        ContextEdge.customer_id == customer_id,
+        ContextEdge.edge_type == 'INVOLVES',
+    ).all()
+    for e in existing_edges:
+        existing_involves.add((e.from_node_id, e.to_node_id))
+
+    created = 0
+    for dec in decisions:
+        props = dec.properties or {}
+        maker_role = props.get('decision_maker_role', '')
+        if not maker_role:
+            continue
+
+        maker_lower = maker_role.lower().strip()
+        account_stakeholders = stakeholder_by_account.get(dec.account_id, [])
+
+        for stk in account_stakeholders:
+            # Match by subtype (role) or by title containing the role
+            stk_subtype = (stk.node_subtype or '').lower()
+            stk_title = (stk.title or '').lower()
+
+            match = (
+                maker_lower == stk_subtype
+                or maker_lower in stk_title
+                or stk_subtype in maker_lower
+                # Fuzzy: "vp_operations" matches "VP of Operations"
+                or maker_lower.replace('_', ' ') in stk_title
+            )
+
+            if match and (stk.node_id, dec.node_id) not in existing_involves:
+                edge = ContextEdge(
+                    customer_id=customer_id,
+                    from_node_id=stk.node_id,
+                    to_node_id=dec.node_id,
+                    edge_type='INVOLVES',
+                    weight=0.85,
+                    confidence=0.8,
+                    properties={
+                        'role': maker_role,
+                        'auto_generated': True,
+                        'match_type': 'decision_maker_role',
+                    },
+                )
+                db.session.add(edge)
+                existing_involves.add((stk.node_id, dec.node_id))
+                created += 1
+
+    return created
+
+
 def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data_dir: Path, engine):
     """
     Auto-generate 2 platform-derived context graph CSVs (decisions, signal_edges)
@@ -1353,6 +1440,28 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
             f"Wizard A failed (non-fatal) in ingest_context_graph_csvs: {_wa_err}",
             exc_info=True,
         )
+
+    # ------------------------------------------------------------------
+    # Layer B2: Auto-generate INVOLVES edges (Stakeholder → Decision)
+    # Links stakeholders to the decisions they influenced based on
+    # decision_maker_role matching stakeholder node_subtype/title.
+    # ------------------------------------------------------------------
+    involves_created = 0
+    try:
+        involves_created = _auto_generate_involves_edges(customer_id, all_account_ids)
+        if involves_created > 0:
+            db.session.commit()
+            current_app.logger.info(
+                f"✅ Auto-generated {involves_created} INVOLVES edges "
+                f"(stakeholder→decision) across {len(all_account_ids)} accounts"
+            )
+        result['involves_edges_created'] = involves_created
+    except Exception as _inv_err:
+        current_app.logger.warning(
+            f"INVOLVES edge generation failed (non-fatal): {_inv_err}",
+            exc_info=True,
+        )
+        db.session.rollback()
 
     # ------------------------------------------------------------------
     # Layer C: Urgent signal scanner — run per-account after edges are

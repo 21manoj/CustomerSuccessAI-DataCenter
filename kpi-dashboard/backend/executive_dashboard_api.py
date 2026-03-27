@@ -1003,11 +1003,74 @@ def cfo_dashboard():
             'rev_per_cs_dollar': round(roi_impact / effective_investment, 1) if effective_investment > 0 else 0,
             'quarter_label': _current_quarter_label(),
             'last_updated': datetime.utcnow().isoformat(),
+            # Account-level details for drill-down
+            'accounts': _build_cfo_account_details(customer_id, accounts, effective_investment, roi_impact),
         })
 
     except Exception as e:
         logger.error(f"Error in cfo_dashboard: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
+
+
+def _build_cfo_account_details(customer_id, accounts, total_investment, total_impact):
+    """Build per-account investment/impact breakdown for CFO drill-down."""
+    if not accounts:
+        return []
+
+    total_arr = sum(_safe_float(a.revenue) for a in accounts)
+    if total_arr <= 0:
+        return []
+
+    latest_scores = _get_latest_health_scores([a.account_id for a in accounts])
+    healthy_min_val = ht.healthy_min()
+
+    result = []
+    for acct in accounts:
+        arr = _safe_float(acct.revenue)
+        arr_share = arr / total_arr if total_arr > 0 else 0
+        hs = latest_scores.get(acct.account_id)
+        score = float(hs.health_score) if hs else 0
+
+        # Check for actual ActionEconomics data
+        try:
+            from models import ActionEconomics
+            ae_records = ActionEconomics.query.filter_by(
+                customer_id=customer_id, account_id=acct.account_id
+            ).all()
+            if ae_records:
+                acct_investment = sum(float(a.total_action_cost or 0) for a in ae_records)
+                acct_impact = sum(float(a.dollar_impact_annual or 0) for a in ae_records)
+                source = 'actual'
+                playbook_runs = len(ae_records)
+            else:
+                acct_investment = round(total_investment * arr_share, 2)
+                acct_impact = round(total_impact * arr_share, 2)
+                source = 'benchmark'
+                playbook_runs = 0
+        except Exception:
+            acct_investment = round(total_investment * arr_share, 2)
+            acct_impact = round(total_impact * arr_share, 2)
+            source = 'benchmark'
+            playbook_runs = 0
+
+        acct_roi = round((acct_impact / acct_investment - 1) * 100) if acct_investment > 0 else 0
+
+        result.append({
+            'account_id': acct.account_id,
+            'account_name': acct.account_name,
+            'arr': arr,
+            'health_score': round(score, 1),
+            'classification': ht.classify(score),
+            'investment': round(acct_investment, 2),
+            'impact': round(acct_impact, 2),
+            'roi_pct': acct_roi,
+            'source': source,
+            'playbook_runs': playbook_runs,
+        })
+
+    # Sort by health score ascending (worst first)
+    result.sort(key=lambda a: a['health_score'])
+    return result
 
 
 # ─── 2b. CEO Dashboard (single-customer fallback) ────────────────────────────

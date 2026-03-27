@@ -79,6 +79,19 @@ interface FinancialRatio {
   accent?: string;
 }
 
+interface AccountROI {
+  account_id: number;
+  account_name: string;
+  arr: number;
+  health_score: number;
+  classification: 'critical' | 'at_risk' | 'healthy';
+  investment: number;
+  impact: number;
+  roi_pct: number;
+  source: 'actual' | 'benchmark';
+  playbook_runs: number;
+}
+
 interface CFODashboardData {
   summary_cards: FinancialSummaryCard[];
   power_of_1: PowerOf1Row[];
@@ -91,6 +104,7 @@ interface CFODashboardData {
   time_saved_hours: number;
   cost_per_protected_dollar: number;
   financial_ratios: FinancialRatio[];
+  accounts: AccountROI[];
   period: string;
   last_updated: string;
 }
@@ -722,6 +736,18 @@ const CFODashboard: React.FC = () => {
               { label: 'NRR Impact / Playbook', value: `+${((nrr - 100) / Math.max(scalingProjs[0]?.accounts || 15, 1)).toFixed(2)}%`, accent: 'cyan' },
               ...(isEstimatedInvestment ? [{ label: '* Based on benchmark estimate', value: '', accent: 'gray' }] : []),
             ],
+            accounts: (json.accounts || []).map((a: any) => ({
+              account_id: a.account_id,
+              account_name: a.account_name || 'Unknown',
+              arr: a.arr || 0,
+              health_score: a.health_score || 0,
+              classification: a.classification || 'at_risk',
+              investment: a.investment || 0,
+              impact: a.impact || 0,
+              roi_pct: a.roi_pct || 0,
+              source: a.source || 'benchmark',
+              playbook_runs: a.playbook_runs || 0,
+            })),
             period: json.quarter_label || 'Q1 2026',
             last_updated: json.last_updated || new Date().toISOString(),
           };
@@ -842,6 +868,55 @@ const CFODashboard: React.FC = () => {
 
           {/* Row 4: ROI Scaling Analysis */}
           <ROIScalingSection tiers={d.roi_scaling} />
+
+          {/* Row 5: Account Investment Breakdown */}
+          {d.accounts.length > 0 && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
+                    Account Investment Breakdown
+                  </h3>
+                </div>
+                <span className="text-[10px] text-gray-500">{d.accounts[0]?.source === 'actual' ? 'From playbook data' : 'Estimated (ARR-weighted)'}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-700/50 text-gray-500">
+                      <th className="text-left py-2 pr-3">Account</th>
+                      <th className="text-right py-2 px-2">ARR</th>
+                      <th className="text-right py-2 px-2">Health</th>
+                      <th className="text-right py-2 px-2">Investment</th>
+                      <th className="text-right py-2 px-2">Impact</th>
+                      <th className="text-right py-2 px-2">ROI</th>
+                      <th className="text-right py-2 pl-2">Runs</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.accounts.map((a) => {
+                      const healthColor = a.classification === 'critical' ? 'text-red-400'
+                        : a.classification === 'at_risk' ? 'text-yellow-400' : 'text-green-400';
+                      return (
+                        <tr key={a.account_id} className="border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors">
+                          <td className="py-2 pr-3">
+                            <div className="text-white font-medium truncate max-w-[180px]">{a.account_name}</div>
+                          </td>
+                          <td className="text-right py-2 px-2 text-gray-400">{formatCompact(a.arr)}</td>
+                          <td className={`text-right py-2 px-2 font-medium ${healthColor}`}>{a.health_score.toFixed(0)}</td>
+                          <td className="text-right py-2 px-2 text-gray-300">{formatCompact(a.investment)}</td>
+                          <td className="text-right py-2 px-2 text-cyan-400">{formatCompact(a.impact)}</td>
+                          <td className={`text-right py-2 px-2 font-medium ${a.roi_pct > 0 ? 'text-green-400' : 'text-gray-500'}`}>{a.roi_pct}%</td>
+                          <td className="text-right py-2 pl-2 text-gray-500">{a.playbook_runs || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
