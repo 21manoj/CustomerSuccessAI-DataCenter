@@ -370,7 +370,7 @@ const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data })
             tick={{ fill: '#9ca3af', fontSize: 10 }}
             axisLine={false}
             tickLine={false}
-            width={140}
+            width={60}
           />
           <Tooltip
             contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid #374151', borderRadius: 8, fontSize: 12, color: '#fff' }}
@@ -662,8 +662,7 @@ const CFODashboard: React.FC = () => {
           });
 
           const pillarDisplayNames: Record<string, string> = {
-            P1: 'Deployment Velocity', P2: 'Operational Stability', P3: 'AI Workload Perf',
-            P4: 'Channel & Partner', P5: 'Expansion Readiness',
+            P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand',
           };
 
           const pillarInvs: PillarInvestment[] = (json.pillar_investments || []).map((p: any) => ({
