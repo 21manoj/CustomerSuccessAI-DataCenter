@@ -618,6 +618,8 @@ const CRODashboard: React.FC = () => {
         const json = await resp.json();
         if (!cancelled) {
           // Transform flat API response into CRODashboardData shape
+          const isEstimatedRoi = json.playbook_roi_estimated === true;
+          const roiLabel = isEstimatedRoi ? 'Estimated (Power-of-1)' : `↑ ${json.playbook_roi_pct || 0}pp vs Q3`;
           const transformed: CRODashboardData = {
             revenue_cards: [
               { label: 'Revenue at Risk', amount: json.revenue_at_risk || 0, subtitle: 'Causal evidence chains active', account_count: json.accounts_at_risk_count || 0, accent: 'red' },
@@ -627,7 +629,7 @@ const CRODashboard: React.FC = () => {
             metrics: [
               { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down', tooltip: 'Revenue-weighted average across all accounts. Larger accounts (by ARR) have proportionally more influence on this score.' },
               { label: 'Early Warning Lead', value: `${json.early_warning_days || 0}d`, change: '↑ 12d vs Q3', trend: 'up', tooltip: 'Average number of days between first risk signal detection and health score decline. Higher = more lead time to intervene.' },
-              { label: 'Playbook ROI', value: `${json.playbook_roi_pct || 0}%`, change: `↑ 41pp vs Q3`, trend: 'up', tooltip: 'Estimated ROI based on industry benchmarks (TSIA, Gainsight Pulse, KeyBanc SaaS Metrics). Pillar score improvements are real; dollar multipliers are benchmark-scaled to your ARR. Not yet traceable to individual playbook costs.' },
+              { label: 'Playbook ROI', value: `${json.playbook_roi_pct || 0}%`, change: roiLabel, trend: 'up', tooltip: isEstimatedRoi ? 'Projected ROI from Power-of-1 industry benchmarks (TSIA, Gainsight Pulse, KeyBanc). Shows what 1% improvement across all metrics would deliver at your ARR.' : 'ROI from tracked playbook executions and measured health score improvements.' },
               { label: 'NRR Projection', value: `${json.nrr_projection || 100}%`, change: `↑ ${json.nrr_change || 0}pp vs Q3`, trend: 'up', accent: 'cyan', tooltip: 'Projected Net Revenue Retention derived from pillar score trends. Based on historical correlation between health improvements and retention outcomes across the portfolio.' },
             ],
             story_arcs: (json.story_arcs || []).map((arc: any) => ({
@@ -656,12 +658,12 @@ const CRODashboard: React.FC = () => {
             }),
             roi_summary: {
               roi_pct: json.playbook_roi_pct || 0,
-              invested: json.cs_investment || 578000,
-              impact: (json.cs_investment || 578000) * (1 + (json.playbook_roi_pct || 294) / 100),
+              invested: json.cs_investment || json.estimated_investment || 0,
+              impact: (json.cs_investment || json.estimated_investment || 0) * (1 + (json.playbook_roi_pct || 0) / 100),
               scaling: [
-                { accounts: 10, label: '10 accts', roi: json.playbook_roi_pct || 294 },
-                { accounts: 50, label: '50 accts', roi: Math.round((json.playbook_roi_pct || 294) * 2.44) },
-                { accounts: 200, label: '200 accts', roi: Math.round((json.playbook_roi_pct || 294) * 3.79) },
+                { accounts: 10, label: '10 accts', roi: json.playbook_roi_pct || 0 },
+                { accounts: 50, label: '50 accts', roi: Math.round((json.playbook_roi_pct || 0) * 2.44) },
+                { accounts: 200, label: '200 accts', roi: Math.round((json.playbook_roi_pct || 0) * 3.79) },
               ],
             },
             period: json.quarter_label || 'Q1 2026',

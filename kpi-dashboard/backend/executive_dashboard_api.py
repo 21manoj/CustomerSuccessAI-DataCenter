@@ -460,12 +460,19 @@ def _get_po1_benchmark_metrics(total_arr):
         metrics = []
         for mid, m in data.get('metrics', {}).items():
             impact = round(m.get('annual_impact_per_pct', 0) * arr_scale, 2)
+            baseline = m.get('baseline', 0)
+            direction = m.get('direction', 'higher_is_better')
+            # Show projected 1% improvement as the "current" value
+            if direction == 'lower_is_better':
+                current = round(baseline * 0.99, 1)  # 1% lower is better
+            else:
+                current = round(baseline * 1.01, 1)  # 1% higher is better
             metrics.append({
                 'metric_id': mid,
                 'display_name': m.get('display_name', mid),
-                'baseline': m.get('baseline', 0),
-                'current': m.get('baseline', 0),  # no improvement yet
-                'improvement_pct': 0,
+                'baseline': baseline,
+                'current': current,
+                'improvement_pct': 1.0,
                 'dollar_impact': impact,
                 'estimated': True,
             })
@@ -687,6 +694,8 @@ def cro_dashboard():
             'playbook_roi_pct': playbook_roi_pct,
             'playbook_roi_estimated': is_estimated_roi,
             'playbook_roi_label': 'Estimated (Power-of-1 benchmark)' if is_estimated_roi else 'Actual (playbook executions)',
+            'cs_investment': 0,  # no playbook executions yet
+            'estimated_investment': _get_po1_benchmark_investment(total_revenue) if is_estimated_roi else 0,
             'nrr_projection': nrr_projection,
             'nrr_change': nrr_change,
             'story_arcs': story_arcs,
@@ -827,6 +836,12 @@ def cfo_dashboard():
                 total_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
                 roi_pct = round((total_impact / estimated_investment - 1) * 100) if estimated_investment > 0 else 0
                 roi_impact = total_impact
+            # Set projected NRR/GRR from 1% improvement
+            for m in power_of_1_metrics:
+                if m['metric_id'] == 'NRR':
+                    nrr_projection = round(m['current'])
+                elif m['metric_id'] == 'GRR':
+                    grr_projection = round(m['current'])
 
         # ── ROI scaling projections (non-linear) ──
         num_accounts = len(accounts)
@@ -917,9 +932,18 @@ def cfo_dashboard():
                 'return': month_return,
             })
 
+        # ── Compute efficiency metrics ──
+        is_estimated = cs_investment == 0 and estimated_investment > 0
+        effective_investment = cs_investment or estimated_investment
+        # Efficiency score: projected impact / investment (capped at 100)
+        efficiency_score = min(round((roi_impact / effective_investment) * 50, 0), 100) if effective_investment > 0 else 0
+        # Payback months
+        payback_months = round((effective_investment / roi_impact) * 12) if roi_impact > 0 else 0
+
         return jsonify({
             'status': 'success',
             'total_arr': round(total_arr, 2),
+            'account_count': len(accounts),
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
@@ -927,6 +951,7 @@ def cfo_dashboard():
             'revenue_risk_label': 'Confirmed Risk (Context Graph)',
             'cs_investment': cs_investment,
             'estimated_investment': estimated_investment,
+            'is_estimated': is_estimated,
             'roi_pct': roi_pct,
             'roi_investment': round(roi_investment, 2),
             'roi_impact': round(roi_impact, 2),
@@ -936,6 +961,11 @@ def cfo_dashboard():
             'roi_scaling': roi_scaling,
             'pillar_investments': pillar_investments,
             'investment_timeline': investment_timeline,
+            # Efficiency metrics (projected when using benchmarks)
+            'efficiency_score': efficiency_score,
+            'automation_rate': 35 if is_estimated else 0,  # benchmark: 35% typical
+            'time_saved_hours': round(effective_investment / 150, 0) if is_estimated else 0,  # ~$150/hr CSM rate
+            'payback_months': payback_months,
             'quarter_label': _current_quarter_label(),
             'last_updated': datetime.utcnow().isoformat(),
         })

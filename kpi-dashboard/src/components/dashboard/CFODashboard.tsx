@@ -697,7 +697,9 @@ const CFODashboard: React.FC = () => {
           // If API returns no scaling projections, leave empty — UI handles gracefully
 
           const csPercent = totalArr > 0 ? ((csInvestment / totalArr) * 100).toFixed(2) : '0';
-          const revPerDollar = csInvestment > 0 ? ((json.revenue_protected || 0) / csInvestment).toFixed(1) : '0';
+          // Use projected impact (not just revenue_protected) for Rev per CS Dollar when estimated
+          const revenueReturn = isEstimatedInvestment ? roiImpact : (json.revenue_protected || 0);
+          const revPerDollar = csInvestment > 0 ? (revenueReturn / csInvestment).toFixed(1) : '0';
           const paybackMonths = json.payback_months || (roiImpact > 0 ? Math.round((csInvestment / roiImpact) * 12) : 0);
 
           const transformed: CFODashboardData = {
