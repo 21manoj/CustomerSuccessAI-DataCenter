@@ -580,7 +580,7 @@ const EfficiencyGauge: React.FC<{
           <span className="text-xs font-medium text-gray-300">{timeSaved} hrs/mo</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Cost per Protected $</span>
+          <span className="text-[11px] text-gray-500">Cost per Impact $</span>
           <span className="text-xs font-medium text-cyan-400">${costPerProtected.toFixed(2)}</span>
         </div>
       </div>
@@ -691,11 +691,12 @@ const CFODashboard: React.FC = () => {
             : (csInvestment > 0 ? ((isEstimatedInvestment ? roiImpact : (json.revenue_protected || 0)) / csInvestment).toFixed(1) : '0');
           const paybackMonths = json.payback_months || (roiImpact > 0 ? Math.round((csInvestment / roiImpact) * 12) : 0);
 
+          const revenueProtected = json.revenue_protected || 0;
           const transformed: CFODashboardData = {
             summary_cards: [
               { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.roi_scaling?.current_accounts || json.account_count || '—'} active accounts`, accent: 'white' },
               { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: isEstimatedInvestment ? 'Power-of-1 benchmark estimate' : 'Playbook execution cost', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: isEstimatedInvestment },
-              { label: 'Revenue Protected', value: formatCompact(json.revenue_protected || 0), subtitle: `GRR: ${grr}%`, accent: 'green' },
+              { label: isEstimatedInvestment ? 'Projected Impact' : 'Revenue Protected', value: formatCompact(isEstimatedInvestment ? roiImpact : revenueProtected), subtitle: isEstimatedInvestment && revenueProtected > 0 ? `${formatCompact(revenueProtected)} confirmed · GRR: ${grr}%` : `GRR: ${grr}%`, accent: 'green', estimated: isEstimatedInvestment },
               { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: isEstimatedInvestment },
             ],
             power_of_1: po1Metrics,
