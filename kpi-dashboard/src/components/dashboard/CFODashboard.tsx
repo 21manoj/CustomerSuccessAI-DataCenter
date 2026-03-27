@@ -632,7 +632,8 @@ const CFODashboard: React.FC = () => {
         if (!cancelled) {
           // Transform flat API response into CFODashboardData shape
           const totalArr = json.total_arr || 0;
-          const rawCsInvestment = json.cs_investment || json.roi_investment || 0;
+          // cs_investment = actual playbook spend; check explicitly for > 0 (not JS falsy)
+          const rawCsInvestment = (json.cs_investment != null && json.cs_investment > 0) ? json.cs_investment : 0;
           // Fall back to Power-of-1 benchmark estimated investment when no PlaybookExecution records exist
           const estimatedInvestment = json.estimated_investment || json.benchmark_investment || json.po1_estimated_investment || 0;
           const isEstimatedInvestment = rawCsInvestment === 0 && estimatedInvestment > 0;
