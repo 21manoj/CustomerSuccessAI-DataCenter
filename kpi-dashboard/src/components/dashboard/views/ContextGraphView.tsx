@@ -502,9 +502,13 @@ const ContextGraphView: React.FC = () => {
     const fetchPortfolioSummaries = async () => {
       setPortfolioLoading(true);
       try {
-        const results = await Promise.allSettled(
-          accounts.map(acct => fetchGraphSummary(acct.account_id))
-        );
+        // Fetch node/edge counts per account AND portfolio-level revenue in parallel
+        const [summaryResults, revenueResp] = await Promise.all([
+          Promise.allSettled(
+            accounts.map(acct => fetchGraphSummary(acct.account_id))
+          ),
+          apiCall('/api/context-graph/portfolio-revenue'),
+        ]);
 
         const agg: PortfolioSummary = {
           total_nodes: 0,
@@ -518,7 +522,8 @@ const ContextGraphView: React.FC = () => {
           accounts_loaded: 0,
         };
 
-        for (const r of results) {
+        // Aggregate node/edge counts from per-account summaries
+        for (const r of summaryResults) {
           if (r.status !== 'fulfilled') continue;
           const d = r.value;
           if (d.status !== 'success') continue;
@@ -530,12 +535,16 @@ const ContextGraphView: React.FC = () => {
               agg.nodes_by_type[type] = (agg.nodes_by_type[type] || 0) + (count || 0);
             }
           }
-          if (d.revenue) {
-            agg.total_at_risk += d.revenue.at_risk || 0;
-            agg.total_protected += d.revenue.protected || 0;
-            agg.total_expansion += d.revenue.expansion || 0;
-            agg.total_lost += d.revenue.lost || 0;
-            agg.total_net_impact += d.revenue.net_impact || 0;
+        }
+
+        // Use portfolio-level revenue from the SAME function as CRO/CFO dashboards
+        if (revenueResp.ok) {
+          const rev = await revenueResp.json();
+          if (rev.status === 'success') {
+            agg.total_at_risk = rev.revenue_at_risk || 0;
+            agg.total_protected = rev.revenue_protected || 0;
+            agg.total_expansion = rev.expansion_pipeline || 0;
+            agg.total_net_impact = (rev.revenue_protected || 0) - (rev.revenue_at_risk || 0);
           }
         }
 
@@ -970,7 +979,7 @@ const ContextGraphView: React.FC = () => {
                   <span className="font-medium">Revenue at Risk</span>
                 </div>
                 <div className="text-3xl font-bold text-red-400 mb-1">
-                  {revenue ? formatCompact(revenue.at_risk) : '--'}
+                  {revenue ? formatCompact(revenue.at_risk) : (portfolioSummary ? formatCompact(portfolioSummary.total_at_risk) : '--')}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
                   <span>{revenueBecause.riskCount} contributing signal{revenueBecause.riskCount !== 1 ? 's' : ''}</span>
@@ -994,7 +1003,7 @@ const ContextGraphView: React.FC = () => {
                   <span className="font-medium">Revenue Protected</span>
                 </div>
                 <div className="text-3xl font-bold text-emerald-400 mb-1">
-                  {revenue ? formatCompact(revenue.protected) : '--'}
+                  {revenue ? formatCompact(revenue.protected) : (portfolioSummary ? formatCompact(portfolioSummary.total_protected) : '--')}
                 </div>
                 <div className="text-xs text-gray-500 mb-3">
                   {revenueBecause.protectedCount} intervention{revenueBecause.protectedCount !== 1 ? 's' : ''} active
@@ -1012,7 +1021,7 @@ const ContextGraphView: React.FC = () => {
                   <span className="font-medium">Expansion Opportunity</span>
                 </div>
                 <div className="text-3xl font-bold text-cyan-400 mb-1">
-                  {revenue ? formatCompact(revenue.expansion) : '--'}
+                  {revenue ? formatCompact(revenue.expansion) : (portfolioSummary ? formatCompact(portfolioSummary.total_expansion) : '--')}
                 </div>
                 <div className="text-xs text-gray-500 mb-3">
                   {revenueBecause.expansionCount} growth signal{revenueBecause.expansionCount !== 1 ? 's' : ''}

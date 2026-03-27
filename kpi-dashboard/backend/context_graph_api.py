@@ -33,6 +33,7 @@ from utils.context_graph import (
     traverse_2hop,
     get_revenue_at_risk,
     get_account_graph_summary,
+    aggregate_revenue_across_accounts,
     upsert_node,
     upsert_edge,
 )
@@ -414,6 +415,73 @@ def graph_revenue():
 
     except Exception as e:
         logger.error(f"Error in graph_revenue: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ─── 6b. Portfolio Revenue ─────────────────────────────────────────────────
+
+@context_graph_api.route('/api/context-graph/portfolio-revenue', methods=['GET'])
+def graph_portfolio_revenue():
+    """
+    Revenue breakdown aggregated across ALL accounts for the customer.
+    Uses the same aggregate_revenue_across_accounts() function as CRO/CFO dashboards
+    to ensure consistent numbers.
+
+    Returns:
+        revenue_at_risk, revenue_protected, expansion_pipeline, node_count,
+        contributing_signals (count of SIGNAL nodes feeding into risk outcomes)
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 400
+
+        # Get all account IDs for this customer
+        account_ids = [
+            a.account_id for a in
+            Account.query.filter_by(customer_id=customer_id).all()
+        ]
+
+        if not account_ids:
+            return jsonify({
+                'status': 'success',
+                'revenue_at_risk': 0,
+                'revenue_protected': 0,
+                'expansion_pipeline': 0,
+                'node_count': 0,
+                'contributing_signals': 0,
+            })
+
+        # Use the SAME function as CRO/CFO dashboards
+        revenue = aggregate_revenue_across_accounts(customer_id, account_ids)
+
+        # Also count contributing signals (SIGNAL nodes in at-risk accounts)
+        at_risk_account_ids = [
+            a.account_id for a in
+            Account.query.filter_by(customer_id=customer_id).all()
+            if a.account_id in account_ids
+        ]
+        signal_count = (
+            ContextNode.query
+            .filter(
+                ContextNode.customer_id == customer_id,
+                ContextNode.account_id.in_(account_ids),
+                ContextNode.node_type == 'SIGNAL',
+            )
+            .count()
+        )
+
+        return jsonify({
+            'status': 'success',
+            'revenue_at_risk': revenue['revenue_at_risk'],
+            'revenue_protected': revenue['revenue_protected'],
+            'expansion_pipeline': revenue['expansion_pipeline'],
+            'node_count': revenue['node_count'],
+            'contributing_signals': signal_count,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in graph_portfolio_revenue: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
 
