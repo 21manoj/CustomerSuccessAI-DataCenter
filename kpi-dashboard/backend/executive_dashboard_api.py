@@ -417,6 +417,63 @@ def _get_playbook_investment(customer_id):
     return round(total_cost, 2)
 
 
+def _get_po1_benchmark_investment(total_arr):
+    """Return Power-of-1 benchmark investment scaled to actual ARR.
+
+    Loads from config/power_of_1_economics.json.  At the $10M ARR baseline
+    the total investment across all 6 metrics is ~$247K.  We scale linearly
+    by actual_arr / 10M so a $57M portfolio sees ~$1.4M.
+    """
+    import json, os
+    config_path = os.path.join(
+        os.path.dirname(__file__), 'config', 'power_of_1_economics.json'
+    )
+    try:
+        with open(config_path) as f:
+            data = json.load(f)
+        arr_base = data.get('_arr_base', 10_000_000)
+        arr_scale = total_arr / arr_base if arr_base > 0 else 1
+        total_inv = sum(
+            m.get('total_investment', 0) for m in data.get('metrics', {}).values()
+        )
+        return round(total_inv * arr_scale, 2)
+    except Exception:
+        # Fallback: 0.5% of ARR as rough CS investment estimate
+        return round(total_arr * 0.005, 2)
+
+
+def _get_po1_benchmark_metrics(total_arr):
+    """Return Power-of-1 metrics as estimated baseline (no DB needed).
+
+    Used when no ROISnapshot exists to populate the CFO Power-of-1 table
+    with benchmark values and estimated dollar impacts.
+    """
+    import json, os
+    config_path = os.path.join(
+        os.path.dirname(__file__), 'config', 'power_of_1_economics.json'
+    )
+    try:
+        with open(config_path) as f:
+            data = json.load(f)
+        arr_base = data.get('_arr_base', 10_000_000)
+        arr_scale = total_arr / arr_base if arr_base > 0 else 1
+        metrics = []
+        for mid, m in data.get('metrics', {}).items():
+            impact = round(m.get('annual_impact_per_pct', 0) * arr_scale, 2)
+            metrics.append({
+                'metric_id': mid,
+                'display_name': m.get('display_name', mid),
+                'baseline': m.get('baseline', 0),
+                'current': m.get('baseline', 0),  # no improvement yet
+                'improvement_pct': 0,
+                'dollar_impact': impact,
+                'estimated': True,
+            })
+        return metrics
+    except Exception:
+        return []
+
+
 def _get_roi_snapshot(customer_id):
     """Get the latest ROI snapshot for the customer."""
     snapshot = (
@@ -548,9 +605,18 @@ def cro_dashboard():
         recovered = _get_accounts_recovered(customer_id, account_ids)
         expansion_candidates = _get_expansion_candidates(customer_id, account_ids)
 
-        # ── ROI & NRR from snapshot ──
+        # ── ROI & NRR from snapshot (with Power-of-1 benchmark fallback) ──
         roi_snap = _get_roi_snapshot(customer_id)
         playbook_roi_pct = round(roi_snap.historical_roi_pct or roi_snap.combined_roi_pct or 0) if roi_snap else 0
+        is_estimated_roi = False
+        if playbook_roi_pct == 0 and total_revenue > 0:
+            # Fall back to Power-of-1 benchmark ROI (41% at $10M baseline)
+            po1_metrics = _get_po1_benchmark_metrics(total_revenue)
+            po1_inv = _get_po1_benchmark_investment(total_revenue)
+            if po1_inv > 0:
+                po1_impact = sum(m.get('dollar_impact', 0) for m in po1_metrics)
+                playbook_roi_pct = round((po1_impact / po1_inv - 1) * 100)
+                is_estimated_roi = True
         nrr_projection = 100
         nrr_change = 0
         if roi_snap and roi_snap.metric_details:
@@ -619,6 +685,8 @@ def cro_dashboard():
             'total_arr': total_revenue,
             'early_warning_days': early_warning_days,
             'playbook_roi_pct': playbook_roi_pct,
+            'playbook_roi_estimated': is_estimated_roi,
+            'playbook_roi_label': 'Estimated (Power-of-1 benchmark)' if is_estimated_roi else 'Actual (playbook executions)',
             'nrr_projection': nrr_projection,
             'nrr_change': nrr_change,
             'story_arcs': story_arcs,
@@ -657,11 +725,16 @@ def cfo_dashboard():
         # ── CS Investment ──
         cs_investment = _get_playbook_investment(customer_id)
 
+        # ── Power-of-1 benchmark fallback when no playbook data ──
+        estimated_investment = 0
+        if cs_investment == 0 and total_arr > 0:
+            estimated_investment = _get_po1_benchmark_investment(total_arr)
+
         # ── ROI from snapshot ──
         roi_snap = _get_roi_snapshot(customer_id)
         roi_pct = 0
         roi_impact = 0.0
-        roi_investment = cs_investment
+        roi_investment = cs_investment or estimated_investment
         nrr_projection = 100
         grr_projection = 85
 
@@ -745,6 +818,15 @@ def cfo_dashboard():
                         nrr_projection = round(nrr_detail.get('current', 100))
                     if isinstance(grr_detail, dict):
                         grr_projection = round(grr_detail.get('current', 85))
+
+        # ── Power-of-1 benchmark fallback when no ROI snapshot ──
+        if not power_of_1_metrics and total_arr > 0:
+            power_of_1_metrics = _get_po1_benchmark_metrics(total_arr)
+            # Estimate ROI from benchmark totals
+            if estimated_investment > 0:
+                total_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
+                roi_pct = round((total_impact / estimated_investment - 1) * 100) if estimated_investment > 0 else 0
+                roi_impact = total_impact
 
         # ── ROI scaling projections (non-linear) ──
         num_accounts = len(accounts)
@@ -844,6 +926,7 @@ def cfo_dashboard():
             'revenue_risk_type': 'confirmed',
             'revenue_risk_label': 'Confirmed Risk (Context Graph)',
             'cs_investment': cs_investment,
+            'estimated_investment': estimated_investment,
             'roi_pct': roi_pct,
             'roi_investment': round(roi_investment, 2),
             'roi_impact': round(roi_impact, 2),
