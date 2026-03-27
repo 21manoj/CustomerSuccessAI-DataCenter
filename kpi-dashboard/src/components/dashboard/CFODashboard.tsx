@@ -335,7 +335,7 @@ const PowerOf1Table: React.FC<{ rows: PowerOf1Row[]; total: number }> = ({ rows,
 const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data }) => {
   // Show projected impact per pillar as single horizontal bars (color-coded)
   const chartData = data.map((p, i) => ({
-    name: p.pillar_code,
+    name: p.pillar,
     impact: Math.round(p.impact / 1000),
     fill: PILLAR_COLORS[i % PILLAR_COLORS.length],
   }));
@@ -367,10 +367,10 @@ const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data })
           <YAxis
             type="category"
             dataKey="name"
-            tick={{ fill: '#9ca3af', fontSize: 11 }}
+            tick={{ fill: '#9ca3af', fontSize: 10 }}
             axisLine={false}
             tickLine={false}
-            width={30}
+            width={140}
           />
           <Tooltip
             contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid #374151', borderRadius: 8, fontSize: 12, color: '#fff' }}
