@@ -151,39 +151,8 @@ function getTrendColor(trend: 'up' | 'down' | 'flat'): string {
   return 'text-gray-500';
 }
 
-// ============================================================================
-// FALLBACK DATA
-// ============================================================================
-
-const FALLBACK_DATA: CEODashboardData = {
-  portfolio_name: 'Apex Growth Partners',
-  total_arr: 127400000,
-  avg_health_score: 68.4,
-  portfolio_nrr: 112.3,
-  total_at_risk: 14,
-  total_accounts: 66,
-  companies: [
-    { customer_id: 401, name: 'Denali DataCenter', arr: 48200000, health_score: 72.1, account_count: 15, at_risk_count: 3, nrr: 118.2, trend: 'up', trend_change: 3.4, vertical: 'dc2_s' },
-    { customer_id: 402, name: 'Mont Blanc Cloud', arr: 42100000, health_score: 65.8, account_count: 15, at_risk_count: 5, nrr: 108.4, trend: 'down', trend_change: -2.1, vertical: 'saas' },
-    { customer_id: 403, name: 'NovaStar Infrastructure', arr: 21800000, health_score: 74.3, account_count: 18, at_risk_count: 2, nrr: 115.7, trend: 'up', trend_change: 5.2, vertical: 'dc2_s' },
-    { customer_id: 404, name: 'CloudScale Premium', arr: 15300000, health_score: 58.9, account_count: 18, at_risk_count: 4, nrr: 103.1, trend: 'down', trend_change: -4.8, vertical: 'saas' },
-  ],
-  health_distribution: [
-    { label: 'Healthy', count: 38, color: HEALTH_COLORS.healthy, bgClass: 'bg-green-500/15', textClass: 'text-green-400' },
-    { label: 'At Risk', count: 18, color: HEALTH_COLORS.at_risk, bgClass: 'bg-yellow-500/15', textClass: 'text-yellow-400' },
-    { label: 'Critical', count: 10, color: HEALTH_COLORS.critical, bgClass: 'bg-red-500/15', textClass: 'text-red-400' },
-  ],
-  portfolio_trend: 'up',
-  portfolio_trend_pct: 2.1,
-  top_risks: [
-    { account_name: 'Apex Infrastructure', company_name: 'CloudScale Premium', health_score: 28, arr: 1200000, signal_count: 9 },
-    { account_name: 'TechFlow Systems', company_name: 'Mont Blanc Cloud', health_score: 34, arr: 890000, signal_count: 7 },
-    { account_name: 'DataPrime Inc', company_name: 'Mont Blanc Cloud', health_score: 42, arr: 580000, signal_count: 5 },
-  ],
-  roi_pct: 294,
-  period: 'Q1 2026',
-  last_updated: '2m ago',
-};
+// No fallback data — dashboard requires live API data.
+// If API is unavailable, error/empty state is shown instead of fake numbers.
 
 // ============================================================================
 // SKELETON COMPONENTS
@@ -607,7 +576,7 @@ const PortfolioTrendWidget: React.FC<{
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-gray-500">Portfolio ROI</span>
-          <span className="text-xs font-semibold" style={{ color: ACCENT }}>{roiPct}%</span>
+          <span className="text-xs font-semibold" style={{ color: ACCENT }}>{roiPct > 0 ? `${roiPct}%` : '\u2014'}</span>
         </div>
       </div>
     </div>
@@ -620,6 +589,13 @@ const TopRisksWidget: React.FC<{ risks: TopRisk[] }> = ({ risks }) => (
     <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-3">
       Top 3 Risks by ARR
     </h3>
+    {risks.length === 0 ? (
+      <div className="flex flex-col items-center justify-center py-6 text-center">
+        <Shield className="w-8 h-8 text-green-500/40 mb-2" />
+        <p className="text-xs text-gray-500">No at-risk accounts detected</p>
+        <p className="text-[10px] text-gray-600 mt-1">All accounts are in healthy range</p>
+      </div>
+    ) : (
     <div className="space-y-3">
       {risks.map((risk, i) => {
         const color = classifyColor(risk.health_score);
@@ -654,6 +630,7 @@ const TopRisksWidget: React.FC<{ risks: TopRisk[] }> = ({ risks }) => (
         );
       })}
     </div>
+    )}
   </div>
 );
 
@@ -855,8 +832,8 @@ const CEODashboard: React.FC = () => {
             health_distribution: healthDist,
             portfolio_trend: portfolioTrend,
             portfolio_trend_pct: avgTrendChange,
-            top_risks: topRisks.length > 0 ? topRisks : FALLBACK_DATA.top_risks,
-            roi_pct: roiPct || FALLBACK_DATA.roi_pct,
+            top_risks: topRisks,
+            roi_pct: roiPct,
             period: 'Q1 2026',
             last_updated: 'just now',
           });
@@ -1108,7 +1085,7 @@ const CEODashboard: React.FC = () => {
               Platform ROI
             </p>
             <p className="text-4xl font-bold mb-1" style={{ color: ACCENT }}>
-              {d.roi_pct}%
+              {d.roi_pct > 0 ? `${d.roi_pct}%` : '\u2014'}
             </p>
             <p className="text-[10px] text-gray-600">
               CS Pulse return on investment

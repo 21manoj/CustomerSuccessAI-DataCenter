@@ -39,6 +39,7 @@ interface FinancialSummaryCard {
   subtitle: string;
   tag?: string;
   accent: string;
+  estimated?: boolean;
 }
 
 interface PowerOf1Row {
@@ -252,6 +253,7 @@ const SummaryCardComponent: React.FC<{ card: FinancialSummaryCard }> = ({ card }
         <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{card.label}</p>
         <p className="text-3xl font-bold mb-1" style={{ color: accent }}>
           {card.value}
+          {card.estimated && <span className="text-xs italic text-gray-400 ml-1 font-normal">Estimated</span>}
         </p>
         <p className="text-xs text-gray-500 mb-1">{card.subtitle}</p>
         {card.tag && (
@@ -643,7 +645,11 @@ const CFODashboard: React.FC = () => {
         if (!cancelled) {
           // Transform flat API response into CFODashboardData shape
           const totalArr = json.total_arr || 0;
-          const csInvestment = json.cs_investment || json.roi_investment || 0;
+          const rawCsInvestment = json.cs_investment || json.roi_investment || 0;
+          // Fall back to Power-of-1 benchmark estimated investment when no PlaybookExecution records exist
+          const estimatedInvestment = json.estimated_investment || json.benchmark_investment || json.po1_estimated_investment || 0;
+          const isEstimatedInvestment = rawCsInvestment === 0 && estimatedInvestment > 0;
+          const csInvestment = rawCsInvestment > 0 ? rawCsInvestment : estimatedInvestment;
           const roiPct = json.roi_pct || 0;
           const roiImpact = json.roi_impact || 0;
           const nrr = json.nrr_projection || 100;
@@ -697,9 +703,9 @@ const CFODashboard: React.FC = () => {
           const transformed: CFODashboardData = {
             summary_cards: [
               { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.roi_scaling?.current_accounts || json.account_count || '—'} active accounts`, accent: 'white' },
-              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Playbook execution cost', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald' },
+              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: isEstimatedInvestment ? 'Power-of-1 benchmark estimate' : 'Playbook execution cost', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: isEstimatedInvestment },
               { label: 'Revenue Protected', value: formatCompact(json.revenue_protected || 0), subtitle: `GRR: ${grr}%`, accent: 'green' },
-              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan' },
+              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: isEstimatedInvestment },
             ],
             power_of_1: po1Metrics,
             power_of_1_total: po1Metrics.reduce((sum: number, m: PowerOf1Row) => sum + m.dollar_impact, 0),
@@ -713,10 +719,11 @@ const CFODashboard: React.FC = () => {
               ? parseFloat((csInvestment / (json.revenue_protected || 1)).toFixed(3))
               : 0.05,
             financial_ratios: [
-              { label: 'CS % of ARR', value: `${csPercent}%` },
-              { label: 'Rev per CS Dollar', value: `$${revPerDollar}` },
-              { label: 'Payback Period', value: `${paybackMonths} months` },
+              { label: 'CS % of ARR', value: `${csPercent}%${isEstimatedInvestment ? ' *' : ''}` },
+              { label: 'Rev per CS Dollar', value: `$${revPerDollar}${isEstimatedInvestment ? ' *' : ''}` },
+              { label: 'Payback Period', value: `${paybackMonths} months${isEstimatedInvestment ? ' *' : ''}` },
               { label: 'NRR Impact / Playbook', value: `+${((nrr - 100) / Math.max(scalingProjs[0]?.accounts || 15, 1)).toFixed(2)}%`, accent: 'cyan' },
+              ...(isEstimatedInvestment ? [{ label: '* Based on benchmark estimate', value: '', accent: 'gray' }] : []),
             ],
             period: json.quarter_label || 'Q1 2026',
             last_updated: json.last_updated || new Date().toISOString(),
