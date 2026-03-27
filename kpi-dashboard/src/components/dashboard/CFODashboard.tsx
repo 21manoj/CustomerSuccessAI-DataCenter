@@ -718,8 +718,9 @@ const CFODashboard: React.FC = () => {
             efficiency_score: json.efficiency_score || 0,
             automation_rate: json.automation_rate || 0,
             time_saved_hours: json.time_saved_hours || 0,
-            cost_per_protected_dollar: csInvestment > 0 && (json.revenue_protected || 0) > 0
-              ? parseFloat((csInvestment / (json.revenue_protected || 1)).toFixed(3))
+            // Use total projected impact (not just confirmed protected) when estimated
+            cost_per_protected_dollar: csInvestment > 0 && roiImpact > 0
+              ? parseFloat((csInvestment / roiImpact).toFixed(2))
               : 0.05,
             financial_ratios: [
               { label: 'CS % of ARR', value: `${csPercent}%${isEstimatedInvestment ? ' *' : ''}` },
