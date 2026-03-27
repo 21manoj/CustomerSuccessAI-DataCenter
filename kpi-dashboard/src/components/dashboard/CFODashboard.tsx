@@ -28,6 +28,7 @@ import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
+import { trackPageView, trackEvent } from '../../utils/activityTracker';
 
 // ============================================================================
 // TYPES
@@ -752,6 +753,7 @@ const CFODashboard: React.FC = () => {
             last_updated: json.last_updated || new Date().toISOString(),
           };
           setData(transformed);
+          trackPageView('cfo_dashboard', { accounts: transformed.accounts.length });
         }
       } catch {
         if (!cancelled) {

@@ -305,3 +305,67 @@ def export_activity_logs():
             'error': 'Failed to export activity logs. Please try again or contact support.'
         }), 500
 
+
+# ─── Frontend Click Tracking ────────────────────────────────────────────────
+
+@activity_log_api.route('/api/activity-logs/track', methods=['POST'])
+def track_ui_event():
+    """
+    Log granular UI interactions (page views, clicks, dashboard switches).
+    Called by the frontend tracker utility on every significant user action.
+
+    Body:
+        event_type: 'page_view' | 'click' | 'dashboard_switch' | 'filter_change' | 'export'
+        target: what was clicked/viewed (e.g., 'cro_dashboard', 'account_card_424001')
+        details: optional JSON with extra context (e.g., {account_id: 424001, view: 'context_graph'})
+    """
+    try:
+        customer_id = get_current_customer_id()
+        user_id = get_current_user_id()
+        if not customer_id:
+            return jsonify({'status': 'ok'})  # Silent fail for unauthenticated
+
+        data = request.get_json(silent=True) or {}
+        event_type = data.get('event_type', 'click')
+        target = data.get('target', 'unknown')
+        details = data.get('details', {})
+
+        # Map event types to action categories
+        category_map = {
+            'page_view': 'navigation',
+            'click': 'interaction',
+            'dashboard_switch': 'navigation',
+            'filter_change': 'interaction',
+            'export': 'export',
+            'account_drill': 'interaction',
+            'playbook_action': 'playbook',
+            'mcp_query': 'query',
+        }
+
+        log_entry = ActivityLog(
+            customer_id=customer_id,
+            user_id=user_id,
+            action_type=event_type,
+            action_category=category_map.get(event_type, 'interaction'),
+            resource_type=data.get('resource_type', 'ui'),
+            resource_id=target,
+            action_description=f"{event_type}: {target}",
+            details=details,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:255],
+            session_id=data.get('session_id', ''),
+            status='success',
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+
+        return jsonify({'status': 'ok'})
+
+    except Exception as e:
+        logger.debug(f"UI tracking error (non-fatal): {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({'status': 'ok'})  # Never fail the UI for tracking errors
+

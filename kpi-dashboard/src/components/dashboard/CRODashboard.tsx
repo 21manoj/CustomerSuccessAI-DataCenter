@@ -28,6 +28,7 @@ import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
+import { trackPageView, trackEvent } from '../../utils/activityTracker';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
@@ -597,6 +598,7 @@ const CRODashboard: React.FC = () => {
 
   // Update URL when view changes
   const handleViewChange = useCallback((view: ViewId) => {
+    trackEvent('dashboard_switch', `cro_${view}`, { persona: 'cro', view });
     setActiveView(view);
     if (view === 'cro-overview') {
       setSearchParams({});
