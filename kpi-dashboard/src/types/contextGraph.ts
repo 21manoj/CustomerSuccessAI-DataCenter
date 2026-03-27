@@ -23,6 +23,8 @@ export interface ContextNodeDTO {
   account_id: number;
   node_type: NodeType;
   node_subtype: string | null;
+  /** Optional: qualitative_signals / wizard signals may expose sentiment (e.g. positive | negative). */
+  sentiment?: string | null;
   tier: number;                    // 1=permanent, 2=decaying, 3=ephemeral
   title: string;
   properties: Record<string, any>;
