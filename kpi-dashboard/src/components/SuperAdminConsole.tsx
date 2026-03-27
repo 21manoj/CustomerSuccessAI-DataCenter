@@ -229,7 +229,8 @@ const SuperAdminConsole: React.FC = () => {
         method: 'POST',
         body: JSON.stringify({ name: `Key for ${cid}`, scopes: ['read', 'write'], duration_days: 365 }),
       });
-      setSuccessMsg(`API Key created: ${result.key}`);
+      const mcpUrl = `${window.location.origin}/mcp/${result.key}`;
+      setSuccessMsg(`API Key created: ${result.key}\n\nMCP URL (paste into Claude.ai):\n${mcpUrl}`);
       // Reload keys
       const keyData = await api<{ api_keys: ApiKeyInfo[] }>(`/customers/${cid}/api-keys`);
       setApiKeys(keyData.api_keys || []);
@@ -610,6 +611,7 @@ const SuperAdminConsole: React.FC = () => {
                         <th className="text-left px-4 py-2">Scopes</th>
                         <th className="text-left px-4 py-2">Status</th>
                         <th className="text-left px-4 py-2">Expires</th>
+                        <th className="text-left px-4 py-2">MCP URL</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -629,10 +631,17 @@ const SuperAdminConsole: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-4 py-2 text-gray-500 text-xs">{k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'Never'}</td>
+                          <td className="px-4 py-2">
+                            {k.is_active && (
+                              <span className="text-xs text-gray-600 font-mono" title="Full MCP URL shown at key creation time">
+                                /mcp/{k.key_prefix}...
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                       {apiKeys.length === 0 && (
-                        <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No API keys</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-500">No API keys</td></tr>
                       )}
                     </tbody>
                   </table>
