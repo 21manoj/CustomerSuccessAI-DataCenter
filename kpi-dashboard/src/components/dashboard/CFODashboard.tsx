@@ -937,11 +937,17 @@ const CFODashboard: React.FC = () => {
 
         {/* Export Options */}
         <div className="space-y-2.5">
-          <button className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-600/20 transition-colors">
+          <button
+            onClick={() => alert('Export via Claude.ai: Ask "Generate a CFO brief for Q1" in the MCP chat')}
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-600/20 transition-colors"
+          >
             <FileText className="w-3.5 h-3.5" />
             Export CFO Brief
           </button>
-          <button className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-purple-600/10 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-600/20 transition-colors">
+          <button
+            onClick={() => alert('Export via Claude.ai: Ask "Generate a board deck with ROI data" in the MCP chat')}
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-purple-600/10 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-600/20 transition-colors"
+          >
             <Layers className="w-3.5 h-3.5" />
             Generate Board Deck
           </button>
