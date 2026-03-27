@@ -700,6 +700,7 @@ def cro_dashboard():
             'playbook_roi_label': 'Estimated (Power-of-1 benchmark)' if is_estimated_roi else 'Actual (playbook executions)',
             'cs_investment': 0,  # no playbook executions yet
             'estimated_investment': _get_po1_benchmark_investment(total_revenue) if is_estimated_roi else 0,
+            'roi_impact': sum(m.get('dollar_impact', 0) for m in po1_metrics) if is_estimated_roi else 0,
             'nrr_projection': nrr_projection,
             'nrr_change': nrr_change,
             'story_arcs': story_arcs,

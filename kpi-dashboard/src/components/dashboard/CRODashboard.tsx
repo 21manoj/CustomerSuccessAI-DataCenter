@@ -623,8 +623,8 @@ const CRODashboard: React.FC = () => {
           const transformed: CRODashboardData = {
             revenue_cards: [
               { label: 'Revenue at Risk', amount: json.revenue_at_risk || 0, subtitle: 'Causal evidence chains active', account_count: json.accounts_at_risk_count || 0, accent: 'red' },
-              { label: 'Revenue Protected', amount: json.revenue_protected || 0, subtitle: 'Playbook interventions proven', account_count: json.accounts_recovered_count || 0, accent: 'green' },
-              { label: 'Expansion Pipeline', amount: json.expansion_pipeline || 0, subtitle: 'Stakeholder maps confirmed', account_count: json.expansion_candidates_count || 0, accent: 'cyan' },
+              { label: 'Revenue Protected', amount: json.revenue_protected || 0, subtitle: json.accounts_recovered_count ? 'Playbook interventions proven' : 'Context graph confirmed', account_count: json.accounts_recovered_count || undefined, accent: 'green' },
+              { label: 'Expansion Pipeline', amount: json.expansion_pipeline || 0, subtitle: json.expansion_candidates_count ? 'Stakeholder maps confirmed' : 'Context graph confirmed', account_count: json.expansion_candidates_count || undefined, accent: 'cyan' },
             ],
             metrics: [
               { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down', tooltip: 'Revenue-weighted average across all accounts. Larger accounts (by ARR) have proportionally more influence on this score.' },
@@ -659,7 +659,7 @@ const CRODashboard: React.FC = () => {
             roi_summary: {
               roi_pct: json.playbook_roi_pct || 0,
               invested: json.cs_investment || json.estimated_investment || 0,
-              impact: (json.cs_investment || json.estimated_investment || 0) * (1 + (json.playbook_roi_pct || 0) / 100),
+              impact: json.roi_impact || ((json.cs_investment || json.estimated_investment || 0) * (1 + (json.playbook_roi_pct || 0) / 100)),
               scaling: [
                 { accounts: 10, label: '10 accts', roi: json.playbook_roi_pct || 0 },
                 { accounts: 50, label: '50 accts', roi: Math.round((json.playbook_roi_pct || 0) * 2.44) },
