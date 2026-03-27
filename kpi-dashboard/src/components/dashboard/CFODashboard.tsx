@@ -439,7 +439,6 @@ const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = (
           <Tooltip
             contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid #374151', borderRadius: 8, fontSize: 12, color: '#fff' }}
             formatter={(value: number) => [`$${value}K`]}
-          />
             wrapperStyle={{ fontSize: 10, color: '#9ca3af' }}
           />
           <Area
