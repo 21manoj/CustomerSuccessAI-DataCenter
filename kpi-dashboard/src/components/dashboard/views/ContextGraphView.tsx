@@ -715,7 +715,7 @@ const ContextGraphView: React.FC = () => {
   const revenueBecause = useMemo(() => {
     // Risk: count all negative signals + at-risk/lost outcomes
     const riskOutcomes = graphNodes.filter(n => n.revenue_impact_type === 'at_risk' || n.revenue_impact_type === 'lost');
-    const riskSignals = graphNodes.filter(n => n.node_type === 'SIGNAL' && (n.sentiment === 'negative' || n.node_subtype?.match(/champion_loss|budget_cut|escalation|usage_decline|competitor/)));
+    const riskSignals = graphNodes.filter(n => n.node_type === 'SIGNAL' && n.node_subtype?.match(/champion_loss|budget_cut|escalation|usage_decline|competitor|downgrade|churn|critical_incident/));
     const allRiskNodes = riskOutcomes.length > 0 ? riskOutcomes : riskSignals;
 
     // Protected: count decisions + protected outcomes
@@ -725,7 +725,7 @@ const ContextGraphView: React.FC = () => {
 
     // Expansion: count positive outcomes + positive signals
     const expansionOutcomes = graphNodes.filter(n => n.revenue_impact_type === 'expansion');
-    const growthSignals = graphNodes.filter(n => n.node_type === 'SIGNAL' && (n.sentiment === 'positive' || n.node_subtype?.match(/expansion|upsell|adoption|growth/)));
+    const growthSignals = graphNodes.filter(n => n.node_type === 'SIGNAL' && n.node_subtype?.match(/expansion|upsell|adoption|growth|renewal_confirmed/));
     const expansionCount = expansionOutcomes.length || growthSignals.length;
 
     const topRisk = [...riskOutcomes, ...riskSignals].sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
