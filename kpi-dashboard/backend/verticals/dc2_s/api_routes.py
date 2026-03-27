@@ -7,7 +7,7 @@ Handles dict targets from YOUR Week 1 KPI definitions
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
-from models import Account, DC2SKPI, User, PlaybookExecution, PlaybookReport, CustomerConfig, HealthScore, PillarScore
+from models import Account, DC2SKPI, User, PlaybookExecution, PlaybookReport, CustomerConfig, HealthScore, PillarScore, ActionEconomics
 from datetime import datetime, timedelta
 from collections import defaultdict
 import logging
@@ -52,6 +52,124 @@ def _filter_user_accounts(accounts_data, key='account_id'):
 def _normalize_kpi_code_for_health(kpi_code):
     """Validate kpi_code exists in the catalog. Returns kpi_code or None."""
     return kpi_code if kpi_code in DC2S_KPIS else None
+
+
+def _record_action_economics(
+    customer_id, account_id, execution_id, playbook_id, playbook_name,
+    total_hours, steps, kpi_before, kpi_after, health_before, health_after,
+    started_at, completed_at,
+):
+    """
+    Record ActionEconomics when a playbook completes — the Playbook Economic Bridge.
+    Connects actual execution costs to Power-of-1 metrics for traceable ROI.
+    """
+    import json as _json
+    import os
+
+    # Playbook → Power-of-1 metric mapping
+    PB_METRIC_MAP = {
+        'PB-01': 'TTFV', 'PB-02': 'ticket_resolution_time',
+        'PB-03': 'product_adoption', 'PB-04': 'expansion_rate',
+        'PB-05': 'GRR', 'PB-06': 'expansion_rate',
+    }
+
+    # Load resource rates
+    rates_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'resource_rates.json')
+    try:
+        with open(rates_path) as f:
+            rates = _json.load(f)
+        role_rates = {k: v['hourly_rate'] for k, v in rates.get('roles', {}).items()}
+    except Exception:
+        role_rates = {'csm': 95, 'cs_ops': 85, 'product': 110, 'platform': 120, 'leadership': 150}
+
+    # Estimate role-hour split from playbook config
+    pb_cfg = get_playbook_config(playbook_id)
+    sub_components = (pb_cfg or {}).get('sub_components', [])
+    total_cfg_hours = sum(sc.get('estimated_hours', 0) for sc in sub_components) or total_hours
+
+    # Default role split: 40% CSM, 30% CS Ops, 15% Platform, 10% Product, 5% Leadership
+    csm_hours = round(total_hours * 0.40, 2)
+    cs_ops_hours = round(total_hours * 0.30, 2)
+    platform_hours = round(total_hours * 0.15, 2)
+    product_hours = round(total_hours * 0.10, 2)
+    leadership_hours = round(total_hours * 0.05, 2)
+
+    # Calculate costs
+    cs_initiative_cost = round(
+        csm_hours * role_rates.get('csm', 95)
+        + cs_ops_hours * role_rates.get('cs_ops', 85)
+        + leadership_hours * role_rates.get('leadership', 150),
+        2
+    )
+    platform_cost = round(
+        platform_hours * role_rates.get('platform', 120)
+        + product_hours * role_rates.get('product', 110),
+        2
+    )
+    total_cost = round(cs_initiative_cost + platform_cost, 2)
+
+    # KPI deltas
+    kpi_deltas = {}
+    for code in kpi_before:
+        if code in kpi_after and kpi_before[code] and kpi_after[code]:
+            try:
+                kpi_deltas[code] = round(float(kpi_after[code]) - float(kpi_before[code]), 4)
+            except (TypeError, ValueError):
+                pass
+
+    # Health improvement as percentage
+    improvement_pct = round(health_after - health_before, 2) if health_before and health_after else 0
+
+    # Dollar impact from Power-of-1 economics
+    po1_metric = PB_METRIC_MAP.get(playbook_id, '')
+    dollar_impact = 0
+    if po1_metric and improvement_pct > 0:
+        try:
+            po1_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'power_of_1_economics.json')
+            with open(po1_path) as f:
+                po1 = _json.load(f)
+            metric_data = po1.get('metrics', {}).get(po1_metric, {})
+            impact_per_pct = metric_data.get('annual_impact_per_pct', 0)
+            # Scale by account ARR vs baseline
+            acct = Account.query.get(account_id)
+            arr_scale = (float(acct.revenue) / 10_000_000) if acct and acct.revenue else 1
+            dollar_impact = round(impact_per_pct * (improvement_pct / 100) * arr_scale, 2)
+        except Exception:
+            pass
+
+    # ROI
+    roi = round((dollar_impact / total_cost - 1), 4) if total_cost > 0 and dollar_impact > 0 else 0
+    payback_days = round((total_cost / (dollar_impact / 365)), 0) if dollar_impact > 0 else 0
+
+    ae = ActionEconomics(
+        customer_id=customer_id,
+        account_id=account_id,
+        execution_id=execution_id,
+        action_type='playbook_execution',
+        action_id=playbook_id,
+        action_name=playbook_name,
+        csm_hours=csm_hours,
+        cs_ops_hours=cs_ops_hours,
+        product_hours=product_hours,
+        platform_hours=platform_hours,
+        leadership_hours=leadership_hours,
+        cs_initiative_cost=cs_initiative_cost,
+        platform_cost=platform_cost,
+        total_action_cost=total_cost,
+        kpi_before=kpi_before,
+        kpi_after=kpi_after,
+        kpi_deltas=kpi_deltas,
+        power_of_1_metric=po1_metric,
+        dollar_impact_annual=dollar_impact,
+        dollar_impact_monthly=round(dollar_impact / 12, 2) if dollar_impact else 0,
+        roi=roi,
+        payback_days=int(payback_days),
+        improvement_pct=improvement_pct,
+        started_at=started_at,
+        completed_at=completed_at,
+    )
+    db.session.add(ae)
+    logger.info(f"ActionEconomics recorded: {playbook_id} on account {account_id}, cost=${total_cost}, impact=${dollar_impact}")
 
 
 def get_precalculated_scores(account_id):
@@ -1870,6 +1988,27 @@ def complete_dc2s_playbook_execution(execution_id):
                 db_exec.completed_at = now
                 db_exec.execution_data = execution
                 db_exec.outcome = 'resolved'
+
+            # ── Record ActionEconomics (Playbook Economic Bridge) ──
+            # Connects actual playbook execution costs to ROI investment numbers
+            try:
+                _record_action_economics(
+                    customer_id=int(customer_id) if customer_id else execution.get('customer_id'),
+                    account_id=account_id,
+                    execution_id=execution_id,
+                    playbook_id=execution.get('playbook_id', ''),
+                    playbook_name=playbook_name,
+                    total_hours=total_act or total_est,
+                    steps=execution.get('steps', []),
+                    kpi_before=before_snap,
+                    kpi_after=kpi_snapshot_after,
+                    health_before=health_before,
+                    health_after=health_after,
+                    started_at=started,
+                    completed_at=now,
+                )
+            except Exception as ae_err:
+                logger.warning(f"ActionEconomics record failed for {execution_id}: {ae_err}")
 
             db.session.commit()
             logger.info(f"DC playbook report saved for {execution_id}")

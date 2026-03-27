@@ -1600,3 +1600,119 @@ def playbook_economics():
         import traceback
         print(f"Playbook economics error: {e}\n{traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
+
+
+# ─── Per-Account ROI ──────────────────────────────────────────────────────────
+
+@outcome_roi_api.route('/api/outcome-roi/account/<int:account_id>', methods=['GET'])
+def get_account_roi(account_id):
+    """
+    Per-account ROI story — drill from portfolio ROI into individual account.
+    Shows: playbook investment, revenue impact, causal chain summary, ROI.
+
+    Uses ActionEconomics for actual costs when available, falls back to
+    Power-of-1 benchmark allocation by account ARR share.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from models import Account, ActionEconomics, PlaybookExecution, ContextNode
+        from utils.context_graph import get_revenue_at_risk
+
+        account = Account.query.get(account_id)
+        if not account or account.customer_id != customer_id:
+            return jsonify({'error': 'Account not found'}), 404
+
+        arr = float(account.revenue or 0)
+
+        # ── Actual playbook costs from ActionEconomics ──
+        action_records = ActionEconomics.query.filter_by(
+            customer_id=customer_id,
+            account_id=account_id,
+        ).order_by(ActionEconomics.completed_at.desc()).all()
+
+        actual_investment = sum(float(a.total_action_cost or 0) for a in action_records)
+        actual_impact = sum(float(a.dollar_impact_annual or 0) for a in action_records)
+        playbook_runs = len(action_records)
+        total_hours = sum(
+            float(a.csm_hours or 0) + float(a.cs_ops_hours or 0)
+            + float(a.product_hours or 0) + float(a.platform_hours or 0)
+            + float(a.leadership_hours or 0)
+            for a in action_records
+        )
+
+        # ── Revenue from context graph ──
+        revenue = get_revenue_at_risk(account_id)
+
+        # ── Benchmark allocation (if no actuals) ──
+        source = 'actual' if action_records else 'benchmark'
+        if not action_records and arr > 0:
+            # Allocate portfolio benchmark by ARR share
+            all_accounts = Account.query.filter_by(customer_id=customer_id).all()
+            total_portfolio_arr = sum(float(a.revenue or 0) for a in all_accounts)
+            arr_share = arr / total_portfolio_arr if total_portfolio_arr > 0 else 0
+
+            from executive_dashboard_api import _get_po1_benchmark_investment, _get_po1_benchmark_metrics
+            portfolio_investment = _get_po1_benchmark_investment(total_portfolio_arr)
+            portfolio_impact = sum(m.get('dollar_impact', 0) for m in _get_po1_benchmark_metrics(total_portfolio_arr))
+
+            actual_investment = round(portfolio_investment * arr_share, 2)
+            actual_impact = round(portfolio_impact * arr_share, 2)
+
+        roi_pct = round((actual_impact / actual_investment - 1) * 100) if actual_investment > 0 else 0
+
+        # ── Causal chain summary ──
+        signal_count = ContextNode.query.filter_by(
+            customer_id=customer_id, account_id=account_id, node_type='SIGNAL'
+        ).count()
+        decision_count = ContextNode.query.filter_by(
+            customer_id=customer_id, account_id=account_id, node_type='DECISION'
+        ).count()
+        outcome_count = ContextNode.query.filter_by(
+            customer_id=customer_id, account_id=account_id, node_type='OUTCOME'
+        ).count()
+
+        # ── Playbook execution details ──
+        playbook_details = []
+        for ae in action_records:
+            playbook_details.append({
+                'playbook_id': ae.action_id,
+                'playbook_name': ae.action_name,
+                'hours': round(float(ae.csm_hours or 0) + float(ae.cs_ops_hours or 0), 1),
+                'cost': float(ae.total_action_cost or 0),
+                'impact': float(ae.dollar_impact_annual or 0),
+                'roi': float(ae.roi or 0),
+                'health_improvement': float(ae.improvement_pct or 0),
+                'completed_at': ae.completed_at.isoformat() if ae.completed_at else None,
+            })
+
+        return jsonify({
+            'status': 'success',
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'arr': arr,
+            'source': source,  # 'actual' or 'benchmark'
+            'investment': round(actual_investment, 2),
+            'impact': round(actual_impact, 2),
+            'roi_pct': roi_pct,
+            'playbook_runs': playbook_runs,
+            'total_hours': round(total_hours, 1),
+            'revenue': {
+                'at_risk': revenue.get('at_risk', 0),
+                'protected': revenue.get('protected', 0),
+                'expansion': revenue.get('expansion', 0),
+            },
+            'causal_chain': {
+                'signals': signal_count,
+                'decisions': decision_count,
+                'outcomes': outcome_count,
+            },
+            'playbook_details': playbook_details,
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Account ROI error: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
