@@ -964,8 +964,12 @@ def cfo_dashboard():
             # Efficiency metrics (projected when using benchmarks)
             'efficiency_score': efficiency_score,
             'automation_rate': 35 if is_estimated else 0,  # benchmark: 35% typical
-            'time_saved_hours': round(effective_investment / 150, 0) if is_estimated else 0,  # ~$150/hr CSM rate
+            # Monthly hours saved = total annual hours × automation_rate / 12
+            # Power-of-1 total_hours at $10M = 6,960 hrs/yr, scale by ARR
+            'time_saved_hours': round((6960 * (total_arr / 10_000_000) * 0.35) / 12, 0) if is_estimated else 0,
             'payback_months': payback_months,
+            # Pre-computed ratios so frontend doesn't need the fallback logic
+            'rev_per_cs_dollar': round(roi_impact / effective_investment, 1) if effective_investment > 0 else 0,
             'quarter_label': _current_quarter_label(),
             'last_updated': datetime.utcnow().isoformat(),
         })
