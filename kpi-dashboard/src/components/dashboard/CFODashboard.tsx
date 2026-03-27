@@ -333,11 +333,10 @@ const PowerOf1Table: React.FC<{ rows: PowerOf1Row[]; total: number }> = ({ rows,
 
 /** Pillar Investment Breakdown - horizontal bar chart */
 const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data }) => {
+  // Show projected impact per pillar as single horizontal bars (color-coded)
   const chartData = data.map((p, i) => ({
     name: p.pillar_code,
-    investment: p.investment / 1000,
-    impact: p.impact / 1000,
-    roi: p.roi_multiplier,
+    impact: Math.round(p.impact / 1000),
     fill: PILLAR_COLORS[i % PILLAR_COLORS.length],
   }));
 
@@ -347,7 +346,7 @@ const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data })
         <div className="flex items-center gap-2">
           <PieChart className="w-4 h-4 text-purple-400" />
           <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
-            Pillar Investment Breakdown
+            Projected Impact by Pillar
           </h3>
         </div>
       </div>
@@ -375,39 +374,31 @@ const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data })
           />
           <Tooltip
             contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid #374151', borderRadius: 8, fontSize: 12, color: '#fff' }}
-            formatter={(value: number, name: string) => [`$${value}K`, name === 'investment' ? 'Investment' : 'Impact']}
+            formatter={(value: number) => [`$${value}K`, 'Projected Impact']}
           />
-          <Legend
-            iconType="circle"
-            iconSize={8}
-            wrapperStyle={{ fontSize: 10, color: '#9ca3af' }}
-          />
-          <Bar dataKey="investment" name="Investment" fill="#f97316" radius={[0, 3, 3, 0]} barSize={10} />
-          <Bar dataKey="impact" name="Impact" fill="#22c55e" radius={[0, 3, 3, 0]} barSize={10} />
+          {chartData.map((entry, i) => (
+            <Bar key={entry.name} dataKey="impact" fill={PILLAR_COLORS[i % PILLAR_COLORS.length]} radius={[0, 4, 4, 0]} barSize={14} />
+          ))}
         </BarChart>
       </ResponsiveContainer>
-      {/* ROI multipliers below */}
-      <div className="flex justify-between mt-3 px-1">
-        {data.map((p, i) => (
-          <div key={p.pillar_code} className="text-center">
-            <p className="text-[10px] text-gray-500">{p.pillar_code}</p>
-            <p className="text-xs font-bold" style={{ color: PILLAR_COLORS[i % PILLAR_COLORS.length] }}>
-              {p.roi_multiplier}x
-            </p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
 
 /** Investment Timeline - area chart */
 const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = ({ data }) => {
-  const chartData = data.map((d) => ({
-    month: d.month,
-    Investment: d.investment / 1000,
-    Return: d.returns / 1000,
-  }));
+  const hasRealData = data.some((d) => d.investment > 0 || d.returns > 0);
+
+  // When no real data, show projected 6-month ramp based on Power-of-1
+  const chartData = hasRealData
+    ? data.map((d) => ({ month: d.month, Investment: d.investment / 1000, Return: d.returns / 1000 }))
+    : ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'].map((m, i) => {
+        const ramp = [0.6, 0.8, 1.0, 1.0, 1.0, 1.0]; // ramp-up factor
+        const monthlyInv = 235; // ~$1.4M / 6 months in $K
+        const inv = Math.round(monthlyInv * ramp[i]);
+        const ret = Math.round(inv * (0.5 + i * 0.3)); // returns accelerate over time
+        return { month: m, Investment: inv, Return: ret };
+      });
 
   return (
     <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
@@ -415,10 +406,10 @@ const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = (
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-cyan-400" />
           <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
-            Investment Timeline
+            {hasRealData ? 'Investment Timeline' : 'Projected Investment Ramp'}
           </h3>
         </div>
-        <span className="text-[10px] text-gray-500">6-month window</span>
+        <span className="text-[10px] text-gray-500">{hasRealData ? '6-month window' : 'Estimated'}</span>
       </div>
       <ResponsiveContainer width="100%" height={200}>
         <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
@@ -449,9 +440,6 @@ const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = (
             contentStyle={{ backgroundColor: '#1a1f2e', border: '1px solid #374151', borderRadius: 8, fontSize: 12, color: '#fff' }}
             formatter={(value: number) => [`$${value}K`]}
           />
-          <Legend
-            iconType="circle"
-            iconSize={8}
             wrapperStyle={{ fontSize: 10, color: '#9ca3af' }}
           />
           <Area
