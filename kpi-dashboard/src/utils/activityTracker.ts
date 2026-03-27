@@ -36,9 +36,9 @@ function shouldTrack(key: string): boolean {
   recentEvents.set(key, now);
   // Clean up old entries periodically
   if (recentEvents.size > 100) {
-    for (const [k, v] of recentEvents) {
+    recentEvents.forEach((v, k) => {
       if (now - v > 10000) recentEvents.delete(k);
-    }
+    });
   }
   return true;
 }
