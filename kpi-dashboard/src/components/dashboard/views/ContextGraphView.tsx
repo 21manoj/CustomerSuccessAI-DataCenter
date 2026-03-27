@@ -713,21 +713,32 @@ const ContextGraphView: React.FC = () => {
 
   // ── Computed: revenue "because" explanations ──
   const revenueBecause = useMemo(() => {
-    const riskNodes = graphNodes.filter(n => n.revenue_impact_type === 'at_risk' || n.revenue_impact_type === 'lost');
-    const protectedNodes = graphNodes.filter(n => n.revenue_impact_type === 'protected');
-    const expansionNodes = graphNodes.filter(n => n.revenue_impact_type === 'expansion');
+    // Risk: count all negative signals + at-risk/lost outcomes
+    const riskOutcomes = graphNodes.filter(n => n.revenue_impact_type === 'at_risk' || n.revenue_impact_type === 'lost');
+    const riskSignals = graphNodes.filter(n => n.node_type === 'SIGNAL' && (n.sentiment === 'negative' || n.node_subtype?.match(/champion_loss|budget_cut|escalation|usage_decline|competitor/)));
+    const allRiskNodes = riskOutcomes.length > 0 ? riskOutcomes : riskSignals;
 
-    const topRisk = riskNodes.sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
-    const topProtected = protectedNodes.sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
-    const topExpansion = expansionNodes.sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
+    // Protected: count decisions + protected outcomes
+    const protectedOutcomes = graphNodes.filter(n => n.revenue_impact_type === 'protected');
+    const decisions = graphNodes.filter(n => n.node_type === 'DECISION');
+    const protectedCount = protectedOutcomes.length || decisions.length;
+
+    // Expansion: count positive outcomes + positive signals
+    const expansionOutcomes = graphNodes.filter(n => n.revenue_impact_type === 'expansion');
+    const growthSignals = graphNodes.filter(n => n.node_type === 'SIGNAL' && (n.sentiment === 'positive' || n.node_subtype?.match(/expansion|upsell|adoption|growth/)));
+    const expansionCount = expansionOutcomes.length || growthSignals.length;
+
+    const topRisk = [...riskOutcomes, ...riskSignals].sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
+    const topProtected = [...protectedOutcomes, ...decisions].sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
+    const topExpansion = [...expansionOutcomes, ...growthSignals].sort((a, b) => Math.abs(b.revenue_impact || 0) - Math.abs(a.revenue_impact || 0))[0];
 
     return {
-      risk: topRisk ? `Because: ${topRisk.title}` : 'No primary cause identified',
-      riskCount: riskNodes.length,
-      protected: topProtected ? `Protected by: ${topProtected.title}` : 'No interventions recorded',
-      protectedCount: protectedNodes.length,
-      expansion: topExpansion ? `Driven by: ${topExpansion.title}` : 'No expansion signals yet',
-      expansionCount: expansionNodes.length,
+      risk: topRisk ? `Because: ${topRisk.title}` : (graphNodes.length > 0 ? 'Health-score based risk estimate' : 'No primary cause identified'),
+      riskCount: allRiskNodes.length,
+      protected: topProtected ? `Protected by: ${topProtected.title}` : (decisions.length > 0 ? `${decisions.length} active decisions` : 'No interventions recorded'),
+      protectedCount: protectedCount,
+      expansion: topExpansion ? `Driven by: ${topExpansion.title}` : (growthSignals.length > 0 ? `${growthSignals.length} growth signals detected` : 'Monitoring for expansion signals'),
+      expansionCount: expansionCount,
     };
   }, [graphNodes]);
 
@@ -746,9 +757,11 @@ const ContextGraphView: React.FC = () => {
   const portfolioGraphDensity = useMemo(() => {
     if (!portfolioSummary) return 0;
     const n = portfolioSummary.total_nodes;
-    if (n < 2) return 0;
-    const maxEdges = n * (n - 1) / 2;
-    return maxEdges > 0 ? portfolioSummary.total_edges / maxEdges : 0;
+    const e = portfolioSummary.total_edges;
+    if (n < 2 || e === 0) return 0;
+    // Use edge-to-node ratio (more intuitive than theoretical max density)
+    // Typical healthy graph: 0.5-2.0 edges per node
+    return e / n;
   }, [portfolioSummary]);
 
   // ── Computed: sorted nodes for deep dive grid ──
@@ -1263,8 +1276,8 @@ const ContextGraphView: React.FC = () => {
               <div className="text-lg font-bold text-white">{portfolioSummary?.total_edges ?? 0}</div>
             </div>
             <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/40 p-3">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide">Density</div>
-              <div className="text-lg font-bold text-white">{(portfolioGraphDensity * 100).toFixed(1)}%</div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide">Edges/Node</div>
+              <div className="text-lg font-bold text-white">{portfolioGraphDensity.toFixed(1)}</div>
             </div>
             <div className="bg-[#1a1f2e] rounded-lg border border-gray-700/40 p-3">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide">Accounts</div>
