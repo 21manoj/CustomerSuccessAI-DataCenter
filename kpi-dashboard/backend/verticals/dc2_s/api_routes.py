@@ -1147,13 +1147,59 @@ def get_dc2s_alerts(account_id):
                         'percentage': round(percentage, 1)
                     })
         
+        # Also fetch context graph signals for this account
+        signals = []
+        try:
+            from models import ContextNode
+            cg_signals = ContextNode.query.filter(
+                ContextNode.customer_id == int(customer_id),
+                ContextNode.account_id == account_id,
+                ContextNode.node_type == 'SIGNAL',
+            ).order_by(ContextNode.occurred_at.desc()).limit(20).all()
+            for s in cg_signals:
+                signals.append({
+                    'id': s.node_id,
+                    'date': s.occurred_at.isoformat() if s.occurred_at else None,
+                    'type': s.node_subtype or 'signal',
+                    'subtype': s.node_subtype,
+                    'title': s.title or f'{s.node_subtype or "Signal"} detected',
+                    'description': (s.properties or {}).get('description', s.title or ''),
+                    'severity': 'critical' if s.tier == 1 else 'warning' if s.tier == 2 else 'info',
+                })
+        except Exception as sig_err:
+            logger.warning(f"Could not fetch context graph signals: {sig_err}")
+
+        # Also build stakeholders and tickets from context graph
+        stakeholders = []
+        try:
+            from models import ContextNode as CN2
+            cg_stakeholders = CN2.query.filter(
+                CN2.customer_id == int(customer_id),
+                CN2.account_id == account_id,
+                CN2.node_type == 'STAKEHOLDER',
+            ).limit(10).all()
+            for st in cg_stakeholders:
+                props = st.properties or {}
+                stakeholders.append({
+                    'id': st.node_id,
+                    'name': st.title or props.get('name', 'Unknown'),
+                    'role': props.get('role', props.get('stakeholder_role', '')),
+                    'influence_score': props.get('influence_score'),
+                    'engagement_level': props.get('engagement_level', ''),
+                })
+        except Exception:
+            pass
+
         return jsonify({
             'account_id': account_id,
             'account_name': account.account_name,
             'alerts': alerts,
+            'signals': signals,
+            'stakeholders': stakeholders,
+            'tickets': [],
             'total': len(alerts)
         })
-        
+
     except Exception as e:
         logger.error(f"Error fetching DC2_S alerts: {e}", exc_info=True)
         return jsonify({'error': 'Failed to fetch alerts'}), 500
