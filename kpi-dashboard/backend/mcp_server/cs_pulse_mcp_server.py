@@ -872,7 +872,8 @@ if __name__ == "__main__":
             try:
                 # FastMCP >= 2.3
                 from fastmcp.server.http import create_streamable_http_app
-                asgi_app = create_streamable_http_app(mcp)
+                # Must match nginx proxy path (see nginx-cspulse.conf location /mcp).
+                asgi_app = create_streamable_http_app(mcp, "/mcp")
             except ImportError:
                 # FastMCP 2.2 — get the app from mcp._app or build it
                 try:
