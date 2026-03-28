@@ -203,7 +203,10 @@ def get_scoped_customer_id() -> Optional[int]:
     if key_record and key_record.customer_id:
         return int(key_record.customer_id)
 
-    return None
+    # Key was present but invalid (revoked, expired, or not found)
+    # Raise error instead of returning None (which would mean "show all")
+    logger.warning("API key present but invalid/revoked — blocking request")
+    raise PermissionError("Invalid or revoked API key")
 
 
 # ---------------------------------------------------------------------------
