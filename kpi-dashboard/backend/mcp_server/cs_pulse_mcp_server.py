@@ -369,7 +369,12 @@ def get_platform_instructions() -> dict:
     This tool requires no parameters. Call it once at the start of each conversation.
     """
     content = _load_system_prompt()
-    return {
+
+    # Tenant isolation: if a customer-scoped key is used, tell the LLM which customer to use
+    from mcp_server.auth import get_scoped_customer_id
+    scoped_cid = get_scoped_customer_id()
+
+    result = {
         "instructions": content,
         "status": "loaded",
         "tool_count": 45,
@@ -381,6 +386,16 @@ def get_platform_instructions() -> dict:
             "healthy >=70."
         ),
     }
+
+    if scoped_cid:
+        result["scoped_customer_id"] = scoped_cid
+        result["scoping_note"] = (
+            f"IMPORTANT: Your API key is scoped to customer_id={scoped_cid}. "
+            f"Always use customer_id={scoped_cid} for ALL tool calls. "
+            f"Do not use any other customer_id — requests for other customers will be rejected."
+        )
+
+    return result
 
 
 # ===================================================================
@@ -435,7 +450,13 @@ def list_customers() -> dict:
             except (ValueError, IndexError):
                 pass
 
-        customers = Customer.query.order_by(Customer.customer_id.desc()).all()
+        # Tenant isolation: if a customer-scoped key is used, only show that customer
+        from mcp_server.auth import get_scoped_customer_id
+        scoped_cid = get_scoped_customer_id()
+        if scoped_cid:
+            customers = Customer.query.filter_by(customer_id=scoped_cid).all()
+        else:
+            customers = Customer.query.order_by(Customer.customer_id.desc()).all()
 
         by_vertical = {}
         for c in customers:

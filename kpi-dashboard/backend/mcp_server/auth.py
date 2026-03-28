@@ -170,6 +170,33 @@ def extract_api_key() -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# Scoped customer_id extraction (for tenant isolation on unscoped tools)
+# ---------------------------------------------------------------------------
+def get_scoped_customer_id() -> Optional[int]:
+    """Return the customer_id this key is scoped to, or None for server/stdio keys.
+
+    Used by tools like list_customers and get_platform_instructions to
+    restrict results to only the customer this API key belongs to.
+    If no key or server key → returns None (show all customers).
+    If customer-scoped key → returns that customer_id.
+    """
+    raw_key = extract_api_key()
+    if not raw_key:
+        return None  # stdio or no key
+
+    # Check if it's the server-level key (super-admin sees all)
+    if MCP_SERVER_API_KEY and raw_key == MCP_SERVER_API_KEY:
+        return None
+
+    # Try customer-scoped key
+    key_record = validate_customer_key(raw_key)
+    if key_record and key_record.customer_id:
+        return int(key_record.customer_id)
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Server-level key validation (backward-compat, super-admin)
 # ---------------------------------------------------------------------------
 def validate_server_key(api_key: str) -> bool:
