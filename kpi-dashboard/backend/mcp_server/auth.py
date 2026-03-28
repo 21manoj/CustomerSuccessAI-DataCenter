@@ -21,10 +21,14 @@ SCOPE HIERARCHY:
 
 import os
 import logging
+import contextvars
 from functools import wraps
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# Request-scoped API key storage (set by ASGI middleware, read by tool functions)
+_current_api_key_var: contextvars.ContextVar[str] = contextvars.ContextVar('_current_api_key', default='')
 
 
 # ---------------------------------------------------------------------------
@@ -160,9 +164,15 @@ def extract_api_key() -> Optional[str]:
     """Extract API key from the current transport context.
 
     Priority:
-      1. _MCP_CURRENT_API_KEY env var (set by HTTP transport per-request)
-      2. CS_PULSE_API_KEY env var (stdio transport / testing)
+      1. contextvars _current_api_key_var (set by ASGI middleware per-request)
+      2. _MCP_CURRENT_API_KEY env var (legacy fallback)
+      3. CS_PULSE_API_KEY env var (stdio transport / testing)
     """
+    # Primary: request-scoped context var (set by BearerAuthMiddleware)
+    key = _current_api_key_var.get('')
+    if key:
+        return key
+    # Fallback: env vars
     key = os.environ.get("_MCP_CURRENT_API_KEY", "")
     if not key:
         key = os.environ.get("CS_PULSE_API_KEY", "")

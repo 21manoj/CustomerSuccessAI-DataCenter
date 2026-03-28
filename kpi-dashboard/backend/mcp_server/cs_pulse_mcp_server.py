@@ -856,7 +856,56 @@ if __name__ == "__main__":
 
     if transport == "http":
         os.environ["MCP_TRANSPORT"] = "http"
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=8001)
+
+        # Inject ASGI middleware to extract Bearer token from Authorization header
+        # and store in request-scoped contextvars for tool functions to read.
+        # We monkey-patch mcp.run to wrap the ASGI app before uvicorn starts.
+        from mcp_server.auth import _current_api_key_var
+
+        _original_run = mcp.run
+
+        def _run_with_auth_middleware(**kwargs):
+            """Wrap MCP's ASGI app with Bearer auth extraction middleware."""
+            import uvicorn
+
+            # Build the MCP ASGI app the same way mcp.run() does internally
+            try:
+                # FastMCP >= 2.3
+                from fastmcp.server.http import create_streamable_http_app
+                asgi_app = create_streamable_http_app(mcp)
+            except ImportError:
+                # FastMCP 2.2 — get the app from mcp._app or build it
+                try:
+                    asgi_app = mcp.get_asgi_app()
+                except AttributeError:
+                    # Last resort — let mcp.run() handle it
+                    print("  ⚠️  Cannot inject auth middleware — FastMCP version incompatible")
+                    _original_run(transport="streamable-http", host="0.0.0.0", port=8001)
+                    return
+
+            # Wrap with Bearer auth extraction
+            class BearerAuthMiddleware:
+                def __init__(self, app):
+                    self.app = app
+                async def __call__(self, scope, receive, send):
+                    if scope["type"] == "http":
+                        headers = dict(scope.get("headers", []))
+                        auth_header = headers.get(b"authorization", b"").decode()
+                        if auth_header.startswith("Bearer "):
+                            token = auth_header[7:].strip()
+                            tok = _current_api_key_var.set(token)
+                            try:
+                                await self.app(scope, receive, send)
+                            finally:
+                                _current_api_key_var.reset(tok)
+                            return
+                    await self.app(scope, receive, send)
+
+            wrapped_app = BearerAuthMiddleware(asgi_app)
+            print("  ✅ Bearer auth middleware injected for HTTP transport")
+            uvicorn.run(wrapped_app, host="0.0.0.0", port=8001)
+
+        _run_with_auth_middleware()
     else:
         os.environ["MCP_TRANSPORT"] = "stdio"
         mcp.run(transport="stdio")
