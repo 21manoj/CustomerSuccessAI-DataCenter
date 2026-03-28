@@ -573,6 +573,11 @@ def get_dc2s_accounts():
             # Phase 0.2: persist journey_phase on every health recalculation
             _sync_journey_phase(account)
 
+            # Extract useful fields from profile_metadata for frontend
+            meta = account.profile_metadata or {}
+            renewal_date = meta.get('renewal_date') or meta.get('contract_renewal_date')
+            last_contact = meta.get('last_contact') or meta.get('last_engagement_date')
+
             results.append({
                 'account_id': account.account_id,
                 'customer_id': account.customer_id,
@@ -585,9 +590,11 @@ def get_dc2s_accounts():
                 'status': status,
                 'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
                 'enabled_pillars': enabled_pillar_codes,
-                'metadata': account.profile_metadata or {},
+                'metadata': meta,
                 'kpi_count': len(pillar_scores) * 3 if precalc_health is not None else 15,  # approximate
-                'last_measured': latest_time.isoformat() if latest_time else None
+                'last_measured': latest_time.isoformat() if latest_time else None,
+                'renewal_date': renewal_date,
+                'last_contact': last_contact,
             })
 
         # Apply user-level account filtering (contractors/restricted users)

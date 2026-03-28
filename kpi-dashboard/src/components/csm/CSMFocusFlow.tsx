@@ -1120,9 +1120,9 @@ const CSMFocusFlow: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{acct.account_name}</p>
                   <p className="text-xs text-gray-400">
-                    Renewal: {new Date(acct.renewal_date!).toLocaleDateString('en-US', {
+                    Renewal: {acct.renewal_date ? new Date(acct.renewal_date).toLocaleDateString('en-US', {
                       month: 'short', day: 'numeric', year: 'numeric',
-                    })}
+                    }) : 'TBD'}
                   </p>
                 </div>
 

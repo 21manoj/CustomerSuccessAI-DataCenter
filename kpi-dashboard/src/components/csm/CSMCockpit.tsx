@@ -414,7 +414,7 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
                         </div>
                         <p className="text-xs text-gray-500 line-clamp-2">{s.description}</p>
                         <span className="text-xs text-gray-400 mt-1 block">
-                          {new Date(s.date).toLocaleDateString()}
+                          {s.date ? new Date(s.date).toLocaleDateString() : '--'}
                         </span>
                       </div>
                     ))
@@ -468,7 +468,7 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
                         </div>
                         <div className="flex justify-between text-xs text-gray-400">
                           <span className="capitalize">{t.status}</span>
-                          <span>{new Date(t.created_at).toLocaleDateString()}</span>
+                          <span>{t.created_at ? new Date(t.created_at).toLocaleDateString() : '--'}</span>
                         </div>
                       </div>
                     ))
