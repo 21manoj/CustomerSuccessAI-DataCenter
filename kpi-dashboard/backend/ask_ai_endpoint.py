@@ -143,7 +143,12 @@ def _build_portfolio_summary(customer_id: int) -> str:
         critical = sum(1 for s in scores if s < ht.at_risk_min())
         at_risk = sum(1 for s in scores if ht.at_risk_min() <= s < ht.healthy_min())
         healthy = sum(1 for s in scores if s >= ht.healthy_min())
-        avg_health = round(sum(scores) / len(scores), 1) if scores else 0
+        avg_health_simple = round(sum(scores) / len(scores), 1) if scores else 0
+        # Revenue-weighted avg health (same as CRO dashboard)
+        revenue_map = {a.account_id: float(a.revenue or 0) for a in accounts}
+        weighted_sum = sum(health_map.get(aid, 0) * revenue_map.get(aid, 0) for aid in account_ids)
+        total_rev = sum(revenue_map.get(aid, 0) for aid in account_ids)
+        avg_health = round(weighted_sum / total_rev, 1) if total_rev > 0 else avg_health_simple
 
         # Top 5 accounts by ARR
         top_accounts = sorted(accounts, key=lambda a: a.revenue or 0, reverse=True)[:5]

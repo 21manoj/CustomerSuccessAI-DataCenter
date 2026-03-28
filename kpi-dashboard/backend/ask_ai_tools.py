@@ -771,8 +771,13 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
                 ))
                 .all()
             )
-            scores = [float(h.health_score) for h in health_rows]
-            avg_health = round(sum(scores) / len(scores), 1) if scores else 50
+            health_map = {h.account_id: float(h.health_score) for h in health_rows}
+            scores = list(health_map.values())
+            # Revenue-weighted avg health (same as CRO dashboard)
+            revenue_map = {a.account_id: float(a.revenue or 0) for a in accounts}
+            weighted_sum = sum(health_map.get(aid, 0) * revenue_map.get(aid, 0) for aid in account_ids)
+            total_rev = sum(revenue_map.get(aid, 0) for aid in account_ids)
+            avg_health = round(weighted_sum / total_rev, 1) if total_rev > 0 else (round(sum(scores) / len(scores), 1) if scores else 50)
             if avg_health >= 70:
                 nrr = round(100 + (avg_health - 70) * 0.33)
             elif avg_health >= 40:
