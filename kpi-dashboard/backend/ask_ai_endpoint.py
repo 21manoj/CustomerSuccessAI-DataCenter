@@ -98,6 +98,13 @@ INSTRUCTIONS:
   CS Investment scales at ~2.5% of ARR. ROI is typically 30-50% at 10 accounts.
   Revenue per CS dollar is typically $1.3-$1.5. Payback is typically 7-9 months.
   Never use different calculation paths — all ROI answers come from one source of truth.
+- CRITICAL REVENUE CONSISTENCY: "Revenue at risk" is the context graph assessed risk from the
+  PORTFOLIO CONTEXT above, NOT the total ARR of critical/at-risk accounts. These are different:
+  * Revenue at Risk (context graph): assessed risk based on causal evidence chains
+  * Critical Account ARR: total revenue of accounts with health < 50
+  Always use the Revenue Intelligence numbers from PORTFOLIO CONTEXT for revenue questions.
+  When asked "how much revenue is at risk", cite the context graph number, then optionally
+  mention the critical account ARR as additional context.
 """
 
 
@@ -165,12 +172,43 @@ def _build_portfolio_summary(customer_id: int) -> str:
         else:
             nrr = round(85 + avg_health * 0.125)
 
+        # Aggregate revenue intelligence from context graph (same as CRO dashboard)
+        rev_at_risk = 0
+        rev_protected = 0
+        rev_expansion = 0
+        try:
+            from utils.context_graph import aggregate_revenue_across_accounts
+            rev_data = aggregate_revenue_across_accounts(customer_id)
+            rev_at_risk = rev_data.get('at_risk', 0)
+            rev_protected = rev_data.get('protected', 0)
+            rev_expansion = rev_data.get('expansion', 0)
+        except Exception:
+            pass
+
+        # Critical accounts ARR (for context, NOT revenue at risk)
+        critical_arr = sum(
+            revenue_map.get(aid, 0)
+            for aid in account_ids
+            if health_map.get(aid, 100) < ht.at_risk_min()
+        )
+
         return f"""Accounts: {len(accounts)} | Total ARR: ${total_arr:,.0f}
 Health: {healthy} healthy, {at_risk} at-risk, {critical} critical | Avg: {avg_health}
 NRR Projection: {nrr}% (derived from portfolio health score — this is the authoritative NRR number)
 Top accounts by ARR: {top_str}
 Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()})
-IMPORTANT: NRR baseline is {nrr}% (health-derived), NOT 105% (benchmark). Always use {nrr}% when discussing current NRR."""
+
+REVENUE INTELLIGENCE (from Context Graph — same source as CRO dashboard):
+  Revenue at Risk: ${rev_at_risk:,.0f} (causal evidence from context graph outcomes)
+  Revenue Protected: ${rev_protected:,.0f} (confirmed by interventions)
+  Expansion Pipeline: ${rev_expansion:,.0f} (identified opportunities)
+  Critical Accounts ARR: ${critical_arr:,.0f} (total ARR of critical accounts — NOT the same as revenue at risk)
+
+CRITICAL RULES:
+- NRR baseline is {nrr}% (health-derived), NOT 105% (benchmark). Always use {nrr}% when discussing current NRR.
+- "Revenue at risk" means ${rev_at_risk:,.0f} from context graph, NOT ${critical_arr:,.0f} (total ARR of critical accounts).
+  Revenue at risk is the ASSESSED risk based on causal evidence chains, not the full ARR of unhealthy accounts.
+- NEVER equate "critical account ARR" with "revenue at risk" — they are fundamentally different metrics."""
 
     except Exception as e:
         logger.warning(f"Portfolio summary error: {e}")
