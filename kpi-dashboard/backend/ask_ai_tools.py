@@ -750,6 +750,36 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
             roi_pct = round((total_impact - investment) / investment * 100) if investment > 0 else 0
             payback_months = round(investment / (total_impact / 12), 1) if total_impact > 0 else 0
 
+            # Derive NRR from health (same formula as CRO dashboard)
+            from models import HealthScore
+            from sqlalchemy import func as sqlfunc
+            account_ids = [a.account_id for a in accounts]
+            latest_sub = (
+                db.session.query(
+                    HealthScore.account_id,
+                    sqlfunc.max(HealthScore.measurement_month).label('max_month')
+                )
+                .filter(HealthScore.account_id.in_(account_ids))
+                .group_by(HealthScore.account_id)
+                .subquery()
+            )
+            health_rows = (
+                db.session.query(HealthScore)
+                .join(latest_sub, db.and_(
+                    HealthScore.account_id == latest_sub.c.account_id,
+                    HealthScore.measurement_month == latest_sub.c.max_month
+                ))
+                .all()
+            )
+            scores = [float(h.health_score) for h in health_rows]
+            avg_health = round(sum(scores) / len(scores), 1) if scores else 50
+            if avg_health >= 70:
+                nrr = round(100 + (avg_health - 70) * 0.33)
+            elif avg_health >= 40:
+                nrr = round(90 + (avg_health - 40) * 0.33)
+            else:
+                nrr = round(85 + avg_health * 0.125)
+
             return {
                 'scope': 'portfolio',
                 'customer_id': customer_id,
@@ -762,6 +792,9 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
                 'roi_per_dollar': round(total_impact / investment, 2) if investment > 0 else 0,
                 'payback_months': payback_months,
                 'cs_pct_of_arr': round(investment / total_arr * 100, 2) if total_arr > 0 else 0,
+                'nrr_current': nrr,
+                'nrr_note': f'NRR {nrr}% derived from portfolio health score {avg_health}. This is the authoritative NRR — do NOT use 105% benchmark baseline.',
+                'avg_health_score': avg_health,
                 'metrics': [{
                     'metric': m['display_name'],
                     'baseline': m['baseline'],

@@ -152,10 +152,20 @@ def _build_portfolio_summary(customer_id: int) -> str:
             for a in top_accounts
         )
 
+        # Derive NRR from health (same formula as CRO dashboard)
+        if avg_health >= 70:
+            nrr = round(100 + (avg_health - 70) * 0.33)
+        elif avg_health >= 40:
+            nrr = round(90 + (avg_health - 40) * 0.33)
+        else:
+            nrr = round(85 + avg_health * 0.125)
+
         return f"""Accounts: {len(accounts)} | Total ARR: ${total_arr:,.0f}
 Health: {healthy} healthy, {at_risk} at-risk, {critical} critical | Avg: {avg_health}
+NRR Projection: {nrr}% (derived from portfolio health score — this is the authoritative NRR number)
 Top accounts by ARR: {top_str}
-Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()})"""
+Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()})
+IMPORTANT: NRR baseline is {nrr}% (health-derived), NOT 105% (benchmark). Always use {nrr}% when discussing current NRR."""
 
     except Exception as e:
         logger.warning(f"Portfolio summary error: {e}")
