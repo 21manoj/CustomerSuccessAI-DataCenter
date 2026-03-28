@@ -311,6 +311,15 @@ const AppRoutes: React.FC = () => {
           }
         />
         
+        {/* Short persona routes — clean URLs for demos (no /dc-dashboard prefix) */}
+        <Route path="/cro" element={<PrivateRoute vertical="datacenter"><CRODashboard /></PrivateRoute>} />
+        <Route path="/cfo" element={<PrivateRoute vertical="datacenter"><CFODashboard /></PrivateRoute>} />
+        <Route path="/ceo" element={<PrivateRoute vertical="datacenter"><CEODashboard /></PrivateRoute>} />
+        <Route path="/csm" element={<PrivateRoute vertical="datacenter"><CSMDashboard /></PrivateRoute>} />
+        <Route path="/vpcs" element={<PrivateRoute vertical="datacenter"><VPCSDashboard /></PrivateRoute>} />
+        <Route path="/ops" element={<PrivateRoute vertical="datacenter"><CSOpsIntegrationDashboard /></PrivateRoute>} />
+        <Route path="/sales" element={<PrivateRoute vertical="datacenter"><AESalesDashboard /></PrivateRoute>} />
+
         {/* Data Center Dashboard - Legacy (keep for backward compatibility) */}
         <Route
           path="/dc-dashboard-legacy"
