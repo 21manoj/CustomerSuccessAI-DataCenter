@@ -39,7 +39,7 @@ def _filter_user_accounts(accounts_data, key='account_id'):
         user_restrictions = getattr(current_user, 'allowed_account_ids', None)
         if user_restrictions is None:
             return accounts_data
-        allowed = set(user_restrictions)
+        allowed = set(int(x) for x in user_restrictions)
         result = []
         for item in accounts_data:
             acct_id = item.get(key) if isinstance(item, dict) else getattr(item, key, None)
