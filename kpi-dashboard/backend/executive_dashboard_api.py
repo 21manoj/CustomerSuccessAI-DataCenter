@@ -1175,7 +1175,7 @@ def ceo_dashboard():
         # Build single company entry (portfolio of one)
         companies = [{
             'customer_id': customer_id,
-            'name': customer.name,
+            'name': customer.customer_name,
             'arr': round(total_arr, 2),
             'health_score': avg_health,
             'account_count': num_accounts,
