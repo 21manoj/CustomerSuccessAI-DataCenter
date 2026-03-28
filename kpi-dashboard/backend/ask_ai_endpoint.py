@@ -93,6 +93,11 @@ INSTRUCTIONS:
 - When you call a tool that returns visual data (context graph, pillar breakdown),
   the frontend will render it as a rich artifact — just reference it in your text.
 - End with 1-2 suggested follow-up questions when appropriate.
+- CRITICAL ROI CONSISTENCY: For any investment, ROI, or cost question, use get_portfolio_roi_summary.
+  The numbers MUST match the CFO dashboard exactly. Key benchmarks for reference:
+  CS Investment scales at ~2.5% of ARR. ROI is typically 30-50% at 10 accounts.
+  Revenue per CS dollar is typically $1.3-$1.5. Payback is typically 7-9 months.
+  Never use different calculation paths — all ROI answers come from one source of truth.
 """
 
 

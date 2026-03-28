@@ -736,31 +736,45 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         }
 
     elif tool_name == 'get_portfolio_roi_summary':
-        # REAL: calls outcome_roi_engine for portfolio-level ROI story
+        # Use the SAME calculation as the CFO dashboard for consistency
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue or 0) for a in accounts)
         try:
-            from outcome_roi_api import _extract_historical_actuals
-            metric_actuals = _extract_historical_actuals(customer_id)
-        except Exception:
-            metric_actuals = {}
-        try:
-            from outcome_roi_engine import calculate_outcome_story, _result_to_dict
-            result = calculate_outcome_story(
-                customer_id=customer_id,
-                account_arr=total_arr,
-                metric_actuals=metric_actuals,
-                target_improvement_pct=1.0,
-                projection_months=6,
+            from executive_dashboard_api import (
+                _get_po1_benchmark_investment,
+                _get_po1_benchmark_metrics,
             )
-            d = _result_to_dict(result) if not isinstance(result, dict) else result
-            d['scope'] = 'portfolio'
-            d['customer_id'] = customer_id
-            d['total_arr'] = total_arr
-            d['account_count'] = len(accounts)
-            return d
+            investment = _get_po1_benchmark_investment(total_arr)
+            po1_metrics = _get_po1_benchmark_metrics(total_arr)
+            total_impact = sum(m.get('dollar_impact', 0) for m in po1_metrics)
+            roi_pct = round((total_impact - investment) / investment * 100) if investment > 0 else 0
+            payback_months = round(investment / (total_impact / 12), 1) if total_impact > 0 else 0
+
+            return {
+                'scope': 'portfolio',
+                'customer_id': customer_id,
+                'total_arr': total_arr,
+                'account_count': len(accounts),
+                'cs_investment': investment,
+                'cs_investment_label': 'Power-of-1 benchmark estimate (TSIA, Gainsight, KeyBanc)',
+                'projected_impact': total_impact,
+                'roi_pct': roi_pct,
+                'roi_per_dollar': round(total_impact / investment, 2) if investment > 0 else 0,
+                'payback_months': payback_months,
+                'cs_pct_of_arr': round(investment / total_arr * 100, 2) if total_arr > 0 else 0,
+                'metrics': [{
+                    'metric': m['display_name'],
+                    'baseline': m['baseline'],
+                    'projected': m['current'],
+                    'improvement': '1.0%',
+                    'dollar_impact': m['dollar_impact'],
+                } for m in po1_metrics],
+                'note': 'All figures are Power-of-1 benchmark projections. '
+                        'A 1% improvement across all metrics yields the projected impact. '
+                        'These numbers match the CFO Investment Intelligence dashboard exactly.',
+            }
         except Exception as e:
-            logger.warning(f"Portfolio ROI failed: {e}")
+            logger.warning(f"Portfolio ROI (CFO-aligned) failed: {e}")
             return {"error": f"Portfolio ROI calculation failed: {str(e)}"}
 
     else:
