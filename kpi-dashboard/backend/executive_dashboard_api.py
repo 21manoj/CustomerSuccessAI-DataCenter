@@ -1094,14 +1094,18 @@ def ceo_dashboard():
             return jsonify({'error': 'Customer not found'}), 404
 
         # Check if customer belongs to a portfolio
-        membership = PortfolioMembership.query.filter_by(customer_id=customer_id).first()
-        if membership:
-            # Has portfolio — return portfolio_id so frontend can call portfolio API
-            return jsonify({
-                'status': 'success',
-                'mode': 'portfolio',
-                'portfolio_id': membership.portfolio_id,
-            })
+        try:
+            membership = PortfolioMembership.query.filter_by(customer_id=customer_id).first()
+            if membership:
+                # Has portfolio — return portfolio_id so frontend can call portfolio API
+                return jsonify({
+                    'status': 'success',
+                    'mode': 'portfolio',
+                    'portfolio_id': membership.portfolio_id,
+                })
+        except Exception:
+            # Table may not exist yet — fall through to single-customer mode
+            pass
 
         # ── Single-customer fallback: "portfolio of one" ──
         accounts = Account.query.filter_by(customer_id=customer_id).all()
