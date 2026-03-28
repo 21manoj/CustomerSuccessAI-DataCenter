@@ -2,7 +2,7 @@
 """
 CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
 
-7 tools moved from cs_pulse_mcp_server.py:
+8 tools moved from cs_pulse_mcp_server.py:
   - get_revenue_at_risk
   - get_causal_chain
   - get_graph_summary
@@ -10,6 +10,7 @@ CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
   - get_account_journey_timeline
   - get_context_graph_mermaid
   - get_stakeholder_map
+  - get_health_score_history
 
 All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
@@ -619,4 +620,167 @@ def get_stakeholder_map(customer_id: int, account_id: int) -> dict:
                 f"{total_outcomes} outcome links, "
                 f"{_format_revenue_short(total_revenue)} total revenue influenced"
             ),
+        }
+
+
+# ---------------------------------------------------------------------------
+# Tool 8: Health Score History
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def get_health_score_history(
+    customer_id: int,
+    account_id: int = 0,
+    months: int = 6,
+) -> dict:
+    """Get monthly health score history for an account or the full portfolio.
+
+    Returns chronological health scores with pillar breakdowns, trends,
+    and threshold crossings (healthy↔at_risk↔critical transitions).
+    Use for: "which accounts deteriorated?", "show me the health trajectory",
+    "any turnaround stories?", "predict NRR from health trends".
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: Specific account (0 = all accounts in portfolio)
+        months: How many months of history (default 6, max 12)
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import HealthScore, Account, db
+        from datetime import datetime, timedelta
+        import utils.health_thresholds as ht
+
+        months = min(max(months, 1), 12)
+        cutoff = datetime.utcnow() - timedelta(days=months * 31)
+
+        if account_id and account_id != 0:
+            _validate_account_ownership(customer_id, account_id)
+            accounts = [Account.query.filter_by(
+                account_id=account_id, customer_id=customer_id
+            ).first()]
+            if not accounts[0]:
+                raise ToolError(f"Account {account_id} not found")
+        else:
+            accounts = Account.query.filter_by(customer_id=customer_id).all()
+
+        if not accounts:
+            raise ToolError(f"No accounts found for customer {customer_id}")
+
+        portfolio_history = []
+        transitions = []
+
+        for acct in accounts:
+            scores = (
+                HealthScore.query
+                .filter(
+                    HealthScore.account_id == acct.account_id,
+                    HealthScore.measurement_month >= cutoff,
+                )
+                .order_by(HealthScore.measurement_month.asc())
+                .all()
+            )
+
+            if not scores:
+                continue
+
+            monthly = []
+            prev_status = None
+            for s in scores:
+                score_val = float(s.health_score) if s.health_score else 0
+                status = ht.classify(score_val)
+                change = float(s.change_from_last_month) if s.change_from_last_month else 0
+
+                entry = {
+                    "month": s.measurement_month.strftime("%Y-%m"),
+                    "health_score": round(score_val, 1),
+                    "status": status,
+                    "trend": s.trend or "stable",
+                    "change": round(change, 1),
+                    "pillars": s.contributing_pillars or {},
+                }
+                monthly.append(entry)
+
+                # Detect threshold crossings
+                if prev_status and prev_status != status:
+                    transitions.append({
+                        "account_id": acct.account_id,
+                        "account_name": acct.account_name,
+                        "month": s.measurement_month.strftime("%Y-%m"),
+                        "from_status": prev_status,
+                        "to_status": status,
+                        "score": round(score_val, 1),
+                        "arr": float(acct.revenue or 0),
+                    })
+                prev_status = status
+
+            if monthly:
+                first_score = monthly[0]["health_score"]
+                last_score = monthly[-1]["health_score"]
+                portfolio_history.append({
+                    "account_id": acct.account_id,
+                    "account_name": acct.account_name,
+                    "arr": float(acct.revenue or 0),
+                    "current_health": last_score,
+                    "current_status": monthly[-1]["status"],
+                    "starting_health": first_score,
+                    "starting_status": monthly[0]["status"],
+                    "net_change": round(last_score - first_score, 1),
+                    "trajectory": (
+                        "improving" if last_score - first_score > 5
+                        else "declining" if last_score - first_score < -5
+                        else "stable"
+                    ),
+                    "monthly_scores": monthly,
+                })
+
+        # Sort by net change (worst deterioration first)
+        portfolio_history.sort(key=lambda x: x["net_change"])
+
+        # Compute summary
+        improving = [a for a in portfolio_history if a["trajectory"] == "improving"]
+        declining = [a for a in portfolio_history if a["trajectory"] == "declining"]
+        stable = [a for a in portfolio_history if a["trajectory"] == "stable"]
+
+        # Turnaround stories: started critical/at_risk, now healthy
+        turnarounds = [
+            a for a in portfolio_history
+            if a["starting_status"] in ("critical", "at_risk") and a["current_status"] == "healthy"
+        ]
+
+        # Deterioration stories: started healthy, now critical/at_risk
+        deteriorations = [
+            a for a in portfolio_history
+            if a["starting_status"] == "healthy" and a["current_status"] in ("critical", "at_risk")
+        ]
+
+        return {
+            "customer_id": customer_id,
+            "months": months,
+            "account_count": len(portfolio_history),
+            "summary": {
+                "improving": len(improving),
+                "declining": len(declining),
+                "stable": len(stable),
+                "turnaround_stories": len(turnarounds),
+                "deterioration_stories": len(deteriorations),
+                "threshold_crossings": len(transitions),
+            },
+            "turnarounds": [
+                {"account": a["account_name"], "arr": _format_revenue_short(a["arr"]),
+                 "from": a["starting_status"], "to": a["current_status"],
+                 "change": f"+{a['net_change']}"}
+                for a in turnarounds
+            ],
+            "deteriorations": [
+                {"account": a["account_name"], "arr": _format_revenue_short(a["arr"]),
+                 "from": a["starting_status"], "to": a["current_status"],
+                 "change": str(a["net_change"])}
+                for a in deteriorations
+            ],
+            "transitions": transitions,
+            "accounts": portfolio_history,
         }
