@@ -101,6 +101,19 @@ interface ActivityEntry {
 
 const BASE = '/api/admin-ui';
 
+/** Format a UTC timestamp (from backend) to local timezone display.
+ *  Backend returns naive ISO strings without 'Z' — append Z to force UTC interpretation. */
+function fmtDate(dateStr: string | null, includeTime = true): string {
+  if (!dateStr) return '—';
+  // Append Z if missing to force UTC interpretation
+  const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+  const d = new Date(utcStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return includeTime
+    ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const baseUrl = getApiBaseUrl();
   const resp = await fetch(`${baseUrl}${BASE}${path}`, {
@@ -368,7 +381,7 @@ const SuperAdminConsole: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 text-gray-400">{c.account_count}</td>
                         <td className="px-4 py-3 text-gray-400">{c.user_count}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(c.created_at, false)}</td>
                         <td className="px-4 py-3">
                           <button onClick={() => loadCustomerDetail(c.customer_id)} className="text-xs text-blue-400 hover:text-blue-300">
                             View
@@ -431,7 +444,7 @@ const SuperAdminConsole: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 text-gray-400">{c.account_count}</td>
                         <td className="px-4 py-3 text-gray-400">{c.user_count}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(c.created_at, false)}</td>
                         <td className="px-4 py-3">
                           <button className="text-xs text-blue-400 hover:text-blue-300">View</button>
                         </td>
@@ -474,7 +487,7 @@ const SuperAdminConsole: React.FC = () => {
                     <p><span className="text-gray-500">Domain:</span> <span className="text-gray-300">{selectedCustomer.customer.domain || '—'}</span></p>
                     <p><span className="text-gray-500">Vertical:</span> <span className="text-gray-300">{selectedCustomer.customer.vertical}</span></p>
                     <p><span className="text-gray-500">UUID:</span> <span className="text-gray-400 font-mono text-xs">{selectedCustomer.customer.uuid || '—'}</span></p>
-                    <p><span className="text-gray-500">Created:</span> <span className="text-gray-300">{selectedCustomer.customer.created_at ? new Date(selectedCustomer.customer.created_at).toLocaleDateString() : '—'}</span></p>
+                    <p><span className="text-gray-500">Created:</span> <span className="text-gray-300">{fmtDate(selectedCustomer.customer.created_at, false)}</span></p>
                   </div>
                 </div>
 
@@ -582,7 +595,7 @@ const SuperAdminConsole: React.FC = () => {
                               {u.active ? 'Active' : 'Inactive'}
                             </span>
                           </td>
-                          <td className="px-4 py-2 text-gray-500 text-xs">{u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}</td>
+                          <td className="px-4 py-2 text-gray-500 text-xs">{fmtDate(u.last_login)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -630,7 +643,7 @@ const SuperAdminConsole: React.FC = () => {
                               {k.is_active ? 'Active' : 'Revoked'}
                             </span>
                           </td>
-                          <td className="px-4 py-2 text-gray-500 text-xs">{k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'Never'}</td>
+                          <td className="px-4 py-2 text-gray-500 text-xs">{fmtDate(k.expires_at, false)}</td>
                           <td className="px-4 py-2">
                             {k.is_active && (
                               <span className="text-xs text-gray-600 font-mono" title="Full MCP URL shown at key creation time">
@@ -777,7 +790,7 @@ const SuperAdminConsole: React.FC = () => {
                     {activityLog.map((entry) => (
                       <tr key={entry.id} className="border-b border-gray-800/50">
                         <td className="px-4 py-2 text-gray-500 text-xs whitespace-nowrap">
-                          {entry.created_at ? new Date(entry.created_at).toLocaleString() : '—'}
+                          {fmtDate(entry.created_at)}
                         </td>
                         <td className="px-4 py-2">
                           <span className="px-2 py-0.5 bg-gray-800 rounded text-xs text-gray-300">{entry.action_type}</span>
