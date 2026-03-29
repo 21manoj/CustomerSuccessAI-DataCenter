@@ -335,7 +335,7 @@ class PatternAnalyzer:
                 if from_phase != to_phase:
                     key = f"{from_phase}→{to_phase}"
                     transitions[key]['count'] += 1
-                    transitions[key]['total_weeks'] += (events[i+1]['week_number'] - events[i]['week_number'])
+                    transitions[key]['total_weeks'] += (events[i+1].get('week_number', events[i+1].get('week', 0)) - events[i].get('week_number', events[i].get('week', 0)))
         
         # Convert to probabilities
         phase_counts = defaultdict(int)
