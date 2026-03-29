@@ -487,13 +487,35 @@ def extract_features(account_id: int, db_session) -> dict:
 
 def detect_phase(features: dict, arc_type: str) -> str:
     """
-    Determine whether this account is in 'baseline' (pre-intervention) or
-    'intervention' (active recovery) phase.
+    Determine which of 4 phases the account is in, based on health score,
+    trajectory slope, and signal composition.
 
-    Intervention if health is improving meaningfully AND is above the crisis floor.
+    4-Phase Model (maps to NRR Death Spiral):
+      Phase 1 — Baseline:       Healthy, stable. No action needed.
+      Phase 2 — Deterioration:  Early warning signs, KPIs declining.
+      Phase 3 — Intervention:   Critical, CSM actively engaged.
+      Phase 4 — Resolution:     Recovering from crisis OR confirmed churn.
+
+    Falls back to legacy 2-phase labels ('baseline'/'intervention') for arcs
+    that haven't been updated to 4-phase format yet.
     """
-    if features['slope_30d'] > 2 and features['health_now'] > 55:
+    health = features['health_now']
+    slope = features['slope_30d']
+
+    # Phase 4 — Resolution: recovering from crisis, health rebuilding
+    # Must check first: an improving account above crisis floor
+    if health >= 55 and slope > 3:
+        return 'resolution'
+
+    # Phase 3 — Intervention: in crisis or just starting recovery
+    if health < 50:
         return 'intervention'
+
+    # Phase 2 — Deterioration: declining, early warning zone
+    if slope < -1 and health < 75:
+        return 'deterioration'
+
+    # Phase 1 — Baseline: healthy and stable
     return 'baseline'
 
 
