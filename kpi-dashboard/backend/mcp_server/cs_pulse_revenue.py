@@ -518,3 +518,72 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
             "portfolio_name": portfolio.portfolio_name,
             "comparisons": comparisons,
         }
+
+
+# ===================================================================
+# Tool: get_nrr_forecast
+# ===================================================================
+
+@mcp.tool
+def get_nrr_forecast(customer_id: int) -> dict:
+    """Get portfolio NRR forecast based on Wizard B pattern-to-NRR correlations.
+
+    Shows current projected NRR (revenue-weighted across all accounts by arc
+    pattern), plus a what-if simulation: "If playbooks executed on at-risk
+    accounts, NRR improves from X% to Y%, protecting $Z ARR."
+
+    Requires Wizard B to have run with NRR intelligence enabled.
+    Falls back to a live calculation if no cached forecast exists.
+
+    Args:
+        customer_id: The customer (tenant) ID
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import WizardLearning
+
+        # Try cached forecast from most recent Wizard B run
+        learning = (
+            WizardLearning.query
+            .filter_by(customer_id=customer_id, is_active=True)
+            .order_by(WizardLearning.created_at.desc())
+            .first()
+        )
+
+        if learning and learning.learnings:
+            cached = learning.learnings.get('portfolio_nrr_forecast')
+            if cached and cached.get('current_nrr_pct'):
+                cached['source'] = 'wizard_b_cached'
+                cached['wizard_learning_version'] = learning.version
+                return cached
+
+        # No cached forecast — run live from journey data
+        import sys as _sys
+        from pathlib import Path
+        _wb_dir = str(Path(__file__).parent.parent / 'verticals' / '_template' / 'journey' / 'wizard_b')
+        if _wb_dir not in _sys.path:
+            _sys.path.insert(0, _wb_dir)
+
+        from wizard_b_pattern_analyzer import PatternAnalyzer
+
+        try:
+            analyzer = PatternAnalyzer.from_database(customer_id)
+        except ValueError:
+            raise ToolError(
+                f"No journey data for customer {customer_id}. "
+                "Run Wizard A (process-data) then Wizard B first."
+            )
+
+        analyzer.analyze_patterns()
+
+        if analyzer.portfolio_nrr_forecast:
+            result = analyzer.portfolio_nrr_forecast
+            result['source'] = 'live_calculation'
+            return result
+
+        raise ToolError(
+            f"NRR forecast unavailable for customer {customer_id}. "
+            "Ensure accounts have ARR data and context graph outcomes."
+        )

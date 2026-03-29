@@ -59,6 +59,13 @@ class PatternProfile:
     financial_impact: str
     early_warning_signals: List[Dict]
     success_factors: List[str]
+    # ── NRR Intelligence (Step 1) ──
+    avg_nrr_impact: float = 1.0           # avg NRR contribution (1.0 = flat, 0.87 = 13% contraction)
+    total_arr_exposed: float = 0.0        # total ARR across accounts in this pattern
+    avg_revenue_protected: float = 0.0    # avg $ protected per account
+    avg_revenue_lost: float = 0.0         # avg $ lost per account
+    avg_revenue_expanded: float = 0.0     # avg $ expanded per account
+    intervention_success_rate: float = 0.0  # % of accounts where health improved post-intervention
 
 
 @dataclass
@@ -104,6 +111,7 @@ class PatternAnalyzer:
             wizard_run_dir: Path to wizard run output (optional, not needed for DB mode).
         """
         self.run_dir = Path(wizard_run_dir) if wizard_run_dir else None
+        self.customer_id: Optional[int] = None
         self.journeys: List[Dict] = []
         self.kpis = pd.DataFrame()
         self.milestones: list = []
@@ -112,6 +120,8 @@ class PatternAnalyzer:
         self.pattern_profiles: Dict[str, PatternProfile] = {}
         self.transition_matrix: Dict[str, TransitionProbability] = {}
         self.early_warning_rules: List[EarlyWarningRule] = []
+        self.nrr_correlations: Dict[str, Dict] = {}  # pattern → NRR metrics
+        self.portfolio_nrr_forecast: Optional[Dict] = None
 
         if self.run_dir:
             print(f"🔍 Pattern Analyzer initialized for: {self.run_dir.name}")
@@ -144,6 +154,7 @@ class PatternAnalyzer:
             )
 
         analyzer = cls()
+        analyzer.customer_id = customer_id
         for row in rows:
             journey = row.journey_json
             # Normalise the field name: DB may store 'pattern' while
@@ -222,9 +233,20 @@ class PatternAnalyzer:
         print("\n4️⃣  Extracting success factors...")
         self.extract_success_factors()
 
-        # 5. Optionally save to filesystem (legacy CLI mode)
+        # 5. NRR correlation (requires DB context)
+        if self.customer_id is not None:
+            print("\n5️⃣  Correlating patterns to NRR impact...")
+            self.correlate_nrr_impact()
+
+            # 6. Portfolio NRR forecast
+            print("\n6️⃣  Forecasting portfolio NRR...")
+            self.forecast_portfolio_nrr()
+        else:
+            print("\n5️⃣  Skipping NRR correlation (no customer_id — filesystem mode)")
+
+        # 7. Optionally save to filesystem (legacy CLI mode)
         if auto_save and self.run_dir:
-            print("\n5️⃣  Generating outputs...")
+            print("\n7️⃣  Generating outputs...")
             self.save_results()
 
         print("\n" + "="*70)
@@ -429,9 +451,232 @@ class PatternAnalyzer:
                 print(f"   ✅ {factor}")
     
     # ========================================================================
+    # NRR INTELLIGENCE (Steps 1-2)
+    # ========================================================================
+
+    def correlate_nrr_impact(self):
+        """
+        Step 1: Correlate each arc pattern with its NRR impact.
+
+        For each pattern group, joins account ARR + context graph OUTCOME
+        revenue to compute what NRR contribution that pattern produces.
+
+        Populates:
+          - self.nrr_correlations  (dict: pattern → NRR metrics)
+          - PatternProfile NRR fields on each profile
+        """
+        from models import Account, ContextNode
+        from extensions import db
+
+        if not self.customer_id:
+            return
+
+        # Load account ARR map: account_id → revenue (float)
+        accounts = Account.query.filter_by(customer_id=self.customer_id).all()
+        arr_map = {a.account_id: float(a.revenue or 0) for a in accounts}
+
+        # Load OUTCOME revenue per account: account_id → {protected, expansion, lost}
+        outcome_nodes = (
+            ContextNode.query
+            .filter(
+                ContextNode.customer_id == self.customer_id,
+                ContextNode.node_type == 'OUTCOME',
+                ContextNode.revenue_impact.isnot(None),
+            )
+            .all()
+        )
+        revenue_by_account: Dict[int, Dict[str, float]] = defaultdict(
+            lambda: {'protected': 0.0, 'expansion': 0.0, 'lost': 0.0}
+        )
+        for n in outcome_nodes:
+            impact = abs(float(n.revenue_impact or 0)) * float(n.confidence or 1.0)
+            bucket = n.revenue_impact_type or 'expansion'
+            if bucket in ('protected', 'expansion', 'lost'):
+                revenue_by_account[n.account_id][bucket] += impact
+
+        # Group journeys by pattern and compute NRR per group
+        patterns = defaultdict(list)
+        for journey in self.journeys:
+            patterns[journey['pattern_type']].append(journey)
+
+        for pattern_type, journeys in patterns.items():
+            total_arr = 0.0
+            total_protected = 0.0
+            total_expansion = 0.0
+            total_lost = 0.0
+            intervention_successes = 0
+
+            for j in journeys:
+                aid = j.get('account_id', 0)
+                arr = arr_map.get(aid, 0)
+                total_arr += arr
+
+                rev = revenue_by_account.get(aid, {})
+                total_protected += rev.get('protected', 0)
+                total_expansion += rev.get('expansion', 0)
+                total_lost += rev.get('lost', 0)
+
+                # Intervention success: health improved from lowest to ending
+                if j['ending_health'] > j['lowest_health'] + 5:
+                    intervention_successes += 1
+
+            n = len(journeys)
+            # NRR = (retained ARR + expansion - contraction) / starting ARR
+            if total_arr > 0:
+                net_revenue = total_arr + total_expansion + total_protected - total_lost
+                avg_nrr = net_revenue / total_arr
+            else:
+                avg_nrr = 1.0
+
+            nrr_data = {
+                'avg_nrr': round(avg_nrr, 4),
+                'total_arr_exposed': round(total_arr, 2),
+                'avg_revenue_protected': round(total_protected / n, 2) if n else 0,
+                'avg_revenue_lost': round(total_lost / n, 2) if n else 0,
+                'avg_revenue_expanded': round(total_expansion / n, 2) if n else 0,
+                'intervention_success_rate': round(intervention_successes / n, 4) if n else 0,
+                'n_accounts': n,
+            }
+            self.nrr_correlations[pattern_type] = nrr_data
+
+            # Update PatternProfile with NRR fields
+            if pattern_type in self.pattern_profiles:
+                p = self.pattern_profiles[pattern_type]
+                p.avg_nrr_impact = nrr_data['avg_nrr']
+                p.total_arr_exposed = nrr_data['total_arr_exposed']
+                p.avg_revenue_protected = nrr_data['avg_revenue_protected']
+                p.avg_revenue_lost = nrr_data['avg_revenue_lost']
+                p.avg_revenue_expanded = nrr_data['avg_revenue_expanded']
+                p.intervention_success_rate = nrr_data['intervention_success_rate']
+
+            # Log
+            nrr_pct = f"{avg_nrr * 100:.1f}%"
+            print(f"   {pattern_type:25s}  NRR={nrr_pct:>7s}  ARR=${total_arr:>12,.0f}  "
+                  f"protected=${total_protected:>10,.0f}  lost=${total_lost:>10,.0f}  "
+                  f"expansion=${total_expansion:>10,.0f}")
+
+    def forecast_portfolio_nrr(self):
+        """
+        Step 2: Revenue-weighted NRR forecast for the entire portfolio.
+
+        Uses the per-pattern NRR correlations (from Step 1) to project
+        portfolio-level NRR, plus a what-if simulation showing the impact
+        of executing playbooks on at-risk accounts.
+
+        Populates self.portfolio_nrr_forecast dict.
+        """
+        if not self.nrr_correlations:
+            return
+
+        from models import Account
+        arr_map = {
+            a.account_id: float(a.revenue or 0)
+            for a in Account.query.filter_by(customer_id=self.customer_id).all()
+        }
+
+        # Build per-account forecast
+        account_forecasts = []
+        total_arr = 0.0
+        weighted_nrr_sum = 0.0
+
+        patterns = defaultdict(list)
+        for j in self.journeys:
+            patterns[j['pattern_type']].append(j)
+
+        for pattern_type, journeys in patterns.items():
+            corr = self.nrr_correlations.get(pattern_type, {})
+            pattern_nrr = corr.get('avg_nrr', 1.0)
+            intervention_rate = corr.get('intervention_success_rate', 0.0)
+
+            for j in journeys:
+                aid = j.get('account_id', 0)
+                arr = arr_map.get(aid, 0)
+                total_arr += arr
+                weighted_nrr_sum += arr * pattern_nrr
+
+                account_forecasts.append({
+                    'account_id': aid,
+                    'account_name': j.get('account_name', f'Account {aid}'),
+                    'arr': arr,
+                    'pattern': pattern_type,
+                    'current_nrr': pattern_nrr,
+                    'health_start': j.get('starting_health', 0),
+                    'health_end': j.get('ending_health', 0),
+                    'intervention_success_rate': intervention_rate,
+                })
+
+        # Current portfolio NRR (revenue-weighted)
+        current_nrr = weighted_nrr_sum / total_arr if total_arr > 0 else 1.0
+
+        # What-if simulation: intervene on all at-risk patterns
+        # At-risk = patterns with avg_nrr < 1.0
+        # Assumption: successful intervention brings NRR to 1.0 (flat retention)
+        intervention_nrr_sum = 0.0
+        total_intervention_arr = 0.0
+        top_interventions = []
+
+        for acct in account_forecasts:
+            if acct['current_nrr'] < 1.0:
+                # This account is dragging NRR down
+                success_rate = acct['intervention_success_rate']
+                # Expected NRR after intervention:
+                # success_rate chance of going to 1.0, (1-success_rate) stays at current
+                intervened_nrr = (success_rate * 1.0) + ((1 - success_rate) * acct['current_nrr'])
+                intervention_nrr_sum += acct['arr'] * intervened_nrr
+                total_intervention_arr += acct['arr']
+
+                projected_save = acct['arr'] * (intervened_nrr - acct['current_nrr'])
+                top_interventions.append({
+                    'account_id': acct['account_id'],
+                    'account_name': acct['account_name'],
+                    'arr': acct['arr'],
+                    'pattern': acct['pattern'],
+                    'current_nrr': round(acct['current_nrr'] * 100, 1),
+                    'projected_nrr': round(intervened_nrr * 100, 1),
+                    'projected_save': round(projected_save, 2),
+                })
+            else:
+                intervention_nrr_sum += acct['arr'] * acct['current_nrr']
+
+        with_interventions_nrr = intervention_nrr_sum / total_arr if total_arr > 0 else 1.0
+        delta_arr = (with_interventions_nrr - current_nrr) * total_arr
+
+        # Sort top interventions by projected save (descending)
+        top_interventions.sort(key=lambda x: x['projected_save'], reverse=True)
+
+        # Pattern breakdown (aggregated)
+        pattern_breakdown = []
+        for pattern_type, corr in self.nrr_correlations.items():
+            pattern_breakdown.append({
+                'pattern': pattern_type,
+                'accounts': corr['n_accounts'],
+                'arr': corr['total_arr_exposed'],
+                'nrr_pct': round(corr['avg_nrr'] * 100, 1),
+                'intervention_success_rate': round(corr['intervention_success_rate'] * 100, 1),
+            })
+        pattern_breakdown.sort(key=lambda x: x['nrr_pct'])
+
+        self.portfolio_nrr_forecast = {
+            'current_nrr_pct': round(current_nrr * 100, 2),
+            'with_interventions_nrr_pct': round(with_interventions_nrr * 100, 2),
+            'delta_arr': round(delta_arr, 2),
+            'total_arr': round(total_arr, 2),
+            'total_accounts': len(account_forecasts),
+            'at_risk_accounts': len(top_interventions),
+            'at_risk_arr': round(total_intervention_arr, 2),
+            'pattern_breakdown': pattern_breakdown,
+            'top_interventions': top_interventions[:10],  # top 10 by impact
+        }
+
+        print(f"\n   Portfolio NRR: {current_nrr * 100:.1f}% → {with_interventions_nrr * 100:.1f}% "
+              f"(+${delta_arr:,.0f} if interventions succeed)")
+        print(f"   At-risk accounts: {len(top_interventions)} / {len(account_forecasts)} "
+              f"(${total_intervention_arr:,.0f} ARR)")
+
+    # ========================================================================
     # OUTPUT GENERATION
     # ========================================================================
-    
+
     def save_results(self):
         """Save analysis results to JSON files"""
         
@@ -550,6 +795,8 @@ class PatternAnalyzer:
             'early_warning_rules': [
                 asdict(r) for r in self.early_warning_rules
             ],
+            'nrr_correlations': self.nrr_correlations or {},
+            'portfolio_nrr_forecast': self.portfolio_nrr_forecast or {},
         }
 
         # 3. Build validation_rules (early warning rules in usable form)
@@ -623,6 +870,42 @@ class PatternAnalyzer:
             lines.append(f"- **Predicted Outcome:** {rule.predicted_outcome}")
             lines.append(f"- **Lead Time:** {rule.lead_time_weeks} weeks")
             lines.append(f"- **Confidence:** {rule.confidence:.1%}\n")
+
+        # NRR Intelligence section
+        if self.nrr_correlations:
+            lines.append("## NRR Intelligence\n")
+            lines.append("### Pattern-to-NRR Correlations\n")
+            lines.append("| Pattern | NRR | ARR Exposed | Protected | Lost | Intervention Rate |")
+            lines.append("|---------|-----|-------------|-----------|------|-------------------|")
+            for pattern, data in sorted(self.nrr_correlations.items(),
+                                         key=lambda x: x[1].get('avg_nrr', 1)):
+                nrr = f"{data.get('avg_nrr', 1) * 100:.1f}%"
+                arr = f"${data.get('total_arr_exposed', 0):,.0f}"
+                prot = f"${data.get('avg_revenue_protected', 0):,.0f}"
+                lost = f"${data.get('avg_revenue_lost', 0):,.0f}"
+                intv = f"{data.get('intervention_success_rate', 0) * 100:.0f}%"
+                lines.append(f"| {pattern} | {nrr} | {arr} | {prot} | {lost} | {intv} |")
+            lines.append("")
+
+        if self.portfolio_nrr_forecast:
+            f = self.portfolio_nrr_forecast
+            lines.append("### Portfolio NRR Forecast\n")
+            lines.append(f"- **Current Projected NRR:** {f.get('current_nrr_pct', 0):.1f}%")
+            lines.append(f"- **With Interventions:** {f.get('with_interventions_nrr_pct', 0):.1f}%")
+            lines.append(f"- **Delta ARR:** ${f.get('delta_arr', 0):,.0f}")
+            lines.append(f"- **At-Risk Accounts:** {f.get('at_risk_accounts', 0)} / {f.get('total_accounts', 0)}")
+            lines.append(f"- **At-Risk ARR:** ${f.get('at_risk_arr', 0):,.0f}\n")
+
+            if f.get('top_interventions'):
+                lines.append("### Top Intervention Opportunities\n")
+                lines.append("| Account | ARR | Pattern | Current NRR | Projected NRR | Projected Save |")
+                lines.append("|---------|-----|---------|-------------|---------------|----------------|")
+                for t in f['top_interventions'][:5]:
+                    lines.append(
+                        f"| {t['account_name']} | ${t['arr']:,.0f} | {t['pattern']} | "
+                        f"{t['current_nrr']}% | {t['projected_nrr']}% | ${t['projected_save']:,.0f} |"
+                    )
+                lines.append("")
 
         return "\n".join(lines)
 

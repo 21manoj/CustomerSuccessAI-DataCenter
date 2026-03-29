@@ -48,6 +48,25 @@ def run_wizard_b(customer_id: int) -> dict:
                 'avg_ending_health': round(v.get('avg_ending_health', 0), 1),
             }
 
+    # NRR intelligence summary
+    nrr_summary = {}
+    if analyzer.nrr_correlations:
+        nrr_summary['correlations'] = {
+            k: {
+                'avg_nrr_pct': round(v.get('avg_nrr', 1.0) * 100, 1),
+                'arr_exposed': round(v.get('total_arr_exposed', 0)),
+                'intervention_success_pct': round(v.get('intervention_success_rate', 0) * 100, 1),
+            }
+            for k, v in analyzer.nrr_correlations.items()
+        }
+    if analyzer.portfolio_nrr_forecast:
+        nrr_summary['forecast'] = {
+            'current_nrr_pct': analyzer.portfolio_nrr_forecast.get('current_nrr_pct'),
+            'with_interventions_nrr_pct': analyzer.portfolio_nrr_forecast.get('with_interventions_nrr_pct'),
+            'delta_arr': analyzer.portfolio_nrr_forecast.get('delta_arr'),
+            'at_risk_accounts': analyzer.portfolio_nrr_forecast.get('at_risk_accounts'),
+        }
+
     return {
         'status': 'completed',
         'total_patterns': len(analyzer.pattern_profiles),
@@ -55,4 +74,5 @@ def run_wizard_b(customer_id: int) -> dict:
         'total_warnings': len(analyzer.early_warning_rules),
         'total_journeys': len(analyzer.journeys),
         'pattern_profiles': pattern_summary,
+        'nrr_intelligence': nrr_summary,
     }
