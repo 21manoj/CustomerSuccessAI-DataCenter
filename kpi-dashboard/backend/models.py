@@ -439,6 +439,90 @@ class PlaybookExecution(db.Model):
         db.Index('idx_status', 'status'),
     )
 
+class PlaybookExecutionV2(db.Model):
+    """
+    Realized ROI Tracker — tracks actual CSM investment + measured health outcomes
+    per playbook execution. Used by the playbook skill framework (Claude Skills)
+    to close the loop from projected ROI (Power-of-1 benchmarks) to actual ROI.
+
+    Investment side: CSM hours, automation hours, total cost
+    Outcome side: health_before → health_after, revenue protected/expanded, NRR delta
+    """
+    __tablename__ = 'playbook_executions_v2'
+
+    id = db.Column(db.Integer, primary_key=True)
+    execution_id = db.Column(db.String(60), nullable=False, unique=True, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
+
+    # Playbook identity
+    playbook_id = db.Column(db.String(50), nullable=False, index=True)  # PB-DC-01, PB-02, etc.
+    playbook_name = db.Column(db.String(200))
+    skill_name = db.Column(db.String(200))  # Claude Skill name that executed it
+
+    # Trigger context
+    triggered_by = db.Column(db.String(50))  # 'csm_manual', 'signal_analyst', 'wizard_a', 'health_drop'
+    trigger_signal_id = db.Column(db.Integer, nullable=True)  # ContextNode ID of triggering signal
+    arc_type = db.Column(db.String(50), nullable=True)  # Arc classification at trigger time
+    lifecycle_stage = db.Column(db.String(50), nullable=True)  # Account lifecycle stage at trigger time
+
+    # Execution status
+    status = db.Column(db.String(20), default='in_progress')  # in_progress, completed, failed, cancelled
+    phase = db.Column(db.String(20), default='stabilize')  # stabilize (0-30d), rebuild (31-60d), secure (61-90d)
+
+    # ── INVESTMENT SIDE ──
+    csm_hours_planned = db.Column(db.Float, default=0)  # Planned CSM hours from action plan
+    csm_hours_actual = db.Column(db.Float, default=0)  # Actual CSM hours logged
+    automation_hours = db.Column(db.Float, default=0)  # Hours saved by automation
+    exec_hours = db.Column(db.Float, default=0)  # Executive/leadership hours
+    csm_hourly_rate = db.Column(db.Float, default=85.0)  # $/hr (from resource_rates.json)
+    total_cost = db.Column(db.Float, default=0)  # Computed: (csm_hours_actual + exec_hours) × rate
+
+    # ── OUTCOME SIDE (at trigger) ──
+    health_at_trigger = db.Column(db.Float, nullable=True)
+    health_status_at_trigger = db.Column(db.String(20))  # critical, at_risk, healthy
+    arr_at_trigger = db.Column(db.Float, nullable=True)
+    revenue_at_risk_at_trigger = db.Column(db.Float, nullable=True)  # From get_revenue_at_risk
+
+    # ── OUTCOME SIDE (at close) ──
+    health_at_close = db.Column(db.Float, nullable=True)
+    health_status_at_close = db.Column(db.String(20))
+    health_delta = db.Column(db.Float, nullable=True)  # health_at_close - health_at_trigger
+    revenue_protected = db.Column(db.Float, default=0)
+    revenue_expanded = db.Column(db.Float, default=0)
+    revenue_lost = db.Column(db.Float, default=0)
+    nrr_impact_pct = db.Column(db.Float, nullable=True)  # Measured NRR change attributed to this playbook
+
+    # ── REALIZED ROI ──
+    realized_roi_pct = db.Column(db.Float, nullable=True)  # (revenue_protected + expanded) / total_cost × 100
+    projected_roi_pct = db.Column(db.Float, nullable=True)  # Power-of-1 benchmark projection at trigger time
+    roi_variance_pct = db.Column(db.Float, nullable=True)  # realized - projected (positive = beat forecast)
+
+    # Actions tracking
+    actions_planned = db.Column(db.Integer, default=0)
+    actions_completed = db.Column(db.Integer, default=0)
+    action_log = db.Column(db.JSON, nullable=True)  # [{date, action, owner, status, outcome}]
+
+    # LLM analysis
+    skill_output = db.Column(db.JSON, nullable=True)  # Full Claude Skill output (7-step report)
+    executive_briefing = db.Column(db.Text, nullable=True)  # Copy of Step 7 exec briefing
+
+    # Timestamps
+    triggered_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    phase_2_at = db.Column(db.DateTime, nullable=True)  # When rebuild phase started
+    phase_3_at = db.Column(db.DateTime, nullable=True)  # When secure phase started
+    closed_at = db.Column(db.DateTime, nullable=True)
+    next_review_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    __table_args__ = (
+        db.Index('idx_v2_customer_playbook', 'customer_id', 'playbook_id'),
+        db.Index('idx_v2_account_status', 'account_id', 'status'),
+        db.Index('idx_v2_triggered_at', 'triggered_at'),
+    )
+
+
 class PlaybookReport(db.Model):
     __tablename__ = 'playbook_reports'
     report_id = db.Column(db.Integer, primary_key=True)
