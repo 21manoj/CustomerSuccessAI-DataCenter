@@ -321,13 +321,32 @@ def run_wizard_c(customer_id: int) -> dict:
                     'pillar_weights': stage_l2,
                 }
 
-            # Update the lifecycle config stages with calibrated weights
+            # Update the lifecycle config stages with calibrated weights.
+            # IMPORTANT: Only overwrite pillar_weights if the stage is using
+            # defaults (no explicit customization). If the customer or admin
+            # set custom stage weights, preserve them — Wizard C reports its
+            # recommendations in per_stage_calibration but does NOT override.
+            # This protects curated lifecycle differentiation (e.g., P1 heavy
+            # for onboarding, P5 heavy for growth) from being flattened.
             import copy
+            from utils.lifecycle_stages import DEFAULT_STAGES
+            _default_pw = {s['name']: s.get('pillar_weights') for s in DEFAULT_STAGES}
+
             updated_lc = copy.deepcopy(lifecycle_config)
             for stage in updated_lc.get('stages', []):
                 cal = per_stage_calibration.get(stage.get('name'))
                 if cal and cal.get('status') == 'calibrated':
-                    stage['pillar_weights'] = cal['pillar_weights']
+                    current_pw = stage.get('pillar_weights', {})
+                    default_pw = _default_pw.get(stage.get('name'), {})
+                    # Only auto-apply if stage is still using defaults
+                    if current_pw == default_pw or not current_pw:
+                        stage['pillar_weights'] = cal['pillar_weights']
+                        cal['auto_applied'] = True
+                    else:
+                        # Stage has custom weights — report recommendation only
+                        cal['auto_applied'] = False
+                        cal['recommendation'] = cal['pillar_weights']
+                        cal['current_preserved'] = current_pw
             config.dc2s_lifecycle_stage_weights = updated_lc
 
         except Exception as stage_err:
