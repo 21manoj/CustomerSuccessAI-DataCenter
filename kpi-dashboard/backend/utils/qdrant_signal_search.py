@@ -83,12 +83,13 @@ class SignalVectorStore:
         return [d.embedding for d in resp.data]
 
     def _signal_text(self, node) -> str:
-        """Build searchable text from a ContextNode or signal dict."""
+        """Build searchable text from a ContextNode (any type: SIGNAL, DECISION, OUTCOME, STAKEHOLDER)."""
         parts = []
         if hasattr(node, 'title'):
             # ContextNode model object
             parts.append(node.title or '')
-            parts.append(f'Type: {node.node_subtype or "signal"}')
+            parts.append(f'Node type: {node.node_type or "SIGNAL"}')
+            parts.append(f'Subtype: {node.node_subtype or "unknown"}')
             props = node.properties or {}
             if props.get('content'):
                 parts.append(props['content'])
@@ -96,9 +97,17 @@ class SignalVectorStore:
                 parts.append(f'Sentiment: {props["sentiment"]}')
             if props.get('stakeholder_name'):
                 parts.append(f'Stakeholder: {props["stakeholder_name"]}')
+            if props.get('decision_maker_role'):
+                parts.append(f'Decision maker: {props["decision_maker_role"]}')
+            # Revenue context for OUTCOME nodes
+            if node.revenue_impact:
+                parts.append(f'Revenue impact: ${node.revenue_impact:,.0f}')
+            if node.revenue_impact_type:
+                parts.append(f'Impact type: {node.revenue_impact_type}')
         elif isinstance(node, dict):
             parts.append(node.get('title', ''))
-            parts.append(f'Type: {node.get("node_subtype", "signal")}')
+            parts.append(f'Node type: {node.get("node_type", "SIGNAL")}')
+            parts.append(f'Subtype: {node.get("node_subtype", "unknown")}')
             props = node.get('properties', {})
             if props.get('content'):
                 parts.append(props['content'])
@@ -127,16 +136,22 @@ class SignalVectorStore:
         from models import ContextNode
         self.ensure_collection()
 
+        # Index ALL context graph node types — not just SIGNAL.
+        # DECISION and OUTCOME nodes are equally important for semantic search:
+        # - "what signals led to this outcome?" needs OUTCOME embeddings
+        # - "what decisions were made?" needs DECISION embeddings
+        # - Causal chain queries span all types
         nodes = (
             ContextNode.query
-            .filter_by(customer_id=self.customer_id, node_type='SIGNAL')
+            .filter_by(customer_id=self.customer_id)
+            .filter(ContextNode.node_type.in_(['SIGNAL', 'DECISION', 'OUTCOME', 'STAKEHOLDER']))
             .order_by(ContextNode.occurred_at.desc())
             .limit(limit)
             .all()
         )
 
         if not nodes:
-            logger.info(f'No signals to index for customer {self.customer_id}')
+            logger.info(f'No context graph nodes to index for customer {self.customer_id}')
             return 0
 
         # Build texts and payloads
@@ -155,6 +170,7 @@ class SignalVectorStore:
                 'node_id': n.node_id,
                 'account_id': n.account_id,
                 'customer_id': n.customer_id,
+                'node_type': n.node_type or 'SIGNAL',
                 'node_subtype': n.node_subtype or '',
                 'source': n.source or 'customer',
                 'title': n.title or '',
@@ -163,6 +179,7 @@ class SignalVectorStore:
                 'occurred_at': n.occurred_at.isoformat() if n.occurred_at else '',
                 'confidence': float(n.confidence) if n.confidence else 1.0,
                 'revenue_impact': float(n.revenue_impact) if n.revenue_impact else 0,
+                'revenue_impact_type': n.revenue_impact_type or '',
                 'tier': n.tier or 1,
             })
 
@@ -246,12 +263,15 @@ class SignalVectorStore:
             hits.append({
                 'node_id': payload.get('node_id'),
                 'account_id': payload.get('account_id'),
+                'node_type': payload.get('node_type', 'SIGNAL'),
                 'title': payload.get('title', ''),
                 'subtype': payload.get('node_subtype', ''),
                 'source': payload.get('source', 'customer'),
                 'sentiment': payload.get('sentiment', 'neutral'),
                 'occurred_at': payload.get('occurred_at', ''),
                 'confidence': payload.get('confidence', 1.0),
+                'revenue_impact': payload.get('revenue_impact', 0),
+                'revenue_impact_type': payload.get('revenue_impact_type', ''),
                 'score': round(r.score, 3),
                 'properties': json.loads(payload.get('properties', '{}')) if isinstance(payload.get('properties'), str) else payload.get('properties', {}),
             })
