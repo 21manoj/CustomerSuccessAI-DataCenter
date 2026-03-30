@@ -1,0 +1,2008 @@
+{
+  "customer": {
+    "name": "Gainsight SaaS Portfolio V2",
+    "vertical": "saas_premium",
+    "admin_email": "admin@gainsightv2.com",
+    "admin_name": "Sarah Chen",
+    "domain": "gainsightv2.com"
+  },
+  "kpis": {
+    "selection": "custom",
+    "count": 8,
+    "codes": ["P1-KPI3", "P1-KPI5", "P2-KPI1", "P2-KPI2", "P2-KPI5", "P3-KPI3", "P5-KPI5", "P5-KPI6"],
+    "pillars": ["P1", "P2", "P3", "P5"]
+  },
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  },
+  "accounts": [
+    {
+      "name": "Luminance AI",
+      "arr": 4200000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-15",
+      "narrative": "AI startup with explosive user growth. Onboarded in Q4 2025, hit 90% feature adoption in 8 weeks. VP Product is vocal champion driving org-wide rollout from ML team to entire R&D.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Artificial Intelligence",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Priya Sharma",
+          "role": "champion",
+          "title": "VP of Product",
+          "department": "Product",
+          "engagement_frequency": 11,
+          "status": "active"
+        },
+        {
+          "name": "David Kim",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Rachel Torres",
+          "role": "technical_lead",
+          "title": "Staff Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 8,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-12-01",
+          "content": "Feature adoption hit 90% within 8 weeks of onboarding"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-01-15",
+          "content": "VP Product requesting licenses for 3 additional departments"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-20",
+          "content": "CTO joined QBR and expressed strong platform commitment"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-20",
+            "action": "Expansion planning workshop with VP Product",
+            "outcome": "Mapped 3-department rollout plan for Q2 2026"
+          },
+          {
+            "date": "2026-02-15",
+            "action": "Technical architecture review for scale",
+            "outcome": "Validated platform can support 5x current usage"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Verdant Health Systems",
+      "arr": 3100000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "partner",
+      "renewal_date": "2026-11-01",
+      "narrative": "Healthcare SaaS customer that completed onboarding ahead of schedule. Clinical ops team driving adoption across 12 hospital sites. HIPAA compliance validated, now expanding to patient engagement module.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Healthcare Technology",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Dr. Angela Martinez",
+          "role": "executive_sponsor",
+          "title": "Chief Digital Officer",
+          "department": "Digital Transformation",
+          "engagement_frequency": 5,
+          "status": "active"
+        },
+        {
+          "name": "Kevin Walsh",
+          "role": "champion",
+          "title": "Director of Clinical Operations",
+          "department": "Operations",
+          "engagement_frequency": 10,
+          "status": "active"
+        },
+        {
+          "name": "Samantha Liu",
+          "role": "technical_lead",
+          "title": "Integration Architect",
+          "department": "IT",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-11-15",
+          "content": "Completed HIPAA-compliant deployment across 12 hospital sites"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-01-20",
+          "content": "CDO approved budget for patient engagement module expansion"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-03-01",
+          "content": "Named platform a strategic vendor in annual IT review"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-01",
+            "action": "Healthcare vertical best practices workshop",
+            "outcome": "Adoption playbook customized for clinical workflows"
+          },
+          {
+            "date": "2026-03-10",
+            "action": "Patient engagement module pilot kickoff",
+            "outcome": "Pilot launched at 3 flagship sites"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PulseMetrics",
+      "arr": 2500000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-15",
+      "narrative": "Analytics platform company that started with a single team and is organically growing. Product analytics team became power users, now pulling in marketing and sales ops teams.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Analytics & BI",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Marcus Johnson",
+          "role": "champion",
+          "title": "Head of Product Analytics",
+          "department": "Analytics",
+          "engagement_frequency": 9,
+          "status": "active"
+        },
+        {
+          "name": "Lisa Chen",
+          "role": "decision_maker",
+          "title": "VP of Data",
+          "department": "Data",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-12-10",
+          "content": "Product analytics team achieved 95% DAU within their department"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-02-05",
+          "content": "Marketing ops requesting access for campaign analytics use case"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-15",
+            "action": "Cross-department use case workshop",
+            "outcome": "Identified 4 new use cases across marketing and sales ops"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DataWeave Corp",
+      "arr": 5800000,
+      "target_health": 86,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "VP of Customer Success is a vocal champion who drove adoption from 1 department to 3 in 6 months. Now pushing for enterprise-wide license. Highest NPS in portfolio at 72.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Data Integration",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Jennifer Park",
+          "role": "champion",
+          "title": "VP of Customer Success",
+          "department": "Customer Success",
+          "engagement_frequency": 12,
+          "status": "active"
+        },
+        {
+          "name": "Robert Chen",
+          "role": "executive_sponsor",
+          "title": "COO",
+          "department": "Operations",
+          "engagement_frequency": 4,
+          "status": "active"
+        },
+        {
+          "name": "Amit Patel",
+          "role": "technical_lead",
+          "title": "Director of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 8,
+          "status": "active"
+        },
+        {
+          "name": "Nicole Adams",
+          "role": "decision_maker",
+          "title": "CFO",
+          "department": "Finance",
+          "engagement_frequency": 3,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_discussion",
+          "date": "2025-11-01",
+          "content": "VP CS presented ROI deck to COO, secured budget for 2 additional departments"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-01-10",
+          "content": "Third department onboarded, feature adoption at 88% across all teams"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-28",
+          "content": "COO approved enterprise-wide license evaluation for Q3"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-03-15",
+          "content": "CFO greenlit enterprise license budget pending Q2 results"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2025-12-01",
+            "action": "Champion enablement: ROI framework and talk track",
+            "outcome": "Jennifer presented internally, secured COO sponsorship"
+          },
+          {
+            "date": "2026-02-01",
+            "action": "Enterprise licensing proposal workshop",
+            "outcome": "Custom pricing model for enterprise-wide deal"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Cirrus Networks",
+      "arr": 4500000,
+      "target_health": 84,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-01",
+      "narrative": "Network SaaS company with a strong VP Engineering sponsor who integrated the platform into their CI/CD pipeline. Now expanding from NOC to full DevOps org. Reference customer candidate.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Network Infrastructure",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Brian Callahan",
+          "role": "champion",
+          "title": "VP of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 10,
+          "status": "active"
+        },
+        {
+          "name": "Yuki Tanaka",
+          "role": "technical_lead",
+          "title": "Senior DevOps Engineer",
+          "department": "DevOps",
+          "engagement_frequency": 11,
+          "status": "active"
+        },
+        {
+          "name": "Patricia Gomez",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 3,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-11-20",
+          "content": "Platform integrated into CI/CD pipeline, automated 80% of NOC monitoring"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-01-25",
+          "content": "VP Eng proposing DevOps org-wide rollout at next budget cycle"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-03-05",
+          "content": "Agreed to be reference customer for upcoming analyst briefing"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-10",
+            "action": "Technical deep-dive with DevOps team",
+            "outcome": "Identified 6 automation workflows for DevOps expansion"
+          },
+          {
+            "date": "2026-02-20",
+            "action": "Reference customer program enrollment",
+            "outcome": "VP Eng agreed to case study and analyst call"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FinEdge Technologies",
+      "arr": 3800000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "partner",
+      "renewal_date": "2026-12-01",
+      "narrative": "Fintech company expanding from risk management module to compliance and fraud detection. Head of Risk is the champion, recently promoted to SVP and now has budget authority for platform-wide deals.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Financial Technology",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Daniel Okafor",
+          "role": "champion",
+          "title": "SVP of Risk & Compliance",
+          "department": "Risk",
+          "engagement_frequency": 9,
+          "status": "active"
+        },
+        {
+          "name": "Maria Santos",
+          "role": "decision_maker",
+          "title": "Chief Risk Officer",
+          "department": "Risk",
+          "engagement_frequency": 4,
+          "status": "active"
+        },
+        {
+          "name": "James Liu",
+          "role": "technical_lead",
+          "title": "Lead Platform Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_discussion",
+          "date": "2025-12-15",
+          "content": "SVP Risk secured budget for compliance module expansion"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-02-01",
+          "content": "Fraud detection module pilot launched, 75% adoption in first month"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-03-10",
+          "content": "CRO endorsed platform in all-hands as strategic vendor"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-05",
+            "action": "Compliance module scoping with risk team",
+            "outcome": "Defined 90-day implementation plan for compliance workflows"
+          },
+          {
+            "date": "2026-02-10",
+            "action": "Fraud detection pilot kickoff",
+            "outcome": "Pilot running at 3 business units with positive early metrics"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NovaBridge Solutions",
+      "arr": 3500000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-30",
+      "narrative": "Surface metrics look stable but engagement is quietly fading. Champion stopped attending QBRs. Login frequency down 40% over 3 months. No support tickets filed — classic silent churn pattern.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Enterprise Software",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Tom Bradley",
+          "role": "champion",
+          "title": "Director of Operations",
+          "department": "Operations",
+          "engagement_frequency": 2,
+          "status": "disengaging"
+        },
+        {
+          "name": "Sarah Nguyen",
+          "role": "decision_maker",
+          "title": "VP of Technology",
+          "department": "Technology",
+          "engagement_frequency": 1,
+          "status": "passive"
+        },
+        {
+          "name": "Mike Rodriguez",
+          "role": "technical_lead",
+          "title": "Senior Developer",
+          "department": "Engineering",
+          "engagement_frequency": 3,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "engagement_gap",
+          "date": "2026-01-05",
+          "content": "Champion Tom Bradley missed 2 consecutive QBRs without notice"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-02-01",
+          "content": "Login frequency dropped 40% over past 3 months with no support escalation"
+        },
+        {
+          "type": "nps_decline",
+          "date": "2026-03-01",
+          "content": "NPS response declined from 42 to 18, passive detractor territory"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-03-10",
+            "action": "Proactive health check outreach to champion",
+            "outcome": "Discovered team evaluating workflow consolidation"
+          },
+          {
+            "date": "2026-03-20",
+            "action": "Value realization workshop scheduled",
+            "outcome": "Pending — workshop set for April 1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TruePoint Analytics",
+      "arr": 2800000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "silent_churn",
+      "partner_tier": "partner",
+      "renewal_date": "2026-07-15",
+      "narrative": "NPS dropped 25 points in last survey. No QBR held in 90+ days. Key user group shifted to a competing free-tier analytics tool. CSM flagged but no exec engagement secured yet.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Business Analytics",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Karen White",
+          "role": "champion",
+          "title": "Analytics Manager",
+          "department": "Analytics",
+          "engagement_frequency": 1,
+          "status": "disengaging"
+        },
+        {
+          "name": "Chris Park",
+          "role": "decision_maker",
+          "title": "VP of Data Science",
+          "department": "Data",
+          "engagement_frequency": 0,
+          "status": "unresponsive"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "nps_decline",
+          "date": "2025-12-15",
+          "content": "NPS dropped from 38 to 13 in quarterly survey"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2026-01-20",
+          "content": "No QBR held in 90+ days, all scheduling attempts ignored"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-02-10",
+          "content": "Key user group migrated daily workflows to competing free-tier tool"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-03-05",
+          "content": "Slack channel discovered discussing competitor analytics tool benefits"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-03-15",
+            "action": "Executive escalation to VP Data Science",
+            "outcome": "Pending — CSM manager reaching out through CRO contact"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Streamline Commerce",
+      "arr": 4100000,
+      "target_health": 32,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-15",
+      "narrative": "Competitor eval underway silently. Engineering team built internal replacement for core workflow. Executive sponsor went dark. Renewal in 6 weeks with no engagement. Highest churn probability in portfolio.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "E-Commerce",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Alex Rivera",
+          "role": "champion",
+          "title": "Director of Platform Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 0,
+          "status": "churned"
+        },
+        {
+          "name": "Diana Foster",
+          "role": "executive_sponsor",
+          "title": "SVP of Technology",
+          "department": "Technology",
+          "engagement_frequency": 0,
+          "status": "unresponsive"
+        },
+        {
+          "name": "Ryan Mitchell",
+          "role": "technical_lead",
+          "title": "Staff Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 1,
+          "status": "passive"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "usage_decline",
+          "date": "2025-12-01",
+          "content": "API call volume dropped 70% as internal replacement went live"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-01-15",
+          "content": "Procurement ran RFP for competing platform without notifying CSM"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2026-02-01",
+          "content": "All executive contacts unresponsive for 60+ days"
+        },
+        {
+          "type": "downgrade_request",
+          "date": "2026-03-01",
+          "content": "Procurement submitted downgrade inquiry for renewal, citing budget constraints"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-03-10",
+            "action": "VP-level save call through executive network",
+            "outcome": "Meeting secured for March 25 — last chance before renewal deadline"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Keystone Platforms",
+      "arr": 4800000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-01",
+      "narrative": "Aggressive competitor offering 40% discount and free migration. VP Procurement driving evaluation. Technical team still prefers current platform but losing budget argument.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Platform Engineering",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Michelle Torres",
+          "role": "champion",
+          "title": "Director of Platform Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "Greg Hamilton",
+          "role": "decision_maker",
+          "title": "VP of Procurement",
+          "department": "Procurement",
+          "engagement_frequency": 2,
+          "status": "evaluating"
+        },
+        {
+          "name": "Steven Lee",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 3,
+          "status": "neutral"
+        },
+        {
+          "name": "Amy Zhang",
+          "role": "technical_lead",
+          "title": "Senior Architect",
+          "department": "Architecture",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "competitor_mention",
+          "date": "2026-01-10",
+          "content": "VP Procurement received aggressive 40% discount offer from competitor"
+        },
+        {
+          "type": "budget_pressure",
+          "date": "2026-02-05",
+          "content": "Procurement team initiated formal vendor comparison matrix"
+        },
+        {
+          "type": "escalation",
+          "date": "2026-03-01",
+          "content": "Champion escalated retention risk to CSM — technical team wants to stay but budget decision pending"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-04",
+        "actions": [
+          {
+            "date": "2026-02-15",
+            "action": "Competitive battle card and TCO analysis delivered",
+            "outcome": "TCO analysis showed competitor 22% more expensive over 3 years"
+          },
+          {
+            "date": "2026-03-10",
+            "action": "Executive alignment meeting with CTO",
+            "outcome": "CTO agreed to present TCO analysis to procurement"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Prism Software",
+      "arr": 3200000,
+      "target_health": 50,
+      "classification": "at_risk",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "partner",
+      "renewal_date": "2026-09-01",
+      "narrative": "Competitor running a POC in parallel with current platform. Head of IT leading the evaluation with bias toward competitor's modern UI. Usage metrics holding but mindshare shifting.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Software Development",
+      "region": "EU-West",
+      "stakeholders": [
+        {
+          "name": "Oliver Schmidt",
+          "role": "decision_maker",
+          "title": "Head of IT",
+          "department": "IT",
+          "engagement_frequency": 3,
+          "status": "evaluating"
+        },
+        {
+          "name": "Emma Johansson",
+          "role": "champion",
+          "title": "Lead Developer",
+          "department": "Engineering",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Henrik Larsson",
+          "role": "technical_lead",
+          "title": "DevOps Manager",
+          "department": "DevOps",
+          "engagement_frequency": 5,
+          "status": "neutral"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "competitor_mention",
+          "date": "2025-12-20",
+          "content": "Head of IT initiated POC with competitor platform citing modern UI"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2026-01-25",
+          "content": "QBR postponed twice by customer, champion unable to secure exec time"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-02-28",
+          "content": "Developer team splitting workflows between current platform and competitor POC"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-04",
+        "actions": [
+          {
+            "date": "2026-02-10",
+            "action": "Product roadmap preview with upcoming UI refresh",
+            "outcome": "Head of IT intrigued but wants to see beta before deciding"
+          },
+          {
+            "date": "2026-03-15",
+            "action": "Beta access granted for new UI to champion team",
+            "outcome": "Early feedback positive, full evaluation scheduled for April"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Atlas Cloud Services",
+      "arr": 4500000,
+      "target_health": 54,
+      "classification": "at_risk",
+      "story_arc": "exec_sponsor_change",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-15",
+      "narrative": "CTO and original executive sponsor departed in February. New CTO comes from a competitor background and is skeptical of current platform. Technical team strong but political winds shifting.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Cloud Infrastructure",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Mark Thompson",
+          "role": "executive_sponsor",
+          "title": "CTO (former)",
+          "department": "Technology",
+          "engagement_frequency": 8,
+          "status": "departed"
+        },
+        {
+          "name": "Dr. Ananya Gupta",
+          "role": "executive_sponsor",
+          "title": "CTO (new)",
+          "department": "Technology",
+          "engagement_frequency": 1,
+          "status": "skeptical"
+        },
+        {
+          "name": "Jason Brooks",
+          "role": "champion",
+          "title": "VP of Platform",
+          "department": "Platform",
+          "engagement_frequency": 9,
+          "status": "active"
+        },
+        {
+          "name": "Linda Park",
+          "role": "technical_lead",
+          "title": "Principal Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2026-02-01",
+          "content": "CTO Mark Thompson departed after 4 years as executive sponsor"
+        },
+        {
+          "type": "champion_change",
+          "date": "2026-02-15",
+          "content": "New CTO Dr. Gupta hired from competitor, known to favor different stack"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2026-03-01",
+          "content": "New CTO declined QBR invitation, delegated to junior staff"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-03",
+        "actions": [
+          {
+            "date": "2026-02-20",
+            "action": "Emergency stakeholder mapping for new CTO network",
+            "outcome": "Identified mutual connection through industry advisory board"
+          },
+          {
+            "date": "2026-03-15",
+            "action": "Peer CTO roundtable invitation extended to new CTO",
+            "outcome": "Accepted — meeting scheduled for April 5"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Quantum Leap SaaS",
+      "arr": 3600000,
+      "target_health": 56,
+      "classification": "at_risk",
+      "story_arc": "exec_sponsor_change",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "VP Engineering and key technical champion left for a startup. Replacement VP favors a different technology stack and has paused all platform expansion initiatives pending a 90-day review.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Quantum Computing",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Nathan Wright",
+          "role": "champion",
+          "title": "VP of Engineering (former)",
+          "department": "Engineering",
+          "engagement_frequency": 10,
+          "status": "departed"
+        },
+        {
+          "name": "Sandra Kim",
+          "role": "decision_maker",
+          "title": "VP of Engineering (new)",
+          "department": "Engineering",
+          "engagement_frequency": 2,
+          "status": "skeptical"
+        },
+        {
+          "name": "Derek Huang",
+          "role": "technical_lead",
+          "title": "Staff Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_loss",
+          "date": "2026-01-15",
+          "content": "VP Engineering Nathan Wright departed for Series A startup"
+        },
+        {
+          "type": "champion_change",
+          "date": "2026-02-01",
+          "content": "New VP Sandra Kim paused all expansion pending 90-day stack review"
+        },
+        {
+          "type": "budget_cut",
+          "date": "2026-02-20",
+          "content": "Platform expansion budget frozen for Q2 during technology review"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-03-10",
+          "content": "New VP requested demo of alternative platforms for comparison"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-03",
+        "actions": [
+          {
+            "date": "2026-02-10",
+            "action": "Technical value assessment delivered to new VP",
+            "outcome": "Report acknowledged but review timeline unchanged"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Staff engineer Derek Huang positioned as internal advocate",
+            "outcome": "Derek presenting platform wins at next engineering all-hands"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IronCore Systems",
+      "arr": 5500000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-01",
+      "narrative": "Major production outage in January took down customer-facing APIs for 18 hours. War room activated, executive escalation to CEO level. Now in structured recovery with weekly status calls. Trust rebuilding underway.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Industrial IoT",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Victoria Chang",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "engagement_frequency": 4,
+          "status": "monitoring"
+        },
+        {
+          "name": "Paul Henderson",
+          "role": "champion",
+          "title": "VP of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 11,
+          "status": "active"
+        },
+        {
+          "name": "Laura Mitchell",
+          "role": "decision_maker",
+          "title": "VP of Operations",
+          "department": "Operations",
+          "engagement_frequency": 8,
+          "status": "concerned"
+        },
+        {
+          "name": "Jake Williams",
+          "role": "technical_lead",
+          "title": "SRE Lead",
+          "department": "Engineering",
+          "engagement_frequency": 12,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "critical_incident",
+          "date": "2026-01-10",
+          "content": "18-hour production outage impacting customer-facing APIs, CEO escalation"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2026-01-12",
+          "content": "CEO demanded root cause analysis and recovery plan within 48 hours"
+        },
+        {
+          "type": "support_escalation",
+          "date": "2026-01-15",
+          "content": "Dedicated support pod assigned, weekly recovery status calls initiated"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-03-01",
+          "content": "SRE Lead confirmed system stability restored, uptime at 99.95% for 6 weeks"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-02",
+        "actions": [
+          {
+            "date": "2026-01-14",
+            "action": "War room established with dedicated engineering pod",
+            "outcome": "Root cause identified and patched within 72 hours"
+          },
+          {
+            "date": "2026-02-01",
+            "action": "Weekly executive recovery calls with CEO",
+            "outcome": "Trust rebuilding in progress, CEO satisfied with transparency"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Resilience architecture review and SLA upgrade",
+            "outcome": "Enhanced SLA with 99.99% uptime guarantee accepted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BrightPath Education",
+      "arr": 4200000,
+      "target_health": 40,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "partner",
+      "renewal_date": "2026-08-15",
+      "narrative": "Data breach scare in December when a misconfigured API exposed student PII for 4 hours. No actual data exfiltration confirmed, but board-level review triggered. Now in active remediation with security audit.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "EdTech",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Dr. James Warren",
+          "role": "executive_sponsor",
+          "title": "Chief Academic Officer",
+          "department": "Academic",
+          "engagement_frequency": 5,
+          "status": "concerned"
+        },
+        {
+          "name": "Christina Reyes",
+          "role": "champion",
+          "title": "Director of IT Security",
+          "department": "IT Security",
+          "engagement_frequency": 10,
+          "status": "active"
+        },
+        {
+          "name": "Robert Jameson",
+          "role": "decision_maker",
+          "title": "CISO",
+          "department": "Security",
+          "engagement_frequency": 7,
+          "status": "monitoring"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "critical_incident",
+          "date": "2025-12-05",
+          "content": "Misconfigured API exposed student PII for 4 hours, board notification triggered"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2025-12-08",
+          "content": "CISO initiated full security audit and vendor risk reassessment"
+        },
+        {
+          "type": "escalation",
+          "date": "2026-01-10",
+          "content": "Board requested quarterly security compliance reports from all SaaS vendors"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-03-15",
+          "content": "Security audit passed with zero critical findings, CISO acknowledged improvements"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-02",
+        "actions": [
+          {
+            "date": "2025-12-10",
+            "action": "Emergency security response team deployed",
+            "outcome": "Vulnerability patched, forensic analysis confirmed no data exfiltration"
+          },
+          {
+            "date": "2026-01-15",
+            "action": "Enhanced security architecture with SOC 2 Type II prep",
+            "outcome": "New security controls implemented, audit in progress"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Board-ready security compliance report delivered",
+            "outcome": "Board accepted remediation plan, renewal no longer at immediate risk"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FlexiGrid Infrastructure",
+      "arr": 4800000,
+      "target_health": 28,
+      "classification": "critical",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "Deployment stuck at 35% for 4 months due to legacy system integration complexity. Technical team overwhelmed, no professional services engaged. Executive sponsor losing patience with timeline slippage.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Energy & Utilities",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Robert Gaines",
+          "role": "executive_sponsor",
+          "title": "VP of Infrastructure",
+          "department": "Infrastructure",
+          "engagement_frequency": 3,
+          "status": "frustrated"
+        },
+        {
+          "name": "Tanya Patel",
+          "role": "technical_lead",
+          "title": "Integration Manager",
+          "department": "IT",
+          "engagement_frequency": 8,
+          "status": "overwhelmed"
+        },
+        {
+          "name": "Chris O'Brien",
+          "role": "champion",
+          "title": "Director of Digital Operations",
+          "department": "Operations",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "usage_decline",
+          "date": "2025-12-01",
+          "content": "Deployment stalled at 35% with no progress in 4 months"
+        },
+        {
+          "type": "support_escalation",
+          "date": "2026-01-15",
+          "content": "Integration team filed 12 P1 support tickets in 30 days"
+        },
+        {
+          "type": "escalation",
+          "date": "2026-02-20",
+          "content": "VP Infrastructure threatened to cancel contract if deployment not at 70% by Q2"
+        },
+        {
+          "type": "budget_pressure",
+          "date": "2026-03-10",
+          "content": "Finance team questioning ROI given stalled deployment timeline"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-06",
+        "actions": [
+          {
+            "date": "2026-02-25",
+            "action": "Dedicated implementation engineer assigned full-time",
+            "outcome": "Integration blockers identified and prioritized"
+          },
+          {
+            "date": "2026-03-10",
+            "action": "Accelerated deployment plan with weekly milestones",
+            "outcome": "Deployment moved from 35% to 48% in 3 weeks"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CoreSync Data",
+      "arr": 3500000,
+      "target_health": 30,
+      "classification": "critical",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "partner",
+      "renewal_date": "2026-07-01",
+      "narrative": "Integration with legacy data warehouse stalled 3 months ago. Partner SI disengaged due to scope creep. Customer technical team lacks expertise for remaining integration work. Time-to-value severely impacted.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Data Management",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Andrea Collins",
+          "role": "decision_maker",
+          "title": "VP of Data Engineering",
+          "department": "Data Engineering",
+          "engagement_frequency": 4,
+          "status": "frustrated"
+        },
+        {
+          "name": "Michael Tanaka",
+          "role": "technical_lead",
+          "title": "Data Integration Lead",
+          "department": "Data Engineering",
+          "engagement_frequency": 7,
+          "status": "blocked"
+        },
+        {
+          "name": "Susan Park",
+          "role": "champion",
+          "title": "Director of Analytics",
+          "department": "Analytics",
+          "engagement_frequency": 5,
+          "status": "concerned"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "usage_decline",
+          "date": "2025-11-15",
+          "content": "Data warehouse integration stalled, only 20% of data pipelines active"
+        },
+        {
+          "type": "support_escalation",
+          "date": "2026-01-05",
+          "content": "Partner SI disengaged citing scope creep, customer team lacks capacity"
+        },
+        {
+          "type": "escalation",
+          "date": "2026-02-15",
+          "content": "VP Data Eng requested contract modification or professional services credit"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-06",
+        "actions": [
+          {
+            "date": "2026-02-20",
+            "action": "Professional services team engaged for integration rescue",
+            "outcome": "30-day integration sprint plan created with dedicated resources"
+          },
+          {
+            "date": "2026-03-15",
+            "action": "Weekly integration progress reviews with VP Data Eng",
+            "outcome": "3 of 8 blocked pipelines unblocked, momentum building"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RetailPulse",
+      "arr": 3200000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "seasonal_surge",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-15",
+      "narrative": "Retail analytics platform with predictable Q4 holiday surge. Usage spikes 3x during Black Friday through January. Strong steady-state engagement with seasonal expansion requests for capacity.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Retail Technology",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Jessica Morales",
+          "role": "champion",
+          "title": "Director of Retail Analytics",
+          "department": "Analytics",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "David Brooks",
+          "role": "decision_maker",
+          "title": "VP of E-Commerce",
+          "department": "E-Commerce",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-11-15",
+          "content": "Q4 holiday surge: usage spiked 3x, all capacity thresholds met"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-01-10",
+          "content": "Post-holiday review: platform handled peak flawlessly, VP E-Commerce praised team"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-03-01",
+          "content": "Pre-planning for Q4 2026 with 50% additional capacity request"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-03-15",
+            "action": "Q4 2026 capacity planning session",
+            "outcome": "Expansion proposal for 50% additional capacity submitted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EventHorizon Platform",
+      "arr": 2600000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "seasonal_surge",
+      "partner_tier": "partner",
+      "renewal_date": "2026-10-15",
+      "narrative": "Event management SaaS with conference season surge pattern. Usage peaks March-June and September-November. Steady baseline between seasons with consistent feature engagement.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Event Management",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Natalie Cooper",
+          "role": "champion",
+          "title": "Head of Event Operations",
+          "department": "Operations",
+          "engagement_frequency": 8,
+          "status": "active"
+        },
+        {
+          "name": "Ryan Fitzgerald",
+          "role": "decision_maker",
+          "title": "VP of Marketing",
+          "department": "Marketing",
+          "engagement_frequency": 4,
+          "status": "active"
+        },
+        {
+          "name": "Anita Desai",
+          "role": "technical_lead",
+          "title": "Integration Specialist",
+          "department": "IT",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-10-15",
+          "content": "Fall conference season drove 2.5x usage spike with zero downtime"
+        },
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-01",
+          "content": "VP Marketing approved budget for spring conference season capacity expansion"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-15",
+            "action": "Spring conference season preparation review",
+            "outcome": "Capacity scaled for March-June peak period"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Meridian Logic",
+      "arr": 2800000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-01",
+      "narrative": "Reliable mid-market customer with consistent usage and positive engagement. Steady performer with no drama.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Business Logic Software",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Andrew Fisher",
+          "role": "champion",
+          "title": "Director of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Paula Simmons",
+          "role": "decision_maker",
+          "title": "VP of Technology",
+          "department": "Technology",
+          "engagement_frequency": 3,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-01-15",
+          "content": "QBR completed with strong engagement scores and positive feedback"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-03-01",
+          "content": "Adopted 2 new features from latest release within first week"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-01",
+            "action": "Quarterly business review",
+            "outcome": "All KPIs on track, renewal confirmed for August"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SignalPath Tech",
+      "arr": 2200000,
+      "target_health": 79,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-15",
+      "narrative": "Signal processing startup with growing usage. Small but highly engaged technical team. Organic growth potential as company scales.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Signal Processing",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Tyler Reed",
+          "role": "champion",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "Monica Alvarez",
+          "role": "technical_lead",
+          "title": "Lead Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 8,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2025-12-10",
+          "content": "CTO provided product feedback that was implemented in next release"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-02-15",
+          "content": "Discussing additional seat licenses as engineering team grows"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-20",
+            "action": "Product roadmap alignment call",
+            "outcome": "Confirmed feature priorities align with customer needs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CloudBridge SaaS",
+      "arr": 1800000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "partner",
+      "renewal_date": "2026-10-01",
+      "narrative": "Cloud integration company with steady usage patterns. Reliable customer with consistent renewal history and low support volume.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Cloud Integration",
+      "region": "EU-West",
+      "stakeholders": [
+        {
+          "name": "Sophie Dubois",
+          "role": "champion",
+          "title": "Head of Integrations",
+          "department": "Engineering",
+          "engagement_frequency": 5,
+          "status": "active"
+        },
+        {
+          "name": "Martin Keller",
+          "role": "decision_maker",
+          "title": "Director of IT",
+          "department": "IT",
+          "engagement_frequency": 3,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-01-05",
+          "content": "Completed annual satisfaction survey with NPS of 52"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-03-10",
+          "content": "Adopted new API connector feature for Salesforce integration"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-10",
+            "action": "Integration best practices workshop",
+            "outcome": "Identified 3 workflow optimizations reducing manual effort 20%"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Horizon Analytics",
+      "arr": 2500000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-15",
+      "narrative": "Analytics firm with strong data team engagement. Power users contribute to community forums. Steady ARR with potential for upsell to enterprise tier.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Data Analytics",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Deepak Mehta",
+          "role": "champion",
+          "title": "VP of Analytics",
+          "department": "Analytics",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Claire Anderson",
+          "role": "technical_lead",
+          "title": "Senior Data Engineer",
+          "department": "Data Engineering",
+          "engagement_frequency": 8,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2025-11-20",
+          "content": "VP Analytics presented at customer community webinar as power user"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-02-20",
+          "content": "Exploring enterprise tier upgrade for advanced governance features"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-15",
+            "action": "Enterprise tier capabilities demo",
+            "outcome": "VP Analytics interested, requested pricing for Q3 upgrade"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NexGen Platforms",
+      "arr": 1600000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "partner",
+      "renewal_date": "2026-07-30",
+      "narrative": "Small but engaged platform company. Lean engineering team with high per-user engagement. Consistent usage with low churn risk.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Platform Engineering",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Jason Lee",
+          "role": "champion",
+          "title": "Co-Founder & CTO",
+          "department": "Technology",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "Emily Nakamura",
+          "role": "technical_lead",
+          "title": "Lead Developer",
+          "department": "Engineering",
+          "engagement_frequency": 9,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-01-20",
+          "content": "CTO joined beta program for new developer tools feature set"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-15",
+            "action": "Beta feedback session with CTO",
+            "outcome": "3 feature requests captured and prioritized for roadmap"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Elevate Systems",
+      "arr": 3000000,
+      "target_health": 83,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-01",
+      "narrative": "Well-managed mid-market account with strong exec relationship. Regular QBRs, positive NPS, and growing usage. Model customer for case studies.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Workforce Management",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Karen Thompson",
+          "role": "champion",
+          "title": "Director of HR Technology",
+          "department": "HR",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Mark Evans",
+          "role": "executive_sponsor",
+          "title": "CHRO",
+          "department": "Human Resources",
+          "engagement_frequency": 3,
+          "status": "active"
+        },
+        {
+          "name": "Rita Patel",
+          "role": "technical_lead",
+          "title": "HRIS Manager",
+          "department": "HR Operations",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2025-12-15",
+          "content": "CHRO participated in QBR and confirmed multi-year renewal intent"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-02-10",
+          "content": "HR team adopted workforce planning module with 85% usage in first month"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-10",
+            "action": "Annual business review with CHRO",
+            "outcome": "Confirmed strategic alignment and 2-year renewal discussion initiated"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TrueNorth Software",
+      "arr": 2100000,
+      "target_health": 77,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-30",
+      "narrative": "Navigation software company with stable engagement. Technical team appreciates platform reliability. Steady-state customer with organic growth potential.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Navigation Software",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Brian Kowalski",
+          "role": "champion",
+          "title": "Director of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 5,
+          "status": "active"
+        },
+        {
+          "name": "Amanda Price",
+          "role": "decision_maker",
+          "title": "VP of Product",
+          "department": "Product",
+          "engagement_frequency": 3,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-01-25",
+          "content": "Engineering team submitted 4-star product review on G2"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-03-05",
+          "content": "Adopted real-time monitoring dashboard from Q1 release"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-20",
+            "action": "Product roadmap review call",
+            "outcome": "Confirmed alignment on upcoming navigation-specific enhancements"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PeakView Solutions",
+      "arr": 1900000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "partner",
+      "renewal_date": "2026-09-15",
+      "narrative": "Consulting firm using platform for client delivery. Consistent usage driven by billable project work. Expansion tied to client wins.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Consulting Technology",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Rachel Green",
+          "role": "champion",
+          "title": "Practice Lead",
+          "department": "Consulting",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "Steve Hawkins",
+          "role": "decision_maker",
+          "title": "Managing Director",
+          "department": "Leadership",
+          "engagement_frequency": 2,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2025-12-20",
+          "content": "Practice Lead credited platform for 30% productivity gain in client engagement"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-03-10",
+          "content": "New client win driving request for 10 additional seats"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-30",
+            "action": "Consulting use case optimization session",
+            "outcome": "Template library created for faster client onboarding"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vantage Point SaaS",
+      "arr": 2400000,
+      "target_health": 81,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-30",
+      "narrative": "Observability platform company with mature usage patterns. Strong technical relationship and regular feature feedback loop. Consistent healthy metrics.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Observability",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Chris Novak",
+          "role": "champion",
+          "title": "Head of SRE",
+          "department": "Engineering",
+          "engagement_frequency": 8,
+          "status": "active"
+        },
+        {
+          "name": "Diana Walsh",
+          "role": "decision_maker",
+          "title": "VP of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-01-10",
+          "content": "SRE team contributed 5 feature requests, 3 accepted into roadmap"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-02-25",
+          "content": "Adopted alerting v2 module with 100% team coverage in first week"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-02-05",
+            "action": "Feature feedback synthesis and roadmap alignment",
+            "outcome": "3 of 5 requested features confirmed for Q2 release"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Catalyst Innovations",
+      "arr": 1700000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "partner",
+      "renewal_date": "2026-12-01",
+      "narrative": "Innovation lab company using platform for rapid prototyping. Small team with high engagement intensity. Usage bursts tied to sprint cycles.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Innovation & R&D",
+      "region": "EU-West",
+      "stakeholders": [
+        {
+          "name": "Lucas Bergmann",
+          "role": "champion",
+          "title": "Head of Innovation Lab",
+          "department": "R&D",
+          "engagement_frequency": 9,
+          "status": "active"
+        },
+        {
+          "name": "Isabelle Fontaine",
+          "role": "technical_lead",
+          "title": "Senior Prototyping Engineer",
+          "department": "R&D",
+          "engagement_frequency": 10,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-05",
+          "content": "Innovation Lab used platform for hackathon, 3 new internal products built"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-03-01",
+            "action": "Innovation use case showcase planning",
+            "outcome": "Agreed to co-present at upcoming customer conference"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Blueprint Technologies",
+      "arr": 2000000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-15",
+      "narrative": "Architecture and design platform company. Highly organized customer with clear governance and regular engagement cadence. Lowest support ticket rate in portfolio.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Architecture & Design",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Elizabeth Morgan",
+          "role": "champion",
+          "title": "Director of Technology",
+          "department": "Technology",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "David Chen",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 3,
+          "status": "active"
+        },
+        {
+          "name": "Sarah Mitchell",
+          "role": "technical_lead",
+          "title": "Platform Architect",
+          "department": "Engineering",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2025-11-10",
+          "content": "Completed annual review with zero critical findings and NPS of 68"
+        },
+        {
+          "type": "feature_adoption_increase",
+          "date": "2026-02-15",
+          "content": "Early adopter of design collaboration module with full team rollout"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-05",
+        "actions": [
+          {
+            "date": "2026-01-25",
+            "action": "Annual strategic alignment with CTO",
+            "outcome": "Multi-year partnership roadmap agreed upon"
+          }
+        ]
+      }
+    }
+  ]
+}

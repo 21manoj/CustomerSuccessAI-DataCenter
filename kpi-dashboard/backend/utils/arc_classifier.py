@@ -108,7 +108,7 @@ _STALLED_SIGNALS = frozenset([
 # Growth / expansion signals
 _EXPANSION_SIGNALS = frozenset([
     # load-driver subtypes
-    'expansion_signal',          # proactive_growth arc
+    'expansion_signal',          # expansion_champion arc
     'champion_advocacy',         # expansion_champion arc
     'usage_spike',               # expansion_champion arc
     'advocacy',                  # multiple healthy arcs
@@ -131,30 +131,31 @@ def _has(signal_types: Counter, keyword_set: frozenset) -> bool:
 
 
 ARC_RULES: list[tuple[str, float, object]] = [
-    # 1a. Champion Loss (explicit) — champion_change signal present
+    # ── All arc_type values use canonical names from config/story_arcs/ ──
+    #
+    # Canonical 8: exec_sponsor_change, crisis_recovery, stalled_deployment,
+    #   competitive_displacement, silent_churn, land_and_expand,
+    #   expansion_champion, seasonal_surge
+
+    # 1a. Exec Sponsor Change (explicit) — champion/exec departure signal present
     #     Strongest indicator: a named person left the account.
-    #     No slope requirement — account may have already bottomed out.
-    #     Load-driver subtype: 'champion_change' (VP/exec resigned/replaced)
-    #     NOT fired if critical_incident present (that's crisis_recovery).
     (
-        'champion_loss', 0.85,
+        'exec_sponsor_change', 0.85,
         lambda f: (
             _has(f['signal_types'], _CHAMPION_CHANGE_SIGNALS)
             and f['health_now'] < ht.at_risk_min()
             and not _has(f['signal_types'], frozenset(['critical_incident']))
         ),
     ),
-    # 1b. Champion Loss (slope-based) — departure signal + actively declining
-    #     Catches early-stage champion loss before account bottoms out.
+    # 1b. Exec Sponsor Change (slope-based) — departure signal + actively declining
     (
-        'champion_loss', 0.80,
+        'exec_sponsor_change', 0.80,
         lambda f: (
             f['has_stakeholder_departure']
             and f['slope_30d'] < -3            # > 3 pts/month active decline
         ),
     ),
-    # 2. Crisis Recovery — critical incident that is stakeholder-driven
-    #    Load-driver: critical_incident + stakeholder_escalation → crisis_recovery arc
+    # 2a. Crisis Recovery — critical incident + stakeholder-driven escalation
     (
         'crisis_recovery', 0.80,
         lambda f: (
@@ -163,19 +164,17 @@ ARC_RULES: list[tuple[str, float, object]] = [
             and _has(f['signal_types'], _STAKEHOLDER_CRISIS_SIGNALS)
         ),
     ),
-    # 2b. Crisis Recovery (relaxed) — critical incident without stakeholder signal but very low health
+    # 2b. Crisis Recovery (relaxed) — critical incident, very low health
     (
         'crisis_recovery', 0.75,
         lambda f: (
-            f['health_now'] < ht.at_risk_min() - 10   # health < 40 — clearly critical
+            f['health_now'] < ht.at_risk_min() - 10   # health < 40
             and _has(f['signal_types'], frozenset(['critical_incident']))
         ),
     ),
-    # 3. Infrastructure Decay — technical/infra signals driving prolonged decline
-    #    Load-driver: critical_incident + support_escalation (NO stakeholder_escalation)
-    #    Distinct from crisis_recovery: infra-driven not stakeholder-driven
+    # 3. Stalled Deployment — infra/tech signals driving prolonged decline
     (
-        'infrastructure_decay', 0.75,
+        'stalled_deployment', 0.75,
         lambda f: (
             f['slope_60d'] < -8                        # > 8 pts/month decline over 2 months
             and f['health_now'] < 65
@@ -183,54 +182,60 @@ ARC_RULES: list[tuple[str, float, object]] = [
             and not _has(f['signal_types'], _STAKEHOLDER_CRISIS_SIGNALS)
         ),
     ),
-    # 4. Budget Pressure (high confidence) — explicit budget signals in CRM data
+    # 3b. Stalled Deployment — P1 pillar decline with flat overall slope
     (
-        'budget_pressure', 0.75,
+        'stalled_deployment', 0.70,
+        lambda f: (
+            f['p1_delta_30d'] < -5             # P1 infra pillar declining
+            and abs(f['slope_30d']) < 3        # overall health relatively flat
+            and f['health_now'] < ht.healthy_min()
+        ),
+    ),
+    # 4. Competitive Displacement — competitor signals + budget pressure
+    (
+        'competitive_displacement', 0.75,
         lambda f: (
             _has(f['signal_types'], _BUDGET_SIGNALS)
             and f['slope_60d'] < -3
         ),
     ),
-    # 5. Stalled Deployment — P1 infra KPI decline with flat overall slope
-    #    (declining infra metrics but account not yet in freefall)
+    # 4b. Competitive Displacement — competitor signals + approaching renewal
     (
-        'stalled_deployment', 0.70,
-        lambda f: (
-            f['p1_delta_30d'] < -5             # P1 infra pillar declining (lowered from -15)
-            and abs(f['slope_30d']) < 3        # overall health relatively flat
-            and f['health_now'] < ht.healthy_min()
-        ),
-    ),
-    # 6. Competitor Evaluation — competitor signals + approaching renewal
-    (
-        'competitor_evaluation', 0.70,
+        'competitive_displacement', 0.70,
         lambda f: (
             _has(f['signal_types'], _COMPETITOR_SIGNALS)
             and f['days_to_renewal'] < 90
         ),
     ),
-    # 7. Ignored Churn — declining engagement, no critical incident, moderate health drop
-    #    Load-driver: kpi_decline + support_escalation + champion_disengagement
+    # 5. Silent Churn — declining engagement, no crisis, no champion departure
     (
-        'ignored_churn', 0.65,
+        'silent_churn', 0.65,
         lambda f: (
             f['slope_30d'] < -5                # > 5 pts/month rapid decline
-            and f['health_now'] < ht.at_risk_min() + 15   # <85 but not necessarily critical
+            and f['health_now'] < ht.at_risk_min() + 15
             and not _has(f['signal_types'], frozenset(['critical_incident']))
             and not f['has_stakeholder_departure']
         ),
     ),
-    # 8. Engagement Decline — mild decline in at-risk range, no crisis signals
+    # 5b. Silent Churn (mild) — moderate decline in at-risk range
     (
-        'engagement_decline', 0.65,
+        'silent_churn', 0.60,
         lambda f: (
             f['slope_30d'] < -3
             and f['health_now'] >= ht.at_risk_min()
             and f['health_now'] < ht.healthy_min()
         ),
     ),
-    # 9. Land and Expand — healthy account with expansion signals
-    #    Load-driver: expansion_signal / champion_advocacy / usage_spike
+    # 6. Expansion Champion — healthy, high confidence, growing with expansion signals
+    (
+        'expansion_champion', 0.75,
+        lambda f: (
+            f['health_now'] >= ht.healthy_min() + 10      # health >= 80
+            and f['slope_30d'] >= 0
+            and _has(f['signal_types'], _EXPANSION_SIGNALS)
+        ),
+    ),
+    # 7. Land and Expand — healthy account with expansion signals
     (
         'land_and_expand', 0.75,
         lambda f: (
@@ -238,23 +243,14 @@ ARC_RULES: list[tuple[str, float, object]] = [
             and _has(f['signal_types'], _EXPANSION_SIGNALS)
         ),
     ),
-    # 10. Proactive Growth — healthy, expanding, high confidence
+    # 8. Seasonal Surge — healthy, stable (seasonal patterns detected by Wizard B)
     (
-        'proactive_growth', 0.70,
-        lambda f: (
-            f['health_now'] >= ht.healthy_min() + 10      # health >= 80
-            and f['slope_30d'] >= 0
-            and _has(f['signal_types'], _EXPANSION_SIGNALS)
-        ),
-    ),
-    # 11. Steady Performer — healthy, stable
-    (
-        'steady_performer', 0.60,
+        'seasonal_surge', 0.60,
         lambda f: f['health_now'] >= ht.healthy_min() and f['slope_30d'] >= -2,
     ),
-    # 12. Fallback — always matches (at-risk default)
+    # 9. Fallback — always matches (competitive pressure is the safe default)
     (
-        'budget_pressure', 0.55,
+        'competitive_displacement', 0.55,
         lambda f: True,
     ),
 ]
@@ -539,7 +535,7 @@ def classify_arc(account_id: int) -> tuple[str, float, str]:
         features = extract_features(account_id, db.session)
     except Exception as e:
         logger.error(f"arc_classifier: feature extraction failed for account {account_id}: {e}")
-        return 'steady_performer', 0.5, 'baseline'
+        return 'seasonal_surge', 0.5, 'baseline'
 
     for arc_type, confidence, condition in ARC_RULES:
         try:

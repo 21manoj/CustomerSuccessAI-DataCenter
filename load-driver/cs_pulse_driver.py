@@ -150,7 +150,10 @@ def run_manifest(args):
         logger.info(f"  Registered: customer_id={customer_id}")
 
         # Provision onboarding directory
-        num_accounts = len(manifest.get('accounts', [])) or 3
+        # num_accounts=0 in manifest mode: the accounts.csv will create
+        # the real accounts. Passing num_accounts>0 creates placeholder
+        # accounts (447001, 447002...) that diverge from manifest accounts.
+        num_accounts = 0
         logger.info(
             f"  Provisioning onboarding (POST /api/onboarding/complete, "
             f"num_accounts={num_accounts})..."

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ARC_TEMPLATES: dict[str, dict] = {
-    'ignored_churn': {
+    'silent_churn': {  # was: ignored_churn
         'classification': 'critical',
         'baseline': [
             {'type': 'signal',      'subtype': 'kpi_decline',              'month': 3, 'offset_days': 0},
@@ -54,7 +54,7 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
         ],
     },
-    'proactive_growth': {
+    'expansion_champion': {  # was: proactive_growth
         'classification': 'healthy',
         'baseline': [
             {'type': 'signal',      'subtype': 'expansion_signal',      'month': 3, 'offset_days': 0},
@@ -130,7 +130,7 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_approved', 'type': 'LED_TO', 'confidence': 0.9, 'lag_days': 21, 'label': 'Proposal secured approval'},
         ],
     },
-    'steady_performer': {
+    'seasonal_surge': {  # was: steady_performer (healthy stable accounts)
         'classification': 'healthy',
         'baseline': [
             {'type': 'signal',      'subtype': 'routine_review',    'month': 4, 'offset_days': 0},
@@ -150,7 +150,7 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_approved', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 21, 'label': 'Proposal secured expansion'},
         ],
     },
-    'budget_pressure': {
+    'competitive_displacement_budget': {  # budget-pressure variant of competitive_displacement
         'classification': 'at_risk',
         'baseline': [
             {'type': 'signal',   'subtype': 'kpi_decline',           'month': 2, 'offset_days': 0},
@@ -198,7 +198,7 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_secured',   'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Remediation secured renewal'},
         ],
     },
-    'competitor_evaluation': {
+    'competitive_displacement_eval': {  # competitor-eval variant
         'classification': 'at_risk',
         'baseline': [
             {'type': 'signal',   'subtype': 'support_escalation',  'month': 2, 'offset_days': 0},
@@ -220,7 +220,7 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_secured',   'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Incentive secured renewal'},
         ],
     },
-    'champion_loss': {
+    'exec_sponsor_change': {  # was: champion_loss
         'classification': 'critical',
         'baseline': [
             {'type': 'signal',   'subtype': 'stakeholder_escalation', 'month': 1, 'offset_days': 0},
@@ -247,7 +247,7 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
         ],
     },
-    'infrastructure_decay': {
+    'stalled_deployment_decay': {  # infrastructure-decay variant of stalled_deployment
         'classification': 'critical',
         'baseline': [
             {'type': 'signal',   'subtype': 'critical_incident',   'month': 1, 'offset_days': 0},
@@ -274,7 +274,7 @@ ARC_TEMPLATES: dict[str, dict] = {
         ],
     },
     # Alias: engagement_decline falls back to budget_pressure topology
-    'engagement_decline': {
+    'silent_churn_mild': {  # was: engagement_decline (mild variant of silent_churn)
         'classification': 'at_risk',
         'baseline': [
             {'type': 'signal',   'subtype': 'kpi_decline',        'month': 2, 'offset_days': 0},
@@ -315,6 +315,117 @@ ARC_TEMPLATES: dict[str, dict] = {
             {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_approved',   'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Proposal secured expansion approval'},
         ],
     },
+
+    # ── 4 additional arcs from JSON story arc manifests ──
+    # These were missing, causing fallback to 'steady_performer' (only 2 edges).
+
+    'competitive_displacement': {
+        'classification': 'at_risk',
+        'baseline': [
+            {'type': 'signal',   'subtype': 'competitor_mention',      'month': 2, 'offset_days': 0},
+            {'type': 'signal',   'subtype': 'budget_pressure',         'month': 3, 'offset_days': 0},
+            {'type': 'signal',   'subtype': 'escalation',              'month': 3, 'offset_days': 14},
+            {'type': 'decision', 'subtype': 'competitive_defense',     'month': 4, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'executive_engagement',    'month': 4, 'offset_days': 7},
+            {'type': 'outcome',  'subtype': 'renewal_uncertainty',     'month': 5, 'offset_days': 0},
+            {'type': 'outcome',  'subtype': 'engagement_decline',      'month': 5, 'offset_days': 7},
+        ],
+        'intervention': [
+            {'type': 'signal',   'subtype': 'value_defense',           'month': 0, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'multi_year_commitment',   'month': 0, 'offset_days': 14},
+            {'type': 'outcome',  'subtype': 'renewal_confirmed',       'month': 1, 'offset_days': 21},
+        ],
+        'edge_topology': [
+            {'phase': 'baseline',     'from': 'signal:1',   'to': 'signal:2',                   'type': 'LED_TO',    'confidence': 0.75, 'lag_days': 14, 'label': 'Competitor threat led to budget pressure'},
+            {'phase': 'baseline',     'from': 'signal:2',   'to': 'signal:3',                   'type': 'LED_TO',    'confidence': 0.80, 'lag_days': 14, 'label': 'Budget pressure escalated retention risk'},
+            {'phase': 'baseline',     'from': 'signal:3',   'to': 'decision:1',                 'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Escalation triggered competitive defense'},
+            {'phase': 'baseline',     'from': 'decision:1', 'to': 'decision:2',                 'type': 'LED_TO',    'confidence': 0.80, 'lag_days': 7,  'label': 'Defense required executive engagement'},
+            {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:renewal_uncertainty', 'type': 'LED_TO',   'confidence': 0.70, 'lag_days': 14, 'label': 'Engagement surfaced renewal uncertainty'},
+            {'phase': 'baseline',     'from': 'signal:1',   'to': 'outcome:engagement_decline', 'type': 'CAUSED_BY', 'confidence': 0.75, 'lag_days': 30, 'label': 'Competitor threat caused engagement decline'},
+            {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',                 'type': 'TRIGGERED', 'confidence': 0.90, 'lag_days': 7,  'label': 'Value defense triggered commitment discussion'},
+            {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_confirmed',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Multi-year commitment secured renewal'},
+        ],
+    },
+
+    'silent_churn': {
+        'classification': 'at_risk',
+        'baseline': [
+            {'type': 'signal',   'subtype': 'engagement_gap',       'month': 2, 'offset_days': 0},
+            {'type': 'signal',   'subtype': 'nps_decline',          'month': 2, 'offset_days': 14},
+            {'type': 'signal',   'subtype': 'usage_decline',        'month': 3, 'offset_days': 0},
+            {'type': 'signal',   'subtype': 'competitor_mention',   'month': 4, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'exec_intervention',    'month': 4, 'offset_days': 7},
+            {'type': 'outcome',  'subtype': 'churn_risk',           'month': 5, 'offset_days': 0},
+        ],
+        'intervention': [
+            {'type': 'signal',   'subtype': 'early_detection',      'month': 0, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'reengagement_plan',    'month': 0, 'offset_days': 7},
+            {'type': 'outcome',  'subtype': 'retention_secured',    'month': 1, 'offset_days': 21},
+        ],
+        'edge_topology': [
+            {'phase': 'baseline',     'from': 'signal:1',   'to': 'signal:2',                'type': 'LED_TO',    'confidence': 0.70, 'lag_days': 14, 'label': 'Engagement gap led to NPS decline'},
+            {'phase': 'baseline',     'from': 'signal:2',   'to': 'signal:3',                'type': 'LED_TO',    'confidence': 0.75, 'lag_days': 14, 'label': 'Dissatisfaction drove usage decline'},
+            {'phase': 'baseline',     'from': 'signal:3',   'to': 'signal:4',                'type': 'LED_TO',    'confidence': 0.80, 'lag_days': 21, 'label': 'Usage decline attracted competitor eval'},
+            {'phase': 'baseline',     'from': 'signal:4',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'Competitor threat triggered exec intervention'},
+            {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:churn_risk',      'type': 'LED_TO',    'confidence': 0.65, 'lag_days': 14, 'label': 'Late intervention revealed churn risk'},
+            {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.90, 'lag_days': 7,  'label': 'Early detection triggered re-engagement'},
+            {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:retention_secured', 'type': 'LED_TO',  'confidence': 0.80, 'lag_days': 21, 'label': 'Re-engagement plan secured retention'},
+        ],
+    },
+
+    'seasonal_surge': {
+        'classification': 'healthy',
+        'baseline': [
+            {'type': 'signal',   'subtype': 'seasonal_pattern',     'month': 1, 'offset_days': 0},
+            {'type': 'signal',   'subtype': 'capacity_constraint',  'month': 3, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'capacity_planning',    'month': 3, 'offset_days': 7},
+            {'type': 'decision', 'subtype': 'expansion_proposal',   'month': 4, 'offset_days': 0},
+            {'type': 'outcome',  'subtype': 'expansion_opportunity', 'month': 4, 'offset_days': 14},
+            {'type': 'outcome',  'subtype': 'cost_avoidance',       'month': 5, 'offset_days': 0},
+        ],
+        'intervention': [
+            {'type': 'signal',   'subtype': 'proactive_planning',   'month': 0, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'pre_surge_expansion',  'month': 0, 'offset_days': 14},
+            {'type': 'outcome',  'subtype': 'expansion_captured',   'month': 1, 'offset_days': 14},
+        ],
+        'edge_topology': [
+            {'phase': 'baseline',     'from': 'signal:1',   'to': 'signal:2',                    'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 30, 'label': 'Seasonal pattern led to capacity constraint'},
+            {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:1',                  'type': 'TRIGGERED', 'confidence': 0.90, 'lag_days': 7,  'label': 'Capacity constraint triggered planning'},
+            {'phase': 'baseline',     'from': 'decision:1', 'to': 'decision:2',                  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Capacity planning led to expansion proposal'},
+            {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:expansion_opportunity', 'type': 'LED_TO',  'confidence': 0.80, 'lag_days': 14, 'label': 'Proposal identified expansion opportunity'},
+            {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:cost_avoidance',      'type': 'LED_TO',    'confidence': 0.80, 'lag_days': 30, 'label': 'Proactive planning avoided emergency costs'},
+            {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',                  'type': 'TRIGGERED', 'confidence': 0.90, 'lag_days': 7,  'label': 'Proactive planning triggered pre-surge expansion'},
+            {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:expansion_captured',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Pre-surge expansion captured revenue'},
+        ],
+    },
+
+    'exec_sponsor_change': {
+        'classification': 'at_risk',
+        'baseline': [
+            {'type': 'signal',   'subtype': 'champion_departure',    'month': 2, 'offset_days': 0},
+            {'type': 'signal',   'subtype': 'engagement_gap',        'month': 2, 'offset_days': 14},
+            {'type': 'signal',   'subtype': 'usage_decline',         'month': 3, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'stakeholder_mapping',   'month': 3, 'offset_days': 7},
+            {'type': 'decision', 'subtype': 'exec_reengagement',     'month': 4, 'offset_days': 0},
+            {'type': 'outcome',  'subtype': 'relationship_reset',    'month': 4, 'offset_days': 14},
+            {'type': 'outcome',  'subtype': 'renewal_uncertainty',   'month': 5, 'offset_days': 0},
+        ],
+        'intervention': [
+            {'type': 'signal',   'subtype': 'new_champion_identified', 'month': 0, 'offset_days': 0},
+            {'type': 'decision', 'subtype': 'onboarding_new_exec',     'month': 0, 'offset_days': 7},
+            {'type': 'outcome',  'subtype': 'renewal_confirmed',       'month': 1, 'offset_days': 21},
+        ],
+        'edge_topology': [
+            {'phase': 'baseline',     'from': 'signal:1',   'to': 'signal:2',                   'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Champion departure created engagement gap'},
+            {'phase': 'baseline',     'from': 'signal:2',   'to': 'signal:3',                   'type': 'LED_TO',    'confidence': 0.75, 'lag_days': 14, 'label': 'Engagement gap led to usage decline'},
+            {'phase': 'baseline',     'from': 'signal:3',   'to': 'decision:1',                 'type': 'TRIGGERED', 'confidence': 0.80, 'lag_days': 7,  'label': 'Usage decline triggered stakeholder mapping'},
+            {'phase': 'baseline',     'from': 'decision:1', 'to': 'decision:2',                 'type': 'LED_TO',    'confidence': 0.80, 'lag_days': 14, 'label': 'Mapping led to exec re-engagement plan'},
+            {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:relationship_reset', 'type': 'LED_TO',    'confidence': 0.70, 'lag_days': 14, 'label': 'Re-engagement initiated relationship reset'},
+            {'phase': 'baseline',     'from': 'signal:1',   'to': 'outcome:renewal_uncertainty', 'type': 'CAUSED_BY', 'confidence': 0.80, 'lag_days': 45, 'label': 'Champion departure caused renewal uncertainty'},
+            {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',                 'type': 'TRIGGERED', 'confidence': 0.90, 'lag_days': 7,  'label': 'New champion identified triggered exec onboarding'},
+            {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:renewal_confirmed',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Exec onboarding secured renewal'},
+        ],
+    },
 }
 
 # Causal edge types that require temporal validation (from must precede to)
@@ -340,6 +451,7 @@ class InDBRefRegistry:
         self._signals: list[tuple[int, Optional[datetime]]] = []
         self._decisions: list[tuple[int, Optional[datetime]]] = []
         self._outcomes: dict[str, tuple[int, Optional[datetime]]] = {}
+        self._outcomes_by_idx: list[tuple[int, Optional[datetime]]] = []  # positional fallback
         self._build()
 
     def _build(self):
@@ -360,6 +472,7 @@ class InDBRefRegistry:
             elif n.node_type == 'DECISION':
                 self._decisions.append((n.node_id, ts))
             elif n.node_type == 'OUTCOME':
+                self._outcomes_by_idx.append((n.node_id, ts))
                 # Register by node_subtype (outcome_type)
                 if n.node_subtype:
                     otype = n.node_subtype.strip().lower()
@@ -399,7 +512,24 @@ class InDBRefRegistry:
 
         if symbolic.startswith('outcome:'):
             otype = symbolic.split(':', 1)[1].strip().lower()
-            return self._outcomes.get(otype)
+            # 1. Exact subtype match
+            hit = self._outcomes.get(otype)
+            if hit:
+                return hit
+            # 2. Positional (outcome:1, outcome:2) — like signals/decisions
+            try:
+                idx = int(otype) - 1
+                return self._outcomes_by_idx[idx] if 0 <= idx < len(self._outcomes_by_idx) else None
+            except ValueError:
+                pass
+            # 3. Fuzzy: any outcome whose key contains the search term
+            for key, val in self._outcomes.items():
+                if otype in key or key in otype:
+                    return val
+            # 4. Last resort: return first outcome if only one exists
+            if len(self._outcomes_by_idx) == 1:
+                return self._outcomes_by_idx[0]
+            return None
 
         return None
 
@@ -420,8 +550,37 @@ def generate_edges(account_id: int, arc_type: str, phase: str = 'baseline') -> i
     from models import ContextEdge, ContextNode
     from extensions import db
 
-    # Resolve arc definition, fall back to steady_performer if unknown
-    arc_def = ARC_TEMPLATES.get(arc_type) or ARC_TEMPLATES.get('steady_performer', {})
+    # ── Arc type resolution ──
+    # Canonical 8: crisis_recovery, exec_sponsor_change, competitive_displacement,
+    #   silent_churn, stalled_deployment, land_and_expand, expansion_champion, seasonal_surge
+    # Legacy aliases map old names to canonical + template variant keys.
+    _ARC_ALIASES = {
+        # Legacy classifier names → canonical
+        'champion_loss': 'exec_sponsor_change',
+        'competitor_evaluation': 'competitive_displacement',
+        'ignored_churn': 'silent_churn',
+        'proactive_growth': 'expansion_champion',
+        'infrastructure_decay': 'stalled_deployment',
+        'engagement_decline': 'silent_churn',
+        'budget_pressure': 'competitive_displacement',
+        'steady_performer': 'seasonal_surge',
+        'crisis': 'crisis_recovery',
+    }
+    resolved_type = _ARC_ALIASES.get(arc_type, arc_type)
+
+    # Look up template: try exact match first, then variants
+    arc_def = ARC_TEMPLATES.get(resolved_type)
+    if not arc_def:
+        # Try variant templates (e.g., competitive_displacement_budget)
+        for key in ARC_TEMPLATES:
+            if key.startswith(resolved_type):
+                arc_def = ARC_TEMPLATES[key]
+                break
+    if not arc_def:
+        arc_def = ARC_TEMPLATES.get('seasonal_surge', {})  # safe fallback
+
+    if resolved_type != arc_type:
+        logger.info(f"arc_edge_generator: aliased '{arc_type}' → '{resolved_type}' for account {account_id}")
 
     # Filter topology to the requested phase
     topology = [

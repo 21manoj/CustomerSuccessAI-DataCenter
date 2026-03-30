@@ -743,9 +743,16 @@ def _process_data_impl(customer_id: int) -> dict:
                 if raw is None:
                     return None
                 raw = int(raw)
+                # Check csv_to_db_aid FIRST — this maps CSV source_account_id
+                # (e.g. 447001) to the real DB account_id (e.g. 732).
+                # Without this priority, placeholder accounts with matching IDs
+                # would intercept the lookup and KPIs would land on the wrong account.
+                mapped = csv_to_db_aid.get(raw)
+                if mapped is not None:
+                    return mapped
                 if raw in accounts_by_db_id:
                     return raw
-                return csv_to_db_aid.get(raw)
+                return None
 
             # Step 3: Load KPIs, signals, and other CSVs
             try:
