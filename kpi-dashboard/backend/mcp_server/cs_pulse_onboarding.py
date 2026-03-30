@@ -578,128 +578,27 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
     """
     _check_mcp_enabled()
 
-    import json as _json
-    import csv as _csv
-    import io as _io
-
-    ft = file_type if file_type.endswith('.csv') else f'{file_type}.csv'
-
-    schemas_path = os.path.join(_backend_dir, 'config', 'csv_schemas.json')
-    if not os.path.isfile(schemas_path):
-        raise ToolError("CSV schemas config not found.")
-
-    with open(schemas_path, 'r') as f:
-        schemas = _json.load(f)
-
-    def _all_files_in_model(model: dict) -> dict:
-        """Flatten a model section into {filename: schema} regardless of nesting style.
-
-        Supports both:
-          - flat:   model['files']['decisions.csv'] = {...}
-          - nested: model['customer_provided']['decisions.csv'] = {...}
-                    model['auto_generated']['decisions.csv'] = {...}
-                    model['platform_curated']['decisions.csv'] = {...}
-        """
-        result = {}
-        # Flat style (preferred — added by csv_schemas.json fix Mar 2026)
-        result.update(model.get('files', {}))
-        # Nested style (legacy — handles containers whose JSON wasn't hot-patched)
-        for sub_key in ('customer_provided', 'auto_generated', 'platform_curated'):
-            sub = model.get(sub_key, {})
-            for k, v in sub.items():
-                if k.endswith('.csv') and k not in result:
-                    result[k] = v
-        return result
-
-    schema = None
-    for model_key in ('regular_model', 'context_graph_model'):
-        files = _all_files_in_model(schemas.get(model_key, {}))
-        if ft in files:
-            schema = files[ft]
-            break
-
-    if not schema:
-        available = []
-        for model_key in ('regular_model', 'context_graph_model'):
-            available.extend(_all_files_in_model(schemas.get(model_key, {})).keys())
-        raise ToolError(
-            f"Unknown file_type '{file_type}'. Available: {sorted(available)}"
-        )
-
-    required_columns = set(schema.get('required_columns', []))
-    optional_columns = set(schema.get('optional_columns', []))
-    all_known = required_columns | optional_columns
-
-    reader = _csv.DictReader(_io.StringIO(csv_content))
-    headers = set(reader.fieldnames or [])
-    rows = list(reader)
-
-    missing_required = required_columns - headers
-    unknown_columns = headers - all_known
-    errors = []
-    warnings = []
-
-    if missing_required:
-        errors.append(f"Missing required columns: {sorted(missing_required)}")
-    if unknown_columns:
-        warnings.append(f"Unknown columns (will be ignored): {sorted(unknown_columns)}")
-    if len(rows) == 0:
-        errors.append("CSV has no data rows.")
-
-    valid = len(errors) == 0
-
-    if dry_run:
-        return {
-            'scope': 'validation',
-            'customer_id': customer_id,
-            'file_type': file_type,
-            'dry_run': True,
-            'valid': valid,
-            'row_count': len(rows),
-            'columns_found': sorted(headers),
-            'required_columns': sorted(required_columns),
-            'missing_required': sorted(missing_required) if missing_required else [],
-            'errors': errors,
-            'warnings': warnings,
-        }
-
-    if not valid:
-        raise ToolError(
-            f"CSV validation failed for {file_type}: {'; '.join(errors)}. "
-            f"Use dry_run=True to inspect details without uploading."
-        )
-
     app = _get_flask_app()
-
     with app.app_context():
-        from models import Customer, db
-        from pathlib import Path
+        from utils.csv_upload import _upload_csv_impl
+        result = _upload_csv_impl(
+            customer_id=customer_id,
+            file_type=file_type,
+            csv_content=csv_content,
+            dry_run=dry_run,
+            storage_mode='disk',
+        )
 
-        customer = db.session.get(Customer, int(customer_id))
-        if not customer:
-            raise ToolError(f"Customer {customer_id} not found.")
+        if result.status == 'error' or (result.status == 'validation_error' and not dry_run):
+            raise ToolError(
+                f"CSV upload failed for {file_type}: {'; '.join(result.errors)}. "
+                f"Use dry_run=True to inspect details."
+            )
 
-        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-        backend_dir = Path(__file__).parent.parent
-        customer_dir = backend_dir / 'verticals' / f'customer{customer_id}-{vertical}'
-
-        data_dir = customer_dir / 'data'
-        data_dir.mkdir(parents=True, exist_ok=True)
-
-        file_path = data_dir / ft
-        file_path.write_text(csv_content, encoding='utf-8')
-
-        return {
-            'scope': 'customer',
-            'customer_id': customer_id,
-            'file_type': file_type,
-            'file_path': str(file_path),
-            'bytes_written': len(csv_content.encode('utf-8')),
-            'row_count': len(rows),
-            'warnings': warnings,
-            'message': f"Uploaded {file_type} ({len(csv_content.encode('utf-8'))} bytes, "
-                       f"{len(rows)} rows). Use process_data() to ingest into the database.",
-        }
+        # Return dict with backward-compatible keys
+        d = result.to_dict()
+        d['scope'] = 'validation' if dry_run else 'customer'
+        return d
 
 
 # ===================================================================

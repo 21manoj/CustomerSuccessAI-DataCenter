@@ -2207,218 +2207,95 @@ def onboarding_status(customer_id):
 @onboarding_api.route('/upload', methods=['POST'])
 def upload_onboarding_csv():
     """
-    Upload CSV or Excel file to customer data directory
-    
-    Phase 2: Added to V2 - Config-aware upload with validation
-    
-    Files are saved to customer{N}-dc2_s/data/ directory.
-    Loading to PostgreSQL is done by the process-data endpoint (reads these saved CSVs directly; no 02_load/02_upload scripts).
-    
+    Upload CSV or Excel file to customer data directory.
+
+    Delegates to the unified ``_upload_csv_impl()`` for validation and
+    storage.  This route handler only manages HTTP concerns: form parsing,
+    file extraction, and Excel-to-CSV conversion.
+
     Expected form data:
     - file: CSV or Excel file (.csv, .xlsx, .xls)
     - customer_id: int (required)
-    - file_type: One of 'accounts', 'kpis', 'signals', 'products', 'profiles'
-    - upload_mode: Optional - 'full_refresh', 'incremental', 'upsert', 'merge' (default: incremental)
-    
-    Returns:
-    - status: success/error
-    - file_path: Path where file was saved
-    - message: Status message
+    - file_type: One of 'accounts', 'kpis', 'signals', 'products', 'profiles',
+                 'stakeholders', 'engagement_events', 'outcomes', 'decisions',
+                 'signal_edges', 'account_business_profiles', 'industry_benchmarks'
+    - upload_mode: Optional (default: incremental)
     """
     try:
-        # Get customer_id from form or request
+        # ── 1. Parse HTTP form ──
         customer_id = request.form.get('customer_id', type=int)
-        
         if not customer_id:
-            # Try to get from authenticated user (if available)
             try:
                 from auth_middleware import get_current_customer_id
                 customer_id = get_current_customer_id()
-            except:
+            except Exception:
                 pass
-        
         if not customer_id:
             return jsonify({'status': 'error', 'message': 'customer_id required'}), 400
-        
+
         if 'file' not in request.files:
             return jsonify({'status': 'error', 'message': 'No file uploaded'}), 400
-        
+
         file = request.files['file']
         file_type = request.form.get('file_type', 'accounts')
         upload_mode = request.form.get('upload_mode', 'incremental')
-        strict_mode = request.form.get('strict_mode', 'false').lower() == 'true'
-        
-        # Validate upload_mode
-        valid_modes = ['full_refresh', 'incremental', 'upsert', 'merge']
-        if upload_mode not in valid_modes:
-            return jsonify({
-                'status': 'error',
-                'message': f'Invalid upload_mode: {upload_mode}. Valid modes: {", ".join(valid_modes)}'
-            }), 400
-        
+
         if file.filename == '':
             return jsonify({'status': 'error', 'message': 'Empty filename'}), 400
-        
+
         customer_id = int(customer_id)
 
-        # Get customer directory (detect vertical from customer record)
-        upload_vertical = 'dc2_s'
-        try:
-            cust = db.session.get(Customer, customer_id)
-            if cust and getattr(cust, 'vertical', None):
-                from utils.vertical_registry import normalize_vertical
-                upload_vertical = normalize_vertical(cust.vertical)
-        except Exception:
-            pass
-        customer_dir = get_customer_directory(customer_id, upload_vertical)
-        data_dir = customer_dir / "data"
-
-        # Auto-create customer directory if customer exists in DB but dir is missing
-        if not customer_dir.exists():
-            try:
-                cust_check = db.session.get(Customer, customer_id)
-                if cust_check:
-                    customer_dir.mkdir(parents=True, exist_ok=True)
-                    current_app.logger.info(f"Auto-created customer directory: {customer_dir}")
-                else:
-                    return jsonify({
-                        'status': 'error',
-                        'message': f'Customer {customer_id} not found. Provision first: POST /api/onboarding/complete'
-                    }), 404
-            except Exception:
-                return jsonify({
-                    'status': 'error',
-                    'message': f'Customer directory not found. Please provision customer first: POST /api/onboarding/complete'
-                }), 404
-        
-        # Create data directory if it doesn't exist
-        data_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Detect file type from extension
+        # ── 2. Read file content (Excel → CSV if needed) ──
         filename = secure_filename(file.filename)
         file_ext = Path(filename).suffix.lower()
-        is_excel = file_ext in ['.xlsx', '.xls']
-        is_csv = file_ext == '.csv'
-        
-        if not (is_csv or is_excel):
-            return jsonify({
-                'status': 'error',
-                'message': f'Unsupported file format: {file_ext}. Use .csv or .xlsx'
-            }), 400
-        
-        # Determine target filename based on file_type
-        is_context_graph_file = False
-        if file_type in FILE_TYPES:
-            target_filename = FILE_TYPES.get(file_type, filename)
-        elif file_type in CONTEXT_GRAPH_FILE_TYPES:
-            target_filename = CONTEXT_GRAPH_FILE_TYPES[file_type]
-            is_context_graph_file = True
-        else:
-            target_filename = filename
 
-        # Context graph files go into data/context_graph/ subdirectory
-        if is_context_graph_file:
-            cg_dir = data_dir / 'context_graph'
-            cg_dir.mkdir(parents=True, exist_ok=True)
-            file_path = cg_dir / target_filename
+        if file_ext in ('.xlsx', '.xls'):
+            try:
+                df_excel = pd.read_excel(file)
+                csv_content = df_excel.to_csv(index=False)
+            except Exception as e:
+                return jsonify({'status': 'error', 'message': f'Excel parse error: {e}'}), 400
+        elif file_ext == '.csv':
+            csv_content = file.read().decode('utf-8')
         else:
-            file_path = data_dir / target_filename
-        
-        try:
-            upload_warnings = []
-            # Save file temporarily first for validation
-            temp_file_path = data_dir / f"temp_{target_filename}"
-            file.save(str(temp_file_path))
-            
-            # GAP 2.2: For KPI files, validate schema (required columns, types, dates)
-            if file_type == 'kpis':
-                try:
-                    df_check = pd.read_csv(temp_file_path, nrows=1000)
-                except Exception as e:
-                    temp_file_path.unlink(missing_ok=True)
-                    return jsonify({'status': 'error', 'message': f'Invalid CSV: {e}'}), 400
-                schema_ok, schema_errors = validate_kpi_csv_schema(df_check)
-                if not schema_ok:
-                    temp_file_path.unlink(missing_ok=True)
-                    return jsonify({
-                        'status': 'error',
-                        'message': 'KPI CSV schema validation failed',
-                        'errors': schema_errors
-                    }), 400
-            
-            # GAP 2.1: For KPI files, validate/filter against config (enabled_kpis)
-            if file_type == 'kpis':
-                try:
-                    df_full = pd.read_csv(temp_file_path)
-                    df_filtered, config_warnings = filter_kpi_csv_by_config(df_full, customer_id, strict_mode=strict_mode)
-                    upload_warnings.extend(config_warnings)
-                    if len(df_filtered) < len(df_full):
-                        df_filtered.to_csv(temp_file_path, index=False)
-                except ValueError as e:
-                    temp_file_path.unlink(missing_ok=True)
-                    return jsonify({'status': 'error', 'message': str(e)}), 400
-            
-            # Validate account IDs before final save
-            is_valid, validation_errors = validate_account_ids_in_file(temp_file_path, customer_id, file_type)
-            
-            if not is_valid:
-                temp_file_path.unlink(missing_ok=True)
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Account ID validation failed',
-                    'errors': validation_errors,
-                    'expected_range': f"{calculate_account_id_range(customer_id)[0]}-{calculate_account_id_range(customer_id)[1]}"
-                }), 400
-            
-            # Move temp file to final location
-            if temp_file_path.exists():
-                temp_file_path.rename(file_path)
-            
-            file_size = file_path.stat().st_size
-            current_app.logger.info(f"✅ Saved file to {file_path} ({file_size} bytes)")
-            
-            # Store upload_mode in a metadata file for the data loading script
-            upload_metadata = {
-                'upload_mode': upload_mode,
-                'uploaded_at': datetime.now().isoformat(),
-                'file_type': file_type,
-                'filename': target_filename
-            }
-            metadata_file = data_dir / f".upload_metadata_{file_type}.json"
-            with open(metadata_file, 'w') as f:
-                json.dump(upload_metadata, f, indent=2)
-            
-            # Log validation warnings if present
-            if validation_errors:
-                current_app.logger.warning(f"Account ID validation warnings: {validation_errors}")
-                
-        except Exception as e:
-            current_app.logger.error(f"Error saving file: {e}", exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': 'Failed to save file. Please try again or contact support.'
-            }), 500
-        
-        # Log upload to activity log for audit trail
+                'message': f'Unsupported format: {file_ext}. Use .csv or .xlsx'
+            }), 400
+
+        # ── 3. Delegate to unified upload ──
+        from utils.csv_upload import _upload_csv_impl
+
+        result = _upload_csv_impl(
+            customer_id=customer_id,
+            file_type=file_type,
+            csv_content=csv_content,
+            storage_mode='disk',
+            log_activity=True,
+        )
+
+        if result.status == 'error' or result.status == 'validation_error':
+            return jsonify({
+                'status': 'error',
+                'message': '; '.join(result.errors) if result.errors else 'Upload failed',
+                'errors': result.errors,
+                'warnings': result.warnings,
+            }), 400
+
+        # ── 4. Activity logging ──
         try:
             from models import ActivityLog
             from flask_login import current_user
-            row_count = 0
-            try:
-                import pandas as _pd
-                row_count = len(_pd.read_csv(file_path)) if file_path.exists() else 0
-            except Exception:
-                pass
             log_entry = ActivityLog(
                 customer_id=customer_id,
                 user_id=getattr(current_user, 'user_id', None) if hasattr(current_user, 'user_id') else None,
                 action_type='data_upload',
                 action_category='data',
-                action_description=f'Uploaded {target_filename} ({upload_mode})',
+                action_description=f'Uploaded {result.canonical_filename} ({upload_mode})',
                 resource_type=file_type,
                 resource_id=str(customer_id),
                 status='success',
-                details={'file_name': target_filename, 'upload_mode': upload_mode, 'records_count': row_count},
+                details={'file_name': result.canonical_filename, 'upload_mode': upload_mode, 'records_count': result.row_count},
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get('User-Agent', '')[:200],
             )
@@ -2429,18 +2306,18 @@ def upload_onboarding_csv():
 
         resp = {
             'status': 'success',
-            'message': 'File saved to customer directory',
+            'message': result.message or 'File saved to customer directory',
             'file_type': file_type,
-            'filename': target_filename,
-            'file_path': str(file_path.relative_to(Path(__file__).parent)),
+            'filename': result.canonical_filename,
+            'file_path': result.file_path,
             'customer_id': customer_id,
             'upload_mode': upload_mode,
-            'next_step': 'Run POST /api/onboarding/process-data to load data to database'
+            'next_step': 'Run POST /api/onboarding/process-data to load data to database',
         }
-        if upload_warnings:
-            resp['warnings'] = upload_warnings
+        if result.warnings:
+            resp['warnings'] = result.warnings
         return jsonify(resp)
-            
+
     except Exception as e:
         current_app.logger.error(f"Error in onboarding upload: {e}", exc_info=True)
         return jsonify({
