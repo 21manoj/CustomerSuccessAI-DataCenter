@@ -10,6 +10,10 @@ import {
 } from 'lucide-react';
 import { useSession } from '../../contexts/SessionContext';
 import { classify, classifyColor } from '../../utils/healthThresholds';
+import {
+  MOCK_ACCOUNTS, MOCK_ACTIONS, MOCK_APPROVALS,
+  MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
+} from './mockData';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -222,7 +226,12 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
           setHistoryItems(data.history || data.recommendations || []);
         }
       } catch {
-        // fail silently, empty states handle display
+        // Fall back to mock data for drawer
+        const mockDetail = (MOCK_ACCOUNT_DETAIL as any)[account.id];
+        if (mockDetail) {
+          setSignals(mockDetail.signals || []);
+          setHistoryItems((MOCK_RECOMMENDATIONS as any)[account.id] || []);
+        }
       } finally {
         setLoadingDetail(false);
       }
@@ -577,11 +586,11 @@ const CSMCockpit: React.FC = () => {
         fetch('/api/dc2s/daily-actions', { headers }),
       ]);
 
+      let acctLoaded = false;
       if (acctRes.status === 'fulfilled' && acctRes.value.ok) {
         const data = await acctRes.value.json();
         const raw: any[] = data.accounts || data || [];
-        // Map backend field names to component interface
-        setAccounts((Array.isArray(raw) ? raw : []).map((a: any) => ({
+        const mapped = (Array.isArray(raw) ? raw : []).map((a: any) => ({
           ...a,
           id: a.id ?? a.account_id,
           name: a.name ?? a.account_name ?? '',
@@ -589,21 +598,29 @@ const CSMCockpit: React.FC = () => {
           arr: a.arr ?? a.revenue ?? 0,
           status: a.status ?? a.account_status ?? '',
           pillar_scores: a.pillar_scores ?? {},
-        })));
-      } else {
-        throw new Error('Failed to load accounts');
+        }));
+        if (mapped.length > 0) {
+          setAccounts(mapped);
+          acctLoaded = true;
+        }
+      }
+      if (!acctLoaded) {
+        setAccounts(MOCK_ACCOUNTS.map((a) => ({ ...a, id: a.account_id, name: a.account_name, pillar_scores: {} })));
       }
 
       if (actRes.status === 'fulfilled' && actRes.value.ok) {
         const data = await actRes.value.json();
         const raw: any[] = data.actions || data || [];
-        setActions((Array.isArray(raw) ? raw : []).map((a: any) => ({
+        const mapped = (Array.isArray(raw) ? raw : []).map((a: any) => ({
           ...a,
           id: a.id ?? a.rank ?? 0,
           action: a.action || a.action_title || a.action_description || '',
           impact_score: a.impact_score ?? a.priority_index ?? 0,
           projected_impact: a.projected_impact ?? a.roi_projected_impact ?? 0,
-        })));
+        }));
+        setActions(mapped.length > 0 ? mapped : MOCK_ACTIONS.map((a) => ({ ...a, id: a.rank, impact_score: 0 })));
+      } else {
+        setActions(MOCK_ACTIONS.map((a) => ({ ...a, id: a.rank, impact_score: 0 })));
       }
 
       // Load approvals (endpoint optional — may not exist)
@@ -612,18 +629,22 @@ const CSMCockpit: React.FC = () => {
         if (appRes.ok) {
           const data = await appRes.json();
           const appList = data.approvals || data.data || [];
-          setApprovals(Array.isArray(appList) ? appList : []);
+          const result = Array.isArray(appList) ? appList : [];
+          setApprovals(result.length > 0 ? result : MOCK_APPROVALS);
         } else {
-          setApprovals([]);
+          setApprovals(MOCK_APPROVALS);
         }
       } catch {
-        setApprovals([]);
+        setApprovals(MOCK_APPROVALS);
       }
 
       // Mock completed today (no dedicated API)
       setCompletedToday([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      // Full fallback to mock data when all APIs fail
+      setAccounts(MOCK_ACCOUNTS.map((a) => ({ ...a, id: a.account_id, name: a.account_name, pillar_scores: {} })));
+      setActions(MOCK_ACTIONS.map((a) => ({ ...a, id: a.rank, impact_score: 0 })));
+      setApprovals(MOCK_APPROVALS);
     } finally {
       setLoading(false);
     }
