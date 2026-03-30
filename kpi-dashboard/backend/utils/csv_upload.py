@@ -199,6 +199,7 @@ def _upload_csv_impl(
     storage_mode: str = 'disk',
     duplicate_strategy: str = 'skip',
     strict_mode: bool = False,
+    strict_validation: bool = True,
     log_activity: bool = False,
 ) -> UploadResult:
     """
@@ -214,6 +215,8 @@ def _upload_csv_impl(
         storage_mode:       'disk' (for process_data pipeline) or 'db_direct' (V3 real-time)
         duplicate_strategy: For db_direct: 'skip', 'update', 'replace', 'error'
         strict_mode:        If True, reject disabled KPIs
+        strict_validation:  If True (default), missing required columns → error.
+                            If False, missing columns → warning (backward compat for load-driver).
         log_activity:       If True, write ActivityLog entry
 
     Returns:
@@ -257,7 +260,11 @@ def _upload_csv_impl(
     warnings: list[str] = []
 
     if missing_required:
-        errors.append(f"Missing required columns: {missing_required}")
+        msg = f"Missing required columns: {missing_required}"
+        if strict_validation:
+            errors.append(msg)
+        else:
+            warnings.append(f"[non-strict] {msg} — file accepted anyway")
     if unknown_columns:
         warnings.append(f"Unknown columns (will be ignored): {unknown_columns}")
     if len(rows) == 0:

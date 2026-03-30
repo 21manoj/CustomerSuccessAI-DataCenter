@@ -2271,6 +2271,7 @@ def upload_onboarding_csv():
             file_type=file_type,
             csv_content=csv_content,
             storage_mode='disk',
+            strict_validation=False,  # Accept files with missing optional columns (backward compat)
             log_activity=True,
         )
 
