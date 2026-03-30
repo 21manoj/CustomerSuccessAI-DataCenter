@@ -14,6 +14,11 @@ name: CS Pulse — ECR build (amd64) & optional EC2 deploy
 on:
   workflow_dispatch:
     inputs:
+      no_cache:
+        description: "Pass --no-cache to docker buildx (full image rebuild, no layer cache)"
+        required: false
+        default: false
+        type: boolean
       deploy_ec2:
         description: "After push, run scripts/rehydrate-ec2-ecr.sh (needs CSPULSE_SSH_PRIVATE_KEY)"
         required: false
@@ -63,21 +68,33 @@ jobs:
 
       - name: Build and push cspulse-platform
         run: |
-          docker buildx build --platform linux/amd64 \
+          EXTRA=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.no_cache }}" = "true" ]; then
+            EXTRA="--no-cache"
+          fi
+          docker buildx build --platform linux/amd64 $EXTRA \
             -f kpi-dashboard/Dockerfile.cspulse \
             -t "${ECR_REGISTRY}/cspulse-platform:latest" \
             --push .
 
       - name: Build and push cspulse-postgres
         run: |
-          docker buildx build --platform linux/amd64 \
+          EXTRA=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.no_cache }}" = "true" ]; then
+            EXTRA="--no-cache"
+          fi
+          docker buildx build --platform linux/amd64 $EXTRA \
             -f kpi-dashboard/docker/postgres/Dockerfile \
             -t "${ECR_REGISTRY}/cspulse-postgres:latest" \
             --push kpi-dashboard/docker/postgres
 
       - name: Build and push cspulse-load-driver
         run: |
-          docker buildx build --platform linux/amd64 \
+          EXTRA=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.no_cache }}" = "true" ]; then
+            EXTRA="--no-cache"
+          fi
+          docker buildx build --platform linux/amd64 $EXTRA \
             -f load-driver/Dockerfile \
             -t "${ECR_REGISTRY}/cspulse-load-driver:latest" \
             --push load-driver
