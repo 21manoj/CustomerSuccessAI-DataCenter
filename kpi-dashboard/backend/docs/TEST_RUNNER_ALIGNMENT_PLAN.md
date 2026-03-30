@@ -774,6 +774,92 @@ RESULT: 13/13 PASS
 
 ---
 
+---
+
+## Phase 13: Ask AI Persona Validation (MEDIUM)
+
+**What:** Automated test harness that runs the 40 validated persona questions from `ASK_AI_WHAT_IF_QUESTIONS.md` against a demo customer and validates responses.
+
+**Why:** Ask AI is the primary interaction surface for CRO/CFO/VP CS. If it returns "I don't have that information" or wrong numbers, the demo fails. These tests ensure every persona gets data-backed answers.
+
+### 13a: Question Execution + Response Validation
+
+Run each of 40 questions against `/api/executive/ask-v2` for a demo customer (e.g., customer 451) and validate:
+
+| Check | Pass Criteria |
+|-------|--------------|
+| Non-empty response | Response length > 50 chars (not "I don't have that info") |
+| Contains data | Response includes at least 1 number (dollar amount, score, percentage) |
+| Persona tone | CSM gets tactical language, CFO gets financial, CRO gets revenue |
+| Tools called | At least 1 MCP tool invoked (not just LLM hallucination) |
+| No errors | HTTP 200, no error/fallback field in response |
+| Follow-up works | Ask a clarifying question → response maintains context |
+
+**Test matrix:**
+
+| Persona | Total Questions | Expected Pass (today) | After simulation tools |
+|---------|----------------|----------------------|----------------------|
+| CSM | 10 | 8/10 | 10/10 |
+| CRO | 10 | 8/10 | 10/10 |
+| CFO | 10 | 7/10 | 9/10 (benchmark Q still needs external data) |
+| VP CS | 10 | 7/10 | 10/10 |
+
+### 13b: Cross-Persona Consistency
+
+Same underlying data, different personas — numbers must match:
+
+| Test | What to compare |
+|------|----------------|
+| At-risk ARR | CSM "which accounts dropped?" vs CRO "how much ARR at risk?" → same $ |
+| ROI total | CFO "investment returning per dollar?" vs CRO "revenue protected?" → consistent |
+| Account count | All 4 personas referencing account list → same count |
+| Health scores | CSM account detail vs VP CS portfolio summary → same scores |
+
+### 13c: Regression Tracking
+
+Save baseline responses (question → response summary → tools called → key numbers) and compare on subsequent runs:
+
+- New question that previously passed now returns empty → REGRESSION
+- Dollar amount changed by >10% with same data → REGRESSION
+- Tool that was previously called is no longer called → REGRESSION
+
+**Report output:**
+```
+Ask AI Persona Validation — Customer 451
+──────────────────────────────────────────────
+Persona    Passed   Failed   Regressed   New
+CSM        8/10     2/10     0           0
+CRO        8/10     2/10     0           0
+CFO        7/10     3/10     0           0
+VP CS      7/10     3/10     0           0
+──────────────────────────────────────────────
+TOTAL      30/40    10/40    0           0
+
+Failed questions (need simulation tools):
+  CSM-9:  "If GPU drops 10%..." → simulate_kpi_change not available
+  CRO-2:  "What happens to NRR if..." → simulate_portfolio_loss not available
+  CRO-9:  "If we had 2 more CSMs..." → get_csm_workload not available
+  CFO-4:  "If we increase investment..." → needs configurable Power of 1
+  CFO-9:  "How does efficiency compare..." → needs external benchmarks
+  CFO-6:  "Compounding effect..." → partial (explanation ok, numbers uncertain)
+  VPCS-7: "If I hire 1 more CSM..." → get_csm_workload not available
+  VPCS-9: "Signal to drop lag..." → get_signal_to_health_lag not available
+  VPCS-8: "Health up but signals negative..." → complex correlation query
+  CRO-10: "Distribution this Q vs last..." → needs historical distribution comparison
+
+Cross-persona consistency: 4/4 PASS
+```
+
+**Files:**
+- NEW: `load-driver/scenarios/scenario_ask_ai_validation.py` (~300 lines)
+- NEW: `load-driver/ask_ai_questions.json` — 40 questions with expected tool calls and validation rules
+- MODIFY: `load-driver/run_scenario.py` — register as scenario '13'
+- MODIFY: `kpi-dashboard/backend/test_runner_api.py` — add to SCENARIO_META
+
+**Effort:** 8-10 hours
+
+---
+
 ## Grand Total (All Phases)
 
 | Phases | Effort | Category |
@@ -783,7 +869,8 @@ RESULT: 13/13 PASS
 | 10-11 (E2E + push signals) | 16-20h | Pipeline verification |
 | 12a-o (Operational workflows) | ~34h | Production safety |
 | 12p (ROI Dashboard validation) | 6-8h | Data consistency + repeatability |
-| **TOTAL** | **94-114h** | |
+| 13 (Ask AI persona validation) | 8-10h | Persona question coverage + regression |
+| **TOTAL** | **102-124h** | |
 
 ## Decision Needed
 
