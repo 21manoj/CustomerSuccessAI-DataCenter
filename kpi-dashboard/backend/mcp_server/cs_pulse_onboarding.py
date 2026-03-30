@@ -742,12 +742,38 @@ def _process_data_impl(customer_id: int) -> dict:
                             customer_id=customer_id, account_name=aname,
                         ).first()
                         if not existing:
+                            # Build profile_metadata from CSV columns
+                            _profile = {}
+                            for _pkey in ['contract_start', 'contract_end', 'renewal_date',
+                                          'csm_name', 'csm_email', 'csm_manager',
+                                          'executive_sponsor', 'tier',
+                                          'primary_champion_name', 'primary_champion_title',
+                                          'primary_champion_email', 'primary_champion_engagement_score']:
+                                _pval = row.get(_pkey)
+                                if _pval is not None and str(_pval) != 'nan' and str(_pval) != '':
+                                    _profile[_pkey] = str(_pval) if not isinstance(_pval, (int, float)) else _pval
+
                             acct = Account(
                                 customer_id=customer_id, account_name=aname,
                                 revenue=row.get('arr', row.get('annual_revenue', row.get('revenue', 0))),
                                 vertical=vertical,
+                                industry=str(row.get('industry', '')) if row.get('industry') and str(row.get('industry')) != 'nan' else None,
+                                region=str(row.get('region', '')) if row.get('region') and str(row.get('region')) != 'nan' else None,
+                                account_status=str(row.get('account_status', 'active')) if row.get('account_status') else 'active',
+                                profile_metadata=_profile if _profile else None,
                             )
                             _db.session.add(acct)
+                        else:
+                            # Update existing account with any missing profile_metadata
+                            _profile = existing.profile_metadata or {}
+                            _updated = False
+                            for _pkey in ['contract_start', 'contract_end', 'renewal_date']:
+                                _pval = row.get(_pkey)
+                                if _pval is not None and str(_pval) != 'nan' and _pkey not in _profile:
+                                    _profile[_pkey] = str(_pval)
+                                    _updated = True
+                            if _updated:
+                                existing.profile_metadata = _profile
                     _db.session.flush()
                     steps_completed.append('accounts_loaded_from_csv')
 
