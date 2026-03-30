@@ -601,3 +601,334 @@ def get_ensemble_weights():
     except Exception as e:
         current_app.logger.error(f"Error loading ensemble: {str(e)}")
         return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
+
+
+# ============================================================
+# S2.1 — HEALTH SCORE RESET
+# ============================================================
+
+@admin_bp.route('/accounts/<int:account_id>/reset-health', methods=['POST'])
+def reset_account_health(account_id):
+    """
+    POST /api/admin/accounts/<account_id>/reset-health
+    Recalculate health scores for a single account from existing KPI data.
+    Body: {"dry_run": bool, "reason": "string"}
+    """
+    from models import db, Account, DC2SKPI, HealthScore, CustomerConfig
+    import utils.health_thresholds as ht
+    from collections import defaultdict
+    from datetime import date as _date
+    from mcp_server.cs_pulse_mcp_server import _get_health_functions
+
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    body = request.get_json(silent=True) or {}
+    dry_run = body.get('dry_run', False)
+    reason = body.get('reason', '')
+
+    # Verify account belongs to this customer
+    account = Account.query.filter_by(account_id=account_id, customer_id=int(customer_id)).first()
+    if not account:
+        return jsonify({"error": f"Account {account_id} not found for customer {customer_id}"}), 404
+
+    try:
+        # Get vertical and calculator
+        vertical = 'dc2_s'
+        try:
+            cc = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+            if cc and cc.vertical:
+                vertical = cc.vertical
+        except Exception:
+            pass
+
+        calculate_fn, _, _ = _get_health_functions(vertical)
+
+        # Load all KPI measurements for this account, grouped by month
+        all_kpis = DC2SKPI.query.filter_by(account_id=account_id).all()
+        month_kpis = defaultdict(lambda: defaultdict(list))
+        for k in all_kpis:
+            if k.measured_at:
+                month_key = k.measured_at.date().replace(day=1) if hasattr(k.measured_at, 'date') else k.measured_at.replace(day=1)
+            else:
+                month_key = _date.today().replace(day=1)
+            month_kpis[month_key][k.kpi_code].append(float(k.value))
+
+        if not month_kpis:
+            return jsonify({"error": "No KPI data found for this account", "account_id": account_id}), 404
+
+        # Calculate health for each month
+        new_scores = []
+        for month, kpi_groups in sorted(month_kpis.items()):
+            kpi_vals = {code: sum(vals) / len(vals) for code, vals in kpi_groups.items()}
+            if not kpi_vals:
+                continue
+            health, pillars = calculate_fn(kpi_vals, customer_id=int(customer_id))
+            new_scores.append({
+                "month": str(month),
+                "health_score": round(health, 2),
+                "health_status": ht.classify(health),
+                "pillar_scores": {k: round(v, 2) for k, v in pillars.items()} if pillars else {},
+            })
+
+        # Get current scores for comparison
+        current_scores = HealthScore.query.filter_by(account_id=account_id).order_by(
+            HealthScore.measurement_month.desc()
+        ).limit(1).first()
+
+        current_health = float(current_scores.health_score) if current_scores else None
+        latest_new = new_scores[-1] if new_scores else None
+
+        result = {
+            "account_id": account_id,
+            "account_name": account.account_name,
+            "dry_run": dry_run,
+            "months_recalculated": len(new_scores),
+            "current_health": current_health,
+            "new_health": latest_new["health_score"] if latest_new else None,
+            "new_status": latest_new["health_status"] if latest_new else None,
+            "delta": round(latest_new["health_score"] - current_health, 2) if latest_new and current_health else None,
+            "scores": new_scores,
+        }
+
+        if dry_run:
+            result["message"] = "Dry run — no changes applied"
+            return jsonify(result)
+
+        # Apply: upsert health scores
+        for s in new_scores:
+            month_date = _date.fromisoformat(s["month"])
+            existing = HealthScore.query.filter_by(
+                account_id=account_id, measurement_month=month_date
+            ).first()
+            pillars_json = json.dumps(s["pillar_scores"]) if s["pillar_scores"] else None
+            if existing:
+                existing.health_score = s["health_score"]
+                existing.health_status = s["health_status"]
+                existing.contributing_pillars = pillars_json
+            else:
+                db.session.add(HealthScore(
+                    account_id=account_id,
+                    measurement_month=month_date,
+                    health_score=s["health_score"],
+                    health_status=s["health_status"],
+                    contributing_pillars=pillars_json,
+                ))
+        db.session.commit()
+
+        # Log the action
+        try:
+            from activity_log_api import log_activity
+            log_activity(
+                customer_id=int(customer_id),
+                action_type='health_score_reset',
+                action_description=f"Reset health scores for account {account_id} ({account.account_name}). Reason: {reason}. "
+                                   f"Previous: {current_health}, New: {result['new_health']}",
+                resource_type='account',
+                resource_id=str(account_id),
+                status='success',
+            )
+        except Exception:
+            pass
+
+        result["message"] = f"Health scores recalculated for {len(new_scores)} months"
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Health score reset failed for account {account_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route('/customers/<int:cid>/reset-all-health', methods=['POST'])
+def reset_customer_health(cid):
+    """
+    POST /api/admin/customers/<cid>/reset-all-health
+    Recalculate health scores for ALL accounts of a customer.
+    Body: {"dry_run": bool, "reason": "string"}
+    """
+    from models import Account
+
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    body = request.get_json(silent=True) or {}
+    dry_run = body.get('dry_run', False)
+    reason = body.get('reason', 'Bulk health reset')
+
+    accounts = Account.query.filter_by(customer_id=cid).all()
+    if not accounts:
+        return jsonify({"error": f"No accounts found for customer {cid}"}), 404
+
+    results = []
+    errors = []
+    for acct in accounts:
+        try:
+            with current_app.test_request_context(
+                f'/api/admin/accounts/{acct.account_id}/reset-health',
+                method='POST',
+                json={"dry_run": dry_run, "reason": reason},
+            ):
+                # Reuse the single-account endpoint logic
+                resp = reset_account_health(acct.account_id)
+                if hasattr(resp, 'get_json'):
+                    data = resp.get_json()
+                else:
+                    data = resp[0].get_json() if isinstance(resp, tuple) else {"error": "unknown"}
+                results.append(data)
+        except Exception as e:
+            errors.append({"account_id": acct.account_id, "error": str(e)})
+
+    return jsonify({
+        "customer_id": cid,
+        "dry_run": dry_run,
+        "accounts_processed": len(results),
+        "errors": errors,
+        "results": results,
+    })
+
+
+# ============================================================
+# S2.2 — WEIGHT OVERRIDE
+# ============================================================
+
+@admin_bp.route('/customers/<int:cid>/override-weights', methods=['POST'])
+def override_customer_weights(cid):
+    """
+    POST /api/admin/customers/<cid>/override-weights
+    Directly set pillar and/or KPI weights, bypassing Wizard C.
+    Body: {
+      "pillar_weights": {"P1": 0.15, "P2": 0.20, ...},
+      "kpi_weights": {"P1": {"P1-KPI1": 0.20, ...}, ...},
+      "reason": "string"
+    }
+    """
+    from models import db, CustomerConfig
+
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    body = request.get_json(silent=True) or {}
+    pillar_weights = body.get('pillar_weights')
+    kpi_weights = body.get('kpi_weights')
+    reason = body.get('reason', '')
+
+    if not pillar_weights and not kpi_weights:
+        return jsonify({"error": "Provide pillar_weights and/or kpi_weights"}), 400
+
+    # Validate pillar weights sum to ~1.0
+    if pillar_weights:
+        total = sum(pillar_weights.values())
+        if abs(total - 1.0) > 0.02:
+            return jsonify({"error": f"Pillar weights must sum to 1.0 (got {total:.3f})"}), 400
+
+    # Validate KPI weights sum to ~1.0 per pillar
+    if kpi_weights:
+        for pillar, kw in kpi_weights.items():
+            total = sum(kw.values())
+            if abs(total - 1.0) > 0.02:
+                return jsonify({"error": f"KPI weights for {pillar} must sum to 1.0 (got {total:.3f})"}), 400
+
+    try:
+        cc = CustomerConfig.query.filter_by(customer_id=cid).first()
+        if not cc:
+            return jsonify({"error": f"CustomerConfig not found for customer {cid}"}), 404
+
+        previous = {
+            "pillar_weights": cc.dc2s_pillar_weights,
+            "kpi_weights": cc.dc2s_kpi_weights,
+        }
+
+        if pillar_weights:
+            cc.dc2s_pillar_weights = pillar_weights
+        if kpi_weights:
+            cc.dc2s_kpi_weights = kpi_weights
+
+        db.session.commit()
+
+        # Log the action
+        try:
+            from activity_log_api import log_activity
+            log_activity(
+                customer_id=cid,
+                action_type='weight_override',
+                action_description=f"Admin weight override. Reason: {reason}. "
+                                   f"Pillar: {pillar_weights or 'unchanged'}, KPI: {'updated' if kpi_weights else 'unchanged'}",
+                resource_type='customer_config',
+                resource_id=str(cid),
+                status='success',
+            )
+        except Exception:
+            pass
+
+        return jsonify({
+            "customer_id": cid,
+            "message": "Weights updated successfully",
+            "source": "admin_override",
+            "previous": previous,
+            "current": {
+                "pillar_weights": cc.dc2s_pillar_weights,
+                "kpi_weights": cc.dc2s_kpi_weights,
+            },
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Weight override failed for customer {cid}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route('/customers/<int:cid>/reset-weights', methods=['POST'])
+def reset_customer_weights(cid):
+    """
+    POST /api/admin/customers/<cid>/reset-weights
+    Revert weights to JSON catalog defaults (clear DB overrides).
+    Body: {"reason": "string"}
+    """
+    from models import db, CustomerConfig
+
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    body = request.get_json(silent=True) or {}
+    reason = body.get('reason', 'Reset to catalog defaults')
+
+    try:
+        cc = CustomerConfig.query.filter_by(customer_id=cid).first()
+        if not cc:
+            return jsonify({"error": f"CustomerConfig not found for customer {cid}"}), 404
+
+        previous = {
+            "pillar_weights": cc.dc2s_pillar_weights,
+            "kpi_weights": cc.dc2s_kpi_weights,
+        }
+
+        cc.dc2s_pillar_weights = None
+        cc.dc2s_kpi_weights = None
+        db.session.commit()
+
+        try:
+            from activity_log_api import log_activity
+            log_activity(
+                customer_id=cid,
+                action_type='weight_reset',
+                action_description=f"Reset weights to catalog defaults. Reason: {reason}. Previous pillar: {previous['pillar_weights']}",
+                resource_type='customer_config',
+                resource_id=str(cid),
+                status='success',
+            )
+        except Exception:
+            pass
+
+        return jsonify({
+            "customer_id": cid,
+            "message": "Weights reset to catalog defaults",
+            "source": "catalog_default",
+            "previous": previous,
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Weight reset failed for customer {cid}: {e}")
+        return jsonify({"error": str(e)}), 500
