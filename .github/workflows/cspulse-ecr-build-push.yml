@@ -1,26 +1,23 @@
 # Build linux/amd64 images on GitHub-hosted ubuntu-latest (native x86_64, no Mac QEMU),
-# push to ECR, optionally rehydrate EC2 (pull + compose up) via SSH.
+# push to ECR.
+#
+# EC2 deploy: native git pull + build on the instance (docker-compose.ec2-build.yml /
+# scripts/ec2-git-pull-rebuild.sh). A prior "CI rehydrate over SSH" job was removed for
+# now; restore from git history if you add CSPULSE_SSH_PRIVATE_KEY and want it back.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   AWS_ACCESS_KEY_ID
 #   AWS_SECRET_ACCESS_KEY
-# Optional (only when running deploy / rehydrate from CI):
-#   CSPULSE_SSH_PRIVATE_KEY   — full PEM for ec2-user (same as cspulse-v6-key.pem)
 #
 # Edit env.ECR_REGISTRY in this file if your AWS account/registry differs.
 
-name: CS Pulse — ECR build (amd64) & optional EC2 deploy
+name: CS Pulse — ECR build (amd64)
 
 on:
   workflow_dispatch:
     inputs:
       no_cache:
         description: "Pass --no-cache to docker buildx (full image rebuild, no layer cache)"
-        required: false
-        default: false
-        type: boolean
-      deploy_ec2:
-        description: "After push, run scripts/rehydrate-ec2-ecr.sh (needs CSPULSE_SSH_PRIVATE_KEY)"
         required: false
         default: false
         type: boolean
@@ -98,41 +95,3 @@ jobs:
             -f load-driver/Dockerfile \
             -t "${ECR_REGISTRY}/cspulse-load-driver:latest" \
             --push load-driver
-
-  rehydrate-ec2:
-    name: Rehydrate EC2
-    needs: build-and-push
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ec2 == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-
-    env:
-      SKIP_CLOUDFRONT_UPDATE: "1"
-      CSPULSE_SSH_KEY_FILE: ${{ github.workspace }}/.cspulse-ci-key.pem
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Write SSH key
-        env:
-          KEY: ${{ secrets.CSPULSE_SSH_PRIVATE_KEY }}
-        run: |
-          if [ -z "$KEY" ]; then
-            echo "CSPULSE_SSH_PRIVATE_KEY is not set. Add it in repository secrets."
-            exit 1
-          fi
-          install -m 600 /dev/null "$CSPULSE_SSH_KEY_FILE"
-          echo "$KEY" > "$CSPULSE_SSH_KEY_FILE"
-
-      - name: Rehydrate
-        run: ./scripts/rehydrate-ec2-ecr.sh

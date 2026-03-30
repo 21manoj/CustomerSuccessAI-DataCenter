@@ -1,0 +1,101 @@
+# ================================================================
+# CS Pulse — Build on EC2 from a git clone (no ECR).
+#
+# Layout: clone repo so the root is e.g. ~/CustomerSuccessAI-DataCenter
+#         (contains kpi-dashboard/ and load-driver/).
+#
+# On EC2 (from kpi-dashboard/):
+#   docker compose -f docker-compose.ec2-build.yml build
+#   docker compose -f docker-compose.ec2-build.yml up -d
+#
+# Fresh rebuild (no layer cache):
+#   docker compose -f docker-compose.ec2-build.yml build --no-cache && \
+#   docker compose -f docker-compose.ec2-build.yml up -d
+#
+# Requires: .env in kpi-dashboard/ (or parent) with POSTGRES_PASSWORD,
+#           SECRET_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY (same as registry deploy).
+# ================================================================
+
+services:
+  postgres:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    container_name: cspulse-postgres
+    environment:
+      POSTGRES_DB: cs_pulse
+      POSTGRES_USER: cspulse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - cspulse-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cspulse -d cs_pulse"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  cs-pulse:
+    build:
+      context: ..
+      dockerfile: kpi-dashboard/Dockerfile.cspulse
+    container_name: cspulse-platform
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      FLASK_APP: app_v3_minimal.py
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      FEATURE_MCP_SERVER: ${FEATURE_MCP_SERVER:-true}
+      FEATURE_CONTEXT_GRAPH: ${FEATURE_CONTEXT_GRAPH:-true}
+      FEATURE_ASK_AI_V2: ${FEATURE_ASK_AI_V2:-true}
+      LOAD_DRIVER_DIR: /app/load-driver
+    volumes:
+      - uploads:/app/backend/uploads
+      - verticals:/app/backend/verticals
+      - instance:/app/backend/instance
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cspulse-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5059/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+networks:
+  cspulse-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  uploads:
+  verticals:
+  instance:
