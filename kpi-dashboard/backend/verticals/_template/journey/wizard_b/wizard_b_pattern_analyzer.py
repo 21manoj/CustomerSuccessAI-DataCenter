@@ -205,7 +205,12 @@ class PatternAnalyzer:
     # ========================================================================
 
     def _is_nrr_intelligence_enabled(self) -> bool:
-        """Check if 'nrr_intelligence' per-customer feature flag is enabled."""
+        """Check if 'nrr_intelligence' per-customer feature flag is enabled.
+
+        Default: ON (enabled unless explicitly disabled via feature toggle).
+        To disable: enable_features(customer_id, ['nrr_intelligence']) then
+        set enabled=False via the admin API.
+        """
         if not self.customer_id:
             return False
         try:
@@ -214,9 +219,10 @@ class PatternAnalyzer:
                 customer_id=self.customer_id,
                 feature_name='nrr_intelligence',
             ).first()
-            return toggle.enabled if toggle else False
+            # Default ON: if no toggle row exists, feature is enabled
+            return toggle.enabled if toggle else True
         except Exception:
-            return False
+            return True
 
     # ========================================================================
     # PATTERN PROFILING

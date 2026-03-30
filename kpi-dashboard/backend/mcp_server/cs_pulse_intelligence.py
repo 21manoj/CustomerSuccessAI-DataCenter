@@ -816,15 +816,15 @@ def get_nrr_forecast(customer_id: int) -> dict:
         from models import FeatureToggle as FTModel, WizardRun
         from extensions import db
 
-        # Check feature flag
+        # Check feature flag (default ON — only blocked if explicitly disabled)
         toggle = FTModel.query.filter_by(
             customer_id=int(customer_id),
             feature_name='nrr_intelligence',
         ).first()
-        if not toggle or not toggle.enabled:
+        if toggle and not toggle.enabled:
             raise ToolError(
-                f"NRR Intelligence not enabled for customer {customer_id}. "
-                "Enable via: enable_features(customer_id, ['nrr_intelligence'])"
+                f"NRR Intelligence explicitly disabled for customer {customer_id}. "
+                "Re-enable via: enable_features(customer_id, ['nrr_intelligence'])"
             )
 
         # Find latest completed Wizard B run with NRR data
