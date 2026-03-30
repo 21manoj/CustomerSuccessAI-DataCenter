@@ -231,7 +231,12 @@ def run_wizard_c(customer_id: int) -> dict:
                 })
 
     # ------------------------------------------------------------------
-    # 7. Submit weight changes to approval queue (not direct DB write)
+    # 7. Apply weight changes — direct or via approval queue
+    #
+    # Toggle: WIZARD_C_APPROVAL_REQUIRED
+    #   OFF (default) → apply weights directly (demo mode, instant feedback)
+    #   ON → submit to approval queue, customer owner/senior CSM must approve
+    #         + notify all CSMs about the pending change
     # ------------------------------------------------------------------
     config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
     if not config:
@@ -239,68 +244,119 @@ def run_wizard_c(customer_id: int) -> dict:
         db.session.add(config)
         db.session.flush()
 
-    # Build change summary for the approval request
     _previous_l2 = config.dc2s_pillar_weights or {}
     _previous_l1 = config.dc2s_kpi_weights or {}
 
+    # Check approval toggle — per-customer feature flag or env var
+    _approval_required = False
+    try:
+        from models import FeatureToggle
+        _ft = FeatureToggle.query.filter_by(
+            customer_id=customer_id, feature_name='wizard_c_approval'
+        ).first()
+        if _ft and _ft.enabled:
+            _approval_required = True
+    except Exception:
+        pass
+    # Env var override (for global setting)
+    import os
+    if os.environ.get('WIZARD_C_APPROVAL_REQUIRED', '').lower() in ('true', '1', 'yes'):
+        _approval_required = True
+
     approval_submitted = False
     approval_results = []
-    try:
-        from approval_queue import ApprovalQueueService
-        aq = ApprovalQueueService()
 
-        # Format readable reasoning
-        change_lines = []
-        for sc in significant_changes:
-            direction = 'increased' if sc['change_pct'] > 0 else 'decreased'
-            change_lines.append(
-                f"{sc['kpi_code']} ({sc['pillar']}): {sc['old_weight']:.3f} → {sc['new_weight']:.3f} "
-                f"({direction} {abs(sc['change_pct']):.1f}%)"
-            )
-        reasoning = (
-            f"Wizard C analyzed {len(successful)} successful and {len(unsuccessful)} unsuccessful "
-            f"accounts to calibrate KPI weights. {len(significant_changes)} significant changes found:\n"
-            + "\n".join(change_lines[:10])  # Cap at 10 lines
-        )
-
-        # Submit global weight change for approval
-        result = aq.submit(
-            customer_id=customer_id,
-            account_id='ALL',  # Portfolio-wide change
-            action_type='weight_calibration',
-            confidence=0.75,  # Always requires review (below auto-execute threshold of 0.85)
-            predicted_outcome='weight_optimization',
-            reasoning=reasoning,
-            dollar_impact=None,
-            action_payload={
-                'scope': 'global',
-                'pillar_weights': adjusted_l2,
-                'kpi_weights': dict(kpi_weights_by_pillar),
-                'previous_pillar_weights': _previous_l2,
-                'previous_kpi_weights': _previous_l1,
-                'significant_changes': significant_changes,
-                'successful_accounts': len(successful),
-                'unsuccessful_accounts': len(unsuccessful),
-            },
-            agent_id='wizard_c',
-        )
-        approval_results.append(result)
-        approval_submitted = True
-        import logging as _log_aq
-        _log_aq.getLogger(__name__).info(
-            f"Wizard C: global weight change submitted for approval "
-            f"(request_id={result.get('request_id')}, status={result.get('status')})"
-        )
-
-    except Exception as _aq_err:
-        # Approval queue unavailable — fall back to direct write
-        import logging as _log_aq2
-        _log_aq2.getLogger(__name__).warning(
-            f"Wizard C: approval queue unavailable, applying weights directly: {_aq_err}"
-        )
+    if not _approval_required:
+        # ── Direct apply (demo mode — default) ──
         config.dc2s_pillar_weights = adjusted_l2
         config.dc2s_kpi_weights = dict(kpi_weights_by_pillar)
-        config.customized_by = 'wizard_c_db_direct'
+        config.customized_by = 'wizard_c_db'
+    else:
+        # ── Approval queue (production mode) ──
+        try:
+            from approval_queue import ApprovalQueueService
+            aq = ApprovalQueueService()
+
+            # Format readable reasoning
+            change_lines = []
+            for sc in significant_changes:
+                direction = 'increased' if sc['change_pct'] > 0 else 'decreased'
+                change_lines.append(
+                    f"{sc['kpi_code']} ({sc['pillar']}): {sc['old_weight']:.3f} → {sc['new_weight']:.3f} "
+                    f"({direction} {abs(sc['change_pct']):.1f}%)"
+                )
+            reasoning = (
+                f"Wizard C analyzed {len(successful)} successful and {len(unsuccessful)} unsuccessful "
+                f"accounts to calibrate KPI weights. {len(significant_changes)} significant changes found:\n"
+                + "\n".join(change_lines[:10])
+            )
+
+            # Submit global weight change for approval (customer owner / senior CSM)
+            result = aq.submit(
+                customer_id=customer_id,
+                account_id='ALL',  # Portfolio-wide — approved by customer owner
+                action_type='weight_calibration',
+                confidence=0.75,  # Below auto-execute (0.85) → always requires human review
+                predicted_outcome='weight_optimization',
+                reasoning=reasoning,
+                dollar_impact=None,
+                action_payload={
+                    'scope': 'global',
+                    'pillar_weights': adjusted_l2,
+                    'kpi_weights': dict(kpi_weights_by_pillar),
+                    'previous_pillar_weights': _previous_l2,
+                    'previous_kpi_weights': _previous_l1,
+                    'significant_changes': significant_changes,
+                    'successful_accounts': len(successful),
+                    'unsuccessful_accounts': len(unsuccessful),
+                },
+                agent_id='wizard_c',
+            )
+            approval_results.append(result)
+            approval_submitted = True
+
+            # Notify individual CSMs about pending weight change
+            try:
+                from models import Notification, Account
+                _csm_accounts = Account.query.filter_by(customer_id=customer_id).all()
+                _csm_names = set()
+                for _a in _csm_accounts:
+                    _pm = _a.profile_metadata or {}
+                    _csm = _pm.get('csm_name')
+                    if _csm and _csm not in _csm_names:
+                        _csm_names.add(_csm)
+                        _notif = Notification(
+                            customer_id=customer_id,
+                            account_id=_a.account_id,
+                            type='weight_change_pending',
+                            priority='medium',
+                            payload={
+                                'csm_name': _csm,
+                                'significant_changes': significant_changes[:5],
+                                'approval_request_id': result.get('request_id'),
+                                'message': (
+                                    f"Wizard C proposes {len(significant_changes)} KPI weight changes. "
+                                    f"Pending customer owner approval. Your accounts will be affected."
+                                ),
+                            },
+                        )
+                        db.session.add(_notif)
+            except Exception:
+                pass  # Notification is best-effort
+
+            logger.info(
+                f"Wizard C: weight change submitted for approval "
+                f"(request_id={result.get('request_id')}, status={result.get('status')})"
+            )
+
+        except Exception as _aq_err:
+            # Approval queue unavailable — fall back to direct write
+            logger.warning(
+                f"Wizard C: approval queue unavailable, applying directly: {_aq_err}"
+            )
+            config.dc2s_pillar_weights = adjusted_l2
+            config.dc2s_kpi_weights = dict(kpi_weights_by_pillar)
+            config.customized_by = 'wizard_c_db_direct'
 
     # ------------------------------------------------------------------
     # 8. Per-stage calibration (if lifecycle stages are enabled)
@@ -429,12 +485,15 @@ def run_wizard_c(customer_id: int) -> dict:
         'significant_changes': significant_changes,
         'per_stage_calibration': per_stage_calibration or None,
         'approval': {
+            'mode': 'approval_required' if _approval_required else 'direct_apply',
             'submitted': approval_submitted,
             'results': approval_results,
             'message': (
-                'Weight changes submitted for CSM/owner approval. '
-                'Weights will be applied after approval via GET /api/approvals.'
+                'Weight changes submitted for customer owner approval. '
+                'Individual CSMs notified. Weights apply after approval.'
                 if approval_submitted else
+                'Weights applied directly (demo mode — toggle wizard_c_approval feature to require approval).'
+                if not _approval_required else
                 'Weights applied directly (approval queue unavailable).'
             ),
         },
