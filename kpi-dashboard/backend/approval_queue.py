@@ -218,10 +218,8 @@ class ApprovalQueueService:
                     f"Executing playbook {request.playbook_id} "
                     f"for account {request.account_id}"
                 )
-                # Publish event for orchestrator to pick up
                 try:
                     from event_system import EventType, EventPublisher
-                    # Use global event publisher if available
                     from app_v3_minimal import event_publisher
                     event_publisher.publish(
                         EventType.PLAYBOOK_AUTO_TRIGGERED,
@@ -237,6 +235,10 @@ class ApprovalQueueService:
                 except Exception as e:
                     logger.warning(f"Failed to publish playbook trigger event: {e}")
 
+            elif request.action_type == "weight_calibration":
+                # Wizard C weight change — apply calibrated weights to CustomerConfig
+                self._apply_weight_calibration(request)
+
             elif request.action_type == "notification":
                 logger.info(f"Sending notification for account {request.account_id}")
 
@@ -245,6 +247,61 @@ class ApprovalQueueService:
 
         except Exception as e:
             logger.error(f"Failed to execute action {request.id}: {e}")
+
+    def _apply_weight_calibration(self, request: ApprovalRequest) -> None:
+        """
+        Apply Wizard C calibrated weights from an approved request.
+
+        action_payload schema:
+          {
+            "scope": "global" | "lifecycle_stage",
+            "pillar_weights": {...},
+            "kpi_weights": {...},
+            "stage_name": "onboarding" (only for lifecycle_stage scope),
+            "previous_weights": {...}  (for audit trail)
+          }
+        """
+        from models import CustomerConfig
+        payload = request.action_payload or {}
+        scope = payload.get('scope', 'global')
+
+        config = CustomerConfig.query.filter_by(
+            customer_id=request.customer_id
+        ).first()
+        if not config:
+            logger.error(f"No CustomerConfig for customer {request.customer_id}")
+            return
+
+        if scope == 'global':
+            # Apply global pillar + KPI weights
+            if payload.get('pillar_weights'):
+                config.dc2s_pillar_weights = payload['pillar_weights']
+            if payload.get('kpi_weights'):
+                config.dc2s_kpi_weights = payload['kpi_weights']
+            config.customized_by = f'wizard_c_approved_{request.decided_by}'
+            logger.info(
+                f"Applied Wizard C global weights for customer {request.customer_id} "
+                f"(approved by {request.decided_by})"
+            )
+
+        elif scope == 'lifecycle_stage':
+            # Apply per-stage weights
+            stage_name = payload.get('stage_name')
+            lc = config.dc2s_lifecycle_stage_weights
+            if lc and stage_name:
+                import copy
+                updated_lc = copy.deepcopy(lc)
+                for stage in updated_lc.get('stages', []):
+                    if stage.get('name') == stage_name:
+                        stage['pillar_weights'] = payload['pillar_weights']
+                        break
+                config.dc2s_lifecycle_stage_weights = updated_lc
+                logger.info(
+                    f"Applied Wizard C stage '{stage_name}' weights for customer "
+                    f"{request.customer_id} (approved by {request.decided_by})"
+                )
+
+        db.session.commit()
 
     @staticmethod
     def _to_dict(request: ApprovalRequest) -> Dict:
