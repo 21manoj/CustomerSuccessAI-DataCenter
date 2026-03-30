@@ -53,108 +53,50 @@ def execute_script(script_path: Path, customer_id: int, timeout: int = 600, addi
 @data_management_api.route('/api/data/trigger-wizard-a', methods=['POST'])
 def trigger_wizard_a():
     """
-    Trigger Wizard A (Journey Generator) to regenerate journey timelines
-    
-    This endpoint runs the wizard_a_journey_generator.py script for the current customer
-    to regenerate journey JSON files from the latest account and KPI data.
+    Trigger Wizard A (Arc Intelligence) to classify accounts and generate
+    causal edges.  DB-native — no subprocess, no filesystem.
     """
     try:
         customer_id = get_current_customer_id()
-        
-        # Determine customer directory (check for dc2_s vertical)
-        # Path(__file__) = backend/data_management_api.py
-        # Path(__file__).parent = backend/
-        # So backend_dir = backend/, and customer_dir = backend/verticals/customer{N}-dc2_s
-        backend_dir = Path(__file__).parent
-        customer_dir = backend_dir / "verticals" / f"customer{customer_id}-dc2_s"
-        
-        current_app.logger.info(f"Looking for customer directory: {customer_dir}")
-        current_app.logger.info(f"Directory exists: {customer_dir.exists()}")
-        
-        if not customer_dir.exists():
-            return jsonify({
-                'status': 'error',
-                'message': f'Customer directory not found: {customer_dir}'
-            }), 404
-        
-        # Find Wizard A script
-        journey_script = customer_dir / "journey" / "wizard_a" / "wizard_journey_generator.py"
-        
-        if not journey_script.exists():
-            # Try alternative name
-            journey_script = customer_dir / "journey" / "wizard_a" / "wizard_a_journey_generator.py"
-        
-        if not journey_script.exists():
-            return jsonify({
-                'status': 'error',
-                'message': f'Journey generator script not found in {customer_dir / "journey" / "wizard_a"}'
-            }), 404
-        
-        # Get account count for this customer to determine script arguments
+
         from models import Account
         account_count = Account.query.filter_by(customer_id=customer_id).count()
-        
         if account_count == 0:
             return jsonify({
                 'status': 'error',
                 'message': 'No accounts found for this customer. Please upload account data first.'
             }), 400
-        
-        # Determine starting account ID (use lowest account_id for this customer)
-        first_account = Account.query.filter_by(customer_id=customer_id).order_by(Account.account_id.asc()).first()
-        start_id = first_account.account_id if first_account else 10001
-        
-        # Default pattern mix (can be made configurable later)
-        pattern_mix = '{"crisis":0.15,"churn":0.15,"stable":0.5,"expansion":0.2}'
-        
-        # Generate output directory with timestamp
-        # Script runs from journey/wizard_a/ directory, so output_dir should be relative to that
-        script_dir = journey_script.parent  # journey/wizard_a/
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_dir_name = f"test_run_{timestamp}"
-        output_dir = script_dir / output_dir_name  # journey/wizard_a/test_run_.../
-        
-        # Ensure output directory exists
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        current_app.logger.info(f"Triggering Wizard A (Journey Generator) for customer {customer_id}")
-        current_app.logger.info(f"Script: {journey_script}")
-        current_app.logger.info(f"Accounts: {account_count}, Start ID: {start_id}, Output: {output_dir_name}")
-        
-        # Build script arguments (output-dir is relative to script directory)
-        script_args = [
-            '--accounts', str(account_count),
-            '--start-id', str(start_id),
-            '--pattern-mix', pattern_mix,
-            '--output-dir', output_dir_name  # Relative to script directory (journey/wizard_a/)
-        ]
-        
-        # Execute Wizard A script
+
+        current_app.logger.info(
+            f"Triggering Wizard A (Arc Intelligence) for customer {customer_id} — DB mode"
+        )
+
+        from wizards.wizard_a_journey_db import run_wizard_a
+
         script_start_time = time.time()
-        success, stdout, stderr = execute_script(journey_script, customer_id, timeout=600, additional_args=script_args)
+        result = run_wizard_a(customer_id)
         script_duration = time.time() - script_start_time
-        
-        if not success:
-            current_app.logger.error(f"Wizard A execution failed: {stderr}")
-            return jsonify({
-                'status': 'error',
-                'message': 'Journey generation script failed',
-                'error': stderr,
-                'duration_seconds': round(script_duration, 2)
-            }), 500
-        
-        current_app.logger.info(f"✅ Wizard A completed successfully in {script_duration:.2f} seconds")
-        
+
+        current_app.logger.info(
+            f"✅ Wizard A completed in {script_duration:.2f}s — "
+            f"accounts={result.get('accounts_processed')}"
+        )
+
         return jsonify({
             'status': 'success',
-            'message': 'Journey timelines regenerated successfully',
+            'message': 'Arc intelligence completed successfully',
             'customer_id': customer_id,
-            'script_path': str(journey_script),
+            'accounts_processed': result.get('accounts_processed', 0),
+            'arcs_classified': result.get('arcs_classified', 0),
+            'edges_generated': result.get('edges_generated', 0),
             'duration_seconds': round(script_duration, 2),
-            'output': stdout[:500] if stdout else None  # First 500 chars of output
+            'source': 'database',
         })
-        
+
+    except ValueError as ve:
+        current_app.logger.warning(f"Wizard A: {ve}")
+        return jsonify({'status': 'error', 'message': str(ve)}), 404
+
     except Exception as e:
         current_app.logger.error(f"Error triggering Wizard A: {str(e)}", exc_info=True)
         return jsonify({

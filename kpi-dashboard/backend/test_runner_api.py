@@ -749,7 +749,7 @@ def get_platform_state():
 
     return jsonify({
         'customer_id': customer_id,
-        'customer_name': customer.name,
+        'customer_name': customer.customer_name,
         'accounts': account_list,
         'summary': {
             'total_accounts': len(account_list),
