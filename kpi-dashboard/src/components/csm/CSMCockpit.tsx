@@ -15,6 +15,10 @@ import {
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
 } from './mockData';
 
+// Pre-map mock data to match Cockpit's stricter types
+const _mockAccounts = MOCK_ACCOUNTS.map((a) => ({ ...a, id: a.account_id, name: a.account_name, pillar_scores: {} as Record<string, number>, last_contact: null as string | null }));
+const _mockApprovals = MOCK_APPROVALS.map((a) => ({ ...a, id: Number(a.id) || 0, type: a.playbook_name, description: `${a.playbook_name} for ${a.account_name}`, submitted_at: a.requested_at }));
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Account {
@@ -605,7 +609,7 @@ const CSMCockpit: React.FC = () => {
         }
       }
       if (!acctLoaded) {
-        setAccounts(MOCK_ACCOUNTS.map((a) => ({ ...a, id: a.account_id, name: a.account_name, pillar_scores: {} })));
+        setAccounts(_mockAccounts);
       }
 
       if (actRes.status === 'fulfilled' && actRes.value.ok) {
@@ -630,21 +634,21 @@ const CSMCockpit: React.FC = () => {
           const data = await appRes.json();
           const appList = data.approvals || data.data || [];
           const result = Array.isArray(appList) ? appList : [];
-          setApprovals(result.length > 0 ? result : MOCK_APPROVALS);
+          setApprovals(result.length > 0 ? result : _mockApprovals);
         } else {
-          setApprovals(MOCK_APPROVALS);
+          setApprovals(_mockApprovals);
         }
       } catch {
-        setApprovals(MOCK_APPROVALS);
+        setApprovals(_mockApprovals);
       }
 
       // Mock completed today (no dedicated API)
       setCompletedToday([]);
     } catch (err) {
       // Full fallback to mock data when all APIs fail
-      setAccounts(MOCK_ACCOUNTS.map((a) => ({ ...a, id: a.account_id, name: a.account_name, pillar_scores: {} })));
+      setAccounts(_mockAccounts);
       setActions(MOCK_ACTIONS.map((a) => ({ ...a, id: a.rank, impact_score: 0 })));
-      setApprovals(MOCK_APPROVALS);
+      setApprovals(_mockApprovals);
     } finally {
       setLoading(false);
     }
