@@ -9,6 +9,7 @@ Flask-SQLAlchemy==3.0.5
 Flask-Session==0.8.0
 Flask-Login==0.6.3
 SQLAlchemy==2.0.23
+alembic>=1.13.0
 Werkzeug==2.2.3
 
 # Data Processing
