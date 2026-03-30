@@ -2,7 +2,7 @@
 """
 CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
 
-8 tools moved from cs_pulse_mcp_server.py:
+9 tools moved from cs_pulse_mcp_server.py:
   - get_revenue_at_risk
   - get_causal_chain
   - get_graph_summary
@@ -11,6 +11,7 @@ CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
   - get_context_graph_mermaid
   - get_stakeholder_map
   - get_health_score_history
+  - get_nrr_forecast (requires 'nrr_intelligence' feature flag)
 
 All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
@@ -783,4 +784,81 @@ def get_health_score_history(
             ],
             "transitions": transitions,
             "accounts": portfolio_history,
+        }
+
+
+# ---------------------------------------------------------------------------
+# NRR Intelligence — portfolio NRR forecast from Wizard B
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def get_nrr_forecast(customer_id: int) -> dict:
+    """Get portfolio NRR forecast based on Wizard B pattern analysis.
+
+    Returns current NRR (revenue-weighted), projected NRR if interventions
+    succeed, delta ARR, per-pattern breakdown, and top accounts to intervene on.
+
+    Requires:
+      1. Wizard A + B to have run (journey_data + wizard_runs populated)
+      2. 'nrr_intelligence' feature flag enabled for the customer
+
+    Use for: "What's our projected NRR?", "Which accounts drag NRR down?",
+    "What's the revenue impact of running playbooks?", "NRR simulation"
+
+    Args:
+        customer_id: The customer (tenant) ID
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import FeatureToggle as FTModel, WizardRun
+        from extensions import db
+
+        # Check feature flag
+        toggle = FTModel.query.filter_by(
+            customer_id=int(customer_id),
+            feature_name='nrr_intelligence',
+        ).first()
+        if not toggle or not toggle.enabled:
+            raise ToolError(
+                f"NRR Intelligence not enabled for customer {customer_id}. "
+                "Enable via: enable_features(customer_id, ['nrr_intelligence'])"
+            )
+
+        # Find latest completed Wizard B run with NRR data
+        latest_run = (
+            WizardRun.query
+            .filter(
+                WizardRun.customer_id == int(customer_id),
+                WizardRun.status == 'completed',
+                WizardRun.run_id.like('wizard_b_%'),
+            )
+            .order_by(WizardRun.completed_at.desc())
+            .first()
+        )
+
+        if not latest_run or not latest_run.results:
+            raise ToolError(
+                f"No Wizard B results found for customer {customer_id}. "
+                "Run: trigger_wizard(customer_id, 'b') first."
+            )
+
+        results = latest_run.results if isinstance(latest_run.results, dict) else {}
+        nrr = results.get('nrr_intelligence', {})
+
+        if not nrr:
+            raise ToolError(
+                "Wizard B ran but NRR intelligence data is empty. "
+                "Ensure 'nrr_intelligence' was enabled BEFORE running Wizard B."
+            )
+
+        return {
+            "scope": "portfolio",
+            "customer_id": customer_id,
+            "run_id": latest_run.run_id,
+            "run_completed_at": latest_run.completed_at.isoformat() if latest_run.completed_at else None,
+            "nrr_forecast": nrr.get('forecast', {}),
+            "pattern_correlations": nrr.get('correlations', {}),
         }
