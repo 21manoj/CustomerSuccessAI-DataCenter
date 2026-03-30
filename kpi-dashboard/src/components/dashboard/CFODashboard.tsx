@@ -735,7 +735,7 @@ const CFODashboard: React.FC = () => {
               { label: 'Rev per CS Dollar', value: `$${revPerDollar}${isEstimatedInvestment ? ' *' : ''}` },
               { label: 'Payback Period', value: `${paybackMonths} months${isEstimatedInvestment ? ' *' : ''}` },
               { label: 'NRR Impact / Playbook', value: `+${((nrr - 100) / Math.max(scalingProjs[0]?.accounts || 15, 1)).toFixed(2)}%`, accent: 'cyan' },
-              ...(isEstimatedInvestment ? [{ label: '* Based on benchmark estimate', value: '', accent: 'gray' }] : []),
+              ...(isEstimatedInvestment ? [{ label: '* Benchmarks: Gainsight Pulse 2024, TSIA, KeyBanc SaaS, Bain NPS Economics', value: '', accent: 'gray' }] : []),
             ],
             accounts: (json.accounts || []).map((a: any) => ({
               account_id: a.account_id,

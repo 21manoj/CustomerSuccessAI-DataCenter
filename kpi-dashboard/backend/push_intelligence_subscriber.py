@@ -429,19 +429,19 @@ class DailyProcessDataScheduler:
         with app.app_context():
             from models import Customer, Account, db
 
-            customers = (
-                Customer.query
-                .filter(Customer.status == 'active')
+            # Get all customers that have accounts (Customer model has no status column)
+            customer_ids_rows = (
+                db.session.query(Account.customer_id)
+                .distinct()
                 .all()
             )
+            customer_ids_list = [r[0] for r in customer_ids_rows]
+            customers = Customer.query.filter(
+                Customer.customer_id.in_(customer_ids_list)
+            ).all() if customer_ids_list else []
 
             if not customers:
-                # Fallback: get customers that have accounts
-                customer_ids = (
-                    db.session.query(Account.customer_id)
-                    .distinct()
-                    .all()
-                )
+                customer_ids = customer_ids_rows
                 customer_ids = [c[0] for c in customer_ids]
             else:
                 customer_ids = [c.customer_id for c in customers]

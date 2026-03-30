@@ -996,9 +996,14 @@ const CRODashboard: React.FC = () => {
             <ROIScalingChart data={d.roi_summary.scaling} />
           </div>
 
-          {/* Footer tagline */}
+          {/* Footer tagline + citation */}
           <p className="text-[10px] text-gray-600 text-center italic">
             Same playbooks. Same platform. Non-linear returns.
+          </p>
+          <p className="text-[8px] text-gray-700 text-center mt-2 leading-relaxed">
+            * Benchmarks: Gainsight Pulse 2024, TSIA CS Benchmark,
+            KeyBanc SaaS Metrics Survey, Bain &amp; Co. NPS Economics.
+            Dollar impacts are ARR-proportional projections scaled at 1% improvement.
           </p>
         </div>
 
