@@ -87,6 +87,8 @@ class CustomerConfig(db.Model):
     dc2s_kpi_overrides = db.Column(db.JSON, nullable=True)      # {"P3-KPI1": {"target": 90}, ...}
     dc2s_kpi_weights = db.Column(db.JSON, nullable=True)        # {"P3": {"P3-KPI1": 0.4, ...}, ...}
     dc2s_kpi_definitions = db.Column(db.JSON, nullable=True)    # Custom KPI definitions
+    dc2s_lifecycle_stage_weights = db.Column(db.JSON, nullable=True)  # Lifecycle-stage weight profiles
+    # Schema: {"enabled": bool, "date_field": str, "stages": [{name, min_days, max_days, pillar_weights, kpi_weights}]}
 
     # Vertical UI nomenclature overrides (customer-specific label customizations)
     nomenclature_overrides = db.Column(db.JSON, nullable=True)  # Deep-merged on top of vertical defaults

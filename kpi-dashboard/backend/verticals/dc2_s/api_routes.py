@@ -413,13 +413,18 @@ def _get_trailing_kpi_values(account_id, days=30):
     return trailing_values
 
 
-def calculate_kpi_health(kpi_values, customer_id=None, vertical=None):
+def calculate_kpi_health(kpi_values, customer_id=None, vertical=None,
+                         pillar_weight_overrides=None, kpi_weight_overrides=None):
     """
     Calculate health score from KPI values using config-aware weights when possible.
     Vertical-aware: uses the correct KPI catalog (DC2_S=38 KPIs, SaaS Premium=41 KPIs).
     When customer_id is provided, auto-detects vertical from CustomerConfig.
     Normalizes AI/CH/DV/EX/OS KPI codes to P1-P5 catalog codes (GAP 1.3).
     Only includes pillars that have non-zero weight in customer config (enabled pillars).
+
+    Optional overrides (used by lifecycle-stage weight profiles):
+        pillar_weight_overrides: dict of {pillar: weight} — overrides L2 weights
+        kpi_weight_overrides: dict of {pillar: {kpi: weight}} — overrides L1 weights
     """
     from utils.vertical_registry import get_kpis, get_pillars, get_vertical_for_customer, normalize_vertical
 
@@ -477,8 +482,12 @@ def calculate_kpi_health(kpi_values, customer_id=None, vertical=None):
         # 4-band scoring: critical→0, risk→50, target→70, healthy_max→100
         score = _score_kpi_value(value, kpi_def)
 
-        # Use L1 weight from KPI definition (fall back to equal weight)
-        l1_weight = kpi_def.get('weight_l1', 0)
+        # Use L1 weight: lifecycle override → KPI definition → equal weight fallback
+        l1_weight = None
+        if kpi_weight_overrides and pillar in kpi_weight_overrides:
+            l1_weight = kpi_weight_overrides[pillar].get(kpi_code)
+        if not l1_weight:
+            l1_weight = kpi_def.get('weight_l1', 0)
         if not l1_weight or l1_weight <= 0:
             l1_weight = 1.0  # equal weight fallback
 
@@ -499,9 +508,12 @@ def calculate_kpi_health(kpi_values, customer_id=None, vertical=None):
     total_weight = 0
 
     for pillar, score in pillar_averages.items():
-        # Get weight from CustomerConfig L2 weights, fallback to catalog weight_l2
-        pillar_data = weights.get(pillar, {})
-        weight = pillar_data.get('weight', pillar_catalog.get(pillar, {}).get('weight_l2', 0.2))
+        # L2 weight: lifecycle override → CustomerConfig → catalog weight_l2
+        if pillar_weight_overrides and pillar in pillar_weight_overrides:
+            weight = pillar_weight_overrides[pillar]
+        else:
+            pillar_data = weights.get(pillar, {})
+            weight = pillar_data.get('weight', pillar_catalog.get(pillar, {}).get('weight_l2', 0.2))
         overall_health += score * weight
         total_weight += weight
 

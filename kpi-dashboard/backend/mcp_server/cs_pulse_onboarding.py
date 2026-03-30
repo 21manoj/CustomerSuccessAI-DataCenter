@@ -406,6 +406,7 @@ def configure_customer_kpis(
     enabled_kpis: list = None,
     pillar_weights: dict = None,
     kpi_weights: dict = None,
+    lifecycle_stage_weights: dict = None,
 ) -> dict:
     """Configure KPI selection and weights for a customer.
 
@@ -414,6 +415,7 @@ def configure_customer_kpis(
     - Select exact KPIs (enabled_kpis overrides enabled_pillars)
     - Set L2 pillar weights (pillar_weights)
     - Set L1 KPI weights per pillar (kpi_weights)
+    - Set lifecycle-stage weight profiles (lifecycle_stage_weights)
 
     Args:
         customer_id: The customer ID
@@ -421,6 +423,12 @@ def configure_customer_kpis(
         enabled_kpis: Optional list of KPI codes (e.g. ['P1-KPI1', 'P1-KPI2'])
         pillar_weights: Optional dict of pillar weights (e.g. {'P1': 0.4, 'P3': 0.35, 'P5': 0.25})
         kpi_weights: Optional dict of KPI weights per pillar (e.g. {'P1': {'P1-KPI1': 0.5}})
+        lifecycle_stage_weights: Optional dict with lifecycle stage definitions.
+            Schema: {"enabled": true, "date_field": "contract_start",
+                     "stages": [{"name": "onboarding", "min_days": 0, "max_days": 90,
+                                 "pillar_weights": {"P1": 0.35, ...}}, ...]}
+            Pass {"enabled": true} with no stages to use defaults (onboarding/stabilization/growth).
+            Pass {"enabled": false} to disable lifecycle-stage weighting.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -474,7 +482,34 @@ def configure_customer_kpis(
                             kpi_weights[pillar][_kw_keys[-1]] + _kw_diff, 4)
             config.dc2s_kpi_weights = kpi_weights
 
+        if lifecycle_stage_weights is not None:
+            from utils.lifecycle_stages import (
+                validate_lifecycle_config, normalize_stage_weights, DEFAULT_LIFECYCLE_CONFIG
+            )
+            # If just {"enabled": true} with no stages, use defaults
+            if lifecycle_stage_weights.get('enabled') and not lifecycle_stage_weights.get('stages'):
+                import copy
+                lc = copy.deepcopy(DEFAULT_LIFECYCLE_CONFIG)
+                lc['enabled'] = True
+                lifecycle_stage_weights = lc
+
+            errors = validate_lifecycle_config(lifecycle_stage_weights)
+            if errors and lifecycle_stage_weights.get('enabled'):
+                raise ToolError(f"Invalid lifecycle config: {'; '.join(errors)}")
+
+            lifecycle_stage_weights = normalize_stage_weights(lifecycle_stage_weights)
+            config.dc2s_lifecycle_stage_weights = lifecycle_stage_weights
+
         db.session.commit()
+
+        lifecycle_info = None
+        if config.dc2s_lifecycle_stage_weights:
+            lc = config.dc2s_lifecycle_stage_weights
+            lifecycle_info = {
+                'enabled': lc.get('enabled', False),
+                'stages': [s.get('name') for s in lc.get('stages', [])],
+                'date_field': lc.get('date_field', 'contract_start'),
+            }
 
         return {
             'scope': 'customer',
@@ -483,6 +518,7 @@ def configure_customer_kpis(
             'enabled_kpi_count': len(config.dc2s_enabled_kpis) if config.dc2s_enabled_kpis else 0,
             'pillar_weights': config.dc2s_pillar_weights,
             'kpi_weights': config.dc2s_kpi_weights,
+            'lifecycle_stage_weights': lifecycle_info,
             'message': 'Customer KPI configuration updated.',
         }
 
@@ -1233,6 +1269,17 @@ def _process_data_impl(customer_id: int) -> dict:
                 database_url = os.environ.get('DATABASE_URL')
 
             acct_list = Account.query.filter_by(customer_id=customer_id).all()
+            acct_by_id = {a.account_id: a for a in acct_list}
+
+            # Load lifecycle stage config (if enabled)
+            _lifecycle_config = None
+            try:
+                from models import CustomerConfig as _CC
+                _cc = _CC.query.filter_by(customer_id=customer_id).first()
+                if _cc and _cc.dc2s_lifecycle_stage_weights:
+                    _lifecycle_config = _cc.dc2s_lifecycle_stage_weights
+            except Exception:
+                pass
 
             # Fetch ALL KPI measurements for this customer, grouped by account+month
             from models import DC2SKPI
@@ -1259,7 +1306,22 @@ def _process_data_impl(customer_id: int) -> dict:
                     if not kpi_vals:
                         scores_skipped += 1
                         continue
-                    health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
+                    # Resolve lifecycle-stage weight overrides for this account+month
+                    _pw_override, _kw_override = None, None
+                    if _lifecycle_config:
+                        try:
+                            from utils.lifecycle_stages import resolve_account_stage, get_stage_weights
+                            _acct_obj = acct_by_id.get(account_id)
+                            if _acct_obj:
+                                _stage = resolve_account_stage(_acct_obj, month, _lifecycle_config)
+                                _pw_override, _kw_override = get_stage_weights(_stage)
+                        except Exception:
+                            pass
+                    health, pillars = calculate_fn(
+                        kpi_vals, customer_id=customer_id,
+                        pillar_weight_overrides=_pw_override,
+                        kpi_weight_overrides=_kw_override,
+                    )
                     score_rows.append({
                         "aid": account_id,
                         "month": month,

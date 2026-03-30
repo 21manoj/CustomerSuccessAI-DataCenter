@@ -241,6 +241,102 @@ def run_wizard_c(customer_id: int) -> dict:
     config.dc2s_pillar_weights = adjusted_l2
     config.dc2s_kpi_weights = dict(kpi_weights_by_pillar)
     config.customized_by = 'wizard_c_db'
+
+    # ------------------------------------------------------------------
+    # 8. Per-stage calibration (if lifecycle stages are enabled)
+    # ------------------------------------------------------------------
+    per_stage_calibration = {}
+    lifecycle_config = config.dc2s_lifecycle_stage_weights
+    if lifecycle_config and lifecycle_config.get('enabled'):
+        try:
+            from utils.lifecycle_stages import resolve_account_stage
+            # Group accounts by their current lifecycle stage
+            stage_accounts: dict[str, list[int]] = defaultdict(list)
+            for acct in accounts:
+                latest_hs = (
+                    HealthScore.query
+                    .filter_by(account_id=acct.account_id)
+                    .order_by(HealthScore.measurement_month.desc())
+                    .first()
+                )
+                month = latest_hs.measurement_month if latest_hs else datetime.utcnow().date()
+                stage = resolve_account_stage(acct, month, lifecycle_config)
+                stage_name = stage.get('name', 'unknown') if stage else 'unknown'
+                stage_accounts[stage_name].append(acct.account_id)
+
+            # For each stage with >= 3 accounts, run correlation analysis
+            for stage_name, stage_acct_ids in stage_accounts.items():
+                if len(stage_acct_ids) < 3:
+                    per_stage_calibration[stage_name] = {
+                        'status': 'skipped',
+                        'reason': f'Only {len(stage_acct_ids)} accounts in stage (need >= 3)',
+                    }
+                    continue
+
+                # Split stage accounts into successful/unsuccessful
+                stage_success = [a for a in stage_acct_ids if a in successful]
+                stage_fail = [a for a in stage_acct_ids if a in unsuccessful]
+                if not stage_success or not stage_fail:
+                    # Use top-half / bottom-half within this stage
+                    stage_scores = []
+                    for aid in stage_acct_ids:
+                        hs = HealthScore.query.filter_by(account_id=aid) \
+                            .order_by(HealthScore.measurement_month.desc()).first()
+                        s = float(hs.health_score) if hs and hs.health_score else 50.0
+                        stage_scores.append((aid, s))
+                    stage_scores.sort(key=lambda x: x[1], reverse=True)
+                    mid = max(1, len(stage_scores) // 2)
+                    stage_success = [a for a, _ in stage_scores[:mid]]
+                    stage_fail = [a for a, _ in stage_scores[mid:]]
+
+                # Correlate within this stage
+                stage_correlations = {}
+                for kpi_code in kpi_defs:
+                    vals = kpi_vals.get(kpi_code, {})
+                    s_vals = [vals[a] for a in stage_success if a in vals]
+                    f_vals = [vals[a] for a in stage_fail if a in vals]
+                    if s_vals and f_vals:
+                        s_mean = statistics.mean(s_vals)
+                        f_mean = statistics.mean(f_vals)
+                        corr = min(abs(s_mean - f_mean) / max(abs(s_mean), abs(f_mean), 1.0), 1.0)
+                    else:
+                        corr = 0.5
+                    stage_correlations[kpi_code] = corr
+
+                # Adjust L2 for this stage
+                stage_l2 = {}
+                for pillar in pillar_codes:
+                    p_kpis = [k for k, p in kpi_to_pillar.items() if p == pillar]
+                    avg_c = statistics.mean(stage_correlations.get(k, 0.5) for k in p_kpis) if p_kpis else 0.5
+                    stage_l2[pillar] = base_l2.get(pillar, 0.2) * (0.5 + avg_c)
+                sl2_total = sum(stage_l2.values())
+                if sl2_total > 0:
+                    stage_l2 = {k: round(v / sl2_total, 4) for k, v in stage_l2.items()}
+
+                per_stage_calibration[stage_name] = {
+                    'status': 'calibrated',
+                    'accounts': len(stage_acct_ids),
+                    'successful': len(stage_success),
+                    'unsuccessful': len(stage_fail),
+                    'pillar_weights': stage_l2,
+                }
+
+            # Update the lifecycle config stages with calibrated weights
+            import copy
+            updated_lc = copy.deepcopy(lifecycle_config)
+            for stage in updated_lc.get('stages', []):
+                cal = per_stage_calibration.get(stage.get('name'))
+                if cal and cal.get('status') == 'calibrated':
+                    stage['pillar_weights'] = cal['pillar_weights']
+            config.dc2s_lifecycle_stage_weights = updated_lc
+
+        except Exception as stage_err:
+            import logging as _log_stage
+            _log_stage.getLogger(__name__).warning(
+                f"Wizard C per-stage calibration failed (non-fatal): {stage_err}",
+                exc_info=True,
+            )
+
     db.session.commit()
 
     return {
@@ -252,5 +348,6 @@ def run_wizard_c(customer_id: int) -> dict:
         'neutral_accounts': len(neutral),
         'total_kpis_calibrated': len(adjusted_l1),
         'significant_changes': significant_changes,
+        'per_stage_calibration': per_stage_calibration or None,
         'calibration_date': datetime.utcnow().isoformat(),
     }
