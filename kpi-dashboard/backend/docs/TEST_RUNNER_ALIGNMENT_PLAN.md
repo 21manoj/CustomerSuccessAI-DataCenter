@@ -675,6 +675,71 @@ Claude.ai calls sequence of MCP tools in realistic order.
 
 ---
 
+### 12p: ROI Dashboard Data Validation (CRITICAL)
+
+End-to-end validation that data flowing into CRO/CFO persona dashboards is correct, consistent, and matches direct MCP tool outputs. This is the "trust but verify" layer — if the pipeline produces numbers, the dashboards must show the same numbers.
+
+**Why CRITICAL:** The CRO/CFO dashboards are the buyer-facing deliverable. If the ROI engine calculates $2.1M protected but the CFO dashboard shows $1.8M (or blank), the deal is dead. Every number must be traceable from pipeline output → API endpoint → dashboard render.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Run full pipeline (onboard + process_data) | Pipeline completes |
+| 2 | Call `get_revenue_at_risk(customer, account)` via MCP | Returns at_risk, protected, expansion, lost |
+| 3 | Call `GET /api/context-graph/revenue?account_id=X` REST endpoint | Returns SAME numbers as step 2 |
+| 4 | Call `get_portfolio_roi_summary(customer)` via MCP | Returns historical ROI, forward ROI, payback |
+| 5 | Call `GET /api/outcome-roi/story?account_id=X` REST endpoint | Returns SAME numbers as step 4 |
+| 6 | Call `get_playbook_economics(customer)` via MCP | Returns per-playbook cost, hours, ROI |
+| 7 | Call `calculate_power_of_1(customer, 'NRR')` via MCP | Returns dollar impact |
+| 8 | Call `GET /api/outcome-roi/historical` REST endpoint | Historical ROI includes NRR impact matching step 7 |
+| 9 | Verify CRO dashboard data matches | Fetch `/api/executive/cro-dashboard`, compare at_risk ARR, expansion pipeline, protected $ |
+| 10 | Verify CFO dashboard data matches | Fetch `/api/executive/cfo-dashboard`, compare ROI %, payback months, investment vs return |
+
+**Cross-validation rules (must ALL pass):**
+- `get_revenue_at_risk()` total === context graph revenue API total (no double-counting)
+- `get_portfolio_roi_summary()` historical_impact === outcome-roi/historical total
+- Power of 1 per-metric impact sums to portfolio ROI total (within 5% tolerance for compounding)
+- CRO dashboard at_risk_arr === sum of at_risk accounts' ARR
+- CFO dashboard roi_percentage === (total_impact / total_investment) * 100
+- Health scores on dashboard match `get_account_health()` for each account
+- Account count on dashboard matches `list_accounts()` count
+
+**Consistency across runs (repeatability):**
+- Run pipeline twice with same manifest + same seed → IDENTICAL outputs
+- Compare: health scores, pillar scores, revenue at risk, ROI numbers, CSM actions
+- Any delta > 0 is a bug (deterministic pipeline should produce deterministic output)
+
+**Report output:**
+```
+ROI Dashboard Validation — Customer 451
+────────────────────────────────────────────────────────────
+Check                              MCP Tool      REST API    Match
+Revenue at risk (total)            $8,241,000    $8,241,000  PASS
+  - at_risk                        $5,120,000    $5,120,000  PASS
+  - protected                      $2,340,000    $2,340,000  PASS
+  - expansion                      $1,890,000    $1,890,000  PASS
+  - lost                           $410,000      $410,000    PASS
+Historical ROI                     $2,140,000    $2,140,000  PASS
+Forward ROI (12mo)                 $4,820,000    $4,820,000  PASS
+ROI percentage                     342%          342%        PASS
+Payback months                     4.2           4.2         PASS
+Power of 1 (NRR, 1%)              $98,200       $98,200     PASS
+CRO dashboard at_risk_arr          $5,120,000    $5,120,000  PASS
+CFO dashboard roi_pct              342%          342%        PASS
+Account count                      30            30          PASS
+────────────────────────────────────────────────────────────
+Repeatability: Run 1 vs Run 2     IDENTICAL (0 deltas)
+RESULT: 13/13 PASS
+```
+
+**Files:**
+- NEW: `load-driver/scenarios/scenario_roi_dashboard_validation.py` (~250 lines)
+- MODIFY: `load-driver/run_scenario.py` — register as scenario '12p'
+- MODIFY: `kpi-dashboard/backend/test_runner_api.py` — add to SCENARIO_META
+
+**Effort:** 6-8 hours
+
+---
+
 ### Phase 12 Summary
 
 | Sub-phase | Workflow | Priority | Effort | Production Risk |
@@ -694,16 +759,18 @@ Claude.ai calls sequence of MCP tools in realistic order.
 | 12m | Large portfolio performance | MEDIUM | 3h | Timeouts, memory issues |
 | 12n | Empty/sparse data | CRITICAL | 2h | NaN/zero scores, crashes |
 | 12o | MCP tool chain | LOW | 2h | Malformed tool responses |
+| 12p | ROI Dashboard data validation | CRITICAL | 6-8h | CRO/CFO dashboard shows wrong numbers |
 
-**Total Phase 12: ~34 hours**
+**Total Phase 12: ~40-42 hours**
 
 **Recommended priority order (CRITICAL first):**
-1. 12a Config cascade + 12b KPI enable/disable (5h) — most common admin action
-2. 12i Data re-upload + 12l Concurrent process_data (5h) — data integrity
-3. 12n Sparse data (2h) — new customer onboarding edge case
-4. 12e Wizard C drift + 12c Tier changes (4h) — operational safety
-5. 12d RBAC + 12g Lifecycle + 12h Multi-vertical (8h) — correctness
-6. 12f Renewal + 12j Stakeholder + 12k Rate limit + 12m Perf + 12o MCP (10h) — completeness
+1. 12p ROI Dashboard validation (6-8h) — buyer-facing data must be correct + repeatable
+2. 12a Config cascade + 12b KPI enable/disable (5h) — most common admin action
+3. 12i Data re-upload + 12l Concurrent process_data (5h) — data integrity
+4. 12n Sparse data (2h) — new customer onboarding edge case
+5. 12e Wizard C drift + 12c Tier changes (4h) — operational safety
+6. 12d RBAC + 12g Lifecycle + 12h Multi-vertical (8h) — correctness
+7. 12f Renewal + 12j Stakeholder + 12k Rate limit + 12m Perf + 12o MCP (10h) — completeness
 
 ---
 
@@ -714,8 +781,9 @@ Claude.ai calls sequence of MCP tools in realistic order.
 | 1-4 (Bridge + UI polish) | 10-15h | Unblock Test Runner |
 | 5-9 (Streaming + reports) | 28-37h | Advanced load driver |
 | 10-11 (E2E + push signals) | 16-20h | Pipeline verification |
-| 12 (Operational workflows) | ~34h | Production safety |
-| **TOTAL** | **88-106h** | |
+| 12a-o (Operational workflows) | ~34h | Production safety |
+| 12p (ROI Dashboard validation) | 6-8h | Data consistency + repeatability |
+| **TOTAL** | **94-114h** | |
 
 ## Decision Needed
 
