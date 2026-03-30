@@ -11,11 +11,14 @@ No filesystem access — everything comes from / goes to PostgreSQL.
 
 from __future__ import annotations
 
+import logging
 import statistics
 from collections import defaultdict
 from datetime import datetime
 
 import utils.health_thresholds as ht
+
+logger = logging.getLogger(__name__)
 
 
 def run_wizard_c(customer_id: int) -> dict:
