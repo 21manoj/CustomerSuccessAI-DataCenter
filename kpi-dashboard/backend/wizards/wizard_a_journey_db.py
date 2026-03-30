@@ -268,55 +268,57 @@ def _run_journey_generation(customer_id: int) -> dict:
         journeys_created += 1
 
         # ── Write arc detection node to context graph ──
+        # Use a savepoint so a failure here does NOT roll back JourneyData rows.
         if pic.arc_classifier_enabled():
             try:
                 phase = ht.classify(h_scores[-1]) if h_scores else 'unknown'
                 if arc_confidence >= pic.arc_min_confidence():
-                    arc_node = ContextNode(
-                        account_id=aid,
-                        customer_id=customer_id,
-                        node_type='SIGNAL',
-                        source='system',
-                        node_subtype='arc_detection',
-                        title=f'Arc Detected: {pattern}',
-                        properties={
-                            'arc_type':     pattern,
-                            'phase':        phase,
-                            'confidence':   arc_confidence,
-                            'triggered_by': 'wizard_a',
-                        },
-                        tier=2,
-                        occurred_at=datetime.utcnow(),
-                    )
-                    db.session.add(arc_node)
-                    db.session.flush()
-
-                    # Connect arc detection node to most recent customer signal
-                    recent_signal = (ContextNode.query
-                                     .filter_by(account_id=aid, node_type='SIGNAL',
-                                                source='customer')
-                                     .order_by(ContextNode.occurred_at.desc())
-                                     .first())
-                    if recent_signal:
-                        db.session.add(ContextEdge(
-                            from_node_id=recent_signal.node_id,
-                            to_node_id=arc_node.node_id,
-                            edge_type='TRIGGERED',
-                            confidence=arc_confidence,
+                    nested = db.session.begin_nested()
+                    try:
+                        arc_node = ContextNode(
+                            account_id=aid,
+                            customer_id=customer_id,
+                            node_type='SIGNAL',
+                            source='system',
+                            node_subtype='arc_detection',
+                            title=f'Arc Detected: {pattern}',
                             properties={
-                                'label': f'Signal pattern triggered {pattern} arc classification'
+                                'arc_type':     pattern,
+                                'phase':        phase,
+                                'confidence':   arc_confidence,
+                                'triggered_by': 'wizard_a',
                             },
-                        ))
+                            tier=2,
+                            occurred_at=datetime.utcnow(),
+                        )
+                        db.session.add(arc_node)
+                        db.session.flush()
+
+                        # Connect arc detection node to most recent customer signal
+                        recent_signal = (ContextNode.query
+                                         .filter_by(account_id=aid, node_type='SIGNAL',
+                                                    source='customer')
+                                         .order_by(ContextNode.occurred_at.desc())
+                                         .first())
+                        if recent_signal:
+                            db.session.add(ContextEdge(
+                                from_node_id=recent_signal.node_id,
+                                to_node_id=arc_node.node_id,
+                                edge_type='TRIGGERED',
+                                confidence=arc_confidence,
+                                properties={
+                                    'label': f'Signal pattern triggered {pattern} arc classification'
+                                },
+                            ))
+                        nested.commit()
+                    except Exception:
+                        nested.rollback()
+                        raise
             except Exception as graph_err:
-                import logging as _log
-                _log.getLogger(__name__).error(
+                logger.error(
                     f"wizard_a: context graph write failed for account {aid}: {graph_err}",
                     exc_info=True,
                 )
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
 
     db.session.commit()
 

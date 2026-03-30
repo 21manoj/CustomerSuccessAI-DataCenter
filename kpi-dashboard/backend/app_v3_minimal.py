@@ -1234,6 +1234,42 @@ try:
 except Exception:
     pass
 
+# ====================================================================
+# Startup Validation: Ensure REQUIRED blueprints are registered
+# ====================================================================
+# These blueprints are essential for platform operation. If any failed
+# to import silently, crash now with a clear message rather than
+# serving requests with missing functionality.
+_REQUIRED_BLUEPRINTS = {
+    'onboarding_api_v2': ONBOARDING_API_V2_AVAILABLE,
+    'dc2s_api': HAS_DC2S_API,
+    'revenue_intelligence_api': HAS_REVENUE_INTELLIGENCE_API,
+}
+# At least one upload API must be available
+_REQUIRED_BLUEPRINTS['upload_api (V2 or V3)'] = (
+    UPLOAD_API_V2_AVAILABLE or UPLOAD_API_V3_AVAILABLE
+)
+# Inline-registered REQUIRED blueprints: check they exist in the app's blueprint registry
+for _bp_name in [
+    'data_ingestion_api', 'outcome_roi_api', 'executive_dashboard_api',
+    'context_graph_api', 'notifications_api',
+]:
+    _REQUIRED_BLUEPRINTS[_bp_name] = _bp_name in app.blueprints
+
+_missing = [name for name, avail in _REQUIRED_BLUEPRINTS.items() if not avail]
+if _missing:
+    print("\n" + "=" * 60)
+    print("FATAL: Required blueprints failed to load:")
+    for m in _missing:
+        print(f"  ✗ {m}")
+    print("=" * 60)
+    raise RuntimeError(
+        f"Cannot start: missing required blueprints: {', '.join(_missing)}. "
+        f"Check import errors above."
+    )
+print(f"✅ All {len(_REQUIRED_BLUEPRINTS)} required blueprints verified")
+
+
 @app.route('/debug/routes')
 def list_routes():
     """Debug endpoint to see all registered routes"""

@@ -1592,7 +1592,7 @@ class ManifestCSVGenerator:
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow([
-            'source_account_id', 'event_date', 'event_type', 'title',
+            'source_account_id', 'event_date', 'event_type', 'description',
             'participants', 'outcome', 'sentiment', 'notes',
         ])
 
@@ -1705,7 +1705,7 @@ class ManifestCSVGenerator:
         w = csv.writer(out)
         w.writerow([
             'source_account_id', 'company_name', 'industry', 'employee_count',
-            'annual_revenue', 'founded_year', 'headquarters', 'website',
+            'arr', 'founded_year', 'headquarters', 'website',
             'description',
         ])
 
@@ -1724,7 +1724,7 @@ class ManifestCSVGenerator:
                 acct['name'],
                 random.choice(industries),
                 emp,
-                acct['arr'] * random.uniform(5, 20),
+                acct['arr'],
                 random.randint(2005, 2022),
                 random.choice(cities),
                 f'https://www.{domain}',
@@ -1746,7 +1746,7 @@ class ManifestCSVGenerator:
         w = csv.writer(out)
         w.writerow([
             'source_account_id', 'outcome_date', 'outcome_type', 'title',
-            'description', 'revenue_impact', 'status', 'linked_signal_id',
+            'description', 'revenue_value', 'status', 'linked_signal_id',
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
@@ -1975,7 +1975,7 @@ class ManifestCSVGenerator:
         w = csv.writer(out)
         w.writerow([
             'source_account_id', 'from_signal_ref', 'to_signal_ref',
-            'edge_type', 'label', 'confidence', 'lag_days',
+            'edge_type', 'weight', 'label', 'confidence', 'lag_days',
         ])
 
         arc_phase = self.phase or 'baseline'
@@ -2016,6 +2016,7 @@ class ManifestCSVGenerator:
                     from_ref,
                     to_ref,
                     edge_type,
+                    edge_def.get('weight', 1.0),
                     edge_def.get('label', f'{edge_def["from"]} {edge_type} {edge_def["to"]}'),
                     edge_def.get('confidence', 0.8),
                     edge_def.get('lag_days', 14),

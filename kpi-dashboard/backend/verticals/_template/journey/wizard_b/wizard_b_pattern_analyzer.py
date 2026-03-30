@@ -293,15 +293,21 @@ class PatternAnalyzer:
         for pattern_type, pattern_journeys in patterns.items():
             print(f"\n   Analyzing {pattern_type} pattern ({len(pattern_journeys)} accounts)...")
             
-            # Extract statistics
+            # Extract statistics (filter out None health values)
+            _sh = [j['starting_health'] for j in pattern_journeys if j.get('starting_health') is not None]
+            _eh = [j['ending_health'] for j in pattern_journeys if j.get('ending_health') is not None]
+            _hc = [j['ending_health'] - j['starting_health'] for j in pattern_journeys
+                   if j.get('ending_health') is not None and j.get('starting_health') is not None]
+            _lh = [j['lowest_health'] for j in pattern_journeys if j.get('lowest_health') is not None]
+            _hh = [j['highest_health'] for j in pattern_journeys if j.get('highest_health') is not None]
             profile = PatternProfile(
                 pattern_type=pattern_type,
                 n_accounts=len(pattern_journeys),
-                avg_starting_health=np.mean([j['starting_health'] for j in pattern_journeys]),
-                avg_ending_health=np.mean([j['ending_health'] for j in pattern_journeys]),
-                health_change=np.mean([j['ending_health'] - j['starting_health'] for j in pattern_journeys]),
-                avg_lowest_health=np.mean([j['lowest_health'] for j in pattern_journeys]),
-                avg_highest_health=np.mean([j['highest_health'] for j in pattern_journeys]),
+                avg_starting_health=np.mean(_sh) if _sh else 0.0,
+                avg_ending_health=np.mean(_eh) if _eh else 0.0,
+                health_change=np.mean(_hc) if _hc else 0.0,
+                avg_lowest_health=np.mean(_lh) if _lh else 0.0,
+                avg_highest_health=np.mean(_hh) if _hh else 0.0,
                 avg_duration_weeks=np.mean([j['total_weeks'] for j in pattern_journeys]),
                 avg_total_events=np.mean([j['summary']['total_events'] for j in pattern_journeys]),
                 common_phases=self._extract_common_phases(pattern_journeys),
@@ -403,7 +409,7 @@ class PatternAnalyzer:
             early_low_health = 0
             for journey in churned:
                 for event in journey['events'][:20]:  # First 20 weeks
-                    if event['health_score_after'] < 50:
+                    if event.get('health_score_after') is not None and event['health_score_after'] < 50:
                         early_low_health += 1
                         break
             
@@ -423,7 +429,7 @@ class PatternAnalyzer:
             # Rule 2: Sustained negative sentiment
             neg_sentiment = 0
             for journey in churned:
-                neg_events = sum(1 for e in journey['events'] if e['sentiment_value'] < 0)
+                neg_events = sum(1 for e in journey['events'] if e.get('sentiment_value') is not None and e['sentiment_value'] < 0)
                 if neg_events / len(journey['events']) > 0.6:  # More than 60% negative
                     neg_sentiment += 1
             
@@ -464,7 +470,7 @@ class PatternAnalyzer:
             success_factors.append(f"High engagement: {avg_events:.0f} events/account")
             
             # Factor 3: Early health score improvement
-            early_improvers = sum(1 for j in expanded if j['events'][10]['health_score_after'] > j['starting_health'])
+            early_improvers = sum(1 for j in expanded if len(j.get('events', [])) > 10 and j['events'][10].get('health_score_after') is not None and j.get('starting_health') is not None and j['events'][10]['health_score_after'] > j['starting_health'])
             if early_improvers >= 2:
                 success_factors.append(f"Early health improvement: {early_improvers}/{len(expanded)} accounts")
             
@@ -543,7 +549,7 @@ class PatternAnalyzer:
                 total_lost += rev.get('lost', 0)
 
                 # Intervention success: health improved from lowest to ending
-                if j['ending_health'] > j['lowest_health'] + 5:
+                if j.get('ending_health') is not None and j.get('lowest_health') is not None and j['ending_health'] > j['lowest_health'] + 5:
                     intervention_successes += 1
 
             n = len(journeys)
