@@ -31,21 +31,21 @@ const FEATURE_CATALOG: Record<string, { tier: Tier; description: string }> = {
   playbook_triggers:    { tier: 'professional', description: 'Manual playbook triggering and execution' },
   power_of_1:           { tier: 'professional', description: 'Power of 1 financial impact calculator' },
   decision_matrix:      { tier: 'professional', description: 'AI-powered decision matrix' },
-  approval_queue:       { tier: 'professional', description: 'Human-in-the-loop approval workflow' },
-  journey_visualizer:   { tier: 'professional', description: 'Journey Visualizer (Wizard A/B analysis)' },
+  test_runner_advanced: { tier: 'professional', description: 'Test Runner advanced options (presets, sliders)' },
+  revenue_intelligence: { tier: 'professional', description: 'Revenue intelligence and portfolio analysis' },
   rag_queries:          { tier: 'professional', description: 'RAG-powered natural language queries' },
 
   // Enterprise
-  test_runner_advanced: { tier: 'enterprise',   description: 'Test Runner advanced options' },
-  revenue_intelligence: { tier: 'enterprise',   description: 'Revenue intelligence and portfolio analysis' },
-  portfolio_synergy:    { tier: 'enterprise',   description: 'PE portfolio synergy modeling (Power of 1 CEO)' },
-  onboarding_agent:     { tier: 'enterprise',   description: 'AI Onboarding Agent' },
+  approval_queue:       { tier: 'enterprise',   description: 'Human-in-the-loop approval workflow' },
+  onboarding_agent:     { tier: 'enterprise',   description: 'AI Onboarding Agent (TTFV, activation plans)' },
   auto_trigger_pipeline:{ tier: 'enterprise',   description: 'Event-driven auto-analysis + auto-playbook' },
   feedback_loop:        { tier: 'enterprise',   description: 'Playbook outcome agent learning loop' },
-  mcp_connectors:       { tier: 'enterprise',   description: 'MCP external connectors' },
+  mcp_connectors:       { tier: 'enterprise',   description: 'MCP external connectors (Salesforce, ServiceNow)' },
   copilot_integration:  { tier: 'enterprise',   description: 'Microsoft Copilot / Teams integration' },
-  multi_provider:       { tier: 'enterprise',   description: 'Multi-LLM provider support' },
-  agent_memory_shared:  { tier: 'enterprise',   description: 'Cross-agent shared memory' },
+  multi_provider:       { tier: 'enterprise',   description: 'Multi-LLM provider support (OpenAI + Claude + Azure)' },
+  agent_memory_shared:  { tier: 'enterprise',   description: 'Cross-agent shared memory and intelligence' },
+  portfolio_synergy:    { tier: 'enterprise',   description: 'PE portfolio synergy modeling (Power of 1 CEO)' },
+  api_key_self_service: { tier: 'enterprise',   description: 'Allow customers to create their own API keys' },
 };
 
 // ---------------------------------------------------------------------------

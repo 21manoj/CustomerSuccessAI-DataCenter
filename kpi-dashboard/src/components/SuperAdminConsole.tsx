@@ -16,6 +16,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from '../contexts/SessionContext';
 import { useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '../utils/api';
+import FeatureTogglePanel from './admin/FeatureTogglePanel';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,7 +134,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 // Component
 // ---------------------------------------------------------------------------
 
-type View = 'dashboard' | 'customers' | 'customer-detail' | 'create-customer' | 'activity-log';
+type View = 'dashboard' | 'customers' | 'customer-detail' | 'create-customer' | 'activity-log' | 'feature-toggles';
 
 const SuperAdminConsole: React.FC = () => {
   const { session, logout } = useSession();
@@ -299,6 +300,7 @@ const SuperAdminConsole: React.FC = () => {
             ['dashboard', 'Dashboard', '\u25A0'],
             ['customers', 'Customers', '\uD83D\uDC65'],
             ['create-customer', 'New Customer', '\u2795'],
+            ['feature-toggles', 'Feature Toggles', '\u2699'],
             ['activity-log', 'Activity Log', '\uD83D\uDCC4'],
           ] as [View, string, string][]).map(([v, label, icon]) => (
             <button
@@ -770,6 +772,9 @@ const SuperAdminConsole: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Feature Toggles View */}
+          {view === 'feature-toggles' && <FeatureTogglePanel />}
 
           {/* Activity Log View */}
           {view === 'activity-log' && (
