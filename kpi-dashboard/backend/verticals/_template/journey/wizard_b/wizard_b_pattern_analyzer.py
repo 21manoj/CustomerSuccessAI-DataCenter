@@ -201,9 +201,27 @@ class PatternAnalyzer:
         return self
     
     # ========================================================================
+    # FEATURE FLAG CHECK
+    # ========================================================================
+
+    def _is_nrr_intelligence_enabled(self) -> bool:
+        """Check if 'nrr_intelligence' per-customer feature flag is enabled."""
+        if not self.customer_id:
+            return False
+        try:
+            from models import FeatureToggle as FTModel
+            toggle = FTModel.query.filter_by(
+                customer_id=self.customer_id,
+                feature_name='nrr_intelligence',
+            ).first()
+            return toggle.enabled if toggle else False
+        except Exception:
+            return False
+
+    # ========================================================================
     # PATTERN PROFILING
     # ========================================================================
-    
+
     def analyze_patterns(self, auto_save: bool = False):
         """
         Main analysis pipeline.
@@ -233,16 +251,18 @@ class PatternAnalyzer:
         print("\n4️⃣  Extracting success factors...")
         self.extract_success_factors()
 
-        # 5. NRR correlation (requires DB context)
-        if self.customer_id is not None:
+        # 5. NRR correlation (requires DB context + feature flag)
+        if self.customer_id is not None and self._is_nrr_intelligence_enabled():
             print("\n5️⃣  Correlating patterns to NRR impact...")
             self.correlate_nrr_impact()
 
             # 6. Portfolio NRR forecast
             print("\n6️⃣  Forecasting portfolio NRR...")
             self.forecast_portfolio_nrr()
-        else:
+        elif self.customer_id is None:
             print("\n5️⃣  Skipping NRR correlation (no customer_id — filesystem mode)")
+        else:
+            print("\n5️⃣  Skipping NRR correlation (nrr_intelligence feature not enabled)")
 
         # 7. Optionally save to filesystem (legacy CLI mode)
         if auto_save and self.run_dir:
