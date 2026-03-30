@@ -15,6 +15,10 @@ import {
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
 } from './mockData';
 
+// Pre-map mock data to match Cockpit's stricter types
+const _mockAccounts = MOCK_ACCOUNTS.map((a) => ({ ...a, id: a.account_id, name: a.account_name, pillar_scores: {} as Record<string, number>, last_contact: null as string | null }));
+const _mockApprovals = MOCK_APPROVALS.map((a) => ({ ...a, id: Number(a.id) || 0, type: a.playbook_name, description: `${a.playbook_name} for ${a.account_name}`, submitted_at: a.requested_at }));
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Account {
@@ -108,38 +112,6 @@ function daysSince(dateStr: string | null): number | null {
   if (!dateStr) return null;
   const diff = Date.now() - new Date(dateStr).getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24));
-}
-
-/** Shared MOCK_APPROVALS is playbook-shaped (Focus Flow); map for this cockpit's Approval type */
-function mockApprovalsForCockpit(): Approval[] {
-  return MOCK_APPROVALS.map((m, i) => ({
-    id: i + 1,
-    type: m.playbook_name || m.playbook_id,
-    account_name: m.account_name,
-    description: `${m.playbook_id} — projected ${formatARR(m.projected_impact || 0)}`,
-    submitted_at: m.requested_at,
-  }));
-}
-
-function normalizeApprovalFromApi(raw: any, idx: number): Approval {
-  if (raw?.description && raw?.submitted_at && raw?.account_name) {
-    return {
-      id: typeof raw.id === 'number' ? raw.id : idx + 1,
-      type: raw.type || 'Approval',
-      account_name: raw.account_name,
-      description: String(raw.description),
-      submitted_at: raw.submitted_at,
-    };
-  }
-  return {
-    id: typeof raw?.id === 'number' ? raw.id : idx + 1,
-    type: raw?.playbook_name || raw?.playbook_id || 'Playbook',
-    account_name: raw?.account_name ?? '',
-    description: raw?.playbook_id
-      ? `${raw.playbook_id} — ${raw.projected_impact ? formatARR(raw.projected_impact) : 'pending'}`
-      : 'Pending approval',
-    submitted_at: raw?.requested_at || raw?.submitted_at || new Date().toISOString(),
-  };
 }
 
 function healthBadgeClasses(score: number): string {
@@ -629,8 +601,6 @@ const CSMCockpit: React.FC = () => {
           health_score: a.health_score ?? a.overall_health ?? 0,
           arr: a.arr ?? a.revenue ?? 0,
           status: a.status ?? a.account_status ?? '',
-          renewal_date: a.renewal_date ?? a.renewalDate ?? null,
-          last_contact: a.last_contact ?? a.lastContact ?? null,
           pillar_scores: a.pillar_scores ?? {},
         }));
         if (mapped.length > 0) {
@@ -639,16 +609,7 @@ const CSMCockpit: React.FC = () => {
         }
       }
       if (!acctLoaded) {
-        setAccounts(
-          MOCK_ACCOUNTS.map((a) => ({
-            ...a,
-            id: a.account_id,
-            name: a.account_name,
-            pillar_scores: {},
-            renewal_date: a.renewal_date,
-            last_contact: null,
-          }))
-        );
+        setAccounts(_mockAccounts);
       }
 
       if (actRes.status === 'fulfilled' && actRes.value.ok) {
@@ -673,31 +634,21 @@ const CSMCockpit: React.FC = () => {
           const data = await appRes.json();
           const appList = data.approvals || data.data || [];
           const result = Array.isArray(appList) ? appList : [];
-          const mappedAppr = result.map((r: any, i: number) => normalizeApprovalFromApi(r, i));
-          setApprovals(mappedAppr.length > 0 ? mappedAppr : mockApprovalsForCockpit());
+          setApprovals(result.length > 0 ? result : _mockApprovals);
         } else {
-          setApprovals(mockApprovalsForCockpit());
+          setApprovals(_mockApprovals);
         }
       } catch {
-        setApprovals(mockApprovalsForCockpit());
+        setApprovals(_mockApprovals);
       }
 
       // Mock completed today (no dedicated API)
       setCompletedToday([]);
     } catch (err) {
       // Full fallback to mock data when all APIs fail
-      setAccounts(
-        MOCK_ACCOUNTS.map((a) => ({
-          ...a,
-          id: a.account_id,
-          name: a.account_name,
-          pillar_scores: {},
-          renewal_date: a.renewal_date,
-          last_contact: null,
-        }))
-      );
+      setAccounts(_mockAccounts);
       setActions(MOCK_ACTIONS.map((a) => ({ ...a, id: a.rank, impact_score: 0 })));
-      setApprovals(mockApprovalsForCockpit());
+      setApprovals(_mockApprovals);
     } finally {
       setLoading(false);
     }
