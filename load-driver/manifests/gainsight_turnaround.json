@@ -1,15 +1,15 @@
 {
   "customer": {
-    "name": "Gainsight 15KPI Final",
+    "name": "Gainsight Turnaround Demo",
     "vertical": "saas_premium",
-    "admin_email": "admin@gs15final.com",
+    "admin_email": "admin@turnaround-demo.com",
     "admin_name": "Sarah Chen",
-    "domain": "gs15final.com"
+    "domain": "turnaround-demo.com"
   },
   "kpis": {
     "selection": "custom",
-    "count": 15,
-    "codes": ["P1-KPI1", "P1-KPI2", "P1-KPI3", "P1-KPI5", "P2-KPI1", "P2-KPI2", "P2-KPI5", "P3-KPI1", "P3-KPI2", "P3-KPI3", "P5-KPI1", "P5-KPI2", "P5-KPI3", "P5-KPI5", "P5-KPI6"],
+    "count": 8,
+    "codes": ["P1-KPI3", "P1-KPI5", "P2-KPI1", "P2-KPI2", "P2-KPI5", "P3-KPI3", "P5-KPI5", "P5-KPI6"],
     "pillars": ["P1", "P2", "P3", "P5"]
   },
   "time_range": {
