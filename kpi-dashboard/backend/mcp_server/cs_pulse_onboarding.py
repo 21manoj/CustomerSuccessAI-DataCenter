@@ -1317,11 +1317,19 @@ def _process_data_impl(customer_id: int) -> dict:
                                 _pw_override, _kw_override = get_stage_weights(_stage)
                         except Exception:
                             pass
-                    health, pillars = calculate_fn(
-                        kpi_vals, customer_id=customer_id,
-                        pillar_weight_overrides=_pw_override,
-                        kpi_weight_overrides=_kw_override,
-                    )
+                    # Try with lifecycle overrides first; fall back to basic call
+                    # if the vertical's calculator doesn't support overrides.
+                    if _pw_override or _kw_override:
+                        try:
+                            health, pillars = calculate_fn(
+                                kpi_vals, customer_id=customer_id,
+                                pillar_weight_overrides=_pw_override,
+                                kpi_weight_overrides=_kw_override,
+                            )
+                        except TypeError:
+                            health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
+                    else:
+                        health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
                     score_rows.append({
                         "aid": account_id,
                         "month": month,
