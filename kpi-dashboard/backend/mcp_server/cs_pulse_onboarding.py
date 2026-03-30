@@ -1586,6 +1586,19 @@ def _process_data_impl(customer_id: int) -> dict:
             import logging as _log_roi2
             _log_roi2.getLogger(__name__).warning(f"ROI engine failed (non-fatal): {_roi_err}")
 
+        # ── QDRANT: Index signals for semantic search (non-fatal) ──
+        try:
+            qdrant_url = os.environ.get('QDRANT_URL')
+            if qdrant_url:
+                from utils.qdrant_signal_search import SignalVectorStore
+                _store = SignalVectorStore(customer_id)
+                _indexed = _store.index_signals(limit=500)
+                if _indexed > 0:
+                    steps_completed.append(f'qdrant_signals_indexed_{_indexed}')
+        except Exception as _qdrant_err:
+            import logging as _log_q
+            _log_q.getLogger(__name__).debug(f"QDRANT indexing skipped (non-fatal): {_qdrant_err}")
+
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
         return {

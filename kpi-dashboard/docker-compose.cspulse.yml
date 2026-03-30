@@ -58,6 +58,9 @@ services:
       # AI API Keys (from .env file)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # QDRANT Vector Database
+      QDRANT_URL: ${QDRANT_URL:-}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
 
       # Flask settings
       FLASK_APP: app_v3_minimal.py

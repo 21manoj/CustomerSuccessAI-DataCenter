@@ -1,0 +1,282 @@
+"""
+QDRANT Signal Search — semantic vector search for CS Pulse signals.
+
+Stores signal embeddings in per-customer QDRANT collections and provides
+semantic search for the signal analyst's Quant+Qual+LLM composite pipeline.
+
+Usage:
+    from utils.qdrant_signal_search import SignalVectorStore
+    store = SignalVectorStore(customer_id=451)
+    store.index_signals()  # Build/rebuild index from DB signals
+    results = store.search("champion departure budget pressure", account_id=852, top_k=5)
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+import os
+from datetime import datetime
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# Embedding config
+EMBEDDING_MODEL = 'text-embedding-3-small'  # Cheaper + faster than 3-large for signal search
+EMBEDDING_DIM = 1536  # text-embedding-3-small dimension
+COLLECTION_PREFIX = 'cspulse_signals'
+
+
+class SignalVectorStore:
+    """Per-customer QDRANT collection for signal semantic search."""
+
+    def __init__(self, customer_id: int):
+        self.customer_id = customer_id
+        self.collection_name = f'{COLLECTION_PREFIX}_{customer_id}'
+        self._client = None
+        self._openai = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            try:
+                from qdrant_client import QdrantClient
+                url = os.environ.get('QDRANT_URL')
+                api_key = os.environ.get('QDRANT_API_KEY')
+                if not url or not api_key:
+                    raise ValueError('QDRANT_URL and QDRANT_API_KEY must be set')
+                self._client = QdrantClient(url=url, api_key=api_key, timeout=10)
+            except ImportError:
+                raise ImportError('qdrant-client not installed. pip install qdrant-client')
+        return self._client
+
+    @property
+    def openai_client(self):
+        if self._openai is None:
+            try:
+                import openai
+                api_key = os.environ.get('OPENAI_API_KEY')
+                if not api_key:
+                    raise ValueError('OPENAI_API_KEY must be set for embeddings')
+                self._openai = openai.OpenAI(api_key=api_key)
+            except ImportError:
+                raise ImportError('openai not installed')
+        return self._openai
+
+    def _embed(self, text: str) -> list[float]:
+        """Generate embedding vector for text."""
+        resp = self.openai_client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=text[:8000],  # Truncate to model limit
+        )
+        return resp.data[0].embedding
+
+    def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a batch of texts."""
+        # OpenAI supports up to 2048 inputs per batch
+        truncated = [t[:8000] for t in texts]
+        resp = self.openai_client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=truncated,
+        )
+        return [d.embedding for d in resp.data]
+
+    def _signal_text(self, node) -> str:
+        """Build searchable text from a ContextNode or signal dict."""
+        parts = []
+        if hasattr(node, 'title'):
+            # ContextNode model object
+            parts.append(node.title or '')
+            parts.append(f'Type: {node.node_subtype or "signal"}')
+            props = node.properties or {}
+            if props.get('content'):
+                parts.append(props['content'])
+            if props.get('sentiment'):
+                parts.append(f'Sentiment: {props["sentiment"]}')
+            if props.get('stakeholder_name'):
+                parts.append(f'Stakeholder: {props["stakeholder_name"]}')
+        elif isinstance(node, dict):
+            parts.append(node.get('title', ''))
+            parts.append(f'Type: {node.get("node_subtype", "signal")}')
+            props = node.get('properties', {})
+            if props.get('content'):
+                parts.append(props['content'])
+            if props.get('sentiment'):
+                parts.append(f'Sentiment: {props["sentiment"]}')
+        return '\n'.join(p for p in parts if p)
+
+    def ensure_collection(self):
+        """Create collection if it doesn't exist."""
+        from qdrant_client.models import Distance, VectorParams
+        collections = [c.name for c in self.client.get_collections().collections]
+        if self.collection_name not in collections:
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
+            )
+            logger.info(f'Created QDRANT collection: {self.collection_name}')
+
+    def index_signals(self, limit: int = 500) -> int:
+        """
+        Index all SIGNAL ContextNodes for this customer into QDRANT.
+        Idempotent: uses node_id as point ID (upsert).
+
+        Returns count of signals indexed.
+        """
+        from models import ContextNode
+        self.ensure_collection()
+
+        nodes = (
+            ContextNode.query
+            .filter_by(customer_id=self.customer_id, node_type='SIGNAL')
+            .order_by(ContextNode.occurred_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+        if not nodes:
+            logger.info(f'No signals to index for customer {self.customer_id}')
+            return 0
+
+        # Build texts and payloads
+        texts = []
+        payloads = []
+        point_ids = []
+
+        for n in nodes:
+            text = self._signal_text(n)
+            if not text.strip():
+                continue
+
+            texts.append(text)
+            point_ids.append(n.node_id)
+            payloads.append({
+                'node_id': n.node_id,
+                'account_id': n.account_id,
+                'customer_id': n.customer_id,
+                'node_subtype': n.node_subtype or '',
+                'source': n.source or 'customer',
+                'title': n.title or '',
+                'properties': json.dumps(n.properties or {}),
+                'sentiment': (n.properties or {}).get('sentiment', 'neutral'),
+                'occurred_at': n.occurred_at.isoformat() if n.occurred_at else '',
+                'confidence': float(n.confidence) if n.confidence else 1.0,
+                'revenue_impact': float(n.revenue_impact) if n.revenue_impact else 0,
+                'tier': n.tier or 1,
+            })
+
+        # Batch embed
+        logger.info(f'Embedding {len(texts)} signals for customer {self.customer_id}...')
+        embeddings = self._embed_batch(texts)
+
+        # Upsert into QDRANT
+        from qdrant_client.models import PointStruct
+        points = [
+            PointStruct(id=pid, vector=emb, payload=pay)
+            for pid, emb, pay in zip(point_ids, embeddings, payloads)
+        ]
+
+        # Upload in batches of 100
+        batch_size = 100
+        for i in range(0, len(points), batch_size):
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points[i:i + batch_size],
+            )
+
+        logger.info(f'Indexed {len(points)} signals into {self.collection_name}')
+        return len(points)
+
+    def search(
+        self,
+        query: str,
+        account_id: Optional[int] = None,
+        top_k: int = 5,
+        threshold: float = 0.3,
+    ) -> list[dict]:
+        """
+        Semantic search for signals similar to the query.
+
+        Args:
+            query: Natural language description (e.g., "champion departure causing engagement drop")
+            account_id: Filter to specific account (None = all accounts)
+            top_k: Max results
+            threshold: Minimum cosine similarity (0-1)
+
+        Returns:
+            List of dicts: [{node_id, account_id, title, subtype, sentiment, score, ...}]
+        """
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+        try:
+            query_vector = self._embed(query)
+        except Exception as e:
+            logger.warning(f'Embedding failed for query: {e}')
+            return []
+
+        # Build filter
+        must_conditions = [
+            FieldCondition(key='customer_id', match=MatchValue(value=self.customer_id))
+        ]
+        if account_id:
+            must_conditions.append(
+                FieldCondition(key='account_id', match=MatchValue(value=account_id))
+            )
+
+        try:
+            results = self.client.search(
+                collection_name=self.collection_name,
+                query_vector=query_vector,
+                query_filter=Filter(must=must_conditions),
+                limit=top_k * 2,  # Fetch extra for threshold filtering
+                with_payload=True,
+                with_vectors=False,
+            )
+        except Exception as e:
+            logger.warning(f'QDRANT search failed: {e}')
+            return []
+
+        # Apply threshold and format results
+        hits = []
+        for r in results:
+            if r.score < threshold:
+                continue
+            payload = r.payload or {}
+            hits.append({
+                'node_id': payload.get('node_id'),
+                'account_id': payload.get('account_id'),
+                'title': payload.get('title', ''),
+                'subtype': payload.get('node_subtype', ''),
+                'source': payload.get('source', 'customer'),
+                'sentiment': payload.get('sentiment', 'neutral'),
+                'occurred_at': payload.get('occurred_at', ''),
+                'confidence': payload.get('confidence', 1.0),
+                'score': round(r.score, 3),
+                'properties': json.loads(payload.get('properties', '{}')) if isinstance(payload.get('properties'), str) else payload.get('properties', {}),
+            })
+            if len(hits) >= top_k:
+                break
+
+        return hits
+
+    def delete_collection(self):
+        """Delete the entire collection (for cleanup/rebuild)."""
+        try:
+            self.client.delete_collection(self.collection_name)
+            logger.info(f'Deleted QDRANT collection: {self.collection_name}')
+        except Exception:
+            pass
+
+    def stats(self) -> dict:
+        """Return collection stats."""
+        try:
+            info = self.client.get_collection(self.collection_name)
+            return {
+                'collection': self.collection_name,
+                'points_count': info.points_count,
+                'vectors_count': info.vectors_count,
+                'status': info.status.value if info.status else 'unknown',
+            }
+        except Exception as e:
+            return {'collection': self.collection_name, 'error': str(e)}

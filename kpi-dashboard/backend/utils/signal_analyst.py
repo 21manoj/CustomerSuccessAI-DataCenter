@@ -54,18 +54,36 @@ def check_and_analyze(
         # ── Lazy imports to avoid circular dependencies ──
         from models import ContextNode, HealthScore, Notification, db, Account
 
-        # ── 1. Collect last-N SIGNAL ContextNodes for this account ──
-        recent_signals = (
-            ContextNode.query
-            .filter_by(account_id=account_id, node_type='SIGNAL')
-            .order_by(ContextNode.occurred_at.desc())
-            .limit(pic.max_signals_context())
-            .all()
-        )
-        signal_texts = [
-            f"- [{n.node_subtype or 'signal'}] {n.title or '(no title)'}"
-            for n in recent_signals
-        ]
+        # ── 1. Collect signals — QDRANT semantic search with SQL fallback ──
+        signal_texts = []
+        _qdrant_used = False
+        try:
+            from utils.qdrant_signal_search import SignalVectorStore
+            _store = SignalVectorStore(customer_id)
+            _query = f"health decline signals engagement drop risk indicators for account {account_id}"
+            _semantic = _store.search(_query, account_id=account_id, top_k=pic.max_signals_context())
+            if _semantic:
+                signal_texts = [
+                    f"- [{s['subtype']}] {s['title']} (relevance: {s['score']:.0%}, sentiment: {s['sentiment']})"
+                    for s in _semantic
+                ]
+                _qdrant_used = True
+                logger.debug(f"signal_analyst: QDRANT returned {len(_semantic)} semantic matches for account {account_id}")
+        except Exception as _q_err:
+            logger.debug(f"signal_analyst: QDRANT unavailable, falling back to SQL: {_q_err}")
+
+        if not _qdrant_used:
+            recent_signals = (
+                ContextNode.query
+                .filter_by(account_id=account_id, node_type='SIGNAL')
+                .order_by(ContextNode.occurred_at.desc())
+                .limit(pic.max_signals_context())
+                .all()
+            )
+            signal_texts = [
+                f"- [{n.node_subtype or 'signal'}] {n.title or '(no title)'}"
+                for n in recent_signals
+            ]
 
         # ── 2. Pillar deltas from last two HealthScore rows ──
         last_two_scores = (
@@ -301,18 +319,35 @@ def analyze_on_signal(
             pillars = cp if isinstance(cp, dict) else __import__('json').loads(cp)
             pillar_text = "\n".join(f"  {k}: {v:.1f}" for k, v in pillars.items())
 
-        # ── 3. Get recent signals for broader context ──
-        recent_signals = (
-            ContextNode.query
-            .filter_by(account_id=account_id, node_type='SIGNAL')
-            .order_by(ContextNode.occurred_at.desc())
-            .limit(pic.max_signals_context())
-            .all()
-        )
-        signal_texts = [
-            f"- [{n.node_subtype or 'signal'}] {n.title or '(no title)'}"
-            for n in recent_signals
-        ]
+        # ── 3. Get recent signals — QDRANT semantic search with SQL fallback ──
+        signal_texts = []
+        _qdrant_used = False
+        try:
+            from utils.qdrant_signal_search import SignalVectorStore
+            _store = SignalVectorStore(customer_id)
+            _query = f"{signal_type} {risk_label} signals for account with engagement and retention risk"
+            _semantic = _store.search(_query, account_id=account_id, top_k=pic.max_signals_context())
+            if _semantic:
+                signal_texts = [
+                    f"- [{s['subtype']}] {s['title']} (relevance: {s['score']:.0%}, sentiment: {s['sentiment']})"
+                    for s in _semantic
+                ]
+                _qdrant_used = True
+        except Exception:
+            pass
+
+        if not _qdrant_used:
+            recent_signals = (
+                ContextNode.query
+                .filter_by(account_id=account_id, node_type='SIGNAL')
+                .order_by(ContextNode.occurred_at.desc())
+                .limit(pic.max_signals_context())
+                .all()
+            )
+            signal_texts = [
+                f"- [{n.node_subtype or 'signal'}] {n.title or '(no title)'}"
+                for n in recent_signals
+            ]
 
         # ── 4. Build proactive LLM prompt ──
         health_line = f"Current health score: {current_health:.1f}/100" if current_health else "Health score: not yet calculated"
