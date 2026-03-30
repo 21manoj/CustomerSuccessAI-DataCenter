@@ -21,6 +21,7 @@ import VPCSDashboard from './components/dashboard/VPCSDashboard';
 import AESalesDashboard from './components/dashboard/AESalesDashboard';
 import AuctusAIWebsite from './components/AuctusAIWebsite';
 import SuperAdminConsole from './components/SuperAdminConsole';
+import EntitlementGuard from './components/shared/EntitlementGuard';
 import AdminLayout from './components/admin-ui/AdminLayout';
 import AdminDashboardPage from './components/admin-ui/AdminDashboardPage';
 import CustomerListPage from './components/admin-ui/CustomerListPage';
@@ -240,7 +241,7 @@ const AppRoutes: React.FC = () => {
           path="/dc-dashboard/cro"
           element={
             <PrivateRoute vertical="datacenter">
-              <CRODashboard />
+              <EntitlementGuard feature="revenue_intelligence"><CRODashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
@@ -248,7 +249,7 @@ const AppRoutes: React.FC = () => {
           path="/dc-dashboard/cfo"
           element={
             <PrivateRoute vertical="datacenter">
-              <CFODashboard />
+              <EntitlementGuard feature="revenue_intelligence"><CFODashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
@@ -256,7 +257,7 @@ const AppRoutes: React.FC = () => {
           path="/dc-dashboard/ops"
           element={
             <PrivateRoute vertical="datacenter">
-              <CSOpsIntegrationDashboard />
+              <EntitlementGuard feature="dashboards"><CSOpsIntegrationDashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
@@ -264,7 +265,7 @@ const AppRoutes: React.FC = () => {
           path="/dc-dashboard/ceo"
           element={
             <PrivateRoute vertical="datacenter">
-              <CEODashboard />
+              <EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
@@ -272,7 +273,7 @@ const AppRoutes: React.FC = () => {
           path="/dc-dashboard/vpcs"
           element={
             <PrivateRoute vertical="datacenter">
-              <VPCSDashboard />
+              <EntitlementGuard feature="dashboards"><VPCSDashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
@@ -280,7 +281,7 @@ const AppRoutes: React.FC = () => {
           path="/dc-dashboard/sales"
           element={
             <PrivateRoute vertical="datacenter">
-              <AESalesDashboard />
+              <EntitlementGuard feature="dashboards"><AESalesDashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
@@ -312,13 +313,14 @@ const AppRoutes: React.FC = () => {
         />
         
         {/* Short persona routes — clean URLs for demos (no /dc-dashboard prefix) */}
-        <Route path="/cro" element={<PrivateRoute vertical="datacenter"><CRODashboard /></PrivateRoute>} />
-        <Route path="/cfo" element={<PrivateRoute vertical="datacenter"><CFODashboard /></PrivateRoute>} />
-        <Route path="/ceo" element={<PrivateRoute vertical="datacenter"><CEODashboard /></PrivateRoute>} />
-        <Route path="/csm" element={<PrivateRoute vertical="datacenter"><CSMDashboard /></PrivateRoute>} />
-        <Route path="/vpcs" element={<PrivateRoute vertical="datacenter"><VPCSDashboard /></PrivateRoute>} />
-        <Route path="/ops" element={<PrivateRoute vertical="datacenter"><CSOpsIntegrationDashboard /></PrivateRoute>} />
-        <Route path="/sales" element={<PrivateRoute vertical="datacenter"><AESalesDashboard /></PrivateRoute>} />
+        {/* CRO/CFO require revenue_intelligence entitlement; others require base dashboards */}
+        <Route path="/cro" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="revenue_intelligence"><CRODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/cfo" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="revenue_intelligence"><CFODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/ceo" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/csm" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><CSMDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/vpcs" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><VPCSDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/ops" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><CSOpsIntegrationDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/sales" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><AESalesDashboard /></EntitlementGuard></PrivateRoute>} />
 
         {/* Data Center Dashboard - Legacy (keep for backward compatibility) */}
         <Route
@@ -385,7 +387,7 @@ const AppRoutes: React.FC = () => {
           path="/portco-dashboard"
           element={
             <PrivateRoute>
-              <PortcoCEODashboard />
+              <EntitlementGuard feature="portfolio_synergy"><PortcoCEODashboard /></EntitlementGuard>
             </PrivateRoute>
           }
         />
