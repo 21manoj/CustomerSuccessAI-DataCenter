@@ -456,9 +456,270 @@ Total pipeline ROI: $1.3M protected, $960K expansion pipeline
 9. Phase 3 (manifests in UI) — UI completeness
 10. Phase 2 + 4 (entitlement + validation) — polish
 
+---
+
+## Phase 12: Operational Workflow Tests (HIGH)
+
+**What:** 15 operational workflows that run in production but have zero test coverage today. These are the scenarios that cause real incidents.
+
+### 12a: Config Change Cascade (CRITICAL)
+
+Admin changes pillar weights → health scores recalculate → playbook triggers re-evaluate → CSM actions reprioritize.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Onboard customer, establish baseline scores | Scores populated |
+| 2 | Change P3 weight from 0.25 → 0.35 via API | CustomerConfig updated |
+| 3 | Trigger health recalculation | Scores changed (not stale) |
+| 4 | Verify accounts near thresholds crossed over | At-risk → critical if P3 was weak |
+| 5 | Verify CSM actions reprioritized | New top action reflects weight change |
+
+**Risk if untested:** Stale scores after config change — admin changes weights but dashboard shows old numbers.
+
+### 12b: KPI Enable/Disable (CRITICAL)
+
+Customer enables 5 new KPIs or disables 3 → weight re-normalization → scores shift.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Establish baseline with 15 KPIs | Scores stable |
+| 2 | Disable 3 KPIs via configure_customer_kpis | Config updated |
+| 3 | Trigger health recalc | Remaining KPI weights re-normalized to sum=1.0 per pillar |
+| 4 | Enable 5 additional KPIs + upload data | New KPIs appear in scoring |
+| 5 | Verify scores changed proportionally | No NaN, no division-by-zero |
+
+**Risk if untested:** Weights don't sum to 1.0 after KPI changes, broken scores.
+
+### 12c: Customer Tier Upgrade/Downgrade (HIGH)
+
+Starter → Professional → new features unlock. Professional → Starter → features locked.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Create customer at Starter tier | Only Starter features accessible |
+| 2 | Try accessing Signal Analyst (Professional) | HTTP 403 returned |
+| 3 | Upgrade to Professional | Signal Analyst accessible |
+| 4 | Try accessing Approval Queue (Enterprise) | HTTP 403 returned |
+| 5 | Downgrade back to Starter | Professional features locked again |
+
+**Risk if untested:** Feature leaks after downgrade, or silent lockouts after upgrade.
+
+### 12d: User CRUD + RBAC (HIGH)
+
+Create CSM user, assign accounts, verify they can only see their accounts.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Create admin user for customer | Admin sees all accounts |
+| 2 | Create CSM user with 5 assigned accounts | CSM sees only 5 accounts |
+| 3 | CSM queries account outside assignment | HTTP 403 or empty result |
+| 4 | Admin adds 2 more accounts to CSM | CSM now sees 7 |
+| 5 | Delete CSM user | User gone, no orphan sessions |
+
+**Risk if untested:** Cross-user data leakage within same customer.
+
+### 12e: Wizard C Weight Drift Detection (HIGH)
+
+Wizard C recalibrates → weights shift → health scores change → accounts cross thresholds.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Establish baseline scores with default weights | Record scores |
+| 2 | Run Wizard C | Weights change (delta logged) |
+| 3 | Recalculate health scores | Scores shift by 5-15 points |
+| 4 | Verify threshold crossings | Accounts that were 68 (at-risk) may now be 72 (healthy) or vice versa |
+| 5 | Verify weight history record created | Timestamp + source=wizard_c |
+
+**Risk if untested:** Silent score drift — accounts change status and nobody notices.
+
+### 12f: Renewal Countdown Triggers (MEDIUM)
+
+Account 30/60/90 days from renewal → playbook triggers → CSM actions escalate.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Create account with renewal_date = today + 90 days | Account created |
+| 2 | Run CSM daily actions | Renewal appears as low priority |
+| 3 | Advance to 60 days out (update renewal_date or wait) | Priority increases |
+| 4 | Advance to 30 days out | Renewal playbook triggers |
+| 5 | Advance past renewal | Account status updates |
+
+**Risk if untested:** Missed renewal windows — CSM doesn't see upcoming renewals.
+
+### 12g: Account Lifecycle Transitions (MEDIUM)
+
+Account health: 80 → 65 → 45 → 30 → 55 → 72 (full cycle through all states).
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Start healthy (80) | Classification = healthy, arc = expansion_champion |
+| 2 | Inject declining KPIs → 65 | Classification = at_risk, arc reclassifies |
+| 3 | Continue decline → 45 | Classification = critical, crisis playbook fires |
+| 4 | Inject improving KPIs → 55 | Classification = at_risk, arc = crisis_recovery |
+| 5 | Continue recovery → 72 | Classification = healthy, ROI captures protected revenue |
+
+**Risk if untested:** Arc doesn't reclassify on threshold crossings, playbooks don't fire.
+
+### 12h: Multi-Vertical Coexistence (MEDIUM)
+
+DC2_S and SaaS Premium customers on same platform, different catalogs, different scoring.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Create DC2_S customer (38 KPIs, P3=AI Workload) | DC2_S catalog loaded |
+| 2 | Create SaaS customer (41 KPIs, P1=Product Adoption) | SaaS catalog loaded |
+| 3 | Upload KPIs for both | Each uses correct catalog ranges |
+| 4 | Calculate health for both | Pillar weights differ correctly (DC2_S P3=25%, SaaS P1=30%) |
+| 5 | Query accounts for each | No cross-vertical catalog contamination |
+
+**Risk if untested:** SaaS customer scored with DC2_S ranges, wrong health scores.
+
+### 12i: Data Correction / Re-Upload (CRITICAL)
+
+Customer re-uploads corrected CSV for a month that already has data.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Upload 6 months of KPI data | Baseline scores established |
+| 2 | Upload corrected data for month 3 (different values) | UPSERT replaces, not duplicates |
+| 3 | Verify row count unchanged for month 3 | No duplicate rows |
+| 4 | Verify health score for month 3 changed | Reflects corrected data |
+| 5 | Verify months 1,2,4,5,6 unchanged | Only month 3 affected |
+
+**Risk if untested:** Duplicate rows inflate scores, or corrected data ignored.
+
+### 12j: Stakeholder Change Detection (MEDIUM)
+
+Champion leaves → stakeholder CSV re-uploaded → context graph updates → arc reclassifies.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Upload stakeholders with champion "Jane Chen, VP Eng" | STAKEHOLDER node created |
+| 2 | Upload new stakeholders CSV: Jane departed, "Tom Park" new | STAKEHOLDER node updated |
+| 3 | Verify context graph: departure edge created | CAUSED_BY or LED_TO edge |
+| 4 | Run arc classifier | Arc shifts to exec_sponsor_change |
+| 5 | Verify playbook recommendation | PB-04 (Champion Recovery) recommended |
+
+**Risk if untested:** Champion departure not detected, no playbook fires.
+
+### 12k: API Rate Limiting (LOW)
+
+Burst 200 requests in 1 minute from single customer.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Send 200 GET /api/dc2s/accounts in rapid succession | First 200 succeed (within limit) |
+| 2 | Continue sending | HTTP 429 returned after limit |
+| 3 | Wait 60 seconds | Requests succeed again |
+| 4 | Verify no data corruption | Accounts unchanged |
+
+**Risk if untested:** Server overload, no rate limiting, or data corruption under load.
+
+### 12l: Concurrent process_data Race Condition (CRITICAL)
+
+Two process_data calls for same customer overlap.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Upload CSVs for customer | Data ready |
+| 2 | Trigger process_data (call A) | Starts processing |
+| 3 | Immediately trigger process_data again (call B) | Should queue or reject |
+| 4 | Wait for both to complete | No duplicate health scores |
+| 5 | Verify score count = expected (not 2x) | Data integrity maintained |
+
+**Risk if untested:** Race condition creates duplicate scores, corrupts health data.
+
+### 12m: Large Portfolio Performance (MEDIUM)
+
+Customer with 100+ accounts, 38 KPIs each, 12 months of data.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Generate manifest with 100 accounts | CSVs generated |
+| 2 | Upload and process | Completes within 5 minutes |
+| 3 | Calculate health for all 100 | All 100 scored |
+| 4 | Load CSM daily actions | Returns in < 3 seconds |
+| 5 | Load CRO dashboard | Renders in < 5 seconds |
+
+**Risk if untested:** Timeout on large portfolios, memory issues, slow UI.
+
+### 12n: Empty/Sparse Data Handling (CRITICAL)
+
+Customer with 3 of 38 KPIs, or account with 1 month of data.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | Upload accounts.csv with 5 accounts | Accounts created |
+| 2 | Upload KPIs for only 3 of 38 KPI codes | 3 KPIs ingested |
+| 3 | Calculate health | Score computed (not NaN, not 0) — uses available KPIs only |
+| 4 | Upload 1 month of data for 1 account | Score computed for that month |
+| 5 | Query pillar scores | Pillars with no data show null (not 0), populated pillars scored |
+
+**Risk if untested:** Division by zero, NaN scores, missing pillar scores crash UI.
+
+### 12o: MCP Tool Chain (LOW)
+
+Claude.ai calls sequence of MCP tools in realistic order.
+
+| Step | Action | Validation |
+|------|--------|------------|
+| 1 | get_platform_instructions() | Returns valid context |
+| 2 | list_accounts(customer_id) | Returns account list |
+| 3 | get_at_risk_accounts(customer_id) | Returns subset with health < 70 |
+| 4 | get_account_health(customer_id, account_id) | Returns pillar breakdown |
+| 5 | get_playbook_recommendations(customer_id, account_id) | Returns playbook list |
+| 6 | calculate_power_of_1(customer_id, "NRR") | Returns dollar impact |
+| 7 | get_context_graph_mermaid(customer_id, account_id) | Returns valid Mermaid diagram |
+
+**Risk if untested:** Tool responses malformed, context lost between calls.
+
+---
+
+### Phase 12 Summary
+
+| Sub-phase | Workflow | Priority | Effort | Production Risk |
+|-----------|---------|----------|--------|----------------|
+| 12a | Config change cascade | CRITICAL | 3h | Stale scores after weight change |
+| 12b | KPI enable/disable | CRITICAL | 2h | Broken weight normalization |
+| 12c | Tier upgrade/downgrade | HIGH | 2h | Feature leaks or lockouts |
+| 12d | User CRUD + RBAC | HIGH | 3h | Cross-user data leakage |
+| 12e | Wizard C weight drift | HIGH | 2h | Silent score drift |
+| 12f | Renewal countdown | MEDIUM | 2h | Missed renewal windows |
+| 12g | Lifecycle transitions | MEDIUM | 3h | Arc reclassification failures |
+| 12h | Multi-vertical coexistence | MEDIUM | 2h | Cross-vertical contamination |
+| 12i | Data correction re-upload | CRITICAL | 2h | Duplicate rows, inflated scores |
+| 12j | Stakeholder change | MEDIUM | 2h | Champion departure undetected |
+| 12k | API rate limiting | LOW | 1h | Server overload |
+| 12l | Concurrent process_data | CRITICAL | 3h | Race condition, duplicate data |
+| 12m | Large portfolio performance | MEDIUM | 3h | Timeouts, memory issues |
+| 12n | Empty/sparse data | CRITICAL | 2h | NaN/zero scores, crashes |
+| 12o | MCP tool chain | LOW | 2h | Malformed tool responses |
+
+**Total Phase 12: ~34 hours**
+
+**Recommended priority order (CRITICAL first):**
+1. 12a Config cascade + 12b KPI enable/disable (5h) — most common admin action
+2. 12i Data re-upload + 12l Concurrent process_data (5h) — data integrity
+3. 12n Sparse data (2h) — new customer onboarding edge case
+4. 12e Wizard C drift + 12c Tier changes (4h) — operational safety
+5. 12d RBAC + 12g Lifecycle + 12h Multi-vertical (8h) — correctness
+6. 12f Renewal + 12j Stakeholder + 12k Rate limit + 12m Perf + 12o MCP (10h) — completeness
+
+---
+
+## Grand Total (All Phases)
+
+| Phases | Effort | Category |
+|--------|--------|----------|
+| 1-4 (Bridge + UI polish) | 10-15h | Unblock Test Runner |
+| 5-9 (Streaming + reports) | 28-37h | Advanced load driver |
+| 10-11 (E2E + push signals) | 16-20h | Pipeline verification |
+| 12 (Operational workflows) | ~34h | Production safety |
+| **TOTAL** | **88-106h** | |
+
 ## Decision Needed
 
 - Phase 1 is required — without `run_scenario.py`, the Test Runner UI can't execute scenarios
-- Phase 10 vs 11 — E2E pipeline benchmark (batch) or push+incremental (operational loop) first?
+- Phase 12a/12b/12i/12l/12n are CRITICAL — should these be prioritized above streaming (P5) and reports (P9)?
 - Phase 6 (concurrent) — what's the target concurrency? 5 customers? 50? Affects design
 - Should the E2E pipeline report be viewable in the Test Runner UI or CLI-only initially?
