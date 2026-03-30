@@ -17,6 +17,8 @@ import { useSession } from '../contexts/SessionContext';
 import { useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '../utils/api';
 import FeatureTogglePanel from './admin/FeatureTogglePanel';
+import AccountHealthReset from './admin/AccountHealthReset';
+import WeightOverridePanel from './admin/WeightOverridePanel';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -134,7 +136,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 // Component
 // ---------------------------------------------------------------------------
 
-type View = 'dashboard' | 'customers' | 'customer-detail' | 'create-customer' | 'activity-log' | 'feature-toggles';
+type View = 'dashboard' | 'customers' | 'customer-detail' | 'create-customer' | 'activity-log' | 'feature-toggles' | 'escalation-tools';
 
 const SuperAdminConsole: React.FC = () => {
   const { session, logout } = useSession();
@@ -301,6 +303,7 @@ const SuperAdminConsole: React.FC = () => {
             ['customers', 'Customers', '\uD83D\uDC65'],
             ['create-customer', 'New Customer', '\u2795'],
             ['feature-toggles', 'Feature Toggles', '\u2699'],
+            ['escalation-tools', 'Escalation Tools', '\u26A1'],
             ['activity-log', 'Activity Log', '\uD83D\uDCC4'],
           ] as [View, string, string][]).map(([v, label, icon]) => (
             <button
@@ -775,6 +778,26 @@ const SuperAdminConsole: React.FC = () => {
 
           {/* Feature Toggles View */}
           {view === 'feature-toggles' && <FeatureTogglePanel />}
+
+          {/* Escalation Tools View */}
+          {view === 'escalation-tools' && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-6">Escalation Tools</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                  <AccountHealthReset customerId={selectedCustomer?.customer?.customer_id || 0} />
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                  <WeightOverridePanel customerId={selectedCustomer?.customer?.customer_id || 0} />
+                </div>
+              </div>
+              {!selectedCustomer && (
+                <p className="text-sm text-gray-500 mt-4">
+                  Tip: Select a customer from the Customers tab first to use customer-specific tools.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Activity Log View */}
           {view === 'activity-log' && (
