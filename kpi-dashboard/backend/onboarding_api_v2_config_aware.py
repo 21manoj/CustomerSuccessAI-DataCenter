@@ -2137,40 +2137,98 @@ def complete_onboarding():
 @onboarding_api.route('/process-data', methods=['POST'])
 def process_data():
     """
-    Process uploaded CSV data — delegates to the single-source-of-truth
-    implementation in cs_pulse_onboarding._process_data_impl().
+    Process uploaded CSV data — async by default, sync if ?sync=true.
 
-    This ensures Flask REST and MCP both use identical pipeline logic:
-    CSV loading (fresh or incremental) → health score recalculation →
-    Wizard A arc classification → Signal Analyst (Layer A, Anthropic) →
-    Urgent Scanner (Layer C) → ROI Engine → event publishing.
+    Async mode (default): Returns 202 immediately with a job_id. Poll
+    GET /api/onboarding/status/<customer_id> for progress and results.
+
+    Sync mode (?sync=true): Blocks until completion (may timeout on CloudFront).
 
     Request:
         { "customer_id": 123 }
 
-    Response:
-        Same shape as MCP process_data tool output.
+    Response (async):
+        202 { "status": "accepted", "customer_id": 123, "message": "Processing started...",
+              "poll_url": "/api/onboarding/status/123" }
+
+    Response (sync):
+        200/207 Same shape as MCP process_data tool output.
     """
-    
+
     data = request.get_json() or {}
     customer_id = data.get('customer_id')
 
     if not customer_id:
         return jsonify({"status": "error", "message": "customer_id required"}), 400
 
-    try:
-        customer_id = int(customer_id)
-        from mcp_server.cs_pulse_onboarding import _process_data_impl
-        result = _process_data_impl(customer_id)
-        status_code = 200 if result.get('status') == 'success' else 207
-        return jsonify(result), status_code
-    except Exception as e:
-        current_app.logger.error(f"Error in process-data endpoint: {e}", exc_info=True)
-        return jsonify({
-            "status": "error",
-            "error": str(e),
-            "message": "Data processing failed."
-        }), 500
+    customer_id = int(customer_id)
+    sync_mode = request.args.get('sync', 'false').lower() in ('true', '1', 'yes')
+
+    if sync_mode:
+        # Synchronous — blocks until completion (legacy behavior)
+        try:
+            from mcp_server.cs_pulse_onboarding import _process_data_impl
+            result = _process_data_impl(customer_id)
+            status_code = 200 if result.get('status') == 'success' else 207
+            return jsonify(result), status_code
+        except Exception as e:
+            current_app.logger.error(f"Error in process-data endpoint: {e}", exc_info=True)
+            return jsonify({
+                "status": "error", "error": str(e),
+                "message": "Data processing failed."
+            }), 500
+
+    # Async mode — return 202 and process in background
+    import threading
+    from datetime import datetime as _dt
+
+    _onboarding_progress[customer_id] = {
+        'in_progress': True,
+        'started_at': _dt.utcnow().isoformat(),
+        'current_step': 'starting',
+        'steps_completed': [],
+        'result': None,
+        'error': None,
+    }
+
+    def _run_in_background(cid, app_ctx):
+        """Execute _process_data_impl in a background thread with Flask app context."""
+        with app_ctx:
+            try:
+                from mcp_server.cs_pulse_onboarding import _process_data_impl
+                result = _process_data_impl(cid)
+                _onboarding_progress[cid] = {
+                    'in_progress': False,
+                    'completed_at': _dt.utcnow().isoformat(),
+                    'status': result.get('status', 'unknown'),
+                    'steps_completed': result.get('steps_completed', []),
+                    'result': result,
+                    'error': None,
+                }
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Background process-data failed: {e}", exc_info=True)
+                _onboarding_progress[cid] = {
+                    'in_progress': False,
+                    'completed_at': _dt.utcnow().isoformat(),
+                    'status': 'error',
+                    'error': str(e),
+                    'result': None,
+                }
+
+    thread = threading.Thread(
+        target=_run_in_background,
+        args=(customer_id, current_app._get_current_object().app_context()),
+        daemon=True,
+    )
+    thread.start()
+
+    return jsonify({
+        "status": "accepted",
+        "customer_id": customer_id,
+        "message": f"Processing started for customer {customer_id}. Poll status endpoint for progress.",
+        "poll_url": f"/api/onboarding/status/{customer_id}",
+    }), 202
 
 
 # ── OLD process_data implementation removed (March 2026) ──────────────
@@ -2195,13 +2253,21 @@ def onboarding_status(customer_id):
             "in_progress": False,
             "message": "No process-data in progress for this customer."
         })
-    return jsonify({
+    resp = {
         "customer_id": customer_id,
         "in_progress": progress.get("in_progress", True),
+        "status": progress.get("status", "processing"),
         "current_step": progress.get("current_step", "unknown"),
         "steps_completed": progress.get("steps_completed", []),
         "started_at": progress.get("started_at"),
-    })
+    }
+    if not progress.get("in_progress"):
+        resp["completed_at"] = progress.get("completed_at")
+        if progress.get("result"):
+            resp["result"] = progress["result"]
+        if progress.get("error"):
+            resp["error"] = progress["error"]
+    return jsonify(resp)
 
 
 @onboarding_api.route('/upload', methods=['POST'])
