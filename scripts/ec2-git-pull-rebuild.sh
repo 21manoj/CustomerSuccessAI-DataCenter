@@ -11,7 +11,8 @@
 set -e
 REPO_ROOT="${CSPULSE_REPO_DIR:-$HOME/CustomerSuccessAI-DataCenter}"
 DASH="${REPO_ROOT}/kpi-dashboard"
-COMPOSE=(sudo docker compose -f docker-compose.ec2-build.yml)
+# Use project name cspulse so volumes match an existing ECR/registry deploy (cspulse_pgdata, etc.).
+COMPOSE=(sudo docker compose -p cspulse -f docker-compose.ec2-build.yml)
 
 NO_CACHE=()
 if [[ "${1:-}" == "--no-cache" ]]; then
