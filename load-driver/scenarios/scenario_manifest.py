@@ -829,8 +829,18 @@ class ManifestCSVGenerator:
             )
         return arc_def
 
+    # Minimum interval (days) between measurements per KPI frequency.
+    # Used by _dates_for_kpi() to thin out the master date list.
+    _FREQ_MIN_INTERVAL_DAYS = {
+        'realtime': 1,
+        'daily':    1,
+        'weekly':   7,
+        'monthly':  28,
+        'quarterly': 84,
+    }
+
     def _build_dates(self) -> List[str]:
-        """Build list of measurement date strings based on frequency."""
+        """Build list of measurement date strings based on manifest-level frequency."""
         dates = []
         if self.frequency == 'weekly':
             delta = timedelta(weeks=1)
@@ -844,6 +854,35 @@ class ManifestCSVGenerator:
             dates.append(current.strftime('%Y-%m-%d'))
             current += delta
         return dates
+
+    def _dates_for_kpi(self, kpi_code: str) -> List[str]:
+        """
+        Return the subset of self.dates appropriate for a KPI's measurement frequency.
+
+        A realtime/daily KPI gets every date. A quarterly KPI gets ~1 per 84 days.
+        This prevents over-sampling slow KPIs (e.g. quarterly Partner NPS getting
+        weekly data points) which would skew trailing-average scoring.
+        """
+        meta = self.kpi_catalog.get(kpi_code, {})
+        kpi_freq = meta.get('frequency', 'monthly')
+        min_interval = self._FREQ_MIN_INTERVAL_DAYS.get(kpi_freq, 28)
+
+        # If manifest frequency is already coarser than the KPI frequency, return all dates
+        manifest_interval = self._FREQ_MIN_INTERVAL_DAYS.get(self.frequency, 7)
+        if manifest_interval >= min_interval:
+            return self.dates
+
+        # Thin the date list: keep only dates >= min_interval apart
+        filtered = []
+        last_date = None
+        for d in self.dates:
+            dt = datetime.strptime(d, '%Y-%m-%d')
+            if last_date is None or (dt - last_date).days >= min_interval:
+                filtered.append(d)
+                last_date = dt
+
+        # Ensure at least 1 data point
+        return filtered if filtered else self.dates[:1]
 
     def _account_id(self, idx: int) -> int:
         """Deterministic account_id from index."""
@@ -1215,8 +1254,14 @@ class ManifestCSVGenerator:
                     classification=classification,
                 )
 
-                for i, date_str in enumerate(self.dates):
-                    val = series[i] if i < len(series) else series[-1]
+                # Respect per-KPI measurement frequency from catalog.
+                # Quarterly KPIs get ~1 point per 84 days; realtime/daily get every date.
+                kpi_dates = self._dates_for_kpi(kpi_code)
+                # Map kpi_dates back to series indices (series was generated for self.dates)
+                date_to_idx = {d: i for i, d in enumerate(self.dates)}
+                for date_str in kpi_dates:
+                    idx = date_to_idx.get(date_str, 0)
+                    val = series[idx] if idx < len(series) else series[-1]
                     status = self._classify_status(kpi_code, val)
 
                     w.writerow([
@@ -2060,6 +2105,90 @@ class ManifestCSVGenerator:
                 bench_date,
             ])
         return out.getvalue()
+
+    def validate_kpi_frequencies(self, csv_content: str = None) -> Dict[str, Any]:
+        """
+        Validate that generated KPI measurements respect per-KPI frequency metadata.
+
+        Returns a report dict:
+          {
+            "valid": bool,
+            "total_kpis": int,
+            "violations": [{"kpi_code", "frequency", "expected_max", "actual", "account_id"}],
+            "summary": {"realtime": {"kpis": N, "avg_points": X}, ...}
+          }
+
+        Can be called standalone as a test feature in the E2E pipeline.
+        """
+        import csv as _csv
+
+        if csv_content is None:
+            csv_content = self.generate_kpi_measurements_csv()
+
+        reader = _csv.DictReader(io.StringIO(csv_content))
+
+        # Count data points per (account_id, kpi_code)
+        counts: Dict[tuple, int] = {}
+        for row in reader:
+            key = (row.get('source_account_id') or row.get('account_id', ''), row.get('kpi_code', ''))
+            counts[key] = counts.get(key, 0) + 1
+
+        # Calculate expected max points per frequency
+        total_days = max(1, (self.end_date - self.start_date).days)
+        expected_max = {
+            'realtime': total_days,
+            'daily':    total_days,
+            'weekly':   total_days // 7 + 2,
+            'monthly':  total_days // 28 + 2,
+            'quarterly': total_days // 84 + 2,
+        }
+
+        violations = []
+        freq_summary: Dict[str, Dict[str, Any]] = {}
+
+        seen_kpis = set()
+        for (aid, kpi_code), count in counts.items():
+            meta = self.kpi_catalog.get(kpi_code, {})
+            freq = meta.get('frequency', 'monthly')
+            max_expected = expected_max.get(freq, total_days)
+
+            # Track summary
+            if freq not in freq_summary:
+                freq_summary[freq] = {'kpis': set(), 'total_points': 0, 'accounts': 0}
+            freq_summary[freq]['kpis'].add(kpi_code)
+            freq_summary[freq]['total_points'] += count
+            freq_summary[freq]['accounts'] += 1
+
+            # Check for over-sampling (>20% above expected max)
+            if count > max_expected * 1.2:
+                violations.append({
+                    'kpi_code': kpi_code,
+                    'frequency': freq,
+                    'expected_max': max_expected,
+                    'actual': count,
+                    'account_id': aid,
+                })
+            seen_kpis.add(kpi_code)
+
+        # Build clean summary
+        summary = {}
+        for freq, data in freq_summary.items():
+            n_kpis = len(data['kpis'])
+            n_accts = data['accounts'] // max(n_kpis, 1)
+            avg_points = data['total_points'] / max(data['accounts'], 1)
+            summary[freq] = {
+                'kpis': n_kpis,
+                'avg_points_per_account': round(avg_points, 1),
+                'expected_max': expected_max.get(freq, 0),
+            }
+
+        return {
+            'valid': len(violations) == 0,
+            'total_kpis': len(seen_kpis),
+            'total_rows': sum(counts.values()),
+            'violations': violations,
+            'summary': summary,
+        }
 
     def get_upload_file_map(self) -> Dict[str, str]:
         """
