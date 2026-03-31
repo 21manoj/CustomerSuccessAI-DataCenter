@@ -256,6 +256,56 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
 # Tool: create_customer
 # ===================================================================
 
+# ===================================================================
+# KPI Tier Helpers
+# ===================================================================
+
+def _load_tier_config():
+    """Load the SaaS KPI tier definitions from config."""
+    import json
+    import os
+    path = os.path.join(os.path.dirname(__file__), '..', 'config', 'saas_kpi_tiers.json')
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _resolve_kpi_tier(tier: str, vertical: str) -> dict:
+    """Resolve tier name to tier definition. Returns None for non-SaaS or unrecognized tier."""
+    if vertical not in ('saas_premium', 'saas'):
+        return None  # DC2_S uses full catalog — no tiers yet
+
+    config = _load_tier_config()
+    if not config:
+        return None
+
+    tiers = config.get('tiers', {})
+
+    if tier and tier in tiers:
+        return tiers[tier]
+
+    # No tier specified — use default
+    default = config.get('default_tier', 'saas_starter_9')
+    return tiers.get(default)
+
+
+def _apply_kpi_tier(customer_config, tier_def: dict) -> dict:
+    """Apply tier KPI selection to a CustomerConfig. Returns tier info dict for response."""
+    kpi_codes = tier_def.get('kpi_codes')
+    if kpi_codes and kpi_codes != 'all':
+        customer_config.dc2s_enabled_kpis = kpi_codes
+
+    return {
+        'name': tier_def.get('display_name'),
+        'model_grade': tier_def.get('model_grade'),
+        'kpi_count': tier_def.get('kpi_count'),
+        'pillars': tier_def.get('pillars'),
+        'upgrade_path': tier_def.get('upgrade_path'),
+    }
+
+
 @mcp.tool
 def create_customer(
     name: str,
@@ -263,6 +313,7 @@ def create_customer(
     vertical: str,
     admin_email: str,
     admin_name: str,
+    tier: str = None,
 ) -> dict:
     """Create a new customer with admin user and auto-generated API key.
 
@@ -280,6 +331,11 @@ def create_customer(
         vertical: Vertical slug (e.g. 'dc2_s')
         admin_email: Admin user email
         admin_name: Admin user display name
+        tier: Optional KPI tier for SaaS verticals. Options:
+            'saas_starter_9' — 9 KPIs, 4 pillars, 1-hour onboarding (default for SaaS)
+            'saas_predictive_11' — 11 KPIs, behavioral signals, requires product analytics
+            'saas_full_43' — all KPIs, enterprise deployment
+            If omitted, SaaS defaults to 'saas_starter_9'. DC2_S uses full catalog.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -345,6 +401,13 @@ def create_customer(
             customer_id=customer_id,
             vertical=vertical,
         )
+
+        # ── Apply KPI tier (SaaS verticals) ──
+        resolved_tier = _resolve_kpi_tier(tier, vertical)
+        tier_info = None
+        if resolved_tier:
+            tier_info = _apply_kpi_tier(config, resolved_tier)
+
         db.session.add(config)
 
         try:
@@ -391,6 +454,9 @@ def create_customer(
                 'Save this API key — it is shown only once. '
                 'Use it for the intelligence tools (list_accounts, get_account_health, etc.).'
             )
+
+        if tier_info:
+            result['tier'] = tier_info
 
         return result
 
@@ -451,6 +517,7 @@ def configure_customer_kpis(
     pillar_weights: dict = None,
     kpi_weights: dict = None,
     lifecycle_stage_weights: dict = None,
+    upgrade_tier: str = None,
 ) -> dict:
     """Configure KPI selection and weights for a customer.
 
@@ -460,6 +527,7 @@ def configure_customer_kpis(
     - Set L2 pillar weights (pillar_weights)
     - Set L1 KPI weights per pillar (kpi_weights)
     - Set lifecycle-stage weight profiles (lifecycle_stage_weights)
+    - Upgrade to a named KPI tier (upgrade_tier)
 
     Args:
         customer_id: The customer ID
@@ -473,6 +541,9 @@ def configure_customer_kpis(
                                  "pillar_weights": {"P1": 0.35, ...}}, ...]}
             Pass {"enabled": true} with no stages to use defaults (onboarding/stabilization/growth).
             Pass {"enabled": false} to disable lifecycle-stage weighting.
+        upgrade_tier: Optional tier name to upgrade to. Options:
+            'saas_starter_9', 'saas_predictive_11', 'saas_full_43'.
+            Sets enabled_kpis from tier definition. Overrides enabled_kpis/enabled_pillars.
     """
     _check_mcp_enabled()
     app = _get_flask_app()
@@ -489,6 +560,20 @@ def configure_customer_kpis(
         cust_vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
         if not config:
             config = CustomerConfig(customer_id=customer_id, vertical=cust_vertical)
+
+        # ── Tier upgrade: override enabled_kpis from tier definition ──
+        tier_info = None
+        if upgrade_tier:
+            tier_def = _resolve_kpi_tier(upgrade_tier, cust_vertical)
+            if not tier_def:
+                raise ToolError(
+                    f"Unknown tier '{upgrade_tier}'. Valid SaaS tiers: "
+                    f"saas_starter_9, saas_predictive_11, saas_full_43"
+                )
+            tier_info = _apply_kpi_tier(config, tier_def)
+            # Tier sets enabled_kpis — clear manual overrides
+            enabled_kpis = None
+            enabled_pillars = None
             db.session.add(config)
 
         if enabled_kpis:
@@ -575,6 +660,9 @@ def configure_customer_kpis(
         if warnings:
             result['dependency_warnings'] = warnings
             result['message'] += f' ⚠️ {len(warnings)} dependency warning(s) — some downstream engines may be affected.'
+        if tier_info:
+            result['tier'] = tier_info
+            result['message'] = f'Upgraded to {tier_info["name"]}. ' + result['message']
         return result
 
 
