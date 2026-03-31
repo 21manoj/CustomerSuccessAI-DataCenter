@@ -615,10 +615,11 @@ def get_playbook_recommendations(playbook_id):
             from verticals.dc2_s.vertical_config import (
                 PLAYBOOK_CONFIG, should_trigger_playbook,
             )
-            from verticals.dc2_s.api_routes import (
-                _get_trailing_kpi_values, get_precalculated_scores,
+            from utils.vertical_health import (
+                get_health_calculator, get_trailing_kpi_values_func,
+                get_precalculated_scores,
             )
-            from utils.vertical_health import get_health_calculator
+            _get_trailing_kpi_values = get_trailing_kpi_values_func(customer_id)
             calculate_kpi_health = get_health_calculator(customer_id)
 
             config = PLAYBOOK_CONFIG.get(playbook_id)

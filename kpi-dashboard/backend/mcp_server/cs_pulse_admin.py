@@ -475,10 +475,11 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                 raise ImportError("use dc2_s")
         except (ImportError, AttributeError):
             from verticals.dc2_s.api_routes import (
-                _normalize_kpi_code_for_health,
                 _compute_impact_score, _compute_effort_score,
                 _determine_urgency, _get_roi_context,
             )
+            from utils.vertical_health import normalize_kpi_code
+            _normalize_kpi_code_for_health = lambda c: normalize_kpi_code(c)
 
         DC2S_KPIS = KPI_DEFS
 

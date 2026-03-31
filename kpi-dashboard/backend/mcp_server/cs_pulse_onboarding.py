@@ -396,6 +396,50 @@ def create_customer(
 
 
 # ===================================================================
+# KPI Dependency Guard
+# ===================================================================
+
+def _check_kpi_dependencies(enabled_kpis=None, enabled_pillars=None, cust_vertical='dc2_s'):
+    """Check if disabled KPIs/pillars affect downstream engines (ROI, arc classifier).
+
+    Returns list of warning strings. Empty list = no issues.
+    Only warns when the customer has EXPLICITLY selected a subset of KPIs/pillars
+    (not when using defaults = all enabled).
+    """
+    if not enabled_kpis and not enabled_pillars:
+        return []  # Using all defaults — no warnings needed
+
+    import json
+    import os
+    deps_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'kpi_dependencies.json')
+    try:
+        with open(deps_path) as f:
+            deps = json.load(f)
+    except Exception:
+        return []  # Can't load deps file — skip silently
+
+    warnings = []
+
+    # Check pillar-level dependencies
+    if enabled_pillars:
+        all_pillars = set(deps.get('pillar_dependencies', {}).keys())
+        disabled_pillars = all_pillars - set(enabled_pillars)
+        for p in sorted(disabled_pillars):
+            dep = deps['pillar_dependencies'].get(p)
+            if dep:
+                warnings.append(dep['warning'])
+
+    # Check KPI-level dependencies
+    if enabled_kpis:
+        all_kpi_deps = deps.get('dependencies', {})
+        for kpi_code, dep in all_kpi_deps.items():
+            if kpi_code not in enabled_kpis:
+                warnings.append(dep['warning'])
+
+    return warnings
+
+
+# ===================================================================
 # Tool: configure_customer_kpis
 # ===================================================================
 
@@ -511,7 +555,14 @@ def configure_customer_kpis(
                 'date_field': lc.get('date_field', 'contract_start'),
             }
 
-        return {
+        # ── KPI Dependency Guard: warn when disabling load-bearing KPIs ──
+        warnings = _check_kpi_dependencies(
+            enabled_kpis=config.dc2s_enabled_kpis,
+            enabled_pillars=list(config.dc2s_pillar_weights.keys()) if config.dc2s_pillar_weights else None,
+            cust_vertical=cust_vertical,
+        )
+
+        result = {
             'scope': 'customer',
             'customer_id': customer_id,
             'enabled_kpis': config.dc2s_enabled_kpis,
@@ -521,6 +572,10 @@ def configure_customer_kpis(
             'lifecycle_stage_weights': lifecycle_info,
             'message': 'Customer KPI configuration updated.',
         }
+        if warnings:
+            result['dependency_warnings'] = warnings
+            result['message'] += f' ⚠️ {len(warnings)} dependency warning(s) — some downstream engines may be affected.'
+        return result
 
 
 # ===================================================================

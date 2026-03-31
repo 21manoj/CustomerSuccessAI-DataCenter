@@ -227,23 +227,19 @@ def get_trailing_kpi_values_generic(account_id: int) -> dict:
 
 def get_health_functions(vertical: str):
     """Return (calculate_kpi_health, get_trailing_kpi_values, get_precalculated_scores)
-    for the given vertical. Falls back to generic readers if module unavailable.
+    for the given vertical. All verticals use the generic JSON-catalog scorer.
     """
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.api_routes import (
-                calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores as gps,
-            )
-            return calculate_kpi_health, _get_trailing_kpi_values, gps
-        except ImportError:
-            def _noop_calculate(kpi_values, customer_id=None):
-                return 0.0, {}
-            return _noop_calculate, get_trailing_kpi_values_generic, get_precalculated_scores
+    from utils.vertical_health import get_health_calculator, get_trailing_kpi_values_func
+    from utils.vertical_health import get_precalculated_scores as vpc
 
-    from verticals.dc2_s.api_routes import (
-        calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores as gps,
-    )
-    return calculate_kpi_health, _get_trailing_kpi_values, gps
+    try:
+        calc = get_health_calculator(None)  # Vertical resolved from catalog
+        trailing = get_trailing_kpi_values_func(None)
+        return calc, trailing, vpc
+    except Exception:
+        def _noop_calculate(kpi_values, customer_id=None):
+            return 0.0, {}
+        return _noop_calculate, get_trailing_kpi_values_generic, get_precalculated_scores
 
 
 def get_kpi_definitions(vertical: str) -> dict:

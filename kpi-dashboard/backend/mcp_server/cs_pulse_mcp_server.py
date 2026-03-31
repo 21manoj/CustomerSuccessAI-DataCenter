@@ -240,20 +240,11 @@ def _get_health_functions(vertical: str):
     2. Fall back to generic scorer (works with any JSON-catalog-defined vertical)
     3. Last resort: noop scorer (returns 0)
     """
-    # 1. Try vertical-specific modules (legacy DC2_S only)
-    # NOTE: SaaS Premium's Python scorer is a stub that returns 50 for all KPIs.
-    # Skip it and use the generic JSON-catalog scorer instead. DC2_S's Python
-    # scorer is fully functional and remains the primary path for DC2_S.
-    if vertical in ('dc2_s', 'dc2s', 'dc', 'datacenter'):
-        try:
-            from verticals.dc2_s.api_routes import (
-                calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
-            )
-            return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
-        except ImportError:
-            pass  # Fall through to generic
-
-    # 2. Generic scorer — works with any JSON-catalog-defined vertical
+    # All verticals (DC2_S, SaaS Premium, custom) use the generic JSON-catalog scorer.
+    # DC2_S was migrated from Python scorer to generic scorer with zero score delta.
+    # See tests/test_scorer_parity.py for parity evidence.
+    #
+    # Generic scorer — works with any JSON-catalog-defined vertical
     # Resolve alias first (e.g. 'saas' → 'saas_premium')
     try:
         from utils.vertical_registry import VERTICAL_ALIASES

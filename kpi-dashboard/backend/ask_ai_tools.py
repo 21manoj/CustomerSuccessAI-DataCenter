@@ -703,7 +703,8 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         else:
             health, pillars = calculate_kpi_health(trailing, customer_id=customer_id)
         try:
-            from verticals.dc2_s.api_routes import _normalize_kpi_code_for_health
+            from utils.vertical_health import normalize_kpi_code
+            _normalize_kpi_code_for_health = lambda c: normalize_kpi_code(c, customer_id)
         except ImportError:
             _normalize_kpi_code_for_health = lambda c: c
         normalized = {}

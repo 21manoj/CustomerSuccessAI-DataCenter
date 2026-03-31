@@ -94,8 +94,10 @@ def _try_python_module_calculator(vertical: str, customer_id: int = None):
     """Try to load calculate_kpi_health from a vertical's Python module."""
     try:
         if vertical == 'dc2_s':
-            from verticals.dc2_s.api_routes import calculate_kpi_health
-            return calculate_kpi_health
+            # DC2_S now uses generic JSON-catalog scorer (same as SaaS Premium).
+            # Parity verified: 190 L1 checks + 8 L2/L3 scenarios, zero delta.
+            # See tests/test_scorer_parity.py for evidence.
+            return None
         elif vertical == 'saas_premium':
             # SaaS Premium Python scorer is a stub (returns 50 for all KPIs).
             # Skip it — generic JSON-catalog scorer handles SaaS Premium correctly.
@@ -160,16 +162,9 @@ def get_trailing_kpi_values_func(customer_id: int = None):
     """Return the correct _get_trailing_kpi_values function for a customer's vertical."""
     vertical = resolve_vertical(customer_id)
 
-    # Try vertical-specific Python module
-    try:
-        if vertical == 'dc2_s':
-            from verticals.dc2_s.api_routes import _get_trailing_kpi_values
-            return _get_trailing_kpi_values
-        elif vertical == 'saas_premium':
-            from verticals.saas_premium.api_routes import _get_trailing_kpi_values
-            return _get_trailing_kpi_values
-    except (ImportError, ModuleNotFoundError):
-        pass
+    # All verticals (DC2_S, SaaS Premium, custom) use generic trailing values.
+    # The DC2_S exponential-decay version is preserved in api_routes.py but
+    # most production paths read pre-computed HealthScore tables from DB.
 
     # Generic fallback: query DC2SKPI table (works for any vertical)
     def _generic_trailing_kpi_values(account_id, days=30):
@@ -197,3 +192,66 @@ def calculate_health_for_customer(kpi_values: dict, customer_id: int = None):
     """One-call convenience: resolve vertical + calculate health."""
     calc = get_health_calculator(customer_id)
     return calc(kpi_values, customer_id=customer_id)
+
+
+# ============================================================
+# Promoted utilities (moved from verticals/dc2_s/api_routes.py)
+# These are vertical-agnostic and used by MCP server, playbook API, etc.
+# ============================================================
+
+def get_precalculated_scores(account_id):
+    """
+    Fetch the latest pre-calculated health score and pillar scores from the
+    HealthScore / PillarScore tables (populated by the score calculator).
+
+    Returns (health_score, health_status, pillar_dict) or (None, None, None)
+    if no pre-calculated scores exist.
+
+    This is the single source of truth — use it in preference to on-the-fly
+    calculation wherever possible.
+    """
+    import utils.health_thresholds as ht
+    try:
+        from models import HealthScore, PillarScore
+        hs = HealthScore.query.filter_by(account_id=account_id) \
+            .order_by(HealthScore.measurement_month.desc()).first()
+        if not hs or hs.health_score is None:
+            return None, None, None
+
+        health = float(hs.health_score)
+        status = hs.health_status or ht.classify(health)
+
+        # Pillar scores — prefer contributing_pillars JSON on HealthScore,
+        # fall back to latest PillarScore rows
+        pillars = {}
+        if hs.contributing_pillars:
+            pillars = {k: float(v) for k, v in hs.contributing_pillars.items()}
+        else:
+            ps_rows = PillarScore.query.filter_by(
+                account_id=account_id,
+                measurement_month=hs.measurement_month,
+            ).all()
+            for ps in ps_rows:
+                if ps.pillar_score is not None:
+                    pillars[ps.pillar_code] = float(ps.pillar_score)
+
+        return health, status, pillars
+    except Exception as e:
+        logger.debug(f"Could not fetch pre-calculated scores for account {account_id}: {e}")
+        return None, None, None
+
+
+def normalize_kpi_code(kpi_code: str, customer_id: int = None) -> str:
+    """
+    Validate that a kpi_code exists in the customer's vertical catalog.
+
+    Returns the kpi_code if valid, None otherwise.
+    Vertical-aware: checks the correct catalog (DC2_S, SaaS Premium, or custom).
+    """
+    from utils.vertical_registry import get_kpis
+    vertical = resolve_vertical(customer_id)
+    try:
+        catalog = get_kpis(vertical)
+        return kpi_code if kpi_code in catalog else None
+    except Exception:
+        return None

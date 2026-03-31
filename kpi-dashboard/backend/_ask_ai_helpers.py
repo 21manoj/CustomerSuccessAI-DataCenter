@@ -74,39 +74,22 @@ def _get_trailing_kpi_values_generic(account_id: int, days: int = 30) -> dict:
 
 
 def _get_health_functions(vertical: str):
-    """Return (calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores)."""
-    # Try vertical-specific modules (legacy)
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.api_routes import (
-                calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
-            )
-            return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
-        except ImportError:
-            pass
+    """Return (calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores).
 
-    if vertical in ('dc2_s', 'dc2s', 'dc', 'datacenter'):
-        try:
-            from verticals.dc2_s.api_routes import (
-                calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores,
-            )
-            return calculate_kpi_health, _get_trailing_kpi_values, get_precalculated_scores
-        except ImportError:
-            pass
-
-    # Generic scorer
+    All verticals use the generic JSON-catalog scorer via vertical_health.
+    """
+    from utils.vertical_health import (
+        get_health_calculator, get_trailing_kpi_values_func,
+        get_precalculated_scores as vpc,
+    )
     try:
-        from utils.generic_scorer import calculate_health_generic
-        def _generic_calculate(kpi_values, customer_id=None):
-            return calculate_health_generic(kpi_values, vertical)
-        return _generic_calculate, _get_trailing_kpi_values_generic, _get_precalculated_scores
-    except ImportError:
-        pass
-
-    # Last resort: noop
-    def _noop(kpi_values, customer_id=None):
-        return 0.0, {}
-    return _noop, _get_trailing_kpi_values_generic, _get_precalculated_scores
+        calc = get_health_calculator(None)
+        trailing = get_trailing_kpi_values_func(None)
+        return calc, trailing, vpc
+    except Exception:
+        def _noop(kpi_values, customer_id=None):
+            return 0.0, {}
+        return _noop, _get_trailing_kpi_values_generic, _get_precalculated_scores
 
 
 def _get_kpi_definitions(vertical: str) -> dict:
