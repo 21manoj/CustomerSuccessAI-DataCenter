@@ -294,7 +294,10 @@ def _resolve_kpi_tier(tier: str, vertical: str) -> dict:
 def _apply_kpi_tier(customer_config, tier_def: dict) -> dict:
     """Apply tier KPI selection to a CustomerConfig. Returns tier info dict for response."""
     kpi_codes = tier_def.get('kpi_codes')
-    if kpi_codes and kpi_codes != 'all':
+    if kpi_codes == 'all':
+        # Full tier: clear KPI restriction (all KPIs enabled)
+        customer_config.dc2s_enabled_kpis = None
+    elif kpi_codes:
         customer_config.dc2s_enabled_kpis = kpi_codes
 
     return {
