@@ -1,0 +1,385 @@
+{
+  "_description": "Starter 9 — Minimal viable KPI set for 1-hour SaaS onboarding. Covers all 6 Power-of-1 ROI metrics, 5 context graph signal sources, 4 of 5 pillars. P4 (Partner) deferred to Growth tier.",
+  "_tier": "starter",
+  "_model_grade": "B+",
+
+  "customer": {
+    "name": "Starter SaaS Demo",
+    "vertical": "saas_premium",
+    "admin_email": "admin@startersaas.com",
+    "admin_name": "Alex Rivera",
+    "domain": "startersaas.com"
+  },
+
+  "kpis": {
+    "selection": "custom",
+    "count": 9,
+    "codes": [
+      "P1-KPI1", "P1-KPI3",
+      "P2-KPI1",
+      "P3-KPI1", "P3-KPI3", "P3-KPI4",
+      "P5-KPI1", "P5-KPI2", "P5-KPI3"
+    ],
+    "pillars": ["P1", "P2", "P3", "P5"],
+    "_kpi_map": {
+      "P1-KPI1": "DAU Rate — baseline for Signal Analyst, product adoption ROI",
+      "P1-KPI3": "TTFV — stalled_deployment arc detection, primary Power-of-1 metric",
+      "P2-KPI1": "Exec Sponsor Engagement — STAKEHOLDER nodes, exec_sponsor_change arcs",
+      "P3-KPI1": "Ticket Resolution Time — support efficiency, Cost Savings in ROI",
+      "P3-KPI3": "NPS — sentiment_decline arc, Wizard C calibration signal",
+      "P3-KPI4": "Escalation Rate — crisis_recovery arcs, high-fidelity SIGNAL",
+      "P5-KPI1": "NRR — L4 health rollup, EV/Revenue multiple impact",
+      "P5-KPI2": "GRR — Wizard C calibration, Churn Prevented dollar impact",
+      "P5-KPI3": "Expansion Revenue Rate — land_and_expand arcs"
+    },
+    "_roi_coverage": {
+      "TTFV": "P1-KPI3",
+      "NRR": "P5-KPI1",
+      "GRR": "P5-KPI2",
+      "ticket_resolution_time": "P3-KPI1",
+      "product_adoption": "P1-KPI1",
+      "expansion_rate": "P5-KPI3"
+    }
+  },
+
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  },
+
+  "accounts": [
+    {
+      "name": "Horizon AI Labs",
+      "arr": 3800000,
+      "target_health": 84,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Series B AI startup. Onboarded Q4 2025, hit value within 2 weeks. DAU at 72%, NPS 52. Champion (VP Eng) pushing for enterprise license expansion across 3 BUs.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Artificial Intelligence",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Priya Mehta",
+          "role": "champion",
+          "title": "VP of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 10,
+          "status": "active"
+        },
+        {
+          "name": "James Chen",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 5,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-11-15",
+          "content": "DAU hit 72% within first month — strong adoption signal"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-01-20",
+          "content": "VP Eng requesting licenses for ML Ops and Data Platform teams"
+        }
+      ]
+    },
+    {
+      "name": "Nexus Financial Systems",
+      "arr": 5200000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "proactive_growth",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-15",
+      "narrative": "Mid-market fintech. Stable usage, strong exec engagement. NRR at 110%, GRR solid at 90%. Moderate expansion pipeline — looking at API integrations for Q3.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Financial Services",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Michael Torres",
+          "role": "champion",
+          "title": "Director of Product",
+          "department": "Product",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "Sarah Williams",
+          "role": "executive_sponsor",
+          "title": "COO",
+          "department": "Operations",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-05",
+          "content": "COO attended QBR and expressed multi-year commitment"
+        }
+      ]
+    },
+    {
+      "name": "CloudBridge Analytics",
+      "arr": 2900000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "steady_state",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-01",
+      "narrative": "Analytics SaaS. Onboarded 6 months ago, usage stabilized. TTFV was 18 days (good). NPS 42 (borderline). Ticket volume manageable but escalation rate creeping up.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Business Analytics",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Emily Chang",
+          "role": "champion",
+          "title": "Head of Analytics",
+          "department": "Data",
+          "engagement_frequency": 6,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "escalation_increase",
+          "date": "2026-02-15",
+          "content": "Escalation rate ticked up from 3% to 5% — monitoring"
+        }
+      ]
+    },
+    {
+      "name": "Velocity Commerce",
+      "arr": 4500000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "E-commerce platform. VP Product (champion) left in Jan. New head is evaluating alternatives. DAU dropped from 65% to 40%. NPS fell to 28. Exec sponsor disengaged.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "E-Commerce",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "David Park",
+          "role": "champion",
+          "title": "VP of Product",
+          "department": "Product",
+          "engagement_frequency": 9,
+          "status": "departed"
+        },
+        {
+          "name": "Lisa Huang",
+          "role": "successor",
+          "title": "Director of Engineering",
+          "department": "Engineering",
+          "engagement_frequency": 2,
+          "status": "new_contact"
+        },
+        {
+          "name": "Robert Kim",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "engagement_frequency": 1,
+          "status": "passive"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2026-01-10",
+          "content": "VP Product David Park left the company — key platform champion"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-01-25",
+          "content": "DAU dropped from 65% to 40% within 2 weeks of champion departure"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-02-15",
+          "content": "New engineering director evaluating Shopify Plus analytics suite"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-03",
+        "actions": [
+          {
+            "date": "2026-02-20",
+            "action": "Emergency stakeholder mapping and outreach",
+            "outcome": "Identified Lisa Huang as potential new champion"
+          },
+          {
+            "date": "2026-03-05",
+            "action": "Executive business review with CEO",
+            "outcome": "Secured 60-day platform commitment pending value demonstration"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MedCore Health Tech",
+      "arr": 6100000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "Healthcare SaaS. Ticket resolution time ballooned to 48hrs after platform migration. Escalation rate at 12%. NPS crashed from 45 to 18. GRR dropping. Exec sponsor frustrated.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Healthcare Technology",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Dr. Amanda Foster",
+          "role": "executive_sponsor",
+          "title": "Chief Medical Information Officer",
+          "department": "Clinical IT",
+          "engagement_frequency": 3,
+          "status": "frustrated"
+        },
+        {
+          "name": "Kevin Walsh",
+          "role": "champion",
+          "title": "Director of IT Operations",
+          "department": "IT",
+          "engagement_frequency": 8,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "support_escalation",
+          "date": "2025-12-15",
+          "content": "Ticket resolution time doubled after V3 platform migration"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2026-01-20",
+          "content": "CMIO escalated to CEO — threatening contract review"
+        },
+        {
+          "type": "nps_decline",
+          "date": "2026-02-01",
+          "content": "NPS dropped from 45 to 18 — detractor territory"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-02-10",
+            "action": "Dedicated support pod assigned — 4hr SLA override",
+            "outcome": "Ticket resolution time improving to 30hrs"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Platform stability review with engineering VP",
+            "outcome": "Root cause identified — migration rollback plan in place"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DataForge Industrial",
+      "arr": 7500000,
+      "target_health": 35,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-01",
+      "narrative": "Industrial IoT SaaS. Multiple compounding failures: exec sponsor left, DAU collapsed to 15%, NPS at 5, escalation rate 20%. GRR at 68%. Renewal in 60 days — emergency intervention needed.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 1,
+      "industry": "Industrial IoT",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Frank Morrison",
+          "role": "executive_sponsor",
+          "title": "VP of Operations",
+          "department": "Operations",
+          "engagement_frequency": 7,
+          "status": "departed"
+        },
+        {
+          "name": "Grace Liu",
+          "role": "technical_lead",
+          "title": "Senior Platform Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 5,
+          "status": "active"
+        },
+        {
+          "name": "Tom Bradley",
+          "role": "decision_maker",
+          "title": "CFO",
+          "department": "Finance",
+          "engagement_frequency": 1,
+          "status": "disengaged"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2025-11-01",
+          "content": "VP Operations Frank Morrison left — exec sponsor and budget holder"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2025-11-20",
+          "content": "DAU collapsed from 58% to 15% — teams stopped logging in"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2025-12-15",
+          "content": "CFO flagged contract for non-renewal review"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-01-10",
+          "content": "Engineering team running POC with PTC ThingWorx"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-01-20",
+            "action": "Emergency C-suite meeting with our CEO",
+            "outcome": "CFO agreed to 90-day extension pending value demonstration"
+          },
+          {
+            "date": "2026-02-01",
+            "action": "Dedicated CSM + solutions architect assigned full-time",
+            "outcome": "DAU recovering to 30% with targeted re-onboarding"
+          },
+          {
+            "date": "2026-02-15",
+            "action": "Custom ROI report delivered to CFO showing $2.1M protected",
+            "outcome": "CFO softened stance — renewal discussion reopened"
+          }
+        ]
+      }
+    }
+  ]
+}
