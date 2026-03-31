@@ -146,10 +146,26 @@ def run_wizard_c(customer_id: int) -> dict:
         kpi_vals[row.kpi_code][row.account_id] = float(row.avg_value)
 
     # ------------------------------------------------------------------
-    # 3. Calculate correlation per KPI
+    # 3. Determine active KPIs (only those with actual measurement data)
+    #    This prevents "ghost" KPIs from polluting correlation and weights.
+    # ------------------------------------------------------------------
+    active_kpi_codes = set(kpi_vals.keys()) & set(kpi_defs.keys())
+    active_pillars = set(kpi_to_pillar[k] for k in active_kpi_codes if k in kpi_to_pillar)
+
+    logger.info(
+        f"Wizard C: {len(active_kpi_codes)} active KPIs (of {len(kpi_defs)} in catalog), "
+        f"{len(active_pillars)} active pillars (of {len(pillar_codes)})"
+    )
+
+    # ------------------------------------------------------------------
+    # 3b. Calculate correlation per KPI — ONLY for active KPIs
     # ------------------------------------------------------------------
     correlations: dict[str, float] = {}
     for kpi_code in kpi_defs:
+        if kpi_code not in active_kpi_codes:
+            # No data for this KPI — skip (don't default to 0.5)
+            continue
+
         vals = kpi_vals.get(kpi_code, {})
         success_vals = [vals[a] for a in successful if a in vals]
         fail_vals = [vals[a] for a in unsuccessful if a in vals]
@@ -160,16 +176,23 @@ def run_wizard_c(customer_id: int) -> dict:
             # Normalize to 0-1: how much does this KPI differ between groups
             correlation = min(abs(s_mean - f_mean) / max(abs(s_mean), abs(f_mean), 1.0), 1.0)
         else:
-            correlation = 0.5  # neutral — not enough data
+            correlation = 0.5  # neutral — not enough data in one group
         correlations[kpi_code] = correlation
 
     # ------------------------------------------------------------------
     # 4. Adjust L1 weights per KPI and normalize per pillar
+    #    Only active KPIs get correlation-adjusted weights.
+    #    Inactive KPIs keep their base weight (unchanged in output).
     # ------------------------------------------------------------------
     adjusted_l1: dict[str, float] = {}
     for kpi_code, base_w in base_l1.items():
-        factor = 0.5 + correlations.get(kpi_code, 0.5)
-        adjusted_l1[kpi_code] = base_w * factor
+        if kpi_code in correlations:
+            # Active KPI — adjust by correlation
+            factor = 0.5 + correlations[kpi_code]
+            adjusted_l1[kpi_code] = base_w * factor
+        else:
+            # Inactive KPI — preserve base weight (no data to calibrate against)
+            adjusted_l1[kpi_code] = base_w
 
     # Group by pillar and normalize each pillar to sum to 1.0
     kpi_weights_by_pillar: dict[str, dict[str, float]] = defaultdict(dict)
@@ -191,28 +214,39 @@ def run_wizard_c(customer_id: int) -> dict:
                     kpi_weights_by_pillar[pillar][_keys[-1]] + _diff, 4)
 
     # ------------------------------------------------------------------
-    # 5. Adjust L2 pillar weights
+    # 5. Adjust L2 pillar weights — Zero-Data Floor
+    #    Pillars with NO active KPIs (no measurement data) get weight 0.
+    #    Their weight is redistributed across active pillars.
     # ------------------------------------------------------------------
     adjusted_l2: dict[str, float] = {}
-    for pillar in pillar_codes:
-        pillar_kpis = [k for k, p in kpi_to_pillar.items() if p == pillar]
-        if pillar_kpis:
-            avg_corr = statistics.mean(
-                correlations.get(k, 0.5) for k in pillar_kpis
-            )
-        else:
-            avg_corr = 0.5
-        adjusted_l2[pillar] = base_l2.get(pillar, 0.2) * (0.5 + avg_corr)
+    suppressed_pillars = []
 
-    # Normalize to sum to 1.0
+    for pillar in pillar_codes:
+        # Only count KPIs that have actual data (are in correlations dict)
+        active_pillar_kpis = [k for k, p in kpi_to_pillar.items()
+                              if p == pillar and k in correlations]
+
+        if not active_pillar_kpis:
+            # Zero-Data Floor: suppress empty pillar entirely
+            adjusted_l2[pillar] = 0.0
+            suppressed_pillars.append(pillar)
+            logger.info(f"Wizard C: suppressing {pillar} (zero active KPIs) — weight set to 0")
+        else:
+            avg_corr = statistics.mean(correlations[k] for k in active_pillar_kpis)
+            adjusted_l2[pillar] = base_l2.get(pillar, 0.2) * (0.5 + avg_corr)
+
+    # Normalize active pillars to sum to 1.0 (suppressed stay at 0)
     l2_total = sum(adjusted_l2.values())
     if l2_total > 0:
-        adjusted_l2 = {k: round(v / l2_total, 4) for k, v in adjusted_l2.items()}
-        # Force exact 1.0 sum for L2 as well
-        _l2_keys = list(adjusted_l2.keys())
+        adjusted_l2 = {
+            k: round(v / l2_total, 4) if v > 0 else 0.0
+            for k, v in adjusted_l2.items()
+        }
+        # Force exact 1.0 sum across active pillars
+        _l2_active = [k for k in adjusted_l2 if adjusted_l2[k] > 0]
         _l2_diff = round(1.0 - sum(adjusted_l2.values()), 4)
-        if _l2_diff != 0 and _l2_keys:
-            adjusted_l2[_l2_keys[-1]] = round(adjusted_l2[_l2_keys[-1]] + _l2_diff, 4)
+        if _l2_diff != 0 and _l2_active:
+            adjusted_l2[_l2_active[-1]] = round(adjusted_l2[_l2_active[-1]] + _l2_diff, 4)
 
     # ------------------------------------------------------------------
     # 6. Compute significant changes report
@@ -408,9 +442,9 @@ def run_wizard_c(customer_id: int) -> dict:
                     stage_success = [a for a, _ in stage_scores[:mid]]
                     stage_fail = [a for a, _ in stage_scores[mid:]]
 
-                # Correlate within this stage
+                # Correlate within this stage — only active KPIs
                 stage_correlations = {}
-                for kpi_code in kpi_defs:
+                for kpi_code in active_kpi_codes:
                     vals = kpi_vals.get(kpi_code, {})
                     s_vals = [vals[a] for a in stage_success if a in vals]
                     f_vals = [vals[a] for a in stage_fail if a in vals]
@@ -422,12 +456,16 @@ def run_wizard_c(customer_id: int) -> dict:
                         corr = 0.5
                     stage_correlations[kpi_code] = corr
 
-                # Adjust L2 for this stage
+                # Adjust L2 for this stage — zero-data floor
                 stage_l2 = {}
                 for pillar in pillar_codes:
-                    p_kpis = [k for k, p in kpi_to_pillar.items() if p == pillar]
-                    avg_c = statistics.mean(stage_correlations.get(k, 0.5) for k in p_kpis) if p_kpis else 0.5
-                    stage_l2[pillar] = base_l2.get(pillar, 0.2) * (0.5 + avg_c)
+                    p_kpis = [k for k, p in kpi_to_pillar.items()
+                              if p == pillar and k in stage_correlations]
+                    if not p_kpis:
+                        stage_l2[pillar] = 0.0
+                    else:
+                        avg_c = statistics.mean(stage_correlations[k] for k in p_kpis)
+                        stage_l2[pillar] = base_l2.get(pillar, 0.2) * (0.5 + avg_c)
                 sl2_total = sum(stage_l2.values())
                 if sl2_total > 0:
                     stage_l2 = {k: round(v / sl2_total, 4) for k, v in stage_l2.items()}
@@ -484,7 +522,10 @@ def run_wizard_c(customer_id: int) -> dict:
         'successful_accounts': len(successful),
         'unsuccessful_accounts': len(unsuccessful),
         'neutral_accounts': len(neutral),
-        'total_kpis_calibrated': len(adjusted_l1),
+        'total_kpis_calibrated': len(active_kpi_codes),
+        'total_kpis_in_catalog': len(kpi_defs),
+        'active_pillars': sorted(active_pillars),
+        'suppressed_pillars': suppressed_pillars,
         'significant_changes': significant_changes,
         'per_stage_calibration': per_stage_calibration or None,
         'approval': {

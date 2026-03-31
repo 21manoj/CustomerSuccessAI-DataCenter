@@ -1,17 +1,17 @@
 {
-  "version": "3.0",
+  "version": "3.1",
   "vertical": "saas_premium",
-  "description": "SaaS Premium KPI catalog \u2014 aligned with Maturity Framework (Loveable)",
+  "description": "SaaS Premium KPI catalog \u2014 aligned with Maturity Framework (Loveable). V3.1: added P1-KPI10 Golden Path Velocity, P2-KPI8 Persona Breadth for Predictive 11 tier.",
   "pillars": {
     "P1": {
       "name": "Product Adoption & Usage",
       "weight_l2": 0.3,
-      "kpi_count": 9
+      "kpi_count": 10
     },
     "P2": {
       "name": "Customer Engagement",
       "weight_l2": 0.15,
-      "kpi_count": 7
+      "kpi_count": 8
     },
     "P3": {
       "name": "Customer Sentiment & Support",
@@ -354,6 +354,44 @@
       },
       "impact": "low"
     },
+    "P1-KPI10": {
+      "name": "Golden Path Velocity",
+      "pillar": "P1",
+      "weight_l1": 0.10,
+      "frequency": "weekly",
+      "unit": "percentage",
+      "higher_is_better": true,
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Amplitude",
+        "Mixpanel",
+        "Pendo",
+        "Heap"
+      ],
+      "target": {
+        "operator": ">",
+        "value": 65
+      },
+      "ranges": {
+        "healthy": {
+          "min": 65,
+          "max": 95,
+          "color": "green"
+        },
+        "risk": {
+          "min": 35,
+          "max": 65,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 35,
+          "color": "red"
+        }
+      },
+      "impact": "high",
+      "_description": "Measures how quickly users complete the key value-delivery workflow (golden path). Behavioral leading indicator — detects stalling before DAU drops. Low velocity + high DAU = frustrated power users (competitor risk)."
+    },
     "P2-KPI1": {
       "name": "Executive Sponsor Engagement",
       "pillar": "P2",
@@ -605,6 +643,44 @@
         }
       },
       "impact": "low"
+    },
+    "P2-KPI8": {
+      "name": "Persona Breadth",
+      "pillar": "P2",
+      "weight_l1": 0.10,
+      "frequency": "monthly",
+      "unit": "ratio",
+      "higher_is_better": true,
+      "data_source": "OBR",
+      "data_source_systems": [
+        "Amplitude",
+        "Mixpanel",
+        "Pendo",
+        "Auth0"
+      ],
+      "target": {
+        "operator": ">",
+        "value": 3.0
+      },
+      "ranges": {
+        "healthy": {
+          "min": 3.0,
+          "max": 8.0,
+          "color": "green"
+        },
+        "risk": {
+          "min": 1.5,
+          "max": 3.0,
+          "color": "yellow"
+        },
+        "critical": {
+          "min": 0,
+          "max": 1.5,
+          "color": "red"
+        }
+      },
+      "impact": "high",
+      "_description": "Number of distinct user personas/roles actively using the platform. Structural leading indicator — protects against single-point-of-failure. Low breadth + high champion engagement = top-heavy account (champion departure = silent churn in 30 days)."
     },
     "P3-KPI1": {
       "name": "Ticket Resolution Time",
