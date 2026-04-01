@@ -59,8 +59,41 @@
         "expansion_rate": "P5-KPI3"
       },
       "prerequisites": "CRM + support + product analytics (Amplitude/Mixpanel/Pendo)",
-      "upgrade_path": "saas_full_43",
+      "upgrade_path": "saas_growth_15",
       "manifest": "predictive_11_saas.json"
+    },
+
+    "saas_growth_15": {
+      "display_name": "SaaS Growth 15",
+      "description": "Full Amplitude integration. Adds Feature Adoption Breadth, Login Frequency, Workflow Completion Rate, and Module Activation Rate for deep product usage intelligence.",
+      "model_grade": "A",
+      "kpi_count": 15,
+      "pillar_count": 4,
+      "pillars": ["P1", "P2", "P3", "P5"],
+      "kpi_codes": [
+        "P1-KPI1", "P1-KPI2", "P1-KPI3", "P1-KPI4", "P1-KPI6", "P1-KPI7", "P1-KPI10",
+        "P2-KPI1", "P2-KPI8",
+        "P3-KPI1", "P3-KPI3", "P3-KPI4",
+        "P5-KPI1", "P5-KPI2", "P5-KPI3"
+      ],
+      "added_vs_previous": ["P1-KPI2", "P1-KPI4", "P1-KPI6", "P1-KPI7"],
+      "capabilities_unlocked": [
+        "Feature adoption depth analysis (which features drive retention)",
+        "Login frequency anomaly detection (disengagement early warning)",
+        "Workflow completion funnel analysis (friction point identification)",
+        "Module activation tracking (upsell readiness scoring)"
+      ],
+      "roi_coverage": {
+        "TTFV": "P1-KPI3",
+        "NRR": "P5-KPI1",
+        "GRR": "P5-KPI2",
+        "ticket_resolution_time": "P3-KPI1",
+        "product_adoption": "P1-KPI1",
+        "expansion_rate": "P5-KPI3"
+      },
+      "prerequisites": "CRM + support + full Amplitude/Mixpanel integration (event tracking, user flows, feature flags)",
+      "upgrade_path": "saas_full_43",
+      "manifest": "growth_15_saas.json"
     },
 
     "saas_full_43": {

@@ -1,0 +1,437 @@
+{
+  "_description": "Growth 15 \u2014 Full Amplitude integration. Adds Feature Adoption Breadth, Login Frequency, Workflow Completion Rate, and Module Activation Rate for deep product usage intelligence.",
+  "_tier": "growth",
+  "_model_grade": "A",
+  "_upgrade_from": "predictive_11_saas.json",
+  "_new_kpis_vs_starter9": [
+    "P1-KPI10 (Golden Path Velocity)",
+    "P2-KPI8 (Persona Breadth)"
+  ],
+  "_capabilities_unlocked": [
+    "Single Point of Failure simulation (Persona Breadth \u2192 champion departure risk)",
+    "Friction vs Value calibration (Golden Path + NPS gap analysis \u2192 frustrated power user detection)",
+    "138-day early warning (Golden Path + Exec Engagement \u2192 competitor POC arc at 90% confidence)"
+  ],
+  "customer": {
+    "name": "Growth SaaS Demo",
+    "vertical": "saas_premium",
+    "admin_email": "admin@growthsaas.com",
+    "admin_name": "Morgan Blake",
+    "domain": "growthsaas.com"
+  },
+  "kpis": {
+    "selection": "custom",
+    "count": 15,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI3",
+      "P1-KPI4",
+      "P1-KPI6",
+      "P1-KPI7",
+      "P1-KPI10",
+      "P2-KPI1",
+      "P2-KPI8",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3"
+    ],
+    "pillars": [
+      "P1",
+      "P2",
+      "P3",
+      "P5"
+    ],
+    "_kpi_map": {
+      "P1-KPI1": "DAU Rate \u2014 baseline frequency",
+      "P1-KPI2": "Feature Adoption Breadth \u2014 which features drive retention (Amplitude)",
+      "P1-KPI3": "TTFV \u2014 Power-of-1: Revenue Acceleration",
+      "P1-KPI4": "Login Frequency \u2014 disengagement early warning (Amplitude)",
+      "P1-KPI6": "Workflow Completion Rate \u2014 friction point identification (Amplitude)",
+      "P1-KPI7": "Module Activation Rate \u2014 upsell readiness scoring (Amplitude)",
+      "P1-KPI10": "Golden Path Velocity \u2014 behavioral lead",
+      "P2-KPI1": "Exec Sponsor Engagement",
+      "P2-KPI8": "Persona Breadth \u2014 structural lead",
+      "P3-KPI1": "Ticket Resolution Time \u2014 Power-of-1: Cost Savings",
+      "P3-KPI3": "NPS \u2014 Sentiment Anchor",
+      "P3-KPI4": "Escalation Rate \u2014 crisis trigger",
+      "P5-KPI1": "NRR \u2014 L4 Health",
+      "P5-KPI2": "GRR \u2014 Power-of-1: Churn Prevention",
+      "P5-KPI3": "Expansion Revenue Rate \u2014 Power-of-1: Revenue Growth"
+    }
+  },
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  },
+  "accounts": [
+    {
+      "name": "Apex Genomics",
+      "arr": 4200000,
+      "target_health": 86,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-15",
+      "narrative": "Biotech Series C. Golden Path Velocity at 78% \u2014 users complete key workflows faster than benchmark. Persona Breadth 4.2 (4 distinct roles). NPS 56. Strong multi-persona adoption, expansion underway.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Biotechnology",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Dr. Sarah Lin",
+          "role": "champion",
+          "title": "VP of Computational Biology",
+          "department": "R&D",
+          "engagement_frequency": 11,
+          "status": "active"
+        },
+        {
+          "name": "Michael Torres",
+          "role": "executive_sponsor",
+          "title": "CSO",
+          "department": "Science",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Rachel Kim",
+          "role": "power_user",
+          "title": "Staff Bioinformatician",
+          "department": "Bioinformatics",
+          "engagement_frequency": 9,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-11-20",
+          "content": "Golden Path Velocity hit 78% \u2014 4 user personas now active"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-01-15",
+          "content": "CSO requesting expansion to clinical trials team \u2014 3 new departments"
+        }
+      ]
+    },
+    {
+      "name": "Luminary EdTech",
+      "arr": 3600000,
+      "target_health": 79,
+      "classification": "healthy",
+      "story_arc": "proactive_growth",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-01",
+      "narrative": "EdTech scaleup. Solid golden path (68%), persona breadth 3.5. NRR 112%. Exec sponsor engaged monthly. Moderate expansion pipeline into K-12 segment.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Education Technology",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "David Park",
+          "role": "champion",
+          "title": "Director of Product",
+          "department": "Product",
+          "engagement_frequency": 7,
+          "status": "active"
+        },
+        {
+          "name": "Elena Vasquez",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-10",
+          "content": "CEO joined QBR \u2014 expressed multi-year platform commitment"
+        }
+      ]
+    },
+    {
+      "name": "Stratos FinOps",
+      "arr": 5800000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "steady_state",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-30",
+      "narrative": "FinOps platform. Golden Path Velocity at 55% (below target). Persona Breadth 2.8 (borderline). NPS 38 (risk zone). The 'Friction vs Value' signal \u2014 users complete workflows but hate the experience.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Financial Technology",
+      "region": "EU-West",
+      "stakeholders": [
+        {
+          "name": "Marcus Weber",
+          "role": "champion",
+          "title": "Head of Cloud FinOps",
+          "department": "Finance",
+          "engagement_frequency": 6,
+          "status": "active"
+        },
+        {
+          "name": "Anna Kowalski",
+          "role": "technical_lead",
+          "title": "Platform Engineer",
+          "department": "Engineering",
+          "engagement_frequency": 8,
+          "status": "frustrated"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "nps_decline",
+          "date": "2026-01-15",
+          "content": "NPS dropped from 45 to 38 despite stable workflow completion \u2014 frustrated power user pattern"
+        },
+        {
+          "type": "feature_request",
+          "date": "2026-02-20",
+          "content": "Platform Engineer filed 12 UX improvement requests in 30 days"
+        }
+      ]
+    },
+    {
+      "name": "Quantum Retail AI",
+      "arr": 4800000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-15",
+      "narrative": "Retail AI platform. Champion (VP Data) departed Feb. Persona Breadth collapsed from 3.8 to 1.2 \u2014 single-point-of-failure triggered. Golden Path Velocity tanking. Exec sponsor went dark 45 days ago.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Retail Technology",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Jennifer Walsh",
+          "role": "champion",
+          "title": "VP of Data Science",
+          "department": "Data",
+          "engagement_frequency": 10,
+          "status": "departed"
+        },
+        {
+          "name": "Ryan Mitchell",
+          "role": "successor",
+          "title": "Senior Data Analyst",
+          "department": "Data",
+          "engagement_frequency": 2,
+          "status": "new_contact"
+        },
+        {
+          "name": "Karen Liu",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Technology",
+          "engagement_frequency": 1,
+          "status": "disengaged"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2026-02-01",
+          "content": "VP Data Science Jennifer Walsh departed \u2014 was primary champion and only power user"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-02-10",
+          "content": "Persona Breadth collapsed from 3.8 to 1.2 \u2014 only junior analyst remaining active"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2026-02-15",
+          "content": "CTO has not responded to 3 outreach attempts in 45 days"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-03-01",
+          "content": "New data team lead evaluating Databricks ML platform"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-03",
+        "actions": [
+          {
+            "date": "2026-02-20",
+            "action": "Emergency stakeholder mapping \u2014 identified Ryan Mitchell as bridge contact",
+            "outcome": "Scheduled product walkthrough for new data team"
+          },
+          {
+            "date": "2026-03-05",
+            "action": "Executive intervention \u2014 VP CS called CTO directly",
+            "outcome": "CTO agreed to 60-day evaluation period before competitor decision"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TerraCore Energy",
+      "arr": 6500000,
+      "target_health": 42,
+      "classification": "at_risk",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-30",
+      "narrative": "Energy analytics SaaS. Platform migration broke golden path \u2014 velocity crashed from 72% to 25%. Ticket resolution ballooned to 52hrs. Escalation rate at 14%. NPS at 22. But Persona Breadth still 3.1 \u2014 the org needs the tool, they just can't use it effectively.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Energy",
+      "region": "US-South",
+      "stakeholders": [
+        {
+          "name": "Dr. Robert Nguyen",
+          "role": "executive_sponsor",
+          "title": "VP of Operations",
+          "department": "Operations",
+          "engagement_frequency": 4,
+          "status": "frustrated"
+        },
+        {
+          "name": "Lisa Chen",
+          "role": "champion",
+          "title": "Director of Analytics",
+          "department": "Analytics",
+          "engagement_frequency": 9,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "support_escalation",
+          "date": "2025-12-10",
+          "content": "Golden Path Velocity crashed from 72% to 25% after V4 migration"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2026-01-15",
+          "content": "VP Ops escalated to CEO \u2014 threatening contract review if stability not restored"
+        },
+        {
+          "type": "nps_decline",
+          "date": "2026-02-01",
+          "content": "NPS crashed from 48 to 22 \u2014 detractor territory despite high persona breadth"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-02-10",
+            "action": "Dedicated engineering pod assigned \u2014 golden path restoration sprint",
+            "outcome": "Golden Path Velocity recovering to 45% after 3 weeks"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Weekly stability reviews with VP Ops",
+            "outcome": "Escalation rate dropping from 14% to 8%"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NovaBridge Healthcare",
+      "arr": 8200000,
+      "target_health": 30,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-15",
+      "narrative": "Healthcare analytics. Perfect storm: Exec sponsor left, Golden Path Velocity at 12%, Persona Breadth collapsed to 0.8 (single user), NPS 3, Escalation rate 22%. GRR at 65%. Renewal in 45 days. This is the '138-day early warning' scenario \u2014 the signals were there 4 months ago.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 1,
+      "industry": "Healthcare Technology",
+      "region": "US-Northeast",
+      "stakeholders": [
+        {
+          "name": "Dr. Amanda Foster",
+          "role": "executive_sponsor",
+          "title": "Chief Medical Informatics Officer",
+          "department": "Clinical IT",
+          "engagement_frequency": 8,
+          "status": "departed"
+        },
+        {
+          "name": "Kevin Walsh",
+          "role": "technical_lead",
+          "title": "Health IT Analyst",
+          "department": "IT",
+          "engagement_frequency": 3,
+          "status": "sole_user"
+        },
+        {
+          "name": "Patricia Chen",
+          "role": "decision_maker",
+          "title": "CFO",
+          "department": "Finance",
+          "engagement_frequency": 1,
+          "status": "disengaged"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2025-10-20",
+          "content": "CMIO Dr. Foster left \u2014 was executive sponsor and budget holder"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2025-11-15",
+          "content": "Persona Breadth collapsed from 4.1 to 0.8 \u2014 only one analyst still logging in"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2025-12-20",
+          "content": "CFO flagged contract for non-renewal \u2014 no exec sponsor to justify spend"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-01-15",
+          "content": "IT team evaluating Epic's built-in analytics module"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-01-25",
+            "action": "Emergency C-suite meeting \u2014 our CMO met their interim CMIO",
+            "outcome": "Secured 90-day extension pending clinical workflow demo"
+          },
+          {
+            "date": "2026-02-10",
+            "action": "Rapid re-onboarding \u2014 3 new clinical users trained in 1 week",
+            "outcome": "Persona Breadth recovering to 2.1"
+          },
+          {
+            "date": "2026-03-01",
+            "action": "Custom clinical ROI report showing $4.2M in avoided readmissions",
+            "outcome": "CFO reopened renewal discussion \u2014 golden path restoration prioritized"
+          }
+        ]
+      }
+    }
+  ],
+  "_new_kpis_vs_predictive11": [
+    "P1-KPI2 (Feature Adoption Breadth)",
+    "P1-KPI4 (Login Frequency)",
+    "P1-KPI6 (Workflow Completion Rate)",
+    "P1-KPI7 (Module Activation Rate)"
+  ]
+}
