@@ -1217,16 +1217,34 @@ def _process_data_impl(customer_id: int) -> dict:
                     steps_completed.append('engagement_events_loaded')
 
                 # Enhanced Qualitative Signals → SIGNAL ContextNodes
+                # Dedup: track source_event_ids already created (from qualitative_signals.csv
+                # at line 1038-1053) to prevent duplicate ContextNodes.
+                _existing_sig_refs = set()
+                try:
+                    _existing = ContextNode.query.filter_by(
+                        customer_id=customer_id, node_type='SIGNAL', source='customer'
+                    ).with_entities(ContextNode.source_event_id).all()
+                    _existing_sig_refs = {r[0] for r in _existing if r[0]}
+                except Exception:
+                    pass
+
                 eqs_path = data_dir / 'enhanced_qualitative_signals.csv'
                 if not eqs_path.exists():
                     eqs_path = data_dir / 'context_graph' / 'enhanced_qualitative_signals.csv'
                 if eqs_path.exists() and not _skip_cg_reload:
                     df_eqs = pd.read_csv(str(eqs_path))
+                    _eqs_deduped = 0
                     for _, row in df_eqs.iterrows():
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
                             continue
                         sig_ref = str(row.get('signal_ref', '')).strip()
+                        # Skip if this signal_ref was already created
+                        if sig_ref and sig_ref != 'nan' and sig_ref in _existing_sig_refs:
+                            _eqs_deduped += 1
+                            continue
+                        if sig_ref and sig_ref != 'nan':
+                            _existing_sig_refs.add(sig_ref)
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='SIGNAL',
@@ -1245,7 +1263,8 @@ def _process_data_impl(customer_id: int) -> dict:
                             source_event_id=sig_ref if sig_ref and sig_ref != 'nan' else None,
                         ))
                     _db.session.flush()
-                    steps_completed.append('enhanced_signals_cg_loaded')
+                    _loaded = len(df_eqs) - _eqs_deduped
+                    steps_completed.append(f'enhanced_signals_cg_loaded_{_loaded}_deduped_{_eqs_deduped}')
 
                 # Products
                 try:

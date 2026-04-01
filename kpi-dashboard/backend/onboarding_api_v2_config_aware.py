@@ -796,6 +796,54 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
                             'created_by': 'auto_generation',
                         })
 
+            # Signal→Outcome edges (for healthy accounts with expansion signals
+            # but no decision intermediary — infer LED_TO by temporal proximity)
+            sig_file = cg_data_dir / 'enhanced_qualitative_signals.csv'
+            if not sig_file.exists():
+                sig_file = data_dir / 'enhanced_qualitative_signals.csv'
+            if sig_file.exists() and outcomes_file.exists():
+                try:
+                    df_sig = pd.read_csv(sig_file)
+                    df_out_s = pd.read_csv(outcomes_file)
+                    for _df in (df_sig, df_out_s):
+                        if 'source_account_id' in _df.columns and 'account_id' not in _df.columns:
+                            _df.rename(columns={'source_account_id': 'account_id'}, inplace=True)
+                    # Expansion-type signals that should link to expansion outcomes
+                    _expansion_subtypes = {'expansion_signal', 'expansion_discussion',
+                                           'champion_advocacy', 'advocacy', 'usage_spike',
+                                           'feature_adoption_increase', 'positive_engagement'}
+                    _expansion_outcome_types = {'expansion_approved', 'expansion_opportunity',
+                                                'revenue_growth', 'renewal_secured'}
+                    for acct_id in df_sig['account_id'].unique():
+                        acct_sigs = df_sig[
+                            (df_sig['account_id'] == acct_id) &
+                            (df_sig['signal_type'].isin(_expansion_subtypes) |
+                             df_sig.get('signal_ref', pd.Series(dtype=str)).str.contains('expansion|advocacy', case=False, na=False))
+                        ]
+                        acct_outs = df_out_s[
+                            (df_out_s['account_id'] == acct_id) &
+                            (df_out_s['outcome_type'].isin(_expansion_outcome_types))
+                        ] if 'outcome_type' in df_out_s.columns else pd.DataFrame()
+                        # Link closest expansion signal to each expansion outcome
+                        for _, out_row in acct_outs.iterrows():
+                            out_ref = out_row.get('outcome_id', out_row.get('outcome_type', ''))
+                            if not acct_sigs.empty:
+                                sig_ref = acct_sigs.iloc[0].get('signal_ref', '')
+                                if sig_ref and str(sig_ref) != 'nan':
+                                    edges_rows.append({
+                                        'account_id': acct_id,
+                                        'from_signal_ref': sig_ref,
+                                        'to_signal_ref': f'outcome:{out_ref}',
+                                        'edge_type': 'LED_TO',
+                                        'weight': 0.7,
+                                        'confidence': 0.6,
+                                        'lag_days': 30,
+                                        'evidence': 'Expansion signal led to expansion outcome (auto-inferred)',
+                                        'created_by': 'auto_generation',
+                                    })
+                except Exception as e:
+                    current_app.logger.warning(f"Signal→Outcome inference failed: {e}")
+
             if edges_rows:
                 pd.DataFrame(edges_rows).to_csv(edges_file, index=False)
                 current_app.logger.info(f"✅ Auto-generated signal_edges.csv ({len(edges_rows)} rows) at {edges_file}")

@@ -1041,9 +1041,15 @@ class ManifestCSVGenerator:
             target_health = min(target_health + 15, 95)
             trajectory = 'improving'
 
-        # V3.1: Additional recovery boost for intervention phase
+        # V3.1: Recovery boost for intervention phase (or full run with
+        # intervention data). Applies progressive KPI improvement in the
+        # second half of the timeline for at-risk/critical accounts.
         recovery_boost_pct = 0.0
-        if self.phase == 'intervention':
+        _has_intervention = self.phase == 'intervention' or (
+            self.phase is None and classification in ('critical', 'at_risk')
+            and acct.get('intervention')
+        )
+        if _has_intervention:
             rng = random.Random(self.seed + hash(kpi_code))
             if classification == 'critical':
                 recovery_boost_pct = rng.uniform(0.05, 0.15)
@@ -1104,8 +1110,16 @@ class ManifestCSVGenerator:
 
             # V3.1: Apply recovery boost for intervention phase (progressive)
             if recovery_boost_pct > 0:
-                # Progressive boost: increases through the intervention window
-                progress = (i + 1) / max(n, 1)
+                # In full run (phase=None), only boost the second half of
+                # the timeline — recovery happens AFTER crisis midpoint.
+                if self.phase is None:
+                    midpoint = n // 2
+                    if i >= midpoint:
+                        progress = (i - midpoint + 1) / max(n - midpoint, 1)
+                    else:
+                        progress = 0  # No boost in first half
+                else:
+                    progress = (i + 1) / max(n, 1)
                 boost_range = target_val * recovery_boost_pct * progress
                 if higher_is_better:
                     val += boost_range
@@ -1526,11 +1540,24 @@ class ManifestCSVGenerator:
 
                 selected_recovery = acct_rng.sample(recovery_templates, n_recovery)
                 total_days = max(1, (self.end_date - self.start_date).days)
+                # P0 FIX: Recovery signals must appear in the SECOND HALF
+                # of the timeline (after the crisis midpoint), never before
+                # the earliest crisis signal.
+                _midpoint = self.start_date + timedelta(days=total_days // 2)
+                # Find latest key_signal date as the crisis floor
+                _crisis_dates = [
+                    datetime.strptime(s.get('date', '2025-10-01'), '%Y-%m-%d')
+                    for s in acct.get('key_signals', [])
+                ]
+                _crisis_floor = max(_crisis_dates) if _crisis_dates else _midpoint
+                _recovery_start = max(_midpoint, _crisis_floor + timedelta(days=7))
+                _recovery_days = max(1, (self.end_date - _recovery_start).days)
+
                 for ri, rtpl in enumerate(selected_recovery):
                     counter += 1
-                    # Spread recovery signals across the intervention window
-                    day_offset = int(total_days * (ri + 1) / (n_recovery + 1))
-                    sig_date = self.start_date + timedelta(days=day_offset)
+                    # Spread recovery signals from crisis_floor+7d to end_date
+                    day_offset = int(_recovery_days * (ri + 1) / (n_recovery + 1))
+                    sig_date = _recovery_start + timedelta(days=day_offset)
                     content = rtpl['content'].format(
                         csm_name=csm_name,
                         champion_name=champion_name,
@@ -1887,8 +1914,24 @@ class ManifestCSVGenerator:
             # Get first signal ref for linked_signal_id (always present after generate_signals_csv)
             first_sig = self._registry._signals.get(aid, [('', '')])[0][0] or f'{phase_prefix}sig_{aid}_1'
 
+            # P3: Check if account has NPS friction signals — suppress
+            # expansion outcomes if NPS is declining (narratively inconsistent
+            # to expand while customer satisfaction is tanking)
+            _has_nps_friction = any(
+                s.get('type') in ('nps_decline', 'nps_drop')
+                for s in acct.get('key_signals', [])
+            )
+            _expansion_suppressed = set()
+            _expansion_outcome_types = {'expansion_approved', 'expansion_opportunity', 'revenue_growth'}
+
             for oi, evt in enumerate(arc_outcome_events):
                 otype = evt['subtype']
+
+                # Suppress expansion outcomes for accounts with NPS friction
+                if _has_nps_friction and otype in _expansion_outcome_types:
+                    _expansion_suppressed.add(otype)
+                    continue
+
                 meta = self.OUTCOME_METADATA.get(otype, (
                     otype.replace('_', ' ').title(), 'Outcome recorded.', 0.0, 'open'
                 ))

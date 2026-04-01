@@ -263,6 +263,9 @@ HIGH_RISK_SIGNAL_TYPES = {
     'competitor_mention':     {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Competitor mentioned by customer'},
     'usage_decline':          {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Product usage declining'},
     'engagement_gap':         {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'Customer engagement gap detected'},
+    # Sentiment / satisfaction (Predictive 11+ tier signals)
+    'nps_decline':            {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'NPS score declining — friction vs value risk'},
+    'nps_drop':               {'priority': 'high',     'playbook': 'PB-DC-04', 'label': 'NPS dropped significantly'},
 }
 
 
