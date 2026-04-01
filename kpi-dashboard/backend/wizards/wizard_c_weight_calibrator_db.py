@@ -200,11 +200,43 @@ def run_wizard_c(customer_id: int) -> dict:
         pillar = kpi_to_pillar.get(kpi_code, kpi_code.split('-')[0])
         kpi_weights_by_pillar[pillar][kpi_code] = w
 
+    # ── Hero KPI Cap (Hole 3) ──
+    # After normalization, no single KPI may exceed MAX_KPI_WEIGHT within
+    # its pillar. Excess is redistributed equally to non-hero KPIs.
+    MAX_KPI_WEIGHT = 0.50
+    hero_kpis_capped = []
+
     for pillar in kpi_weights_by_pillar:
         total = sum(kpi_weights_by_pillar[pillar].values())
         if total > 0:
+            # First pass: normalize to 1.0
+            normalized = {
+                k: v / total for k, v in kpi_weights_by_pillar[pillar].items()
+            }
+            # Second pass: cap heroes and redistribute excess
+            excess = 0.0
+            non_hero_keys = []
+            for k, w in normalized.items():
+                if w > MAX_KPI_WEIGHT:
+                    excess += w - MAX_KPI_WEIGHT
+                    normalized[k] = MAX_KPI_WEIGHT
+                    hero_kpis_capped.append({
+                        'kpi': k, 'pillar': pillar,
+                        'uncapped': round(w, 4), 'capped_to': MAX_KPI_WEIGHT,
+                    })
+                    logger.info(
+                        f"Wizard C: hero KPI {k} in {pillar} capped "
+                        f"from {w:.4f} to {MAX_KPI_WEIGHT}"
+                    )
+                else:
+                    non_hero_keys.append(k)
+            if excess > 0 and non_hero_keys:
+                boost = excess / len(non_hero_keys)
+                for k in non_hero_keys:
+                    normalized[k] += boost
+
             kpi_weights_by_pillar[pillar] = {
-                k: round(v / total, 4) for k, v in kpi_weights_by_pillar[pillar].items()
+                k: round(v, 4) for k, v in normalized.items()
             }
             # Force exact 1.0 sum: adjust last weight to absorb rounding error
             _keys = list(kpi_weights_by_pillar[pillar].keys())
@@ -234,6 +266,24 @@ def run_wizard_c(customer_id: int) -> dict:
         else:
             avg_corr = statistics.mean(correlations[k] for k in active_pillar_kpis)
             adjusted_l2[pillar] = base_l2.get(pillar, 0.2) * (0.5 + avg_corr)
+
+    # ── Pillar Floor (Hole 4) ──
+    # Active pillars (with data) must not drop below MIN_PILLAR_WEIGHT.
+    # This prevents over-suppression of pillars with weak but real correlations.
+    MIN_PILLAR_WEIGHT = 0.10
+    pillar_floors_applied = []
+
+    for pillar in adjusted_l2:
+        if 0 < adjusted_l2[pillar] < MIN_PILLAR_WEIGHT:
+            logger.info(
+                f"Wizard C: pillar {pillar} weight {adjusted_l2[pillar]:.4f} "
+                f"floored to {MIN_PILLAR_WEIGHT}"
+            )
+            pillar_floors_applied.append({
+                'pillar': pillar, 'original': round(adjusted_l2[pillar], 4),
+                'floored_to': MIN_PILLAR_WEIGHT,
+            })
+            adjusted_l2[pillar] = MIN_PILLAR_WEIGHT
 
     # Normalize active pillars to sum to 1.0 (suppressed stay at 0)
     l2_total = sum(adjusted_l2.values())
@@ -515,6 +565,77 @@ def run_wizard_c(customer_id: int) -> dict:
 
     db.session.commit()
 
+    # ------------------------------------------------------------------
+    # NRR Predictive Validation (Hole 5)
+    # Check if calibrated weights suppress NRR-linked KPIs while the
+    # customer has confirmed revenue at risk. Warn, don't block.
+    # ------------------------------------------------------------------
+    NRR_LINKED_KPIS = ['P5-KPI1', 'P5-KPI2', 'P5-KPI3']
+    nrr_validation = {'status': 'ok', 'warnings': []}
+
+    try:
+        nrr_warnings = []
+        for kpi_code in NRR_LINKED_KPIS:
+            pillar = kpi_to_pillar.get(kpi_code)
+            if pillar and pillar in kpi_weights_by_pillar:
+                new_w = kpi_weights_by_pillar[pillar].get(kpi_code, 0)
+                old_w = base_l1.get(kpi_code, 0)
+                if old_w > 0 and new_w < old_w * 0.7:
+                    nrr_warnings.append({
+                        'kpi': kpi_code,
+                        'pillar': pillar,
+                        'base_weight': round(old_w, 4),
+                        'calibrated_weight': round(new_w, 4),
+                        'reduction_pct': round((1 - new_w / old_w) * 100, 1),
+                    })
+
+        if nrr_warnings:
+            # Check if there's actual revenue at risk in context graph
+            revenue_at_risk = 0.0
+            try:
+                from models import ContextNode
+                outcome_nodes = ContextNode.query.filter(
+                    ContextNode.customer_id == customer_id,
+                    ContextNode.node_type == 'OUTCOME',
+                    ContextNode.revenue_impact_type.in_(['at_risk', 'lost']),
+                    ContextNode.revenue_impact.isnot(None),
+                ).all()
+                revenue_at_risk = sum(
+                    abs(n.revenue_impact) for n in outcome_nodes
+                    if n.revenue_impact
+                )
+            except Exception:
+                pass
+
+            if revenue_at_risk > 0:
+                nrr_validation = {
+                    'status': 'warning',
+                    'warnings': nrr_warnings,
+                    'revenue_at_risk': revenue_at_risk,
+                    'recommendation': (
+                        'Calibrated weights suppress NRR-linked KPIs '
+                        f'({", ".join(w["kpi"] for w in nrr_warnings)}) '
+                        f'by >30% while ${revenue_at_risk:,.0f} revenue is at risk. '
+                        'Review manually before next recalibration cycle.'
+                    ),
+                }
+                logger.warning(
+                    f"Wizard C NRR validation: {len(nrr_warnings)} NRR KPIs suppressed, "
+                    f"${revenue_at_risk:,.0f} at risk"
+                )
+            else:
+                nrr_validation = {
+                    'status': 'info',
+                    'warnings': nrr_warnings,
+                    'revenue_at_risk': 0,
+                    'recommendation': (
+                        'NRR-linked KPIs suppressed but no confirmed revenue at risk. '
+                        'Calibration is safe to keep.'
+                    ),
+                }
+    except Exception as e:
+        logger.warning(f"Wizard C NRR validation skipped: {e}")
+
     return {
         'status': 'completed',
         'pillar_weights': adjusted_l2,
@@ -527,6 +648,9 @@ def run_wizard_c(customer_id: int) -> dict:
         'active_pillars': sorted(active_pillars),
         'suppressed_pillars': suppressed_pillars,
         'significant_changes': significant_changes,
+        'hero_kpis_capped': hero_kpis_capped,
+        'pillar_floors_applied': pillar_floors_applied,
+        'nrr_validation': nrr_validation,
         'per_stage_calibration': per_stage_calibration or None,
         'approval': {
             'mode': 'approval_required' if _approval_required else 'direct_apply',
