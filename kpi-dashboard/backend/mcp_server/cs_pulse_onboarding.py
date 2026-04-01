@@ -1216,6 +1216,37 @@ def _process_data_impl(customer_id: int) -> dict:
                         ))
                     steps_completed.append('engagement_events_loaded')
 
+                # Enhanced Qualitative Signals → SIGNAL ContextNodes
+                eqs_path = data_dir / 'enhanced_qualitative_signals.csv'
+                if not eqs_path.exists():
+                    eqs_path = data_dir / 'context_graph' / 'enhanced_qualitative_signals.csv'
+                if eqs_path.exists() and not _skip_cg_reload:
+                    df_eqs = pd.read_csv(str(eqs_path))
+                    for _, row in df_eqs.iterrows():
+                        acct_id = _resolve_acct_id(row)
+                        if not acct_id:
+                            continue
+                        sig_ref = str(row.get('signal_ref', '')).strip()
+                        _db.session.add(ContextNode(
+                            customer_id=customer_id, account_id=acct_id,
+                            node_type='SIGNAL',
+                            source='customer',
+                            node_subtype=str(row.get('signal_type', 'signal') or 'signal'),
+                            title=str(row.get('content', ''))[:200],
+                            properties={
+                                'signal_ref': sig_ref,
+                                'signal_type': str(row.get('signal_type', '')),
+                                'sentiment': str(row.get('sentiment', '')),
+                                'sentiment_score': str(row.get('sentiment_score', '')),
+                            },
+                            tier=2,
+                            occurred_at=pd.to_datetime(row.get('signal_date')) if row.get('signal_date') else _dt.utcnow(),
+                            source_platform=str(row.get('source_platform', 'csv_import')),
+                            source_event_id=sig_ref if sig_ref and sig_ref != 'nan' else None,
+                        ))
+                    _db.session.flush()
+                    steps_completed.append('enhanced_signals_cg_loaded')
+
                 # Products
                 try:
                     from models import Product
@@ -1337,6 +1368,19 @@ def _process_data_impl(customer_id: int) -> dict:
                         nid = sigref_to_node.get(ref_str) or srcid_to_node.get(ref_str)
                         if nid:
                             return nid
+
+                        # Strategy 1b: CSV refs without prefix → DB source_event_ids WITH prefix
+                        # e.g. CSV "dec_10001_1" → DB "decision:dec_10001_1"
+                        #      CSV "revenue_at_risk" → DB "outcome:revenue_at_risk"
+                        for prefix in ('decision:', 'outcome:', 'signal:'):
+                            prefixed = f'{prefix}{ref_str}'
+                            if account_id:
+                                nid = acct_srcid_to_node.get((account_id, prefixed))
+                                if nid:
+                                    return nid
+                            nid = srcid_to_node.get(prefixed)
+                            if nid:
+                                return nid
 
                         # Strategy 2: Split on separator, try phase_ref + title
                         phase_ref, title_part = None, None
