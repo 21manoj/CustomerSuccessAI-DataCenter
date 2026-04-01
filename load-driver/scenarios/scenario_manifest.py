@@ -1026,6 +1026,7 @@ class ManifestCSVGenerator:
         decline_start_month: Optional[int],
         kpi_code: str,
         classification: str = 'healthy',
+        has_intervention: bool = False,
     ) -> List[float]:
         """
         Generate a time-series of KPI values for one account+KPI.
@@ -1047,7 +1048,7 @@ class ManifestCSVGenerator:
         recovery_boost_pct = 0.0
         _has_intervention = self.phase == 'intervention' or (
             self.phase is None and classification in ('critical', 'at_risk')
-            and acct.get('intervention')
+            and has_intervention
         )
         if _has_intervention:
             rng = random.Random(self.seed + hash(kpi_code))
@@ -1326,6 +1327,7 @@ class ManifestCSVGenerator:
                 series = self._generate_kpi_series(
                     target_health, trajectory, decline_start, kpi_code,
                     classification=classification,
+                    has_intervention=bool(acct.get('intervention')),
                 )
 
                 # Respect per-KPI measurement frequency from catalog.
