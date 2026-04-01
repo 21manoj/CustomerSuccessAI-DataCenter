@@ -353,13 +353,15 @@ def generate_edges(account_id: int, arc_type: str, phase: str = 'baseline') -> i
         )
         return 0
 
-    # Delete existing edges for this account (idempotent re-run)
+    # Delete only wizard_a-generated edges for this account (idempotent re-run).
+    # Preserve CSV-imported and other-source edges.
     account_node_ids = (
         db.session.query(ContextNode.node_id)
         .filter_by(account_id=account_id)
         .subquery()
     )
     db.session.query(ContextEdge).filter(
+        ContextEdge.source_platform == 'wizard_a',
         (ContextEdge.from_node_id.in_(account_node_ids))
         | (ContextEdge.to_node_id.in_(account_node_ids))
     ).delete(synchronize_session='fetch')
