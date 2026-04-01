@@ -744,6 +744,10 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
             if dec_file.exists() and outcomes_file.exists():
                 df_dec = pd.read_csv(dec_file)
                 df_out = pd.read_csv(outcomes_file)
+                # Normalize source_account_id → account_id for edge matching
+                for _df in (df_dec, df_out):
+                    if 'source_account_id' in _df.columns and 'account_id' not in _df.columns:
+                        _df.rename(columns={'source_account_id': 'account_id'}, inplace=True)
                 for _, dec_row in df_dec.iterrows():
                     dec_ref = dec_row.get('decision_id', '')
                     dec_acct = dec_row.get('account_id')
@@ -770,6 +774,9 @@ def _auto_generate_context_graph_files(customer_id: int, cg_data_dir: Path, data
             if stk_file.exists() and dec_file.exists():
                 df_stk = pd.read_csv(stk_file)
                 df_dec = pd.read_csv(dec_file)
+                for _df in (df_stk, df_dec):
+                    if 'source_account_id' in _df.columns and 'account_id' not in _df.columns:
+                        _df.rename(columns={'source_account_id': 'account_id'}, inplace=True)
                 for _, dec_row in df_dec.iterrows():
                     dec_ref = dec_row.get('decision_id', '')
                     maker_role = dec_row.get('decision_maker_role', '')
@@ -945,11 +952,44 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     signal_ref_map = {}
     all_account_ids = set()
 
+    # ── Build source_account_id → DB account_id mapping ──
+    # Load driver CSVs use source_account_id (e.g. 424001) which differs from
+    # the DB account_id (e.g. 732). Build a mapping to resolve both column
+    # naming (source_account_id → account_id) and value translation.
+    _src_to_db_aid = {}
+    try:
+        with engine.begin() as conn:
+            rows = conn.execute(text(
+                "SELECT account_id FROM accounts WHERE customer_id = :cid"
+            ), {'cid': customer_id}).fetchall()
+            _db_account_ids = {r[0] for r in rows}
+            # Load driver convention: source_account_id = customer_id * 1000 + ordinal
+            for i, db_aid in enumerate(sorted(_db_account_ids)):
+                _src_to_db_aid[customer_id * 1000 + i] = db_aid
+            current_app.logger.info(
+                f"Context graph account mapping: {len(_db_account_ids)} DB accounts, "
+                f"{len(_src_to_db_aid)} source→DB mappings"
+            )
+    except Exception as e:
+        current_app.logger.warning(f"Could not build account mapping: {e}")
+
+    def _normalize_df_accounts(df):
+        """Normalize source_account_id → account_id and resolve to DB IDs."""
+        if 'source_account_id' in df.columns and 'account_id' not in df.columns:
+            df.rename(columns={'source_account_id': 'account_id'}, inplace=True)
+        if 'account_id' in df.columns:
+            df['account_id'] = df['account_id'].apply(
+                lambda x: _src_to_db_aid.get(int(float(x)), int(float(x)))
+                if pd.notna(x) else x
+            )
+        return df
+
     # ── 1. stakeholders.csv → STAKEHOLDER nodes ──
     stakeholders_file = data_dir / 'stakeholders.csv'
     if stakeholders_file.exists():
         try:
             df = pd.read_csv(stakeholders_file)
+            df = _normalize_df_accounts(df)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
                     account_id_val = int(row['account_id'])
@@ -981,6 +1021,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     if events_file.exists():
         try:
             df = pd.read_csv(events_file)
+            df = _normalize_df_accounts(df)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
                     account_id_val = int(row['account_id'])
@@ -1012,6 +1053,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     if profiles_file.exists():
         try:
             df = pd.read_csv(profiles_file)
+            df = _normalize_df_accounts(df)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
                     props = {
@@ -1043,6 +1085,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     if decisions_file.exists():
         try:
             df = pd.read_csv(decisions_file)
+            df = _normalize_df_accounts(df)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
                     account_id_val = int(row['account_id'])
@@ -1093,6 +1136,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     if outcomes_file.exists():
         try:
             df = pd.read_csv(outcomes_file)
+            df = _normalize_df_accounts(df)
             with engine.begin() as conn:
                 for _, row in df.iterrows():
                     account_id_val = int(row['account_id'])
@@ -1191,6 +1235,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     if enhanced_file.exists():
         try:
             df = pd.read_csv(enhanced_file)
+            df = _normalize_df_accounts(df)
             with engine.begin() as conn:
                 for idx, row in df.iterrows():
                     account_id_val = int(row['account_id'])
@@ -1238,6 +1283,16 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
         except Exception as e:
             result['errors'].append(f"enhanced_qualitative_signals.csv: {str(e)}")
             current_app.logger.error(f"Error loading enhanced_qualitative_signals.csv: {e}", exc_info=True)
+
+    # ── Diagnostic: ref map sizes (helps diagnose edge resolution failures) ──
+    current_app.logger.info(
+        f"Context graph ref maps for customer {customer_id}: "
+        f"stakeholder_roles={len(stakeholder_role_map)}, "
+        f"decisions={len(decision_ref_map)}, "
+        f"outcomes={len(outcome_ref_map)}, "
+        f"signals={len(signal_ref_map)}, "
+        f"all_accounts={len(all_account_ids)}"
+    )
 
     # ── Helper: resolve a signal_edges ref to a node_id for a given account ──
     import re as _re
@@ -1308,6 +1363,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
     if edges_file.exists():
         try:
             df = pd.read_csv(edges_file)
+            df = _normalize_df_accounts(df)
             unresolved = 0
             with engine.begin() as conn:
                 for _, row in df.iterrows():

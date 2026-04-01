@@ -1016,7 +1016,13 @@ def _process_data_impl(customer_id: int) -> dict:
                         for _, row in df.iterrows():
                             acct_id = _resolve_acct_id(row)
                             if acct_id:
-                                sig_id = row.get('signal_id') or f"sig_{_uuid.uuid4().hex[:12]}"
+                                raw_sig_id = row.get('signal_id') or f"sig_{_uuid.uuid4().hex[:12]}"
+                                # Customer-scope signal_id to prevent PK collision
+                                # across tenants (e.g. two customers both having
+                                # 'sig_424001_1' from the same manifest template).
+                                sig_id = f"c{customer_id}_{raw_sig_id}" if not str(raw_sig_id).startswith(f"c{customer_id}_") else str(raw_sig_id)
+                                # Truncate to 50 chars (PK column width)
+                                sig_id = sig_id[:50]
 
                                 # Dedup: skip if signal_id already exists
                                 if has_new_csvs:
