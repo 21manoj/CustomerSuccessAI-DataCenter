@@ -113,6 +113,12 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',     'subtype': 'churn_risk',               'month': 5, 'offset_days': 0},
                 {'type': 'outcome',     'subtype': 'engagement_decline',       'month': 5, 'offset_days': 3},
             ],
+            'deterioration': [
+                {'type': 'signal',   'subtype': 'usage_decline',         'month': 3, 'offset_days': 21},
+                {'type': 'signal',   'subtype': 'champion_departure',    'month': 4, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'competitor_mention',    'month': 4, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'revenue_at_risk',       'month': 5, 'offset_days': 7},
+            ],
             'intervention': [
                 {'type': 'signal',   'subtype': 'csm_intervention',  'month': 0, 'offset_days': 0},
                 {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 1, 'offset_days': 7},
@@ -121,14 +127,24 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',  'subtype': 'churn_averted',     'month': 2, 'offset_days': 0},
                 {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 14},
             ],
+            'resolution': [
+                {'type': 'signal',   'subtype': 'kpi_stabilized',    'month': 2, 'offset_days': 21},
+                {'type': 'decision', 'subtype': 'renewal_confirmed', 'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_secured',   'month': 3, 'offset_days': 14},
+            ],
             'edge_topology': [
-                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI decline triggered escalation'},
-                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:churn_risk',      'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Escalation surfaced churn risk'},
-                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:2',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Decline triggered retention plan'},
-                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention plan addressed engagement decline'},
-                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Recovery signal triggered intervention plan'},
-                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted',   'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Intervention plan averted churn'},
-                {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+                {'phase': 'baseline',      'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI decline triggered escalation'},
+                {'phase': 'baseline',      'from': 'decision:1', 'to': 'outcome:churn_risk',      'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Escalation surfaced churn risk'},
+                {'phase': 'baseline',      'from': 'signal:1',   'to': 'decision:2',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Decline triggered retention plan'},
+                {'phase': 'baseline',      'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention plan addressed engagement decline'},
+                {'phase': 'deterioration', 'from': 'signal:1',   'to': 'signal:2',                'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 10, 'label': 'Usage decline led to champion departure'},
+                {'phase': 'deterioration', 'from': 'signal:2',   'to': 'signal:3',                'type': 'LED_TO',    'confidence': 0.8,  'lag_days': 14, 'label': 'Champion departure triggered competitor evaluation'},
+                {'phase': 'deterioration', 'from': 'signal:3',   'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 7,  'label': 'Competitor mention confirmed revenue at risk'},
+                {'phase': 'intervention',  'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Recovery signal triggered intervention plan'},
+                {'phase': 'intervention',  'from': 'decision:1', 'to': 'outcome:churn_averted',   'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Intervention plan averted churn'},
+                {'phase': 'intervention',  'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+                {'phase': 'resolution',    'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI stabilization confirmed renewal'},
+                {'phase': 'resolution',    'from': 'decision:1', 'to': 'outcome:renewal_secured', 'type': 'LED_TO',    'confidence': 0.95, 'lag_days': 14, 'label': 'Renewal confirmed and secured'},
             ],
         },
         'proactive_growth': {
@@ -166,6 +182,12 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',     'subtype': 'partial_recovery',       'month': 4, 'offset_days': 0},
                 {'type': 'outcome',     'subtype': 'revenue_protected',      'month': 4, 'offset_days': 14},
             ],
+            'deterioration': [
+                {'type': 'signal',   'subtype': 'usage_decline',       'month': 2, 'offset_days': 14},
+                {'type': 'signal',   'subtype': 'executive_escalation','month': 3, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'nps_decline',         'month': 3, 'offset_days': 7},
+                {'type': 'outcome',  'subtype': 'capacity_constraint', 'month': 4, 'offset_days': 7},
+            ],
             'intervention': [
                 {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 0, 'offset_days': 0},
                 {'type': 'decision', 'subtype': 'recovery_plan',     'month': 0, 'offset_days': 14},
@@ -173,14 +195,24 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',  'subtype': 'churn_averted',     'month': 1, 'offset_days': 21},
                 {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 0},
             ],
+            'resolution': [
+                {'type': 'signal',   'subtype': 'kpi_stabilized',    'month': 2, 'offset_days': 14},
+                {'type': 'decision', 'subtype': 'renewal_confirmed', 'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_secured',   'month': 3, 'offset_days': 14},
+            ],
             'edge_topology': [
-                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Critical incident triggered emergency response'},
-                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:partial_recovery', 'type': 'LED_TO',   'confidence': 0.85, 'lag_days': 14, 'label': 'Emergency response led to partial recovery'},
-                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',              'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Escalation triggered recovery plan'},
-                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.8,  'lag_days': 21, 'label': 'Recovery plan protected revenue'},
-                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',              'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI recovery signal triggered plan'},
-                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted',   'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Recovery plan averted churn'},
-                {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+                {'phase': 'baseline',      'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Critical incident triggered emergency response'},
+                {'phase': 'baseline',      'from': 'decision:1', 'to': 'outcome:partial_recovery',  'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 14, 'label': 'Emergency response led to partial recovery'},
+                {'phase': 'baseline',      'from': 'signal:2',   'to': 'decision:2',               'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Escalation triggered recovery plan'},
+                {'phase': 'baseline',      'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',   'confidence': 0.8,  'lag_days': 21, 'label': 'Recovery plan protected revenue'},
+                {'phase': 'deterioration', 'from': 'signal:1',   'to': 'signal:2',                 'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 7,  'label': 'Usage decline escalated to executive level'},
+                {'phase': 'deterioration', 'from': 'signal:2',   'to': 'signal:3',                 'type': 'LED_TO',    'confidence': 0.8,  'lag_days': 7,  'label': 'Executive escalation drove NPS decline'},
+                {'phase': 'deterioration', 'from': 'signal:3',   'to': 'outcome:capacity_constraint', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 14, 'label': 'NPS decline confirmed capacity issues'},
+                {'phase': 'intervention',  'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI recovery signal triggered plan'},
+                {'phase': 'intervention',  'from': 'decision:1', 'to': 'outcome:churn_averted',    'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Recovery plan averted churn'},
+                {'phase': 'intervention',  'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO',   'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+                {'phase': 'resolution',    'from': 'signal:1',   'to': 'decision:1',               'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI stabilization confirmed renewal'},
+                {'phase': 'resolution',    'from': 'decision:1', 'to': 'outcome:renewal_secured',  'type': 'LED_TO',    'confidence': 0.95, 'lag_days': 14, 'label': 'Renewal confirmed and secured'},
             ],
         },
         'expansion_champion': {
@@ -308,6 +340,11 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',  'subtype': 'revenue_at_risk',        'month': 4, 'offset_days': 0},
                 {'type': 'outcome',  'subtype': 'engagement_decline',     'month': 4, 'offset_days': 7},
             ],
+            'deterioration': [
+                {'type': 'signal',   'subtype': 'champion_departure',    'month': 2, 'offset_days': 14},
+                {'type': 'signal',   'subtype': 'usage_decline',         'month': 3, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'competitor_mention',    'month': 3, 'offset_days': 14},
+            ],
             'intervention': [
                 {'type': 'signal',   'subtype': 'executive_engagement',   'month': 0, 'offset_days': 0},
                 {'type': 'decision', 'subtype': 'recovery_plan',          'month': 0, 'offset_days': 14},
@@ -315,14 +352,23 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',  'subtype': 'churn_averted',          'month': 1, 'offset_days': 21},
                 {'type': 'outcome',  'subtype': 'revenue_protected',      'month': 2, 'offset_days': 7},
             ],
+            'resolution': [
+                {'type': 'signal',   'subtype': 'new_champion_identified', 'month': 2, 'offset_days': 14},
+                {'type': 'decision', 'subtype': 'renewal_confirmed',       'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_secured',         'month': 3, 'offset_days': 14},
+            ],
             'edge_topology': [
-                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Stakeholder loss triggered escalation'},
-                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 14, 'label': 'Escalation revealed revenue risk'},
-                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'KPI decline triggered retention plan'},
-                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention plan addressed engagement decline'},
-                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Exec engagement triggered recovery plan'},
-                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Recovery plan averted churn'},
-                {'phase': 'intervention', 'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+                {'phase': 'baseline',      'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Stakeholder loss triggered escalation'},
+                {'phase': 'baseline',      'from': 'decision:1', 'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 14, 'label': 'Escalation revealed revenue risk'},
+                {'phase': 'baseline',      'from': 'signal:2',   'to': 'decision:2',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'KPI decline triggered retention plan'},
+                {'phase': 'baseline',      'from': 'decision:2', 'to': 'outcome:engagement_decline', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention plan addressed engagement decline'},
+                {'phase': 'deterioration', 'from': 'signal:1',   'to': 'signal:2',              'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 7,  'label': 'Champion departure caused usage collapse'},
+                {'phase': 'deterioration', 'from': 'signal:2',   'to': 'signal:3',              'type': 'LED_TO',    'confidence': 0.8,  'lag_days': 14, 'label': 'Usage decline led to competitor evaluation'},
+                {'phase': 'intervention',  'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Exec engagement triggered recovery plan'},
+                {'phase': 'intervention',  'from': 'decision:1', 'to': 'outcome:churn_averted', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Recovery plan averted churn'},
+                {'phase': 'intervention',  'from': 'decision:2', 'to': 'outcome:revenue_protected', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 21, 'label': 'Executive QBR protected revenue'},
+                {'phase': 'resolution',    'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'New champion identified triggered renewal'},
+                {'phase': 'resolution',    'from': 'decision:1', 'to': 'outcome:renewal_secured', 'type': 'LED_TO',  'confidence': 0.95, 'lag_days': 14, 'label': 'Renewal confirmed with new champion'},
             ],
         },
         'infrastructure_decay': {
@@ -335,20 +381,34 @@ class NarrativeTimelinePlanner:
                 {'type': 'outcome',  'subtype': 'revenue_at_risk',      'month': 4, 'offset_days': 0},
                 {'type': 'outcome',  'subtype': 'capacity_constraint',  'month': 4, 'offset_days': 7},
             ],
+            'deterioration': [
+                {'type': 'signal',   'subtype': 'nps_decline',           'month': 2, 'offset_days': 7},
+                {'type': 'signal',   'subtype': 'executive_escalation',  'month': 2, 'offset_days': 14},
+                {'type': 'signal',   'subtype': 'usage_decline',         'month': 3, 'offset_days': 0},
+            ],
             'intervention': [
                 {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 0, 'offset_days': 0},
                 {'type': 'decision', 'subtype': 'recovery_plan',     'month': 0, 'offset_days': 14},
                 {'type': 'outcome',  'subtype': 'churn_averted',     'month': 1, 'offset_days': 21},
                 {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 0},
             ],
+            'resolution': [
+                {'type': 'signal',   'subtype': 'kpi_stabilized',    'month': 2, 'offset_days': 14},
+                {'type': 'decision', 'subtype': 'renewal_confirmed', 'month': 3, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_secured',   'month': 3, 'offset_days': 14},
+            ],
             'edge_topology': [
-                {'phase': 'baseline',     'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Critical incident triggered emergency response'},
-                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 14, 'label': 'Response revealed revenue at risk'},
-                {'phase': 'baseline',     'from': 'signal:2',   'to': 'decision:2',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Escalation triggered retention plan'},
-                {'phase': 'baseline',     'from': 'decision:2', 'to': 'outcome:capacity_constraint', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention surfaced capacity constraints'},
-                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI recovery triggered remediation plan'},
-                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Remediation averted churn'},
-                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:revenue_protected', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 28, 'label': 'Remediation protected revenue'},
+                {'phase': 'baseline',      'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'Critical incident triggered emergency response'},
+                {'phase': 'baseline',      'from': 'decision:1', 'to': 'outcome:revenue_at_risk', 'type': 'LED_TO',  'confidence': 0.85, 'lag_days': 14, 'label': 'Response revealed revenue at risk'},
+                {'phase': 'baseline',      'from': 'signal:2',   'to': 'decision:2',            'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 10, 'label': 'Escalation triggered retention plan'},
+                {'phase': 'baseline',      'from': 'decision:2', 'to': 'outcome:capacity_constraint', 'type': 'LED_TO', 'confidence': 0.8, 'lag_days': 21, 'label': 'Retention surfaced capacity constraints'},
+                {'phase': 'deterioration', 'from': 'signal:1',   'to': 'signal:2',              'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 7,  'label': 'NPS decline escalated to executive level'},
+                {'phase': 'deterioration', 'from': 'signal:2',   'to': 'signal:3',              'type': 'LED_TO',    'confidence': 0.8,  'lag_days': 14, 'label': 'Executive escalation drove usage decline'},
+                {'phase': 'intervention',  'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI recovery triggered remediation plan'},
+                {'phase': 'intervention',  'from': 'decision:1', 'to': 'outcome:churn_averted', 'type': 'LED_TO',    'confidence': 0.9,  'lag_days': 21, 'label': 'Remediation averted churn'},
+                {'phase': 'intervention',  'from': 'decision:1', 'to': 'outcome:revenue_protected', 'type': 'LED_TO', 'confidence': 0.85, 'lag_days': 28, 'label': 'Remediation protected revenue'},
+                {'phase': 'resolution',    'from': 'signal:1',   'to': 'decision:1',            'type': 'TRIGGERED', 'confidence': 0.9,  'lag_days': 7,  'label': 'KPI stabilization confirmed renewal'},
+                {'phase': 'resolution',    'from': 'decision:1', 'to': 'outcome:renewal_secured', 'type': 'LED_TO',  'confidence': 0.95, 'lag_days': 14, 'label': 'Renewal confirmed and secured'},
             ],
         },
     }
@@ -1795,7 +1855,6 @@ class ManifestCSVGenerator:
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
-        arc_phase = self.phase or 'baseline'
 
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
@@ -1804,11 +1863,19 @@ class ManifestCSVGenerator:
             acct_rng = random.Random(self.seed + aid + 8000)
             arc_def = self._get_arc_def(acct)
 
-            # Outcome events from the arc spine for this phase
-            arc_outcome_events = [
-                e for e in arc_def.get(arc_phase, arc_def.get('baseline', []))
-                if e['type'] == 'outcome'
-            ]
+            # Outcome events from the arc spine.
+            # If --phase specified, use that phase only.
+            # If no phase (default), merge baseline + intervention for full causal chain.
+            if self.phase:
+                phases_to_emit = [self.phase]
+            else:
+                phases_to_emit = ['baseline', 'deterioration', 'intervention', 'resolution']
+            arc_outcome_events = []
+            for p in phases_to_emit:
+                arc_outcome_events.extend(
+                    e for e in arc_def.get(p, [])
+                    if e['type'] == 'outcome'
+                )
 
             # Narrative-planned dates for outcomes
             planned_outcomes = self.planner.get_events(aid, 'outcome')
@@ -1918,7 +1985,6 @@ class ManifestCSVGenerator:
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
-        arc_phase = self.phase or 'baseline'
 
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
@@ -1926,11 +1992,19 @@ class ManifestCSVGenerator:
             arr = acct['arr']
             arc_def = self._get_arc_def(acct)
 
-            # Get decision events from the arc spine for this phase
-            arc_decision_events = [
-                e for e in arc_def.get(arc_phase, arc_def.get('baseline', []))
-                if e['type'] == 'decision'
-            ]
+            # Get decision events from the arc spine.
+            # If --phase specified, use that phase only.
+            # If no phase (default), merge baseline + intervention for full causal chain.
+            if self.phase:
+                phases_to_emit = [self.phase]
+            else:
+                phases_to_emit = ['baseline', 'deterioration', 'intervention', 'resolution']
+            arc_decision_events = []
+            for p in phases_to_emit:
+                arc_decision_events.extend(
+                    e for e in arc_def.get(p, [])
+                    if e['type'] == 'decision'
+                )
 
             # Get narrative-planned dates for decisions
             planned_decisions = self.planner.get_events(aid, 'decision')
@@ -2023,7 +2097,7 @@ class ManifestCSVGenerator:
             'edge_type', 'weight', 'label', 'confidence', 'lag_days',
         ])
 
-        arc_phase = self.phase or 'baseline'
+        arc_phase = self.phase  # None = emit ALL phases (full causal chain)
         causal_edge_types = {'LED_TO', 'TRIGGERED', 'CAUSED_BY'}
 
         for idx, acct in enumerate(self.accounts):
@@ -2033,8 +2107,9 @@ class ManifestCSVGenerator:
 
             edges_written = 0
             for edge_def in edge_topology:
-                # Only emit edges for the current phase
-                if edge_def.get('phase', 'baseline') != arc_phase:
+                # Phase filtering: if --phase specified, only emit that phase's edges.
+                # If no phase specified (default), emit ALL edges for dense causal chains.
+                if arc_phase is not None and edge_def.get('phase', 'baseline') != arc_phase:
                     continue
 
                 from_resolved = self._registry.resolve(aid, edge_def['from'])
