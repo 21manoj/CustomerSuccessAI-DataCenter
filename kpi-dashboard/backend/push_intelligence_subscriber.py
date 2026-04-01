@@ -309,6 +309,66 @@ class ArcPlaybookSubscriber:
                 f"confidence={confidence:.2f}, health={health_score:.1f})"
             )
 
+            # Write DECISION node to context graph (closes the
+            # Signal → Decision → Outcome chain for playbook actions)
+            try:
+                from models import ContextNode, ContextEdge
+                decision_node = ContextNode(
+                    account_id=account_id,
+                    customer_id=customer_id,
+                    node_type='DECISION',
+                    source='system',
+                    node_subtype=f'playbook_{arc_type}',
+                    title=f'Playbook {playbook_id} Auto-Approved — {account_name}',
+                    properties={
+                        'playbook_id': playbook_id,
+                        'execution_id': execution.execution_id,
+                        'arc_type': arc_type,
+                        'arc_confidence': arc_confidence,
+                        'validation_decision': decision,
+                        'validation_confidence': confidence,
+                        'validation_reasoning': reasoning,
+                        'health_score': health_score,
+                    },
+                    tier=2,
+                    occurred_at=datetime.utcnow(),
+                    source_platform='signal_analyst',
+                    source_event_id=f'playbook:{execution.execution_id}',
+                )
+                db.session.add(decision_node)
+                db.session.flush()
+
+                # Link arc_detection signal → playbook decision
+                arc_signal = (
+                    ContextNode.query
+                    .filter_by(
+                        account_id=account_id,
+                        customer_id=customer_id,
+                        node_subtype='arc_detection',
+                    )
+                    .order_by(ContextNode.occurred_at.desc())
+                    .first()
+                )
+                if arc_signal:
+                    db.session.add(ContextEdge(
+                        customer_id=customer_id,
+                        from_node_id=arc_signal.node_id,
+                        to_node_id=decision_node.node_id,
+                        edge_type='TRIGGERED',
+                        confidence=arc_confidence,
+                        source_platform='signal_analyst',
+                        properties={
+                            'label': f'Arc detection triggered {playbook_id}',
+                        },
+                    ))
+                db.session.commit()
+                logger.info(
+                    f"Context graph: DECISION node created for {playbook_id} "
+                    f"(account {account_id})"
+                )
+            except Exception as cg_err:
+                logger.warning(f"Context graph DECISION write failed (non-fatal): {cg_err}")
+
             # Publish event for downstream PlaybookAutoTriggerSubscriber
             try:
                 from event_system import event_manager, EventType

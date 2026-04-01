@@ -1468,8 +1468,10 @@ class ManifestCSVGenerator:
                     self._registry.register_signal(aid, sig_ref, date_str)
 
             # Intervention-phase recovery signals (from V2 — manifest-defined)
+            # Fire when --phase=intervention OR when running full (phase=None)
             intervention = acct.get('intervention', {})
-            if self.phase == 'intervention' and intervention.get('recovery_signals'):
+            _emit_intervention = self.phase in ('intervention', None)
+            if _emit_intervention and intervention.get('recovery_signals'):
                 for rs in intervention['recovery_signals']:
                     counter += 1
                     sig_ref = f'{phase_prefix}recovery_{aid}_{counter}'
@@ -1484,8 +1486,9 @@ class ManifestCSVGenerator:
                     ])
                     self._registry.register_signal(aid, sig_ref, date_str)
 
-            if self.phase == 'intervention' and intervention.get('csm_actions'):
-                for ca in intervention['csm_actions']:
+            _csm_actions = intervention.get('csm_actions') or intervention.get('actions', [])
+            if _emit_intervention and _csm_actions:
+                for ca in _csm_actions:
                     counter += 1
                     sig_ref = f'{phase_prefix}csm_action_{aid}_{counter}'
                     date_str = ca.get('date', '2026-02-01')
@@ -1499,7 +1502,7 @@ class ManifestCSVGenerator:
                     self._registry.register_signal(aid, sig_ref, date_str)
 
             # V3.1: Auto-generated recovery signals for intervention phase
-            if self.phase == 'intervention':
+            if _emit_intervention:
                 recovery_templates = self.RECOVERY_SIGNAL_TEMPLATES.get(cls, [])
                 acct_rng = random.Random(self.seed + aid + 7000)
                 # Determine how many recovery signals
