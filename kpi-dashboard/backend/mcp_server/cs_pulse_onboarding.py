@@ -1335,6 +1335,11 @@ def _process_data_impl(customer_id: int) -> dict:
                 if not se_path.exists():
                     se_path = data_dir / 'context_graph' / 'signal_edges.csv'
                 if se_path.exists():
+                    # Clear existing CSV-imported edges before re-inserting (idempotent)
+                    ContextEdge.query.filter_by(
+                        customer_id=customer_id, source_platform='csv_import'
+                    ).delete(synchronize_session='fetch')
+                    _db.session.flush()
                     df_se = pd.read_csv(str(se_path))
                     all_nodes = ContextNode.query.filter_by(customer_id=customer_id).all()
                     title_to_node, sigref_to_node, srcid_to_node = {}, {}, {}
