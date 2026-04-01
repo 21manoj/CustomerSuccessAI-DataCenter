@@ -850,7 +850,7 @@ def _process_data_impl(customer_id: int) -> dict:
         has_new_csvs = False
         if data_in_db and has_csv_dir:
             try:
-                import os
+                # os is already imported at module level (line 23)
                 last_kpi_ts = _db.session.execute(_db.text(
                     "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
                     "JOIN accounts a ON k.account_id = a.account_id "
