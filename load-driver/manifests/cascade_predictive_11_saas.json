@@ -1,16 +1,18 @@
 {
-  "_description": "Cascade Predictive 11 — Second cohort for Predictive tier validation. Fresh accounts in HR tech, climate tech, and media verticals. Same KPI set as predictive_11_saas.json, entirely new narratives.",
+  "_description": "Cascade Predictive 11 \u2014 Second cohort for Predictive tier validation. Fresh accounts in HR tech, climate tech, and media verticals. Same KPI set as predictive_11_saas.json, entirely new narratives.",
   "_tier": "predictive",
   "_model_grade": "A-",
   "_cohort": "cascade",
   "_upgrade_from": "cascade_starter_9_saas.json",
-  "_new_kpis_vs_starter9": ["P1-KPI10 (Golden Path Velocity)", "P2-KPI8 (Persona Breadth)"],
-  "_capabilities_unlocked": [
-    "Single Point of Failure simulation (Persona Breadth → champion departure risk)",
-    "Friction vs Value calibration (Golden Path + NPS gap analysis → frustrated power user detection)",
-    "138-day early warning (Golden Path + Exec Engagement → competitor POC arc at 90% confidence)"
+  "_new_kpis_vs_starter9": [
+    "P1-KPI10 (Golden Path Velocity)",
+    "P2-KPI8 (Persona Breadth)"
   ],
-
+  "_capabilities_unlocked": [
+    "Single Point of Failure simulation (Persona Breadth \u2192 champion departure risk)",
+    "Friction vs Value calibration (Golden Path + NPS gap analysis \u2192 frustrated power user detection)",
+    "138-day early warning (Golden Path + Exec Engagement \u2192 competitor POC arc at 90% confidence)"
+  ],
   "customer": {
     "name": "Cascade Predictive SaaS",
     "vertical": "saas_premium",
@@ -18,55 +20,73 @@
     "admin_name": "Taylor Osei",
     "domain": "cascadepredictive.io"
   },
-
   "kpis": {
     "selection": "custom",
     "count": 11,
     "codes": [
-      "P1-KPI1", "P1-KPI3", "P1-KPI10",
-      "P2-KPI1", "P2-KPI8",
-      "P3-KPI1", "P3-KPI3", "P3-KPI4",
-      "P5-KPI1", "P5-KPI2", "P5-KPI3"
+      "P1-KPI1",
+      "P1-KPI3",
+      "P1-KPI10",
+      "P2-KPI1",
+      "P2-KPI8",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3"
     ],
-    "pillars": ["P1", "P2", "P3", "P5"],
+    "pillars": [
+      "P1",
+      "P2",
+      "P3",
+      "P5"
+    ],
     "_kpi_map": {
-      "P1-KPI1":  "DAU Rate — baseline frequency for Signal Analyst",
-      "P1-KPI3":  "TTFV — Power-of-1: Revenue Acceleration",
-      "P1-KPI10": "Golden Path Velocity — Behavioral LEAD: detects stalling before DAU drops",
-      "P2-KPI1":  "Exec Sponsor Engagement — STAKEHOLDER node: high-risk if dark",
-      "P2-KPI8":  "Persona Breadth — Structural LEAD: protects against single-point-of-failure",
-      "P3-KPI1":  "Ticket Resolution Time — Power-of-1: Cost Savings",
-      "P3-KPI3":  "NPS — Sentiment Anchor: calibrates all other signals",
-      "P3-KPI4":  "Escalation Rate — SIGNAL node: triggers crisis_recovery arc",
-      "P5-KPI1":  "NRR — L4 Health: valuation impact (EV/Revenue multiples)",
-      "P5-KPI2":  "GRR — Power-of-1: Churn Prevention",
-      "P5-KPI3":  "Expansion Revenue Rate — Power-of-1: Revenue Growth"
+      "P1-KPI1": "DAU Rate \u2014 baseline frequency for Signal Analyst",
+      "P1-KPI3": "TTFV \u2014 Power-of-1: Revenue Acceleration",
+      "P1-KPI10": "Golden Path Velocity \u2014 Behavioral LEAD: detects stalling before DAU drops",
+      "P2-KPI1": "Exec Sponsor Engagement \u2014 STAKEHOLDER node: high-risk if dark",
+      "P2-KPI8": "Persona Breadth \u2014 Structural LEAD: protects against single-point-of-failure",
+      "P3-KPI1": "Ticket Resolution Time \u2014 Power-of-1: Cost Savings",
+      "P3-KPI3": "NPS \u2014 Sentiment Anchor: calibrates all other signals",
+      "P3-KPI4": "Escalation Rate \u2014 SIGNAL node: triggers crisis_recovery arc",
+      "P5-KPI1": "NRR \u2014 L4 Health: valuation impact (EV/Revenue multiples)",
+      "P5-KPI2": "GRR \u2014 Power-of-1: Churn Prevention",
+      "P5-KPI3": "Expansion Revenue Rate \u2014 Power-of-1: Revenue Growth"
     },
     "_simulation_models": {
       "single_point_of_failure": {
-        "inputs": ["P2-KPI8", "P2-KPI1"],
+        "inputs": [
+          "P2-KPI8",
+          "P2-KPI1"
+        ],
         "question": "What happens if our Champion at Pinnacle HR leaves?",
-        "logic": "Persona Breadth < 2.0 + Champion departure → 90% probability of silent_churn arc in 30 days"
+        "logic": "Persona Breadth < 2.0 + Champion departure \u2192 90% probability of silent_churn arc in 30 days"
       },
       "friction_vs_value": {
-        "inputs": ["P1-KPI10", "P3-KPI3"],
+        "inputs": [
+          "P1-KPI10",
+          "P3-KPI3"
+        ],
         "question": "Are Meridian Media users getting value or just stuck?",
-        "logic": "High Golden Path Velocity + Low NPS = Frustrated Power User → prime competitor target"
+        "logic": "High Golden Path Velocity + Low NPS = Frustrated Power User \u2192 prime competitor target"
       },
       "early_warning_138d": {
-        "inputs": ["P1-KPI10", "P2-KPI1"],
+        "inputs": [
+          "P1-KPI10",
+          "P2-KPI1"
+        ],
         "question": "Is a competitor POC starting at OceanBlue Climate?",
-        "logic": "Declining Golden Path + Exec Disengagement → competitor_poc arc at ~90% confidence, 138 days before churn"
+        "logic": "Declining Golden Path + Exec Disengagement \u2192 competitor_poc arc at ~90% confidence, 138 days before churn"
       }
     }
   },
-
   "time_range": {
     "start": "2025-10-01",
     "end": "2026-03-31",
     "data_points_per_kpi": 26
   },
-
   "accounts": [
     {
       "name": "Pinnacle HR Platform",
@@ -76,7 +96,7 @@
       "story_arc": "land_and_expand",
       "partner_tier": "direct",
       "renewal_date": "2026-10-01",
-      "narrative": "HR tech Series B. Golden Path Velocity at 81% — talent acquisition and onboarding workflows running faster than benchmark. Persona Breadth 4.5 (HRBP, Recruiter, Analyst, Manager). NPS 58. Multi-department expansion secured Q1.",
+      "narrative": "HR tech Series B. Golden Path Velocity at 81% \u2014 talent acquisition and onboarding workflows running faster than benchmark. Persona Breadth 4.5 (HRBP, Recruiter, Analyst, Manager). NPS 58. Multi-department expansion secured Q1.",
       "kpi_trajectory": "improving",
       "decline_start_month": 0,
       "industry": "Human Resources Technology",
@@ -111,12 +131,12 @@
         {
           "type": "feature_adoption_increase",
           "date": "2025-11-18",
-          "content": "Golden Path Velocity at 81% — 4 HR personas fully active, recruiting cycle time down 31%"
+          "content": "Golden Path Velocity at 81% \u2014 4 HR personas fully active, recruiting cycle time down 31%"
         },
         {
           "type": "expansion_discussion",
           "date": "2026-01-12",
-          "content": "CHRO requesting expansion to compensation and L&D teams — 55 new seats"
+          "content": "CHRO requesting expansion to compensation and L&D teams \u2014 55 new seats"
         }
       ]
     },
@@ -128,7 +148,7 @@
       "story_arc": "proactive_growth",
       "partner_tier": "direct",
       "renewal_date": "2026-09-15",
-      "narrative": "Retail analytics SaaS. Golden Path at 70%, Persona Breadth 3.8. NRR 114%. Exec sponsor (CPO) engaged bi-weekly. Strong pipeline — seasonal analytics expansion for holiday 2026 planning underway.",
+      "narrative": "Retail analytics SaaS. Golden Path at 70%, Persona Breadth 3.8. NRR 114%. Exec sponsor (CPO) engaged bi-weekly. Strong pipeline \u2014 seasonal analytics expansion for holiday 2026 planning underway.",
       "kpi_trajectory": "stable",
       "decline_start_month": 0,
       "industry": "Retail Analytics",
@@ -155,7 +175,7 @@
         {
           "type": "positive_engagement",
           "date": "2026-02-14",
-          "content": "CPO joined strategic roadmap review — committed to 3-year deal discussion for H2"
+          "content": "CPO joined strategic roadmap review \u2014 committed to 3-year deal discussion for H2"
         }
       ]
     },
@@ -167,7 +187,7 @@
       "story_arc": "steady_state",
       "partner_tier": "direct",
       "renewal_date": "2026-12-01",
-      "narrative": "Digital media SaaS. Golden Path Velocity 52% (below target). Persona Breadth 2.6 (borderline). NPS 35 — the 'Friction vs Value' pattern: editors complete workflow but hate the UI. Prime target for competitive displacement.",
+      "narrative": "Digital media SaaS. Golden Path Velocity 52% (below target). Persona Breadth 2.6 (borderline). NPS 35 \u2014 the 'Friction vs Value' pattern: editors complete workflow but hate the UI. Prime target for competitive displacement.",
       "kpi_trajectory": "stable",
       "decline_start_month": 0,
       "industry": "Digital Media",
@@ -194,12 +214,12 @@
         {
           "type": "nps_decline",
           "date": "2026-01-20",
-          "content": "NPS dropped from 42 to 35 — editorial team frustrated with publishing workflow UX"
+          "content": "NPS dropped from 42 to 35 \u2014 editorial team frustrated with publishing workflow UX"
         },
         {
           "type": "feature_request",
           "date": "2026-02-22",
-          "content": "Platform engineer submitted 15 UX bugs in 30 days — frustrated power user pattern confirmed"
+          "content": "Platform engineer submitted 15 UX bugs in 30 days \u2014 frustrated power user pattern confirmed"
         }
       ]
     },
@@ -211,8 +231,8 @@
       "story_arc": "champion_loss",
       "partner_tier": "direct",
       "renewal_date": "2026-07-01",
-      "narrative": "Climate analytics SaaS. Head of Sustainability Data (champion) moved to competitor in Jan. Persona Breadth collapsed from 4.0 to 1.4. Golden Path tanking — only junior analyst active. Exec sponsor went silent 6 weeks ago.",
-      "kpi_trajectory": "declining",
+      "narrative": "Climate analytics SaaS. Head of Sustainability Data (champion) moved to competitor in Jan. Persona Breadth collapsed from 4.0 to 1.4. Golden Path tanking \u2014 only junior analyst active. Exec sponsor went silent 6 weeks ago.",
+      "kpi_trajectory": "slow_decline",
       "decline_start_month": 3,
       "industry": "Climate Technology",
       "region": "EU-North",
@@ -246,12 +266,12 @@
         {
           "type": "champion_departure",
           "date": "2026-01-28",
-          "content": "Dr. Sorenson left for competitor — was sole power user and internal champion"
+          "content": "Dr. Sorenson left for competitor \u2014 was sole power user and internal champion"
         },
         {
           "type": "usage_decline",
           "date": "2026-02-05",
-          "content": "Persona Breadth collapsed from 4.0 to 1.4 — only junior analyst active"
+          "content": "Persona Breadth collapsed from 4.0 to 1.4 \u2014 only junior analyst active"
         },
         {
           "type": "engagement_gap",
@@ -269,7 +289,7 @@
         "actions": [
           {
             "date": "2026-02-18",
-            "action": "Emergency stakeholder mapping — Lars Eriksson identified as bridge",
+            "action": "Emergency stakeholder mapping \u2014 Lars Eriksson identified as bridge",
             "outcome": "Scheduled re-demo for new sustainability team; 3 new users to activate"
           },
           {
@@ -288,8 +308,8 @@
       "story_arc": "infrastructure_decay",
       "partner_tier": "direct",
       "renewal_date": "2026-06-15",
-      "narrative": "Energy sector SaaS. API migration broke Golden Path — velocity crashed from 75% to 22%. Ticket resolution ballooned to 60hrs. Escalation rate 16%. NPS at 19. Persona Breadth 3.3 — organization wants the tool but can't use it. V5 API fix in progress.",
-      "kpi_trajectory": "declining",
+      "narrative": "Energy sector SaaS. API migration broke Golden Path \u2014 velocity crashed from 75% to 22%. Ticket resolution ballooned to 60hrs. Escalation rate 16%. NPS at 19. Persona Breadth 3.3 \u2014 organization wants the tool but can't use it. V5 API fix in progress.",
+      "kpi_trajectory": "slow_decline",
       "decline_start_month": 2,
       "industry": "Energy Analytics",
       "region": "EU-West",
@@ -315,17 +335,17 @@
         {
           "type": "support_escalation",
           "date": "2025-12-12",
-          "content": "V5 API migration broke Golden Path workflows — velocity collapsed from 75% to 22%"
+          "content": "V5 API migration broke Golden Path workflows \u2014 velocity collapsed from 75% to 22%"
         },
         {
           "type": "executive_escalation",
           "date": "2026-01-17",
-          "content": "VP Digital escalated to our CRO — formal breach of uptime SLA noted"
+          "content": "VP Digital escalated to our CRO \u2014 formal breach of uptime SLA noted"
         },
         {
           "type": "nps_decline",
           "date": "2026-02-03",
-          "content": "NPS crashed from 51 to 19 — grid analytics team majority now detractors"
+          "content": "NPS crashed from 51 to 19 \u2014 grid analytics team majority now detractors"
         }
       ],
       "intervention": {
@@ -333,8 +353,8 @@
         "actions": [
           {
             "date": "2026-02-14",
-            "action": "Engineering SWAT team on API migration fix — daily status calls",
-            "outcome": "Golden Path Velocity recovering to 44% — teams cautiously re-engaging"
+            "action": "Engineering SWAT team on API migration fix \u2014 daily status calls",
+            "outcome": "Golden Path Velocity recovering to 44% \u2014 teams cautiously re-engaging"
           },
           {
             "date": "2026-03-03",
@@ -352,8 +372,8 @@
       "story_arc": "crisis_recovery",
       "partner_tier": "direct",
       "renewal_date": "2026-05-01",
-      "narrative": "Compliance SaaS for financial institutions. Regulatory team restructured — exec sponsor and champion both departed. Golden Path Velocity at 10%, Persona Breadth 0.7 (single user). NPS 2, escalation rate 24%. GRR 63%. Renewal in 30 days — 138-day warning missed entirely.",
-      "kpi_trajectory": "declining",
+      "narrative": "Compliance SaaS for financial institutions. Regulatory team restructured \u2014 exec sponsor and champion both departed. Golden Path Velocity at 10%, Persona Breadth 0.7 (single user). NPS 2, escalation rate 24%. GRR 63%. Renewal in 30 days \u2014 138-day warning missed entirely.",
+      "kpi_trajectory": "recovering",
       "decline_start_month": 1,
       "industry": "Financial Compliance",
       "region": "US-Northeast",
@@ -387,17 +407,17 @@
         {
           "type": "champion_departure",
           "date": "2025-10-15",
-          "content": "CCO Richard Holt resigned — was exec sponsor and regulatory workflow designer"
+          "content": "CCO Richard Holt resigned \u2014 was exec sponsor and regulatory workflow designer"
         },
         {
           "type": "usage_decline",
           "date": "2025-11-10",
-          "content": "Persona Breadth dropped from 4.8 to 0.7 — full compliance team offboarded with CCO"
+          "content": "Persona Breadth dropped from 4.8 to 0.7 \u2014 full compliance team offboarded with CCO"
         },
         {
           "type": "executive_escalation",
           "date": "2025-12-18",
-          "content": "CFO flagged contract for immediate non-renewal review — no compliance owner"
+          "content": "CFO flagged contract for immediate non-renewal review \u2014 no compliance owner"
         },
         {
           "type": "competitor_mention",
@@ -410,21 +430,22 @@
         "actions": [
           {
             "date": "2026-01-28",
-            "action": "CEO-to-CFO call — presented regulatory risk of platform gap during transition",
+            "action": "CEO-to-CFO call \u2014 presented regulatory risk of platform gap during transition",
             "outcome": "CFO granted 90-day extension pending CCO replacement hire"
           },
           {
             "date": "2026-02-12",
-            "action": "Compliance onboarding sprint — 4 new team members trained",
+            "action": "Compliance onboarding sprint \u2014 4 new team members trained",
             "outcome": "Persona Breadth recovering to 2.0; Golden Path Velocity at 28%"
           },
           {
             "date": "2026-03-05",
-            "action": "Regulatory audit trail ROI report — $5.1M in avoided fines documented",
-            "outcome": "CFO reopened annual renewal conversation — final decision pending CCO hire"
+            "action": "Regulatory audit trail ROI report \u2014 $5.1M in avoided fines documented",
+            "outcome": "CFO reopened annual renewal conversation \u2014 final decision pending CCO hire"
           }
         ]
-      }
+      },
+      "recovery_start_month": 4
     }
   ]
 }

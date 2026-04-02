@@ -1,5 +1,5 @@
 {
-  "_description": "Cascade Growth 15 — Second cohort for Growth tier validation. Fresh accounts in proptech, biotech, and fintech verticals. Same 15-KPI set as growth_15_saas.json, entirely new narratives with richer Amplitude signals.",
+  "_description": "Cascade Growth 15 \u2014 Second cohort for Growth tier validation. Fresh accounts in proptech, biotech, and fintech verticals. Same 15-KPI set as growth_15_saas.json, entirely new narratives with richer Amplitude signals.",
   "_tier": "growth",
   "_model_grade": "A",
   "_cohort": "cascade",
@@ -11,12 +11,11 @@
     "P1-KPI7 (Module Activation Rate)"
   ],
   "_capabilities_unlocked": [
-    "Feature-level upsell readiness (Module Activation Rate → identifies expansion-ready accounts before CSM conversation)",
-    "Workflow friction forensics (Workflow Completion Rate + NPS → pinpoints exact workflow drop-off causing NPS decline)",
-    "Disengagement early warning (Login Frequency decline → 45-day leading indicator before DAU drops)",
-    "Feature adoption segmentation (Feature Adoption Breadth per persona → which role drives which feature bundle)"
+    "Feature-level upsell readiness (Module Activation Rate \u2192 identifies expansion-ready accounts before CSM conversation)",
+    "Workflow friction forensics (Workflow Completion Rate + NPS \u2192 pinpoints exact workflow drop-off causing NPS decline)",
+    "Disengagement early warning (Login Frequency decline \u2192 45-day leading indicator before DAU drops)",
+    "Feature adoption segmentation (Feature Adoption Breadth per persona \u2192 which role drives which feature bundle)"
   ],
-
   "customer": {
     "name": "Cascade Growth SaaS",
     "vertical": "saas_premium",
@@ -24,60 +23,81 @@
     "admin_name": "Cameron Wu",
     "domain": "cascadegrowth.io"
   },
-
   "kpis": {
     "selection": "custom",
     "count": 15,
     "codes": [
-      "P1-KPI1", "P1-KPI2", "P1-KPI3", "P1-KPI4",
-      "P1-KPI6", "P1-KPI7", "P1-KPI10",
-      "P2-KPI1", "P2-KPI8",
-      "P3-KPI1", "P3-KPI3", "P3-KPI4",
-      "P5-KPI1", "P5-KPI2", "P5-KPI3"
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI3",
+      "P1-KPI4",
+      "P1-KPI6",
+      "P1-KPI7",
+      "P1-KPI10",
+      "P2-KPI1",
+      "P2-KPI8",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3"
     ],
-    "pillars": ["P1", "P2", "P3", "P5"],
+    "pillars": [
+      "P1",
+      "P2",
+      "P3",
+      "P5"
+    ],
     "_kpi_map": {
-      "P1-KPI1":  "DAU Rate — baseline frequency",
-      "P1-KPI2":  "Feature Adoption Breadth — which features drive retention (Amplitude)",
-      "P1-KPI3":  "TTFV — Power-of-1: Revenue Acceleration",
-      "P1-KPI4":  "Login Frequency — disengagement early warning (Amplitude)",
-      "P1-KPI6":  "Workflow Completion Rate — friction point identification (Amplitude)",
-      "P1-KPI7":  "Module Activation Rate — upsell readiness scoring (Amplitude)",
-      "P1-KPI10": "Golden Path Velocity — behavioral lead",
-      "P2-KPI1":  "Exec Sponsor Engagement",
-      "P2-KPI8":  "Persona Breadth — structural lead",
-      "P3-KPI1":  "Ticket Resolution Time — Power-of-1: Cost Savings",
-      "P3-KPI3":  "NPS — Sentiment Anchor",
-      "P3-KPI4":  "Escalation Rate — crisis trigger",
-      "P5-KPI1":  "NRR — L4 Health",
-      "P5-KPI2":  "GRR — Power-of-1: Churn Prevention",
-      "P5-KPI3":  "Expansion Revenue Rate — Power-of-1: Revenue Growth"
+      "P1-KPI1": "DAU Rate \u2014 baseline frequency",
+      "P1-KPI2": "Feature Adoption Breadth \u2014 which features drive retention (Amplitude)",
+      "P1-KPI3": "TTFV \u2014 Power-of-1: Revenue Acceleration",
+      "P1-KPI4": "Login Frequency \u2014 disengagement early warning (Amplitude)",
+      "P1-KPI6": "Workflow Completion Rate \u2014 friction point identification (Amplitude)",
+      "P1-KPI7": "Module Activation Rate \u2014 upsell readiness scoring (Amplitude)",
+      "P1-KPI10": "Golden Path Velocity \u2014 behavioral lead",
+      "P2-KPI1": "Exec Sponsor Engagement",
+      "P2-KPI8": "Persona Breadth \u2014 structural lead",
+      "P3-KPI1": "Ticket Resolution Time \u2014 Power-of-1: Cost Savings",
+      "P3-KPI3": "NPS \u2014 Sentiment Anchor",
+      "P3-KPI4": "Escalation Rate \u2014 crisis trigger",
+      "P5-KPI1": "NRR \u2014 L4 Health",
+      "P5-KPI2": "GRR \u2014 Power-of-1: Churn Prevention",
+      "P5-KPI3": "Expansion Revenue Rate \u2014 Power-of-1: Revenue Growth"
     },
     "_amplitude_intelligence": {
       "feature_expansion_signal": {
-        "inputs": ["P1-KPI7", "P1-KPI2"],
+        "inputs": [
+          "P1-KPI7",
+          "P1-KPI2"
+        ],
         "question": "Which Renova PropTech modules are primed for upsell?",
-        "logic": "Module Activation Rate > 80% on core modules + Feature Adoption Breadth expanding → upsell readiness score HIGH"
+        "logic": "Module Activation Rate > 80% on core modules + Feature Adoption Breadth expanding \u2192 upsell readiness score HIGH"
       },
       "workflow_friction_forensics": {
-        "inputs": ["P1-KPI6", "P3-KPI3"],
+        "inputs": [
+          "P1-KPI6",
+          "P3-KPI3"
+        ],
         "question": "Why is NPS low at CapitalEdge despite high DAU?",
-        "logic": "Workflow Completion Rate < 60% + Low NPS → specific step-drop identified; friction is structural, not sentiment-based"
+        "logic": "Workflow Completion Rate < 60% + Low NPS \u2192 specific step-drop identified; friction is structural, not sentiment-based"
       },
       "login_disengagement_warning": {
-        "inputs": ["P1-KPI4", "P1-KPI1"],
+        "inputs": [
+          "P1-KPI4",
+          "P1-KPI1"
+        ],
         "question": "Is ClearWave Telecom team quietly disengaging?",
-        "logic": "Login Frequency declining 3 weeks before DAU drops → 45-day early warning window for proactive CSM intervention"
+        "logic": "Login Frequency declining 3 weeks before DAU drops \u2192 45-day early warning window for proactive CSM intervention"
       }
     }
   },
-
   "time_range": {
     "start": "2025-10-01",
     "end": "2026-03-31",
     "data_points_per_kpi": 26
   },
-
   "accounts": [
     {
       "name": "Renova PropTech",
@@ -87,7 +107,7 @@
       "story_arc": "land_and_expand",
       "partner_tier": "direct",
       "renewal_date": "2026-10-01",
-      "narrative": "PropTech Series B managing commercial real estate portfolios. Module Activation Rate 87% across core + advanced modules. Feature Adoption Breadth 6.2 — asset managers, leasing, compliance, and facilities all active. Golden Path Velocity 82%. Expansion into new regional office being planned by CTO.",
+      "narrative": "PropTech Series B managing commercial real estate portfolios. Module Activation Rate 87% across core + advanced modules. Feature Adoption Breadth 6.2 \u2014 asset managers, leasing, compliance, and facilities all active. Golden Path Velocity 82%. Expansion into new regional office being planned by CTO.",
       "kpi_trajectory": "improving",
       "decline_start_month": 0,
       "industry": "Property Technology",
@@ -122,12 +142,12 @@
         {
           "type": "feature_adoption_increase",
           "date": "2025-11-22",
-          "content": "Module Activation Rate hit 87% — 6 feature bundles active across 4 team personas"
+          "content": "Module Activation Rate hit 87% \u2014 6 feature bundles active across 4 team personas"
         },
         {
           "type": "expansion_discussion",
           "date": "2026-01-18",
-          "content": "CTO requesting platform deployment for new Pacific Northwest regional office — 80 new seats"
+          "content": "CTO requesting platform deployment for new Pacific Northwest regional office \u2014 80 new seats"
         }
       ]
     },
@@ -139,7 +159,7 @@
       "story_arc": "proactive_growth",
       "partner_tier": "direct",
       "renewal_date": "2026-09-01",
-      "narrative": "Life sciences CRO. Golden Path Velocity 72%, Feature Adoption Breadth 5.1 — scientists, clinical leads, data managers, and regulatory all engaged. Login Frequency stable at 4.8x/week. NRR 116%. CSO proactively expanding to companion diagnostics team.",
+      "narrative": "Life sciences CRO. Golden Path Velocity 72%, Feature Adoption Breadth 5.1 \u2014 scientists, clinical leads, data managers, and regulatory all engaged. Login Frequency stable at 4.8x/week. NRR 116%. CSO proactively expanding to companion diagnostics team.",
       "kpi_trajectory": "stable",
       "decline_start_month": 0,
       "industry": "Life Sciences",
@@ -166,7 +186,7 @@
         {
           "type": "positive_engagement",
           "date": "2026-02-16",
-          "content": "CSO confirmed multi-year renewal and expansion to companion diagnostics — 3 new departments"
+          "content": "CSO confirmed multi-year renewal and expansion to companion diagnostics \u2014 3 new departments"
         }
       ]
     },
@@ -178,7 +198,7 @@
       "story_arc": "steady_state",
       "partner_tier": "direct",
       "renewal_date": "2026-12-15",
-      "narrative": "Investment portfolio SaaS. Workflow Completion Rate only 57% despite high DAU — the Amplitude data tells the story: users start the risk analysis workflow but abandon at step 4. NPS at 34. Golden Path Velocity 48%. Friction is structural; Amplitude pinpoints the exact drop-off step.",
+      "narrative": "Investment portfolio SaaS. Workflow Completion Rate only 57% despite high DAU \u2014 the Amplitude data tells the story: users start the risk analysis workflow but abandon at step 4. NPS at 34. Golden Path Velocity 48%. Friction is structural; Amplitude pinpoints the exact drop-off step.",
       "kpi_trajectory": "stable",
       "decline_start_month": 0,
       "industry": "Financial Services",
@@ -205,12 +225,12 @@
         {
           "type": "nps_decline",
           "date": "2026-01-25",
-          "content": "NPS dropped from 43 to 34 — Amplitude shows 43% of users abandoning risk workflow at step 4"
+          "content": "NPS dropped from 43 to 34 \u2014 Amplitude shows 43% of users abandoning risk workflow at step 4"
         },
         {
           "type": "feature_request",
           "date": "2026-02-28",
-          "content": "Quant engineer filed 18 workflow UX improvement tickets — workflow_completion_rate confirmed at 57%"
+          "content": "Quant engineer filed 18 workflow UX improvement tickets \u2014 workflow_completion_rate confirmed at 57%"
         }
       ]
     },
@@ -222,8 +242,8 @@
       "story_arc": "champion_loss",
       "partner_tier": "direct",
       "renewal_date": "2026-07-15",
-      "narrative": "Telecom SaaS. Network operations champion departed Mar 1. Login Frequency dropped first — Amplitude caught it 47 days before DAU fell (exactly the 45-day early warning window). Persona Breadth now 1.3, Feature Adoption Breadth collapsed. Exec sponsor hasn't engaged in 7 weeks.",
-      "kpi_trajectory": "declining",
+      "narrative": "Telecom SaaS. Network operations champion departed Mar 1. Login Frequency dropped first \u2014 Amplitude caught it 47 days before DAU fell (exactly the 45-day early warning window). Persona Breadth now 1.3, Feature Adoption Breadth collapsed. Exec sponsor hasn't engaged in 7 weeks.",
+      "kpi_trajectory": "slow_decline",
       "decline_start_month": 3,
       "industry": "Telecommunications",
       "region": "US-Central",
@@ -257,17 +277,17 @@
         {
           "type": "usage_decline",
           "date": "2026-01-14",
-          "content": "Amplitude detected Login Frequency decline — 47 days before DAU drop (early warning window)"
+          "content": "Amplitude detected Login Frequency decline \u2014 47 days before DAU drop (early warning window)"
         },
         {
           "type": "champion_departure",
           "date": "2026-03-01",
-          "content": "VP Network Ops Darius Webb departed — was platform champion and only power user driving 5 modules"
+          "content": "VP Network Ops Darius Webb departed \u2014 was platform champion and only power user driving 5 modules"
         },
         {
           "type": "usage_decline",
           "date": "2026-03-10",
-          "content": "Feature Adoption Breadth collapsed from 5.8 to 1.2 — only basic monitoring module active"
+          "content": "Feature Adoption Breadth collapsed from 5.8 to 1.2 \u2014 only basic monitoring module active"
         },
         {
           "type": "competitor_mention",
@@ -280,12 +300,12 @@
         "actions": [
           {
             "date": "2026-03-08",
-            "action": "Natalie Ortiz identified via stakeholder mapping — emergency re-onboarding scheduled",
+            "action": "Natalie Ortiz identified via stakeholder mapping \u2014 emergency re-onboarding scheduled",
             "outcome": "2 new team members activating on core network monitoring module"
           },
           {
             "date": "2026-03-15",
-            "action": "VP CS direct call to CTO — Amplitude ROI data shared",
+            "action": "VP CS direct call to CTO \u2014 Amplitude ROI data shared",
             "outcome": "CTO agreed to 45-day evaluation before competitor decision"
           }
         ]
@@ -299,8 +319,8 @@
       "story_arc": "infrastructure_decay",
       "partner_tier": "direct",
       "renewal_date": "2026-06-01",
-      "narrative": "Freight and warehouse SaaS. Kubernetes migration broke 3 core workflows — Workflow Completion Rate dropped from 78% to 31%. Login Frequency fell 60% as users gave up. Golden Path Velocity at 18%. Escalation rate 18%. NPS 14. Despite high Persona Breadth (3.4) the org still wants the tool — they just can't use it.",
-      "kpi_trajectory": "declining",
+      "narrative": "Freight and warehouse SaaS. Kubernetes migration broke 3 core workflows \u2014 Workflow Completion Rate dropped from 78% to 31%. Login Frequency fell 60% as users gave up. Golden Path Velocity at 18%. Escalation rate 18%. NPS 14. Despite high Persona Breadth (3.4) the org still wants the tool \u2014 they just can't use it.",
+      "kpi_trajectory": "slow_decline",
       "decline_start_month": 2,
       "industry": "Logistics Technology",
       "region": "US-Midwest",
@@ -326,17 +346,17 @@
         {
           "type": "support_escalation",
           "date": "2025-12-08",
-          "content": "Kubernetes migration broke 3 workflows — Workflow Completion Rate fell from 78% to 31%, Login Frequency down 60%"
+          "content": "Kubernetes migration broke 3 workflows \u2014 Workflow Completion Rate fell from 78% to 31%, Login Frequency down 60%"
         },
         {
           "type": "executive_escalation",
           "date": "2026-01-14",
-          "content": "SVP Supply Chain Technology escalated formally — SLA breach documentation filed"
+          "content": "SVP Supply Chain Technology escalated formally \u2014 SLA breach documentation filed"
         },
         {
           "type": "nps_decline",
           "date": "2026-02-01",
-          "content": "NPS dropped from 47 to 14 — warehouse and freight teams both in detractor territory"
+          "content": "NPS dropped from 47 to 14 \u2014 warehouse and freight teams both in detractor territory"
         }
       ],
       "intervention": {
@@ -344,7 +364,7 @@
         "actions": [
           {
             "date": "2026-02-10",
-            "action": "Engineering SWAT — Kubernetes rollback on 2 of 3 broken workflows",
+            "action": "Engineering SWAT \u2014 Kubernetes rollback on 2 of 3 broken workflows",
             "outcome": "Workflow Completion Rate recovering to 52%; Login Frequency up 40% from trough"
           },
           {
@@ -363,8 +383,8 @@
       "story_arc": "crisis_recovery",
       "partner_tier": "direct",
       "renewal_date": "2026-05-01",
-      "narrative": "Precision agriculture SaaS. Perfect storm: exec sponsor left (acquired by private equity), golden path at 8%, login frequency near-zero, module activation rate 0.9 (only 1 of 7 modules active). NPS 1, escalation 26%. GRR 61%. The Amplitude data shows exactly when engagement started unraveling — 5 months ago. Renewal in 30 days.",
-      "kpi_trajectory": "declining",
+      "narrative": "Precision agriculture SaaS. Perfect storm: exec sponsor left (acquired by private equity), golden path at 8%, login frequency near-zero, module activation rate 0.9 (only 1 of 7 modules active). NPS 1, escalation 26%. GRR 61%. The Amplitude data shows exactly when engagement started unraveling \u2014 5 months ago. Renewal in 30 days.",
+      "kpi_trajectory": "recovering",
       "decline_start_month": 1,
       "industry": "Agricultural Technology",
       "region": "US-Midwest",
@@ -398,7 +418,7 @@
         {
           "type": "champion_departure",
           "date": "2025-10-20",
-          "content": "VP Digital Agriculture left post PE acquisition — was exec sponsor and platform architect"
+          "content": "VP Digital Agriculture left post PE acquisition \u2014 was exec sponsor and platform architect"
         },
         {
           "type": "usage_decline",
@@ -408,12 +428,12 @@
         {
           "type": "usage_decline",
           "date": "2025-12-01",
-          "content": "Module Activation Rate collapsed from 6.8 to 0.9 — only basic field reporting module used"
+          "content": "Module Activation Rate collapsed from 6.8 to 0.9 \u2014 only basic field reporting module used"
         },
         {
           "type": "executive_escalation",
           "date": "2025-12-22",
-          "content": "PE-appointed CFO flagged all SaaS contracts for elimination — cost reduction mandate"
+          "content": "PE-appointed CFO flagged all SaaS contracts for elimination \u2014 cost reduction mandate"
         },
         {
           "type": "competitor_mention",
@@ -426,21 +446,22 @@
         "actions": [
           {
             "date": "2026-01-28",
-            "action": "CEO-to-CFO meeting — Amplitude ROI model showing $6.7M in yield optimization value",
+            "action": "CEO-to-CFO meeting \u2014 Amplitude ROI model showing $6.7M in yield optimization value",
             "outcome": "CFO granted 90-day extension; agreed to evaluate against John Deere platform"
           },
           {
             "date": "2026-02-10",
-            "action": "Rapid re-onboarding — 6 field managers trained; 4 modules reactivated",
+            "action": "Rapid re-onboarding \u2014 6 field managers trained; 4 modules reactivated",
             "outcome": "Module Activation Rate recovering to 3.1; Login Frequency up for 60% of users"
           },
           {
             "date": "2026-03-01",
-            "action": "Yield analytics comparison report — 23% better accuracy vs John Deere baseline",
-            "outcome": "CFO softened stance — PE board review scheduled for Q2 renewal decision"
+            "action": "Yield analytics comparison report \u2014 23% better accuracy vs John Deere baseline",
+            "outcome": "CFO softened stance \u2014 PE board review scheduled for Q2 renewal decision"
           }
         ]
-      }
+      },
+      "recovery_start_month": 4
     }
   ]
 }
