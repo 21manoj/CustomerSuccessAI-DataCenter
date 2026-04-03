@@ -234,13 +234,15 @@ def export_customer_data():
             db.session.rollback()
             payload['context_edges'] = []
 
-        # ── Serialise datetimes + Decimals ────────────────────────────
-        import decimal
+        # ── Serialise dates, datetimes, Decimals, UUIDs ───────────────
+        import decimal, datetime as dt_module
         def _default(obj):
-            if isinstance(obj, datetime):
+            if isinstance(obj, (dt_module.datetime, dt_module.date)):
                 return obj.isoformat()
             if isinstance(obj, decimal.Decimal):
                 return float(obj)
+            if isinstance(obj, bytes):
+                return obj.decode('utf-8', errors='replace')
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
         json_bytes = json.dumps(payload, default=_default, indent=2).encode('utf-8')
