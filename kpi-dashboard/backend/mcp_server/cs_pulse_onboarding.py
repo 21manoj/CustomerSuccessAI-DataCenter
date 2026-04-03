@@ -1806,6 +1806,21 @@ def _process_data_impl(customer_id: int) -> dict:
             import logging as _log_roi2
             _log_roi2.getLogger(__name__).warning(f"ROI engine failed (non-fatal): {_roi_err}")
 
+        # ── PLAYBOOK AUTO-TRIGGER: evaluate at-risk accounts (V2-only, direct call) ──
+        try:
+            from push_intelligence_subscriber import evaluate_playbook_triggers_for_customer
+            _pb_results = evaluate_playbook_triggers_for_customer(customer_id)
+            _pb_triggered = [r for r in _pb_results if r.get('decision') == 'auto_approved']
+            if _pb_triggered:
+                steps_completed.append(f'playbooks_auto_triggered_{len(_pb_triggered)}')
+                import logging as _log_pb
+                _log_pb.getLogger(__name__).info(
+                    f"Playbook auto-trigger: {len(_pb_triggered)} playbooks fired for customer {customer_id}"
+                )
+        except Exception as _pb_err:
+            import logging as _log_pb2
+            _log_pb2.getLogger(__name__).debug(f"Playbook auto-trigger skipped (non-fatal): {_pb_err}")
+
         # ── QDRANT: Index signals for semantic search (non-fatal) ──
         try:
             qdrant_url = os.environ.get('QDRANT_URL')

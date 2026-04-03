@@ -98,8 +98,299 @@ class UrgentScannerSubscriber:
 
 
 # ─────────────────────────────────────────────────────────────────────
-#  Layer B — Arc → Playbook Auto-Dispatch Subscriber
+#  Layer B — Standalone playbook auto-trigger (V2-only)
+#
+#  Called from:
+#    1. _process_data_impl() — direct call after health scores written
+#    2. ArcPlaybookSubscriber — event-driven backup (when event system
+#       shares the same process as the Flask app)
 # ─────────────────────────────────────────────────────────────────────
+
+# Canonical arc → playbook mapping (from config/arc_playbook_map.json)
+_ARC_PLAYBOOK_MAP = {
+    'crisis_recovery':          'PB-02',
+    'exec_sponsor_change':      'PB-04',
+    'competitive_displacement': 'PB-03',
+    'stalled_deployment':       'PB-01',
+    'silent_churn':             'PB-06',
+    'expansion_champion':       'PB-08',
+    'land_and_expand':          'PB-08',
+    'seasonal_surge':           'PB-07',
+    # Legacy aliases
+    'crisis':           'PB-02',
+    'champion_loss':    'PB-04',
+    'budget_pressure':  'PB-06',
+    'recovery':         'PB-02',
+    'onboarding':       'PB-01',
+    'stable':           None,
+    'expansion':        'PB-08',
+}
+
+
+def evaluate_playbook_triggers_for_customer(customer_id: int) -> list:
+    """Evaluate all at-risk/critical accounts for playbook auto-trigger.
+
+    Scans accounts with health < 70, checks arc classification, maps to
+    playbook, deduplicates against recent V2 executions, and creates new
+    PlaybookExecutionV2 records for qualifying accounts.
+
+    Returns list of dicts: [{'account_id': ..., 'playbook_id': ..., 'decision': ...}, ...]
+    Safe to call multiple times — 7-day dedup window prevents duplicates.
+    """
+    from models import Account, HealthScore
+    from extensions import db
+
+    accounts = Account.query.filter_by(customer_id=customer_id).all()
+    results = []
+
+    for account in accounts:
+        hs = (
+            HealthScore.query.filter_by(account_id=account.account_id)
+            .order_by(HealthScore.measurement_month.desc())
+            .first()
+        )
+        health = float(hs.health_score) if hs and hs.health_score else None
+        if not health or health >= 70:
+            continue
+
+        result = evaluate_playbook_trigger_for_account(
+            customer_id, account.account_id, health, _ARC_PLAYBOOK_MAP
+        )
+        if result:
+            results.append(result)
+
+    return results
+
+
+def evaluate_playbook_trigger_for_account(
+    customer_id: int,
+    account_id: int,
+    health_score: float,
+    arc_playbook_map: dict = None,
+) -> dict:
+    """Evaluate a single account for playbook auto-trigger (V2-only).
+
+    Returns dict with trigger result, or None if no trigger.
+    Dedup: skips if PlaybookExecutionV2 exists for same account+playbook within 7 days.
+    """
+    from models import ContextNode, Account, PlaybookExecutionV2, db
+    from datetime import datetime
+    import uuid
+
+    if arc_playbook_map is None:
+        arc_playbook_map = _ARC_PLAYBOOK_MAP
+
+    # 1. Get arc classification (prefer Account.arc_type, fall back to ContextNode)
+    account = db.session.get(Account, account_id)
+    if not account:
+        return None
+    account_name = account.account_name or f'Account {account_id}'
+
+    arc_type = account.arc_type
+    arc_confidence = account.arc_confidence or 0.5
+
+    if not arc_type:
+        # Fall back to latest arc_detection ContextNode
+        arc_node = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == account_id,
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_type == 'SIGNAL',
+                ContextNode.node_subtype == 'arc_detection',
+            )
+            .order_by(ContextNode.occurred_at.desc())
+            .first()
+        )
+        if not arc_node:
+            return None
+        arc_type = (arc_node.properties or {}).get('arc_type', 'unknown')
+        arc_confidence = (arc_node.properties or {}).get('confidence', 0.5)
+
+    playbook_id = arc_playbook_map.get(arc_type)
+    if not playbook_id:
+        return None
+
+    # 2. Dedup: check PlaybookExecutionV2 for recent execution (V2-only)
+    recent_cutoff = datetime.utcnow() - timedelta(days=7)
+    existing = (
+        PlaybookExecutionV2.query
+        .filter(
+            PlaybookExecutionV2.account_id == account_id,
+            PlaybookExecutionV2.playbook_id == playbook_id,
+            PlaybookExecutionV2.triggered_at > recent_cutoff,
+            PlaybookExecutionV2.status.in_(['in_progress', 'completed']),
+        )
+        .first()
+    )
+    if existing:
+        logger.debug(
+            f"Playbook {playbook_id} already running/completed for "
+            f"account {account_id} within 7d — skipping"
+        )
+        return {'account_id': account_id, 'playbook_id': playbook_id,
+                'decision': 'skipped_dedup', 'existing_execution_id': existing.execution_id}
+
+    # 3. Decide: rule-based (LLM validation is optional overlay)
+    decision = 'auto_approved'
+    confidence = arc_confidence
+    reasoning = f"Arc '{arc_type}' detected with confidence {arc_confidence:.2f}"
+
+    try:
+        from playbook_trigger_validator import PlaybookTriggerValidator
+        validator = PlaybookTriggerValidator()
+        result = validator.validate_trigger(
+            account_id=str(account_id),
+            customer_id=customer_id,
+            playbook_id=playbook_id,
+            trigger_context={
+                'arc_type': arc_type,
+                'arc_confidence': arc_confidence,
+                'health_score': health_score,
+                'source': 'arc_detection',
+            },
+            account_name=account_name,
+            health_score=health_score,
+        )
+        decision = result.decision.value if hasattr(result.decision, 'value') else str(result.decision)
+        confidence = result.confidence
+        reasoning = result.reasoning
+    except Exception:
+        # Fallback: rule-based
+        if health_score < 50 and arc_confidence >= 0.7:
+            decision = 'auto_approved'
+            confidence = arc_confidence
+        elif health_score < 70:
+            decision = 'pending_manual_approval'
+            confidence = arc_confidence * 0.8
+        else:
+            decision = 'auto_rejected'
+            confidence = arc_confidence * 0.5
+
+    # 4. Act on decision
+    if decision == 'auto_approved':
+        arr = float(account.revenue or 0)
+        execution_id = f"auto-{playbook_id}-{account_id}-{uuid.uuid4().hex[:8]}"
+
+        v2 = PlaybookExecutionV2(
+            execution_id=execution_id,
+            customer_id=customer_id,
+            account_id=account_id,
+            playbook_id=playbook_id,
+            playbook_name=f'Auto: {playbook_id} ({arc_type})',
+            triggered_by='health_drop',
+            arc_type=arc_type,
+            status='in_progress',
+            phase='stabilize',
+            health_at_trigger=health_score,
+            health_status_at_trigger='critical' if health_score < 50 else 'at_risk',
+            arr_at_trigger=arr,
+            csm_hourly_rate=85.0,
+        )
+        db.session.add(v2)
+        db.session.commit()
+
+        logger.info(
+            f"✅ Layer B AUTO-APPROVED: playbook {playbook_id} for "
+            f"account {account_name} (arc={arc_type}, "
+            f"confidence={confidence:.2f}, health={health_score:.1f})"
+        )
+
+        # Write DECISION node to context graph
+        try:
+            from models import ContextEdge
+            decision_node = ContextNode(
+                account_id=account_id,
+                customer_id=customer_id,
+                node_type='DECISION',
+                source='system',
+                node_subtype=f'playbook_{arc_type}',
+                title=f'Playbook {playbook_id} Auto-Approved — {account_name}',
+                properties={
+                    'playbook_id': playbook_id,
+                    'execution_id': execution_id,
+                    'arc_type': arc_type,
+                    'arc_confidence': arc_confidence,
+                    'validation_decision': decision,
+                    'validation_confidence': confidence,
+                    'health_score': health_score,
+                },
+                tier=2,
+                occurred_at=datetime.utcnow(),
+                source_platform='playbook_auto_trigger',
+                source_event_id=f'playbook:{execution_id}',
+            )
+            db.session.add(decision_node)
+            db.session.flush()
+
+            # Link arc_detection signal → playbook decision
+            arc_signal = (
+                ContextNode.query
+                .filter_by(account_id=account_id, customer_id=customer_id,
+                           node_subtype='arc_detection')
+                .order_by(ContextNode.occurred_at.desc())
+                .first()
+            )
+            if arc_signal:
+                db.session.add(ContextEdge(
+                    customer_id=customer_id,
+                    from_node_id=arc_signal.node_id,
+                    to_node_id=decision_node.node_id,
+                    edge_type='TRIGGERED',
+                    confidence=arc_confidence,
+                    source_platform='playbook_auto_trigger',
+                    properties={'label': f'Arc detection triggered {playbook_id}'},
+                ))
+            db.session.commit()
+        except Exception as cg_err:
+            logger.warning(f"Context graph DECISION write failed (non-fatal): {cg_err}")
+
+        # Publish event (best-effort, for any downstream subscribers)
+        try:
+            from event_system import event_manager, EventType
+            event_manager.publisher.publish(
+                EventType.PLAYBOOK_AUTO_TRIGGERED, customer_id,
+                {'account_id': account_id, 'playbook_id': playbook_id,
+                 'execution_id': execution_id, 'arc_type': arc_type},
+                priority=1,
+            )
+        except Exception:
+            pass
+
+        return {'account_id': account_id, 'account_name': account_name,
+                'playbook_id': playbook_id, 'decision': 'auto_approved',
+                'execution_id': execution_id, 'health': health_score,
+                'arc_type': arc_type}
+
+    elif decision == 'pending_manual_approval':
+        logger.info(
+            f"⏳ Layer B PENDING REVIEW: playbook {playbook_id} for "
+            f"account {account_name} (confidence={confidence:.2f})"
+        )
+        try:
+            from models import Notification
+            Notification.query  # ensure model is available
+            notif = Notification(
+                customer_id=customer_id, account_id=account_id,
+                type='playbook_approval_needed', priority='high',
+                payload={
+                    'playbook_id': playbook_id, 'arc_type': arc_type,
+                    'health_score': health_score, 'confidence': confidence,
+                    'reasoning': reasoning,
+                    'detected_at': datetime.utcnow().isoformat(),
+                },
+            )
+            db.session.add(notif)
+            db.session.commit()
+        except Exception:
+            pass
+        return {'account_id': account_id, 'playbook_id': playbook_id,
+                'decision': 'pending_manual_approval'}
+
+    else:
+        return {'account_id': account_id, 'playbook_id': playbook_id,
+                'decision': 'auto_rejected'}
+
 
 class ArcPlaybookSubscriber:
     """
@@ -113,26 +404,8 @@ class ArcPlaybookSubscriber:
     If confidence < 0.4 → auto-reject.
     """
 
-    # Mapping from arc_type → recommended playbook_id
-    # Canonical mapping from config/arc_playbook_map.json (first playbook = primary)
-    ARC_PLAYBOOK_MAP = {
-        'crisis_recovery':          'PB-02',
-        'exec_sponsor_change':      'PB-04',
-        'competitive_displacement': 'PB-03',
-        'stalled_deployment':       'PB-01',
-        'silent_churn':             'PB-06',
-        'expansion_champion':       'PB-08',
-        'land_and_expand':          'PB-08',
-        'seasonal_surge':           'PB-07',
-        # Legacy aliases
-        'crisis':           'PB-02',
-        'champion_loss':    'PB-04',
-        'budget_pressure':  'PB-06',
-        'recovery':         'PB-02',
-        'onboarding':       'PB-01',
-        'stable':           None,
-        'expansion':        'PB-08',
-    }
+    # Reuse module-level mapping
+    ARC_PLAYBOOK_MAP = _ARC_PLAYBOOK_MAP
 
     def __init__(self, cooldown_seconds: int = 600):
         self._cooldown = cooldown_seconds
@@ -198,261 +471,10 @@ class ArcPlaybookSubscriber:
                 logger.debug(f"Layer B eval skipped for {account_id}: {e}")
 
     def _do_evaluate(self, customer_id: int, account_id: int, health_score: float) -> None:
-        from models import ContextNode, Account, PlaybookExecution, db
-        from datetime import datetime
-        import uuid
-
-        # 1. Find the latest arc detection for this account
-        arc_node = (
-            ContextNode.query
-            .filter(
-                ContextNode.account_id == account_id,
-                ContextNode.customer_id == customer_id,
-                ContextNode.node_type == 'SIGNAL',
-                ContextNode.node_subtype == 'arc_detection',
-            )
-            .order_by(ContextNode.occurred_at.desc())
-            .first()
+        """Delegate to the standalone function (V2-only)."""
+        evaluate_playbook_trigger_for_account(
+            customer_id, account_id, health_score, self.ARC_PLAYBOOK_MAP
         )
-
-        if not arc_node:
-            return
-
-        arc_type = (arc_node.properties or {}).get('arc_type', 'unknown')
-        arc_confidence = (arc_node.properties or {}).get('confidence', 0.0)
-        playbook_id = self.ARC_PLAYBOOK_MAP.get(arc_type)
-
-        if not playbook_id:
-            logger.debug(f"Arc type '{arc_type}' has no mapped playbook — skipping")
-            return
-
-        # 2. Check if we already have a recent execution for this account+playbook
-        recent_cutoff = datetime.utcnow() - timedelta(days=7)
-        existing = (
-            PlaybookExecution.query
-            .filter(
-                PlaybookExecution.account_id == account_id,
-                PlaybookExecution.playbook_id == playbook_id,
-                PlaybookExecution.started_at > recent_cutoff,
-                PlaybookExecution.status.in_(['in-progress', 'completed']),
-            )
-            .first()
-        )
-        if existing:
-            logger.debug(
-                f"Playbook {playbook_id} already running/completed for "
-                f"account {account_id} within 7d — skipping"
-            )
-            return
-
-        account = db.session.get(Account, account_id)
-        account_name = account.account_name if account else f"Account {account_id}"
-
-        # 3. Try LLM-based validation (Layer B), fall back to rule-based
-        decision = 'auto_approved'
-        confidence = arc_confidence
-        reasoning = f"Arc '{arc_type}' detected with confidence {arc_confidence:.2f}"
-
-        try:
-            from playbook_trigger_validator import PlaybookTriggerValidator
-            validator = PlaybookTriggerValidator()
-            result = validator.validate_trigger(
-                account_id=str(account_id),
-                customer_id=customer_id,
-                playbook_id=playbook_id,
-                trigger_context={
-                    'arc_type': arc_type,
-                    'arc_confidence': arc_confidence,
-                    'health_score': health_score,
-                    'source': 'arc_detection',
-                },
-                account_name=account_name,
-                health_score=health_score,
-            )
-            decision = result.decision.value if hasattr(result.decision, 'value') else str(result.decision)
-            confidence = result.confidence
-            reasoning = result.reasoning
-        except Exception as e:
-            # Fallback: use arc confidence directly
-            logger.debug(f"LLM validation unavailable, using rule-based: {e}")
-            if health_score < 50 and arc_confidence >= 0.7:
-                decision = 'auto_approved'
-                confidence = arc_confidence
-            elif health_score < 70:
-                decision = 'pending_manual_approval'
-                confidence = arc_confidence * 0.8
-            else:
-                decision = 'auto_rejected'
-                confidence = arc_confidence * 0.5
-
-        # 4. Act on decision
-        if decision == 'auto_approved':
-            execution = PlaybookExecution(
-                execution_id=str(uuid.uuid4()),
-                customer_id=customer_id,
-                account_id=account_id,
-                playbook_id=playbook_id,
-                status='in-progress',
-                started_at=datetime.utcnow(),
-                execution_mode='auto_trigger',
-                trigger_context={
-                    'arc_type': arc_type,
-                    'arc_confidence': arc_confidence,
-                    'health_score': health_score,
-                    'decision': decision,
-                    'confidence': confidence,
-                    'reasoning': reasoning,
-                },
-                llm_validation_result={
-                    'decision': decision,
-                    'confidence': confidence,
-                    'reasoning': reasoning,
-                },
-            )
-            db.session.add(execution)
-
-            # Also create PlaybookExecutionV2 record for ROI tracking
-            try:
-                from models import PlaybookExecutionV2
-                arr = float(account.revenue or 0) if account else 0
-                v2_exec = PlaybookExecutionV2(
-                    execution_id=execution.execution_id,
-                    customer_id=customer_id,
-                    account_id=account_id,
-                    playbook_id=playbook_id,
-                    playbook_name=f'Auto: {playbook_id} ({arc_type})',
-                    triggered_by='health_drop',
-                    arc_type=arc_type,
-                    status='in_progress',
-                    phase='stabilize',
-                    health_at_trigger=health_score,
-                    health_status_at_trigger='critical' if health_score < 50 else 'at_risk',
-                    arr_at_trigger=arr,
-                    csm_hourly_rate=85.0,
-                )
-                db.session.add(v2_exec)
-            except Exception as v2_err:
-                logger.debug(f"PlaybookExecutionV2 creation skipped: {v2_err}")
-
-            db.session.commit()
-
-            logger.info(
-                f"✅ Layer B AUTO-APPROVED: playbook {playbook_id} for "
-                f"account {account_name} (arc={arc_type}, "
-                f"confidence={confidence:.2f}, health={health_score:.1f})"
-            )
-
-            # Write DECISION node to context graph (closes the
-            # Signal → Decision → Outcome chain for playbook actions)
-            try:
-                from models import ContextNode, ContextEdge
-                decision_node = ContextNode(
-                    account_id=account_id,
-                    customer_id=customer_id,
-                    node_type='DECISION',
-                    source='system',
-                    node_subtype=f'playbook_{arc_type}',
-                    title=f'Playbook {playbook_id} Auto-Approved — {account_name}',
-                    properties={
-                        'playbook_id': playbook_id,
-                        'execution_id': execution.execution_id,
-                        'arc_type': arc_type,
-                        'arc_confidence': arc_confidence,
-                        'validation_decision': decision,
-                        'validation_confidence': confidence,
-                        'validation_reasoning': reasoning,
-                        'health_score': health_score,
-                    },
-                    tier=2,
-                    occurred_at=datetime.utcnow(),
-                    source_platform='signal_analyst',
-                    source_event_id=f'playbook:{execution.execution_id}',
-                )
-                db.session.add(decision_node)
-                db.session.flush()
-
-                # Link arc_detection signal → playbook decision
-                arc_signal = (
-                    ContextNode.query
-                    .filter_by(
-                        account_id=account_id,
-                        customer_id=customer_id,
-                        node_subtype='arc_detection',
-                    )
-                    .order_by(ContextNode.occurred_at.desc())
-                    .first()
-                )
-                if arc_signal:
-                    db.session.add(ContextEdge(
-                        customer_id=customer_id,
-                        from_node_id=arc_signal.node_id,
-                        to_node_id=decision_node.node_id,
-                        edge_type='TRIGGERED',
-                        confidence=arc_confidence,
-                        source_platform='signal_analyst',
-                        properties={
-                            'label': f'Arc detection triggered {playbook_id}',
-                        },
-                    ))
-                db.session.commit()
-                logger.info(
-                    f"Context graph: DECISION node created for {playbook_id} "
-                    f"(account {account_id})"
-                )
-            except Exception as cg_err:
-                logger.warning(f"Context graph DECISION write failed (non-fatal): {cg_err}")
-
-            # Publish event for downstream PlaybookAutoTriggerSubscriber
-            try:
-                from event_system import event_manager, EventType
-                event_manager.publisher.publish(
-                    EventType.PLAYBOOK_AUTO_TRIGGERED,
-                    customer_id,
-                    {
-                        'account_id': account_id,
-                        'playbook_id': playbook_id,
-                        'execution_id': execution.execution_id,
-                        'arc_type': arc_type,
-                        'trigger_source': 'arc_auto_dispatch',
-                    },
-                    priority=1,
-                )
-            except Exception as pub_err:
-                logger.debug(f"Event publish failed (non-fatal): {pub_err}")
-
-        elif decision == 'pending_manual_approval':
-            logger.info(
-                f"⏳ Layer B PENDING REVIEW: playbook {playbook_id} for "
-                f"account {account_name} (arc={arc_type}, "
-                f"confidence={confidence:.2f})"
-            )
-            # Create a notification for CSM review
-            try:
-                from models import Notification
-                notif = Notification(
-                    customer_id=customer_id,
-                    account_id=account_id,
-                    type='playbook_approval_needed',
-                    priority='high',
-                    payload={
-                        'playbook_id': playbook_id,
-                        'arc_type': arc_type,
-                        'health_score': health_score,
-                        'confidence': confidence,
-                        'reasoning': reasoning,
-                        'detected_at': datetime.utcnow().isoformat(),
-                    },
-                )
-                db.session.add(notif)
-                db.session.commit()
-            except Exception:
-                pass  # non-fatal
-
-        else:
-            logger.debug(
-                f"Layer B REJECTED: playbook {playbook_id} for "
-                f"account {account_name} (confidence={confidence:.2f})"
-            )
 
 
 # ─────────────────────────────────────────────────────────────────────
