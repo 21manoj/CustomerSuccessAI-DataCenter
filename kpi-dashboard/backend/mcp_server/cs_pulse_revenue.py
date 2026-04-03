@@ -525,26 +525,32 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
 # ===================================================================
 
 @mcp.tool
-def get_nrr_forecast(customer_id: int) -> dict:
+def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
     """Get portfolio NRR forecast based on Wizard B pattern-to-NRR correlations.
 
     Shows current projected NRR (revenue-weighted across all accounts by arc
     pattern), plus a what-if simulation: "If playbooks executed on at-risk
     accounts, NRR improves from X% to Y%, protecting $Z ARR."
 
+    Enhanced with T+30/60/90 trajectory, renewal risk overlay, and
+    per-intervention playbook cost/ROI.
+
     Requires Wizard B to have run with NRR intelligence enabled.
     Falls back to a live calculation if no cached forecast exists.
 
     Args:
         customer_id: The customer (tenant) ID
+        months: Forecast horizon in months (default 3, max 12)
     """
     _check_mcp_enabled()
     app = _get_flask_app()
+    months = min(months, 12)
 
     with app.app_context():
         from models import WizardLearning
 
         # Try cached forecast from most recent Wizard B run
+        # Only use cache if it has the new trajectory field
         learning = (
             WizardLearning.query
             .filter_by(customer_id=customer_id, is_active=True)
@@ -554,12 +560,12 @@ def get_nrr_forecast(customer_id: int) -> dict:
 
         if learning and learning.learnings:
             cached = learning.learnings.get('portfolio_nrr_forecast')
-            if cached and cached.get('current_nrr_pct'):
+            if cached and cached.get('trajectory'):
                 cached['source'] = 'wizard_b_cached'
                 cached['wizard_learning_version'] = learning.version
                 return cached
 
-        # No cached forecast — run live from journey data
+        # No cached forecast (or missing trajectory) — run live
         import sys as _sys
         from pathlib import Path
         _wb_dir = str(Path(__file__).parent.parent / 'verticals' / '_template' / 'journey' / 'wizard_b')

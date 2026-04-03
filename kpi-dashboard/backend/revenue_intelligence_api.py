@@ -471,3 +471,53 @@ def get_playbook_mapping(customer_id, playbook_id):
         'metrics': metrics,
         'metric_count': len(metrics),
     })
+
+
+@revenue_intelligence_api.route('/api/revenue-intelligence/nrr-forecast', methods=['GET'])
+@require_revenue_intelligence
+def get_nrr_forecast_endpoint(customer_id):
+    """NRR trajectory forecast with intervention simulation.
+
+    Query params:
+        months: forecast horizon in months (default 3, max 12)
+
+    Returns portfolio NRR trajectory at T+30/60/90, renewal risk overlay,
+    and ranked interventions with playbook cost and ROI.
+    """
+    import sys
+    from pathlib import Path
+
+    months = min(int(request.args.get('months', 3)), 12)
+
+    # Try cached forecast from Wizard B
+    from models import WizardLearning
+    learning = (
+        WizardLearning.query
+        .filter_by(customer_id=customer_id, is_active=True)
+        .order_by(WizardLearning.created_at.desc())
+        .first()
+    )
+    if learning and learning.learnings:
+        cached = learning.learnings.get('portfolio_nrr_forecast')
+        if cached and cached.get('trajectory'):
+            cached['source'] = 'wizard_b_cached'
+            return jsonify(cached)
+
+    # Live calculation
+    _wb_dir = str(Path(__file__).parent / 'verticals' / '_template' / 'journey' / 'wizard_b')
+    if _wb_dir not in sys.path:
+        sys.path.insert(0, _wb_dir)
+
+    try:
+        from wizard_b_pattern_analyzer import PatternAnalyzer
+        analyzer = PatternAnalyzer.from_database(customer_id)
+        analyzer.analyze_patterns()
+    except (ValueError, ImportError) as e:
+        return jsonify({'error': str(e)}), 404
+
+    if analyzer.portfolio_nrr_forecast:
+        result = analyzer.portfolio_nrr_forecast
+        result['source'] = 'live_calculation'
+        return jsonify(result)
+
+    return jsonify({'error': 'NRR forecast unavailable — ensure accounts have ARR and context graph outcomes.'}), 404

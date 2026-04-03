@@ -587,7 +587,43 @@ class PatternAnalyzer:
                   f"protected=${total_protected:>10,.0f}  lost=${total_lost:>10,.0f}  "
                   f"expansion=${total_expansion:>10,.0f}")
 
-    def forecast_portfolio_nrr(self):
+    # ------------------------------------------------------------------
+    # Health extrapolation helper (used by forecast_portfolio_nrr)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extrapolate_health(health_now: float, slope_pts_per_month: float,
+                            months: int, deceleration: float = 0.85) -> list:
+        """Project health forward with diminishing slope.
+
+        Returns list of dicts, one per month:
+          [{'month': 1, 'projected_health': 72.3, 'threshold_crossing': None}, ...]
+        Threshold crossings: 'healthy_to_at_risk', 'at_risk_to_critical', or None.
+        """
+        trajectory = []
+        h = health_now
+        prev_h = health_now
+        for m in range(1, months + 1):
+            effective_slope = slope_pts_per_month * (deceleration ** (m - 1))
+            h = max(0.0, min(100.0, h + effective_slope))
+            crossing = None
+            if prev_h >= 70 and h < 70:
+                crossing = 'healthy_to_at_risk'
+            elif prev_h >= 50 and h < 50:
+                crossing = 'at_risk_to_critical'
+            elif prev_h < 50 and h >= 50:
+                crossing = 'critical_to_at_risk'
+            elif prev_h < 70 and h >= 70:
+                crossing = 'at_risk_to_healthy'
+            trajectory.append({
+                'month': m,
+                'projected_health': round(h, 1),
+                'threshold_crossing': crossing,
+            })
+            prev_h = h
+        return trajectory
+
+    def forecast_portfolio_nrr(self, forecast_horizon_days: int = 90):
         """
         Step 2: Revenue-weighted NRR forecast for the entire portfolio.
 
@@ -595,16 +631,83 @@ class PatternAnalyzer:
         portfolio-level NRR, plus a what-if simulation showing the impact
         of executing playbooks on at-risk accounts.
 
+        Enhanced with:
+          - T+30/60/90 trajectory with health extrapolation
+          - Renewal risk overlay
+          - Per-intervention playbook cost and ROI
+
         Populates self.portfolio_nrr_forecast dict.
         """
         if not self.nrr_correlations:
             return
 
-        from models import Account
-        arr_map = {
-            a.account_id: float(a.revenue or 0)
-            for a in Account.query.filter_by(customer_id=self.customer_id).all()
-        }
+        from models import Account, HealthScore
+        from datetime import datetime, timedelta, date
+
+        accounts_db = Account.query.filter_by(customer_id=self.customer_id).all()
+        arr_map = {a.account_id: float(a.revenue or 0) for a in accounts_db}
+        arc_map = {a.account_id: a.arc_type for a in accounts_db}
+
+        # Renewal dates from profile_metadata
+        renewal_map = {}
+        for a in accounts_db:
+            meta = a.profile_metadata or {}
+            rd_raw = meta.get('renewal_date') or meta.get('contract_renewal_date')
+            if rd_raw:
+                try:
+                    renewal_map[a.account_id] = datetime.strptime(
+                        str(rd_raw)[:10], '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    pass
+
+        # Health slopes per account (simplified: use last 2 health scores)
+        slope_map = {}
+        for a in accounts_db:
+            scores = (
+                HealthScore.query
+                .filter_by(account_id=a.account_id)
+                .order_by(HealthScore.measurement_month.desc())
+                .limit(3)
+                .all()
+            )
+            if len(scores) >= 2:
+                latest = float(scores[0].health_score or 0)
+                prev = float(scores[1].health_score or 0)
+                d0 = scores[1].measurement_month
+                d1 = scores[0].measurement_month
+                delta_days = (d1 - d0).days if hasattr(d1, 'year') else 30
+                if delta_days > 0:
+                    slope_map[a.account_id] = (latest - prev) / delta_days * 30
+                else:
+                    slope_map[a.account_id] = 0.0
+            else:
+                slope_map[a.account_id] = 0.0
+
+        # Arc→playbook mapping
+        arc_playbook_map = {}
+        try:
+            import json as _json
+            from pathlib import Path
+            _map_path = Path(__file__).parent.parent.parent.parent.parent / 'config' / 'arc_playbook_map.json'
+            if _map_path.exists():
+                with open(_map_path) as _f:
+                    _raw = _json.load(_f)
+                arc_playbook_map = {k: v for k, v in _raw.items() if not k.startswith('_')}
+        except Exception:
+            pass
+
+        # Playbook cost lookup (lazy, cached)
+        _cost_cache = {}
+        def _get_playbook_cost(playbook_id: str, acct_arr: float) -> float:
+            if playbook_id not in _cost_cache:
+                try:
+                    from playbook_cost_bridge import calculate_cost_bridge
+                    bridge = calculate_cost_bridge(account_arr=acct_arr)
+                    for pid, econ in bridge.playbooks.items():
+                        _cost_cache[pid] = econ.manual_cost
+                except Exception:
+                    pass
+            return _cost_cache.get(playbook_id, 0)
 
         # Build per-account forecast
         account_forecasts = []
@@ -614,6 +717,8 @@ class PatternAnalyzer:
         patterns = defaultdict(list)
         for j in self.journeys:
             patterns[j['pattern_type']].append(j)
+
+        forecast_months = max(1, forecast_horizon_days // 30)
 
         for pattern_type, journeys in patterns.items():
             corr = self.nrr_correlations.get(pattern_type, {})
@@ -626,6 +731,24 @@ class PatternAnalyzer:
                 total_arr += arr
                 weighted_nrr_sum += arr * pattern_nrr
 
+                health_end = j.get('ending_health', 0)
+                slope = slope_map.get(aid, 0.0)
+                health_traj = self._extrapolate_health(health_end, slope, forecast_months)
+
+                # Renewal urgency
+                renewal_date = renewal_map.get(aid)
+                renewal_urgency = None
+                days_to_renewal = None
+                if renewal_date:
+                    days_to_renewal = (renewal_date - date.today()).days
+                    projected_at_renewal = health_traj[-1]['projected_health'] if health_traj else health_end
+                    if days_to_renewal <= 30 and projected_at_renewal < 50:
+                        renewal_urgency = 'urgent'
+                    elif days_to_renewal <= 60 and projected_at_renewal < 60:
+                        renewal_urgency = 'warning'
+                    elif days_to_renewal <= 90 and slope < -1:
+                        renewal_urgency = 'watch'
+
                 account_forecasts.append({
                     'account_id': aid,
                     'account_name': j.get('account_name', f'Account {aid}'),
@@ -633,39 +756,95 @@ class PatternAnalyzer:
                     'pattern': pattern_type,
                     'current_nrr': pattern_nrr,
                     'health_start': j.get('starting_health', 0),
-                    'health_end': j.get('ending_health', 0),
+                    'health_end': health_end,
+                    'health_slope_30d': round(slope, 2),
+                    'health_trajectory': health_traj,
                     'intervention_success_rate': intervention_rate,
+                    'renewal_date': str(renewal_date) if renewal_date else None,
+                    'days_to_renewal': days_to_renewal,
+                    'renewal_urgency': renewal_urgency,
                 })
 
         # Current portfolio NRR (revenue-weighted)
         current_nrr = weighted_nrr_sum / total_arr if total_arr > 0 else 1.0
 
-        # What-if simulation: intervene on all at-risk patterns
-        # At-risk = patterns with avg_nrr < 1.0
-        # Assumption: successful intervention brings NRR to 1.0 (flat retention)
+        # ── Trajectory: portfolio NRR at T+30/60/90 ────────────────────
+        # Use health-to-churn mapping to project NRR at each horizon
+        def _health_to_churn_90d(h, arc):
+            """Map projected health to 90-day churn probability."""
+            base = 0.12 if h < 50 else (0.054 if h < 70 else 0.013)
+            arc_mult = {'crisis_recovery': 1.5, 'silent_churn': 1.3,
+                        'competitive_displacement': 1.4, 'expansion_champion': 0.3
+                        }.get(arc, 1.0)
+            return min(base * arc_mult, 0.5)
+
+        trajectory = {}
+        for t_months in range(1, forecast_months + 1):
+            t_key = f't{t_months * 30}'
+            weighted_nrr_t = 0.0
+            crossings = []
+            for acct in account_forecasts:
+                proj_h = acct['health_trajectory'][t_months - 1]['projected_health'] if t_months <= len(acct['health_trajectory']) else acct['health_end']
+                churn = _health_to_churn_90d(proj_h, acct['pattern']) * (t_months / 3)
+                acct_nrr_t = 1.0 - churn
+                weighted_nrr_t += acct['arr'] * acct_nrr_t
+                cx = acct['health_trajectory'][t_months - 1].get('threshold_crossing') if t_months <= len(acct['health_trajectory']) else None
+                if cx:
+                    crossings.append({'account_id': acct['account_id'],
+                                      'account_name': acct['account_name'],
+                                      'crossing': cx})
+            nrr_t = weighted_nrr_t / total_arr if total_arr > 0 else 1.0
+            trajectory[t_key] = {
+                'nrr_pct': round(nrr_t * 100, 2),
+                'threshold_crossings': crossings,
+            }
+
+        # ── What-if simulation + playbook cost/ROI ─────────────────────
         intervention_nrr_sum = 0.0
         total_intervention_arr = 0.0
         top_interventions = []
 
         for acct in account_forecasts:
             if acct['current_nrr'] < 1.0:
-                # This account is dragging NRR down
                 success_rate = acct['intervention_success_rate']
-                # Expected NRR after intervention:
-                # success_rate chance of going to 1.0, (1-success_rate) stays at current
                 intervened_nrr = (success_rate * 1.0) + ((1 - success_rate) * acct['current_nrr'])
                 intervention_nrr_sum += acct['arr'] * intervened_nrr
                 total_intervention_arr += acct['arr']
 
                 projected_save = acct['arr'] * (intervened_nrr - acct['current_nrr'])
+
+                # Playbook cost from arc mapping
+                arc = acct['pattern']
+                playbooks = arc_playbook_map.get(arc, [])
+                primary_pb = playbooks[0] if playbooks else None
+                pb_cost = _get_playbook_cost(primary_pb, acct['arr']) if primary_pb else 0
+                roi = round(projected_save / pb_cost, 1) if pb_cost > 0 else None
+
+                # Intervention deadline
+                dtr = acct.get('days_to_renewal')
+                if dtr and dtr < 30:
+                    deadline = 'Act within 7 days'
+                elif dtr and dtr < 60:
+                    deadline = 'Act within 14 days'
+                elif acct['health_end'] < 50:
+                    deadline = 'Act within 21 days'
+                else:
+                    deadline = 'Act within 30 days'
+
                 top_interventions.append({
                     'account_id': acct['account_id'],
                     'account_name': acct['account_name'],
                     'arr': acct['arr'],
-                    'pattern': acct['pattern'],
+                    'pattern': arc,
                     'current_nrr': round(acct['current_nrr'] * 100, 1),
                     'projected_nrr': round(intervened_nrr * 100, 1),
                     'projected_save': round(projected_save, 2),
+                    'playbook': primary_pb,
+                    'playbook_cost': round(pb_cost, 2),
+                    'roi': roi,
+                    'deadline': deadline,
+                    'renewal_date': acct.get('renewal_date'),
+                    'renewal_urgency': acct.get('renewal_urgency'),
                 })
             else:
                 intervention_nrr_sum += acct['arr'] * acct['current_nrr']
@@ -675,6 +854,23 @@ class PatternAnalyzer:
 
         # Sort top interventions by projected save (descending)
         top_interventions.sort(key=lambda x: x['projected_save'], reverse=True)
+
+        # Renewals at risk
+        renewals_at_risk = [
+            {
+                'account_id': a['account_id'],
+                'account_name': a['account_name'],
+                'renewal_date': a['renewal_date'],
+                'days_until': a['days_to_renewal'],
+                'health': round(a['health_end'], 1),
+                'projected_health_at_renewal': a['health_trajectory'][-1]['projected_health'] if a['health_trajectory'] else a['health_end'],
+                'arr': a['arr'],
+                'renewal_urgency': a['renewal_urgency'],
+            }
+            for a in account_forecasts
+            if a.get('renewal_urgency')
+        ]
+        renewals_at_risk.sort(key=lambda x: x.get('days_until') or 999)
 
         # Pattern breakdown (aggregated)
         pattern_breakdown = []
@@ -696,14 +892,18 @@ class PatternAnalyzer:
             'total_accounts': len(account_forecasts),
             'at_risk_accounts': len(top_interventions),
             'at_risk_arr': round(total_intervention_arr, 2),
+            'trajectory': trajectory,
+            'renewals_at_risk': renewals_at_risk,
             'pattern_breakdown': pattern_breakdown,
-            'top_interventions': top_interventions[:10],  # top 10 by impact
+            'top_interventions': top_interventions[:10],
         }
 
         print(f"\n   Portfolio NRR: {current_nrr * 100:.1f}% → {with_interventions_nrr * 100:.1f}% "
               f"(+${delta_arr:,.0f} if interventions succeed)")
         print(f"   At-risk accounts: {len(top_interventions)} / {len(account_forecasts)} "
               f"(${total_intervention_arr:,.0f} ARR)")
+        if renewals_at_risk:
+            print(f"   Renewals at risk: {len(renewals_at_risk)}")
 
     # ========================================================================
     # OUTPUT GENERATION
