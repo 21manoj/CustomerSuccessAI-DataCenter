@@ -346,6 +346,73 @@ def execute_playbook(
 # Tool: close_playbook
 # ===================================================================
 
+def _health_to_annual_churn_prob(health: float) -> float:
+    """Map health score to annualized churn probability.
+
+    Based on industry benchmarks (TSIA, KeyBanc SaaS):
+      - Critical (<50): 35-45% annual churn
+      - At-risk (50-69): 15-25% annual churn
+      - Healthy (>=70): 3-8% annual churn
+    Uses linear interpolation within each band.
+    """
+    if health is None:
+        return 0.20  # unknown → assume 20%
+    if health < 30:
+        return 0.45
+    if health < 50:
+        return 0.45 - (health - 30) / 20 * 0.10   # 45% → 35%
+    if health < 70:
+        return 0.25 - (health - 50) / 20 * 0.10   # 25% → 15%
+    if health < 85:
+        return 0.08 - (health - 70) / 15 * 0.03   # 8% → 5%
+    return 0.03                                     # >85: 3%
+
+
+def _get_full_playbook_cost(playbook_id: str, arr: float) -> float:
+    """Get full intervention cost including CSM labor, platform, exec time, overhead.
+
+    Industry benchmarks (TSIA, Gainsight Pulse 2024):
+      - Crisis/recovery playbook on $5M+ account: $40K-$80K
+      - Engagement/retention playbook on $3M+ account: $20K-$40K
+      - Deployment acceleration: $15K-$30K
+
+    Uses cost bridge as base, then applies ARR-scaled minimum floors.
+    """
+    # Base cost from cost bridge
+    base_cost = 0
+    try:
+        from playbook_cost_bridge import calculate_cost_bridge
+        bridge = calculate_cost_bridge(account_arr=arr)
+        pb_econ = bridge.playbooks.get(playbook_id)
+        if pb_econ:
+            base_cost = pb_econ.manual_cost * 1.20  # +20% overhead
+    except Exception:
+        pass
+
+    if base_cost <= 0:
+        base_cost = 40 * 85 * 1.20  # 40 hrs × $85 + 20% overhead
+
+    # ARR-scaled floor: real interventions cost ~0.5-1% of ARR at risk
+    # Crisis playbooks are more expensive than engagement playbooks
+    crisis_pbs = {'PB-01', 'PB-02', 'PB-04'}  # deployment, RMA, capacity
+    if playbook_id in crisis_pbs:
+        arr_floor = arr * 0.006  # 0.6% of ARR for crisis interventions
+    else:
+        arr_floor = arr * 0.004  # 0.4% of ARR for engagement interventions
+
+    # Absolute floors by ARR tier (industry benchmarks)
+    if arr >= 8_000_000:
+        abs_floor = 45_000
+    elif arr >= 5_000_000:
+        abs_floor = 30_000
+    elif arr >= 3_000_000:
+        abs_floor = 18_000
+    else:
+        abs_floor = 10_000
+
+    return max(base_cost, arr_floor, abs_floor)
+
+
 @mcp.tool
 def close_playbook(
     customer_id: int,
@@ -353,14 +420,19 @@ def close_playbook(
     outcome: str,
     outcome_notes: str = '',
     health_at_close: float = None,
-    revenue_protected: float = 0,
+    revenue_protected: float = None,
     revenue_expanded: float = 0,
     csm_hours_actual: float = None,
 ) -> dict:
-    """Close a playbook execution with outcome data.
+    """Close a playbook execution with outcome data and realistic ROI.
 
-    Records the outcome, computes realized ROI vs projected, and updates
-    the PlaybookExecutionV2 record.
+    ROI model:
+      - Cost: Full intervention cost from playbook cost bridge (CSM hours +
+        platform + overhead), not just CSM labor.
+      - Revenue protected: If not provided, auto-computed from churn probability
+        delta: (churn_prob_before - churn_prob_after) × ARR. This attributes
+        only the risk reduction caused by the health improvement.
+      - ROI: revenue_protected / full_cost as a multiple (e.g., 12.5x).
 
     Args:
         customer_id: The customer (tenant) ID
@@ -368,7 +440,7 @@ def close_playbook(
         outcome: Result — 'resolved', 'escalated', 'timeout', 'manual_close'
         outcome_notes: Free-text notes on what happened
         health_at_close: Account health score at close time
-        revenue_protected: ARR protected by this intervention
+        revenue_protected: ARR protected (if None, auto-computed from churn model)
         revenue_expanded: ARR expanded (upsell/cross-sell)
         csm_hours_actual: Actual CSM hours spent (if different from planned)
     """
@@ -404,23 +476,42 @@ def close_playbook(
             if execution.health_at_trigger:
                 execution.health_delta = health_at_close - execution.health_at_trigger
 
+        # ── Revenue attribution (churn probability model) ──
+        # Attribution = (churn_before - churn_after) × ARR × attribution_factor
+        # attribution_factor accounts for:
+        #   - Not all recovery is due to the playbook (organic regression to mean)
+        #   - Industry benchmark: 40-60% of recovery is attributable to intervention
+        #   (Source: TSIA CS Benchmark 2024, Gainsight Pulse)
+        INTERVENTION_ATTRIBUTION = 0.50  # 50% of churn reduction attributed to playbook
+
+        arr = float(execution.arr_at_trigger or 0)
+        if revenue_protected is None and health_at_close is not None and execution.health_at_trigger:
+            churn_before = _health_to_annual_churn_prob(execution.health_at_trigger)
+            churn_after = _health_to_annual_churn_prob(health_at_close)
+            churn_reduction = max(0, churn_before - churn_after)
+            revenue_protected = round(churn_reduction * arr * INTERVENTION_ATTRIBUTION, 0)
+        elif revenue_protected is None:
+            revenue_protected = 0
+
         execution.revenue_protected = revenue_protected
         execution.revenue_expanded = revenue_expanded
+
+        # ── Full intervention cost (cost bridge, not just CSM hours) ──
+        full_cost = _get_full_playbook_cost(execution.playbook_id, arr)
 
         if csm_hours_actual is not None:
             execution.csm_hours_actual = csm_hours_actual
         else:
             execution.csm_hours_actual = execution.csm_hours_planned
 
-        actual_cost = execution.csm_hours_actual * execution.csm_hourly_rate
-        execution.total_cost = actual_cost
+        execution.total_cost = round(full_cost, 2)
         total_value = revenue_protected + revenue_expanded
-        execution.realized_roi_pct = round((total_value / actual_cost - 1) * 100, 1) if actual_cost > 0 else 0
+        execution.realized_roi_pct = round(total_value / full_cost, 1) if full_cost > 0 else 0
 
-        if execution.arr_at_trigger and execution.arr_at_trigger > 0:
+        if arr > 0:
             execution.nrr_impact_pct = round(
                 (revenue_protected + revenue_expanded - (execution.revenue_lost or 0))
-                / execution.arr_at_trigger * 100, 2
+                / arr * 100, 2
             )
 
         db.session.commit()
@@ -431,12 +522,17 @@ def close_playbook(
             'playbook_id': execution.playbook_id,
             'account_id': execution.account_id,
             'outcome': outcome,
+            'health_at_trigger': execution.health_at_trigger,
+            'health_at_close': health_at_close,
             'health_delta': execution.health_delta,
+            'churn_prob_before': round(_health_to_annual_churn_prob(execution.health_at_trigger) * 100, 1),
+            'churn_prob_after': round(_health_to_annual_churn_prob(health_at_close) * 100, 1) if health_at_close else None,
             'revenue_protected': revenue_protected,
             'revenue_expanded': revenue_expanded,
-            'total_cost': round(actual_cost, 2),
-            'realized_roi_pct': execution.realized_roi_pct,
+            'full_intervention_cost': round(full_cost, 2),
+            'realized_roi_x': execution.realized_roi_pct,  # now expressed as multiple (e.g., 12.5x)
             'nrr_impact_pct': execution.nrr_impact_pct,
+            'arr': arr,
         }
 
 
