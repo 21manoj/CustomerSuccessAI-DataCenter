@@ -5,11 +5,12 @@ Allows new customers to self-register and create their own accounts.
 Supports multi-vertical UUID generation (dual-write with legacy integer IDs).
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Customer, User, CustomerConfig
 from werkzeug.security import generate_password_hash
 from id_generator import generate_id, resolve_vertical_prefix, VALID_VERTICALS
+import datetime
 import json
 import re
 import logging
@@ -196,7 +197,19 @@ def register_customer():
                 db.session.add(trigger)
         
         db.session.commit()
-        
+
+        # Auto-login: establish session immediately so frontend can redirect to /onboarding
+        try:
+            from flask_login import login_user
+            login_user(user, remember=False)
+            session['customer_id'] = customer_id
+            session['user_id'] = user.user_id
+            session['login_time'] = datetime.datetime.utcnow().isoformat()
+            session['ip_address'] = request.remote_addr
+            session.permanent = True
+        except Exception as session_err:
+            logger.warning(f"Auto-login after registration failed (non-fatal): {session_err}")
+
         return jsonify({
             'status': 'success',
             'message': 'Registration successful',
@@ -206,9 +219,11 @@ def register_customer():
             'user_id': user.user_id,
             'user_uuid': user_uuid,
             'email': email,
-            'company_name': company_name
+            'company_name': company_name,
+            'onboarding_state': 'fresh',   # always fresh on registration
+            'auto_logged_in': True
         }), 201
-    
+
     except Exception as e:
         db.session.rollback()
         return jsonify({

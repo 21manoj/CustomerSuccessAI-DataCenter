@@ -88,6 +88,181 @@ const SHOWCASE_JOURNEYS = [
   }
 ];
 
+// ─── Column Mapping Guide ────────────────────────────────────────────────────
+
+const PLATFORM_MAPPINGS = {
+  Gainsight: {
+    'accounts.csv': [
+      { source: 'Company Name', target: 'account_name' },
+      { source: 'GSID / Account ID', target: 'account_id' },
+      { source: 'ARR', target: 'revenue' },
+      { source: 'Industry', target: 'industry' },
+      { source: 'Region', target: 'region' },
+      { source: 'Status', target: 'account_status' },
+    ],
+    'kpi_measurements.csv': [
+      { source: 'Scorecard Measure Name', target: 'kpi_name' },
+      { source: 'Score Date', target: 'date' },
+      { source: 'Score Value', target: 'value' },
+      { source: 'Company Name', target: 'account_name' },
+      { source: 'GSID', target: 'account_id' },
+    ],
+    'enhanced_qualitative_signals.csv': [
+      { source: 'Activity Date', target: 'signal_date' },
+      { source: 'Activity Type', target: 'signal_type' },
+      { source: 'Description / Notes', target: 'content' },
+      { source: 'Sentiment (if present)', target: 'sentiment' },
+      { source: 'Contact Name', target: 'stakeholder_name' },
+    ],
+  },
+  Totango: {
+    'accounts.csv': [
+      { source: 'Account Name', target: 'account_name' },
+      { source: 'Account ID', target: 'account_id' },
+      { source: 'Contract Value', target: 'revenue' },
+      { source: 'Industry', target: 'industry' },
+      { source: 'Country', target: 'region' },
+      { source: 'Health', target: 'account_status' },
+    ],
+    'kpi_measurements.csv': [
+      { source: 'Metric Name', target: 'kpi_name' },
+      { source: 'Date', target: 'date' },
+      { source: 'Value', target: 'value' },
+      { source: 'Account Name', target: 'account_name' },
+      { source: 'Account ID', target: 'account_id' },
+    ],
+    'enhanced_qualitative_signals.csv': [
+      { source: 'Touch Date', target: 'signal_date' },
+      { source: 'Touch Type', target: 'signal_type' },
+      { source: 'Notes', target: 'content' },
+      { source: 'Sentiment Score', target: 'sentiment_score' },
+      { source: 'Contact Name', target: 'stakeholder_name' },
+    ],
+  },
+  ChurnZero: {
+    'accounts.csv': [
+      { source: 'Account Name', target: 'account_name' },
+      { source: 'External ID', target: 'account_id' },
+      { source: 'MRR × 12', target: 'revenue' },
+      { source: 'Segment', target: 'industry' },
+      { source: 'Owner Region', target: 'region' },
+      { source: 'Stage', target: 'account_status' },
+    ],
+    'kpi_measurements.csv': [
+      { source: 'Attribute Name', target: 'kpi_name' },
+      { source: 'Date', target: 'date' },
+      { source: 'Value', target: 'value' },
+      { source: 'Account Name', target: 'account_name' },
+      { source: 'Account ID', target: 'account_id' },
+    ],
+    'enhanced_qualitative_signals.csv': [
+      { source: 'Event Date', target: 'signal_date' },
+      { source: 'Event Name', target: 'signal_type' },
+      { source: 'Description', target: 'content' },
+      { source: 'Sentiment', target: 'sentiment' },
+      { source: 'Contact', target: 'stakeholder_name' },
+    ],
+  },
+};
+
+type Platform = keyof typeof PLATFORM_MAPPINGS;
+type FileKey = keyof (typeof PLATFORM_MAPPINGS)[Platform];
+
+const ColumnMappingGuide: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [platform, setPlatform] = useState<Platform>('Gainsight');
+  const [fileKey, setFileKey] = useState<FileKey>('accounts.csv');
+
+  const mappings = PLATFORM_MAPPINGS[platform][fileKey] ?? [];
+
+  return (
+    <div className="mt-4 border border-amber-200 rounded-lg bg-amber-50">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-amber-800">
+          <Info className="w-4 h-4" />
+          Coming from Gainsight, Totango, or ChurnZero?
+        </span>
+        <span className="text-amber-600 text-sm">{open ? '▲ Hide' : '▼ Show column mapping'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4">
+          <p className="text-xs text-amber-700 mb-3">
+            Map your existing platform's export columns to CS Pulse column names before uploading.
+          </p>
+
+          {/* Platform tabs */}
+          <div className="flex gap-2 mb-3">
+            {(Object.keys(PLATFORM_MAPPINGS) as Platform[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => { setPlatform(p); setFileKey('accounts.csv'); }}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  platform === p
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-white border border-amber-300 text-amber-700 hover:bg-amber-100'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
+          {/* File tabs */}
+          <div className="flex gap-2 mb-3 flex-wrap">
+            {(Object.keys(PLATFORM_MAPPINGS[platform]) as FileKey[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFileKey(f)}
+                className={`px-3 py-1 rounded text-xs transition-colors ${
+                  fileKey === f
+                    ? 'bg-white border-2 border-amber-500 text-amber-800 font-semibold'
+                    : 'bg-white border border-amber-200 text-amber-600 hover:bg-amber-50'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {/* Mapping table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-amber-100">
+                  <th className="text-left px-3 py-2 font-semibold text-amber-800 border border-amber-200">
+                    {platform} export column
+                  </th>
+                  <th className="text-left px-3 py-2 font-semibold text-amber-800 border border-amber-200">
+                    CS Pulse column name
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {mappings.map((row, i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-amber-50'}>
+                    <td className="px-3 py-2 font-mono text-gray-600 border border-amber-200">{row.source}</td>
+                    <td className="px-3 py-2 font-mono font-semibold text-indigo-700 border border-amber-200">{row.target}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-xs text-amber-600 mt-2">
+            Rename columns in Excel/Sheets before uploading, or use your platform's export field mapping if available.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onboardingMode, onModeChange, businessContext }) => {
   const [previewSource, setPreviewSource] = useState<string | null>(null);
   const [apiConfigSource, setApiConfigSource] = useState<string | null>(null);
@@ -730,6 +905,11 @@ export const Step5Sources: React.FC<Step5SourcesProps> = ({ data, onChange, onbo
               ))}
             </div>
           </div>
+
+          {/* ============================================================ */}
+          {/* Platform Column-Mapping Guide                                 */}
+          {/* ============================================================ */}
+          <ColumnMappingGuide />
         </>
       )}
     </div>

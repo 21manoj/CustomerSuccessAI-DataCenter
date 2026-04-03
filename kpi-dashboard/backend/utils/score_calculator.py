@@ -437,10 +437,15 @@ class ScoreCalculator:
                 # Calculate trend with account context (override with actual trend calculation)
                 change, trend = self._calculate_trend(health_score, account_id, measurement_month)
 
+                _hs = Decimal(str(round(health_score, 2)))
                 health_score_record = {
                     'account_id': account_id,
                     'measurement_month': measurement_month,
-                    'health_score': Decimal(str(round(health_score, 2))),
+                    'health_score': _hs,
+                    # kpi_only_score — separation principle (§1a): always equals health_score
+                    # today (no Signal-DNA yet). NRR/churn MUST read kpi_only_score.
+                    'kpi_only_score': _hs,
+                    # composite_score remains NULL until FEATURE_UNIFIED_SCORING ships
                     'health_status': health_status,
                     'trend': trend,
                     'change_from_last_month': Decimal(str(round(change, 2))) if change else None,

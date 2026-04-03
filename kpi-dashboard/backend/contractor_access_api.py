@@ -396,33 +396,84 @@ def reinstate_api_key_endpoint(key_id):
 @contractor_access_bp.route("/api/admin-ui/activity-log", methods=["GET"])
 @super_admin_required
 def get_activity_log():
-    """Get activity log entries, optionally filtered by category."""
+    """Get activity log entries — cross-tenant for super_admin.
+
+    Query params:
+      category       — action_category filter
+      action_type    — action_type filter (e.g. 'entitlement_rejected', 'login')
+      customer_id    — filter to one customer
+      search         — substring match on action_description
+      date_from      — ISO date (inclusive lower bound on created_at)
+      date_to        — ISO date (inclusive upper bound on created_at)
+      page, per_page — pagination
+    """
     try:
         category = request.args.get("category")
+        action_type = request.args.get("action_type")
         customer_id = request.args.get("customer_id", type=int)
+        search = request.args.get("search", "").strip()
+        date_from = request.args.get("date_from")
+        date_to = request.args.get("date_to")
         page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 25, type=int)
+        per_page = min(request.args.get("per_page", 25, type=int), 200)
 
         query = ActivityLog.query.order_by(ActivityLog.created_at.desc())
 
         if category:
             query = query.filter(ActivityLog.action_category == category)
+        if action_type:
+            query = query.filter(ActivityLog.action_type == action_type)
         if customer_id:
             query = query.filter(ActivityLog.customer_id == customer_id)
+        if search:
+            query = query.filter(ActivityLog.action_description.ilike(f"%{search}%"))
+        if date_from:
+            try:
+                dt = datetime.fromisoformat(date_from.replace("Z", "+00:00"))
+                query = query.filter(ActivityLog.created_at >= dt)
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                dt = datetime.fromisoformat(date_to.replace("Z", "+00:00"))
+                query = query.filter(ActivityLog.created_at <= dt)
+            except ValueError:
+                pass
 
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        # Build customer_id → name lookup for this page
+        cids = {log.customer_id for log in paginated.items if log.customer_id}
+        customer_names: dict[int, str] = {}
+        if cids:
+            rows = db.session.query(Customer.customer_id, Customer.customer_name).filter(
+                Customer.customer_id.in_(cids)
+            ).all()
+            customer_names = {r.customer_id: r.customer_name for r in rows}
+
+        # Build user_id → name lookup for this page
+        uids = {log.user_id for log in paginated.items if log.user_id}
+        user_names: dict[int, str] = {}
+        if uids:
+            rows = db.session.query(User.user_id, User.user_name).filter(
+                User.user_id.in_(uids)
+            ).all()
+            user_names = {r.user_id: r.user_name for r in rows}
 
         logs = []
         for log in paginated.items:
             logs.append({
                 "id": log.id,
                 "customer_id": log.customer_id,
+                "customer_name": customer_names.get(log.customer_id) if log.customer_id else None,
                 "user_id": log.user_id,
+                "user_name": user_names.get(log.user_id) if log.user_id else None,
                 "action_type": log.action_type,
                 "action_category": getattr(log, 'action_category', None),
                 "action_description": log.action_description,
                 "resource_type": getattr(log, 'resource_type', None),
                 "resource_id": getattr(log, 'resource_id', None),
+                "details": getattr(log, 'details', None) or {},
                 "status": log.status,
                 "ip_address": getattr(log, 'ip_address', None),
                 "created_at": log.created_at.isoformat() if log.created_at else None,

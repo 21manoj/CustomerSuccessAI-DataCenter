@@ -2224,11 +2224,24 @@ def complete_onboarding():
         # Add domain if provided
         if domain:
             response_data["domain"] = domain
-        
+
         # Add user info if created
         if user_created:
             response_data["user"] = user_created
-        
+
+        # Send welcome email (non-blocking; skips gracefully if SMTP not configured)
+        try:
+            admin_email_addr = (user_created or {}).get('email') or email
+            if admin_email_addr:
+                from welcome_email import send_welcome_email
+                send_welcome_email(
+                    admin_email=admin_email_addr,
+                    company_name=customer_name,
+                    customer_id=customer_id,
+                )
+        except Exception as _email_exc:
+            current_app.logger.warning(f"[welcome_email] non-fatal error: {_email_exc}")
+
         return jsonify(response_data)
         
     except Exception as e:

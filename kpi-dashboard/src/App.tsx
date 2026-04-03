@@ -82,6 +82,11 @@ const LoginRoute: React.FC = () => {
     <LoginComponent
       onLogin={(newSession) => {
         login(newSession);
+        // Fresh accounts (no data yet) go straight to the onboarding wizard
+        if (newSession.onboarding_state === 'fresh') {
+          navigate('/onboarding');
+          return;
+        }
         const vertical = normalizeVertical(newSession.vertical || undefined);
         const dashboardRoute = vertical === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
         navigate(dashboardRoute);

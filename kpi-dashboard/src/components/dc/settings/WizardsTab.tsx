@@ -212,13 +212,13 @@ const WizardsTab: React.FC<WizardsTabProps> = ({ customerId }) => {
   const runWizardB = async () => {
     setStatusB({ state: 'running', message: null });
     try {
-      const res = await fetch(apiUrl('/api/admin/wizard-b/run'), {
+      const res = await fetch(apiUrl('/api/data/trigger-wizard-b'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
       if (res.status === 404) {
-        setStatusB({ state: 'error', message: 'Endpoint not yet available (coming soon)' });
+        setStatusB({ state: 'error', message: 'No data found — run Wizard A first' });
       } else if (res.ok) {
         const data = await res.json().catch(() => ({}));
         setStatusB({ state: 'success', message: data.message || 'Wizard B completed' });

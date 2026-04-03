@@ -10,9 +10,11 @@
  *   </EntitlementGuard>
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useEntitlement, tierLabel } from '../../hooks/useEntitlement';
 import { useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../../utils/api';
+import { useSession } from '../../contexts/SessionContext';
 
 interface Props {
   feature: string;
@@ -21,7 +23,32 @@ interface Props {
 
 const EntitlementGuard: React.FC<Props> = ({ feature, children }) => {
   const { allowed, requiredTier } = useEntitlement(feature);
+  const { session } = useSession();
   const navigate = useNavigate();
+  const logged = useRef(false);
+
+  useEffect(() => {
+    if (!allowed && !logged.current) {
+      logged.current = true;
+      // Fire-and-forget: log entitlement rejection for upsell signal
+      const baseUrl = getApiBaseUrl();
+      fetch(`${baseUrl}/api/activity-logs/track`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: 'entitlement_rejected',
+          target: feature,
+          details: {
+            required_tier: requiredTier,
+            customer_tier: session?.tier ?? null,
+          },
+        }),
+      }).catch(() => {
+        // Silently ignore — never break the UI for tracking
+      });
+    }
+  }, [allowed, feature, requiredTier, session?.tier]);
 
   if (allowed) {
     return <>{children}</>;

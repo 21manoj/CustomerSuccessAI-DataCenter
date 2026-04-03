@@ -609,11 +609,23 @@ export async function fetchPartnerAuditLog(
 // ---------------------------------------------------------------------------
 
 export async function fetchActivityLog(
-  params?: { customer_id?: number; page?: number; limit?: number },
+  params?: {
+    customer_id?: number;
+    action_type?: string;
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+    limit?: number;
+  },
 ): Promise<PaginatedActivity> {
   // Backend uses per_page instead of limit
   const backendParams: Record<string, string | number> = {};
   if (params?.customer_id) backendParams.customer_id = params.customer_id;
+  if (params?.action_type) backendParams.action_type = params.action_type;
+  if (params?.search) backendParams.search = params.search;
+  if (params?.date_from) backendParams.date_from = params.date_from;
+  if (params?.date_to) backendParams.date_to = params.date_to;
   if (params?.page) backendParams.page = params.page;
   if (params?.limit) backendParams.per_page = params.limit;
 
@@ -621,12 +633,15 @@ export async function fetchActivityLog(
     activity_logs: Array<{
       id: number;
       customer_id: number | null;
+      customer_name: string | null;
       user_id: number | null;
+      user_name: string | null;
       action_type: string;
       action_category: string | null;
       action_description: string | null;
       resource_type: string | null;
       resource_id: string | null;
+      details: Record<string, unknown> | null;
       status: string;
       ip_address: string | null;
       created_at: string | null;
@@ -639,8 +654,8 @@ export async function fetchActivityLog(
       id: log.id,
       timestamp: log.created_at ?? '',
       customer_id: log.customer_id,
-      customer_name: null, // resolved on frontend if needed
-      user_name: null,
+      customer_name: log.customer_name ?? null,
+      user_name: log.user_name ?? null,
       action: log.action_type ?? '',
       description: log.action_description ?? '',
       status: log.status ?? 'success',

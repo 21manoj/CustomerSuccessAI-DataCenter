@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '../contexts/SessionContext';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 
 interface RegistrationFormProps {
@@ -7,6 +9,8 @@ interface RegistrationFormProps {
 }
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel }) => {
+  const navigate = useNavigate();
+  const { login } = useSession();
   const [formData, setFormData] = useState({
     company_name: '',
     admin_name: '',
@@ -70,11 +74,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel
 
       const data = await response.json();
       setSuccess(true);
-      
-      // Call success callback and then redirect to login
-      setTimeout(() => {
-        onSuccess();
-      }, 2000);
+
+      // Backend auto-logged us in — establish session in React context
+      if (data.auto_logged_in) {
+        login({
+          customer_id: data.customer_id,
+          user_id: String(data.user_id),
+          email: data.email,
+          user_name: formData.admin_name,
+          vertical: data.vertical || 'dc2_s',
+          onboarding_state: 'fresh',
+        });
+        // Go straight to onboarding — no login detour
+        setTimeout(() => navigate('/onboarding'), 1200);
+      } else {
+        // Fallback: backend session failed, send to login
+        setTimeout(() => onSuccess(), 1200);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -93,7 +109,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel
           </div>
           <h3 className="mt-4 text-lg font-medium text-gray-900">Registration Successful!</h3>
           <p className="mt-2 text-sm text-gray-500">
-            Your account has been created. Redirecting to login...
+            Your account has been created. Taking you to setup...
           </p>
         </div>
       </div>

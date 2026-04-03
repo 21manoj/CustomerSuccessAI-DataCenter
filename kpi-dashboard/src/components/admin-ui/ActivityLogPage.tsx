@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Filter,
+  X,
 } from 'lucide-react';
 import {
   fetchActivityLog,
@@ -14,6 +15,34 @@ import {
   type ActivityEntry,
   type Customer,
 } from '../../api/adminApi';
+
+// ---------------------------------------------------------------------------
+// Action type badge — color-coded
+// ---------------------------------------------------------------------------
+
+const ACTION_COLORS: Record<string, string> = {
+  login: 'bg-blue-100 text-blue-700',
+  logout: 'bg-gray-100 text-gray-600',
+  entitlement_rejected: 'bg-amber-100 text-amber-700',
+  page_view: 'bg-indigo-100 text-indigo-700',
+  click: 'bg-indigo-100 text-indigo-600',
+  dashboard_switch: 'bg-purple-100 text-purple-700',
+  export: 'bg-teal-100 text-teal-700',
+  data_upload: 'bg-green-100 text-green-700',
+  wizard_run: 'bg-violet-100 text-violet-700',
+  config_change: 'bg-orange-100 text-orange-700',
+  security: 'bg-red-100 text-red-700',
+  playbook_action: 'bg-pink-100 text-pink-700',
+};
+
+const ActionBadge: React.FC<{ action: string }> = ({ action }) => {
+  const classes = ACTION_COLORS[action] ?? 'bg-gray-100 text-gray-600';
+  return (
+    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${classes}`}>
+      {action.replace(/_/g, ' ')}
+    </span>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -39,6 +68,23 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Common action types for the filter dropdown
+// ---------------------------------------------------------------------------
+
+const ACTION_TYPE_OPTIONS = [
+  { value: '', label: 'All Actions' },
+  { value: 'entitlement_rejected', label: 'Entitlement Rejected' },
+  { value: 'login', label: 'Login' },
+  { value: 'logout', label: 'Logout' },
+  { value: 'page_view', label: 'Page View' },
+  { value: 'data_upload', label: 'Data Upload' },
+  { value: 'wizard_run', label: 'Wizard Run' },
+  { value: 'config_change', label: 'Config Change' },
+  { value: 'export', label: 'Export' },
+  { value: 'playbook_action', label: 'Playbook Action' },
+];
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -52,9 +98,13 @@ const ActivityLogPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [customerFilter, setCustomerFilter] = useState<number | undefined>(undefined);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [customerFilter, setCustomerFilter] = useState<number | undefined>(undefined);
+  const [actionTypeFilter, setActionTypeFilter] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   // Load customer list once for the filter dropdown
   useEffect(() => {
@@ -65,6 +115,23 @@ const ActivityLogPage: React.FC = () => {
       });
   }, []);
 
+  const activeFilterCount = [
+    customerFilter !== undefined,
+    actionTypeFilter !== '',
+    searchText !== '',
+    dateFrom !== '',
+    dateTo !== '',
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setCustomerFilter(undefined);
+    setActionTypeFilter('');
+    setSearchText('');
+    setDateFrom('');
+    setDateTo('');
+    setPage(1);
+  };
+
   // Fetch activity
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,6 +139,10 @@ const ActivityLogPage: React.FC = () => {
     try {
       const data = await fetchActivityLog({
         customer_id: customerFilter,
+        action_type: actionTypeFilter || undefined,
+        search: searchText || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
         page,
         limit: PAGE_SIZE,
       });
@@ -82,7 +153,7 @@ const ActivityLogPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [customerFilter, page]);
+  }, [customerFilter, actionTypeFilter, searchText, dateFrom, dateTo, page]);
 
   useEffect(() => {
     load();
@@ -97,19 +168,25 @@ const ActivityLogPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-gray-900">Activity Log</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            {total} total entries
+            {total} total entries{activeFilterCount > 0 ? ` (${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} active)` : ''}
           </p>
         </div>
         <div className="flex gap-2 self-start">
           <button
             onClick={() => setShowFilters((prev) => !prev)}
             className={`inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-lg transition-colors ${
-              showFilters
+              showFilters || activeFilterCount > 0
                 ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <Filter size={14} /> Filters
+            <Filter size={14} />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 text-xs bg-indigo-600 text-white rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
           <button
             onClick={load}
@@ -124,8 +201,23 @@ const ActivityLogPage: React.FC = () => {
       {showFilters && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex flex-wrap gap-4 items-end">
+            {/* Search */}
+            <div className="min-w-[220px] flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => { setSearchText(e.target.value); setPage(1); }}
+                  placeholder="Search descriptions..."
+                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+
             {/* Customer filter */}
-            <div className="min-w-[200px]">
+            <div className="min-w-[180px]">
               <label className="block text-xs font-medium text-gray-600 mb-1">Customer</label>
               <select
                 value={customerFilter ?? ''}
@@ -145,16 +237,51 @@ const ActivityLogPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Clear filters */}
-            <button
-              onClick={() => {
-                setCustomerFilter(undefined);
-                setPage(1);
-              }}
-              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
-            >
-              Clear Filters
-            </button>
+            {/* Action type filter */}
+            <div className="min-w-[180px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Action Type</label>
+              <select
+                value={actionTypeFilter}
+                onChange={(e) => { setActionTypeFilter(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                {ACTION_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date from */}
+            <div className="min-w-[150px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            {/* Date to */}
+            <div className="min-w-[150px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            {/* Clear */}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <X size={13} /> Clear All
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -197,18 +324,21 @@ const ActivityLogPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
+                  <tr
+                    key={entry.id}
+                    className={`hover:bg-gray-50 ${entry.action === 'entitlement_rejected' ? 'bg-amber-50/40' : ''}`}
+                  >
                     <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">
                       {new Date(entry.timestamp).toLocaleString()}
                     </td>
                     <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">
-                      {entry.customer_name ?? '--'}
+                      {entry.customer_name ?? (entry.customer_id ? `#${entry.customer_id}` : '--')}
                     </td>
                     <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
                       {entry.user_name ?? '--'}
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">
-                      {entry.action}
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <ActionBadge action={entry.action} />
                     </td>
                     <td className="px-4 py-2.5 text-gray-600 max-w-sm truncate" title={entry.description}>
                       {entry.description}

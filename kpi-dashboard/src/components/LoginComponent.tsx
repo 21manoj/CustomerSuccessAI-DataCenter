@@ -16,6 +16,7 @@ interface LoginProps {
     entitlements?: Record<string, boolean>;
     allowed_account_ids?: number[] | null;
     allowed_customer_ids?: number[] | null;
+    onboarding_state?: 'fresh' | 'data_uploaded' | 'active';
   }) => void;
 }
 
