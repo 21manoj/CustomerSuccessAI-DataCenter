@@ -213,6 +213,7 @@ def export_customer_data():
             ).fetchall()
             payload['context_nodes'] = [dict(r._mapping) for r in cn_rows]
         except Exception:
+            db.session.rollback()
             payload['context_nodes'] = []
 
         # ── Context Graph Edges ────────────────────────────────────────
@@ -230,6 +231,7 @@ def export_customer_data():
             ).fetchall()
             payload['context_edges'] = [dict(r._mapping) for r in ce_rows]
         except Exception:
+            db.session.rollback()
             payload['context_edges'] = []
 
         # ── Serialise datetimes ────────────────────────────────────────
@@ -552,7 +554,8 @@ def verify_customer_data():
                 {'cid': customer_id}
             )
         except Exception:
-            pass
+            # context_graph tables may not exist — rollback to keep session healthy
+            db.session.rollback()
 
         config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
         results['customer_config'] = {
