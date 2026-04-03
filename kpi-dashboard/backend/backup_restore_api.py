@@ -99,8 +99,13 @@ def export_customer_data():
       - health_scores (kpi_only_score, composite_score)
       - dc2s_kpis (KPI measurements)
       - context_nodes + context_edges
+
+    Body (JSON): { "customer_id": <int> }  — required for super-admins.
+    Falls back to the session customer_id for regular users.
     """
-    customer_id = get_current_customer_id()
+    body = request.get_json(silent=True) or {}
+    # Super-admins pass customer_id in the body; regular users use their session
+    customer_id = body.get('customer_id') or get_current_customer_id()
     if not customer_id:
         return jsonify({'error': 'Authentication required'}), 401
     customer_id = int(customer_id)
@@ -500,9 +505,9 @@ def import_customer_data():
 def verify_customer_data():
     """Integrity check: row counts per table for the current customer.
 
-    Returns counts so the caller can confirm a restore is complete.
+    Query param: customer_id (required for super-admins, else session value used).
     """
-    customer_id = get_current_customer_id()
+    customer_id = request.args.get('customer_id', type=int) or get_current_customer_id()
     if not customer_id:
         return jsonify({'error': 'Authentication required'}), 401
     customer_id = int(customer_id)
@@ -585,8 +590,11 @@ def verify_customer_data():
 
 @backup_restore_api.route('/history', methods=['GET'])
 def backup_history():
-    """List past export/import events for the current customer."""
-    customer_id = get_current_customer_id()
+    """List past export/import events for a customer.
+
+    Query param: customer_id (required for super-admins, else session value used).
+    """
+    customer_id = request.args.get('customer_id', type=int) or get_current_customer_id()
     if not customer_id:
         return jsonify({'error': 'Authentication required'}), 401
     customer_id = int(customer_id)
@@ -601,18 +609,17 @@ def backup_history():
             .limit(limit)
             .all()
         )
-        return jsonify({
-            'history': [
-                {
-                    'id': l.id,
-                    'action_type': l.action_type,
-                    'description': l.action_description,
-                    'status': l.status,
-                    'details': l.details or {},
-                    'created_at': l.created_at.isoformat() if l.created_at else None,
-                }
-                for l in logs
-            ]
-        })
+        events = [
+            {
+                'id': l.id,
+                'action_type': l.action_type,
+                'description': l.action_description,
+                'status': l.status,
+                'details': l.details or {},
+                'created_at': l.created_at.isoformat() if l.created_at else None,
+            }
+            for l in logs
+        ]
+        return jsonify({'events': events, 'total': len(events)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

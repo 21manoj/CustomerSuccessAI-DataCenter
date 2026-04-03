@@ -970,7 +970,12 @@ def get_stuck_users():
 
     try:
         # Customers without any health scores (not yet 'active')
-        active_customer_ids = db.session.query(HealthScore.customer_id).distinct()
+        # HealthScore links via account_id → Account.customer_id
+        active_customer_ids = (
+            db.session.query(Account.customer_id)
+            .join(HealthScore, HealthScore.account_id == Account.account_id)
+            .distinct()
+        )
         inactive_customers = (
             Customer.query
             .filter(Customer.customer_id.notin_(active_customer_ids))
