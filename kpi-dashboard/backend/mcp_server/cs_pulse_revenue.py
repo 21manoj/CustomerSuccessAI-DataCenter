@@ -235,6 +235,212 @@ def get_playbook_recommendations(
 
 
 # ===================================================================
+# Tool: execute_playbook
+# ===================================================================
+
+@mcp.tool
+def execute_playbook(
+    customer_id: int,
+    account_id: int,
+    playbook_id: str,
+    triggered_by: str = 'csm_manual',
+) -> dict:
+    """Start a playbook execution for an account.
+
+    Creates a PlaybookExecutionV2 record capturing the account's health,
+    ARR, and arc type at trigger time. Returns the execution_id for tracking.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: The account to run the playbook on
+        playbook_id: Playbook ID (e.g. 'PB-01', 'PB-02')
+        triggered_by: Who triggered it — 'csm_manual', 'health_drop', 'signal_analyst', 'mcp_agent'
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import Account, HealthScore, PlaybookExecutionV2
+        from extensions import db
+        import uuid
+        from datetime import datetime
+
+        account = Account.query.filter_by(
+            account_id=account_id, customer_id=customer_id
+        ).first()
+        if not account:
+            raise ToolError(f"Account {account_id} not found for customer {customer_id}")
+
+        # Get current health
+        latest_hs = (
+            HealthScore.query
+            .filter_by(account_id=account_id)
+            .order_by(HealthScore.measurement_month.desc())
+            .first()
+        )
+        health_now = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
+        health_status = 'critical' if health_now and health_now < 50 else (
+            'at_risk' if health_now and health_now < 70 else 'healthy'
+        ) if health_now else None
+
+        arr = float(account.revenue or 0)
+
+        # Playbook name lookup
+        pb_names = {
+            'PB-01': 'Deployment Acceleration', 'PB-02': 'RMA Prevention',
+            'PB-03': 'GPU Optimization', 'PB-04': 'Capacity Planning',
+            'PB-05': 'Health Monitoring', 'PB-06': 'Customer Engagement',
+            'PB-07': 'Seasonal Planning', 'PB-08': 'Expansion Accelerator',
+        }
+
+        # Playbook hours from PLAYBOOK_CONFIG (if available)
+        csm_hours = 0
+        try:
+            from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
+            cfg = PLAYBOOK_CONFIG.get(playbook_id, {})
+            csm_hours = sum(sc.get('estimated_hours', 0) for sc in cfg.get('sub_components', []))
+        except Exception:
+            csm_hours = 40  # default
+
+        execution_id = f"exec-{playbook_id}-{account_id}-{uuid.uuid4().hex[:8]}"
+
+        execution = PlaybookExecutionV2(
+            execution_id=execution_id,
+            customer_id=customer_id,
+            account_id=account_id,
+            playbook_id=playbook_id,
+            playbook_name=pb_names.get(playbook_id, playbook_id),
+            triggered_by=triggered_by,
+            arc_type=account.arc_type,
+            status='in_progress',
+            phase='stabilize',
+            csm_hours_planned=csm_hours,
+            csm_hourly_rate=85.0,
+            total_cost=csm_hours * 85.0,
+            health_at_trigger=health_now,
+            health_status_at_trigger=health_status,
+            arr_at_trigger=arr,
+            actions_planned=len(cfg.get('sub_components', [])) if 'cfg' in dir() else 4,
+        )
+        db.session.add(execution)
+        db.session.commit()
+
+        return {
+            'scope': 'execution',
+            'execution_id': execution_id,
+            'customer_id': customer_id,
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'playbook_id': playbook_id,
+            'playbook_name': pb_names.get(playbook_id, playbook_id),
+            'status': 'in_progress',
+            'triggered_by': triggered_by,
+            'health_at_trigger': health_now,
+            'arr_at_trigger': arr,
+            'csm_hours_planned': csm_hours,
+            'estimated_cost': round(csm_hours * 85.0, 2),
+        }
+
+
+# ===================================================================
+# Tool: close_playbook
+# ===================================================================
+
+@mcp.tool
+def close_playbook(
+    customer_id: int,
+    execution_id: str,
+    outcome: str,
+    outcome_notes: str = '',
+    health_at_close: float = None,
+    revenue_protected: float = 0,
+    revenue_expanded: float = 0,
+    csm_hours_actual: float = None,
+) -> dict:
+    """Close a playbook execution with outcome data.
+
+    Records the outcome, computes realized ROI vs projected, and updates
+    the PlaybookExecutionV2 record.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        execution_id: The execution_id from execute_playbook
+        outcome: Result — 'resolved', 'escalated', 'timeout', 'manual_close'
+        outcome_notes: Free-text notes on what happened
+        health_at_close: Account health score at close time
+        revenue_protected: ARR protected by this intervention
+        revenue_expanded: ARR expanded (upsell/cross-sell)
+        csm_hours_actual: Actual CSM hours spent (if different from planned)
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import PlaybookExecutionV2
+        from extensions import db
+        from datetime import datetime
+
+        execution = PlaybookExecutionV2.query.filter_by(
+            execution_id=execution_id, customer_id=customer_id
+        ).first()
+        if not execution:
+            raise ToolError(f"Execution {execution_id} not found for customer {customer_id}")
+
+        if execution.status == 'completed':
+            raise ToolError(f"Execution {execution_id} is already closed")
+
+        # Update outcome fields
+        execution.status = 'completed'
+        execution.outcome = outcome
+        execution.outcome_notes = outcome_notes
+        execution.closed_at = datetime.utcnow()
+
+        if health_at_close is not None:
+            execution.health_at_close = health_at_close
+            execution.health_status_at_close = (
+                'critical' if health_at_close < 50 else
+                'at_risk' if health_at_close < 70 else 'healthy'
+            )
+            if execution.health_at_trigger:
+                execution.health_delta = health_at_close - execution.health_at_trigger
+
+        execution.revenue_protected = revenue_protected
+        execution.revenue_expanded = revenue_expanded
+
+        if csm_hours_actual is not None:
+            execution.csm_hours_actual = csm_hours_actual
+        else:
+            execution.csm_hours_actual = execution.csm_hours_planned
+
+        actual_cost = execution.csm_hours_actual * execution.csm_hourly_rate
+        execution.total_cost = actual_cost
+        total_value = revenue_protected + revenue_expanded
+        execution.realized_roi_pct = round((total_value / actual_cost - 1) * 100, 1) if actual_cost > 0 else 0
+
+        if execution.arr_at_trigger and execution.arr_at_trigger > 0:
+            execution.nrr_impact_pct = round(
+                (revenue_protected + revenue_expanded - (execution.revenue_lost or 0))
+                / execution.arr_at_trigger * 100, 2
+            )
+
+        db.session.commit()
+
+        return {
+            'scope': 'execution_closed',
+            'execution_id': execution_id,
+            'playbook_id': execution.playbook_id,
+            'account_id': execution.account_id,
+            'outcome': outcome,
+            'health_delta': execution.health_delta,
+            'revenue_protected': revenue_protected,
+            'revenue_expanded': revenue_expanded,
+            'total_cost': round(actual_cost, 2),
+            'realized_roi_pct': execution.realized_roi_pct,
+            'nrr_impact_pct': execution.nrr_impact_pct,
+        }
+
+
+# ===================================================================
 # Tool: get_portfolio_roi_summary
 # ===================================================================
 
