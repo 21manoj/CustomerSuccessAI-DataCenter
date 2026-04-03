@@ -545,27 +545,36 @@ def get_wizard_c_accuracy():
 def trigger_wizard_c_recalibration():
     """
     POST /api/admin/wizard-c/recalibrate
-    Triggers weight recalibration (Wizard C)
+    Triggers real DB-native Wizard C weight calibration.
     """
+    import time as _time
     try:
         customer_id = get_current_customer_id()
         if customer_id:
             customer_id = int(customer_id)
-        
-        # In production, this would trigger a Celery task
-        # For now, return a mock response
-        
+
         current_app.logger.info(f"Wizard C recalibration triggered for customer {customer_id}")
-        
+
+        from wizards.wizard_c_weight_calibrator_db import run_wizard_c
+        t0 = _time.time()
+        result = run_wizard_c(customer_id)
+        duration = round(_time.time() - t0, 2)
+
+        current_app.logger.info(
+            f"✅ Wizard C completed in {duration}s — status={result.get('status')}"
+        )
+
         return jsonify({
-            "status": "queued",
-            "task_id": f"wizc_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "message": "Weight recalibration has been queued. This may take a few minutes.",
-            "estimated_time": "2-5 minutes"
+            "status": result.get("status", "success"),
+            "message": result.get("message", "Weight calibration completed"),
+            "kpis_calibrated": result.get("kpis_calibrated", 0),
+            "pillars_calibrated": result.get("pillars_calibrated", 0),
+            "accounts_analyzed": result.get("accounts_analyzed", 0),
+            "duration_seconds": duration,
         })
-        
+
     except Exception as e:
-        current_app.logger.error(f"Error triggering recalibration: {str(e)}")
+        current_app.logger.error(f"Error triggering Wizard C: {str(e)}", exc_info=True)
         return jsonify({"error": "An internal error occurred. Please try again or contact support."}), 500
 
 

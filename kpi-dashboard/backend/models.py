@@ -1182,15 +1182,23 @@ class HealthScore(db.Model):
     measurement_month = db.Column(db.Date, nullable=False, index=True)
     
     # Health Information
-    health_score = db.Column(db.Numeric(5, 2))      # 0-100 weighted average
+    health_score = db.Column(db.Numeric(5, 2))      # 0-100 weighted average (kpi_only today; composite when Signal-DNA ships)
     health_status = db.Column(db.String(20))        # excellent, good, warning, critical
     trend = db.Column(db.String(20))                # improving, declining, stable
     change_from_last_month = db.Column(db.Numeric(5, 2))
-    
+
+    # Score decomposition — separation principle (see spec_recency_signal_dna_scoring.md §1a)
+    # kpi_only_score: pure KPI-weighted score, NEVER contains signal or composite contribution.
+    # This is the ONLY score that feeds NRR forecasting and churn probability models.
+    # health_score = kpi_only_score today; they diverge when unified scoring (Signal-DNA) ships.
+    kpi_only_score = db.Column(db.Numeric(5, 2))    # kpi_only — safe for NRR/churn math
+    # composite_score populated only when FEATURE_UNIFIED_SCORING is enabled (future)
+    composite_score = db.Column(db.Numeric(5, 2))   # signal-blended composite (future Signal-DNA)
+
     # Contributing Pillars (for transparency)
     contributing_pillars = db.Column(db.JSON)  # {"P1": 80, "P2": 92, "P3": 85, "P4": 90, "P5": 88}
     pillar_weights = db.Column(db.JSON)        # {"P1": 0.15, "P2": 0.20, "P3": 0.25, "P4": 0.15, "P5": 0.25}
-    
+
     # Metadata
     calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -1205,6 +1213,12 @@ class HealthScore(db.Model):
             'health_score_id': self.health_score_id,
             'account_id': self.account_id,
             'health_score': float(self.health_score) if self.health_score else None,
+            # kpi_only_score: equals health_score today; diverges when Signal-DNA unified scoring ships.
+            # NRR engine and churn models MUST read kpi_only_score, never health_score or composite_score.
+            'kpi_only_score': float(self.kpi_only_score) if self.kpi_only_score else (
+                float(self.health_score) if self.health_score else None
+            ),
+            'composite_score': float(self.composite_score) if self.composite_score else None,
             'health_status': self.health_status,
             'trend': self.trend,
             'change_from_last_month': float(self.change_from_last_month) if self.change_from_last_month else None,

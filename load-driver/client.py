@@ -424,9 +424,17 @@ class CSPulseClient:
         vertical: str = "dc2_s",
         skip_wizard_b: bool = True,
         skip_wizard_c: bool = False,
-        strict_kpi_ranges: bool = False
+        strict_kpi_ranges: bool = False,
+        poll_timeout: int = 300,
+        poll_interval: int = 3,
     ) -> Optional[Dict[str, Any]]:
-        """Process uploaded data (load CSVs, embeddings, journey, weights)"""
+        """Process uploaded data (load CSVs, embeddings, journey, weights).
+
+        Handles both sync (immediate success) and async (poll_url) server modes.
+        When the server returns a poll_url, polls the status endpoint until the
+        job reaches a terminal state (success / warning / failure / error) or
+        poll_timeout seconds elapse.
+        """
         response = self.post(
             '/api/onboarding/process-data',
             {
@@ -438,6 +446,48 @@ class CSPulseClient:
             },
             skip_auth_check=True
         )
+
+        # ── Async mode: server accepted the job and returned a poll_url ──
+        poll_url = response.get('poll_url') if response else None
+        if poll_url:
+            logger.info(f'  process-data running async — polling {poll_url}')
+            deadline = time.time() + poll_timeout
+            interval = poll_interval
+            while time.time() < deadline:
+                time.sleep(interval)
+                interval = min(interval * 1.5, 15)   # back off up to 15 s
+                status_resp = self.get(poll_url, skip_auth_check=True)
+                if not status_resp:
+                    continue
+                terminal = status_resp.get('status') in (
+                    'success', 'warning', 'failure', 'error', 'completed'
+                )
+                # Also treat a response with steps_completed as done
+                if not terminal and status_resp.get('steps_completed'):
+                    terminal = True
+                    status_resp['status'] = 'success'
+                if terminal:
+                    logger.info(
+                        f'  process-data finished: status={status_resp.get("status")}'
+                    )
+                    return status_resp
+                logger.debug(
+                    f'  process-data still running: {status_resp.get("status", "?")} '
+                    f'— {status_resp.get("message", "")[:80]}'
+                )
+            # Timed out — return best-effort last response with a warning status
+            logger.warning(
+                f'  process-data poll timed out after {poll_timeout}s — '
+                'returning last response as warning'
+            )
+            if response:
+                response['status'] = 'warning'
+                response['message'] = (
+                    response.get('message', '')
+                    + f' [poll timed out after {poll_timeout}s]'
+                )
+            return response
+
         return response
 
     def calculate_scores(

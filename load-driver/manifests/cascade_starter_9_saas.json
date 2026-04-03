@@ -1,0 +1,378 @@
+{
+  "_description": "Cascade Starter 9 — Second cohort for Starter tier validation. Fresh accounts in cybersecurity, legal tech, and logistics verticals. Same KPI set as starter_9_saas.json but entirely new narratives.",
+  "_tier": "starter",
+  "_model_grade": "B+",
+  "_cohort": "cascade",
+
+  "customer": {
+    "name": "Cascade Starter SaaS",
+    "vertical": "saas_premium",
+    "admin_email": "admin@cascadestarter.io",
+    "admin_name": "Riley Okonkwo",
+    "domain": "cascadestarter.io"
+  },
+
+  "kpis": {
+    "selection": "custom",
+    "count": 9,
+    "codes": [
+      "P1-KPI1", "P1-KPI3",
+      "P2-KPI1",
+      "P3-KPI1", "P3-KPI3", "P3-KPI4",
+      "P5-KPI1", "P5-KPI2", "P5-KPI3"
+    ],
+    "pillars": ["P1", "P2", "P3", "P5"],
+    "_kpi_map": {
+      "P1-KPI1": "DAU Rate — baseline for Signal Analyst, product adoption ROI",
+      "P1-KPI3": "TTFV — stalled_deployment arc detection, primary Power-of-1 metric",
+      "P2-KPI1": "Exec Sponsor Engagement — STAKEHOLDER nodes, exec_sponsor_change arcs",
+      "P3-KPI1": "Ticket Resolution Time — support efficiency, Cost Savings in ROI",
+      "P3-KPI3": "NPS — sentiment_decline arc, Wizard C calibration signal",
+      "P3-KPI4": "Escalation Rate — crisis_recovery arcs, high-fidelity SIGNAL",
+      "P5-KPI1": "NRR — L4 health rollup, EV/Revenue multiple impact",
+      "P5-KPI2": "GRR — Wizard C calibration, Churn Prevented dollar impact",
+      "P5-KPI3": "Expansion Revenue Rate — land_and_expand arcs"
+    }
+  },
+
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  },
+
+  "accounts": [
+    {
+      "name": "Ironclad Legal Ops",
+      "arr": 4100000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-01",
+      "narrative": "Legal tech Series B. Contract workflow automation onboarded Oct 2025, hit TTFV in 11 days. DAU at 74%, NPS 54. Legal Ops Director championing expansion to paralegal and billing teams — two new BUs in pipeline.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Legal Technology",
+      "region": "US-East",
+      "stakeholders": [
+        {
+          "name": "Amara Diallo",
+          "role": "champion",
+          "title": "Director of Legal Operations",
+          "department": "Legal",
+          "engagement_frequency": 11,
+          "status": "active"
+        },
+        {
+          "name": "Jonathan Price",
+          "role": "executive_sponsor",
+          "title": "General Counsel",
+          "department": "Legal",
+          "engagement_frequency": 5,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "feature_adoption_increase",
+          "date": "2025-11-10",
+          "content": "DAU hit 74% — contract review team fully onboarded in first 6 weeks"
+        },
+        {
+          "type": "expansion_discussion",
+          "date": "2026-01-22",
+          "content": "Director requesting platform access for paralegal team and billing — est. 40 new seats"
+        }
+      ]
+    },
+    {
+      "name": "FreightPath Logistics",
+      "arr": 5600000,
+      "target_health": 77,
+      "classification": "healthy",
+      "story_arc": "proactive_growth",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-01",
+      "narrative": "Supply chain SaaS. Stable warehouse ops usage, strong exec engagement. NRR at 108%, GRR 91%. Exec sponsor (COO) proactively engaged — exploring integration with their TMS for Q3 expansion.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Logistics & Supply Chain",
+      "region": "US-Midwest",
+      "stakeholders": [
+        {
+          "name": "Sandra Okeke",
+          "role": "champion",
+          "title": "VP of Operations Technology",
+          "department": "Operations",
+          "engagement_frequency": 8,
+          "status": "active"
+        },
+        {
+          "name": "Carlos Reyes",
+          "role": "executive_sponsor",
+          "title": "COO",
+          "department": "Executive",
+          "engagement_frequency": 4,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "positive_engagement",
+          "date": "2026-02-08",
+          "content": "COO requested cross-functional demo for TMS integration — expansion intent confirmed"
+        }
+      ]
+    },
+    {
+      "name": "Sentinel Cyber Defense",
+      "arr": 3200000,
+      "target_health": 73,
+      "classification": "healthy",
+      "story_arc": "steady_state",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-15",
+      "narrative": "Cybersecurity SaaS. Deployed for SOC team, TTFV was 14 days. DAU stable at 62%. NPS 41 (acceptable). Ticket escalation rate edging up post-Q1 product update — monitoring but manageable.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Cybersecurity",
+      "region": "US-West",
+      "stakeholders": [
+        {
+          "name": "Nadia Petrov",
+          "role": "champion",
+          "title": "Head of Security Operations",
+          "department": "Security",
+          "engagement_frequency": 7,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "escalation_increase",
+          "date": "2026-02-20",
+          "content": "Escalation rate rose from 2% to 4.5% after Q1 product update — root cause under investigation"
+        }
+      ]
+    },
+    {
+      "name": "ProcureMax Manufacturing",
+      "arr": 4900000,
+      "target_health": 57,
+      "classification": "at_risk",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "Manufacturing ERP-adjacent SaaS. Procurement lead (champion) restructured out in Dec. Replacement is skeptical — still using legacy system. DAU dropped from 68% to 38%. Exec sponsor unresponsive since Jan.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Manufacturing",
+      "region": "US-Central",
+      "stakeholders": [
+        {
+          "name": "Harold Weston",
+          "role": "champion",
+          "title": "Director of Procurement",
+          "department": "Procurement",
+          "engagement_frequency": 9,
+          "status": "departed"
+        },
+        {
+          "name": "Mia Nakamura",
+          "role": "successor",
+          "title": "Procurement Manager",
+          "department": "Procurement",
+          "engagement_frequency": 2,
+          "status": "new_contact"
+        },
+        {
+          "name": "Brent Cassidy",
+          "role": "executive_sponsor",
+          "title": "SVP of Operations",
+          "department": "Operations",
+          "engagement_frequency": 1,
+          "status": "passive"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2025-12-18",
+          "content": "Director of Procurement Harold Weston left in org restructure — primary platform driver"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-01-10",
+          "content": "DAU dropped from 68% to 38% — new procurement manager defaulting to legacy ERP"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-02-18",
+          "content": "New manager piloting Coupa for procurement workflows"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-03",
+        "actions": [
+          {
+            "date": "2026-02-25",
+            "action": "Stakeholder re-mapping — identified Mia Nakamura as bridge contact",
+            "outcome": "Demo scheduled for new procurement team on Q2 workflow automation"
+          },
+          {
+            "date": "2026-03-10",
+            "action": "Executive outreach to SVP Operations",
+            "outcome": "SVP agreed to 45-day evaluation before switching decision"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vertex Professional Services",
+      "arr": 5500000,
+      "target_health": 51,
+      "classification": "at_risk",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-01",
+      "narrative": "B2B professional services firm. Data migration to cloud caused ticket volume explosion — resolution time at 56hrs. Escalation rate 11%. NPS dropped from 43 to 17. GRR declining. Exec sponsor demanding SLA review.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Professional Services",
+      "region": "US-Southeast",
+      "stakeholders": [
+        {
+          "name": "Dr. Fiona Gallagher",
+          "role": "executive_sponsor",
+          "title": "Chief Operating Officer",
+          "department": "Operations",
+          "engagement_frequency": 3,
+          "status": "frustrated"
+        },
+        {
+          "name": "Marcus Delgado",
+          "role": "champion",
+          "title": "Director of IT",
+          "department": "IT",
+          "engagement_frequency": 8,
+          "status": "active"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "support_escalation",
+          "date": "2025-12-05",
+          "content": "Cloud migration caused 3x increase in ticket volume — resolution time spiked to 56hrs"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2026-01-18",
+          "content": "COO escalated to our CEO — formal SLA breach notification sent"
+        },
+        {
+          "type": "nps_decline",
+          "date": "2026-02-03",
+          "content": "NPS fell from 43 to 17 — majority of survey responses cite platform instability"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-02-12",
+            "action": "Dedicated support squad — 6hr SLA override implemented",
+            "outcome": "Resolution time improving to 34hrs — downward trend confirmed"
+          },
+          {
+            "date": "2026-03-02",
+            "action": "Engineering lead joined weekly COO review",
+            "outcome": "Migration root cause found — rollback plan approved by both parties"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CivicCore Government Tech",
+      "arr": 8100000,
+      "target_health": 33,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-01",
+      "narrative": "GovTech SaaS. Budget cuts forced team reduction — exec sponsor laid off, platform usage collapsed. DAU at 18%, NPS 6, escalation rate 19%. GRR at 66%. New agency CTO hostile to vendor spend. Renewal in 60 days — emergency C-suite intervention underway.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 1,
+      "industry": "Government Technology",
+      "region": "US-DC",
+      "stakeholders": [
+        {
+          "name": "Deputy Director Hayes",
+          "role": "executive_sponsor",
+          "title": "Deputy Director, Digital Services",
+          "department": "Digital Services",
+          "engagement_frequency": 7,
+          "status": "departed"
+        },
+        {
+          "name": "Tamara Ellis",
+          "role": "technical_lead",
+          "title": "Platform Administrator",
+          "department": "IT",
+          "engagement_frequency": 5,
+          "status": "active"
+        },
+        {
+          "name": "Commissioner Bradford",
+          "role": "decision_maker",
+          "title": "Agency CTO",
+          "department": "Technology",
+          "engagement_frequency": 1,
+          "status": "disengaged"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_departure",
+          "date": "2025-11-05",
+          "content": "Deputy Director Hayes laid off in budget reduction — was primary exec sponsor"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2025-11-22",
+          "content": "DAU collapsed from 61% to 18% — team reduction left only 2 active users"
+        },
+        {
+          "type": "executive_escalation",
+          "date": "2025-12-20",
+          "content": "New CTO flagged all SaaS contracts for non-renewal review — cost consolidation mandate"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-01-14",
+          "content": "CTO's team evaluating open-source alternative with state IT consortium"
+        }
+      ],
+      "intervention": {
+        "playbook": "PB-01",
+        "actions": [
+          {
+            "date": "2026-01-25",
+            "action": "CEO-to-Commissioner call — presented compliance ROI and audit trail value",
+            "outcome": "Commissioner agreed to 90-day review before cancellation"
+          },
+          {
+            "date": "2026-02-05",
+            "action": "Dedicated CSM assigned + re-onboarding of remaining team",
+            "outcome": "DAU recovering to 32% — 5 new users activated from adjacent department"
+          },
+          {
+            "date": "2026-02-20",
+            "action": "Audit savings report showing $3.4M in compliance cost avoided",
+            "outcome": "CTO opened bilateral renewal discussion — budget exception request filed"
+          }
+        ]
+      }
+    }
+  ]
+}
