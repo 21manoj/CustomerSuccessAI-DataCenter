@@ -152,7 +152,7 @@ def export_customer_data():
         payload['feature_toggles'] = [
             {
                 'feature_name': t.feature_name,
-                'is_enabled': t.is_enabled,
+                'is_enabled': t.enabled,
                 'updated_at': t.updated_at.isoformat() if hasattr(t, 'updated_at') and t.updated_at else None,
             }
             for t in toggles
@@ -344,7 +344,7 @@ def import_customer_data():
             db.session.add(FeatureToggle(
                 customer_id=customer_id,
                 feature_name=t['feature_name'],
-                is_enabled=t.get('is_enabled', False),
+                enabled=t.get('is_enabled', False),
             ))
         db.session.flush()
         counts['feature_toggles'] = len(toggles_data)
