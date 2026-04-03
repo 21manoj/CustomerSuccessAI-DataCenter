@@ -696,18 +696,26 @@ class PatternAnalyzer:
         except Exception:
             pass
 
-        # Playbook cost lookup (lazy, cached)
+        # Playbook cost lookup — full intervention cost with ARR-scaled floors
         _cost_cache = {}
         def _get_playbook_cost(playbook_id: str, acct_arr: float) -> float:
-            if playbook_id not in _cost_cache:
+            cache_key = f'{playbook_id}:{int(acct_arr)}'
+            if cache_key not in _cost_cache:
+                base_cost = 40 * 85 * 1.20  # fallback
                 try:
                     from playbook_cost_bridge import calculate_cost_bridge
                     bridge = calculate_cost_bridge(account_arr=acct_arr)
-                    for pid, econ in bridge.playbooks.items():
-                        _cost_cache[pid] = econ.manual_cost
+                    econ = bridge.playbooks.get(playbook_id)
+                    if econ:
+                        base_cost = econ.manual_cost * 1.20
                 except Exception:
                     pass
-            return _cost_cache.get(playbook_id, 0)
+                # ARR-scaled floors (industry benchmarks)
+                crisis_pbs = {'PB-01', 'PB-02', 'PB-04'}
+                arr_floor = acct_arr * (0.006 if playbook_id in crisis_pbs else 0.004)
+                abs_floor = 45000 if acct_arr >= 8e6 else (30000 if acct_arr >= 5e6 else (18000 if acct_arr >= 3e6 else 10000))
+                _cost_cache[cache_key] = max(base_cost, arr_floor, abs_floor)
+            return _cost_cache.get(cache_key, 0)
 
         # Build per-account forecast
         account_forecasts = []
@@ -855,6 +863,86 @@ class PatternAnalyzer:
         # Sort top interventions by projected save (descending)
         top_interventions.sort(key=lambda x: x['projected_save'], reverse=True)
 
+        # ── Revenue waterfall (exposure → expected loss → residual → attributed)
+        ATTRIBUTION_FACTOR = 0.50  # 50% of churn reduction attributed to intervention
+
+        def _churn_prob(h):
+            """Annual churn probability from health score."""
+            if h is None: return 0.20
+            if h < 30: return 0.45
+            if h < 50: return 0.45 - (h - 30) / 20 * 0.10
+            if h < 70: return 0.25 - (h - 50) / 20 * 0.10
+            if h < 85: return 0.08 - (h - 70) / 15 * 0.03
+            return 0.03
+
+        waterfall_accounts = []
+        total_exposure = 0
+        total_expected_loss_before = 0
+        total_expected_loss_after = 0
+        total_gross_saved = 0
+        total_attributed = 0
+        total_intervention_cost = 0
+
+        for acct in account_forecasts:
+            health_now = acct['health_end']
+            if health_now >= 70:
+                continue  # healthy accounts not at risk
+
+            arr = acct['arr']
+            churn_before = _churn_prob(health_now)
+            # Project health at T+90 to estimate post-intervention churn
+            proj_h = acct['health_trajectory'][-1]['projected_health'] if acct.get('health_trajectory') else health_now
+            churn_after = _churn_prob(proj_h)
+
+            expected_loss_before = churn_before * arr
+            expected_loss_after = churn_after * arr
+            gross_saved = max(0, expected_loss_before - expected_loss_after)
+            attributed = gross_saved * ATTRIBUTION_FACTOR
+
+            # Playbook cost — use Account.arc_type (Wizard A, stable) not journey pattern
+            aid = acct['account_id']
+            acct_arc = arc_map.get(aid) or acct['pattern']
+            pbs = arc_playbook_map.get(acct_arc, [])
+            pb = pbs[0] if pbs else None
+            pb_cost = _get_playbook_cost(pb, arr) if pb else 0
+
+            total_exposure += arr
+            total_expected_loss_before += expected_loss_before
+            total_expected_loss_after += expected_loss_after
+            total_gross_saved += gross_saved
+            total_attributed += attributed
+            total_intervention_cost += pb_cost
+
+            waterfall_accounts.append({
+                'account_id': acct['account_id'],
+                'account_name': acct['account_name'],
+                'arr': arr,
+                'health_now': round(health_now, 1),
+                'projected_health_t90': round(proj_h, 1),
+                'churn_prob_now_pct': round(churn_before * 100, 1),
+                'churn_prob_projected_pct': round(churn_after * 100, 1),
+                'expected_loss': round(expected_loss_before, 0),
+                'residual_risk': round(expected_loss_after, 0),
+                'gross_saved': round(gross_saved, 0),
+                'attributed_save': round(attributed, 0),
+                'playbook': pb,
+                'playbook_cost': round(pb_cost, 0),
+            })
+
+        waterfall_accounts.sort(key=lambda x: x['expected_loss'], reverse=True)
+
+        revenue_waterfall = {
+            'attribution_factor': ATTRIBUTION_FACTOR,
+            'total_exposure': round(total_exposure, 0),
+            'total_expected_loss': round(total_expected_loss_before, 0),
+            'total_residual_risk': round(total_expected_loss_after, 0),
+            'total_gross_saved': round(total_gross_saved, 0),
+            'total_attributed_save': round(total_attributed, 0),
+            'total_intervention_cost': round(total_intervention_cost, 0),
+            'projected_roi_x': round(total_attributed / total_intervention_cost, 1) if total_intervention_cost > 0 else None,
+            'accounts': waterfall_accounts,
+        }
+
         # Renewals at risk
         renewals_at_risk = [
             {
@@ -893,6 +981,7 @@ class PatternAnalyzer:
             'at_risk_accounts': len(top_interventions),
             'at_risk_arr': round(total_intervention_arr, 2),
             'trajectory': trajectory,
+            'revenue_waterfall': revenue_waterfall,
             'renewals_at_risk': renewals_at_risk,
             'pattern_breakdown': pattern_breakdown,
             'top_interventions': top_interventions[:10],
