@@ -193,7 +193,7 @@ def export_customer_data():
                 FROM dc2s_kpis k
                 JOIN accounts a ON k.account_id = a.account_id
                 WHERE a.customer_id = :cid
-                ORDER BY k.account_id, k.measurement_month
+                ORDER BY k.account_id, k.measured_at
             """),
             {'cid': customer_id}
         ).fetchall()
