@@ -441,6 +441,177 @@ def close_playbook(
 
 
 # ===================================================================
+# Tool: generate_playbook_from_description
+# ===================================================================
+
+@mcp.tool
+def generate_playbook_from_description(
+    customer_id: int,
+    description: str,
+) -> dict:
+    """Generate a structured playbook from a natural language description.
+
+    Takes a plain-English description of a playbook and returns structured
+    JSON with trigger conditions, actions, estimated hours, and owner roles.
+    Does NOT save — returns for review. Use the /api/playbooks/library POST
+    endpoint to save after reviewing.
+
+    Example descriptions:
+      "When NPS drops below 30, schedule an exec QBR within 7 days"
+      "If ticket resolution time exceeds 48 hours and escalation rate > 10%, deploy a dedicated support pod"
+      "When a champion departs and health drops below 60, run emergency stakeholder mapping"
+
+    Args:
+        customer_id: The customer (tenant) ID (used to load their KPI catalog)
+        description: Natural language description of the playbook
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        # Load KPI catalog for this customer to inform condition generation
+        kpi_names = {}
+        try:
+            from utils.vertical_registry import get_catalog
+            catalog = get_catalog(customer_id)
+            for pillar in catalog.get('pillars', []):
+                for kpi in pillar.get('kpis', []):
+                    kpi_names[kpi['code']] = kpi.get('name', kpi['code'])
+        except Exception:
+            # Fallback KPI names
+            kpi_names = {
+                'P1-KPI1': 'DAU Rate', 'P1-KPI3': 'Time to First Value',
+                'P2-KPI1': 'Exec Sponsor Engagement',
+                'P3-KPI1': 'Ticket Resolution Time', 'P3-KPI3': 'NPS',
+                'P3-KPI4': 'Escalation Rate',
+                'P5-KPI1': 'Net Revenue Retention', 'P5-KPI2': 'Gross Revenue Retention',
+                'P5-KPI3': 'Expansion Revenue Rate',
+            }
+
+        # Pattern-match common playbook descriptions to structured output
+        # This is a rule-based generator — Claude (the caller) can refine
+        desc_lower = description.lower()
+
+        # Extract trigger conditions from description
+        conditions = []
+        if 'nps' in desc_lower:
+            threshold = _extract_number(desc_lower, 'nps', default=30)
+            conditions.append({'kpi_code': 'P3-KPI3', 'kpi_name': 'NPS',
+                               'operator': 'less_than', 'threshold': threshold})
+        if 'ticket' in desc_lower and ('resolution' in desc_lower or 'time' in desc_lower):
+            threshold = _extract_number(desc_lower, 'ticket', default=48)
+            conditions.append({'kpi_code': 'P3-KPI1', 'kpi_name': 'Ticket Resolution Time',
+                               'operator': 'greater_than', 'threshold': threshold})
+        if 'escalation' in desc_lower:
+            threshold = _extract_number(desc_lower, 'escalation', default=10)
+            conditions.append({'kpi_code': 'P3-KPI4', 'kpi_name': 'Escalation Rate',
+                               'operator': 'greater_than', 'threshold': threshold})
+        if 'dau' in desc_lower or 'adoption' in desc_lower or 'usage' in desc_lower:
+            threshold = _extract_number(desc_lower, 'dau', default=40)
+            conditions.append({'kpi_code': 'P1-KPI1', 'kpi_name': 'DAU Rate',
+                               'operator': 'less_than', 'threshold': threshold})
+        if 'champion' in desc_lower and ('depart' in desc_lower or 'left' in desc_lower or 'loss' in desc_lower):
+            conditions.append({'kpi_code': 'P2-KPI1', 'kpi_name': 'Exec Sponsor Engagement',
+                               'operator': 'less_than', 'threshold': 3})
+        if 'health' in desc_lower:
+            threshold = _extract_number(desc_lower, 'health', default=60)
+            conditions.append({'kpi_code': 'health_score', 'kpi_name': 'Overall Health Score',
+                               'operator': 'less_than', 'threshold': threshold})
+        if 'nrr' in desc_lower or 'retention' in desc_lower:
+            threshold = _extract_number(desc_lower, 'nrr', default=95)
+            conditions.append({'kpi_code': 'P5-KPI1', 'kpi_name': 'Net Revenue Retention',
+                               'operator': 'less_than', 'threshold': threshold})
+        if 'grr' in desc_lower:
+            threshold = _extract_number(desc_lower, 'grr', default=85)
+            conditions.append({'kpi_code': 'P5-KPI2', 'kpi_name': 'Gross Revenue Retention',
+                               'operator': 'less_than', 'threshold': threshold})
+
+        if not conditions:
+            conditions.append({'kpi_code': 'health_score', 'kpi_name': 'Overall Health Score',
+                               'operator': 'less_than', 'threshold': 60})
+
+        # Determine trigger logic
+        trigger_logic = 'AND' if ' and ' in desc_lower and len(conditions) > 1 else 'OR'
+
+        # Extract actions from description
+        actions = []
+        action_keywords = {
+            'qbr': ('Schedule Executive QBR', 'csm', 8),
+            'review': ('Conduct Account Review', 'csm', 6),
+            'stakeholder': ('Emergency Stakeholder Mapping', 'csm', 4),
+            'support pod': ('Deploy Dedicated Support Pod', 'support_lead', 16),
+            'escalat': ('Escalation Response Protocol', 'csm', 4),
+            'onboard': ('Re-onboarding Sprint', 'csm', 12),
+            'training': ('Customer Training Session', 'csm', 8),
+            'roi': ('Deliver Custom ROI Report', 'csm', 6),
+        }
+
+        step = 1
+        for keyword, (action_name, role, hours) in action_keywords.items():
+            if keyword in desc_lower:
+                actions.append({'step': step, 'description': action_name,
+                                'owner_role': role, 'estimated_hours': hours})
+                step += 1
+
+        if not actions:
+            # Default action set based on condition severity
+            actions = [
+                {'step': 1, 'description': 'Assess situation and gather context', 'owner_role': 'csm', 'estimated_hours': 4},
+                {'step': 2, 'description': 'Develop intervention plan', 'owner_role': 'csm', 'estimated_hours': 4},
+                {'step': 3, 'description': 'Execute intervention', 'owner_role': 'csm', 'estimated_hours': 8},
+                {'step': 4, 'description': 'Follow-up and measure impact', 'owner_role': 'csm', 'estimated_hours': 4},
+            ]
+
+        total_hours = sum(a['estimated_hours'] for a in actions)
+
+        # Generate playbook name from description
+        name = description[:80].strip()
+        if not name[0].isupper():
+            name = name.capitalize()
+
+        return {
+            'scope': 'playbook_draft',
+            'status': 'draft',
+            'message': 'Review this playbook and save via POST /api/playbooks/library',
+            'playbook': {
+                'name': name,
+                'description': description,
+                'trigger_conditions': conditions,
+                'trigger_logic': trigger_logic,
+                'actions': actions,
+                'auto_trigger_enabled': False,
+                'cooldown_hours': 168,
+                'estimated_total_hours': total_hours,
+                'estimated_cost_at_85_per_hour': round(total_hours * 85, 2),
+            },
+            'available_kpis': kpi_names,
+        }
+
+
+def _extract_number(text: str, keyword: str, default: float = 50) -> float:
+    """Extract a number near a keyword in text."""
+    import re
+    # Find patterns like "NPS drops below 30" or "exceeds 48 hours"
+    patterns = [
+        rf'{keyword}\D*?(\d+\.?\d*)',
+        rf'(\d+\.?\d*)\D*?{keyword}',
+        rf'below\s+(\d+\.?\d*)',
+        rf'above\s+(\d+\.?\d*)',
+        rf'exceeds?\s+(\d+\.?\d*)',
+        rf'under\s+(\d+\.?\d*)',
+        rf'over\s+(\d+\.?\d*)',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            try:
+                return float(match.group(1))
+            except ValueError:
+                continue
+    return default
+
+
+# ===================================================================
 # Tool: get_portfolio_roi_summary
 # ===================================================================
 

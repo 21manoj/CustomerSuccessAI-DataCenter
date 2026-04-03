@@ -205,6 +205,7 @@ from unified_query_api import unified_query_api
 from cache_api import cache_api
 from playbook_triggers_api import playbook_triggers_api
 from playbook_execution_api import playbook_execution_api
+from customer_playbook_api import customer_playbook_api
 from playbook_reports_api import playbook_reports_api
 from playbook_recommendations_api import playbook_recommendations_api
 from feature_toggle_api import feature_toggle_api
@@ -357,6 +358,7 @@ app.register_blueprint(unified_query_api)
 app.register_blueprint(cache_api)
 app.register_blueprint(playbook_triggers_api)
 app.register_blueprint(playbook_execution_api)
+app.register_blueprint(customer_playbook_api)
 app.register_blueprint(playbook_reports_api)
 app.register_blueprint(playbook_recommendations_api)
 app.register_blueprint(feature_toggle_api)

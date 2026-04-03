@@ -114,15 +114,24 @@ class ArcPlaybookSubscriber:
     """
 
     # Mapping from arc_type → recommended playbook_id
+    # Canonical mapping from config/arc_playbook_map.json (first playbook = primary)
     ARC_PLAYBOOK_MAP = {
-        'crisis':           'PB-DC-01',   # Emergency intervention
-        'champion_loss':    'PB-DC-02',   # Stakeholder re-engagement
-        'budget_pressure':  'PB-DC-03',   # ROI demonstration
-        'silent_churn':     'PB-DC-04',   # Re-engagement campaign
-        'expansion':        'PB-DC-05',   # Expansion nurture
-        'recovery':         'PB-DC-06',   # Recovery playbook
-        'onboarding':       'PB-DC-01',   # Onboarding acceleration
-        'stable':           None,         # No playbook needed
+        'crisis_recovery':          'PB-02',
+        'exec_sponsor_change':      'PB-04',
+        'competitive_displacement': 'PB-03',
+        'stalled_deployment':       'PB-01',
+        'silent_churn':             'PB-06',
+        'expansion_champion':       'PB-08',
+        'land_and_expand':          'PB-08',
+        'seasonal_surge':           'PB-07',
+        # Legacy aliases
+        'crisis':           'PB-02',
+        'champion_loss':    'PB-04',
+        'budget_pressure':  'PB-06',
+        'recovery':         'PB-02',
+        'onboarding':       'PB-01',
+        'stable':           None,
+        'expansion':        'PB-08',
     }
 
     def __init__(self, cooldown_seconds: int = 600):
@@ -301,6 +310,30 @@ class ArcPlaybookSubscriber:
                 },
             )
             db.session.add(execution)
+
+            # Also create PlaybookExecutionV2 record for ROI tracking
+            try:
+                from models import PlaybookExecutionV2
+                arr = float(account.revenue or 0) if account else 0
+                v2_exec = PlaybookExecutionV2(
+                    execution_id=execution.execution_id,
+                    customer_id=customer_id,
+                    account_id=account_id,
+                    playbook_id=playbook_id,
+                    playbook_name=f'Auto: {playbook_id} ({arc_type})',
+                    triggered_by='health_drop',
+                    arc_type=arc_type,
+                    status='in_progress',
+                    phase='stabilize',
+                    health_at_trigger=health_score,
+                    health_status_at_trigger='critical' if health_score < 50 else 'at_risk',
+                    arr_at_trigger=arr,
+                    csm_hourly_rate=85.0,
+                )
+                db.session.add(v2_exec)
+            except Exception as v2_err:
+                logger.debug(f"PlaybookExecutionV2 creation skipped: {v2_err}")
+
             db.session.commit()
 
             logger.info(

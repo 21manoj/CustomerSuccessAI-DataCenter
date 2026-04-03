@@ -463,10 +463,106 @@ def get_execution_stats():
                 'by_playbook': by_playbook
             }
         })
-    
+
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+@playbook_execution_api.route('/api/playbooks/active', methods=['GET'])
+def get_active_playbooks():
+    """Get in-progress playbook executions (V2) for the CSM dashboard."""
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from models import PlaybookExecutionV2, Account, HealthScore
+
+        executions = (
+            PlaybookExecutionV2.query
+            .filter_by(customer_id=int(customer_id), status='in_progress')
+            .order_by(PlaybookExecutionV2.triggered_at.desc())
+            .limit(20)
+            .all()
+        )
+
+        results = []
+        for ex in executions:
+            account = db.session.get(Account, ex.account_id)
+            account_name = account.account_name if account else f'Account {ex.account_id}'
+            latest_hs = (
+                HealthScore.query.filter_by(account_id=ex.account_id)
+                .order_by(HealthScore.measurement_month.desc()).first()
+            )
+            health_now = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
+            health_delta = round(health_now - ex.health_at_trigger, 1) if health_now and ex.health_at_trigger else None
+            days_active = (datetime.utcnow() - ex.triggered_at).days if ex.triggered_at else 0
+
+            results.append({
+                'execution_id': ex.execution_id,
+                'account_id': ex.account_id,
+                'account_name': account_name,
+                'playbook_id': ex.playbook_id,
+                'playbook_name': ex.playbook_name,
+                'triggered_by': ex.triggered_by,
+                'arc_type': ex.arc_type,
+                'status': ex.status,
+                'phase': ex.phase,
+                'days_active': days_active,
+                'health_at_trigger': float(ex.health_at_trigger) if ex.health_at_trigger else None,
+                'health_now': health_now,
+                'health_delta': health_delta,
+                'arr_at_trigger': float(ex.arr_at_trigger) if ex.arr_at_trigger else None,
+                'actions_planned': ex.actions_planned or 0,
+                'actions_completed': ex.actions_completed or 0,
+                'triggered_at': ex.triggered_at.isoformat() if ex.triggered_at else None,
+            })
+
+        return jsonify({'status': 'success', 'active_playbooks': results, 'total': len(results)})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@playbook_execution_api.route('/api/playbooks/completed', methods=['GET'])
+def get_completed_playbooks():
+    """Get recently completed playbook executions with ROI data."""
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from models import PlaybookExecutionV2, Account
+
+        executions = (
+            PlaybookExecutionV2.query
+            .filter_by(customer_id=int(customer_id), status='completed')
+            .order_by(PlaybookExecutionV2.closed_at.desc())
+            .limit(20)
+            .all()
+        )
+
+        results = []
+        for ex in executions:
+            account = db.session.get(Account, ex.account_id)
+            results.append({
+                'execution_id': ex.execution_id,
+                'account_id': ex.account_id,
+                'account_name': account.account_name if account else f'Account {ex.account_id}',
+                'playbook_id': ex.playbook_id,
+                'playbook_name': ex.playbook_name,
+                'outcome': ex.outcome,
+                'health_delta': float(ex.health_delta) if ex.health_delta else None,
+                'revenue_protected': float(ex.revenue_protected) if ex.revenue_protected else 0,
+                'total_cost': float(ex.total_cost) if ex.total_cost else 0,
+                'realized_roi_pct': float(ex.realized_roi_pct) if ex.realized_roi_pct else None,
+                'nrr_impact_pct': float(ex.nrr_impact_pct) if ex.nrr_impact_pct else None,
+                'closed_at': ex.closed_at.isoformat() if ex.closed_at else None,
+            })
+
+        return jsonify({'status': 'success', 'completed_playbooks': results, 'total': len(results)})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
