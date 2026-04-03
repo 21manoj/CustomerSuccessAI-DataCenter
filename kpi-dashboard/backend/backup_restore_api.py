@@ -28,6 +28,19 @@ from sqlalchemy import text
 
 from extensions import db
 from auth_middleware import get_current_customer_id, get_current_user_id
+
+
+def _jsonify_row(row: dict) -> dict:
+    """Serialize dict/list/bytes values to JSON strings for psycopg2 text() binds."""
+    out = {}
+    for k, v in row.items():
+        if isinstance(v, (dict, list)):
+            out[k] = json.dumps(v)
+        elif isinstance(v, bytes):
+            out[k] = v.decode('utf-8', errors='replace')
+        else:
+            out[k] = v
+    return out
 from models import (
     Customer, CustomerConfig, Account, FeatureToggle, ActivityLog,
 )
@@ -382,7 +395,7 @@ def import_customer_data():
                     VALUES ({placeholders})
                     ON CONFLICT (account_id) DO UPDATE SET {updates}
                 """),
-                acc
+                _jsonify_row(acc)
             )
         db.session.flush()
         counts['accounts'] = len(accounts_data)
@@ -406,7 +419,7 @@ def import_customer_data():
                 ph_str = ', '.join(f':{c}' for c in cols)
                 db.session.execute(
                     text(f"INSERT INTO health_scores ({col_str}) VALUES ({ph_str})"),
-                    {c: hs[c] for c in cols}
+                    _jsonify_row({c: hs[c] for c in cols})
                 )
         db.session.flush()
         counts['health_scores'] = len(hs_data)
@@ -429,14 +442,15 @@ def import_customer_data():
                 ph_str = ', '.join(f':{c}' for c in cols)
                 db.session.execute(
                     text(f"INSERT INTO dc2s_kpis ({col_str}) VALUES ({ph_str})"),
-                    {c: row[c] for c in cols}
+                    _jsonify_row({c: row[c] for c in cols})
                 )
         db.session.flush()
         counts['kpi_measurements'] = len(kpi_data)
 
-        # ── Context Graph ──────────────────────────────────────────────
+        # ── Context Graph (savepoint so failures don't poison the transaction) ─
         nodes_data = data.get('context_nodes', [])
         edges_data = data.get('context_edges', [])
+        nested = db.session.begin_nested()  # SAVEPOINT
         try:
             db.session.execute(
                 text("""
@@ -464,7 +478,7 @@ def import_customer_data():
                 ph_str = ', '.join(f':{c}' for c in cols)
                 db.session.execute(
                     text(f"INSERT INTO context_nodes ({col_str}) VALUES ({ph_str})"),
-                    {c: node[c] for c in cols}
+                    _jsonify_row({c: node[c] for c in cols})
                 )
             for edge in edges_data:
                 cols = [c for c in edge.keys() if c != 'id']
@@ -472,11 +486,13 @@ def import_customer_data():
                 ph_str = ', '.join(f':{c}' for c in cols)
                 db.session.execute(
                     text(f"INSERT INTO context_edges ({col_str}) VALUES ({ph_str})"),
-                    {c: edge[c] for c in cols}
+                    _jsonify_row({c: edge[c] for c in cols})
                 )
+            nested.commit()
             counts['context_nodes'] = len(nodes_data)
             counts['context_edges'] = len(edges_data)
         except Exception as ctx_err:
+            nested.rollback()  # rollback to SAVEPOINT, keep outer transaction clean
             logger.warning(f"[backup] context graph restore skipped: {ctx_err}")
             counts['context_nodes'] = 'skipped'
             counts['context_edges'] = 'skipped'
