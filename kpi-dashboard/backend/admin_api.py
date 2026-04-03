@@ -941,3 +941,104 @@ def reset_customer_weights(cid):
     except Exception as e:
         current_app.logger.error(f"Weight reset failed for customer {cid}: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Stuck User Detection — Support Tooling
+# ---------------------------------------------------------------------------
+
+@admin_bp.route('/onboarding/stuck-users', methods=['GET'])
+def get_stuck_users():
+    """Return new customers whose onboarding wizard hasn't completed.
+
+    A customer is "stuck" when:
+      - Their onboarding_state is not 'active' (no real health scores yet), AND
+      - Their most recent onboarding activity log entry is > `threshold_minutes` old
+        (default 30 minutes — they started but went quiet)
+
+    Query params:
+      threshold_minutes  int   — inactivity window (default 30)
+      include_fresh      bool  — include customers with zero activity logs (default true)
+    """
+    from extensions import db
+    from models import Customer, Account, HealthScore, ActivityLog
+    from sqlalchemy import func, desc
+
+    threshold_minutes = request.args.get('threshold_minutes', 30, type=int)
+    include_fresh = request.args.get('include_fresh', 'true').lower() != 'false'
+    cutoff = datetime.utcnow() - __import__('datetime').timedelta(minutes=threshold_minutes)
+
+    try:
+        # Customers without any health scores (not yet 'active')
+        active_customer_ids = db.session.query(HealthScore.customer_id).distinct()
+        inactive_customers = (
+            Customer.query
+            .filter(Customer.customer_id.notin_(active_customer_ids))
+            .all()
+        )
+
+        # Latest onboarding activity per customer
+        latest_activity_sq = (
+            db.session.query(
+                ActivityLog.customer_id,
+                func.max(ActivityLog.created_at).label('last_activity'),
+            )
+            .filter(ActivityLog.action_category == 'onboarding')
+            .group_by(ActivityLog.customer_id)
+            .subquery()
+        )
+
+        results = []
+        for customer in inactive_customers:
+            cid = customer.customer_id
+            row = (
+                db.session.query(latest_activity_sq.c.last_activity)
+                .filter(latest_activity_sq.c.customer_id == cid)
+                .scalar()
+            )
+
+            if row is None:
+                # No onboarding activity at all
+                if not include_fresh:
+                    continue
+                last_step = None
+                last_activity_iso = None
+                minutes_idle = None
+                is_stuck = True
+            else:
+                minutes_idle = int((datetime.utcnow() - row).total_seconds() / 60)
+                is_stuck = row < cutoff
+                if not is_stuck:
+                    continue  # Still active — skip
+                last_activity_iso = row.isoformat()
+                # Get the last step name from ActivityLog
+                last_log = (
+                    ActivityLog.query
+                    .filter_by(customer_id=cid, action_category='onboarding')
+                    .order_by(desc(ActivityLog.created_at))
+                    .first()
+                )
+                last_step = (last_log.action_description if last_log else None)
+
+            results.append({
+                'customer_id': cid,
+                'customer_name': customer.customer_name,
+                'created_at': customer.created_at.isoformat() if customer.created_at else None,
+                'last_onboarding_activity': last_activity_iso,
+                'minutes_idle': minutes_idle,
+                'last_step': last_step,
+                'is_stuck': is_stuck,
+            })
+
+        results.sort(key=lambda r: r['minutes_idle'] or 99999, reverse=True)
+
+        return jsonify({
+            'stuck_users': results,
+            'total': len(results),
+            'threshold_minutes': threshold_minutes,
+            'as_of': datetime.utcnow().isoformat(),
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"get_stuck_users failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500

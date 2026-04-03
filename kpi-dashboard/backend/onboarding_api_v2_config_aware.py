@@ -2242,11 +2242,48 @@ def complete_onboarding():
         except Exception as _email_exc:
             current_app.logger.warning(f"[welcome_email] non-fatal error: {_email_exc}")
 
+        # ── Stuck-user logging: record onboarding_complete success ──
+        try:
+            from models import ActivityLog
+            db.session.add(ActivityLog(
+                customer_id=customer_id,
+                action_type='onboarding_complete',
+                action_category='onboarding',
+                action_description=f'Onboarding complete: {customer_name} (mode={onboarding_mode})',
+                resource_type='customer',
+                resource_id=str(customer_id),
+                status='success',
+                details={'onboarding_mode': onboarding_mode, 'vertical': vertical},
+                ip_address=request.remote_addr,
+            ))
+            db.session.commit()
+        except Exception:
+            pass  # Never block the response for logging
+
         return jsonify(response_data)
-        
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Onboarding complete failed: {str(e)}", exc_info=True)
+        # Log failure for stuck-user detection
+        try:
+            from models import ActivityLog
+            _cid = request.json.get('customer_id') if request.json else None
+            if _cid:
+                db.session.add(ActivityLog(
+                    customer_id=_cid,
+                    action_type='onboarding_complete',
+                    action_category='onboarding',
+                    action_description=f'Onboarding complete FAILED: {str(e)[:200]}',
+                    resource_type='customer',
+                    resource_id=str(_cid),
+                    status='error',
+                    details={'error': str(e)[:500]},
+                    ip_address=request.remote_addr,
+                ))
+                db.session.commit()
+        except Exception:
+            pass
         return jsonify({
             "error": "Onboarding failed. Please try again or contact support."
         }), 500
@@ -2736,3 +2773,71 @@ def generate_sample_files_noop():
         'message': 'Sample data generation is handled by /api/onboarding/complete in demo mode.',
         'noop': True
     }), 200
+
+
+# ---------------------------------------------------------------------------
+# Wizard Step Progress — Support / Stuck User Detection
+# ---------------------------------------------------------------------------
+
+_STEP_NAMES = {
+    0: 'Account & Billing',
+    1: 'Business Context',
+    2: 'KPI Priorities',
+    3: 'Event Severity',
+    4: 'Success Criteria',
+    5: 'Data Sources',
+    6: 'Review',
+    7: 'Team Setup',
+    8: 'Training / Finish',
+}
+
+
+@onboarding_api.route('/wizard-step', methods=['POST'])
+def report_wizard_step():
+    """Called by the onboarding wizard frontend when the user navigates to a new step.
+
+    Only used for NEW customers (onboarding_state != active).
+    Persists progress to ActivityLog so support can see where a user got stuck.
+
+    Body:
+        step_number  int    — 0-based wizard step index
+        customer_id  int    — optional; falls back to session customer_id
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        step_number = int(data.get('step_number', 0))
+        step_name = _STEP_NAMES.get(step_number, f'Step {step_number}')
+
+        # Resolve customer_id: prefer body, fall back to session
+        customer_id = data.get('customer_id')
+        if not customer_id:
+            from auth_middleware import get_current_customer_id
+            customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'status': 'ok'})  # unauthenticated — ignore silently
+
+        customer_id = int(customer_id)
+
+        from models import ActivityLog
+        db.session.add(ActivityLog(
+            customer_id=customer_id,
+            action_type='onboarding_wizard_step',
+            action_category='onboarding',
+            action_description=f'Wizard step {step_number}: {step_name}',
+            resource_type='customer',
+            resource_id=str(customer_id),
+            status='in_progress',
+            details={'step_number': step_number, 'step_name': step_name},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:200],
+        ))
+        db.session.commit()
+        return jsonify({'status': 'ok', 'step': step_number, 'name': step_name})
+
+    except Exception as e:
+        current_app.logger.debug(f"wizard-step log failed (non-fatal): {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({'status': 'ok'})  # Never fail the UI

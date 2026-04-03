@@ -222,7 +222,7 @@ except ImportError as e:
     print(f"⚠️ Product Analytics API not available: {e}")
 from workflow_config_api import workflow_config_api
 from export_api import export_api
-from rehydration_api import rehydration_api
+from backup_restore_api import backup_restore_api
 from data_quality_api import data_quality_api
 from customer_profile_api import customer_profile_api
 from enhanced_upload_api import enhanced_upload_api
@@ -366,7 +366,7 @@ app.register_blueprint(direct_rag_api)
 app.register_blueprint(customer_perf_summary_api)
 app.register_blueprint(workflow_config_api)
 app.register_blueprint(export_api)
-app.register_blueprint(rehydration_api)
+app.register_blueprint(backup_restore_api)
 app.register_blueprint(account_snapshot_api)
 app.register_blueprint(admin_cleanup_api)
 

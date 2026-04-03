@@ -73,6 +73,22 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, 
     }
   }, [business.vertical]);
 
+  // ── Stuck-user support: report wizard step to backend on each navigation ──
+  // Fire-and-forget. Only for new customers (customerId not yet assigned → pre-complete)
+  // or when customerId is known but onboarding is still in progress.
+  useEffect(() => {
+    // Don't report step 0 on first mount (nothing to log yet)
+    if (step === 0 && !customerId) return;
+    const payload: Record<string, unknown> = { step_number: step };
+    if (customerId) payload.customer_id = customerId;
+    fetch('/api/onboarding/wizard-step', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => { /* never block the wizard */ });
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const steps = [
     { num: 0, title: 'Account & Billing', icon: <CreditCard className="w-5 h-5" /> },
     { num: 1, title: 'Business Context', icon: <Building2 className="w-5 h-5" /> },
