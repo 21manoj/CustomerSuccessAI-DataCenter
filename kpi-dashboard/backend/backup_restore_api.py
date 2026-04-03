@@ -213,19 +213,19 @@ def export_customer_data():
         payload['kpi_measurements'] = [dict(r._mapping) for r in kpi_rows]
 
         # ── Context Graph Nodes ────────────────────────────────────────
+        # Use customer_id directly (ContextNode has customer_id column)
         try:
             cn_rows = db.session.execute(
                 text("""
-                    SELECT cn.*
-                    FROM context_nodes cn
-                    JOIN accounts a ON cn.account_id = a.account_id
-                    WHERE a.customer_id = :cid
-                    ORDER BY cn.id
+                    SELECT * FROM context_nodes
+                    WHERE customer_id = :cid
+                    ORDER BY id
                 """),
                 {'cid': customer_id}
             ).fetchall()
-            payload['context_nodes'] = [dict(r._mapping) for r in cn_rows]
-        except Exception:
+            payload['context_nodes'] = [_row_to_dict(r) for r in cn_rows]
+        except Exception as cn_err:
+            logger.warning(f"[backup] context_nodes export failed: {cn_err}")
             db.session.rollback()
             payload['context_nodes'] = []
 
@@ -235,20 +235,33 @@ def export_customer_data():
                 text("""
                     SELECT ce.*
                     FROM context_edges ce
-                    JOIN context_nodes cn ON ce.source_node_id = cn.id
-                    JOIN accounts a ON cn.account_id = a.account_id
-                    WHERE a.customer_id = :cid
+                    WHERE ce.customer_id = :cid
                     ORDER BY ce.id
                 """),
                 {'cid': customer_id}
             ).fetchall()
-            payload['context_edges'] = [dict(r._mapping) for r in ce_rows]
-        except Exception:
+            payload['context_edges'] = [_row_to_dict(r) for r in ce_rows]
+        except Exception as ce_err:
+            logger.warning(f"[backup] context_edges export failed: {ce_err}")
             db.session.rollback()
             payload['context_edges'] = []
 
-        # ── Serialise dates, datetimes, Decimals, UUIDs ───────────────
+        # ── Helper: convert DB row to JSON-safe dict ─────────────────
         import decimal, datetime as dt_module
+
+        def _row_to_dict(row):
+            """Convert a SQLAlchemy row to a JSON-safe dict."""
+            d = dict(row._mapping)
+            for k, v in d.items():
+                if isinstance(v, (dt_module.datetime, dt_module.date)):
+                    d[k] = v.isoformat()
+                elif isinstance(v, decimal.Decimal):
+                    d[k] = float(v)
+                elif isinstance(v, bytes):
+                    d[k] = v.decode('utf-8', errors='replace')
+            return d
+
+        # ── Serialise dates, datetimes, Decimals, UUIDs ───────────────
         def _default(obj):
             if isinstance(obj, (dt_module.datetime, dt_module.date)):
                 return obj.isoformat()

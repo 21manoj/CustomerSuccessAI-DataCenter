@@ -269,12 +269,21 @@ def _run_journey_generation(customer_id: int) -> dict:
 
         # ── Write arc detection node to context graph ──
         # Use a savepoint so a failure here does NOT roll back JourneyData rows.
+        # Delete stale arc_detection nodes for this account first (dedup across runs).
         if pic.arc_classifier_enabled():
             try:
                 phase = ht.classify(h_scores[-1]) if h_scores else 'unknown'
                 if arc_confidence >= pic.arc_min_confidence():
                     nested = db.session.begin_nested()
                     try:
+                        # Cleanup old arc_detection nodes for this account
+                        ContextNode.query.filter(
+                            ContextNode.account_id == aid,
+                            ContextNode.customer_id == customer_id,
+                            ContextNode.node_subtype == 'arc_detection',
+                            ContextNode.source == 'system',
+                        ).delete(synchronize_session='fetch')
+
                         arc_node = ContextNode(
                             account_id=aid,
                             customer_id=customer_id,

@@ -566,3 +566,50 @@ def get_completed_playbooks():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
+# ── Vertical-agnostic health scores endpoint ──────────────────────────
+
+@playbook_execution_api.route('/api/health-scores', methods=['GET'])
+def get_health_scores():
+    """Get health score history for a customer's accounts (all verticals).
+
+    Works for both DC2_S and SaaS Premium — queries HealthScore table directly.
+    Query params: customer_id (optional, defaults to session), months (default 6).
+    """
+    try:
+        customer_id = request.args.get('customer_id') or get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        customer_id = int(customer_id)
+        months = int(request.args.get('months', 6))
+
+        from models import HealthScore, Account
+        from datetime import datetime, timedelta
+
+        account_ids = [
+            a.account_id for a in
+            Account.query.filter_by(customer_id=customer_id).all()
+        ]
+        if not account_ids:
+            return jsonify({'health_scores': [], 'total': 0})
+
+        cutoff = datetime.utcnow() - timedelta(days=months * 30)
+        scores = (
+            HealthScore.query
+            .filter(
+                HealthScore.account_id.in_(account_ids),
+                HealthScore.measurement_month >= cutoff.date(),
+            )
+            .order_by(HealthScore.account_id, HealthScore.measurement_month)
+            .all()
+        )
+
+        return jsonify({
+            'health_scores': [s.to_dict() for s in scores],
+            'total': len(scores),
+            'accounts': len(account_ids),
+            'months': months,
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+

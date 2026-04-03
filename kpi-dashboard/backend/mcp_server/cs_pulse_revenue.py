@@ -514,6 +514,77 @@ def close_playbook(
                 / arr * 100, 2
             )
 
+        # ── Write OUTCOME node to context graph (Signal→Decision→Outcome) ──
+        try:
+            from models import ContextNode, ContextEdge
+            from datetime import datetime as _dt
+
+            # Determine revenue_impact_type
+            if revenue_protected > 0 and outcome == 'resolved':
+                ri_type = 'revenue_protected'
+            elif revenue_expanded > 0:
+                ri_type = 'expansion_closed'
+            elif outcome == 'timeout':
+                ri_type = 'revenue_at_risk'
+            else:
+                ri_type = 'intervention_outcome'
+
+            net_impact = revenue_protected + revenue_expanded
+            outcome_node = ContextNode(
+                account_id=execution.account_id,
+                customer_id=customer_id,
+                node_type='OUTCOME',
+                source='system',
+                node_subtype='playbook_outcome',
+                title=f'{outcome.title()}: {execution.playbook_id} — ${net_impact:,.0f} protected',
+                revenue_impact=net_impact if net_impact > 0 else -(arr * 0.01),
+                revenue_impact_type=ri_type,
+                properties={
+                    'execution_id': execution_id,
+                    'playbook_id': execution.playbook_id,
+                    'outcome': outcome,
+                    'health_at_trigger': execution.health_at_trigger,
+                    'health_at_close': health_at_close,
+                    'health_delta': execution.health_delta,
+                    'revenue_protected': revenue_protected,
+                    'revenue_expanded': revenue_expanded,
+                    'total_cost': round(full_cost, 2),
+                    'roi_x': execution.realized_roi_pct,
+                },
+                tier=1,
+                occurred_at=_dt.utcnow(),
+                source_platform='playbook_execution',
+                source_event_id=f'close:{execution_id}',
+            )
+            db.session.add(outcome_node)
+            db.session.flush()
+
+            # Link DECISION → OUTCOME (find the playbook DECISION node)
+            decision_node = (
+                ContextNode.query
+                .filter(
+                    ContextNode.account_id == execution.account_id,
+                    ContextNode.customer_id == customer_id,
+                    ContextNode.node_type == 'DECISION',
+                    ContextNode.node_subtype.like('playbook_%'),
+                )
+                .order_by(ContextNode.occurred_at.desc())
+                .first()
+            )
+            if decision_node:
+                db.session.add(ContextEdge(
+                    customer_id=customer_id,
+                    from_node_id=decision_node.node_id,
+                    to_node_id=outcome_node.node_id,
+                    edge_type='RESULTED_IN',
+                    confidence=1.0,
+                    source_platform='playbook_execution',
+                    properties={'label': f'{execution.playbook_id} → {outcome}'},
+                ))
+        except Exception as _cg_err:
+            import logging as _log_cg
+            _log_cg.getLogger(__name__).warning(f"Context graph OUTCOME write failed (non-fatal): {_cg_err}")
+
         db.session.commit()
 
         return {

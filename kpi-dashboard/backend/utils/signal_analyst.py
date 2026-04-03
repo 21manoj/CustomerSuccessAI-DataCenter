@@ -419,9 +419,43 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
             f"priority={risk_info['priority']})"
         )
 
-        # ── 8. Write system signal to context graph ──
+        # ── 8. Write system signal to context graph (with dedup) ──
         try:
             from models import ContextEdge
+            # Dedup: skip if a proactive_insight for same account+signal_type exists within 7 days
+            _dedup_cutoff = datetime.utcnow() - timedelta(days=7)
+            _existing = ContextNode.query.filter(
+                ContextNode.account_id == account_id,
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_subtype == 'proactive_insight',
+                ContextNode.occurred_at >= _dedup_cutoff,
+            ).filter(
+                ContextNode.title == f'Proactive Alert: {risk_info["label"]}'
+            ).first()
+            if _existing:
+                logger.debug(
+                    f"signal_analyst: dedup — proactive_insight already exists for "
+                    f"account {account_id} signal '{risk_info['label']}' within 7d, skipping"
+                )
+                return payload  # return analysis but don't create duplicate node
+
+            # Use source signal date if available, else now
+            _signal_date = None
+            try:
+                _src_signal = (
+                    ContextNode.query
+                    .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
+                    .filter(ContextNode.node_subtype == signal_type)
+                    .order_by(ContextNode.occurred_at.desc())
+                    .first()
+                )
+                if _src_signal and _src_signal.occurred_at:
+                    _signal_date = _src_signal.occurred_at
+            except Exception:
+                pass
+            if not _signal_date:
+                _signal_date = datetime.utcnow()
+
             insight_node = ContextNode(
                 account_id=account_id,
                 customer_id=customer_id,
@@ -438,7 +472,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     'triggered_by':    'signal_analyst_proactive',
                 },
                 tier=2,
-                occurred_at=datetime.utcnow(),
+                occurred_at=_signal_date,
             )
             db.session.add(insight_node)
             db.session.flush()
