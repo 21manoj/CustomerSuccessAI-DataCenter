@@ -127,12 +127,35 @@ class DataGenerator:
 
                 measured_at = phase_start + timedelta(weeks=week)
 
+                # Match the manifest CSV schema exactly:
+                # source_account_id, kpi_code, kpi_name, pillar, measured_at, value, target, weight, unit, status
+                kpi_name = kpi_code
+                pillar = kpi_code.split('-')[0]
+                weight = 0.25
+                unit = '%'
+                status = 'healthy' if value >= kpi_target * 0.7 else ('at_risk' if value >= kpi_target * 0.5 else 'critical')
+
+                if self._catalog:
+                    try:
+                        kpi_meta = self._catalog.get_kpis().get(kpi_code, {})
+                        kpi_name = kpi_meta.get('name', kpi_code)
+                        pillar = kpi_meta.get('pillar', pillar)
+                        weight = kpi_meta.get('weight_l1', 0.25)
+                        unit = kpi_meta.get('unit', '%')
+                    except Exception:
+                        pass
+
                 rows.append({
-                    'account_id': state.account_id,
+                    'source_account_id': state.account_id,
                     'kpi_code': kpi_code,
-                    'value': round(value, 4),
+                    'kpi_name': kpi_name,
+                    'pillar': pillar,
                     'measured_at': measured_at.strftime('%Y-%m-%d'),
-                    'source': 'simulation',
+                    'value': round(value, 4),
+                    'target': kpi_target,
+                    'weight': weight,
+                    'unit': unit,
+                    'status': status,
                 })
 
         return rows
@@ -154,15 +177,22 @@ class DataGenerator:
             offset_days = int((i + 1) / (len(signals) + 1) * phase_weeks * 7)
             signal_date = phase_start + timedelta(days=offset_days)
 
+            sentiment = sig.get('sentiment', 'negative')
+            sentiment_score = -0.7 if sentiment == 'negative' else (0.7 if sentiment == 'positive' else 0.0)
+            signal_ref = f'sim_p{phase_number}_{state.account_id}_{i+1}'
+
             rows.append({
-                'account_id': state.account_id,
-                'signal_type': sig.get('signal_type', 'observation'),
+                'signal_id': f'sim_{phase_number}_{state.account_id}_{i+1}',
+                'source_account_id': state.account_id,
                 'signal_date': signal_date.strftime('%Y-%m-%d'),
+                'signal_type': sig.get('signal_type', 'observation'),
                 'content': sig.get('content', ''),
-                'sentiment': sig.get('sentiment', 'negative'),
-                'source': 'simulation',
-                'severity': 'high' if sig.get('sentiment') == 'negative' else 'medium',
-                'signal_ref': f'sim_p{phase_number}_{state.account_id}_{i+1}',
+                'sentiment': sentiment,
+                'sentiment_score': sentiment_score,
+                'arc_id': state.arc_type or '',
+                'story_phase': decision.narrative_phase,
+                'linked_node_id': '',
+                'signal_ref': signal_ref,
             })
 
         return rows
@@ -185,14 +215,14 @@ class DataGenerator:
             outcome_date = phase_start + timedelta(days=offset_days)
 
             rows.append({
-                'account_id': state.account_id,
-                'outcome_type': out.get('subtype', 'observation'),
+                'source_account_id': state.account_id,
                 'outcome_date': outcome_date.strftime('%Y-%m-%d'),
+                'outcome_type': out.get('subtype', 'observation'),
                 'title': out.get('title', ''),
-                'revenue_impact': out.get('revenue_impact', 0),
-                'revenue_impact_type': out.get('revenue_impact_type', 'at_risk'),
-                'source': 'simulation',
-                'outcome_ref': f'sim_p{phase_number}_out_{state.account_id}_{i+1}',
+                'description': f'Simulation phase {phase_number}: {out.get("revenue_impact_type", "")}',
+                'revenue_value': out.get('revenue_impact', 0),
+                'status': 'active',
+                'linked_signal_id': f'sim_p{phase_number}_{state.account_id}_1',
             })
 
         return rows

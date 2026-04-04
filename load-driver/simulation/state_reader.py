@@ -96,14 +96,28 @@ class StateReader:
             aid = pb.get('account_id')
             completed_by_acct.setdefault(aid, []).append(pb)
 
+        # Read all health scores once (not per-account)
+        all_health_scores = self._read_all_health_scores()
+
         states = []
         for acct in accounts:
             aid = acct.get('account_id')
-            health = float(acct.get('health_score') or 0)
 
-            # Health history for slope
-            history = self._read_health_history(aid)
+            # Health history for slope — use health_scores table (not Account cache)
+            history = [s for s in all_health_scores if s.get('account_id') == aid]
+            history.sort(key=lambda s: s.get('measurement_month', ''))
             slope_label, slope_val = _compute_slope(history)
+
+            # Use LATEST health score from health_scores table, not Account.health_score
+            if history:
+                health = float(history[-1].get('health_score') or 0)
+            else:
+                health = float(acct.get('health_score') or 0)
+
+            # Last KPI date from health history (most recent measurement_month)
+            last_kpi = None
+            if history:
+                last_kpi = history[-1].get('measurement_month')
 
             # Recent signals
             signals = self._read_recent_signals(aid)
@@ -112,8 +126,9 @@ class StateReader:
             meta = acct.get('profile_metadata') or {}
             renewal = meta.get('renewal_date') or meta.get('contract_renewal_date')
 
-            # Last KPI date
-            last_kpi = acct.get('last_data_at') or acct.get('updated_at')
+            # Fallback last_kpi_date if not from history
+            if not last_kpi:
+                last_kpi = acct.get('last_data_at') or acct.get('updated_at')
 
             state = AccountState(
                 account_id=aid,
@@ -153,6 +168,19 @@ class StateReader:
                 return resp
         except Exception as e:
             logger.error(f"Failed to read accounts: {e}")
+        return []
+
+    def _read_all_health_scores(self) -> List[Dict]:
+        """Fetch all health scores for this customer (single API call)."""
+        try:
+            resp = self.client.get(f'/api/health-scores', params={
+                'customer_id': self.customer_id,
+                'months': 12,
+            })
+            if isinstance(resp, dict):
+                return resp.get('health_scores', [])
+        except Exception as e:
+            logger.debug(f"Health scores unavailable: {e}")
         return []
 
     def _read_health_history(self, account_id: int) -> List[Dict]:

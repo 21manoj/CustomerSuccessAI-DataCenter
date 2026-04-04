@@ -851,8 +851,11 @@ def _process_data_impl(customer_id: int) -> dict:
         if data_in_db and has_csv_dir:
             try:
                 # os is already imported at module level (line 23)
+                # Use created_at (when row was inserted), not measured_at
+                # (simulated data date). Simulation engines generate future
+                # dates that would make CSV files appear "old" by comparison.
                 last_kpi_ts = _db.session.execute(_db.text(
-                    "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
+                    "SELECT MAX(k.created_at) FROM dc2s_kpis k "
                     "JOIN accounts a ON k.account_id = a.account_id "
                     "WHERE a.customer_id = :cid"
                 ), {"cid": customer_id}).scalar()
