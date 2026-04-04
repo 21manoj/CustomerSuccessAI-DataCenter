@@ -66,11 +66,11 @@ Present the current health state:
 | Metric | Value | Trend |
 |--------|-------|-------|
 | Overall Health | [score]/100 | [direction] |
-| P1: AI/ML Performance | [score] | [direction] |
-| P2: Infrastructure Reliability | [score] | [direction] |
-| P3: Cloud & DevOps | [score] | [direction] |
-| P4: Customer Engagement | [score] | [direction] |
-| P5: Commercial & Expansion | [score] | [direction] |
+| P1: [pillar_label from get_account_health] | [score] | [direction] |
+| P2: [pillar_label from get_account_health] | [score] | [direction] |
+| P3: [pillar_label from get_account_health] | [score] | [direction] |
+| P4: [pillar_label from get_account_health] | [score] | [direction] |
+| P5: [pillar_label from get_account_health] | [score] | [direction] |
 
 Below the table, write 2-3 sentences interpreting the scores. Identify which pillars are dragging overall health down. Flag any pillar that crossed from healthy to at-risk or critical in recent months. Classify the overall situation:
 - **Critical (score < 50):** Immediate intervention required. Escalate to VP/CRO.
