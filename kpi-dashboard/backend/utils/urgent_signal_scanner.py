@@ -91,6 +91,24 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
         if not edges:
             return []
 
+        # ── Dedup: load existing urgent_alert outcome node IDs to avoid duplicates ──
+        _existing_alerts = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == account_id,
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_subtype == 'urgent_alert',
+                ContextNode.source == 'system',
+            )
+            .all()
+        )
+        _alerted_outcomes = set()
+        for _ea in _existing_alerts:
+            _ea_props = _ea.properties or {}
+            # Track by (revenue_impact, days_to_renewal) as outcome signature
+            _sig = (round(float(_ea_props.get('revenue_impact', 0))), _ea_props.get('days_to_renewal'))
+            _alerted_outcomes.add(_sig)
+
         for edge in edges:
             try:
                 to_node = db.session.get(ContextNode, edge.to_node_id)
@@ -99,6 +117,11 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
 
                 revenue_impact = float(to_node.revenue_impact)
                 confidence     = float(edge.confidence) if edge.confidence else 0.0
+
+                # Skip if already alerted for this outcome
+                _outcome_sig = (round(revenue_impact), days_to_renewal)
+                if _outcome_sig in _alerted_outcomes:
+                    continue
 
                 # ── 3. Urgency formula ──
                 # When renewal_date is unknown, use renewal_window_days() as denominator
