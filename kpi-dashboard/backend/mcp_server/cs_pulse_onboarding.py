@@ -873,29 +873,34 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 
         # ----------------------------------------------------------
         # Detect incremental CSVs: data in DB AND new CSVs on disk.
-        # Compare CSV file timestamps to last KPI upload timestamp.
-        # If any CSV is newer, load them (Path 2) before recalculating.
-        # ----------------------------------------------------------
-        has_new_csvs = False  # default for fresh customers
+        # Compare CSV file timestamps to last process_data WizardRun timestamp
+        # (NOT MAX(measured_at) which can be future-dated from simulation data).
         # ----------------------------------------------------------
         has_new_csvs = False
         if data_in_db and has_csv_dir:
             try:
-                # os is already imported at module level (line 23)
-                last_kpi_ts = _db.session.execute(_db.text(
-                    "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
-                    "JOIN accounts a ON k.account_id = a.account_id "
-                    "WHERE a.customer_id = :cid"
-                ), {"cid": customer_id}).scalar()
+                # Use WizardRun timestamp (wall-clock) instead of measured_at (can be future)
+                from models import WizardRun as _WR
+                _last_run = (
+                    _WR.query
+                    .filter(
+                        _WR.customer_id == customer_id,
+                        _WR.config['wizard'].astext == 'process_data',
+                    )
+                    .order_by(_WR.created_at.desc())
+                    .first()
+                )
+                _last_run_ts = _last_run.created_at if _last_run else None
 
                 for f in data_dir.iterdir():
                     if f.suffix == '.csv':
                         csv_mtime = _dt.fromtimestamp(os.path.getmtime(str(f)))
-                        # CSV file modified after last process_data run
-                        if last_kpi_ts is None or csv_mtime > last_kpi_ts:
+                        if _last_run_ts is None or csv_mtime > _last_run_ts:
                             has_new_csvs = True
                             break
             except Exception as _inc_err:
+                # Fallback: if WizardRun query fails, assume new CSVs exist
+                has_new_csvs = True
                 import logging as _log_inc
                 _log_inc.getLogger(__name__).debug(f"Incremental CSV detection error (non-fatal): {_inc_err}")
 

@@ -371,7 +371,19 @@ def _upload_to_disk(
     data_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = data_dir / info.canonical_filename
-    file_path.write_text(csv_content, encoding='utf-8')
+
+    # Append mode: if file exists and has data, append new rows (skip header).
+    # This preserves data from previous uploads (e.g., simulation phases,
+    # incremental monthly loads) instead of overwriting.
+    if file_path.exists() and file_path.stat().st_size > 0:
+        lines = csv_content.split('\n')
+        # Skip header (first line) and any trailing empty lines
+        data_lines = [l for l in lines[1:] if l.strip()]
+        if data_lines:
+            with open(file_path, 'a', encoding='utf-8') as f:
+                f.write('\n' + '\n'.join(data_lines) + '\n')
+    else:
+        file_path.write_text(csv_content, encoding='utf-8')
 
     byte_count = len(csv_content.encode('utf-8'))
 
