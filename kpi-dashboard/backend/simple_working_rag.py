@@ -15,7 +15,7 @@ class SimpleWorkingRAG:
     def __init__(self):
         """Initialize simple working RAG system"""
         # Initialize OpenAI client with the API key
-        self.openai_api_key = "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"
+        self.openai_api_key = os.environ.get('OPENAI_API_KEY', '')
         
         # Initialize embedding model
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')

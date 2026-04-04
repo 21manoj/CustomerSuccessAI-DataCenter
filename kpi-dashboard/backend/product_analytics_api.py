@@ -137,9 +137,10 @@ def get_product_catalog():
     
     results = []
     for product in products:
-        # Count accounts using this product
+        # Count accounts using this product (tenant-isolated)
         account_count = ProductTrend.query.filter_by(
-            product_id=product.product_id
+            product_id=product.product_id,
+            customer_id=customer_id,
         ).distinct(ProductTrend.account_id).count()
         
         results.append({

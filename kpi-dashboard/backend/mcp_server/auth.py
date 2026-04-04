@@ -37,10 +37,18 @@ _current_api_key_var: contextvars.ContextVar[str] = contextvars.ContextVar('_cur
 MCP_SERVER_API_KEY = os.environ.get("MCP_SERVER_API_KEY", "")
 
 # ---------------------------------------------------------------------------
-# Auth toggle — set MCP_AUTH_REQUIRED=true to enforce API key auth.
-# Default: false (open access, no key needed for any tool).
+# Auth toggle — set MCP_AUTH_REQUIRED=false to disable API key enforcement.
+# Default: true (production-safe). Onboarding tools are exempt (ONBOARDING_TOOLS set).
 # ---------------------------------------------------------------------------
-MCP_AUTH_REQUIRED = os.environ.get("MCP_AUTH_REQUIRED", "false").lower() in ("true", "1", "yes")
+MCP_AUTH_REQUIRED = os.environ.get("MCP_AUTH_REQUIRED", "true").lower() in ("true", "1", "yes")
+
+if not MCP_AUTH_REQUIRED:
+    import logging as _auth_log
+    _auth_log.getLogger(__name__).critical(
+        "⚠️  MCP_AUTH_REQUIRED=false — API key enforcement DISABLED. "
+        "All tools accessible without authentication. "
+        "Set MCP_AUTH_REQUIRED=true for production."
+    )
 
 
 # ---------------------------------------------------------------------------

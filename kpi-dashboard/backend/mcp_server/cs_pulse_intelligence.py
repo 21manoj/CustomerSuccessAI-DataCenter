@@ -132,7 +132,7 @@ def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream"
                 f"Node {node_id} not found for customer {customer_id}"
             )
 
-        chain = _get_chain(node_id, direction=direction, max_depth=5)
+        chain = _get_chain(node_id, direction=direction, max_depth=5, customer_id=int(customer_id))
 
         return {
             "scope": "node_traversal",

@@ -1259,8 +1259,7 @@ class EnhancedRAGSystemQdrant:
             # Get API key from environment at query time
             api_key = os.getenv('OPENAI_API_KEY')
             if not api_key:
-                # Try the specific key that was provided
-                api_key = "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"
+                raise ValueError("OPENAI_API_KEY environment variable not set")
             
             _cid = getattr(self, 'customer_id', 0) or 0
             # Budget check (fail-open)

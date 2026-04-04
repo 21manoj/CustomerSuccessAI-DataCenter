@@ -477,6 +477,12 @@ def create_customer(
                 'Save this API key — it is shown only once. '
                 'Use it for the intelligence tools (list_accounts, get_account_health, etc.).'
             )
+            # Log masked key for audit trail (never log full key)
+            import logging as _key_log
+            _masked = full_key[:12] + '...' + full_key[-4:] if len(full_key) > 16 else '***'
+            _key_log.getLogger(__name__).info(
+                f"API key generated for customer {customer_id}: {_masked}"
+            )
 
         if tier_info:
             result['tier'] = tier_info
@@ -807,27 +813,16 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
 # _process_data_impl — Single source of truth for data processing
 # ===================================================================
 
-def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
+def _process_data_impl(customer_id: int) -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Modes:
-    - 'auto' (default): Only score NEW months — existing health scores are immutable.
-      Health scores are point-in-time artifacts; weight changes apply forward only.
-    - 'full_recalc': Admin override — rewrite ALL months with current weights.
-      Use only for data corrections. Logged in WizardRun for audit trail.
-
-    Two paths for CSV loading:
-    - Path 1 (DB-native): Data already in DB -> recalculate new health scores
+    Two paths:
+    - Path 1 (DB-native): Data already in DB -> recalculate health scores
     - Path 2 (Fresh CSV): No data in DB -> load CSVs into DB, then calculate
 
     Args:
         customer_id: The customer ID
-        mode: 'auto' (immutable scores) or 'full_recalc' (admin rewrite)
     """
-    import time as _time
-    _pipeline_t0 = _time.time()
-    _step_timings = {}
-
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -873,34 +868,29 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 
         # ----------------------------------------------------------
         # Detect incremental CSVs: data in DB AND new CSVs on disk.
-        # Compare CSV file timestamps to last process_data WizardRun timestamp
-        # (NOT MAX(measured_at) which can be future-dated from simulation data).
+        # Compare CSV file timestamps to last KPI upload timestamp.
+        # If any CSV is newer, load them (Path 2) before recalculating.
+        # ----------------------------------------------------------
+        has_new_csvs = False  # default for fresh customers
         # ----------------------------------------------------------
         has_new_csvs = False
         if data_in_db and has_csv_dir:
             try:
-                # Use WizardRun timestamp (wall-clock) instead of measured_at (can be future)
-                from models import WizardRun as _WR
-                _last_run = (
-                    _WR.query
-                    .filter(
-                        _WR.customer_id == customer_id,
-                        _WR.config['wizard'].astext == 'process_data',
-                    )
-                    .order_by(_WR.created_at.desc())
-                    .first()
-                )
-                _last_run_ts = _last_run.created_at if _last_run else None
+                # os is already imported at module level (line 23)
+                last_kpi_ts = _db.session.execute(_db.text(
+                    "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
+                    "JOIN accounts a ON k.account_id = a.account_id "
+                    "WHERE a.customer_id = :cid"
+                ), {"cid": customer_id}).scalar()
 
                 for f in data_dir.iterdir():
                     if f.suffix == '.csv':
                         csv_mtime = _dt.fromtimestamp(os.path.getmtime(str(f)))
-                        if _last_run_ts is None or csv_mtime > _last_run_ts:
+                        # CSV file modified after last process_data run
+                        if last_kpi_ts is None or csv_mtime > last_kpi_ts:
                             has_new_csvs = True
                             break
             except Exception as _inc_err:
-                # Fallback: if WizardRun query fails, assume new CSVs exist
-                has_new_csvs = True
                 import logging as _log_inc
                 _log_inc.getLogger(__name__).debug(f"Incremental CSV detection error (non-fatal): {_inc_err}")
 
@@ -1563,47 +1553,20 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             except Exception:
                 pass
 
-            # ── Immutable scores: only calculate NEW (account, month) pairs ──
-            # Existing health scores are point-in-time artifacts and are never
-            # retroactively recalculated (weights apply forward, not backward).
-            # Exception: mode='full_recalc' rewrites everything (admin override).
+            # Fetch ALL KPI measurements for this customer, grouped by account+month
             from models import DC2SKPI
-            _t_kpi = _time.time()
-
-            # Build set of already-scored (account_id, month) pairs
-            scored_set = set()
-            if mode != 'full_recalc':
-                _existing_rows = _db.session.execute(_db.text(
-                    "SELECT account_id, measurement_month FROM health_scores "
-                    "WHERE account_id IN (SELECT account_id FROM accounts WHERE customer_id = :cid)"
-                ), {"cid": customer_id}).fetchall()
-                scored_set = {(int(r[0]), r[1]) for r in _existing_rows}
-
             all_kpis = DC2SKPI.query.filter(
                 DC2SKPI.account_id.in_([a.account_id for a in acct_list])
             ).all()
 
-            # Group by (account_id, month) → {kpi_code: [values]}, skipping scored months
+            # Group by (account_id, month) → {kpi_code: [values]}
             account_month_kpis = defaultdict(lambda: defaultdict(list))
-            _skipped_immutable = 0
             for k in all_kpis:
                 if k.measured_at:
                     month_key = k.measured_at.date().replace(day=1) if hasattr(k.measured_at, 'date') else k.measured_at.replace(day=1)
                 else:
                     month_key = _date.today().replace(day=1)
-
-                if (k.account_id, month_key) in scored_set:
-                    _skipped_immutable += 1
-                    continue  # immutable — already scored, don't recalculate
                 account_month_kpis[(k.account_id, month_key)][k.kpi_code].append(float(k.value))
-
-            _step_timings['kpi_grouping'] = round(_time.time() - _t_kpi, 2)
-            if _skipped_immutable:
-                _logger.info(
-                    f"Immutable scores: skipped {_skipped_immutable} KPI rows "
-                    f"({len(scored_set)} scored months preserved) — "
-                    f"{len(account_month_kpis)} new (account, month) pairs to score"
-                )
 
             # For each (account, month), average the KPI values and compute health
             score_rows = []
@@ -1649,69 +1612,52 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                 except Exception as calc_err:
                     _logger.warning(f"Health score calc failed for account {account_id} month {month}: {calc_err}")
 
-            _step_timings['health_calc'] = round(_time.time() - _t_kpi, 2)
             _logger.info(f"Per-month health calc: {len(score_rows)} rows for {len(set(r['aid'] for r in score_rows))} accounts, "
-                         f"{len(set(r['month'] for r in score_rows))} distinct months "
-                         f"(mode={mode}, skipped_immutable={_skipped_immutable})")
-
-            # Collect changed account IDs for downstream incremental processing
-            _changed_account_ids = set(r['aid'] for r in score_rows)
+                         f"{len(set(r['month'] for r in score_rows))} distinct months")
 
             scores_written = 0
             if database_url and score_rows:
                 engine = create_engine(database_url)
                 with engine.begin() as conn:
-                    if mode == 'full_recalc':
-                        # UPSERT: intentional history rewrite (admin override)
-                        for row in score_rows:
-                            conn.execute(_text("""
-                                INSERT INTO health_scores
-                                    (account_id, measurement_month, health_score, health_status, contributing_pillars)
-                                VALUES (:aid, :month, :score, :status, :pillars)
-                                ON CONFLICT (account_id, measurement_month)
-                                DO UPDATE SET
-                                    health_score = EXCLUDED.health_score,
-                                    health_status = EXCLUDED.health_status,
-                                    contributing_pillars = EXCLUDED.contributing_pillars
-                            """), row)
-                            scores_written += 1
-                    else:
-                        # INSERT only — immutable scores, DO NOTHING on conflict
-                        for row in score_rows:
-                            result = conn.execute(_text("""
-                                INSERT INTO health_scores
-                                    (account_id, measurement_month, health_score, health_status, contributing_pillars)
-                                VALUES (:aid, :month, :score, :status, :pillars)
-                                ON CONFLICT (account_id, measurement_month) DO NOTHING
-                            """), row)
-                            scores_written += 1
-
-                    # Compute change_from_last_month — scoped to changed accounts only
-                    # LAG reads prior month from existing (immutable) rows, which is correct.
-                    if _changed_account_ids:
+                    # UPSERT: preserve historical months, update only matching (account_id, measurement_month).
+                    # This is critical for 2-phase loads where Phase 1 and Phase 2 produce different months.
+                    # Old behavior (DELETE all) destroyed historical data needed by ROI engine.
+                    for row in score_rows:
                         conn.execute(_text("""
-                            UPDATE health_scores hs
-                            SET change_from_last_month = hs.health_score - prev.health_score
-                            FROM (
-                                SELECT account_id, measurement_month, health_score,
-                                       LAG(health_score) OVER (PARTITION BY account_id ORDER BY measurement_month) AS prev_score
-                                FROM health_scores
-                                WHERE account_id IN (SELECT account_id FROM accounts WHERE customer_id = :cid)
-                            ) prev
-                            WHERE hs.account_id = prev.account_id
-                              AND hs.measurement_month = prev.measurement_month
-                              AND prev.prev_score IS NOT NULL
-                        """), {"cid": customer_id})
+                            INSERT INTO health_scores
+                                (account_id, measurement_month, health_score, health_status, contributing_pillars)
+                            VALUES (:aid, :month, :score, :status, :pillars)
+                            ON CONFLICT (account_id, measurement_month)
+                            DO UPDATE SET
+                                health_score = EXCLUDED.health_score,
+                                health_status = EXCLUDED.health_status,
+                                contributing_pillars = EXCLUDED.contributing_pillars
+                        """), row)
+                        scores_written += 1
+
+                    # Compute change_from_last_month for all this customer's health scores
+                    conn.execute(_text("""
+                        UPDATE health_scores hs
+                        SET change_from_last_month = hs.health_score - prev.health_score
+                        FROM (
+                            SELECT account_id, measurement_month, health_score,
+                                   LAG(health_score) OVER (PARTITION BY account_id ORDER BY measurement_month) AS prev_score
+                            FROM health_scores
+                            WHERE account_id IN (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                        ) prev
+                        WHERE hs.account_id = prev.account_id
+                          AND hs.measurement_month = prev.measurement_month
+                          AND prev.prev_score IS NOT NULL
+                    """), {"cid": customer_id})
                 engine.dispose()
             elif not database_url:
                 _logger.error("DATABASE_URL not set — cannot write health scores")
 
-            _step_timings['health_write'] = round(_time.time() - _t_kpi, 2)
             _logger.info(
                 f"Health scores: {scores_written} written, {scores_skipped} skipped (no KPIs) "
-                f"— customer {customer_id} (mode={mode})"
+                f"— customer {customer_id}"
             )
-            steps_completed.append(f'health_scores_{mode}_{scores_written}_written')
+            steps_completed.append(f'health_scores_recalculated_{scores_written}_accounts')
 
             # ── Publish ONE batched event per customer (not per account) ──
             # This triggers CG regen, Layer B, Layer C, snapshots downstream.
@@ -1761,17 +1707,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             )
 
         # ── Wizard A: arc classification + context graph edge generation ──
-        # Incremental: only reclassify accounts with new health data
         try:
-            _t_wa = _time.time()
             import logging as _log_wa
             _logger_wa = _log_wa.getLogger(__name__)
             from wizards.wizard_a_journey_db import run_wizard_a
-            wizard_a_result = run_wizard_a(
-                customer_id,
-                account_ids=_changed_account_ids if mode != 'full_recalc' else None,
-            )
-            _step_timings['wizard_a'] = round(_time.time() - _t_wa, 2)
+            wizard_a_result = run_wizard_a(customer_id)
             _logger_wa.info(
                 f"Wizard A complete: {wizard_a_result.get('processed', 0)} accounts, "
                 f"{wizard_a_result.get('edges_created', 0)} edges created"
@@ -1907,50 +1847,18 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
 
-        # ── Record run in WizardRun for audit trail + incremental detection ──
-        _pipeline_duration = round(_time.time() - _pipeline_t0, 1)
-        _step_timings['total'] = _pipeline_duration
-        try:
-            from models import WizardRun
-            _run = WizardRun(
-                customer_id=customer_id,
-                config={
-                    'wizard': 'process_data',
-                    'mode': mode,
-                    'duration_s': _pipeline_duration,
-                    'scores_written': scores_written if 'scores_written' in dir() else 0,
-                    'changed_accounts': len(_changed_account_ids) if '_changed_account_ids' in dir() else 0,
-                    'timings': _step_timings,
-                },
-            )
-            _db.session.add(_run)
-            _db.session.commit()
-        except Exception as _wr_err:
-            import logging as _log_wr
-            _log_wr.getLogger(__name__).debug(f"WizardRun tracking failed (non-fatal): {_wr_err}")
-
-        _logger_pd = __import__('logging').getLogger(__name__)
-        _logger_pd.info(
-            f"process_data complete: customer={customer_id} mode={mode} "
-            f"duration={_pipeline_duration}s timings={_step_timings}"
-        )
-
         return {
             'scope': 'customer',
             'customer_id': customer_id,
             'status': status,
-            'mode': mode,
             'accounts': len(existing_accounts),
             'kpi_measurements': existing_kpi_count or DC2SKPI.query.filter(
                 DC2SKPI.account_id.in_(existing_acct_ids)).count(),
             'csv_files_processed': csv_files if csv_files else None,
             'steps_completed': steps_completed,
             'errors': errors,
-            'duration_s': _pipeline_duration,
-            'timings': _step_timings,
             'message': (
-                f"Data processing {'completed' if status == 'success' else 'completed with issues'} "
-                f"(mode={mode}, {_pipeline_duration}s). "
+                f"Data processing {'completed' if status == 'success' else 'completed with issues'}. "
                 f"Steps: {', '.join(steps_completed) if steps_completed else 'none'}."
             ),
         }
@@ -1961,25 +1869,21 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 # ===================================================================
 
 @mcp.tool
-def process_data(customer_id: int, mode: str = 'auto') -> dict:
+def process_data(customer_id: int) -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Processes uploaded CSV files through the pipeline:
+    Processes uploaded CSV files through the full pipeline:
     1. Data loading (CSVs -> PostgreSQL)
-    2. Health score calculation (incremental — only NEW months)
-    3. Journey generation (Wizard A — only changed accounts)
-    4. Signal analysis + ROI engine
-
-    Health scores are immutable: once written for (account, month), they are
-    never retroactively recalculated. Weight changes apply forward only.
+    2. Embedding generation
+    3. Data validation
+    4. Journey generation (Wizard A)
+    5. Pattern analysis (Wizard B)
+    6. Weight calibration (Wizard C)
 
     Args:
         customer_id: The customer ID
-        mode: 'auto' (default, immutable scores) or 'full_recalc' (admin rewrite)
     """
-    if mode not in ('auto', 'full_recalc'):
-        mode = 'auto'
-    return _process_data_impl(customer_id, mode=mode)
+    return _process_data_impl(customer_id)
 
 
 # ===================================================================
@@ -2304,7 +2208,7 @@ def clone_customer(
     playbook executions, and ROI snapshots. Enables instant demo setup:
     "clone Gold_DC_Alpha as Acme Corp" in ~2 seconds.
 
-    No authentication required (onboarding tool).
+    Requires authentication — this is a data export operation, not discovery.
 
     Args:
         source_customer_id: Customer ID to clone from (e.g. 407 for Gold_DC_Alpha)
@@ -2312,6 +2216,7 @@ def clone_customer(
         new_domain: Domain for the new customer (e.g. 'acme.com')
     """
     _check_mcp_enabled()
+    _require_auth(source_customer_id, required_scope='read')
     app = _get_flask_app()
 
     with app.app_context():
@@ -2678,7 +2583,7 @@ def download_customer_csv(
     accessible to Claude.ai and other MCP clients that cannot access
     the server's filesystem.
 
-    No authentication required (onboarding tool).
+    Requires authentication — this is a data export operation.
 
     Args:
         customer_id: Customer ID to download data from
@@ -2694,6 +2599,7 @@ def download_customer_csv(
             'outcomes' — outcomes.csv
     """
     _check_mcp_enabled()
+    _require_auth(customer_id, required_scope='read')
     app = _get_flask_app()
 
     with app.app_context():

@@ -103,7 +103,8 @@ def get_edges(
         return outgoing + incoming
 
 
-def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int = 5) -> List[Dict[str, Any]]:
+def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int = 5,
+                     customer_id: int = None) -> List[Dict[str, Any]]:
     """
     Walk causal edges to build a chain of connected nodes.
 
@@ -111,6 +112,8 @@ def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int =
         node_id: Starting node
         direction: 'upstream' (find what caused this node) or 'downstream' (find effects)
         max_depth: Stop after N hops
+        customer_id: Tenant isolation — only traverse nodes belonging to this customer.
+                     If provided, nodes from other customers are silently skipped.
     Returns:
         List of {node, edge, depth} dicts in traversal order
     """
@@ -119,6 +122,12 @@ def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int =
 
     visited = set()
     chain = []
+
+    # Resolve customer_id from starting node if not provided
+    if customer_id is None:
+        start = db.session.get(ContextNode, node_id)
+        if start:
+            customer_id = start.customer_id
 
     current_ids = [node_id]
     for depth in range(1, max_depth + 1):
@@ -129,8 +138,6 @@ def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int =
             visited.add(nid)
 
             if direction == 'upstream':
-                # Find edges pointing INTO this node (from_node → nid)
-                # The from_node is the upstream cause
                 edges = ContextEdge.query.filter(
                     ContextEdge.to_node_id == nid,
                     ContextEdge.edge_type.in_(CAUSAL_EDGE_TYPES),
@@ -139,7 +146,8 @@ def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int =
                     neighbor_id = edge.from_node_id
                     if neighbor_id not in visited:
                         neighbor = db.session.get(ContextNode, neighbor_id)
-                        if neighbor:
+                        # Tenant isolation: skip nodes from other customers
+                        if neighbor and (customer_id is None or neighbor.customer_id == customer_id):
                             chain.append({
                                 'node': neighbor.to_dict(),
                                 'edge': edge.to_dict(),
@@ -147,8 +155,6 @@ def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int =
                             })
                             next_ids.append(neighbor_id)
             else:
-                # Find edges going OUT from this node (nid → to_node)
-                # The to_node is the downstream effect
                 edges = ContextEdge.query.filter(
                     ContextEdge.from_node_id == nid,
                     ContextEdge.edge_type.in_(CAUSAL_EDGE_TYPES),
@@ -157,7 +163,8 @@ def get_causal_chain(node_id: int, direction: str = 'upstream', max_depth: int =
                     neighbor_id = edge.to_node_id
                     if neighbor_id not in visited:
                         neighbor = db.session.get(ContextNode, neighbor_id)
-                        if neighbor:
+                        # Tenant isolation: skip nodes from other customers
+                        if neighbor and (customer_id is None or neighbor.customer_id == customer_id):
                             chain.append({
                                 'node': neighbor.to_dict(),
                                 'edge': edge.to_dict(),
@@ -242,10 +249,19 @@ def traverse_2hop(
     }
 
 
-def _get_all_edges_for_node(node_id: int, edge_types: Optional[List[str]] = None) -> List[ContextEdge]:
-    """Get all edges (both directions) for a node, optionally filtered."""
+def _get_all_edges_for_node(node_id: int, edge_types: Optional[List[str]] = None,
+                            customer_id: int = None) -> List[ContextEdge]:
+    """Get all edges (both directions) for a node, optionally filtered.
+
+    Args:
+        customer_id: Tenant isolation — only return edges belonging to this customer.
+    """
     q_out = ContextEdge.query.filter_by(from_node_id=node_id)
     q_in = ContextEdge.query.filter_by(to_node_id=node_id)
+
+    if customer_id is not None:
+        q_out = q_out.filter(ContextEdge.customer_id == customer_id)
+        q_in = q_in.filter(ContextEdge.customer_id == customer_id)
 
     if edge_types:
         q_out = q_out.filter(ContextEdge.edge_type.in_(edge_types))
