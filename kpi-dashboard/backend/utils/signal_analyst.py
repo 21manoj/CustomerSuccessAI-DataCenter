@@ -18,7 +18,7 @@ Errors are caught at every layer; this function must NEVER crash process_data.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import utils.push_intelligence_config as pic
@@ -419,43 +419,9 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
             f"priority={risk_info['priority']})"
         )
 
-        # ── 8. Write system signal to context graph (with dedup) ──
+        # ── 8. Write system signal to context graph ──
         try:
             from models import ContextEdge
-            # Dedup: skip if a proactive_insight for same account+signal_type exists within 7 days
-            _dedup_cutoff = datetime.utcnow() - timedelta(days=7)
-            _existing = ContextNode.query.filter(
-                ContextNode.account_id == account_id,
-                ContextNode.customer_id == customer_id,
-                ContextNode.node_subtype == 'proactive_insight',
-                ContextNode.occurred_at >= _dedup_cutoff,
-            ).filter(
-                ContextNode.title == f'Proactive Alert: {risk_info["label"]}'
-            ).first()
-            if _existing:
-                logger.debug(
-                    f"signal_analyst: dedup — proactive_insight already exists for "
-                    f"account {account_id} signal '{risk_info['label']}' within 7d, skipping"
-                )
-                return payload  # return analysis but don't create duplicate node
-
-            # Use source signal date if available, else now
-            _signal_date = None
-            try:
-                _src_signal = (
-                    ContextNode.query
-                    .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
-                    .filter(ContextNode.node_subtype == signal_type)
-                    .order_by(ContextNode.occurred_at.desc())
-                    .first()
-                )
-                if _src_signal and _src_signal.occurred_at:
-                    _signal_date = _src_signal.occurred_at
-            except Exception:
-                pass
-            if not _signal_date:
-                _signal_date = datetime.utcnow()
-
             insight_node = ContextNode(
                 account_id=account_id,
                 customer_id=customer_id,
@@ -472,7 +438,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     'triggered_by':    'signal_analyst_proactive',
                 },
                 tier=2,
-                occurred_at=_signal_date,
+                occurred_at=datetime.utcnow(),
             )
             db.session.add(insight_node)
             db.session.flush()
@@ -543,9 +509,27 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
         # Scan TWO sources for high-risk signals:
         # 1. ContextNode SIGNAL nodes (if CG was loaded)
         # 2. QualitativeSignal table (always — covers incremental loads where CG skip is on)
-        # 90-day window covers initial onboarding batch + incremental loads
-        # In production, incremental signals arrive within 1-7 days
-        cutoff = datetime.utcnow() - timedelta(days=90)
+        #
+        # Use last process_data run timestamp as cutoff to avoid re-analyzing
+        # old signals that were already triggered in a previous run.
+        # Falls back to 7-day window if no WizardRun exists (first run).
+        cutoff = datetime.utcnow() - timedelta(days=7)  # default for first run
+        try:
+            from models import WizardRun
+            last_run = (
+                WizardRun.query
+                .filter(
+                    WizardRun.customer_id == customer_id,
+                    WizardRun.config['wizard'].astext == 'process_data',
+                )
+                .order_by(WizardRun.created_at.desc())
+                .first()
+            )
+            if last_run and last_run.created_at:
+                cutoff = last_run.created_at
+                logger.info(f"signal_analyst: using last process_data run as cutoff: {cutoff}")
+        except Exception:
+            pass  # fall back to 7-day window
 
         seen = set()  # (account_id, signal_type) to avoid duplicate triggers
 
