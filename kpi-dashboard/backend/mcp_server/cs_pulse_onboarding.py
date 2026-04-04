@@ -813,16 +813,25 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
 # _process_data_impl — Single source of truth for data processing
 # ===================================================================
 
-def _process_data_impl(customer_id: int) -> dict:
+def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Two paths:
-    - Path 1 (DB-native): Data already in DB -> recalculate health scores
+    Modes:
+    - 'auto' (default): Only score NEW months — existing health scores are immutable.
+      Health scores are point-in-time artifacts; weight changes apply forward only.
+    - 'full_recalc': Admin override — rewrite ALL months with current weights.
+
+    Two paths for CSV loading:
+    - Path 1 (DB-native): Data already in DB -> recalculate new health scores
     - Path 2 (Fresh CSV): No data in DB -> load CSVs into DB, then calculate
 
     Args:
         customer_id: The customer ID
+        mode: 'auto' (immutable scores) or 'full_recalc' (admin rewrite)
     """
+    import time as _time
+    _pipeline_t0 = _time.time()
+
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -1501,34 +1510,124 @@ def _process_data_impl(customer_id: int) -> dict:
                 f'data_already_in_db_{len(existing_accounts)}_accounts_{existing_kpi_count}_kpis'
             )
 
-        # ----------------------------------------------------------
-        # PROACTIVE: Scan newly loaded signals for leading indicators
-        # (champion loss, budget cut, etc.) BEFORE health scores drop.
-        # This is the "push" path — act on signals, don't wait for KPIs.
-        # ----------------------------------------------------------
-        try:
-            from utils.signal_analyst import scan_signals_for_proactive_triggers
-            proactive_results = scan_signals_for_proactive_triggers(customer_id)
-            if proactive_results:
-                steps_completed.append(
-                    f'proactive_signals_{len(proactive_results)}_triggered'
-                )
-        except Exception as _ps_err:
-            import logging as _log_ps
-            _log_ps.getLogger(__name__).warning(
-                f"Proactive signal scan failed (non-fatal): {_ps_err}"
-            )
+        # ══════════════════════════════════════════════════════════
+        # POST-PROCESSING PIPELINE — delegated to process_data_pipeline.py
+        # Each stage is standalone, testable, never raises, logs own errors.
+        # ══════════════════════════════════════════════════════════
+        from mcp_server.process_data_pipeline import (
+            run_proactive_signal_scan,
+            calculate_health_scores,
+            run_wizard_a_step,
+            run_signal_analyst,
+            run_urgent_scanner,
+            run_roi_engine,
+            run_qdrant_indexing,
+            publish_health_events,
+            record_wizard_run,
+        )
 
-        # ----------------------------------------------------------
-        # ALWAYS: Recalculate health scores from DB data
-        # Per-month: group KPIs by month, compute health per month
-        # per account. This enables ROI engine to see historical
-        # deltas (e.g. Phase 1 baseline vs Phase 2 intervention).
-        # ----------------------------------------------------------
-        try:
-            calculate_fn, _, _ = _get_health_functions(vertical)
-            import utils.health_thresholds as ht
-            from datetime import date as _date
+        _step_timings = {}
+
+        # Stage 1: Proactive signal scan
+        _step = run_proactive_signal_scan(customer_id)
+        if _step:
+            steps_completed.append(_step)
+
+        # Stage 2: Health score calculation (immutable — only new months)
+        acct_list = Account.query.filter_by(customer_id=customer_id).all()
+        _health_step, _changed_account_ids, _health_timings = calculate_health_scores(
+            customer_id=customer_id,
+            acct_list=acct_list,
+            vertical=vertical,
+            mode=mode,
+        )
+        if _health_step:
+            steps_completed.append(_health_step)
+        _step_timings.update(_health_timings)
+
+        # Publish health events for downstream subscribers
+        if _changed_account_ids:
+            existing_acct_ids = [a.account_id for a in acct_list]
+            publish_health_events(customer_id, existing_acct_ids)
+
+        # Stage 3: Wizard A — arc classification (incremental)
+        _wa_step, _wa_duration = run_wizard_a_step(customer_id, _changed_account_ids, mode)
+        if _wa_step:
+            steps_completed.append(_wa_step)
+        _step_timings['wizard_a'] = _wa_duration
+
+        # Stage 4: Signal analyst (Layer A)
+        run_signal_analyst(customer_id)
+
+        # Stage 5: Urgent signal scanner (Layer C)
+        _urgent_step = run_urgent_scanner(customer_id)
+        if _urgent_step:
+            steps_completed.append(_urgent_step)
+
+        # Stage 6: ROI engine
+        _roi_step = run_roi_engine(customer_id)
+        if _roi_step:
+            steps_completed.append(_roi_step)
+
+        # Stage 7: QDRANT indexing
+        _qdrant_step = run_qdrant_indexing(customer_id)
+        if _qdrant_step:
+            steps_completed.append(_qdrant_step)
+
+        # ── Result + tracking ──
+        status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
+        _pipeline_duration = round(_time.time() - _pipeline_t0, 1)
+        _step_timings['total'] = _pipeline_duration
+
+        # Stage 8: Record WizardRun for audit trail
+        _scores_written = int(_health_step.split('_')[-2]) if _health_step and '_' in _health_step else 0
+        record_wizard_run(
+            customer_id=customer_id,
+            mode=mode,
+            duration_s=_pipeline_duration,
+            scores_written=_scores_written,
+            changed_accounts=len(_changed_account_ids),
+            timings=_step_timings,
+        )
+
+        import logging as _log_pd
+        _log_pd.getLogger(__name__).info(
+            f"process_data complete: customer={customer_id} mode={mode} "
+            f"duration={_pipeline_duration}s timings={_step_timings}"
+        )
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'status': status,
+            'mode': mode,
+            'accounts': len(acct_list),
+            'kpi_measurements': existing_kpi_count or DC2SKPI.query.filter(
+                DC2SKPI.account_id.in_([a.account_id for a in acct_list])).count(),
+            'csv_files_processed': csv_files if csv_files else None,
+            'steps_completed': steps_completed,
+            'errors': errors,
+            'duration_s': _pipeline_duration,
+            'timings': _step_timings,
+            'message': (
+                f"Data processing {'completed' if status == 'success' else 'completed with issues'} "
+                f"(mode={mode}, {_pipeline_duration}s). "
+                f"Steps: {', '.join(steps_completed) if steps_completed else 'none'}."
+            ),
+        }
+
+        # ── LEGACY CODE BELOW REPLACED BY PIPELINE MODULE ──
+        # The following 300+ lines have been extracted into
+        # process_data_pipeline.py as standalone, testable functions.
+        # Keeping this marker for git history reference.
+        if False:  # noqa: SIM108 — dead code marker
+            pass
+            # Old health calc, wizard A, signal analyst, urgent scanner,
+            # ROI engine, QDRANT indexing were all inline here.
+            try:
+                calculate_fn, _, _ = _get_health_functions(vertical)
+                import utils.health_thresholds as ht
+                from datetime import date as _date
             from sqlalchemy import create_engine, text as _text
             import json as _json, logging
             from collections import defaultdict
@@ -1869,21 +1968,25 @@ def _process_data_impl(customer_id: int) -> dict:
 # ===================================================================
 
 @mcp.tool
-def process_data(customer_id: int) -> dict:
+def process_data(customer_id: int, mode: str = 'auto') -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Processes uploaded CSV files through the full pipeline:
+    Processes uploaded CSV files through the pipeline:
     1. Data loading (CSVs -> PostgreSQL)
-    2. Embedding generation
-    3. Data validation
-    4. Journey generation (Wizard A)
-    5. Pattern analysis (Wizard B)
-    6. Weight calibration (Wizard C)
+    2. Health score calculation (incremental — only NEW months)
+    3. Journey generation (Wizard A — only changed accounts)
+    4. Signal analysis + ROI engine
+
+    Health scores are immutable: once written for (account, month), they are
+    never retroactively recalculated. Weight changes apply forward only.
 
     Args:
         customer_id: The customer ID
+        mode: 'auto' (default, immutable scores) or 'full_recalc' (admin rewrite)
     """
-    return _process_data_impl(customer_id)
+    if mode not in ('auto', 'full_recalc'):
+        mode = 'auto'
+    return _process_data_impl(customer_id, mode=mode)
 
 
 # ===================================================================
