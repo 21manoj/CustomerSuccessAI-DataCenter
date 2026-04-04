@@ -26,7 +26,7 @@ import utils.push_intelligence_config as pic
 logger = logging.getLogger(__name__)
 
 
-def run_wizard_a(customer_id: int) -> dict:
+def run_wizard_a(customer_id: int, account_ids: set = None) -> dict:
     """
     Top-level entrypoint for Wizard A Arc Intelligence Engine.
 
@@ -38,6 +38,11 @@ def run_wizard_a(customer_id: int) -> dict:
 
     Also runs legacy journey generation for backward compatibility.
 
+    Args:
+        customer_id: The customer ID
+        account_ids: Optional set of account IDs to process. If None, processes all.
+            Used by incremental process_data to only reclassify accounts with new health data.
+
     Returns:
         dict with arc classification results and edge counts.
     """
@@ -47,6 +52,8 @@ def run_wizard_a(customer_id: int) -> dict:
     from utils.arc_edge_generator import generate_edges
 
     accounts = Account.query.filter_by(customer_id=customer_id).all()
+    if account_ids is not None:
+        accounts = [a for a in accounts if a.account_id in account_ids]
     if not accounts:
         return {
             'status': 'skipped',
