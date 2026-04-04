@@ -219,11 +219,11 @@ def export_customer_data():
                 text("""
                     SELECT * FROM context_nodes
                     WHERE customer_id = :cid
-                    ORDER BY id
+                    ORDER BY node_id
                 """),
                 {'cid': customer_id}
             ).fetchall()
-            payload['context_nodes'] = [_row_to_dict(r) for r in cn_rows]
+            payload['context_nodes'] = [dict(r._mapping) for r in cn_rows]
         except Exception as cn_err:
             logger.warning(f"[backup] context_nodes export failed: {cn_err}")
             db.session.rollback()
@@ -236,11 +236,11 @@ def export_customer_data():
                     SELECT ce.*
                     FROM context_edges ce
                     WHERE ce.customer_id = :cid
-                    ORDER BY ce.id
+                    ORDER BY ce.edge_id
                 """),
                 {'cid': customer_id}
             ).fetchall()
-            payload['context_edges'] = [_row_to_dict(r) for r in ce_rows]
+            payload['context_edges'] = [dict(r._mapping) for r in ce_rows]
         except Exception as ce_err:
             logger.warning(f"[backup] context_edges export failed: {ce_err}")
             db.session.rollback()
