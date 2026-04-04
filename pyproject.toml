@@ -1,0 +1,82 @@
+# ================================================================
+# CS Pulse Platform — Project Configuration
+# ================================================================
+
+[project]
+name = "cs-pulse"
+version = "5.0.0"
+requires-python = ">=3.11"
+
+# ================================================================
+# Ruff — Fast Python linter + formatter
+# https://docs.astral.sh/ruff/
+# ================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["kpi-dashboard/backend", "load-driver"]
+
+# Start permissive — tighten over time
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort (import ordering)
+    "S",     # bandit (security)
+    "B",     # bugbear (common bugs)
+    "UP",    # pyupgrade (Python version)
+]
+ignore = [
+    "E501",  # line too long — handled by formatter
+    "E722",  # bare except — TODO: fix 187 instances then remove
+    "S101",  # assert — used in tests
+    "S105",  # hardcoded password — already addressed in S1
+    "S106",  # hardcoded password arg — already addressed in S1
+    "B904",  # raise from — too noisy for now
+]
+
+# Exclude legacy/generated files from linting
+[tool.ruff.lint.per-file-ignores]
+"kpi-dashboard/backend/verticals/customer*/scripts/*" = ["S", "E", "W"]
+"kpi-dashboard/backend/migrations/*" = ["E", "W"]
+"kpi-dashboard/backend/simple_*.py" = ["S"]
+"kpi-dashboard/backend/working_*.py" = ["S"]
+"load-driver/tests/*" = ["S"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["models", "extensions", "utils", "verticals", "mcp_server"]
+
+# ================================================================
+# Black — Code formatter (ruff format is compatible)
+# ================================================================
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+
+# ================================================================
+# Pytest
+# ================================================================
+[tool.pytest.ini_options]
+testpaths = [
+    "kpi-dashboard/backend/tests",
+    "load-driver/tests",
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short -q"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests requiring database",
+    "e2e: marks end-to-end tests requiring running server",
+]
+
+# ================================================================
+# MyPy — Type checking (future, start with critical paths)
+# ================================================================
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

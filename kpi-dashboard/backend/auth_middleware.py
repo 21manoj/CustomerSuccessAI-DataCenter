@@ -10,28 +10,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Public endpoints that don't require authentication
+# Public endpoints that don't require authentication.
+# SECURITY: Keep this list minimal. MCP server has its own auth (ONBOARDING_TOOLS set).
+# These REST endpoints are for UI login flow, health checks, and discovery only.
 PUBLIC_ENDPOINTS = [
     '/api/login',
     '/api/register',
     '/api/health',
-    '/api/upload/health',  # Upload API health check
+    '/api/upload/health',           # Upload API health check (no data)
     '/api/forgot-password',
     '/api/reset-password',
-    # Onboarding endpoints - must be public for new customer creation
-    '/api/onboarding/complete',
-    '/api/onboarding/provision',
-    '/api/onboarding/upload',  # Upload endpoint for onboarding workflow
-    '/api/onboarding/process-data',
-    '/api/onboarding/register-journey-api',
-    '/api/onboarding/processing-status',
-    '/api/onboarding/templates',  # Template download endpoints
-    '/api/onboarding/validate-csv',  # CSV validation endpoint
-    # Integration framework — webhook endpoints must be public (n8n/external push)
-    '/api/integrations/webhook',  # Public inbound webhook (HMAC-authenticated)
-    '/api/integrations/connector-types',  # Discovery endpoint
-    # /api/test-runner and /api/admin/uuid-backfill are protected (require auth)
+    # Discovery — no customer data, safe to expose
+    '/api/onboarding/templates',    # CSV template download (schema only)
+    '/api/onboarding/validate-csv', # CSV validation (no persist)
+    # Integration framework — webhook uses HMAC auth separately
+    '/api/integrations/webhook',
+    '/api/integrations/connector-types',
 ]
+
+# NOTE: The following onboarding endpoints were previously public but now
+# require authentication (login cookie or session). The MCP server handles
+# frictionless onboarding via its own ONBOARDING_TOOLS set — these REST
+# endpoints are only used by the load driver and UI, which authenticate.
+# Moved to auth-required (April 2026 — S1 security hardening):
+#   /api/onboarding/complete
+#   /api/onboarding/provision
+#   /api/onboarding/upload
+#   /api/onboarding/process-data
+#   /api/onboarding/register-journey-api
+#   /api/onboarding/processing-status
 
 # Public path prefixes (for static files)
 PUBLIC_PREFIXES = [
