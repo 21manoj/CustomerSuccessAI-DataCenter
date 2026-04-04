@@ -99,7 +99,20 @@ class DataGenerator:
     ) -> List[Dict]:
         """Generate KPI measurement rows for one account in this phase."""
         rows = []
-        target_health = max(5, min(95, state.health_score + decision.target_health_delta))
+        # Adaptive amplification — as health rises, the scoring curve flattens
+        # and each new month has less marginal impact (averaging with more history).
+        # Low health (<55): 2x amplification (big jumps are easy)
+        # Mid health (55-65): 3x amplification (need stronger signal)
+        # High health (>65): 4x amplification (pushing through to healthy ≥70)
+        current = state.health_score
+        if current < 55:
+            amp = 2.0
+        elif current < 65:
+            amp = 3.0
+        else:
+            amp = 4.0
+        amplified_health = current + decision.target_health_delta * amp
+        target_health = max(10, min(95, amplified_health))
 
         for kpi_code in self.kpi_codes:
             # Get KPI metadata from catalog
@@ -121,8 +134,8 @@ class DataGenerator:
                 t = week / max(1, phase_weeks - 1)  # 0.0 → 1.0
                 value = self._apply_trajectory(base_value, t, decision.trajectory, kpi_target)
 
-                # Add noise
-                noise = self._rng.gauss(0, base_value * 0.03)
+                # Add noise (1.5% — low enough to not mask the signal)
+                noise = self._rng.gauss(0, base_value * 0.015)
                 value = max(0, value + noise)
 
                 measured_at = phase_start + timedelta(weeks=week)
@@ -231,16 +244,16 @@ class DataGenerator:
         """Map health score (0-100) to a KPI value.
 
         At health=100, KPI is at target (excellent).
-        At health=0, KPI is at 20% of target (terrible).
-        Linear interpolation between.
+        At health=0, KPI is at 40% of target (poor).
+        Steeper curve than before — 5-point health delta produces ~5-point KPI delta.
         """
         ratio = health / 100.0
-        floor = target * 0.20
+        floor = target * 0.40
         if higher_is_better:
             return floor + (target - floor) * ratio
         else:
             # Lower is better: invert — health=100 → low value, health=0 → high value
-            ceiling = target * 3.0
+            ceiling = target * 2.5
             return ceiling - (ceiling - target) * ratio
 
     def _apply_trajectory(self, base: float, t: float, trajectory: str, target: float) -> float:
@@ -249,18 +262,14 @@ class DataGenerator:
         t: normalized time (0.0 = start of phase, 1.0 = end of phase)
         """
         if trajectory == 'declining':
-            return base * (1.0 - 0.15 * t)
+            return base * (1.0 - 0.20 * t)
         elif trajectory == 'slow_decline':
-            return base * (1.0 - 0.07 * t)
+            return base * (1.0 - 0.10 * t)
         elif trajectory == 'improving':
-            return base * (1.0 + 0.12 * t)
+            return base * (1.0 + 0.20 * t)
         elif trajectory == 'recovering':
-            # V-shape: dip first 40%, then recover
-            if t < 0.4:
-                return base * (1.0 - 0.08 * (t / 0.4))
-            else:
-                recovery = (t - 0.4) / 0.6
-                return base * (0.92 + 0.15 * recovery)
+            # Monotonic improvement — no V-shape dip, every week is better
+            return base * (1.0 + 0.15 * t)
         elif trajectory == 'stable':
             return base * (1.0 + self._rng.gauss(0, 0.02))
         elif trajectory == 'flat_high_risk':

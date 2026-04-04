@@ -148,12 +148,12 @@ RULES = [
             'narrative_phase': 'baseline',
         },
     },
-    # Critical + active playbook → slow recovery starting
+    # Critical + active playbook → strong recovery (must punch through to at-risk)
     {
         'name': 'critical_pb_active',
         'conditions': {'health_band': 'critical', 'active_playbook': True},
         'decision': {
-            'trajectory': 'recovering', 'target_health_delta': 5,
+            'trajectory': 'recovering', 'target_health_delta': 10,
             'signals': ['csm_intervention', 'kpi_recovery'],
             'narrative_phase': 'intervention',
         },
@@ -190,13 +190,13 @@ RULES = [
             'narrative_phase': 'baseline',
         },
     },
-    # At-risk + active playbook → stabilize
+    # At-risk + active playbook → sustained recovery (push toward healthy ≥70)
     {
         'name': 'at_risk_pb_active',
         'conditions': {'health_band': 'at_risk', 'active_playbook': True},
         'decision': {
-            'trajectory': 'stable', 'target_health_delta': 2,
-            'signals': ['champion_reengagement'],
+            'trajectory': 'improving', 'target_health_delta': 7,
+            'signals': ['kpi_recovery', 'champion_reengagement'],
             'narrative_phase': 'intervention',
         },
     },
@@ -211,7 +211,18 @@ RULES = [
             'narrative_phase': 'resolution',
         },
     },
-    # Healthy + improving → expansion signals
+    # Healthy + active playbook → sustain and expand (just crossed threshold)
+    {
+        'name': 'healthy_pb_active',
+        'conditions': {'health_band': 'healthy', 'active_playbook': True},
+        'decision': {
+            'trajectory': 'improving', 'target_health_delta': 5,
+            'signals': ['deployment_improvement', 'expansion_signal'],
+            'outcomes': ['revenue_protected', 'expansion_opportunity'],
+            'narrative_phase': 'resolution',
+        },
+    },
+    # Healthy + improving (no playbook) → expansion signals
     {
         'name': 'healthy_improving',
         'conditions': {'health_band': 'healthy', 'slope': 'improving'},
@@ -227,7 +238,7 @@ RULES = [
         'name': 'healthy_stable',
         'conditions': {'health_band': 'healthy'},
         'decision': {
-            'trajectory': 'stable', 'target_health_delta': 0,
+            'trajectory': 'stable', 'target_health_delta': 3,
             'signals': ['routine_review'],
             'narrative_phase': 'baseline',
         },

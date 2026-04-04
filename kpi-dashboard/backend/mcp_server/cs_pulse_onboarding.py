@@ -292,13 +292,33 @@ def _resolve_kpi_tier(tier: str, vertical: str) -> dict:
 
 
 def _apply_kpi_tier(customer_config, tier_def: dict) -> dict:
-    """Apply tier KPI selection to a CustomerConfig. Returns tier info dict for response."""
+    """Apply tier KPI selection AND pillar weights to a CustomerConfig.
+
+    Shift-left: sets both enabled_kpis and pillar_weights at creation time
+    so health scores are computed correctly from the first process_data call.
+    Without pillar_weights, the scorer falls back to full-catalog defaults
+    which spread weight across all 5 pillars — including pillars with zero
+    KPIs in the tier, diluting the score.
+    """
     kpi_codes = tier_def.get('kpi_codes')
     if kpi_codes == 'all':
         # Full tier: clear KPI restriction (all KPIs enabled)
         customer_config.dc2s_enabled_kpis = None
+        customer_config.dc2s_pillar_weights = None  # use catalog defaults
     elif kpi_codes:
         customer_config.dc2s_enabled_kpis = kpi_codes
+
+        # Set pillar weights — distribute equally across active pillars only.
+        # Without this, pillars with zero KPIs still get weight → score dilution.
+        active_pillars = tier_def.get('pillars')
+        if active_pillars and len(active_pillars) < 5:
+            equal_weight = round(1.0 / len(active_pillars), 4)
+            pw = {p: equal_weight for p in active_pillars}
+            # Fix rounding to sum exactly to 1.0
+            diff = round(1.0 - sum(pw.values()), 4)
+            if diff != 0:
+                pw[active_pillars[-1]] = round(pw[active_pillars[-1]] + diff, 4)
+            customer_config.dc2s_pillar_weights = pw
 
     return {
         'name': tier_def.get('display_name'),
@@ -851,11 +871,8 @@ def _process_data_impl(customer_id: int) -> dict:
         if data_in_db and has_csv_dir:
             try:
                 # os is already imported at module level (line 23)
-                # Use created_at (when row was inserted), not measured_at
-                # (simulated data date). Simulation engines generate future
-                # dates that would make CSV files appear "old" by comparison.
                 last_kpi_ts = _db.session.execute(_db.text(
-                    "SELECT MAX(k.created_at) FROM dc2s_kpis k "
+                    "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
                     "JOIN accounts a ON k.account_id = a.account_id "
                     "WHERE a.customer_id = :cid"
                 ), {"cid": customer_id}).scalar()
@@ -1808,21 +1825,6 @@ def _process_data_impl(customer_id: int) -> dict:
         except Exception as _roi_err:
             import logging as _log_roi2
             _log_roi2.getLogger(__name__).warning(f"ROI engine failed (non-fatal): {_roi_err}")
-
-        # ── PLAYBOOK AUTO-TRIGGER: evaluate at-risk accounts (V2-only, direct call) ──
-        try:
-            from push_intelligence_subscriber import evaluate_playbook_triggers_for_customer
-            _pb_results = evaluate_playbook_triggers_for_customer(customer_id)
-            _pb_triggered = [r for r in _pb_results if r.get('decision') == 'auto_approved']
-            if _pb_triggered:
-                steps_completed.append(f'playbooks_auto_triggered_{len(_pb_triggered)}')
-                import logging as _log_pb
-                _log_pb.getLogger(__name__).info(
-                    f"Playbook auto-trigger: {len(_pb_triggered)} playbooks fired for customer {customer_id}"
-                )
-        except Exception as _pb_err:
-            import logging as _log_pb2
-            _log_pb2.getLogger(__name__).debug(f"Playbook auto-trigger skipped (non-fatal): {_pb_err}")
 
         # ── QDRANT: Index signals for semantic search (non-fatal) ──
         try:

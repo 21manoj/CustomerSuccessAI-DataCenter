@@ -264,9 +264,12 @@ class PhaseRunner:
                 'up' if decision.target_health_delta > 2 else 'flat'
             )
             actual_delta = post.health_score - state.health_score
-            # Use ±0.5 threshold for direction detection — health scores
-            # change less than expected because new data gets averaged with existing
-            actual_dir = 'down' if actual_delta < -0.5 else ('up' if actual_delta > 0.5 else 'flat')
+            # Tighter thresholds: ±1.0 for large expected moves, ±0.5 for small
+            if abs(decision.target_health_delta) >= 5:
+                threshold = 1.0
+            else:
+                threshold = 0.5
+            actual_dir = 'down' if actual_delta < -threshold else ('up' if actual_delta > threshold else 'flat')
 
             passed = expected_dir == actual_dir or expected_dir == 'flat'
             if passed:
