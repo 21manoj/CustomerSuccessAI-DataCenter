@@ -533,6 +533,27 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
 
         seen = set()  # (account_id, signal_type) to avoid duplicate triggers
 
+        # Pre-populate seen set with signals already analyzed (have proactive_insight nodes).
+        # This prevents re-triggering LLM on signals analyzed in previous process_data runs.
+        try:
+            _existing_insights = (
+                ContextNode.query
+                .filter(
+                    ContextNode.customer_id == customer_id,
+                    ContextNode.node_subtype == 'proactive_insight',
+                )
+                .all()
+            )
+            for _ei in _existing_insights:
+                _ei_props = _ei.properties or {}
+                _ei_sig_type = _ei_props.get('signal_type', '')
+                if _ei_sig_type and _ei.account_id:
+                    seen.add((_ei.account_id, _ei_sig_type))
+            if seen:
+                logger.info(f"signal_analyst: {len(seen)} already-analyzed signals pre-loaded into dedup set")
+        except Exception:
+            pass
+
         # Source 1: ContextNode table
         recent_cg = (
             ContextNode.query
