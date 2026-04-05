@@ -370,48 +370,21 @@ def _health_to_annual_churn_prob(health: float) -> float:
 
 
 def _get_full_playbook_cost(playbook_id: str, arr: float) -> float:
-    """Get full intervention cost including CSM labor, platform, exec time, overhead.
+    """Get full intervention cost from cost bridge (CSM labor + platform + overhead).
 
-    Industry benchmarks (TSIA, Gainsight Pulse 2024):
-      - Crisis/recovery playbook on $5M+ account: $40K-$80K
-      - Engagement/retention playbook on $3M+ account: $20K-$40K
-      - Deployment acceleration: $15K-$30K
-
-    Uses cost bridge as base, then applies ARR-scaled minimum floors.
+    Uses the same cost bridge as get_playbook_economics for consistency.
+    Adds 20% overhead for exec time, coordination, and context-switching.
     """
-    # Base cost from cost bridge
-    base_cost = 0
     try:
         from playbook_cost_bridge import calculate_cost_bridge
         bridge = calculate_cost_bridge(account_arr=arr)
         pb_econ = bridge.playbooks.get(playbook_id)
         if pb_econ:
-            base_cost = pb_econ.manual_cost * 1.20  # +20% overhead
+            return pb_econ.manual_cost * 1.20  # +20% overhead
     except Exception:
         pass
-
-    if base_cost <= 0:
-        base_cost = 40 * 85 * 1.20  # 40 hrs × $85 + 20% overhead
-
-    # ARR-scaled floor: real interventions cost ~0.5-1% of ARR at risk
-    # Crisis playbooks are more expensive than engagement playbooks
-    crisis_pbs = {'PB-01', 'PB-02', 'PB-04'}  # deployment, RMA, capacity
-    if playbook_id in crisis_pbs:
-        arr_floor = arr * 0.006  # 0.6% of ARR for crisis interventions
-    else:
-        arr_floor = arr * 0.004  # 0.4% of ARR for engagement interventions
-
-    # Absolute floors by ARR tier (industry benchmarks)
-    if arr >= 8_000_000:
-        abs_floor = 45_000
-    elif arr >= 5_000_000:
-        abs_floor = 30_000
-    elif arr >= 3_000_000:
-        abs_floor = 18_000
-    else:
-        abs_floor = 10_000
-
-    return max(base_cost, arr_floor, abs_floor)
+    # Fallback: 40 hrs × CSM rate + 20% overhead
+    return 40 * 95 * 1.20
 
 
 @mcp.tool

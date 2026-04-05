@@ -917,25 +917,6 @@ def calculate_outcome_story(
     if kpi_trends:
         result['kpi_trends'] = kpi_trends
 
-    # ── Data source tagging: benchmark vs Wizard C calibrated (#5) ──
-    is_calibrated = False
-    if customer_id:
-        try:
-            from models import CustomerConfig
-            cc = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
-            is_calibrated = bool(cc and cc.dc2s_pillar_weights)
-        except Exception:
-            pass
-    data_source_label = "calibrated" if is_calibrated else "benchmark"
-    result['data_source'] = data_source_label
-    result['data_source_detail'] = (
-        "Weights calibrated by Wizard C from account outcome correlations"
-        if is_calibrated else
-        "Industry benchmarks (Gainsight Pulse 2024, TSIA Research, KeyBanc SaaS Survey)"
-    )
-    for mo in result.get('forward', {}).get('metric_outcomes', []):
-        mo['data_source'] = data_source_label
-
     # Context graph enrichment (feature-toggle gated, graceful fallback)
     if customer_id and account_ids:
         try:
@@ -944,27 +925,6 @@ def calculate_outcome_story(
                 result['context_graph'] = graph_evidence
         except Exception:
             pass  # Graph data is enrichment, not required
-
-    # ── Exposure vs Confirmed Risk narrative (#2 — CRO differentiator) ──
-    risk = result.get('risk_analysis', {})
-    cg = result.get('context_graph', {})
-    surface_exposure = risk.get('expected_value_at_risk', 0)
-    cg_revenue = cg.get('revenue_summary', {}) if isinstance(cg, dict) else {}
-    confirmed_risk = abs(cg_revenue.get('at_risk', 0)) if cg_revenue else 0
-    if surface_exposure > 0:
-        gap = surface_exposure - confirmed_risk
-        risk['exposure_vs_confirmed'] = {
-            'surface_exposure': round(surface_exposure, 2),
-            'evidence_confirmed_risk': round(confirmed_risk, 2),
-            'gap': round(gap, 2),
-            'gap_pct': round((gap / surface_exposure * 100) if surface_exposure > 0 else 0, 1),
-            'narrative': (
-                f"Surface exposure = ${surface_exposure:,.0f} (ARR x churn probability). "
-                f"Evidence-confirmed risk = ${confirmed_risk:,.0f} (from causal evidence graph). "
-                f"Gap = ${gap:,.0f} ({round(gap / surface_exposure * 100) if surface_exposure else 0}%) "
-                f"— this is the noise CS Pulse removes by grounding risk in actual signals."
-            ),
-        }
 
     return result
 
@@ -1422,6 +1382,15 @@ def _generate_narrative(
         parts.append(
             f"Looking ahead over {forward.period_label.lower()}, the same investment "
             f"is projected to deliver {forward_dollar} ({f.roi_pct:.0f}% ROI)."
+        )
+
+    # Explain the ROI differential if historical >> forward
+    if h.roi_pct > 0 and f.roi_pct > 0 and h.roi_pct > f.roi_pct * 3:
+        parts.append(
+            f"The historical ROI includes one-time turnaround gains from accounts "
+            f"that moved from critical to healthy — these gains are now captured in "
+            f"the baseline. Forward projections assume incremental {f.improvement_pct_avg:.0f}% "
+            f"improvement on the new, higher baseline."
         )
 
     if h.total_impact > 0 and f.total_impact > 0:

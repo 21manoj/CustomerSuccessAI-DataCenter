@@ -632,22 +632,23 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
     ).all()
 
     if len(kpi_rows) >= 2:
-        # Build {kpi_code: [(measured_at, value), ...]} across all accounts
+        # Build {kpi_code: [(measured_at, value), ...]} and collect targets
         from collections import defaultdict
         kpi_by_code = defaultdict(list)
+        kpi_targets = {}  # kpi_code → target value
         for row in kpi_rows:
             kpi_by_code[row.kpi_code].append((row.measured_at, float(row.value)))
+            if row.target and row.kpi_code not in kpi_targets:
+                kpi_targets[row.kpi_code] = float(row.target)
 
         # For each kpi_code, compute earliest-avg and latest-avg
         kpi_earliest = {}  # kpi_code → avg value at earliest month
         kpi_latest = {}    # kpi_code → avg value at latest month
         for kpi_code, measurements in kpi_by_code.items():
             measurements.sort(key=lambda x: x[0])
-            # Group by month to handle multiple accounts
             earliest_month = measurements[0][0].strftime('%Y-%m')
             latest_month = measurements[-1][0].strftime('%Y-%m')
             if earliest_month == latest_month and len(measurements) > 1:
-                # Same month only — try to split by first/second half
                 mid = len(measurements) // 2
                 early_vals = [v for _, v in measurements[:mid]]
                 late_vals = [v for _, v in measurements[mid:]]
@@ -658,7 +659,10 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
             kpi_earliest[kpi_code] = sum(early_vals) / len(early_vals) if early_vals else None
             kpi_latest[kpi_code] = sum(late_vals) / len(late_vals) if late_vals else None
 
-        # Map linked_kpi_codes → Power-of-1 metrics
+        # Map linked_kpi_codes → Power-of-1 metrics using IMPROVEMENT-BASED mapping.
+        # Each KPI's improvement is normalized as a fraction of its own scale,
+        # then the average improvement fraction is applied to the Po1 metric baseline.
+        # This prevents mixing units (e.g., RMA rate % with MTBF hours).
         metric_actuals = {}
         metrics_with_data = 0
         for metric_id, metric in POWER_OF_1_METRICS.items():
@@ -666,20 +670,38 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
             if not linked:
                 continue
 
-            # Average across linked KPIs that have data
-            baselines = []
-            currents = []
+            improvement_fractions = []
             for kpi_code in linked:
                 early = kpi_earliest.get(kpi_code)
                 late = kpi_latest.get(kpi_code)
-                if early is not None and late is not None:
-                    baselines.append(early)
-                    currents.append(late)
+                if early is None or late is None:
+                    continue
+                target = kpi_targets.get(kpi_code, early)
+                # Determine KPI direction from whether target > early baseline
+                kpi_higher_is_better = target > early if target != early else True
+                if kpi_higher_is_better:
+                    # Higher is better: fraction of target achieved
+                    denom = max(abs(target), abs(early), 1)
+                    frac = (late - early) / denom
+                else:
+                    # Lower is better: fraction of reduction achieved
+                    denom = max(abs(early), 1)
+                    frac = (early - late) / denom
+                improvement_fractions.append(frac)
 
-            if baselines and currents:
+            if improvement_fractions:
+                avg_improvement = sum(improvement_fractions) / len(improvement_fractions)
+                # Convert fraction to Power-of-1 percentage points
+                po1_pct = avg_improvement * 100
+                if metric.direction == "lower_is_better":
+                    baseline_val = metric.baseline + (metric.one_pct_move * max(-po1_pct, 0))
+                    current_val = metric.baseline - (metric.one_pct_move * max(po1_pct, 0))
+                else:
+                    baseline_val = metric.baseline - (metric.one_pct_move * max(po1_pct, 0))
+                    current_val = metric.baseline + (metric.one_pct_move * max(po1_pct, 0))
                 metric_actuals[metric_id] = {
-                    "baseline": round(sum(baselines) / len(baselines), 2),
-                    "current": round(sum(currents) / len(currents), 2),
+                    "baseline": round(baseline_val, 2),
+                    "current": round(current_val, 2),
                 }
                 metrics_with_data += 1
 
@@ -1018,29 +1040,46 @@ def _extract_current_values(accounts, customer_id=None):
     ).order_by(_DC2SKPI.measured_at.desc()).all()
 
     if latest_kpis:
-        # Keep only the latest measurement per (account_id, kpi_code)
+        # Keep only the latest measurement per (account_id, kpi_code) + targets
         seen = set()
-        kpi_latest_vals = defaultdict(list)  # kpi_code → [value, ...]
+        kpi_latest_vals = defaultdict(list)
+        kpi_targets = {}
         for row in latest_kpis:
             key = (row.account_id, row.kpi_code)
             if key not in seen:
                 seen.add(key)
                 kpi_latest_vals[row.kpi_code].append(float(row.value))
+                if row.target and row.kpi_code not in kpi_targets:
+                    kpi_targets[row.kpi_code] = float(row.target)
 
-        # Map to Power-of-1 metrics
+        # Map to Power-of-1 metrics using improvement-based approach
+        # Current state = Po1 baseline adjusted by how far current KPIs are from target
         current_values = {}
         metrics_with_data = 0
         for metric_id, metric in POWER_OF_1_METRICS.items():
             linked = metric.linked_kpi_codes
             if not linked:
                 continue
-            vals = []
+            achievement_fracs = []
             for kpi_code in linked:
                 kpi_vals = kpi_latest_vals.get(kpi_code, [])
-                if kpi_vals:
-                    vals.append(sum(kpi_vals) / len(kpi_vals))
-            if vals:
-                current_values[metric_id] = round(sum(vals) / len(vals), 2)
+                if not kpi_vals:
+                    continue
+                avg_val = sum(kpi_vals) / len(kpi_vals)
+                target = kpi_targets.get(kpi_code)
+                if not target:
+                    continue
+                # How close to target? 1.0 = at target, >1 = exceeding
+                achievement = avg_val / target if target != 0 else 1.0
+                achievement_fracs.append(achievement)
+            if achievement_fracs:
+                avg_achievement = sum(achievement_fracs) / len(achievement_fracs)
+                # Map achievement to Po1 scale: 1.0 = at baseline, deviation maps via one_pct_move
+                deviation_pct = (avg_achievement - 1.0) * 100
+                if metric.direction == "lower_is_better":
+                    current_values[metric_id] = round(metric.baseline - (metric.one_pct_move * deviation_pct), 2)
+                else:
+                    current_values[metric_id] = round(metric.baseline + (metric.one_pct_move * deviation_pct), 2)
                 metrics_with_data += 1
 
         if metrics_with_data >= 2:
