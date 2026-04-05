@@ -24,6 +24,7 @@ from cs_pulse_mcp_server import (
     _get_account_arr,
     _resolve_customer_vertical,
     _get_health_functions,
+    _get_playbook_config,
     _ensure_registry,
     _backend_dir,
     ToolError,
@@ -1118,6 +1119,7 @@ def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
 
         # ── Enrich with trajectory + revenue waterfall ──
         from models import Account, HealthScore
+        from datetime import datetime, timedelta as _td
         import utils.health_thresholds as ht
 
         accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
@@ -1239,7 +1241,6 @@ def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
         }
 
         # Renewals at risk (contracts expiring within forecast horizon)
-        from datetime import timedelta as _td
         horizon_date = datetime.utcnow() + _td(days=months * 30)
         renewals = []
         for acct in accounts:
