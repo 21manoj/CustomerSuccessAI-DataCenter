@@ -881,10 +881,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         # ----------------------------------------------------------
         has_new_csvs = False  # default for fresh customers
         # ----------------------------------------------------------
-        # Use MAX(created_at) — the wall-clock insertion time — not
-        # MAX(measured_at) which can be a simulated future date.
-        has_new_csvs = False
-        if data_in_db and has_csv_dir:
+        # full_recalc always reloads CSVs (semantic contract: redo everything).
+        # For auto mode, use MAX(created_at) — the wall-clock insertion time.
+        if mode == 'full_recalc' and has_csv_dir:
+            has_new_csvs = True
+        elif data_in_db and has_csv_dir:
             try:
                 last_kpi_ts = _db.session.execute(_db.text(
                     "SELECT MAX(k.created_at) FROM dc2s_kpis k "
