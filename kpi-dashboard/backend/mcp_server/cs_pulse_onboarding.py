@@ -881,15 +881,13 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         # ----------------------------------------------------------
         has_new_csvs = False  # default for fresh customers
         # ----------------------------------------------------------
-        # full_recalc always reloads CSVs — the freshness check uses
-        # simulated measured_at dates which can be in the future,
-        # making real CSV uploads look "older" than the data.
-        has_new_csvs = (mode == 'full_recalc' and has_csv_dir)
-        if data_in_db and has_csv_dir and not has_new_csvs:
+        # Use MAX(created_at) — the wall-clock insertion time — not
+        # MAX(measured_at) which can be a simulated future date.
+        has_new_csvs = False
+        if data_in_db and has_csv_dir:
             try:
-                # os is already imported at module level (line 23)
                 last_kpi_ts = _db.session.execute(_db.text(
-                    "SELECT MAX(k.measured_at) FROM dc2s_kpis k "
+                    "SELECT MAX(k.created_at) FROM dc2s_kpis k "
                     "JOIN accounts a ON k.account_id = a.account_id "
                     "WHERE a.customer_id = :cid"
                 ), {"cid": customer_id}).scalar()
@@ -1110,8 +1108,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             # handled by the ContextGraphRegenerationSubscriber when health changes.
             try:
                 from models import ContextNode, ContextEdge
-                _skip_cg_reload = has_new_csvs and ContextNode.query.filter_by(
-                    customer_id=customer_id).first() is not None
+                _skip_cg_reload = (has_new_csvs and mode != 'full_recalc'
+                                   and ContextNode.query.filter_by(
+                                       customer_id=customer_id).first() is not None)
                 if _skip_cg_reload:
                     import logging as _log_cg
                     _log_cg.getLogger(__name__).info(

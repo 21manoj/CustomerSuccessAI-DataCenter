@@ -180,17 +180,15 @@ class PhaseRunner:
             return 'error: no MCP session'
         hdrs['Mcp-Session-Id'] = sid
 
-        # Call process_data tool with full_recalc so each phase overwrites
-        # health scores.  Without this, immutable scoring skips months that
-        # already have a score → phases 2-4 become no-ops.
+        # Call process_data in auto mode.  The backend's CSV freshness check
+        # uses MAX(created_at) (wall-clock insertion time) so new CSVs from
+        # each simulation phase are always detected and loaded.  Auto mode
+        # only scores NEW months — much faster than full_recalc.
         r = requests.post(mcp_url, headers=hdrs, json={
             'jsonrpc': '2.0', 'method': 'tools/call', 'id': 1,
             'params': {
                 'name': 'process_data',
-                'arguments': {
-                    'customer_id': self.customer_id,
-                    'mode': 'full_recalc',
-                },
+                'arguments': {'customer_id': self.customer_id},
             },
         }, timeout=300)
 

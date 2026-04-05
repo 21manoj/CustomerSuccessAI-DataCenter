@@ -1688,17 +1688,41 @@ def get_portfolio_summary():
         if roi_snap:
             roi_pct = round(roi_snap.historical_roi_pct or roi_snap.combined_roi_pct or 0)
             details = roi_snap.metric_details or {}
-            # Extract NRR from metric_details (two possible formats)
-            forward_metrics = details.get('forward_metrics', [])
-            if isinstance(forward_metrics, list):
-                for fm in forward_metrics:
-                    if fm.get('id') == 'NRR':
-                        baseline = 105
-                        pct = float(fm.get('pct', 0))
-                        nrr = round(baseline * (1 + pct / 100.0))
-                        break
-            elif isinstance(details.get('NRR'), dict):
-                nrr = round(details['NRR'].get('current', 100))
+            # Compute actual NRR from churn-probability waterfall (same model
+            # as get_nrr_forecast) so both tools show consistent numbers.
+            try:
+                from models import Account as _Acct, HealthScore as _HS
+                from sqlalchemy import func as _fn, desc as _desc
+                _latest = (
+                    _db.session.query(_HS.account_id, _fn.max(_HS.measurement_month).label('mm'))
+                    .filter(_HS.account_id.in_(account_ids))
+                    .group_by(_HS.account_id)
+                    .subquery()
+                )
+                _scores = (
+                    _db.session.query(_HS.account_id, _HS.health_score)
+                    .join(_latest, (_HS.account_id == _latest.c.account_id) & (_HS.measurement_month == _latest.c.mm))
+                    .all()
+                )
+                _arr_map = {a.account_id: float(a.revenue or 0) for a in _Acct.query.filter(_Acct.account_id.in_(account_ids)).all()}
+                _total_arr = sum(_arr_map.values())
+                _total_loss = 0
+                for _aid, _hs in _scores:
+                    _h = float(_hs or 50)
+                    _churn = max(5, 50 - _h * 0.5) / 100.0
+                    _total_loss += _arr_map.get(_aid, 0) * _churn
+                nrr = round((_total_arr - _total_loss) / _total_arr * 100, 1) if _total_arr else 100
+            except Exception:
+                # Fallback to ROI snapshot if waterfall computation fails
+                forward_metrics = details.get('forward_metrics', [])
+                if isinstance(forward_metrics, list):
+                    for fm in forward_metrics:
+                        if fm.get('id') == 'NRR':
+                            pct = float(fm.get('pct', 0))
+                            nrr = round(105 * (1 + pct / 100.0))
+                            break
+                elif isinstance(details.get('NRR'), dict):
+                    nrr = round(details['NRR'].get('current', 100))
 
         # Revenue from context graph (shared util)
         from utils.context_graph import aggregate_revenue_across_accounts

@@ -90,6 +90,11 @@ _SIGNAL_TEMPLATES = {
         'sentiment': 'neutral',
         'content': 'Quarterly business review completed — account stable, no action needed',
     },
+    'engagement_gap': {
+        'subtype': 'engagement_gap',
+        'sentiment': 'negative',
+        'content': 'No executive touchpoint in 45+ days — engagement cadence broken',
+    },
     'critical_incident': {
         'subtype': 'critical_incident',
         'sentiment': 'negative',
@@ -169,12 +174,12 @@ RULES = [
             'narrative_phase': 'resolution',
         },
     },
-    # At-risk + declining → inject warning signals
+    # At-risk + declining → inject warning signals (gradual, not cliff)
     {
         'name': 'at_risk_declining_no_pb',
         'conditions': {'health_band': 'at_risk', 'active_playbook': False, 'slope': 'declining'},
         'decision': {
-            'trajectory': 'declining', 'target_health_delta': -10,
+            'trajectory': 'slow_decline', 'target_health_delta': -5,
             'signals': ['competitor_mention', 'usage_decline'],
             'outcomes': ['revenue_at_risk'],
             'narrative_phase': 'deterioration',
@@ -231,6 +236,17 @@ RULES = [
             'signals': ['expansion_signal'],
             'outcomes': ['expansion_opportunity'],
             'narrative_phase': 'baseline',
+        },
+    },
+    # Healthy + declining + no playbook → early warning before crossing at-risk
+    {
+        'name': 'healthy_declining_no_pb',
+        'conditions': {'health_band': 'healthy', 'active_playbook': False, 'slope': 'declining'},
+        'decision': {
+            'trajectory': 'slow_decline', 'target_health_delta': -3,
+            'signals': ['usage_decline', 'engagement_gap'],
+            'outcomes': ['revenue_at_risk'],
+            'narrative_phase': 'deterioration',
         },
     },
     # Healthy + stable → business as usual
