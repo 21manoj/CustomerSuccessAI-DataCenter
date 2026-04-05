@@ -339,7 +339,7 @@ def run_roi_engine(customer_id: int) -> Optional[str]:
         if accounts:
             total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
             acct_ids = [a.account_id for a in accounts]
-            metric_actuals, _data_src = _extract_historical_actuals(accounts, 6)
+            metric_actuals, _data_src = _extract_historical_actuals(accounts, 6, customer_id=customer_id)
             at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
             vertical = getattr(accounts[0], 'vertical', None)
 
@@ -352,6 +352,7 @@ def run_roi_engine(customer_id: int) -> Optional[str]:
                 customer_id=customer_id,
                 account_ids=acct_ids,
                 vertical=vertical,
+                data_source=_data_src,
             )
             if roi_story:
                 logger.info(

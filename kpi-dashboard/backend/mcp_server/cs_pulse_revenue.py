@@ -113,17 +113,17 @@ def get_outcome_roi_story(
 
     with app.app_context():
         from outcome_roi_engine import calculate_outcome_story
-        from power_of_1_model import POWER_OF_1_METRICS
+        from outcome_roi_api import _extract_historical_actuals
 
         account = _validate_account_ownership(customer_id, account_id)
 
         arr = _get_account_arr(account)
-
-        metric_actuals = {}
-        for mid, m in POWER_OF_1_METRICS.items():
-            metric_actuals[mid] = {"current": m.baseline, "baseline": m.baseline}
-
         acct_vertical = getattr(account, 'vertical', None)
+
+        # Use real KPI data instead of baseline defaults
+        metric_actuals, data_source = _extract_historical_actuals(
+            [account], 6, customer_id=customer_id,
+        )
 
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
@@ -133,6 +133,7 @@ def get_outcome_roi_story(
             customer_id=customer_id,
             account_ids=[account_id],
             vertical=acct_vertical,
+            data_source=data_source,
         )
 
         story["scope"] = "account"
@@ -808,7 +809,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
 
-        metric_actuals, data_source = _extract_historical_actuals(accounts, 6)
+        metric_actuals, data_source = _extract_historical_actuals(accounts, 6, customer_id=customer_id)
         accounts_at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
 
         portfolio_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
@@ -822,6 +823,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
             customer_id=customer_id,
             account_ids=account_ids,
             vertical=portfolio_vertical,
+            data_source=data_source,
         )
 
         return {

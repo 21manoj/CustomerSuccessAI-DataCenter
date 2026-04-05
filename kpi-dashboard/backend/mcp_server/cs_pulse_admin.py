@@ -26,6 +26,7 @@ from cs_pulse_mcp_server import (
     _get_health_functions,
     _get_kpi_definitions,
     _get_playbook_config,
+    _get_pillar_labels,
     _ensure_registry,
     _backend_dir,
     ToolError,
@@ -500,7 +501,38 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                 },
             }
 
+        # Load pillar labels from vertical config (not hardcoded)
+        PILLAR_LABELS = _get_pillar_labels(vertical)
+
+        # Build pillar → playbook mapping dynamically from trigger_kpis
+        PILLAR_PLAYBOOK_MAP = {}
+        for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+            for tk in pb_cfg.get('trigger_kpis', []):
+                pillar = tk.split('-')[0]  # "P1-KPI1" → "P1"
+                if pillar not in PILLAR_PLAYBOOK_MAP:
+                    PILLAR_PLAYBOOK_MAP[pillar] = pb_id
+
         all_actions = []
+        account_ids = [a.account_id for a in accounts]
+
+        # ── Load DB-stored playbook templates when vertical has no config ──
+        from models import QualitativeSignal, CustomerPlaybook
+        db_playbooks = []
+        if not PLAYBOOK_CONFIG:
+            db_playbooks = CustomerPlaybook.query.filter_by(
+                customer_id=int(customer_id), is_system=True,
+            ).all()
+
+        # ── Pre-load recent qualitative signals for signal-driven actions ──
+        recent_signals = QualitativeSignal.query.filter(
+            QualitativeSignal.account_id.in_(account_ids),
+            QualitativeSignal.sentiment.in_(['negative', 'critical']),
+        ).order_by(QualitativeSignal.signal_date.desc()).limit(30).all()
+
+        # Group signals by account_id
+        signals_by_account = {}
+        for sig in recent_signals:
+            signals_by_account.setdefault(sig.account_id, []).append(sig)
 
         for account in accounts:
             precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account.account_id)
@@ -541,6 +573,9 @@ def get_csm_daily_actions(customer_id: int) -> dict:
             if exp_kpi is not None:
                 expansion_prob_val = max(expansion_prob_val, exp_kpi)
 
+            has_playbook_action = False
+
+            # ── Playbook triggers (strict: ALL conditions met) ──
             for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
                 if should_trigger_playbook(pb_id, normalized_kpis):
                     impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
@@ -563,7 +598,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                     all_actions.append({
                         'account_id': account.account_id,
                         'account_name': account.account_name,
-                        'action_title': f"Start {pb_cfg['name']} Playbook",
+                        'action_title': f"Run {pb_cfg['name']}",
                         'action_description': description,
                         'action_type': 'playbook',
                         'related_playbook_id': pb_id,
@@ -576,19 +611,135 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                         'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
                         **roi_ctx,
                     })
+                    has_playbook_action = True
 
-            if overall_health < 80:
+            # ── DB playbook triggers (for verticals without config, e.g. SaaS) ──
+            if not has_playbook_action and db_playbooks:
+                for dbpb in db_playbooks:
+                    conditions = dbpb.trigger_conditions or []
+                    logic = (dbpb.trigger_logic or 'OR').upper()
+                    met_details = []
+                    all_met = True
+                    for cond in conditions:
+                        kpi_code = cond.get('kpi_code', '')
+                        val = normalized_kpis.get(kpi_code)
+                        if val is None:
+                            if logic == 'AND':
+                                all_met = False
+                            continue
+                        op = cond.get('operator', '')
+                        threshold = cond.get('threshold', 0)
+                        triggered = False
+                        if op in ('less_than', '<') and val < threshold:
+                            triggered = True
+                        elif op in ('greater_than', '>') and val > threshold:
+                            triggered = True
+                        if triggered:
+                            kpi_name = DC2S_KPIS.get(kpi_code, {}).get('name', kpi_code)
+                            met_details.append(f"{kpi_name}: {val:.1f} (threshold {threshold})")
+                        elif logic == 'AND':
+                            all_met = False
+
+                    should_fire = (logic == 'OR' and met_details) or (logic == 'AND' and all_met and met_details)
+                    if should_fire:
+                        impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                        actions_list = dbpb.actions or []
+                        est_hours = sum(a.get('estimated_hours', 2) for a in actions_list) if actions_list else 8
+                        effort = min(est_hours * 2, 60)
+                        priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                        roi_ctx = _get_roi_context('playbook', dbpb.playbook_id, arr)
+                        all_actions.append({
+                            'account_id': account.account_id,
+                            'account_name': account.account_name,
+                            'action_title': f"Run {dbpb.name}",
+                            'action_description': '; '.join(met_details),
+                            'action_type': 'playbook',
+                            'related_playbook_id': dbpb.playbook_id,
+                            'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                            'impact_score': impact, 'effort_score': effort,
+                            'priority_index': priority_index,
+                            'account_health': round(overall_health, 1),
+                            'estimated_hours': est_hours,
+                            'estimated_duration_display': f"{max(1, est_hours // 8)} days",
+                            **roi_ctx,
+                        })
+                        has_playbook_action = True
+                        break  # one DB playbook per account
+
+            # ── Soft playbook triggers: ANY trigger condition met ──
+            if not has_playbook_action:
+                for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+                    conditions = pb_cfg.get('trigger_conditions', {})
+                    met_details = []
+                    for kpi_code, cond in conditions.items():
+                        val = normalized_kpis.get(kpi_code)
+                        if val is None:
+                            continue
+                        op, threshold = cond.get('operator'), cond.get('value')
+                        triggered = (op == '>' and val > threshold) or (op == '<' and val < threshold)
+                        if triggered:
+                            kpi_name = DC2S_KPIS.get(kpi_code, {}).get('name', kpi_code)
+                            met_details.append(f"{kpi_name}: {val:.1f} (threshold {threshold})")
+                    if met_details:
+                        impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                        effort = _compute_effort_score(pb_cfg) * 0.7  # lighter since partial trigger
+                        priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                        total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+                        roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                        all_actions.append({
+                            'account_id': account.account_id,
+                            'account_name': account.account_name,
+                            'action_title': f"Evaluate {pb_cfg['name']}",
+                            'action_description': '; '.join(met_details),
+                            'action_type': 'playbook_evaluate',
+                            'related_playbook_id': pb_id,
+                            'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                            'impact_score': impact, 'effort_score': effort,
+                            'priority_index': priority_index,
+                            'account_health': round(overall_health, 1),
+                            'estimated_hours': total_hours,
+                            'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                            **roi_ctx,
+                        })
+                        has_playbook_action = True
+                        break  # one soft trigger per account
+
+            # ── Pillar-specific intervention (replaces generic "Health Check") ──
+            if overall_health < ht.healthy_min() and not has_playbook_action:
+                # Find the weakest pillar to make the action specific
+                weakest_pillar = None
+                weakest_score = 999
+                for pc, score in pillar_averages.items():
+                    if score is not None and score < weakest_score:
+                        weakest_score = score
+                        weakest_pillar = pc
+
+                pillar_label = PILLAR_LABELS.get(weakest_pillar, 'Overall Health')
+                recommended_pb = PILLAR_PLAYBOOK_MAP.get(weakest_pillar)
+                pb_name = PLAYBOOK_CONFIG.get(recommended_pb, {}).get('name', '') if recommended_pb else ''
+
+                if h_cls == 'critical':
+                    title = f"Urgent: {pillar_label} Critical"
+                    desc = (f"Health {overall_health:.0f} (critical). {pillar_label} at {weakest_score:.0f}. "
+                            f"{'Recommend ' + pb_name + ' playbook. ' if pb_name else ''}"
+                            f"ARR ${arr/1e6:.1f}M at risk.")
+                else:
+                    title = f"Investigate {pillar_label} Decline"
+                    desc = (f"Health {overall_health:.0f} (at-risk). {pillar_label} at {weakest_score:.0f}. "
+                            f"{'Consider ' + pb_name + '. ' if pb_name else ''}"
+                            f"Schedule root-cause review.")
+
                 impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
                 effort = 20
                 priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
-                roi_ctx = _get_roi_context('follow_up', None, arr)
+                roi_ctx = _get_roi_context('follow_up', recommended_pb, arr)
                 all_actions.append({
                     'account_id': account.account_id,
                     'account_name': account.account_name,
-                    'action_title': 'Health Check Follow-up',
-                    'action_description': f'Health score at {overall_health:.0f}. Schedule intervention call.',
-                    'action_type': 'follow_up',
-                    'related_playbook_id': None,
+                    'action_title': title,
+                    'action_description': desc,
+                    'action_type': 'pillar_intervention',
+                    'related_playbook_id': recommended_pb,
                     'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
                     'impact_score': impact, 'effort_score': effort,
                     'priority_index': priority_index,
@@ -598,6 +749,45 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                     **roi_ctx,
                 })
 
+            # ── Signal-driven actions (from qualitative signals) ──
+            acct_signals = signals_by_account.get(account.account_id, [])
+            if acct_signals and not has_playbook_action:
+                sig = acct_signals[0]  # most recent negative signal
+                signal_type = getattr(sig, 'signal_type', 'risk')
+                signal_text = getattr(sig, 'signal_text', '') or getattr(sig, 'description', '') or ''
+                snippet = signal_text[:120] + ('...' if len(signal_text) > 120 else '')
+
+                title_map = {
+                    'champion_loss': 'Stakeholder Risk: Champion Change',
+                    'escalation': 'Escalation Alert',
+                    'sentiment_drop': 'Sentiment Decline Detected',
+                    'support_spike': 'Support Volume Spike',
+                    'usage_drop': 'Usage Drop Alert',
+                    'executive_change': 'Executive Sponsor Change',
+                }
+                action_title = title_map.get(signal_type, f"Signal Alert: {signal_type.replace('_', ' ').title()}")
+
+                impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                effort = 15
+                priority_index = round((impact * 0.7 * arr_weight) - (effort * 0.3), 1)
+                roi_ctx = _get_roi_context('follow_up', None, arr)
+                all_actions.append({
+                    'account_id': account.account_id,
+                    'account_name': account.account_name,
+                    'action_title': action_title,
+                    'action_description': snippet,
+                    'action_type': 'signal_driven',
+                    'related_playbook_id': None,
+                    'urgency': 'critical' if sig.sentiment == 'critical' else 'high',
+                    'impact_score': impact, 'effort_score': effort,
+                    'priority_index': priority_index,
+                    'account_health': round(overall_health, 1),
+                    'estimated_hours': 2,
+                    'estimated_duration_display': '1 day',
+                    **roi_ctx,
+                })
+
+            # ── QBR action ──
             qbr_val = normalized_kpis.get('P4-KPI3')
             if qbr_val is not None and qbr_val < 3:
                 impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
@@ -620,6 +810,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                     **roi_ctx,
                 })
 
+            # ── Expansion opportunity ──
             if exp_kpi is not None and exp_kpi > 70:
                 impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
                 effort = 30

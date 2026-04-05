@@ -22,6 +22,7 @@ from extensions import db
 from models import (
     Account, HealthTrend, FeatureToggle as FeatureToggleModel, ROISnapshot,
     QualitativeSignal, PlaybookExecution, KPIScore, PillarScore,
+    DC2SKPI, CustomerConfig,
 )
 from resolve_identifier import resolve_customer_id
 import utils.health_thresholds as ht
@@ -119,7 +120,7 @@ def get_historical_roi():
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
 
-        metric_actuals, data_source = _extract_historical_actuals(accounts, months)
+        metric_actuals, data_source = _extract_historical_actuals(accounts, months, customer_id=customer_id)
 
         # Learn investment model from execution history
         learned_investment = learn_investment_from_actuals(customer_id, account_ids, months)
@@ -133,6 +134,7 @@ def get_historical_roi():
             period_label=f"Last {months} Months",
             vertical=acct_vertical,
             learned_investment=learned_investment,
+            data_source=data_source,
         )
 
         from outcome_roi_engine import _result_to_dict
@@ -205,7 +207,7 @@ def get_forward_roi():
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
-        current_values, data_source = _extract_current_values(accounts)
+        current_values, data_source = _extract_current_values(accounts, customer_id=customer_id)
         fwd_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
 
         # Learn investment model from execution history
@@ -355,7 +357,7 @@ def get_outcome_story():
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
 
-        metric_actuals, data_source = _extract_historical_actuals(accounts, 6)
+        metric_actuals, data_source = _extract_historical_actuals(accounts, 6, customer_id=customer_id)
 
         # ── Learn investment model from actual execution history ──
         from outcome_roi_engine import learn_investment_from_actuals
@@ -420,6 +422,7 @@ def get_outcome_story():
             vertical=acct_vertical,
             per_metric_pcts=per_metric_pcts,
             learned_investment=learned_investment,
+            data_source=data_source,
         )
 
         # Persist ROI snapshot for audit trail and trending
@@ -519,7 +522,7 @@ def get_outcome_timeline():
 
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         account_ids = [a.account_id for a in accounts]
-        metric_actuals, _data_source = _extract_historical_actuals(accounts, months)
+        metric_actuals, _data_source = _extract_historical_actuals(accounts, months, customer_id=customer_id)
 
         timeline = build_historical_timeline(
             customer_id=customer_id,
@@ -592,12 +595,20 @@ def get_demo_outcome_story():
 # HELPERS — Extract metric values from DB
 # ============================================================
 
-def _extract_historical_actuals(accounts, months):
+def _is_calibrated(customer_id):
+    """Check if Wizard C has calibrated weights for this customer."""
+    if not customer_id:
+        return False
+    cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+    return bool(cfg and cfg.dc2s_kpi_weights)
+
+
+def _extract_historical_actuals(accounts, months, customer_id=None):
     """
     Extract historical metric actuals from DB.
 
-    Tries HealthTrend (SaaS) first, then PillarScore (DC2S).
-    Falls back to demo data only if neither has sufficient data.
+    Priority: DC2SKPI (actual measurements) → HealthTrend (SaaS) → PillarScore → baseline.
+    Falls back to demo data only if no path has sufficient data.
 
     Returns:
         tuple: (metric_actuals dict, data_source string)
@@ -608,6 +619,78 @@ def _extract_historical_actuals(accounts, months):
         return _get_baseline_actuals(), 'baseline_defaults'
 
     account_ids = [a.account_id for a in accounts]
+    calibrated = _is_calibrated(customer_id)
+    cal_suffix = "_calibrated" if calibrated else "_benchmark"
+
+    # ── Path 0: DC2SKPI (actual KPI measurements) ──
+    cutoff_dt = datetime.now() - timedelta(days=months * 30)
+    kpi_rows = DC2SKPI.query.filter(
+        DC2SKPI.account_id.in_(account_ids),
+        DC2SKPI.measured_at >= cutoff_dt,
+    ).all()
+
+    if len(kpi_rows) >= 2:
+        # Build {kpi_code: [(measured_at, value), ...]} across all accounts
+        from collections import defaultdict
+        kpi_by_code = defaultdict(list)
+        for row in kpi_rows:
+            kpi_by_code[row.kpi_code].append((row.measured_at, float(row.value)))
+
+        # For each kpi_code, compute earliest-avg and latest-avg
+        kpi_earliest = {}  # kpi_code → avg value at earliest month
+        kpi_latest = {}    # kpi_code → avg value at latest month
+        for kpi_code, measurements in kpi_by_code.items():
+            measurements.sort(key=lambda x: x[0])
+            # Group by month to handle multiple accounts
+            earliest_month = measurements[0][0].strftime('%Y-%m')
+            latest_month = measurements[-1][0].strftime('%Y-%m')
+            if earliest_month == latest_month and len(measurements) > 1:
+                # Same month only — try to split by first/second half
+                mid = len(measurements) // 2
+                early_vals = [v for _, v in measurements[:mid]]
+                late_vals = [v for _, v in measurements[mid:]]
+            else:
+                early_vals = [v for dt, v in measurements if dt.strftime('%Y-%m') == earliest_month]
+                late_vals = [v for dt, v in measurements if dt.strftime('%Y-%m') == latest_month]
+
+            kpi_earliest[kpi_code] = sum(early_vals) / len(early_vals) if early_vals else None
+            kpi_latest[kpi_code] = sum(late_vals) / len(late_vals) if late_vals else None
+
+        # Map linked_kpi_codes → Power-of-1 metrics
+        metric_actuals = {}
+        metrics_with_data = 0
+        for metric_id, metric in POWER_OF_1_METRICS.items():
+            linked = metric.linked_kpi_codes
+            if not linked:
+                continue
+
+            # Average across linked KPIs that have data
+            baselines = []
+            currents = []
+            for kpi_code in linked:
+                early = kpi_earliest.get(kpi_code)
+                late = kpi_latest.get(kpi_code)
+                if early is not None and late is not None:
+                    baselines.append(early)
+                    currents.append(late)
+
+            if baselines and currents:
+                metric_actuals[metric_id] = {
+                    "baseline": round(sum(baselines) / len(baselines), 2),
+                    "current": round(sum(currents) / len(currents), 2),
+                }
+                metrics_with_data += 1
+
+        # Need at least 2 metrics with actual data to use this path
+        if metrics_with_data >= 2:
+            # Fill gaps with static baselines
+            for metric_id in POWER_OF_1_METRICS:
+                if metric_id not in metric_actuals:
+                    metric_actuals[metric_id] = {
+                        "baseline": POWER_OF_1_METRICS[metric_id].baseline,
+                        "current": POWER_OF_1_METRICS[metric_id].baseline,
+                    }
+            return metric_actuals, f'kpi_actuals{cal_suffix}'
 
     # ── Path 0: DC2SKPI raw measurements (highest fidelity) ──
     KPI_TO_PO1 = {
@@ -704,7 +787,7 @@ def _extract_historical_actuals(accounts, months):
                         "current": POWER_OF_1_METRICS[metric_id].baseline,
                     }
 
-            return metric_actuals, 'health_trends'
+            return metric_actuals, f'health_trends{cal_suffix}'
 
     # ── Path 2: PillarScore (DC2S customers) ──
     cutoff = datetime.now() - timedelta(days=months * 30)
@@ -814,7 +897,7 @@ def _extract_historical_actuals(accounts, months):
                 "current": POWER_OF_1_METRICS[metric_id].baseline,
             }
 
-    return metric_actuals, 'pillar_scores'
+    return metric_actuals, f'pillar_scores{cal_suffix}'
 
 
 # ── Pillar velocity map: pillar_code → ROI metric_id ──
@@ -938,11 +1021,11 @@ def _extract_pillar_velocities(accounts, months=6):
     return velocities, 'health_trends'
 
 
-def _extract_current_values(accounts):
+def _extract_current_values(accounts, customer_id=None):
     """
     Extract current metric values from latest health data.
 
-    Tries HealthTrend (SaaS) first, then PillarScore (DC2S).
+    Tries DC2SKPI (actual measurements) first, then HealthTrend (SaaS), then PillarScore (DC2S).
 
     Returns:
         tuple: (current_values dict, data_source string)
@@ -953,6 +1036,47 @@ def _extract_current_values(accounts):
         return _get_baseline_current_values(), 'baseline_defaults'
 
     account_ids = [a.account_id for a in accounts]
+    calibrated = _is_calibrated(customer_id)
+    cal_suffix = "_calibrated" if calibrated else "_benchmark"
+
+    # ── Path 0: DC2SKPI (actual KPI measurements — latest values) ──
+    from collections import defaultdict
+    # Get most recent measurement per kpi_code per account
+    latest_kpis = DC2SKPI.query.filter(
+        DC2SKPI.account_id.in_(account_ids),
+    ).order_by(DC2SKPI.measured_at.desc()).all()
+
+    if latest_kpis:
+        # Keep only the latest measurement per (account_id, kpi_code)
+        seen = set()
+        kpi_latest_vals = defaultdict(list)  # kpi_code → [value, ...]
+        for row in latest_kpis:
+            key = (row.account_id, row.kpi_code)
+            if key not in seen:
+                seen.add(key)
+                kpi_latest_vals[row.kpi_code].append(float(row.value))
+
+        # Map to Power-of-1 metrics
+        current_values = {}
+        metrics_with_data = 0
+        for metric_id, metric in POWER_OF_1_METRICS.items():
+            linked = metric.linked_kpi_codes
+            if not linked:
+                continue
+            vals = []
+            for kpi_code in linked:
+                kpi_vals = kpi_latest_vals.get(kpi_code, [])
+                if kpi_vals:
+                    vals.append(sum(kpi_vals) / len(kpi_vals))
+            if vals:
+                current_values[metric_id] = round(sum(vals) / len(vals), 2)
+                metrics_with_data += 1
+
+        if metrics_with_data >= 2:
+            for metric_id in POWER_OF_1_METRICS:
+                if metric_id not in current_values:
+                    current_values[metric_id] = POWER_OF_1_METRICS[metric_id].baseline
+            return current_values, f'kpi_actuals{cal_suffix}'
 
     # ── Path 1: HealthTrend (SaaS) ──
     latest_trend = HealthTrend.query.filter(
@@ -992,7 +1116,7 @@ def _extract_current_values(accounts):
             if metric_id not in current_values:
                 current_values[metric_id] = POWER_OF_1_METRICS[metric_id].baseline
 
-        return current_values, 'health_trends'
+        return current_values, f'health_trends{cal_suffix}'
 
     # ── Path 2: PillarScore (DC2S) ──
     latest_month = db.session.query(
@@ -1051,7 +1175,7 @@ def _extract_current_values(accounts):
         if metric_id not in current_values:
             current_values[metric_id] = POWER_OF_1_METRICS[metric_id].baseline
 
-    return current_values, 'pillar_scores'
+    return current_values, f'pillar_scores{cal_suffix}'
 
 
 def _extract_accounts_at_risk(accounts, customer_id=None):
