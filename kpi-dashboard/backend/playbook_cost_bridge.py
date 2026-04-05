@@ -80,6 +80,8 @@ class CostBridgeResult:
     csm_rate: float = 95.0
     arr_scale: float = 1.0
     arr_basis: float = 10_000_000
+    arr_tier: str = 'mid'
+    effort_multiplier: float = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -129,10 +131,22 @@ def calculate_cost_bridge(
     arr = account_arr or 10_000_000
     arr_scale = arr / 10_000_000
 
+    def _arr_effort_tier(a):
+        if a < 3_000_000:
+            return 0.7, 'small'
+        elif a <= 8_000_000:
+            return 1.0, 'mid'
+        else:
+            return 1.4, 'large'
+
+    effort_mult, arr_tier = _arr_effort_tier(arr)
+
     result = CostBridgeResult(
         csm_rate=csm_rate,
         arr_scale=arr_scale,
         arr_basis=arr,
+        arr_tier=arr_tier,
+        effort_multiplier=effort_mult,
     )
 
     total_csm = 0.0
@@ -164,9 +178,12 @@ def calculate_cost_bridge(
                 continue
 
             sub_comps = pb_config.get('sub_components', [])
-            total_hrs = sum(sc.get('estimated_hours', 0) for sc in sub_comps)
-            manual_hrs = sum(sc.get('manual_hours', sc.get('estimated_hours', 0)) for sc in sub_comps)
+            base_total_hrs = sum(sc.get('estimated_hours', 0) for sc in sub_comps)
+            base_manual_hrs = sum(sc.get('manual_hours', sc.get('estimated_hours', 0)) for sc in sub_comps)
             auto_hrs = sum(sc.get('automated_hours', 0) for sc in sub_comps)
+
+            total_hrs = round(base_total_hrs * effort_mult, 1)
+            manual_hrs = round(base_manual_hrs * effort_mult, 1)
 
             manual_cost = manual_hrs * csm_rate
             cost_without = total_hrs * csm_rate
@@ -315,6 +332,8 @@ def bridge_to_dict(result: CostBridgeResult) -> Dict:
         'csm_rate': result.csm_rate,
         'arr_scale': result.arr_scale,
         'arr_basis': result.arr_basis,
+        'arr_tier': result.arr_tier,
+        'effort_multiplier': result.effort_multiplier,
     }
 
 

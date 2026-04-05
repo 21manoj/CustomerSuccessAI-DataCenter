@@ -559,14 +559,17 @@ def close_playbook(
             db.session.add(outcome_node)
             db.session.flush()
 
-            # Link DECISION → OUTCOME (find the playbook DECISION node)
+            # Link DECISION → OUTCOME
+            # Strategy: find the most recent DECISION node for this account
+            # (any subtype — renewal_confirmed, executive_sponsor, champion, etc.)
+            # This connects the playbook outcome to the END of the existing
+            # causal chain (Signal → Decision → ... → Playbook Outcome).
             decision_node = (
                 ContextNode.query
                 .filter(
                     ContextNode.account_id == execution.account_id,
                     ContextNode.customer_id == customer_id,
                     ContextNode.node_type == 'DECISION',
-                    ContextNode.node_subtype.like('playbook_%'),
                 )
                 .order_by(ContextNode.occurred_at.desc())
                 .first()
