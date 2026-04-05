@@ -762,6 +762,23 @@ def get_health_score_history(
             if a["starting_status"] == "healthy" and a["current_status"] in ("critical", "at_risk")
         ]
 
+        # Portfolio trajectory (ARR-weighted momentum)
+        improving_arr = sum(a['arr'] for a in portfolio_history if a['trajectory'] == 'improving')
+        declining_arr = sum(a['arr'] for a in portfolio_history if a['trajectory'] == 'declining')
+        total_arr = sum(a['arr'] for a in portfolio_history) or 1  # avoid div zero
+
+        momentum = round((improving_arr - declining_arr) / total_arr * 100, 1)
+        net_health_change_weighted = sum(a['net_change'] * a['arr'] for a in portfolio_history) / total_arr
+
+        portfolio_trajectory = {
+            'overall_direction': 'improving' if momentum > 5 else ('declining' if momentum < -5 else 'stable'),
+            'momentum_score': momentum,
+            'improving_arr_pct': round(improving_arr / total_arr * 100, 1),
+            'declining_arr_pct': round(declining_arr / total_arr * 100, 1),
+            'stable_arr_pct': round(100 - improving_arr / total_arr * 100 - declining_arr / total_arr * 100, 1),
+            'net_health_change_weighted': round(net_health_change_weighted, 1),
+        }
+
         return {
             "customer_id": customer_id,
             "months": months,
@@ -786,6 +803,7 @@ def get_health_score_history(
                  "change": str(a["net_change"])}
                 for a in deteriorations
             ],
+            "portfolio_trajectory": portfolio_trajectory,
             "transitions": transitions,
             "accounts": portfolio_history,
         }

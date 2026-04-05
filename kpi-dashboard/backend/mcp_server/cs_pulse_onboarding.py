@@ -1147,6 +1147,60 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     _db.session.flush()
                     steps_completed.append('stakeholders_loaded')
 
+                    # Link stakeholders to decisions via INVOLVES edges
+                    ROLE_DECISION_MAP = {
+                        'champion': ['renewal', 'champion', 'renewal_confirmed'],
+                        'executive_sponsor': ['escalation', 'executive_sponsor', 'playbook'],
+                        'technical_lead': ['technical', 'playbook', 'remediation'],
+                        'csm': ['playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
+                        'primary_contact': ['renewal', 'champion'],
+                    }
+
+                    try:
+                        _stakeholder_nodes = ContextNode.query.filter_by(
+                            customer_id=customer_id, node_type='STAKEHOLDER'
+                        ).all()
+                        _decision_nodes = ContextNode.query.filter_by(
+                            customer_id=customer_id, node_type='DECISION'
+                        ).all()
+
+                        _edges_created = 0
+                        for sn in _stakeholder_nodes:
+                            role = (sn.node_subtype or '').lower()
+                            match_subtypes = []
+                            for role_key, subtypes in ROLE_DECISION_MAP.items():
+                                if role_key in role:
+                                    match_subtypes = subtypes
+                                    break
+                            if not match_subtypes:
+                                match_subtypes = ['playbook', 'renewal']  # default
+
+                            for dn in _decision_nodes:
+                                if dn.account_id != sn.account_id:
+                                    continue
+                                dec_sub = (dn.node_subtype or '').lower()
+                                if any(ms in dec_sub for ms in match_subtypes):
+                                    existing = ContextEdge.query.filter_by(
+                                        from_node_id=sn.node_id, to_node_id=dn.node_id
+                                    ).first()
+                                    if not existing:
+                                        _db.session.add(ContextEdge(
+                                            customer_id=customer_id,
+                                            from_node_id=sn.node_id,
+                                            to_node_id=dn.node_id,
+                                            edge_type='INVOLVES',
+                                            confidence=0.8,
+                                            properties={'source': 'role_match', 'stakeholder_role': role},
+                                        ))
+                                        _edges_created += 1
+
+                        if _edges_created:
+                            _db.session.flush()
+                            steps_completed.append(f'stakeholder_edges_{_edges_created}')
+                    except Exception as _se:
+                        import logging as _slog
+                        _slog.getLogger(__name__).warning(f'Stakeholder edge creation: {_se}')
+
                 # Outcomes
                 outcomes_path = data_dir / 'outcomes.csv'
                 if not outcomes_path.exists():

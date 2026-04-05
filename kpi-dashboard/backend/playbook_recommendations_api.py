@@ -25,7 +25,26 @@ playbook_recommendations_api = Blueprint('playbook_recommendations_api', __name_
 # ── DC2S Vertical-Specific Playbook Evaluation ──────────────────────────
 
 
-def _evaluate_dc2s_playbooks(kpi_values, health_score=None):
+def _get_playbook_historical_success(playbook_id, customer_id):
+    """Get historical success rate for a playbook."""
+    try:
+        from models import PlaybookExecutionV2
+        execs = PlaybookExecutionV2.query.filter_by(
+            playbook_id=playbook_id, customer_id=customer_id
+        ).all()
+        if not execs:
+            return None
+        resolved = sum(1 for e in execs if e.outcome == 'resolved')
+        return {
+            'total_runs': len(execs),
+            'resolved': resolved,
+            'success_rate_pct': round(resolved / len(execs) * 100, 1),
+        }
+    except Exception:
+        return None
+
+
+def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None):
     """Evaluate DC2S-specific playbooks (PB-01 through PB-06).
 
     Uses OR logic for most playbooks: if ANY trigger condition is met, the
@@ -36,6 +55,7 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None):
     Args:
         kpi_values: Dict of KPI code → current value (e.g., {"P1-KPI1": 25.0})
         health_score: Account-level health score (0-100) for PB-05
+        pillar_scores: Optional dict of pillar code → score (e.g., {"P1": 45.0})
 
     Returns:
         List of recommendation dicts sorted by urgency (highest first)
@@ -122,7 +142,37 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None):
                 ],
             })
 
-    recommendations.sort(key=lambda r: r['urgency_score'], reverse=True)
+    # Pillar-weakness recommendations (secondary)
+    PILLAR_PLAYBOOK_MAP = {
+        'P1': 'PB-01',  # Deployment Velocity / Product Adoption → Deployment Acceleration
+        'P2': 'PB-02',  # Operational Stability / Engagement → RMA Prevention
+        'P3': 'PB-03',  # AI Workload / Sentiment → GPU Optimization
+        'P4': 'PB-05',  # Channel & Partner / Ecosystem → Health Monitoring
+        'P5': 'PB-04',  # Expansion Readiness / Revenue → Capacity Planning
+    }
+
+    if pillar_scores:
+        already_recommended = {r['playbook_id'] for r in recommendations}
+        for pillar, score in pillar_scores.items():
+            if score < 50 and PILLAR_PLAYBOOK_MAP.get(pillar) not in already_recommended:
+                pb_id = PILLAR_PLAYBOOK_MAP[pillar]
+                pb_config = PLAYBOOK_CONFIG.get(pb_id, {})
+                recommendations.append({
+                    'playbook_id': pb_id,
+                    'playbook_name': pb_config.get('name', pb_id),
+                    'urgency_score': max(10, 50 - score),
+                    'urgency_level': 'High' if score < 40 else 'Medium',
+                    'reasons': [f'{pillar} pillar score {score:.0f} (critical, below 50)'],
+                    'recommendation_source': 'pillar_weakness',
+                    'health_score': health_score,
+                    'estimated_impact': f'+{min(20, int(50 - score))}% improvement potential in {pillar}',
+                    'estimated_duration': '7\u201314 days',
+                })
+
+    # Cap at 3, sort by urgency
+    recommendations.sort(key=lambda r: r.get('urgency_score', 0), reverse=True)
+    recommendations = recommendations[:3]
+
     return recommendations
 
 
@@ -157,9 +207,31 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
         return {"account_id": account_id, "recommendations": [],
                 "error": f"Account {account_id} not found"}
 
+    # ── Retrieve pillar scores from latest HealthScore ──
+    pillar_scores = None
+    try:
+        from models import HealthScore
+        _hs = HealthScore.query.filter_by(account_id=int(account_id)) \
+            .order_by(HealthScore.measurement_month.desc()).first()
+        if _hs and _hs.contributing_pillars:
+            pillar_scores = {k: float(v) for k, v in _hs.contributing_pillars.items()}
+    except Exception:
+        pass
+
     # ── DC2S Vertical Path: PB-01 through PB-06 ──
     if kpi_values is not None:
-        recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score)
+        recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score, pillar_scores)
+
+        # Enrich with historical success rates
+        for rec in recommendations:
+            hist = _get_playbook_historical_success(rec['playbook_id'], customer_id)
+            rec['historical_success'] = hist
+            if hist:
+                rec['success_summary'] = (
+                    f"{hist['success_rate_pct']}% success rate "
+                    f"({hist['resolved']}/{hist['total_runs']} resolved)"
+                )
+
         return {
             'account_id': account_id,
             'account_name': account.account_name,
@@ -196,6 +268,16 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
             logger.debug(f"Error evaluating {pb_id} for account {account_id}: {e}")
 
     recommendations.sort(key=lambda r: r['urgency_score'], reverse=True)
+
+    # Enrich with historical success rates
+    for rec in recommendations:
+        hist = _get_playbook_historical_success(rec['playbook_id'], customer_id)
+        rec['historical_success'] = hist
+        if hist:
+            rec['success_summary'] = (
+                f"{hist['success_rate_pct']}% success rate "
+                f"({hist['resolved']}/{hist['total_runs']} resolved)"
+            )
 
     return {
         'account_id': account_id,

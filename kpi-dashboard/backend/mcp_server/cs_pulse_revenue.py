@@ -586,6 +586,97 @@ def close_playbook(
 
 
 # ===================================================================
+# Tool: get_playbook_success_metrics
+# ===================================================================
+
+@mcp.tool
+def get_playbook_success_metrics(customer_id: int) -> dict:
+    """Get playbook execution success rates and ROI metrics across the portfolio.
+
+    Aggregates PlaybookExecutionV2 outcomes by playbook_id. Shows resolved/escalated/
+    timeout counts, success rate, average health delta, and revenue impact per playbook.
+    Use for VP CS team performance analysis.
+
+    Args:
+        customer_id: The customer (tenant) ID
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import PlaybookExecutionV2
+
+        execs = PlaybookExecutionV2.query.filter_by(customer_id=customer_id).all()
+
+        if not execs:
+            return {
+                'scope': 'portfolio',
+                'customer_id': customer_id,
+                'total_executions': 0,
+                'playbooks': {},
+                'portfolio_summary': {'total_runs': 0, 'overall_success_rate_pct': 0},
+            }
+
+        from collections import defaultdict
+        by_pb = defaultdict(list)
+        for e in execs:
+            by_pb[e.playbook_id].append(e)
+
+        playbooks = {}
+        total_resolved = 0
+        total_runs = 0
+        total_revenue = 0
+        total_cost = 0
+
+        for pb_id, pb_execs in by_pb.items():
+            n = len(pb_execs)
+            resolved = sum(1 for e in pb_execs if e.outcome == 'resolved')
+            escalated = sum(1 for e in pb_execs if e.outcome == 'escalated')
+            timeout = sum(1 for e in pb_execs if e.outcome == 'timeout')
+
+            health_deltas = [float(e.health_delta or 0) for e in pb_execs if e.health_delta]
+            roi_values = [float(e.realized_roi_pct or 0) for e in pb_execs if e.realized_roi_pct]
+            rev_protected = sum(float(e.revenue_protected or 0) for e in pb_execs)
+            rev_expanded = sum(float(e.revenue_expanded or 0) for e in pb_execs)
+            cost = sum(float(e.total_cost or 0) for e in pb_execs)
+
+            playbooks[pb_id] = {
+                'playbook_id': pb_id,
+                'total_executions': n,
+                'resolved': resolved,
+                'escalated': escalated,
+                'timeout': timeout,
+                'manual_close': n - resolved - escalated - timeout,
+                'success_rate_pct': round(resolved / n * 100, 1) if n else 0,
+                'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
+                'avg_roi_pct': round(sum(roi_values) / len(roi_values), 1) if roi_values else 0,
+                'total_revenue_protected': rev_protected,
+                'total_revenue_expanded': rev_expanded,
+                'total_cost': cost,
+            }
+
+            total_resolved += resolved
+            total_runs += n
+            total_revenue += rev_protected + rev_expanded
+            total_cost += cost
+
+        return {
+            'scope': 'portfolio',
+            'customer_id': customer_id,
+            'total_executions': total_runs,
+            'playbooks': playbooks,
+            'portfolio_summary': {
+                'total_runs': total_runs,
+                'overall_success_rate_pct': round(total_resolved / total_runs * 100, 1) if total_runs else 0,
+                'total_revenue_impact': total_revenue,
+                'total_cost': total_cost,
+                'portfolio_roi_pct': round(total_revenue / total_cost * 100, 1) if total_cost else 0,
+            },
+        }
+
+
+# ===================================================================
 # Tool: generate_playbook_from_description
 # ===================================================================
 
@@ -1240,18 +1331,35 @@ def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
             'accounts': waterfall_accounts,
         }
 
-        # Renewals at risk (contracts expiring within forecast horizon)
-        horizon_date = (datetime.utcnow() + _td(days=months * 30)).date()
+        # Renewals at risk (contracts expiring within 90 days, sourced from profile_metadata)
         renewals = []
         for acct in accounts:
-            end = getattr(acct, 'contract_end', None)
-            if end is not None and end <= horizon_date:
-                renewals.append({
-                    'account_id': acct.account_id,
-                    'account_name': acct.account_name,
-                    'arr': float(acct.revenue or 0),
-                    'contract_end': str(end),
-                })
+            meta = acct.profile_metadata if isinstance(acct.profile_metadata, dict) else {}
+            contract_end_str = meta.get('renewal_date') or meta.get('contract_end') or meta.get('contract_renewal_date')
+            contract_end = None
+            if contract_end_str:
+                try:
+                    contract_end = datetime.strptime(str(contract_end_str)[:10], '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    pass
+            if contract_end:
+                days_until = (contract_end - datetime.utcnow().date()).days
+                if days_until <= 90:
+                    # Get health for this account
+                    acct_scores = HealthScore.query.filter_by(
+                        account_id=acct.account_id
+                    ).order_by(HealthScore.measurement_month.desc()).first()
+                    health = float(acct_scores.health_score) if acct_scores else 50.0
+                    risk_level = 'high' if (health < 50 or days_until <= 30) else ('medium' if health < 70 else 'low')
+                    renewals.append({
+                        'account_id': acct.account_id,
+                        'account_name': acct.account_name,
+                        'arr': float(acct.revenue or 0),
+                        'renewal_date': str(contract_end),
+                        'days_until_renewal': days_until,
+                        'health_score': health,
+                        'risk_level': risk_level,
+                    })
         result['renewals_at_risk'] = renewals
 
         # ── NRR fallback: when pattern correlation is flat 100%, derive from waterfall ──

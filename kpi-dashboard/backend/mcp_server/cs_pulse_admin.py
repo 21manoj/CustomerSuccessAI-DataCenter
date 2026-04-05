@@ -442,7 +442,7 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
 # ===================================================================
 
 @mcp.tool
-def get_csm_daily_actions(customer_id: int) -> dict:
+def get_csm_daily_actions(customer_id: int, csm_name: str = None) -> dict:
     """Get top-10 prioritized CSM actions across all accounts (portfolio-level). Each action includes the linked playbook, urgency level, estimated effort hours, and projected dollar impact via Power-of-1 ROI metric correlation.
 
     Use for "What should I do today?" or "Morning briefing" questions.
@@ -450,6 +450,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
 
     Args:
         customer_id: The customer (tenant) ID — actions span ALL accounts for this tenant
+        csm_name: Optional CSM name to filter actions to their assigned accounts only
     """
     _check_mcp_enabled()
     _require_auth(customer_id)
@@ -487,6 +488,12 @@ def get_csm_daily_actions(customer_id: int) -> dict:
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
         ).all()
+
+        if csm_name:
+            accounts = [a for a in accounts
+                        if csm_name.lower() in (
+                            (a.profile_metadata or {}).get('assigned_csm', '') or ''
+                        ).lower()]
 
         if not accounts:
             return {
@@ -649,7 +656,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                     has_playbook_action = True
 
             # ── DB playbook triggers (for verticals without config, e.g. SaaS) ──
-            if not has_playbook_action and db_playbooks:
+            if db_playbooks:
                 for dbpb in db_playbooks:
                     conditions = dbpb.trigger_conditions or []
                     logic = (dbpb.trigger_logic or 'OR').upper()
@@ -708,47 +715,46 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                         break  # one DB playbook per account
 
             # ── Soft playbook triggers: ANY trigger condition met ──
-            if not has_playbook_action:
-                for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
-                    conditions = pb_cfg.get('trigger_conditions', {})
-                    met_details = []
-                    for kpi_code, cond in conditions.items():
-                        val = normalized_kpis.get(kpi_code)
-                        if val is None:
-                            continue
-                        op, threshold = cond.get('operator'), cond.get('value')
-                        triggered = (op == '>' and val > threshold) or (op == '<' and val < threshold)
-                        if triggered:
-                            kpi_name = DC2S_KPIS.get(kpi_code, {}).get('name', kpi_code)
-                            met_details.append(f"{kpi_name}: {val:.1f} (threshold {threshold})")
-                    if met_details:
-                        impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
-                        effort = _compute_effort_score(pb_cfg) * 0.7  # lighter since partial trigger
-                        priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
-                        total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
-                        roi_ctx = _get_roi_context('playbook', pb_id, arr)
-                        exec_info = _get_execution_info(pb_id)
-                        all_actions.append({
-                            'account_id': account.account_id,
-                            'account_name': account.account_name,
-                            'action_title': f"Evaluate {pb_cfg['name']}",
-                            'action_description': '; '.join(met_details),
-                            'action_type': 'playbook_evaluate',
-                            'related_playbook_id': pb_id,
-                            'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
-                            'impact_score': impact, 'effort_score': effort,
-                            'priority_index': priority_index,
-                            'account_health': round(overall_health, 1),
-                            'estimated_hours': total_hours,
-                            'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
-                            **roi_ctx,
-                            **exec_info,
-                        })
-                        has_playbook_action = True
-                        break  # one soft trigger per account
+            for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+                conditions = pb_cfg.get('trigger_conditions', {})
+                met_details = []
+                for kpi_code, cond in conditions.items():
+                    val = normalized_kpis.get(kpi_code)
+                    if val is None:
+                        continue
+                    op, threshold = cond.get('operator'), cond.get('value')
+                    triggered = (op == '>' and val > threshold) or (op == '<' and val < threshold)
+                    if triggered:
+                        kpi_name = DC2S_KPIS.get(kpi_code, {}).get('name', kpi_code)
+                        met_details.append(f"{kpi_name}: {val:.1f} (threshold {threshold})")
+                if met_details:
+                    impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
+                    effort = _compute_effort_score(pb_cfg) * 0.7  # lighter since partial trigger
+                    priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
+                    total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
+                    roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                    exec_info = _get_execution_info(pb_id)
+                    all_actions.append({
+                        'account_id': account.account_id,
+                        'account_name': account.account_name,
+                        'action_title': f"Evaluate {pb_cfg['name']}",
+                        'action_description': '; '.join(met_details),
+                        'action_type': 'playbook_evaluate',
+                        'related_playbook_id': pb_id,
+                        'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
+                        'impact_score': impact, 'effort_score': effort,
+                        'priority_index': priority_index,
+                        'account_health': round(overall_health, 1),
+                        'estimated_hours': total_hours,
+                        'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
+                        **roi_ctx,
+                        **exec_info,
+                    })
+                    has_playbook_action = True
+                    break  # one soft trigger per account
 
             # ── Pillar-specific intervention (replaces generic "Health Check") ──
-            if overall_health < ht.healthy_min() and not has_playbook_action:
+            if overall_health < ht.healthy_min():
                 # Find the weakest pillar to make the action specific
                 weakest_pillar = None
                 weakest_score = 999
@@ -795,7 +801,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
 
             # ── Signal-driven actions (from qualitative signals) ──
             acct_signals = signals_by_account.get(account.account_id, [])
-            if acct_signals and not has_playbook_action:
+            if acct_signals:
                 sig = acct_signals[0]  # most recent negative signal
                 signal_type = getattr(sig, 'signal_type', 'risk')
                 signal_text = getattr(sig, 'content', '') or getattr(sig, 'raw_text', '') or ''
@@ -877,7 +883,44 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                 })
 
         all_actions.sort(key=lambda a: a['priority_index'], reverse=True)
-        top_actions = all_actions[:10]
+
+        # Diversity-aware selection: round-robin across action types, cap 2 per account
+        from collections import defaultdict
+        by_type = defaultdict(list)
+        for a in all_actions:
+            by_type[a['action_type']].append(a)
+
+        seen_accounts = defaultdict(int)
+        top_actions = []
+        type_keys = list(by_type.keys())
+        idx = 0
+        while len(top_actions) < 10 and type_keys:
+            action_type = type_keys[idx % len(type_keys)]
+            candidates = by_type[action_type]
+            picked = False
+            while candidates and not picked:
+                candidate = candidates.pop(0)
+                acct_id = candidate.get('account_id')
+                if seen_accounts[acct_id] < 2:
+                    top_actions.append(candidate)
+                    seen_accounts[acct_id] += 1
+                    picked = True
+            if not candidates:
+                type_keys.remove(action_type)
+                if type_keys:
+                    idx = idx % len(type_keys)
+            else:
+                idx += 1
+
+        # If still < 10, fill from remaining by priority
+        if len(top_actions) < 10:
+            remaining = [a for a in all_actions if a not in top_actions]
+            for a in remaining:
+                if len(top_actions) >= 10:
+                    break
+                if seen_accounts[a.get('account_id')] < 3:
+                    top_actions.append(a)
+                    seen_accounts[a.get('account_id')] += 1
 
         for i, action in enumerate(top_actions, 1):
             action['rank'] = i
