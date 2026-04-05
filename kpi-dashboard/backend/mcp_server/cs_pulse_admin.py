@@ -523,6 +523,39 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                 customer_id=int(customer_id), is_system=True,
             ).all()
 
+        # ── Build playbook_id → execution_backend map from DB templates ──
+        # Reads from `steps` (new format) or `actions` (legacy format)
+        db_pb_lookup = {}  # playbook_id → CustomerPlaybook
+        if not db_playbooks:
+            # Also load for vertical-config playbooks to enrich with execution_backend
+            all_db_pbs = CustomerPlaybook.query.filter_by(
+                customer_id=int(customer_id),
+            ).all()
+            for dbpb in all_db_pbs:
+                db_pb_lookup[dbpb.playbook_id] = dbpb
+        else:
+            for dbpb in db_playbooks:
+                db_pb_lookup[dbpb.playbook_id] = dbpb
+
+        def _get_execution_info(playbook_id):
+            """Extract execution_backend and first_step info from DB playbook."""
+            dbpb = db_pb_lookup.get(playbook_id)
+            if not dbpb:
+                return {}
+            # Try new `steps` format first, fall back to `actions`
+            steps = getattr(dbpb, 'steps', None) or dbpb.actions or []
+            if not steps:
+                return {}
+            first_step = steps[0] if steps else {}
+            backend = first_step.get('execution_backend', 'manual')
+            backend_config = first_step.get('backend_config', {})
+            return {
+                'execution_backend': backend,
+                'execution_config': backend_config,
+                'total_steps': len(steps),
+                'first_step': first_step.get('description', ''),
+            }
+
         # ── Pre-load recent qualitative signals for signal-driven actions ──
         recent_signals = QualitativeSignal.query.filter(
             QualitativeSignal.account_id.in_(account_ids),
@@ -595,6 +628,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                     description = '; '.join(trigger_details) if trigger_details else pb_cfg.get('estimated_impact', '')
 
                     roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                    exec_info = _get_execution_info(pb_id)
                     all_actions.append({
                         'account_id': account.account_id,
                         'account_name': account.account_name,
@@ -610,6 +644,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                         'estimated_hours': total_hours,
                         'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
                         **roi_ctx,
+                        **exec_info,
                     })
                     has_playbook_action = True
 
@@ -648,6 +683,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                         effort = min(est_hours * 2, 60)
                         priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
                         roi_ctx = _get_roi_context('playbook', dbpb.playbook_id, arr)
+                        exec_info = _get_execution_info(dbpb.playbook_id)
                         all_actions.append({
                             'account_id': account.account_id,
                             'account_name': account.account_name,
@@ -662,6 +698,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                             'estimated_hours': est_hours,
                             'estimated_duration_display': f"{max(1, est_hours // 8)} days",
                             **roi_ctx,
+                            **exec_info,
                         })
                         has_playbook_action = True
                         break  # one DB playbook per account
@@ -686,6 +723,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                         priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
                         total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
                         roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                        exec_info = _get_execution_info(pb_id)
                         all_actions.append({
                             'account_id': account.account_id,
                             'account_name': account.account_name,
@@ -700,6 +738,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                             'estimated_hours': total_hours,
                             'estimated_duration_display': pb_cfg.get('estimated_duration_display', ''),
                             **roi_ctx,
+                            **exec_info,
                         })
                         has_playbook_action = True
                         break  # one soft trigger per account
@@ -747,6 +786,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                     'estimated_hours': 2,
                     'estimated_duration_display': '1 day',
                     **roi_ctx,
+                    **(_get_execution_info(recommended_pb) if recommended_pb else {}),
                 })
 
             # ── Signal-driven actions (from qualitative signals) ──
