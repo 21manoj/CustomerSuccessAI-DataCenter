@@ -183,24 +183,14 @@ def export_preview(upload_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@export_api.route('/api/export/all-account-data', methods=['GET'])
-def export_all_account_data():
-    """Export all account data including KPIs, products, and configuration in Excel format"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
+def build_all_account_export_workbook(customer_id: int, logger):
+    """Build full-account XLSX. Returns (file_bytes, download_filename, error_message)."""
     try:
-        customer_id = get_current_customer_id()
-        logger.info(f"Export request received for customer_id: {customer_id}")
-        
-        # Get all accounts for this customer
         accounts = Account.query.filter_by(customer_id=customer_id).all()
-        logger.info(f"Found {len(accounts)} accounts for customer {customer_id}")
-        
         if not accounts:
-            logger.warning(f"No accounts found for customer {customer_id}")
-            return jsonify({'error': 'No accounts found'}), 404
-        
+            logger.warning("No accounts found for customer %s", customer_id)
+            return None, None, "No accounts found"
+
         # Create Excel workbook
         wb = openpyxl.Workbook()
         wb.remove(wb.active)  # Remove default sheet
@@ -750,19 +740,77 @@ def export_all_account_data():
         for row in range(1, 17):
             metadata_sheet[f'A{row}'].font = Font(bold=True)
         
-        # Save to bytes
+
         excel_bytes = io.BytesIO()
         wb.save(excel_bytes)
         excel_bytes.seek(0)
-        
-        # Generate filename with version and timestamp for ransomware protection
         timestamp = export_timestamp.strftime('%Y%m%d_%H%M%S')
         filename = f"Account_Data_Export_v{export_version}_{timestamp}.xlsx"
-        
-        # Return file with proper headers for download
-        logger.info(f"Excel file generated successfully: {filename}, size: {excel_bytes.tell()} bytes")
-        
-        # Activity log: high-value export event (low volume)
+        return excel_bytes.getvalue(), filename, None
+    except Exception as e:
+        logger.error("build_all_account_export_workbook failed: %s", e, exc_info=True)
+        return None, None, str(e)
+
+
+
+@export_api.route('/api/export/all-account-data', methods=['GET'])
+def export_all_account_data():
+    """Export all account data including KPIs, products, and configuration in Excel format"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        customer_id = get_current_customer_id()
+        logger.info("Export request received for customer_id: %s", customer_id)
+
+        if not customer_id:
+            return jsonify({"error": "Authentication required"}), 401
+
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        if not accounts:
+            logger.warning("No accounts found for customer %s", customer_id)
+            return jsonify({"error": "No accounts found"}), 404
+
+        if request.args.get("async", "").lower() in ("1", "true", "yes"):
+            from utils.customer_jobs_sqs import enqueue_customer_job, customer_jobs_sqs_configured
+            from utils.async_job_storage import write_job_record
+            import uuid
+
+            if customer_jobs_sqs_configured():
+                job_id = str(uuid.uuid4())
+                payload = {
+                    "job": "export_all_account_data",
+                    "customer_id": int(customer_id),
+                    "job_id": job_id,
+                }
+                if enqueue_customer_job(payload):
+                    write_job_record(
+                        job_id,
+                        {
+                            "job": "export_all_account_data",
+                            "customer_id": int(customer_id),
+                            "in_progress": True,
+                            "source": "sqs",
+                        },
+                    )
+                    return jsonify(
+                        {
+                            "status": "accepted",
+                            "job": "export_all_account_data",
+                            "job_id": job_id,
+                            "message": "Export queued. Poll GET /api/jobs/status/<job_id>, then GET /api/jobs/download/<job_id>.",
+                            "poll_url": f"/api/jobs/status/{job_id}",
+                            "download_url": f"/api/jobs/download/{job_id}",
+                        }
+                    ), 202
+
+        file_bytes, filename, err = build_all_account_export_workbook(customer_id, logger)
+        if err:
+            code = 404 if err == "No accounts found" else 500
+            return jsonify({"error": err}), code
+
+        excel_bytes = io.BytesIO(file_bytes)
+
         if activity_logger:
             try:
                 user_id = get_current_user_id()
@@ -775,25 +823,23 @@ def export_all_account_data():
                 )
             except Exception:
                 pass
-        
+
         response = send_file(
             excel_bytes,
             as_attachment=True,
             download_name=filename,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        
-        # Add CORS headers if needed
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        logger.info(f"Sending Excel file response for customer {customer_id}")
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        logger.info("Sending Excel file response for customer %s", customer_id)
         return response
-        
+
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        logger.error(f"Export failed for customer {customer_id}: {str(e)}\n{error_trace}")
+        cid = locals().get("customer_id")
+        logger.error("Export failed for customer %s: %s\n%s", cid, str(e), error_trace)
         traceback.print_exc()
-        return jsonify({'error': f'Export failed: {str(e)}'}), 500 
+        return jsonify({"error": f"Export failed: {str(e)}"}), 500

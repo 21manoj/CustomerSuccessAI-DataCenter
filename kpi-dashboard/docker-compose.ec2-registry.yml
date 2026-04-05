@@ -53,6 +53,8 @@ services:
       FEATURE_CONTEXT_GRAPH: ${FEATURE_CONTEXT_GRAPH:-true}
       FEATURE_ASK_AI_V2: ${FEATURE_ASK_AI_V2:-true}
       LOAD_DRIVER_DIR: /app/load-driver
+      ONBOARDING_SQS_URL: ${ONBOARDING_SQS_URL:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
     volumes:
       - uploads:/app/backend/uploads
       - verticals:/app/backend/verticals

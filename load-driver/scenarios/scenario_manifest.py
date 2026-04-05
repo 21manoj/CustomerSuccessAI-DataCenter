@@ -1027,6 +1027,7 @@ class ManifestCSVGenerator:
         kpi_code: str,
         classification: str = 'healthy',
         has_intervention: bool = False,
+        recovery_start_month: Optional[int] = None,
     ) -> List[float]:
         """
         Generate a time-series of KPI values for one account+KPI.
@@ -1036,6 +1037,9 @@ class ManifestCSVGenerator:
 
         V3: intervention phase flips declining trajectories to improving.
         V3.1: adds recovery_boost for critical/at_risk accounts in intervention phase.
+        V3.2: recovery_start_month makes 'recovering' inflection point configurable.
+              E.g. recovery_start_month=4 in a 6-month window → inflects at 4/6 ≈ 67%.
+              Default (None) keeps the original 40% hardcoded split.
         """
         # V2 phase logic: intervention flips declining to improving
         if self.phase == 'intervention' and trajectory in ('declining', 'slow_decline'):
@@ -1092,10 +1096,21 @@ class ManifestCSVGenerator:
             elif trajectory == 'improving':
                 modifier = 1.0 + 0.15 * t if higher_is_better else 1.0 - 0.15 * t
             elif trajectory == 'recovering':
-                if t < 0.4:
-                    m = 1.0 - 0.25 * (t / 0.4)
+                # recovery_start_month controls where the V-shape inflects.
+                # Default 0.4 (40% through window) preserves legacy behaviour.
+                # E.g. recovery_start_month=4 in a 6-month range → inflect at 4/6.
+                total_months = max(
+                    1,
+                    (self.end_date - self.start_date).days / 30.0,
+                )
+                if recovery_start_month is not None:
+                    split = min(recovery_start_month / total_months, 0.85)
                 else:
-                    m = 0.75 + 0.30 * ((t - 0.4) / 0.6)
+                    split = 0.4
+                if t < split:
+                    m = 1.0 - 0.30 * (t / split)
+                else:
+                    m = 0.70 + 0.35 * ((t - split) / max(1 - split, 0.01))
                 modifier = m if higher_is_better else (2.0 - m)
             elif trajectory == 'ramping_up':
                 modifier = 0.7 + 0.35 * t if higher_is_better else 1.3 - 0.35 * t
@@ -1310,6 +1325,7 @@ class ManifestCSVGenerator:
             target_health = acct['target_health']
             trajectory = acct.get('kpi_trajectory', 'stable')
             decline_start = acct.get('decline_start_month')
+            recovery_start = acct.get('recovery_start_month')
             classification = acct.get('classification', 'healthy')
 
             for kpi_code in self.kpi_codes:
@@ -1328,6 +1344,7 @@ class ManifestCSVGenerator:
                     target_health, trajectory, decline_start, kpi_code,
                     classification=classification,
                     has_intervention=bool(acct.get('intervention')),
+                    recovery_start_month=recovery_start,
                 )
 
                 # Respect per-KPI measurement frequency from catalog.

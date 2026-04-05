@@ -77,6 +77,17 @@ onboarding_api = Blueprint('onboarding_v2', __name__)
 _onboarding_progress = {}
 
 
+def _sync_onboarding_progress(customer_id: int, payload: dict) -> None:
+    """Keep in-memory map and instance-dir JSON in sync (multi-worker + SQS worker)."""
+    _onboarding_progress[customer_id] = payload
+    try:
+        from utils.onboarding_progress_file import write_progress
+
+        write_progress(customer_id, payload)
+    except Exception:
+        pass
+
+
 # ============================================================================
 # Helper Functions
 # ============================================================================
@@ -2332,18 +2343,40 @@ def process_data():
                 "message": "Data processing failed."
             }), 500
 
-    # Async mode — return 202 and process in background
-    import threading
+    # Async mode — SQS worker (optional) or in-process background thread
     from datetime import datetime as _dt
+    from utils.onboarding_sqs import enqueue_process_data_job
 
-    _onboarding_progress[customer_id] = {
+    if enqueue_process_data_job(customer_id):
+        queued = {
+            'in_progress': True,
+            'started_at': _dt.utcnow().isoformat(),
+            'current_step': 'queued',
+            'steps_completed': [],
+            'result': None,
+            'error': None,
+            'source': 'sqs',
+        }
+        _sync_onboarding_progress(customer_id, queued)
+        return jsonify({
+            "status": "accepted",
+            "customer_id": customer_id,
+            "delivery": "sqs",
+            "message": f"Processing queued for customer {customer_id}. Poll status endpoint for progress.",
+            "poll_url": f"/api/onboarding/status/{customer_id}",
+        }), 202
+
+    import threading
+
+    _sync_onboarding_progress(customer_id, {
         'in_progress': True,
         'started_at': _dt.utcnow().isoformat(),
         'current_step': 'starting',
         'steps_completed': [],
         'result': None,
         'error': None,
-    }
+        'source': 'thread',
+    })
 
     def _run_in_background(cid, app_ctx):
         """Execute _process_data_impl in a background thread with Flask app context."""
@@ -2351,24 +2384,26 @@ def process_data():
             try:
                 from mcp_server.cs_pulse_onboarding import _process_data_impl
                 result = _process_data_impl(cid)
-                _onboarding_progress[cid] = {
+                _sync_onboarding_progress(cid, {
                     'in_progress': False,
                     'completed_at': _dt.utcnow().isoformat(),
                     'status': result.get('status', 'unknown'),
                     'steps_completed': result.get('steps_completed', []),
                     'result': result,
                     'error': None,
-                }
+                    'source': 'thread',
+                })
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).error(f"Background process-data failed: {e}", exc_info=True)
-                _onboarding_progress[cid] = {
+                _sync_onboarding_progress(cid, {
                     'in_progress': False,
                     'completed_at': _dt.utcnow().isoformat(),
                     'status': 'error',
                     'error': str(e),
                     'result': None,
-                }
+                    'source': 'thread',
+                })
 
     thread = threading.Thread(
         target=_run_in_background,
@@ -2380,6 +2415,7 @@ def process_data():
     return jsonify({
         "status": "accepted",
         "customer_id": customer_id,
+        "delivery": "thread",
         "message": f"Processing started for customer {customer_id}. Poll status endpoint for progress.",
         "poll_url": f"/api/onboarding/status/{customer_id}",
     }), 202
@@ -2401,6 +2437,10 @@ def onboarding_status(customer_id):
     Returns in_progress, current_step, steps_completed, started_at (when in progress).
     """
     progress = _onboarding_progress.get(customer_id)
+    if not progress:
+        from utils.onboarding_progress_file import read_progress
+
+        progress = read_progress(customer_id)
     if not progress:
         return jsonify({
             "customer_id": customer_id,

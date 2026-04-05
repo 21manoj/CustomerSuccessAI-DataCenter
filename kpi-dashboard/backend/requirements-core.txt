@@ -24,6 +24,7 @@ pytz==2025.2
 
 # HTTP & API Integrations
 requests==2.31.0
+boto3>=1.34.0,<2
 httpx>=0.28.1,<1
 anthropic>=0.39.0
 openai>=1.2.0
