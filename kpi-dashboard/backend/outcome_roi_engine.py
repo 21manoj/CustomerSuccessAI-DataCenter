@@ -361,6 +361,7 @@ class MetricOutcome:
     category: str
     linked_kpis: List[str]
     linked_playbooks: List[str]
+    data_source: str = "benchmark"
 
 
 @dataclass
@@ -403,6 +404,7 @@ def calculate_historical_roi(
     period_end: Optional[str] = None,
     vertical: Optional[str] = None,
     learned_investment: Optional[LearnedInvestment] = None,
+    data_source: str = "benchmark",
 ) -> OutcomeROIResult:
     """
     Calculate realized ROI from actual metric movements.
@@ -479,6 +481,7 @@ def calculate_historical_roi(
             category=metric.category.value,
             linked_kpis=metric.linked_kpi_codes,
             linked_playbooks=metric.get_playbooks(vertical),
+            data_source=data_source,
         ))
 
     # ── Investment: use learned model or fallback ──
@@ -576,6 +579,7 @@ def calculate_forward_roi(
     vertical: Optional[str] = None,
     per_metric_pcts: Optional[Dict[str, float]] = None,
     learned_investment: Optional[LearnedInvestment] = None,
+    data_source: str = "benchmark",
 ) -> OutcomeROIResult:
     """
     Project forward ROI from current metric values to target improvement.
@@ -658,6 +662,7 @@ def calculate_forward_roi(
             category=metric.category.value,
             linked_kpis=metric.linked_kpi_codes,
             linked_playbooks=metric.get_playbooks(vertical),
+            data_source=data_source,
         ))
 
     # ── Investment: extrapolate from learned model ──
@@ -776,6 +781,7 @@ def calculate_outcome_story(
     vertical: Optional[str] = None,
     per_metric_pcts: Optional[Dict[str, float]] = None,
     learned_investment: Optional[LearnedInvestment] = None,
+    data_source: str = "benchmark",
 ) -> Dict:
     """
     Build the complete outcome story: historical proof + forward projection.
@@ -794,6 +800,7 @@ def calculate_outcome_story(
         period_label=historical_period_label,
         vertical=vertical,
         learned_investment=learned_investment,
+        data_source=data_source,
     )
 
     # Extract current values from actuals for forward projection
@@ -811,6 +818,7 @@ def calculate_outcome_story(
         vertical=vertical,
         per_metric_pcts=per_metric_pcts,
         learned_investment=learned_investment,
+        data_source=data_source,
     )
 
     # Combined totals
@@ -1146,6 +1154,7 @@ def _result_to_dict(result: OutcomeROIResult) -> Dict:
                 "category": m.category,
                 "linked_kpis": m.linked_kpis,
                 "linked_playbooks": m.linked_playbooks,
+                "data_source": m.data_source,
             }
             for m in result.metric_outcomes
         ],

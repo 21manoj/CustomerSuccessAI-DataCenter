@@ -667,7 +667,7 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         arr = float(acct.revenue or 0)
         try:
             from outcome_roi_api import _extract_historical_actuals
-            metric_actuals = _extract_historical_actuals(customer_id, account_id)
+            metric_actuals, _ds = _extract_historical_actuals([acct], 6, customer_id=customer_id)
         except Exception:
             metric_actuals = {}
         try:
