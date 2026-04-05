@@ -1241,11 +1241,11 @@ def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
         }
 
         # Renewals at risk (contracts expiring within forecast horizon)
-        horizon_date = datetime.utcnow() + _td(days=months * 30)
+        horizon_date = (datetime.utcnow() + _td(days=months * 30)).date()
         renewals = []
         for acct in accounts:
             end = getattr(acct, 'contract_end', None)
-            if end and end <= horizon_date.date() if hasattr(end, 'date') else end <= horizon_date:
+            if end is not None and end <= horizon_date:
                 renewals.append({
                     'account_id': acct.account_id,
                     'account_name': acct.account_name,
