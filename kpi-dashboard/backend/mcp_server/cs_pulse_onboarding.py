@@ -1121,6 +1121,8 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 
                 # Stakeholders
                 stakeholder_path = data_dir / 'stakeholders.csv'
+                if not stakeholder_path.exists():
+                    stakeholder_path = data_dir / 'context_graph' / 'stakeholders.csv'
                 if stakeholder_path.exists() and not _skip_cg_reload:
                     df_s = pd.read_csv(str(stakeholder_path))
                     for _, row in df_s.iterrows():
