@@ -2,16 +2,17 @@
 """
 CS Pulse MCP — Revenue & Portfolio Tools.
 
-7 tools moved from cs_pulse_mcp_server.py:
+Tools registered on the shared `mcp` instance from cs_pulse_mcp_server:
   - calculate_power_of_1
   - get_outcome_roi_story
   - get_playbook_economics
   - get_playbook_recommendations
+  - get_playbook_success_metrics
+  - get_team_capacity
+  - generate_playbook_from_description
   - get_portfolio_roi_summary
   - list_portfolio_customers
   - get_portfolio_cross_customer_comparison
-
-All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
 
 from cs_pulse_mcp_server import (
@@ -673,6 +674,106 @@ def get_playbook_success_metrics(customer_id: int) -> dict:
                 'total_cost': total_cost,
                 'portfolio_roi_pct': round(total_revenue / total_cost * 100, 1) if total_cost else 0,
             },
+        }
+
+
+# ===================================================================
+# Tool: get_team_capacity
+# ===================================================================
+
+@mcp.tool
+def get_team_capacity(customer_id: int) -> dict:
+    """Get CS team capacity utilization — hours used vs available, bottleneck detection.
+
+    Shows if the team is over/under capacity for the current portfolio's active
+    playbook workload. Identifies which roles (CSM, CS Ops, Product, Platform,
+    Leadership) are bottlenecks.
+
+    Args:
+        customer_id: The customer (tenant) ID
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from models import PlaybookExecutionV2, Account
+        import resource_capacity_model as rcm
+
+        # Get resource pool summary
+        pool = rcm.get_resource_pool_summary()
+
+        # Active playbook executions (not yet closed)
+        execs = PlaybookExecutionV2.query.filter_by(
+            customer_id=customer_id
+        ).filter(
+            PlaybookExecutionV2.outcome.is_(None)
+        ).all()
+
+        # Recent completed for workload visibility (last 90 days)
+        from datetime import datetime, timedelta
+        recent_cutoff = datetime.utcnow() - timedelta(days=90)
+        recent_execs = PlaybookExecutionV2.query.filter(
+            PlaybookExecutionV2.customer_id == customer_id,
+            PlaybookExecutionV2.triggered_at >= recent_cutoff,
+        ).all()
+
+        # Sum planned hours by role from active executions
+        hours_by_role = {
+            rcm.CSRole.CSM: 0.0,
+            rcm.CSRole.CS_OPS: 0.0,
+            rcm.CSRole.PRODUCT: 0.0,
+            rcm.CSRole.PLATFORM: 0.0,
+            rcm.CSRole.LEADERSHIP: 0.0,
+        }
+        for e in execs:
+            csm_hrs = float(e.csm_hours_planned or 0)
+            hours_by_role[rcm.CSRole.CSM] += csm_hrs
+            # Approximate other roles as fraction of CSM hours
+            hours_by_role[rcm.CSRole.CS_OPS] += csm_hrs * 0.5
+            hours_by_role[rcm.CSRole.PLATFORM] += csm_hrs * 0.2
+
+        # Check capacity against resource pool
+        try:
+            cap = rcm.check_capacity(hours_by_role)
+            feasible = cap.is_feasible
+            utilization = {r: round(u * 100, 1) for r, u in cap.utilization_by_role.items()}
+            bottleneck = cap.bottleneck_role
+            overflow = cap.overflow_hours
+        except Exception:
+            feasible = True
+            utilization = {}
+            bottleneck = None
+            overflow = 0.0
+
+        # Portfolio context
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        total_arr = sum(float(a.revenue or 0) for a in accounts)
+        at_risk_count = sum(1 for a in accounts if float(a.health_score or 100) < 70)
+
+        bottleneck_list = [bottleneck] if bottleneck else []
+
+        return {
+            'scope': 'portfolio',
+            'customer_id': customer_id,
+            'resource_pool': pool,
+            'active_playbooks': len(execs),
+            'recent_playbooks_90d': len(recent_execs),
+            'planned_hours': {r.value: round(h, 1) for r, h in hours_by_role.items()},
+            'utilization_pct': utilization,
+            'feasible': feasible,
+            'bottleneck_roles': bottleneck_list,
+            'overflow_hours': round(overflow, 1),
+            'portfolio_context': {
+                'total_accounts': len(accounts),
+                'at_risk_accounts': at_risk_count,
+                'total_arr': total_arr,
+            },
+            'recommendation': (
+                f"Team is {'within' if feasible else 'over'} capacity. "
+                + (f"No bottlenecks." if not bottleneck_list else f"Bottleneck roles: {', '.join(bottleneck_list)}.")
+                + f" {at_risk_count} at-risk accounts need attention."
+            ),
         }
 
 

@@ -44,7 +44,8 @@ def _get_playbook_historical_success(playbook_id, customer_id):
         return None
 
 
-def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None):
+def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None,
+                             customer_id=None):
     """Evaluate DC2S-specific playbooks (PB-01 through PB-06).
 
     Uses OR logic for most playbooks: if ANY trigger condition is met, the
@@ -52,10 +53,14 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None):
     expansion requires all three conditions (capacity >80%, growth >10%,
     expansion probability >70%).
 
+    For healthy accounts (health >= 70), adds expansion-readiness
+    recommendations (PB-04, PB-06) so they don't get 0 results.
+
     Args:
         kpi_values: Dict of KPI code → current value (e.g., {"P1-KPI1": 25.0})
         health_score: Account-level health score (0-100) for PB-05
         pillar_scores: Optional dict of pillar code → score (e.g., {"P1": 45.0})
+        customer_id: Optional customer/tenant ID for historical success enrichment
 
     Returns:
         List of recommendation dicts sorted by urgency (highest first)
@@ -169,6 +174,46 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None):
                     'estimated_duration': '7\u201314 days',
                 })
 
+    # Expansion recommendations for healthy accounts (health >= 70)
+    if health_score and health_score >= 70:
+        already_recommended = {r['playbook_id'] for r in recommendations}
+        p5_score = (pillar_scores or {}).get('P5', 0)
+        # PB-04 if strong P5 (expansion ready)
+        if p5_score >= 70 and 'PB-04' not in already_recommended:
+            pb_config = PLAYBOOK_CONFIG.get('PB-04', {})
+            recommendations.append({
+                'playbook_id': 'PB-04',
+                'playbook_name': pb_config.get('name', 'Capacity Planning'),
+                'urgency_score': 15,
+                'urgency_level': 'Opportunity',
+                'reasons': [f'Healthy account (health {health_score:.0f}) with strong Revenue & Growth (P5={p5_score:.0f}) — expansion ready'],
+                'recommendation_source': 'expansion_readiness',
+                'health_score': health_score,
+                'estimated_impact': 'Upsell/cross-sell opportunity',
+                'estimated_duration': '14–30 days',
+            })
+        # PB-06 Customer Engagement — proactive for all healthy accounts
+        if 'PB-06' not in already_recommended:
+            pb_config = PLAYBOOK_CONFIG.get('PB-06', {})
+            recommendations.append({
+                'playbook_id': 'PB-06',
+                'playbook_name': pb_config.get('name', 'Customer Engagement'),
+                'urgency_score': 10,
+                'urgency_level': 'Opportunity',
+                'reasons': ['Healthy account — proactive engagement to protect and expand'],
+                'recommendation_source': 'proactive_engagement',
+                'health_score': health_score,
+                'estimated_impact': 'Strengthen champion relationship, prevent silent churn',
+                'estimated_duration': '7–14 days',
+            })
+
+    # Enrich with historical success data if customer_id available
+    if customer_id:
+        for rec in recommendations:
+            hist = _get_playbook_historical_success(rec['playbook_id'], customer_id)
+            if hist:
+                rec['historical_success'] = hist
+
     # Cap at 3, sort by urgency
     recommendations.sort(key=lambda r: r.get('urgency_score', 0), reverse=True)
     recommendations = recommendations[:3]
@@ -220,7 +265,8 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
 
     # ── DC2S Vertical Path: PB-01 through PB-06 ──
     if kpi_values is not None:
-        recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score, pillar_scores)
+        recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score, pillar_scores,
+                                                    customer_id=customer_id)
 
         # Enrich with historical success rates
         for rec in recommendations:

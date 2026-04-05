@@ -86,13 +86,22 @@ def _get_account_profile(account) -> dict:
                 for s in stakeholders:
                     props = s.properties if isinstance(s.properties, dict) else {}
                     role = s.node_subtype or ''
-                    if role == 'csm':
+                    if 'csm' in role.lower():
                         assigned_csm = s.title or ''
                         if '(' in assigned_csm:
                             assigned_csm = assigned_csm.split('(')[0].strip()
                         break
         except Exception:
             pass
+
+        # Write back resolved CSM to profile_metadata for fast subsequent lookups
+        if assigned_csm != "Unassigned" and not meta.get('assigned_csm'):
+            try:
+                from app_v3_minimal import db as _wdb
+                account.profile_metadata = {**(account.profile_metadata or {}), 'assigned_csm': assigned_csm}
+                _wdb.session.commit()
+            except Exception:
+                pass
 
     return {
         "assigned_csm": assigned_csm,
@@ -1170,3 +1179,85 @@ def partner_portal(
                     'action': 'impact', 'metric': metric_id, 'kpi_code': kpi_code,
                     'current_value': current, 'improved_value': round(current * 1.01, 2) if current else None,
                     'annual_revenue_impact': impact}
+
+
+@mcp.tool
+def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
+    """Get CSM performance scorecard — accounts managed, health improvements, revenue impact.
+
+    Builds attribution by cross-referencing account CSM assignment with
+    playbook executions and health score changes on those accounts.
+    If csm_name is None, returns scorecard for ALL CSMs in the portfolio.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        csm_name: Optional CSM name to filter (case-insensitive substring match)
+    """
+    _ensure_registry()
+    app = _get_flask_app()
+
+    with app.app_context():
+        _require_auth(customer_id)
+
+        from models import Account, HealthScore, PlaybookExecutionV2
+        from sqlalchemy import func, desc
+        from collections import defaultdict
+
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+
+        # Group accounts by assigned CSM
+        csm_accounts = defaultdict(list)
+        for acct in accounts:
+            profile = _get_account_profile(acct)
+            csm = profile.get('assigned_csm', 'Unassigned')
+            if csm_name and csm_name.lower() not in csm.lower():
+                continue
+            csm_accounts[csm].append(acct)
+
+        scorecards = {}
+        for csm, accts in csm_accounts.items():
+            acct_ids = [a.account_id for a in accts]
+            total_arr = sum(float(a.revenue or 0) for a in accts)
+
+            # Health deltas: latest score - earliest score per account
+            health_deltas = []
+            for aid in acct_ids:
+                scores = (HealthScore.query
+                    .filter_by(account_id=aid)
+                    .order_by(HealthScore.measurement_month.asc())
+                    .all())
+                if len(scores) >= 2:
+                    delta = float(scores[-1].health_score or 0) - float(scores[0].health_score or 0)
+                    health_deltas.append(delta)
+
+            # Playbook executions on this CSM's accounts
+            execs = PlaybookExecutionV2.query.filter(
+                PlaybookExecutionV2.account_id.in_(acct_ids),
+                PlaybookExecutionV2.customer_id == customer_id,
+            ).all()
+
+            resolved = sum(1 for e in execs if e.outcome == 'resolved')
+            rev_protected = sum(float(e.revenue_protected or 0) for e in execs)
+            rev_expanded = sum(float(e.revenue_expanded or 0) for e in execs)
+
+            scorecards[csm] = {
+                'csm_name': csm,
+                'accounts_managed': len(accts),
+                'total_arr': total_arr,
+                'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
+                'accounts_improving': sum(1 for d in health_deltas if d > 5),
+                'accounts_declining': sum(1 for d in health_deltas if d < -5),
+                'playbooks_executed': len(execs),
+                'playbooks_resolved': resolved,
+                'success_rate_pct': round(resolved / len(execs) * 100, 1) if execs else 0,
+                'revenue_protected': rev_protected,
+                'revenue_expanded': rev_expanded,
+                'total_revenue_impact': rev_protected + rev_expanded,
+            }
+
+        return {
+            'scope': 'portfolio',
+            'customer_id': customer_id,
+            'csm_count': len(scorecards),
+            'scorecards': scorecards,
+        }
