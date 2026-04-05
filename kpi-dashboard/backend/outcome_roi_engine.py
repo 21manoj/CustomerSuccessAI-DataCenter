@@ -1384,6 +1384,15 @@ def _generate_narrative(
             f"is projected to deliver {forward_dollar} ({f.roi_pct:.0f}% ROI)."
         )
 
+    # Explain the ROI differential if historical >> forward
+    if h.roi_pct > 0 and f.roi_pct > 0 and h.roi_pct > f.roi_pct * 3:
+        parts.append(
+            f"The historical ROI includes one-time turnaround gains from accounts "
+            f"that moved from critical to healthy — these gains are now captured in "
+            f"the baseline. Forward projections assume incremental {f.improvement_pct_avg:.0f}% "
+            f"improvement on the new, higher baseline."
+        )
+
     if h.total_impact > 0 and f.total_impact > 0:
         parts.append(
             f"Combined trajectory: {combined} in total outcome value."

@@ -50,6 +50,76 @@ def import_account_data():
         
         # Read Excel file
         raw_excel = file.read()
+        original_filename = getattr(file, "filename", None) or "import.xlsx"
+
+        job_id = _try_enqueue_rehydrate_import(customer_id, user_id, raw_excel, original_filename)
+        if job_id:
+            return jsonify({
+                "status": "accepted",
+                "job": "rehydrate_import",
+                "job_id": job_id,
+                "message": "Rehydration queued. Poll GET /api/jobs/status/<job_id> until completed.",
+                "poll_url": f"/api/jobs/status/{job_id}",
+            }), 202
+
+        return _import_account_data_from_excel(
+            customer_id, raw_excel, user_id=user_id, original_filename=original_filename
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        return jsonify({
+            'error': f'Rehydration failed: {str(e)}',
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+def _try_enqueue_rehydrate_import(customer_id, user_id, raw_excel: bytes, original_filename: str):
+    """Return job_id if enqueued to SQS, else None."""
+    import uuid
+    from pathlib import Path
+    from flask import current_app
+    from utils.customer_jobs_sqs import enqueue_customer_job, customer_jobs_sqs_configured
+    from utils.async_job_storage import write_job_record
+
+    if not customer_jobs_sqs_configured():
+        return None
+    job_id = str(uuid.uuid4())
+    root = Path(current_app.instance_path) / "rehydrate_staging"
+    root.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{int(customer_id)}_{job_id}.xlsx"
+    fp = root / safe_name
+    try:
+        fp.write_bytes(raw_excel)
+    except OSError:
+        return None
+    rel = f"rehydrate_staging/{safe_name}"
+    payload = {
+        "job": "rehydrate_import",
+        "customer_id": int(customer_id),
+        "job_id": job_id,
+        "staging_relpath": rel,
+        "original_filename": original_filename or "import.xlsx",
+        "user_id": int(user_id) if user_id is not None else None,
+    }
+    if not enqueue_customer_job(payload):
+        fp.unlink(missing_ok=True)
+        return None
+    write_job_record(
+        job_id,
+        {
+            "job": "rehydrate_import",
+            "customer_id": int(customer_id),
+            "in_progress": True,
+            "source": "sqs",
+        },
+    )
+    return job_id
+
+
+def _import_account_data_from_excel(customer_id: int, raw_excel: bytes, user_id=None, original_filename: str = "import.xlsx"):
+    try:
         xls = pd.ExcelFile(io.BytesIO(raw_excel))
         
         # Step 0: Validate export metadata (customer ID, version, timestamp)
@@ -200,10 +270,10 @@ def import_account_data():
                         account_name = str(row['Account Name']).strip()
                         if not account_name or account_name == 'nan':
                             continue
-                        
+                    
                         external_account_id = str(row.get('External Account ID', '')).strip() if pd.notna(row.get('External Account ID')) else None
                         external_account_id = external_account_id if external_account_id and external_account_id != 'nan' else None
-                        
+                    
                         # Try to find existing account by external_account_id or account_name
                         existing_account = None
                         if external_account_id:
@@ -211,13 +281,13 @@ def import_account_data():
                                 customer_id=customer_id,
                                 external_account_id=external_account_id
                             ).first()
-                        
+                    
                         if not existing_account:
                             existing_account = Account.query.filter_by(
                                 customer_id=customer_id,
                                 account_name=account_name
                             ).first()
-                        
+                    
                         # Parse profile_metadata
                         profile_metadata = None
                         if 'Profile Metadata (JSON)' in accounts_df.columns:
@@ -231,7 +301,7 @@ def import_account_data():
                                         profile_metadata = eval(str(pm_str))
                                     except:
                                         pass
-                        
+                    
                         # Create new account (all existing accounts were deleted)
                         new_account = Account(
                             customer_id=customer_id,
@@ -262,13 +332,13 @@ def import_account_data():
                         account_id_val = row.get('Account ID')
                         if pd.isna(account_id_val):
                             continue
-                        
+                    
                         # Find account by ID or name
                         account = Account.query.filter_by(
                             customer_id=customer_id,
                             account_id=int(account_id_val)
                         ).first()
-                        
+                    
                         if not account:
                             # Try by account name if provided
                             account_name = str(row.get('Account Name', '')).strip() if pd.notna(row.get('Account Name')) else None
@@ -277,15 +347,15 @@ def import_account_data():
                                     customer_id=customer_id,
                                     account_name=account_name
                                 ).first()
-                        
+                    
                         if not account:
                             results['errors'].append(f"Account not found for product {row.get('Product Name', 'unknown')}")
                             continue
-                        
+                    
                         product_name = str(row.get('Product Name', '')).strip()
                         if not product_name or product_name == 'nan':
                             continue
-                        
+                    
                         # Create new product (all existing products were deleted)
                         new_product = Product(
                             account_id=account.account_id,
@@ -316,24 +386,24 @@ def import_account_data():
                     user_id=user_id,
                     account_id=None,  # Multi-account import
                     version=1,
-                    original_filename=file.filename,
+                    original_filename=original_filename,
                     raw_excel=raw_excel
                 )
                 db.session.add(upload)
                 db.session.flush()
-                
+            
                 for _, row in kpis_df.iterrows():
                     try:
                         account_id_val = row.get('Account ID')
                         if pd.isna(account_id_val):
                             continue
-                        
+                    
                         # Find account
                         account = Account.query.filter_by(
                             customer_id=customer_id,
                             account_id=int(account_id_val)
                         ).first()
-                        
+                    
                         if not account:
                             account_name = str(row.get('Account Name', '')).strip() if pd.notna(row.get('Account Name')) else None
                             if account_name:
@@ -341,15 +411,15 @@ def import_account_data():
                                     customer_id=customer_id,
                                     account_name=account_name
                                 ).first()
-                        
+                    
                         if not account:
                             results['errors'].append(f"Account not found for KPI {row.get('KPI Parameter', 'unknown')}")
                             continue
-                        
+                    
                         kpi_parameter = str(row.get('KPI Parameter', '')).strip()
                         if not kpi_parameter or kpi_parameter == 'nan':
                             continue
-                        
+                    
                         # Find product if product_id is provided
                         product = None
                         product_id_val = row.get('Product ID')
@@ -358,7 +428,7 @@ def import_account_data():
                                 product_id=int(product_id_val),
                                 account_id=account.account_id
                             ).first()
-                            
+                        
                             # If not found by ID, try by name
                             if not product:
                                 product_name = str(row.get('Product Name', '')).strip() if pd.notna(row.get('Product Name')) else None
@@ -367,7 +437,7 @@ def import_account_data():
                                         account_id=account.account_id,
                                         product_name=product_name
                                     ).first()
-                        
+                    
                         # Create new KPI (all existing KPIs were deleted)
                         kpi_data = {
                             'upload_id': upload.upload_id,
@@ -382,7 +452,7 @@ def import_account_data():
                             'weight': str(row.get('Weight', '')) if pd.notna(row.get('Weight')) else None,
                             'aggregation_type': str(row.get('Aggregation Type', '')) if pd.notna(row.get('Aggregation Type')) else None
                         }
-                        
+                    
                         new_kpi = KPI(**kpi_data)
                         db.session.add(new_kpi)
                         results['kpis_created'] += 1
@@ -401,15 +471,15 @@ def import_account_data():
                         account_id_val = row.get('Account ID')
                         if pd.isna(account_id_val):
                             continue
-                        
+                    
                         account = Account.query.filter_by(
                             customer_id=customer_id,
                             account_id=int(account_id_val)
                         ).first()
-                        
+                    
                         if not account:
                             continue
-                        
+                    
                         # Import profile_metadata
                         pm_str = row.get('Profile Metadata (JSON)', '')
                         if pd.notna(pm_str) and str(pm_str).strip() and str(pm_str) != 'nan':
@@ -437,26 +507,26 @@ def import_account_data():
                         playbook_type = str(row.get('Playbook Type', '')).strip()
                         if not playbook_type or playbook_type == 'nan':
                             continue
-                        
+                    
                         trigger_config = str(row.get('Trigger Config (JSON)', '')) if pd.notna(row.get('Trigger Config (JSON)')) else None
                         auto_trigger = str(row.get('Auto Trigger Enabled', '')).strip().lower() == 'yes' if pd.notna(row.get('Auto Trigger Enabled')) else False
-                        
+                    
                         last_evaluated = None
                         if pd.notna(row.get('Last Evaluated')) and str(row.get('Last Evaluated')).strip():
                             try:
                                 last_evaluated = pd.to_datetime(row.get('Last Evaluated'))
                             except:
                                 pass
-                        
+                    
                         last_triggered = None
                         if pd.notna(row.get('Last Triggered')) and str(row.get('Last Triggered')).strip():
                             try:
                                 last_triggered = pd.to_datetime(row.get('Last Triggered'))
                             except:
                                 pass
-                        
+                    
                         trigger_count = int(row.get('Trigger Count', 0)) if pd.notna(row.get('Trigger Count')) else 0
-                        
+                    
                         new_trigger = PlaybookTrigger(
                             customer_id=customer_id,
                             playbook_type=playbook_type,
@@ -483,17 +553,17 @@ def import_account_data():
                         execution_id = str(row.get('Execution ID', '')).strip()
                         if not execution_id or execution_id == 'nan':
                             continue
-                        
+                    
                         playbook_id = str(row.get('Playbook ID', '')).strip()
                         if not playbook_id or playbook_id == 'nan':
                             continue
-                        
+                    
                         account_id_val = row.get('Account ID')
                         account_id = int(account_id_val) if pd.notna(account_id_val) and str(account_id_val).strip() != 'nan' else None
-                        
+                    
                         status = str(row.get('Status', 'in-progress')).strip() if pd.notna(row.get('Status')) else 'in-progress'
                         current_step = str(row.get('Current Step', '')).strip() if pd.notna(row.get('Current Step')) else None
-                        
+                    
                         # Import execution_data
                         execution_data = None
                         ed_str = row.get('Execution Data (JSON)', '')
@@ -505,27 +575,27 @@ def import_account_data():
                                     execution_data = eval(str(ed_str))
                                 except:
                                     pass
-                        
+                    
                         started_at = None
                         if pd.notna(row.get('Started At')) and str(row.get('Started At')).strip():
                             try:
                                 started_at = pd.to_datetime(row.get('Started At'))
                             except:
                                 pass
-                        
+                    
                         completed_at = None
                         if pd.notna(row.get('Completed At')) and str(row.get('Completed At')).strip():
                             try:
                                 completed_at = pd.to_datetime(row.get('Completed At'))
                             except:
                                 pass
-                        
+                    
                         if not started_at:
                             started_at = datetime.utcnow()
-                        
+                    
                         if not execution_data:
                             execution_data = {}
-                        
+                    
                         new_execution = PlaybookExecution(
                             execution_id=execution_id,
                             customer_id=customer_id,
@@ -554,18 +624,18 @@ def import_account_data():
                         execution_id = str(row.get('Execution ID', '')).strip()
                         if not execution_id or execution_id == 'nan':
                             continue
-                        
+                    
                         playbook_id = str(row.get('Playbook ID', '')).strip()
                         playbook_name = str(row.get('Playbook Name', '')).strip()
                         if not playbook_id or playbook_id == 'nan' or not playbook_name or playbook_name == 'nan':
                             continue
-                        
+                    
                         account_id_val = row.get('Account ID')
                         account_id = int(account_id_val) if pd.notna(account_id_val) and str(account_id_val).strip() != 'nan' else None
                         account_name = str(row.get('Account Name', '')).strip() if pd.notna(row.get('Account Name')) else None
-                        
+                    
                         status = str(row.get('Status', 'in-progress')).strip() if pd.notna(row.get('Status')) else 'in-progress'
-                        
+                    
                         # Import report_data
                         report_data = None
                         rd_str = row.get('Report Data (JSON)', '')
@@ -577,31 +647,31 @@ def import_account_data():
                                     report_data = eval(str(rd_str))
                                 except:
                                     pass
-                        
+                    
                         if not report_data:
                             report_data = {}
-                        
+                    
                         duration = str(row.get('Duration', '')).strip() if pd.notna(row.get('Duration')) else None
                         steps_completed = int(row.get('Steps Completed', 0)) if pd.notna(row.get('Steps Completed')) else 0
                         total_steps = int(row.get('Total Steps', 0)) if pd.notna(row.get('Total Steps')) else None
-                        
+                    
                         started_at = None
                         if pd.notna(row.get('Started At')) and str(row.get('Started At')).strip():
                             try:
                                 started_at = pd.to_datetime(row.get('Started At'))
                             except:
                                 pass
-                        
+                    
                         completed_at = None
                         if pd.notna(row.get('Completed At')) and str(row.get('Completed At')).strip():
                             try:
                                 completed_at = pd.to_datetime(row.get('Completed At'))
                             except:
                                 pass
-                        
+                    
                         if not started_at:
                             started_at = datetime.utcnow()
-                        
+                    
                         new_report = PlaybookReport(
                             execution_id=execution_id,
                             customer_id=customer_id,
@@ -633,7 +703,7 @@ def import_account_data():
                     kpi_upload_mode = str(row.get('KPI Upload Mode', 'corporate')).strip() if pd.notna(row.get('KPI Upload Mode')) else 'corporate'
                     category_weights = str(row.get('Category Weights (JSON)', '')).strip() if pd.notna(row.get('Category Weights (JSON)')) else None
                     master_file_name = str(row.get('Master File Name', '')).strip() if pd.notna(row.get('Master File Name')) else None
-                    
+                
                     new_config = CustomerConfig(
                         customer_id=customer_id,
                         kpi_upload_mode=kpi_upload_mode,
@@ -656,25 +726,25 @@ def import_account_data():
                         account_id_val = row.get('Account ID')
                         if pd.isna(account_id_val):
                             continue
-                        
+                    
                         account = Account.query.filter_by(
                             customer_id=customer_id,
                             account_id=int(account_id_val)
                         ).first()
-                        
+                    
                         if not account:
                             continue
-                        
+                    
                         month = int(row.get('Month')) if pd.notna(row.get('Month')) else None
                         year = int(row.get('Year')) if pd.notna(row.get('Year')) else None
-                        
+                    
                         if not month or not year:
                             continue
-                        
+                    
                         overall_health_score = float(row.get('Overall Health Score')) if pd.notna(row.get('Overall Health Score')) else None
                         if overall_health_score is None:
                             continue
-                        
+                    
                         new_trend = HealthTrend(
                             account_id=account.account_id,
                             customer_id=customer_id,
@@ -707,21 +777,21 @@ def import_account_data():
                         account_id_val = row.get('Account ID')
                         if pd.isna(kpi_id_val) or pd.isna(account_id_val):
                             continue
-                        
+                    
                         account = Account.query.filter_by(
                             customer_id=customer_id,
                             account_id=int(account_id_val)
                         ).first()
-                        
+                    
                         if not account:
                             continue
-                        
+                    
                         month = int(row.get('Month')) if pd.notna(row.get('Month')) else None
                         year = int(row.get('Year')) if pd.notna(row.get('Year')) else None
-                        
+                    
                         if not month or not year:
                             continue
-                        
+                    
                         new_ts = KPITimeSeries(
                             kpi_id=int(kpi_id_val),
                             account_id=account.account_id,
@@ -749,23 +819,23 @@ def import_account_data():
                         kpi_name = str(row.get('KPI Name', '')).strip()
                         if not kpi_name or kpi_name == 'nan':
                             continue
-                        
+                    
                         unit = str(row.get('Unit', '')).strip()
                         if not unit or unit == 'nan':
                             continue
-                        
+                    
                         higher_is_better = str(row.get('Higher Is Better', '')).strip().lower() == 'yes' if pd.notna(row.get('Higher Is Better')) else True
-                        
+                    
                         critical_min = float(row.get('Critical Min')) if pd.notna(row.get('Critical Min')) else None
                         critical_max = float(row.get('Critical Max')) if pd.notna(row.get('Critical Max')) else None
                         risk_min = float(row.get('Risk Min')) if pd.notna(row.get('Risk Min')) else None
                         risk_max = float(row.get('Risk Max')) if pd.notna(row.get('Risk Max')) else None
                         healthy_min = float(row.get('Healthy Min')) if pd.notna(row.get('Healthy Min')) else None
                         healthy_max = float(row.get('Healthy Max')) if pd.notna(row.get('Healthy Max')) else None
-                        
+                    
                         if not all([critical_min, critical_max, risk_min, risk_max, healthy_min, healthy_max]):
                             continue
-                        
+                    
                         new_ref_range = KPIReferenceRange(
                             customer_id=customer_id,
                             kpi_name=kpi_name,
@@ -799,9 +869,9 @@ def import_account_data():
                         feature_name = str(row.get('Feature Name', '')).strip()
                         if not feature_name or feature_name == 'nan':
                             continue
-                        
+                    
                         enabled = str(row.get('Enabled', '')).strip().lower() == 'yes' if pd.notna(row.get('Enabled')) else False
-                        
+                    
                         # Import config
                         config = None
                         config_str = row.get('Config (JSON)', '')
@@ -813,9 +883,9 @@ def import_account_data():
                                     config = eval(str(config_str))
                                 except:
                                     pass
-                        
+                    
                         description = str(row.get('Description', '')).strip() if pd.notna(row.get('Description')) else None
-                        
+                    
                         new_toggle = FeatureToggle(
                             customer_id=customer_id,
                             feature_name=feature_name,
@@ -835,7 +905,6 @@ def import_account_data():
             'message': 'Data rehydration completed',
             'results': results
         })
-        
     except Exception as e:
         db.session.rollback()
         import traceback
@@ -843,4 +912,5 @@ def import_account_data():
             'error': f'Rehydration failed: {str(e)}',
             'traceback': traceback.format_exc()
         }), 500
+
 

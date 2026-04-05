@@ -384,9 +384,17 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     outcome_buckets: Dict[str, List[float]] = {
         'protected': [], 'expansion': [], 'lost': [],
     }
+    # Normalize revenue_impact_type → bucket name
+    # close_playbook writes 'revenue_protected', data generator writes 'protected'
+    _BUCKET_ALIASES = {
+        'revenue_protected': 'protected', 'churn_averted': 'protected',
+        'revenue_at_risk': 'lost', 'revenue_lost': 'lost',
+        'expansion_closed': 'expansion', 'revenue_expanded': 'expansion',
+    }
     for n in outcome_nodes:
         impact = abs(float(n.revenue_impact) * float(n.confidence or 1.0))
-        bucket = n.revenue_impact_type or 'expansion'
+        raw_type = n.revenue_impact_type or 'expansion'
+        bucket = _BUCKET_ALIASES.get(raw_type, raw_type)
         if bucket in outcome_buckets:
             outcome_buckets[bucket].append(impact)
 
