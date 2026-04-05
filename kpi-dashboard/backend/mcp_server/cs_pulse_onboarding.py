@@ -881,8 +881,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         # ----------------------------------------------------------
         has_new_csvs = False  # default for fresh customers
         # ----------------------------------------------------------
-        has_new_csvs = False
-        if data_in_db and has_csv_dir:
+        # full_recalc always reloads CSVs — the freshness check uses
+        # simulated measured_at dates which can be in the future,
+        # making real CSV uploads look "older" than the data.
+        has_new_csvs = (mode == 'full_recalc' and has_csv_dir)
+        if data_in_db and has_csv_dir and not has_new_csvs:
             try:
                 # os is already imported at module level (line 23)
                 last_kpi_ts = _db.session.execute(_db.text(
