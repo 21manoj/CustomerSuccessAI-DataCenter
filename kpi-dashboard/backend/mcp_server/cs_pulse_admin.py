@@ -665,9 +665,13 @@ def get_csm_daily_actions(customer_id: int) -> dict:
                         op = cond.get('operator', '')
                         threshold = cond.get('threshold', 0)
                         triggered = False
-                        if op in ('less_than', '<') and val < threshold:
+                        if op in ('less_than', '<', 'lt') and val < threshold:
                             triggered = True
-                        elif op in ('greater_than', '>') and val > threshold:
+                        elif op in ('greater_than', '>', 'gt') and val > threshold:
+                            triggered = True
+                        elif op in ('<=', 'lte', 'less_than_or_equal') and val <= threshold:
+                            triggered = True
+                        elif op in ('>=', 'gte', 'greater_than_or_equal') and val >= threshold:
                             triggered = True
                         if triggered:
                             kpi_name = DC2S_KPIS.get(kpi_code, {}).get('name', kpi_code)
@@ -794,7 +798,7 @@ def get_csm_daily_actions(customer_id: int) -> dict:
             if acct_signals and not has_playbook_action:
                 sig = acct_signals[0]  # most recent negative signal
                 signal_type = getattr(sig, 'signal_type', 'risk')
-                signal_text = getattr(sig, 'signal_text', '') or getattr(sig, 'description', '') or ''
+                signal_text = getattr(sig, 'content', '') or getattr(sig, 'raw_text', '') or ''
                 snippet = signal_text[:120] + ('...' if len(signal_text) > 120 else '')
 
                 title_map = {
