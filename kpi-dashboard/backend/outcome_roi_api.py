@@ -599,7 +599,8 @@ def _is_calibrated(customer_id):
     """Check if Wizard C has calibrated weights for this customer."""
     if not customer_id:
         return False
-    cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+    from models import CustomerConfig as _CC
+    cfg = _CC.query.filter_by(customer_id=int(customer_id)).first()
     return bool(cfg and cfg.dc2s_kpi_weights)
 
 
@@ -623,10 +624,11 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
     cal_suffix = "_calibrated" if calibrated else "_benchmark"
 
     # ── Path 0: DC2SKPI (actual KPI measurements) ──
+    from models import DC2SKPI as _DC2SKPI
     cutoff_dt = datetime.now() - timedelta(days=months * 30)
-    kpi_rows = DC2SKPI.query.filter(
-        DC2SKPI.account_id.in_(account_ids),
-        DC2SKPI.measured_at >= cutoff_dt,
+    kpi_rows = _DC2SKPI.query.filter(
+        _DC2SKPI.account_id.in_(account_ids),
+        _DC2SKPI.measured_at >= cutoff_dt,
     ).all()
 
     if len(kpi_rows) >= 2:
@@ -691,38 +693,6 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
                         "current": POWER_OF_1_METRICS[metric_id].baseline,
                     }
             return metric_actuals, f'kpi_actuals{cal_suffix}'
-
-    # ── Path 0: DC2SKPI raw measurements (highest fidelity) ──
-    KPI_TO_PO1 = {
-        'P1-KPI1': 'product_adoption', 'P1-KPI3': 'TTFV',
-        'P3-KPI1': 'ticket_resolution_time', 'P3-KPI3': 'GRR',
-        'P5-KPI1': 'NRR', 'P5-KPI2': 'GRR', 'P5-KPI3': 'expansion_rate',
-    }
-    try:
-        from models import DC2SKPI
-        cutoff = datetime.now() - timedelta(days=months * 30 + 30)
-        raw_kpis = DC2SKPI.query.filter(
-            DC2SKPI.account_id.in_(account_ids), DC2SKPI.measured_at >= cutoff,
-        ).order_by(DC2SKPI.measured_at).all()
-        if raw_kpis and len(raw_kpis) >= 2:
-            from collections import defaultdict
-            kpi_series = defaultdict(list)
-            for row in raw_kpis:
-                kpi_series[row.kpi_code].append((row.measured_at, float(row.value or 0)))
-            metric_actuals = {}
-            for kpi_code, series in kpi_series.items():
-                mid = KPI_TO_PO1.get(kpi_code)
-                if not mid or mid in metric_actuals:
-                    continue
-                s = sorted(series, key=lambda x: x[0])
-                metric_actuals[mid] = {'baseline': round(s[0][1], 2), 'current': round(s[-1][1], 2)}
-            for mid, metric in POWER_OF_1_METRICS.items():
-                if mid not in metric_actuals:
-                    metric_actuals[mid] = {'baseline': metric.baseline, 'current': metric.baseline}
-            if any(ma['current'] != ma['baseline'] for ma in metric_actuals.values()):
-                return metric_actuals, 'dc2s_kpi_measurements'
-    except Exception:
-        pass
 
     # ── Path 1: HealthTrend (SaaS customers) ──
     trends = HealthTrend.query.filter(
@@ -1040,11 +1010,12 @@ def _extract_current_values(accounts, customer_id=None):
     cal_suffix = "_calibrated" if calibrated else "_benchmark"
 
     # ── Path 0: DC2SKPI (actual KPI measurements — latest values) ──
+    from models import DC2SKPI as _DC2SKPI
     from collections import defaultdict
     # Get most recent measurement per kpi_code per account
-    latest_kpis = DC2SKPI.query.filter(
-        DC2SKPI.account_id.in_(account_ids),
-    ).order_by(DC2SKPI.measured_at.desc()).all()
+    latest_kpis = _DC2SKPI.query.filter(
+        _DC2SKPI.account_id.in_(account_ids),
+    ).order_by(_DC2SKPI.measured_at.desc()).all()
 
     if latest_kpis:
         # Keep only the latest measurement per (account_id, kpi_code)
