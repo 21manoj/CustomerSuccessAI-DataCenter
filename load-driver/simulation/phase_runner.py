@@ -180,12 +180,17 @@ class PhaseRunner:
             return 'error: no MCP session'
         hdrs['Mcp-Session-Id'] = sid
 
-        # Call process_data tool
+        # Call process_data tool with full_recalc so each phase overwrites
+        # health scores.  Without this, immutable scoring skips months that
+        # already have a score → phases 2-4 become no-ops.
         r = requests.post(mcp_url, headers=hdrs, json={
             'jsonrpc': '2.0', 'method': 'tools/call', 'id': 1,
             'params': {
                 'name': 'process_data',
-                'arguments': {'customer_id': self.customer_id},
+                'arguments': {
+                    'customer_id': self.customer_id,
+                    'mode': 'full_recalc',
+                },
             },
         }, timeout=300)
 

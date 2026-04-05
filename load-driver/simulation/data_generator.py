@@ -99,20 +99,26 @@ class DataGenerator:
     ) -> List[Dict]:
         """Generate KPI measurement rows for one account in this phase."""
         rows = []
-        # Adaptive amplification — as health rises, the scoring curve flattens
-        # and each new month has less marginal impact (averaging with more history).
-        # Low health (<55): 2x amplification (big jumps are easy)
-        # Mid health (55-65): 3x amplification (need stronger signal)
-        # High health (>65): 4x amplification (pushing through to healthy ≥70)
         current = state.health_score
-        if current < 55:
-            amp = 2.0
-        elif current < 65:
-            amp = 3.0
+
+        # For stable/flat trajectories, target the CURRENT health exactly.
+        # The DataGenerator's health→KPI mapping doesn't match the backend's
+        # KPI→health scoring curve perfectly, so any delta amplification for
+        # stable accounts causes unintended regression.  Recovery/decline
+        # trajectories use amplification because directional correctness
+        # matters more than precision.
+        if decision.trajectory in ('stable', 'flat_high_risk'):
+            target_health = current
         else:
-            amp = 4.0
-        amplified_health = current + decision.target_health_delta * amp
-        target_health = max(10, min(95, amplified_health))
+            # Adaptive amplification — as health rises, the scoring curve flattens
+            if current < 55:
+                amp = 2.0
+            elif current < 65:
+                amp = 3.0
+            else:
+                amp = 4.0
+            amplified_health = current + decision.target_health_delta * amp
+            target_health = max(10, min(95, amplified_health))
 
         for kpi_code in self.kpi_codes:
             # Get KPI metadata from catalog
