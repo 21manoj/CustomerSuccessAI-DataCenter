@@ -292,13 +292,33 @@ def _resolve_kpi_tier(tier: str, vertical: str) -> dict:
 
 
 def _apply_kpi_tier(customer_config, tier_def: dict) -> dict:
-    """Apply tier KPI selection to a CustomerConfig. Returns tier info dict for response."""
+    """Apply tier KPI selection AND pillar weights to a CustomerConfig.
+
+    Shift-left: sets both enabled_kpis and pillar_weights at creation time
+    so health scores are computed correctly from the first process_data call.
+    Without pillar_weights, the scorer falls back to full-catalog defaults
+    which spread weight across all 5 pillars — including pillars with zero
+    KPIs in the tier, diluting the score.
+    """
     kpi_codes = tier_def.get('kpi_codes')
     if kpi_codes == 'all':
         # Full tier: clear KPI restriction (all KPIs enabled)
         customer_config.dc2s_enabled_kpis = None
+        customer_config.dc2s_pillar_weights = None  # use catalog defaults
     elif kpi_codes:
         customer_config.dc2s_enabled_kpis = kpi_codes
+
+        # Set pillar weights — distribute equally across active pillars only.
+        # Without this, pillars with zero KPIs still get weight → score dilution.
+        active_pillars = tier_def.get('pillars')
+        if active_pillars and len(active_pillars) < 5:
+            equal_weight = round(1.0 / len(active_pillars), 4)
+            pw = {p: equal_weight for p in active_pillars}
+            # Fix rounding to sum exactly to 1.0
+            diff = round(1.0 - sum(pw.values()), 4)
+            if diff != 0:
+                pw[active_pillars[-1]] = round(pw[active_pillars[-1]] + diff, 4)
+            customer_config.dc2s_pillar_weights = pw
 
     return {
         'name': tier_def.get('display_name'),
@@ -426,13 +446,12 @@ def create_customer(
 
         try:
             from verticals.provision_dc_customer import provision_customer
-            provision_customer(
+            directory_provisioned = provision_customer(
                 customer_id=customer_id,
                 customer_name=name,
                 vertical_slug=vertical,
                 force=True,
             )
-            directory_provisioned = True
         except Exception:
             directory_provisioned = False
 
@@ -456,6 +475,12 @@ def create_customer(
             result['api_key_note'] = (
                 'Save this API key — it is shown only once. '
                 'Use it for the intelligence tools (list_accounts, get_account_health, etc.).'
+            )
+            # Log masked key for audit trail (never log full key)
+            import logging as _key_log
+            _masked = full_key[:12] + '...' + full_key[-4:] if len(full_key) > 16 else '***'
+            _key_log.getLogger(__name__).info(
+                f"API key generated for customer {customer_id}: {_masked}"
             )
 
         if tier_info:
@@ -787,16 +812,25 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
 # _process_data_impl — Single source of truth for data processing
 # ===================================================================
 
-def _process_data_impl(customer_id: int) -> dict:
+def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Two paths:
-    - Path 1 (DB-native): Data already in DB -> recalculate health scores
+    Modes:
+    - 'auto' (default): Only score NEW months — existing health scores are immutable.
+      Health scores are point-in-time artifacts; weight changes apply forward only.
+    - 'full_recalc': Admin override — rewrite ALL months with current weights.
+
+    Two paths for CSV loading:
+    - Path 1 (DB-native): Data already in DB -> recalculate new health scores
     - Path 2 (Fresh CSV): No data in DB -> load CSVs into DB, then calculate
 
     Args:
         customer_id: The customer ID
+        mode: 'auto' (immutable scores) or 'full_recalc' (admin rewrite)
     """
+    import time as _time
+    _pipeline_t0 = _time.time()
+
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -1475,389 +1509,139 @@ def _process_data_impl(customer_id: int) -> dict:
                 f'data_already_in_db_{len(existing_accounts)}_accounts_{existing_kpi_count}_kpis'
             )
 
-        # ----------------------------------------------------------
-        # PROACTIVE: Scan newly loaded signals for leading indicators
-        # (champion loss, budget cut, etc.) BEFORE health scores drop.
-        # This is the "push" path — act on signals, don't wait for KPIs.
-        # ----------------------------------------------------------
-        try:
-            from utils.signal_analyst import scan_signals_for_proactive_triggers
-            proactive_results = scan_signals_for_proactive_triggers(customer_id)
-            if proactive_results:
-                steps_completed.append(
-                    f'proactive_signals_{len(proactive_results)}_triggered'
-                )
-        except Exception as _ps_err:
-            import logging as _log_ps
-            _log_ps.getLogger(__name__).warning(
-                f"Proactive signal scan failed (non-fatal): {_ps_err}"
-            )
+        # ══════════════════════════════════════════════════════════
+        # POST-PROCESSING PIPELINE — delegated to process_data_pipeline.py
+        # Each stage is standalone, testable, never raises, logs own errors.
+        # ══════════════════════════════════════════════════════════
+        from mcp_server.process_data_pipeline import (
+            run_proactive_signal_scan,
+            calculate_health_scores,
+            run_wizard_a_step,
+            run_signal_analyst,
+            run_urgent_scanner,
+            run_roi_engine,
+            run_qdrant_indexing,
+            publish_health_events,
+            record_wizard_run,
+        )
 
-        # ----------------------------------------------------------
-        # ALWAYS: Recalculate health scores from DB data
-        # Per-month: group KPIs by month, compute health per month
-        # per account. This enables ROI engine to see historical
-        # deltas (e.g. Phase 1 baseline vs Phase 2 intervention).
-        # ----------------------------------------------------------
-        try:
-            calculate_fn, _, _ = _get_health_functions(vertical)
-            import utils.health_thresholds as ht
-            from datetime import date as _date
-            from sqlalchemy import create_engine, text as _text
-            import json as _json, logging
-            from collections import defaultdict
-            _logger = logging.getLogger(__name__)
+        _step_timings = {}
 
-            database_url = os.environ.get('DATABASE_URL')
-            if not database_url:
-                from dotenv import load_dotenv
-                load_dotenv()
-                database_url = os.environ.get('DATABASE_URL')
+        # Stage 1: Proactive signal scan
+        _step = run_proactive_signal_scan(customer_id)
+        if _step:
+            steps_completed.append(_step)
 
-            acct_list = Account.query.filter_by(customer_id=customer_id).all()
-            acct_by_id = {a.account_id: a for a in acct_list}
+        # Stage 2: Health score calculation (immutable — only new months)
+        acct_list = Account.query.filter_by(customer_id=customer_id).all()
+        _health_step, _changed_account_ids, _health_timings = calculate_health_scores(
+            customer_id=customer_id,
+            acct_list=acct_list,
+            vertical=vertical,
+            mode=mode,
+        )
+        if _health_step:
+            steps_completed.append(_health_step)
+        _step_timings.update(_health_timings)
 
-            # Load lifecycle stage config (if enabled)
-            _lifecycle_config = None
-            try:
-                from models import CustomerConfig as _CC
-                _cc = _CC.query.filter_by(customer_id=customer_id).first()
-                if _cc and _cc.dc2s_lifecycle_stage_weights:
-                    _lifecycle_config = _cc.dc2s_lifecycle_stage_weights
-            except Exception:
-                pass
+        # Publish health events for downstream subscribers
+        if _changed_account_ids:
+            existing_acct_ids = [a.account_id for a in acct_list]
+            publish_health_events(customer_id, existing_acct_ids)
 
-            # Fetch ALL KPI measurements for this customer, grouped by account+month
-            from models import DC2SKPI
-            all_kpis = DC2SKPI.query.filter(
-                DC2SKPI.account_id.in_([a.account_id for a in acct_list])
-            ).all()
+        # Stage 3: Wizard A — arc classification (incremental)
+        _wa_step, _wa_duration = run_wizard_a_step(customer_id, _changed_account_ids, mode)
+        if _wa_step:
+            steps_completed.append(_wa_step)
+        _step_timings['wizard_a'] = _wa_duration
 
-            # Group by (account_id, month) → {kpi_code: [values]}
-            account_month_kpis = defaultdict(lambda: defaultdict(list))
-            for k in all_kpis:
-                if k.measured_at:
-                    month_key = k.measured_at.date().replace(day=1) if hasattr(k.measured_at, 'date') else k.measured_at.replace(day=1)
-                else:
-                    month_key = _date.today().replace(day=1)
-                account_month_kpis[(k.account_id, month_key)][k.kpi_code].append(float(k.value))
+        # Stage 4: Signal analyst (Layer A)
+        run_signal_analyst(customer_id)
 
-            # For each (account, month), average the KPI values and compute health
-            score_rows = []
-            scores_skipped = 0
-            for (account_id, month), kpi_groups in account_month_kpis.items():
-                try:
-                    # Average multiple measurements per KPI within the same month
-                    kpi_vals = {code: sum(vals) / len(vals) for code, vals in kpi_groups.items()}
-                    if not kpi_vals:
-                        scores_skipped += 1
-                        continue
-                    # Resolve lifecycle-stage weight overrides for this account+month
-                    _pw_override, _kw_override = None, None
-                    if _lifecycle_config:
-                        try:
-                            from utils.lifecycle_stages import resolve_account_stage, get_stage_weights
-                            _acct_obj = acct_by_id.get(account_id)
-                            if _acct_obj:
-                                _stage = resolve_account_stage(_acct_obj, month, _lifecycle_config)
-                                _pw_override, _kw_override = get_stage_weights(_stage)
-                        except Exception:
-                            pass
-                    # Try with lifecycle overrides first; fall back to basic call
-                    # if the vertical's calculator doesn't support overrides.
-                    if _pw_override or _kw_override:
-                        try:
-                            health, pillars = calculate_fn(
-                                kpi_vals, customer_id=customer_id,
-                                pillar_weight_overrides=_pw_override,
-                                kpi_weight_overrides=_kw_override,
-                            )
-                        except TypeError:
-                            health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
-                    else:
-                        health, pillars = calculate_fn(kpi_vals, customer_id=customer_id)
-                    score_rows.append({
-                        "aid": account_id,
-                        "month": month,
-                        "score": round(health, 2),
-                        "status": ht.classify(health),
-                        "pillars": _json.dumps({k: round(v, 2) for k, v in pillars.items()}) if pillars else None,
-                    })
-                except Exception as calc_err:
-                    _logger.warning(f"Health score calc failed for account {account_id} month {month}: {calc_err}")
+        # Stage 5: Urgent signal scanner (Layer C)
+        _urgent_step = run_urgent_scanner(customer_id)
+        if _urgent_step:
+            steps_completed.append(_urgent_step)
 
-            _logger.info(f"Per-month health calc: {len(score_rows)} rows for {len(set(r['aid'] for r in score_rows))} accounts, "
-                         f"{len(set(r['month'] for r in score_rows))} distinct months")
+        # Stage 6: ROI engine
+        _roi_step = run_roi_engine(customer_id)
+        if _roi_step:
+            steps_completed.append(_roi_step)
 
-            scores_written = 0
-            if database_url and score_rows:
-                engine = create_engine(database_url)
-                with engine.begin() as conn:
-                    # UPSERT: preserve historical months, update only matching (account_id, measurement_month).
-                    # This is critical for 2-phase loads where Phase 1 and Phase 2 produce different months.
-                    # Old behavior (DELETE all) destroyed historical data needed by ROI engine.
-                    for row in score_rows:
-                        conn.execute(_text("""
-                            INSERT INTO health_scores
-                                (account_id, measurement_month, health_score, health_status, contributing_pillars)
-                            VALUES (:aid, :month, :score, :status, :pillars)
-                            ON CONFLICT (account_id, measurement_month)
-                            DO UPDATE SET
-                                health_score = EXCLUDED.health_score,
-                                health_status = EXCLUDED.health_status,
-                                contributing_pillars = EXCLUDED.contributing_pillars
-                        """), row)
-                        scores_written += 1
+        # Stage 7: QDRANT indexing
+        _qdrant_step = run_qdrant_indexing(customer_id)
+        if _qdrant_step:
+            steps_completed.append(_qdrant_step)
 
-                    # Compute change_from_last_month for all this customer's health scores
-                    conn.execute(_text("""
-                        UPDATE health_scores hs
-                        SET change_from_last_month = hs.health_score - prev.health_score
-                        FROM (
-                            SELECT account_id, measurement_month, health_score,
-                                   LAG(health_score) OVER (PARTITION BY account_id ORDER BY measurement_month) AS prev_score
-                            FROM health_scores
-                            WHERE account_id IN (SELECT account_id FROM accounts WHERE customer_id = :cid)
-                        ) prev
-                        WHERE hs.account_id = prev.account_id
-                          AND hs.measurement_month = prev.measurement_month
-                          AND prev.prev_score IS NOT NULL
-                    """), {"cid": customer_id})
-                engine.dispose()
-            elif not database_url:
-                _logger.error("DATABASE_URL not set — cannot write health scores")
-
-            _logger.info(
-                f"Health scores: {scores_written} written, {scores_skipped} skipped (no KPIs) "
-                f"— customer {customer_id}"
-            )
-            steps_completed.append(f'health_scores_recalculated_{scores_written}_accounts')
-
-            # ── Publish ONE batched event per customer (not per account) ──
-            # This triggers CG regen, Layer B, Layer C, snapshots downstream.
-            # Batching avoids 18 individual events for an 18-account customer.
-            if scores_written > 0:
-                try:
-                    from event_system import event_manager, EventType
-                    # Collect account scores for the batch event
-                    _batch_accounts = []
-                    for _aid in existing_acct_ids:
-                        _latest = db.session.execute(db.text(
-                            "SELECT health_score FROM health_scores "
-                            "WHERE account_id = :aid ORDER BY measurement_month DESC LIMIT 1"
-                        ), {"aid": _aid}).fetchone()
-                        if _latest and _latest[0] is not None:
-                            _batch_accounts.append({
-                                'account_id': _aid,
-                                'score': float(_latest[0]),
-                            })
-
-                    # Publish per-account events (subscribers need account_id)
-                    # but with priority=2 so they queue up, and cooldowns
-                    # ensure downstream runs only once per customer.
-                    for _ba in _batch_accounts:
-                        event_manager.publisher.publish(
-                            EventType.HEALTH_SCORES_UPDATED,
-                            customer_id,
-                            {
-                                'account_id': _ba['account_id'],
-                                'score': _ba['score'],
-                                'source': 'process_data',
-                            },
-                            priority=2,
-                        )
-                    _logger.info(
-                        f"Published HEALTH_SCORES_UPDATED for {len(_batch_accounts)} accounts "
-                        f"(customer {customer_id}) — downstream subscribers will fire"
-                    )
-                except Exception as _evt_err:
-                    _logger.debug(f"Event publish failed (non-fatal): {_evt_err}")
-
-        except Exception as e:
-            errors.append(f"health_calc: {str(e)}")
-            import logging as _log2
-            _log2.getLogger(__name__).error(
-                f"Health score recalculation failed for customer {customer_id}: {e}", exc_info=True
-            )
-
-        # ── Wizard A: arc classification + context graph edge generation ──
-        try:
-            import logging as _log_wa
-            _logger_wa = _log_wa.getLogger(__name__)
-            from wizards.wizard_a_journey_db import run_wizard_a
-            wizard_a_result = run_wizard_a(customer_id)
-            _logger_wa.info(
-                f"Wizard A complete: {wizard_a_result.get('processed', 0)} accounts, "
-                f"{wizard_a_result.get('edges_created', 0)} edges created"
-            )
-            steps_completed.append(
-                f"wizard_a_{wizard_a_result.get('processed', 0)}_accounts"
-            )
-        except Exception as _wa_err:
-            import logging as _log_wa2
-            _log_wa2.getLogger(__name__).warning(
-                f"Wizard A failed (non-fatal): {_wa_err}", exc_info=True
-            )
-
-        # ----------------------------------------------------------
-        # Layer A: Proactive signal analysis on significant health drops
-        # Runs after health scores are written so we can compare to the
-        # previous month's score.  All errors are non-fatal.
-        # ----------------------------------------------------------
-        try:
-            import logging as _log_sa
-            _sa_logger = _log_sa.getLogger(__name__)
-            from utils.signal_analyst import check_and_analyze
-            from models import HealthScore as _HS
-            from sqlalchemy import desc as _desc
-
-            # For each account, compare latest two health scores
-            _acct_list_for_signals = Account.query.filter_by(customer_id=customer_id).all()
-            for _acct in _acct_list_for_signals:
-                try:
-                    last_two = (
-                        _HS.query
-                        .filter_by(account_id=_acct.account_id)
-                        .order_by(_desc(_HS.measurement_month))
-                        .limit(2)
-                        .all()
-                    )
-                    if len(last_two) >= 2:
-                        _health_after  = float(last_two[0].health_score)
-                        _health_before = float(last_two[1].health_score)
-                        check_and_analyze(
-                            customer_id=customer_id,
-                            account_id=_acct.account_id,
-                            health_before=_health_before,
-                            health_after=_health_after,
-                        )
-                except Exception as _acct_e:
-                    _sa_logger.debug(
-                        f"signal_analyst: skipped account {_acct.account_id}: {_acct_e}"
-                    )
-        except Exception as e:
-            import logging as _log_sa2
-            _log_sa2.getLogger(__name__).warning(f"Signal analyst trigger failed (non-fatal): {e}")
-
-        # ----------------------------------------------------------
-        # Layer C: Urgent signal scanning — revenue risk pre-emption
-        # Runs for every account; all errors are non-fatal.
-        # ----------------------------------------------------------
-        try:
-            import logging as _log_uss
-            _uss_logger = _log_uss.getLogger(__name__)
-            from utils.urgent_signal_scanner import scan_for_urgent_signals
-
-            _acct_list_for_urgent = Account.query.filter_by(customer_id=customer_id).all()
-            _urgent_total = 0
-            for _acct in _acct_list_for_urgent:
-                try:
-                    alerts = scan_for_urgent_signals(
-                        customer_id=customer_id,
-                        account_id=_acct.account_id,
-                    )
-                    _urgent_total += len(alerts)
-                except Exception as _ue:
-                    _uss_logger.debug(
-                        f"urgent_signal_scanner: skipped account {_acct.account_id}: {_ue}"
-                    )
-            if _urgent_total:
-                steps_completed.append(f'urgent_alerts_created_{_urgent_total}')
-        except Exception as e:
-            import logging as _log_uss2
-            _log_uss2.getLogger(__name__).warning(f"Urgent signal scanner failed (non-fatal): {e}")
-
-        # ----------------------------------------------------------
-        # ROI Engine: auto-calculate portfolio ROI snapshot
-        # Runs once per process_data so dashboards have fresh numbers.
-        # All errors are non-fatal.
-        # ----------------------------------------------------------
-        try:
-            import logging as _log_roi
-            _roi_logger = _log_roi.getLogger(__name__)
-            from outcome_roi_engine import calculate_outcome_story
-            from outcome_roi_api import _extract_historical_actuals, _extract_accounts_at_risk
-
-            _roi_accounts = Account.query.filter_by(customer_id=customer_id).all()
-            if _roi_accounts:
-                _total_arr = sum(float(a.revenue) for a in _roi_accounts if a.revenue) or None
-                _acct_ids = [a.account_id for a in _roi_accounts]
-                _metric_actuals, _data_src = _extract_historical_actuals(_roi_accounts, 6)
-                _at_risk = _extract_accounts_at_risk(_roi_accounts, customer_id=customer_id)
-                _vertical = getattr(_roi_accounts[0], 'vertical', None)
-
-                _roi_story = calculate_outcome_story(
-                    metric_actuals=_metric_actuals,
-                    target_improvement_pct=1.0,
-                    account_arr=_total_arr,
-                    projection_months=6,
-                    accounts_at_risk=_at_risk,
-                    customer_id=customer_id,
-                    account_ids=_acct_ids,
-                    vertical=_vertical,
-                )
-                if _roi_story:
-                    _roi_logger.info(
-                        f"ROI Engine: portfolio ROI calculated for customer {customer_id} "
-                        f"({len(_roi_accounts)} accounts, ARR=${_total_arr or 0:,.0f})"
-                    )
-                    steps_completed.append('roi_engine_calculated')
-        except Exception as _roi_err:
-            import logging as _log_roi2
-            _log_roi2.getLogger(__name__).warning(f"ROI engine failed (non-fatal): {_roi_err}")
-
-        # ── QDRANT: Index signals for semantic search (non-fatal) ──
-        try:
-            qdrant_url = os.environ.get('QDRANT_URL')
-            if qdrant_url:
-                from utils.qdrant_signal_search import SignalVectorStore
-                _store = SignalVectorStore(customer_id)
-                _indexed = _store.index_signals(limit=500)
-                if _indexed > 0:
-                    steps_completed.append(f'qdrant_signals_indexed_{_indexed}')
-        except Exception as _qdrant_err:
-            import logging as _log_q
-            _log_q.getLogger(__name__).debug(f"QDRANT indexing skipped (non-fatal): {_qdrant_err}")
-
+        # ── Result + tracking ──
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
+        _pipeline_duration = round(_time.time() - _pipeline_t0, 1)
+        _step_timings['total'] = _pipeline_duration
+
+        # Stage 8: Record WizardRun for audit trail
+        _scores_written = int(_health_step.split('_')[-2]) if _health_step and '_' in _health_step else 0
+        record_wizard_run(
+            customer_id=customer_id,
+            mode=mode,
+            duration_s=_pipeline_duration,
+            scores_written=_scores_written,
+            changed_accounts=len(_changed_account_ids),
+            timings=_step_timings,
+        )
+
+        import logging as _log_pd
+        _log_pd.getLogger(__name__).info(
+            f"process_data complete: customer={customer_id} mode={mode} "
+            f"duration={_pipeline_duration}s timings={_step_timings}"
+        )
 
         return {
             'scope': 'customer',
             'customer_id': customer_id,
             'status': status,
-            'accounts': len(existing_accounts),
+            'mode': mode,
+            'accounts': len(acct_list),
             'kpi_measurements': existing_kpi_count or DC2SKPI.query.filter(
-                DC2SKPI.account_id.in_(existing_acct_ids)).count(),
+                DC2SKPI.account_id.in_([a.account_id for a in acct_list])).count(),
             'csv_files_processed': csv_files if csv_files else None,
             'steps_completed': steps_completed,
             'errors': errors,
+            'duration_s': _pipeline_duration,
+            'timings': _step_timings,
             'message': (
-                f"Data processing {'completed' if status == 'success' else 'completed with issues'}. "
+                f"Data processing {'completed' if status == 'success' else 'completed with issues'} "
+                f"(mode={mode}, {_pipeline_duration}s). "
                 f"Steps: {', '.join(steps_completed) if steps_completed else 'none'}."
             ),
         }
 
-
+        # Legacy post-processing code (350+ lines) has been extracted to
+        # process_data_pipeline.py — see git history for the original inline version.
+        # ── END OF _process_data_impl ──
 # ===================================================================
 # Tool: process_data
 # ===================================================================
 
 @mcp.tool
-def process_data(customer_id: int) -> dict:
+def process_data(customer_id: int, mode: str = 'auto') -> dict:
     """Trigger the data processing pipeline for a customer.
 
-    Processes uploaded CSV files through the full pipeline:
+    Processes uploaded CSV files through the pipeline:
     1. Data loading (CSVs -> PostgreSQL)
-    2. Embedding generation
-    3. Data validation
-    4. Journey generation (Wizard A)
-    5. Pattern analysis (Wizard B)
-    6. Weight calibration (Wizard C)
+    2. Health score calculation (incremental — only NEW months)
+    3. Journey generation (Wizard A — only changed accounts)
+    4. Signal analysis + ROI engine
+
+    Health scores are immutable: once written for (account, month), they are
+    never retroactively recalculated. Weight changes apply forward only.
 
     Args:
         customer_id: The customer ID
+        mode: 'auto' (default, immutable scores) or 'full_recalc' (admin rewrite)
     """
-    return _process_data_impl(customer_id)
+    if mode not in ('auto', 'full_recalc'):
+        mode = 'auto'
+    return _process_data_impl(customer_id, mode=mode)
 
 
 # ===================================================================
@@ -2182,7 +1966,7 @@ def clone_customer(
     playbook executions, and ROI snapshots. Enables instant demo setup:
     "clone Gold_DC_Alpha as Acme Corp" in ~2 seconds.
 
-    No authentication required (onboarding tool).
+    Requires authentication — this is a data export operation, not discovery.
 
     Args:
         source_customer_id: Customer ID to clone from (e.g. 407 for Gold_DC_Alpha)
@@ -2190,6 +1974,7 @@ def clone_customer(
         new_domain: Domain for the new customer (e.g. 'acme.com')
     """
     _check_mcp_enabled()
+    _require_auth(source_customer_id, required_scope='read')
     app = _get_flask_app()
 
     with app.app_context():
@@ -2556,7 +2341,7 @@ def download_customer_csv(
     accessible to Claude.ai and other MCP clients that cannot access
     the server's filesystem.
 
-    No authentication required (onboarding tool).
+    Requires authentication — this is a data export operation.
 
     Args:
         customer_id: Customer ID to download data from
@@ -2572,6 +2357,7 @@ def download_customer_csv(
             'outcomes' — outcomes.csv
     """
     _check_mcp_enabled()
+    _require_auth(customer_id, required_scope='read')
     app = _get_flask_app()
 
     with app.app_context():

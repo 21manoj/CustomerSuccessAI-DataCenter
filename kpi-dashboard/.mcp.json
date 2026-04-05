@@ -6,7 +6,9 @@
       "cwd": "/Users/manojgupta/CustomerSuccessAI-DataCenter/kpi-dashboard",
       "env": {
         "FEATURE_MCP_SERVER": "true",
-        "FEATURE_CONTEXT_GRAPH": "true"
+        "FEATURE_CONTEXT_GRAPH": "true",
+        "MCP_TRANSPORT": "stdio",
+        "MCP_AUTH_REQUIRED": "false"
       }
     }
   }

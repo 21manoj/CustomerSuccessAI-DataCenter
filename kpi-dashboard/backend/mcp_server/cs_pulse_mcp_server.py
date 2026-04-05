@@ -138,21 +138,14 @@ def _get_account_arr(account) -> float:
 
 
 def _get_dc2s_pillar_labels() -> dict:
-    """Return canonical DC2S pillar labels from kpi_definitions.py."""
-    try:
-        from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-        return {
-            code: pillar['name']
-            for code, pillar in DC2S_PILLARS.items()
-        }
-    except ImportError:
-        return {
-            'P1': 'Deployment Velocity',
-            'P2': 'Operational Stability',
-            'P3': 'AI Workload Performance',
-            'P4': 'Channel & Partner Health',
-            'P5': 'Expansion Readiness',
-        }
+    """Return DC2S pillar labels. DEPRECATED — use _get_pillar_labels(vertical) instead."""
+    return _get_pillar_labels('dc2_s')
+
+
+def _get_pillar_labels(vertical: str = 'dc2_s') -> dict:
+    """Return canonical pillar labels for a vertical (DC2_S or SaaS Premium)."""
+    from mcp_server.common import get_pillar_labels
+    return get_pillar_labels(vertical)
 
 
 def _validate_account_ownership(customer_id: int, account_id: int):
@@ -547,6 +540,7 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
 
         customer_l2 = None
         customer_l1 = None
+        enabled_kpis = None
         if customer_id and int(customer_id) > 0:
             try:
                 from models import CustomerConfig
@@ -558,8 +552,34 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
                         customer_l2 = cc.dc2s_pillar_weights
                     if cc.dc2s_kpi_weights:
                         customer_l1 = cc.dc2s_kpi_weights
+                    if cc.dc2s_enabled_kpis:
+                        enabled_kpis = cc.dc2s_enabled_kpis
             except Exception:
                 pass
+
+        # If customer has enabled_kpis set (tier-restricted), filter catalog
+        if enabled_kpis:
+            enabled_set = set(enabled_kpis)
+            filtered_catalog = {}
+            for pcode, pdata in pillar_catalog.items():
+                filtered_kpis = {
+                    k: v for k, v in pdata['kpis'].items() if k in enabled_set
+                }
+                if filtered_kpis:
+                    filtered_catalog[pcode] = {
+                        'name': pdata['name'],
+                        'kpi_count': len(filtered_kpis),
+                        'kpis': filtered_kpis,
+                    }
+            pillar_catalog = filtered_catalog
+            # Also filter default_l2 to only active pillars
+            active_pillars = set(pillar_catalog.keys())
+            if active_pillars != set(default_l2.keys()):
+                filtered_l2 = {k: v for k, v in default_l2.items() if k in active_pillars}
+                # Normalize to sum=1.0
+                total = sum(filtered_l2.values())
+                if total > 0:
+                    default_l2 = {k: round(v / total, 4) for k, v in filtered_l2.items()}
 
         result = {
             'scope': 'platform',
@@ -578,6 +598,8 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
             result['customer_id'] = int(customer_id)
             result['customer_pillar_weights_l2'] = customer_l2 or 'not configured — using defaults'
             result['customer_kpi_weights_l1'] = customer_l1 or 'not configured — using defaults'
+            if enabled_kpis:
+                result['tier_enabled_kpis'] = enabled_kpis
 
         return result
 
@@ -665,15 +687,19 @@ def list_accounts(customer_id: int) -> dict:
         customer_obj = Customer.query.filter_by(customer_id=int(customer_id)).first()
         customer_created = customer_obj.created_at.isoformat() if customer_obj and customer_obj.created_at else None
 
+        pillar_labels = _get_pillar_labels(vertical)
+
         return {
             "scope": "portfolio",
             "customer_id": customer_id,
             "customer_created_at": customer_created,
+            "vertical": vertical,
             "total_accounts": len(results),
             "portfolio_summary": {
                 "total_arr": round(total_arr, 2),
                 "avg_health_score": avg_health,
             },
+            "pillar_labels": pillar_labels,
             "accounts": results,
         }
 
@@ -686,8 +712,8 @@ def list_accounts(customer_id: int) -> dict:
 def get_account_health(customer_id: int, account_id: int) -> dict:
     """Get detailed health score and pillar breakdown for a specific account.
 
-    Health is computed from 5 pillars (P1-P5): AI/ML Performance, Infrastructure Reliability,
-    Cloud & DevOps, Customer Engagement, Commercial & Expansion.
+    Health is computed from up to 5 pillars (P1-P5) with vertical-specific names.
+    Pillar names are returned in the response under 'pillar_labels'.
     Thresholds: critical <50, at_risk 50-69, healthy >=70.
 
     Args:
@@ -719,16 +745,19 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
             status = ht.classify(health)
 
         arr = _get_account_arr(account)
+        pillar_labels = _get_pillar_labels(vertical)
 
         return {
             "scope": "account",
             "account_id": account_id,
             "account_name": account.account_name,
+            "vertical": vertical,
             "health_score": round(health, 1),
             "status": status,
             "status_label": ht.classify_label(health) if hasattr(ht, 'classify_label') else status,
             "arr": arr,
             "pillar_scores": {k: round(v, 1) for k, v in pillars.items()},
+            "pillar_labels": {k: pillar_labels.get(k, k) for k in pillars},
         }
 
 

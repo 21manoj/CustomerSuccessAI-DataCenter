@@ -72,6 +72,9 @@ services:
       FEATURE_MCP_SERVER: "true"
       FEATURE_CONTEXT_GRAPH: "true"
       FEATURE_ASK_AI_V2: "true"
+      # Claude.ai MCP clients cannot pass Bearer tokens, so auth must be
+      # disabled for HTTP transport until session-based auth is implemented.
+      MCP_AUTH_REQUIRED: "false"
 
       # Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}

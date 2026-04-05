@@ -777,6 +777,71 @@ class ContextGraphGenerator:
                                 'story_arc_generator',
                             ])
 
+            # ── CAUSAL CHAIN edges: SIGNAL→DECISION, DECISION→DECISION, DECISION→OUTCOME ──
+            # Connect the full evidence chain:
+            #   Signal → Decision → Decision → ... → Outcome
+            # Signal refs use format "phase{N}:w{week_offset}" (same as generate_enhanced_signals_csv)
+
+            decisions = arc.get('decisions', [])
+            outcomes = arc.get('outcomes', [])
+            phases = arc.get('phases', [])
+
+            if decisions:
+                sorted_decisions = sorted(decisions, key=lambda d: d.get('phase_id', 0))
+                decision_ids = [d.get('decision_id', '') for d in sorted_decisions]
+
+                # 1. SIGNAL → DECISION (TRIGGERED)
+                for decision in sorted_decisions:
+                    d_phase = decision.get('phase_id', 0)
+                    dec_id = decision.get('decision_id', '')
+                    trigger_phase = max(0, d_phase - 1)
+                    if trigger_phase < len(phases):
+                        pps = phases[trigger_phase].get('plot_points', [])
+                        if pps:
+                            last_pp = pps[-1]
+                            trigger_ref = f"phase{trigger_phase}:w{last_pp.get('week_offset', 0)}"
+                            if trigger_ref and dec_id:
+                                edge_key = (trigger_ref, dec_id, 'TRIGGERED')
+                                if edge_key not in seen_edges:
+                                    seen_edges.add(edge_key)
+                                    writer.writerow([
+                                        trigger_ref, dec_id, 'TRIGGERED',
+                                        0.85, 0.85, 7, 0,
+                                        f'Signal triggered decision {dec_id}',
+                                        'csv_import', 'story_arc_generator',
+                                    ])
+
+                # 2. DECISION → DECISION (LED_TO)
+                for i in range(len(decision_ids) - 1):
+                    from_dec, to_dec = decision_ids[i], decision_ids[i + 1]
+                    if from_dec and to_dec:
+                        edge_key = (from_dec, to_dec, 'LED_TO')
+                        if edge_key not in seen_edges:
+                            seen_edges.add(edge_key)
+                            writer.writerow([
+                                from_dec, to_dec, 'LED_TO',
+                                0.9, 0.9, 14, 0,
+                                f'Decision chain: {from_dec} -> {to_dec}',
+                                'csv_import', 'story_arc_generator',
+                            ])
+
+                # 3. DECISION → OUTCOME (RESULTED_IN)
+                if outcomes and decision_ids:
+                    last_dec = decision_ids[-1]
+                    for outcome in outcomes:
+                        outcome_id = outcome.get('outcome_id', '')
+                        if last_dec and outcome_id:
+                            edge_key = (last_dec, outcome_id, 'RESULTED_IN')
+                            if edge_key not in seen_edges:
+                                seen_edges.add(edge_key)
+                                writer.writerow([
+                                    last_dec, outcome_id, 'RESULTED_IN',
+                                    0.95, 0.95, 0,
+                                    outcome.get('revenue_value', 0),
+                                    f'Decision led to outcome: {outcome_id}',
+                                    'csv_import', 'story_arc_generator',
+                                ])
+
         return output.getvalue()
 
     # ─── 7. Industry Benchmarks ──────────────────────────────────────────

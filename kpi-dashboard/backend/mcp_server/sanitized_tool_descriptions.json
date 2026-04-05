@@ -1,0 +1,215 @@
+{
+  "_meta": {
+    "generated": "2026-04-04",
+    "purpose": "Balanced MCP tool descriptions — usable by Claude, IP-protected",
+    "principle": "Tell Claude WHAT the tool does and WHEN to use it. Never reveal HOW (formulas, thresholds, internal names)."
+  },
+
+  "tools": {
+
+    "get_platform_instructions": {
+      "description": "Load platform context and usage guidelines. Call once at the start of each conversation.",
+      "note": "CRITICAL: This tool's response contains full architecture details. Sanitize the returned system prompt separately, or gate this tool behind auth."
+    },
+
+    "get_kpi_catalog": {
+      "description": "Get the metric catalog for a customer — metric names, weights, and categories. Auto-detects the customer's industry vertical and returns calibrated weights if available. Call this before referencing any metric names.\n\nArgs:\n    customer_id: The customer ID (0 for platform defaults)",
+      "parameters": ["customer_id"]
+    },
+
+    "get_account_health": {
+      "description": "Get health score and category breakdown for a specific account. Returns an overall score with per-category scores and trend direction.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to analyze",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "list_accounts": {
+      "description": "List all accounts for a customer with health scores and revenue, sorted by health (worst first). Use for portfolio overview.\n\nArgs:\n    customer_id: The customer (tenant) ID",
+      "parameters": ["customer_id"]
+    },
+
+    "get_at_risk_accounts": {
+      "description": "List accounts with health scores below a threshold. Returns accounts needing attention with revenue at risk and weakest category.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    threshold: Health score threshold (default 70)",
+      "parameters": ["customer_id", "threshold"]
+    },
+
+    "get_health_score_history": {
+      "description": "Get monthly health score history for an account or full portfolio. Returns trends, status transitions, turnaround stories, and deterioration alerts. Use for trajectory analysis.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: Specific account (0 = all accounts)\n    months: Months of history (default 6, max 12)",
+      "parameters": ["customer_id", "account_id", "months"]
+    },
+
+    "get_revenue_at_risk": {
+      "description": "Get authoritative revenue breakdown for an account: at-risk, protected, expansion, and lost. This is the ONLY source for revenue figures — never manually sum from other tools.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to analyze",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "calculate_power_of_1": {
+      "description": "Calculate the revenue impact of improving a business metric by a given percentage. Supported metrics: NRR, GRR, product_adoption, expansion_rate, ticket_resolution_time, TTFV.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    metric_id: Metric to improve (e.g. 'NRR', 'GRR')\n    improvement_pct: Percentage improvement (default 1.0)\n    account_arr: Optional ARR override",
+      "parameters": ["customer_id", "metric_id", "improvement_pct", "account_arr"]
+    },
+
+    "get_nrr_forecast": {
+      "description": "Get portfolio net revenue retention forecast with trajectory projections and renewal risk overlay. Shows current NRR, projected NRR with interventions, and per-account impact.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    months: Forecast horizon (default 3, max 12)",
+      "parameters": ["customer_id", "months"]
+    },
+
+    "get_portfolio_roi_summary": {
+      "description": "Get the complete ROI story for a portfolio — historical results, forward projections, and trajectory assessment across all accounts.\n\nArgs:\n    customer_id: The customer (tenant) ID",
+      "parameters": ["customer_id"]
+    },
+
+    "get_outcome_roi_story": {
+      "description": "Generate a full ROI narrative for an account with proof points, projections, and evidence-based insights.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to analyze\n    target_improvement_pct: Target improvement (default 10%)\n    projection_months: Horizon in months (default 12)",
+      "parameters": ["customer_id", "account_id", "target_improvement_pct", "projection_months"]
+    },
+
+    "get_playbook_economics": {
+      "description": "Get cost and ROI estimates per intervention type — hours, automation savings, and projected impact tied to business metrics.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_arr: Optional ARR for scaling",
+      "parameters": ["customer_id", "account_arr"]
+    },
+
+    "get_csm_daily_actions": {
+      "description": "Get top prioritized actions across all accounts. Each action includes the linked intervention, urgency, effort estimate, and projected dollar impact. Use for 'What should I do today?' questions.\n\nArgs:\n    customer_id: The customer (tenant) ID",
+      "parameters": ["customer_id"]
+    },
+
+    "get_playbook_recommendations": {
+      "description": "Get recommended interventions for an account based on its health and signal patterns.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to get recommendations for",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "execute_playbook": {
+      "description": "Start an intervention for an account. Records initial health and revenue for outcome tracking.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account\n    playbook_id: Intervention ID (e.g. 'PB-01')\n    triggered_by: Who triggered it (default 'csm_manual')",
+      "parameters": ["customer_id", "account_id", "playbook_id", "triggered_by"]
+    },
+
+    "close_playbook": {
+      "description": "Complete an intervention with outcome data. Computes ROI from health improvement and revenue impact.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    execution_id: The execution ID from execute_playbook\n    outcome: Result — 'resolved', 'escalated', 'timeout', 'manual_close'\n    outcome_notes: Free-text notes\n    health_at_close: Health score at close\n    revenue_protected: ARR protected (auto-computed if omitted)\n    revenue_expanded: ARR from upsell/cross-sell\n    csm_hours_actual: Actual hours spent",
+      "parameters": ["customer_id", "execution_id", "outcome", "outcome_notes", "health_at_close", "revenue_protected", "revenue_expanded", "csm_hours_actual"]
+    },
+
+    "generate_playbook_from_description": {
+      "description": "Generate a structured intervention plan from a natural-language description. Returns trigger conditions, actions, estimated hours, and owner roles. Does not save — returns for review.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    description: Natural language description",
+      "parameters": ["customer_id", "description"]
+    },
+
+    "search_signals": {
+      "description": "Search for events and signals in an account's evidence graph. Filter by event type and subtype.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to search\n    node_type: Event type filter (default 'SIGNAL')\n    node_subtype: Optional subtype filter\n    limit: Max results (default 20)",
+      "parameters": ["customer_id", "account_id", "node_type", "node_subtype", "limit"]
+    },
+
+    "get_causal_chain": {
+      "description": "Trace the causal chain from an event — upstream (what caused this) or downstream (what this led to).\n\nArgs:\n    customer_id: The customer (tenant) ID\n    node_id: Starting event ID\n    direction: 'upstream' or 'downstream' (default 'upstream')",
+      "parameters": ["customer_id", "node_id", "direction"]
+    },
+
+    "get_account_journey_timeline": {
+      "description": "Get a chronological timeline of all events for an account with a pre-computed revenue summary. Preferred over multiple search_signals calls.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to analyze\n    limit: Max events (default 50, max 200)",
+      "parameters": ["customer_id", "account_id", "limit"]
+    },
+
+    "get_graph_summary": {
+      "description": "Get event graph statistics and revenue breakdown for an account.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to analyze",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "get_context_graph_mermaid": {
+      "description": "Generate a visual diagram of the evidence graph for an account. Returns a renderable Mermaid flowchart with color-coded events.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to visualize\n    max_nodes: Maximum nodes (default 30, max 60)",
+      "parameters": ["customer_id", "account_id", "max_nodes"]
+    },
+
+    "get_stakeholder_map": {
+      "description": "Get the stakeholder network for an account — contacts, roles, engagement details, and their influence on decisions and outcomes.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account to analyze",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "get_crm_account_data": {
+      "description": "Pull CRM data for an account — contract details, renewal opportunity, champion contacts, usage metrics.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "get_support_tickets": {
+      "description": "Pull support ticket summary — open tickets, SLA compliance, escalations, risk indicators.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "get_customer_feedback": {
+      "description": "Pull customer feedback — NPS trend, satisfaction indicators, voice-of-customer summaries.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account",
+      "parameters": ["customer_id", "account_id"]
+    },
+
+    "list_portfolio_customers": {
+      "description": "List all companies in a portfolio with health and revenue summary.\n\nArgs:\n    portfolio_id: The portfolio (PE fund / holding company) ID",
+      "parameters": ["portfolio_id"]
+    },
+
+    "get_portfolio_cross_customer_comparison": {
+      "description": "Compare all companies in a portfolio side-by-side: health, revenue, risk, expansion. CEO-level view.\n\nArgs:\n    portfolio_id: The portfolio ID",
+      "parameters": ["portfolio_id"]
+    },
+
+    "partner_portal": {
+      "description": "Partner-scoped portal for channel health operations. All responses are scoped to partner metrics only — no revenue or other data exposed. Actions: scorecard, submit_data, actions, benchmarks, impact.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    partner_id: The partner ID\n    action: One of: scorecard, submit_data, actions, benchmarks, impact\n    data_type: For submit_data only\n    csv_content: For submit_data only\n    metric_id: For impact only",
+      "parameters": ["customer_id", "partner_id", "action", "data_type", "csv_content", "metric_id"]
+    },
+
+    "create_customer": {
+      "description": "Create a new customer with admin user and API key. First step in onboarding.\n\nArgs:\n    name: Company name\n    domain: Email domain\n    vertical: Industry vertical slug\n    admin_email: Admin user email\n    admin_name: Admin display name\n    tier: Optional configuration tier",
+      "parameters": ["name", "domain", "vertical", "admin_email", "admin_name", "tier"]
+    },
+
+    "clone_customer": {
+      "description": "Deep-copy an existing customer with all data into a new customer for instant demo setup.\n\nArgs:\n    source_customer_id: Customer to clone from\n    new_name: Name for the new customer\n    new_domain: Domain for the new customer",
+      "parameters": ["source_customer_id", "new_name", "new_domain"]
+    },
+
+    "upload_csv": {
+      "description": "Upload CSV data for a customer. Use dry_run=True to validate before persisting.\n\nArgs:\n    customer_id: The customer ID\n    file_type: CSV type (e.g. 'accounts.csv', 'kpi_measurements.csv')\n    csv_content: Raw CSV content\n    dry_run: If True, validate only",
+      "parameters": ["customer_id", "file_type", "csv_content", "dry_run"]
+    },
+
+    "process_data": {
+      "description": "Run the full data processing pipeline: data loading, health scoring, analytics, and signal analysis.\n\nArgs:\n    customer_id: The customer ID\n    mode: 'auto' (default) or 'full_recalc'",
+      "parameters": ["customer_id", "mode"]
+    },
+
+    "complete_onboarding": {
+      "description": "Finalize onboarding or check status. When check_only=True, returns a checklist of what's done and what's missing.\n\nArgs:\n    customer_id: The customer ID\n    check_only: If True, return status without finalizing",
+      "parameters": ["customer_id", "check_only"]
+    },
+
+    "configure_customer_kpis": {
+      "description": "Configure which metrics are active and their weights for a customer. Supports category selection, metric selection, weight adjustment, and tier upgrades.\n\nArgs:\n    customer_id: The customer ID\n    enabled_pillars: Optional list of category codes\n    enabled_kpis: Optional list of metric codes\n    pillar_weights: Optional category weight overrides\n    kpi_weights: Optional per-metric weight overrides\n    lifecycle_stage_weights: Optional lifecycle stage definitions\n    upgrade_tier: Optional tier name to upgrade to",
+      "parameters": ["customer_id", "enabled_pillars", "enabled_kpis", "pillar_weights", "kpi_weights", "lifecycle_stage_weights", "upgrade_tier"]
+    },
+
+    "enable_features": {
+      "description": "Enable or disable feature flags for a customer. Returns current state if no features specified.\n\nArgs:\n    customer_id: The customer ID\n    features: List of feature names to enable",
+      "parameters": ["customer_id", "features"]
+    },
+
+    "trigger_wizard": {
+      "description": "Run an analytics engine for a customer: journey classification, pattern analysis, or weight calibration.\n\nArgs:\n    customer_id: The customer ID\n    wizard: Which engine — 'a' (journeys), 'b' (patterns), or 'c' (calibration)",
+      "parameters": ["customer_id", "wizard"]
+    },
+
+    "list_verticals": {
+      "description": "List available industry verticals with metric counts and configuration templates.",
+      "parameters": []
+    },
+
+    "list_customers": {
+      "description": "List recent customers grouped by vertical. Use to find the correct customer_id.",
+      "parameters": []
+    },
+
+    "get_csv_templates": {
+      "description": "Get CSV column schemas for data uploads — required and optional columns per file type.\n\nArgs:\n    vertical: The industry vertical\n    file_type: Optional specific file type",
+      "parameters": ["vertical", "file_type"]
+    },
+
+    "download_customer_csv": {
+      "description": "Export customer data as CSV content.\n\nArgs:\n    customer_id: Customer to export\n    file_type: Which CSV ('all', 'accounts', 'kpi_measurements', etc.)",
+      "parameters": ["customer_id", "file_type"]
+    }
+  }
+}
