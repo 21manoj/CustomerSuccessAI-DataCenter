@@ -1,0 +1,65 @@
+# ================================================================
+# CS Pulse — SQS customer-jobs worker (optional overlay)
+#
+# Consumes one queue for: process_data, rehydrate_import, export_all_account_data.
+# Uses the SAME platform image as cs-pulse but overrides entrypoint to
+# run scripts/sqs_onboarding_worker.py (no nginx/gunicorn).
+#
+# Prereq: platform image already built or pulled (same tag as cs-pulse).
+#
+# Git build on EC2 (typical image name: cspulse-cs-pulse when using -p cspulse):
+#   docker compose -p cspulse -f docker-compose.ec2-build.yml build
+#   docker compose -p cspulse -f docker-compose.ec2-build.yml -f docker-compose.ec2-worker.yml up -d
+#
+# Registry deploy: set CSPULSE_PLATFORM_IMAGE to your ECR URI, e.g.
+#   CSPULSE_PLATFORM_IMAGE=123456789.dkr.ecr.us-east-1.amazonaws.com/cspulse-platform:latest
+#
+# .env additions:
+#   ONBOARDING_SQS_URL=https://sqs.<region>.amazonaws.com/<acct>/<queue>
+#   AWS_REGION=us-east-1
+#
+# IAM (instance profile or task role):
+#   Platform: sqs:SendMessage on that queue
+#   Worker:   sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes
+#
+# SQS queue: set visibility timeout >= max job duration (e.g. 900s for long pipelines).
+# ================================================================
+
+services:
+  cs-pulse-worker:
+    image: ${CSPULSE_PLATFORM_IMAGE:-cspulse-cs-pulse}
+    container_name: cspulse-onboarding-worker
+    entrypoint: ["python3"]
+    command: ["/app/backend/scripts/sqs_onboarding_worker.py"]
+    environment:
+      DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
+      SQLALCHEMY_DATABASE_URI: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      FLASK_APP: app_v3_minimal.py
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      PYTHONPATH: /app/backend
+      ONBOARDING_SQS_URL: ${ONBOARDING_SQS_URL:-}
+      AWS_SQS_ONBOARDING_QUEUE_URL: ${AWS_SQS_ONBOARDING_QUEUE_URL:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      ONBOARDING_PROGRESS_DIR: /app/backend/instance
+      ONBOARDING_SQS_WAIT_SECONDS: ${ONBOARDING_SQS_WAIT_SECONDS:-20}
+      ONBOARDING_SQS_VISIBILITY_TIMEOUT: ${ONBOARDING_SQS_VISIBILITY_TIMEOUT:-900}
+      FEATURE_MCP_SERVER: "false"
+    volumes:
+      - uploads:/app/backend/uploads
+      - verticals:/app/backend/verticals
+      - instance:/app/backend/instance
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cspulse-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
