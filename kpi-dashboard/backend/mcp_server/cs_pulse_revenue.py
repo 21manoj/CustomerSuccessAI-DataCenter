@@ -1087,6 +1087,7 @@ def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
         months: Forecast horizon in months (default 3, max 12)
     """
     _check_mcp_enabled()
+    _require_auth(customer_id)
     app = _get_flask_app()
     months = min(months, 12)
 

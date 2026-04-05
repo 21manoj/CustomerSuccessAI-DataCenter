@@ -540,6 +540,7 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
 
         customer_l2 = None
         customer_l1 = None
+        enabled_kpis = None
         if customer_id and int(customer_id) > 0:
             try:
                 from models import CustomerConfig
@@ -551,8 +552,34 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
                         customer_l2 = cc.dc2s_pillar_weights
                     if cc.dc2s_kpi_weights:
                         customer_l1 = cc.dc2s_kpi_weights
+                    if cc.dc2s_enabled_kpis:
+                        enabled_kpis = cc.dc2s_enabled_kpis
             except Exception:
                 pass
+
+        # If customer has enabled_kpis set (tier-restricted), filter catalog
+        if enabled_kpis:
+            enabled_set = set(enabled_kpis)
+            filtered_catalog = {}
+            for pcode, pdata in pillar_catalog.items():
+                filtered_kpis = {
+                    k: v for k, v in pdata['kpis'].items() if k in enabled_set
+                }
+                if filtered_kpis:
+                    filtered_catalog[pcode] = {
+                        'name': pdata['name'],
+                        'kpi_count': len(filtered_kpis),
+                        'kpis': filtered_kpis,
+                    }
+            pillar_catalog = filtered_catalog
+            # Also filter default_l2 to only active pillars
+            active_pillars = set(pillar_catalog.keys())
+            if active_pillars != set(default_l2.keys()):
+                filtered_l2 = {k: v for k, v in default_l2.items() if k in active_pillars}
+                # Normalize to sum=1.0
+                total = sum(filtered_l2.values())
+                if total > 0:
+                    default_l2 = {k: round(v / total, 4) for k, v in filtered_l2.items()}
 
         result = {
             'scope': 'platform',
@@ -571,6 +598,8 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
             result['customer_id'] = int(customer_id)
             result['customer_pillar_weights_l2'] = customer_l2 or 'not configured — using defaults'
             result['customer_kpi_weights_l1'] = customer_l1 or 'not configured — using defaults'
+            if enabled_kpis:
+                result['tier_enabled_kpis'] = enabled_kpis
 
         return result
 

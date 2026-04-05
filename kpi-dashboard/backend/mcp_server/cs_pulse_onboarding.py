@@ -446,13 +446,12 @@ def create_customer(
 
         try:
             from verticals.provision_dc_customer import provision_customer
-            provision_customer(
+            directory_provisioned = provision_customer(
                 customer_id=customer_id,
                 customer_name=name,
                 vertical_slug=vertical,
                 force=True,
             )
-            directory_provisioned = True
         except Exception:
             directory_provisioned = False
 

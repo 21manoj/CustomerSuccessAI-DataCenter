@@ -122,9 +122,10 @@ def require_auth_if_key_present(tool_name: str, customer_id: int = None):
     """
     from fastmcp.exceptions import ToolError
 
-    # In stdio mode, auth is implicit
+    # Non-HTTP transports (stdio, SSE, etc.) are trusted — local process.
+    # Only enforce auth when MCP_TRANSPORT is explicitly "http" (set by __main__).
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
-    if transport == "stdio":
+    if transport != "http":
         return None
 
     # Check if a key was provided
@@ -291,9 +292,11 @@ def _resolve_key(customer_id: int, required_scope: str, _api_key=None):
     if _api_key is not None:
         raw_key = _api_key
     else:
-        # In stdio mode, auth is implicit (local process is trusted)
+        # Non-HTTP transports (stdio, SSE, etc.) are trusted ��� local process.
+        # Only enforce auth when MCP_TRANSPORT is explicitly "http" (set by
+        # the __main__ HTTP startup path in cs_pulse_mcp_server.py).
         transport = os.environ.get("MCP_TRANSPORT", "stdio")
-        if transport == "stdio":
+        if transport != "http":
             return None  # Trusted — no key_record to return
 
         raw_key = extract_api_key()
@@ -407,9 +410,9 @@ def require_api_key(func):
         if not MCP_AUTH_REQUIRED:
             return func(*args, **kwargs)
 
-        # In stdio mode, this decorator is a no-op
+        # Non-HTTP transports are trusted — decorator is a no-op
         transport = os.environ.get("MCP_TRANSPORT", "stdio")
-        if transport == "stdio":
+        if transport != "http":
             return func(*args, **kwargs)
 
         # Onboarding tools: frictionless, but validate if key IS present
