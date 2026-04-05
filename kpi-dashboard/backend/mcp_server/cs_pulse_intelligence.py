@@ -656,7 +656,11 @@ def get_health_score_history(
         import utils.health_thresholds as ht
 
         months = min(max(months, 1), 12)
-        cutoff = datetime.utcnow() - timedelta(days=months * 31)
+        # Truncate to first-of-month at midnight so date comparisons
+        # don't exclude data from the boundary month (HealthScore.measurement_month is a date)
+        cutoff = (datetime.utcnow() - timedelta(days=months * 31)).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0,
+        )
 
         if account_id and account_id != 0:
             _validate_account_ownership(customer_id, account_id)

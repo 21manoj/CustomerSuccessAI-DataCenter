@@ -1107,12 +1107,172 @@ def get_nrr_forecast(customer_id: int, months: int = 3) -> dict:
 
         analyzer.analyze_patterns()
 
-        if analyzer.portfolio_nrr_forecast:
-            result = analyzer.portfolio_nrr_forecast
-            result['source'] = 'live_calculation'
-            return result
+        if not analyzer.portfolio_nrr_forecast:
+            raise ToolError(
+                f"NRR forecast unavailable for customer {customer_id}. "
+                "Ensure accounts have ARR data and context graph outcomes."
+            )
 
-        raise ToolError(
-            f"NRR forecast unavailable for customer {customer_id}. "
-            "Ensure accounts have ARR data and context graph outcomes."
-        )
+        result = analyzer.portfolio_nrr_forecast
+        result['source'] = 'live_calculation'
+
+        # ── Enrich with trajectory + revenue waterfall ──
+        from models import Account, HealthScore
+        import utils.health_thresholds as ht
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        total_arr = sum(float(a.revenue or 0) for a in accounts)
+
+        # T+30/60/90 trajectory from health score trends
+        trajectory = {}
+        for horizon_days, label in [(30, 't30'), (60, 't60'), (90, 't90')]:
+            crossings = []
+            for acct in accounts:
+                scores = HealthScore.query.filter_by(
+                    account_id=acct.account_id
+                ).order_by(HealthScore.measurement_month.asc()).all()
+                if len(scores) < 2:
+                    continue
+                delta_per_month = (float(scores[-1].health_score) - float(scores[0].health_score))
+                months_span = max(1, len(scores) - 1)
+                projected = float(scores[-1].health_score) + (delta_per_month / months_span) * (horizon_days / 30)
+                curr_status = ht.classify(float(scores[-1].health_score))
+                proj_status = ht.classify(projected)
+                if curr_status != proj_status:
+                    crossings.append({
+                        'account_id': acct.account_id,
+                        'account_name': acct.account_name,
+                        'crossing': f"{curr_status}_to_{proj_status}",
+                    })
+            # Estimate NRR at this horizon
+            nrr_at_horizon = 100 - (horizon_days / 30) * 0.61  # ~0.6% decay per month baseline
+            trajectory[label] = {
+                'nrr_pct': round(nrr_at_horizon, 2),
+                'threshold_crossings': crossings,
+            }
+        result['trajectory'] = trajectory
+
+        # Revenue waterfall: per-account churn probability → attributed saves
+        ATTRIBUTION_FACTOR = 0.5
+        waterfall_accounts = []
+        total_exposure = 0
+        total_expected_loss = 0
+        total_residual = 0
+        total_gross_saved = 0
+        total_attributed = 0
+        total_cost = 0
+        PLAYBOOK_CONFIG = _get_playbook_config(_resolve_customer_vertical(customer_id))[0]
+
+        for acct in accounts:
+            arr = float(acct.revenue or 0)
+            if arr <= 0:
+                continue
+            scores = HealthScore.query.filter_by(
+                account_id=acct.account_id
+            ).order_by(HealthScore.measurement_month.asc()).all()
+            if not scores:
+                continue
+            health_now = float(scores[-1].health_score)
+            if health_now >= ht.healthy_min():
+                continue  # skip healthy accounts
+
+            # Project health at T+90
+            if len(scores) >= 2:
+                delta = float(scores[-1].health_score) - float(scores[0].health_score)
+                projected = health_now + delta * 0.5  # half the historical trend continues
+            else:
+                projected = health_now - 3  # slight decline if no trend
+
+            churn_now = max(5, 50 - health_now * 0.5)  # simple model
+            churn_proj = max(5, 50 - projected * 0.5)
+            expected_loss = arr * churn_now / 100
+            residual = arr * churn_proj / 100
+            gross_saved = max(0, expected_loss - residual)
+            attributed = gross_saved * ATTRIBUTION_FACTOR
+
+            # Pick best playbook
+            pb_id = 'PB-03'
+            pb_cost = round(arr * 0.003, 0)  # ~0.3% of ARR
+            if health_now < ht.at_risk_min():
+                pb_id = 'PB-05'
+            for pid, cfg in PLAYBOOK_CONFIG.items():
+                if cfg.get('trigger_conditions', {}).get('OVERALL_HEALTH', {}).get('value', 999) >= health_now:
+                    pb_id = pid
+                    break
+
+            total_exposure += arr
+            total_expected_loss += expected_loss
+            total_residual += residual
+            total_gross_saved += gross_saved
+            total_attributed += attributed
+            total_cost += pb_cost
+
+            waterfall_accounts.append({
+                'account_id': acct.account_id,
+                'account_name': acct.account_name,
+                'arr': arr,
+                'health_now': round(health_now, 1),
+                'projected_health_t90': round(projected, 1),
+                'churn_prob_now_pct': round(churn_now, 1),
+                'churn_prob_projected_pct': round(churn_proj, 1),
+                'expected_loss': round(expected_loss, 0),
+                'residual_risk': round(residual, 0),
+                'gross_saved': round(gross_saved, 0),
+                'attributed_save': round(attributed, 0),
+                'playbook': pb_id,
+                'playbook_cost': round(pb_cost, 0),
+            })
+
+        waterfall_accounts.sort(key=lambda x: x['expected_loss'], reverse=True)
+        waterfall_roi = round(total_attributed / total_cost, 1) if total_cost > 0 else 0
+
+        result['revenue_waterfall'] = {
+            'attribution_factor': ATTRIBUTION_FACTOR,
+            'total_exposure': round(total_exposure, 0),
+            'total_expected_loss': round(total_expected_loss, 0),
+            'total_residual_risk': round(total_residual, 0),
+            'total_gross_saved': round(total_gross_saved, 0),
+            'total_attributed_save': round(total_attributed, 0),
+            'total_intervention_cost': round(total_cost, 0),
+            'projected_roi_x': waterfall_roi,
+            'accounts': waterfall_accounts,
+        }
+
+        # Renewals at risk (contracts expiring within forecast horizon)
+        from datetime import timedelta as _td
+        horizon_date = datetime.utcnow() + _td(days=months * 30)
+        renewals = []
+        for acct in accounts:
+            end = getattr(acct, 'contract_end', None)
+            if end and end <= horizon_date.date() if hasattr(end, 'date') else end <= horizon_date:
+                renewals.append({
+                    'account_id': acct.account_id,
+                    'account_name': acct.account_name,
+                    'arr': float(acct.revenue or 0),
+                    'contract_end': str(end),
+                })
+        result['renewals_at_risk'] = renewals
+
+        # ── NRR fallback: when pattern correlation is flat 100%, derive from waterfall ──
+        pattern_nrr = result.get('current_nrr_pct', 100)
+        if pattern_nrr >= 99.9 and total_arr > 0 and total_expected_loss > 0:
+            waterfall_nrr_current = round((total_arr - total_expected_loss) / total_arr * 100, 1)
+            waterfall_nrr_with_intervention = round(
+                (total_arr - total_expected_loss + total_attributed) / total_arr * 100, 1
+            )
+            result['current_nrr_pct'] = waterfall_nrr_current
+            result['with_interventions_nrr_pct'] = waterfall_nrr_with_intervention
+            result['delta_arr'] = round(total_attributed, 0)
+            result['nrr_method'] = 'waterfall_churn_probability'
+            result['nrr_method_note'] = (
+                f"Pattern correlation returned {pattern_nrr}% (no historical churn events). "
+                f"Falling back to churn-probability model: "
+                f"NRR = (ARR - expected_loss) / ARR. "
+                f"Current: {waterfall_nrr_current}%, "
+                f"with interventions: {waterfall_nrr_with_intervention}% "
+                f"(+${total_attributed:,.0f} attributed saves at {ATTRIBUTION_FACTOR*100:.0f}% attribution)."
+            )
+        else:
+            result['nrr_method'] = 'pattern_correlation'
+
+        return result
