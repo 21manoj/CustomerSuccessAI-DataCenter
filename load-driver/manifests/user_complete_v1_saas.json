@@ -1,0 +1,268 @@
+{
+  "_description": "User-Complete-V1 Test Harness — 10 accounts, $50M ARR, diverse arc mix for full lifecycle testing.",
+  "_test_harness": "user_complete_v1",
+
+  "customer": {
+    "name": "MountK SaaS Inc",
+    "vertical": "saas_premium",
+    "admin_email": "admin@mounk.com",
+    "admin_name": "Test Admin",
+    "domain": "mounk.com",
+    "admin_password": "Demo123!"
+  },
+
+  "kpis": {
+    "selection": "custom",
+    "count": 9,
+    "codes": [
+      "P1-KPI1", "P1-KPI3",
+      "P2-KPI1",
+      "P3-KPI1", "P3-KPI3", "P3-KPI4",
+      "P5-KPI1", "P5-KPI2", "P5-KPI3"
+    ],
+    "pillars": ["P1", "P2", "P3", "P5"]
+  },
+
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  },
+
+  "accounts": [
+    {
+      "name": "Apex Genomics",
+      "arr": 8500000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-15",
+      "narrative": "Series C biotech. Strong product-market fit, expanding across 3 departments.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Healthcare",
+      "region": "US-West",
+      "stakeholders": [
+        {"name": "Dr. Sarah Kim", "role": "champion", "title": "VP Research", "department": "R&D", "engagement_frequency": 12, "status": "active"},
+        {"name": "Mark Johnson", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "engagement_frequency": 4, "status": "active"},
+        {"name": "Lisa Chen", "role": "technical_lead", "title": "Head of Data Science", "department": "Engineering", "engagement_frequency": 8, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "feature_adoption_increase", "date": "2025-11-15", "content": "DAU hit 78% — fastest adoption in portfolio"},
+        {"type": "expansion_discussion", "date": "2026-01-20", "content": "VP Research requesting licenses for Clinical Trials team"}
+      ]
+    },
+    {
+      "name": "Meridian FinTech",
+      "arr": 6200000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-30",
+      "narrative": "Mid-market fintech. Active champion driving expansion, NRR at 112%.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 0,
+      "industry": "Financial Services",
+      "region": "US-East",
+      "stakeholders": [
+        {"name": "Alex Rivera", "role": "champion", "title": "Director of Engineering", "department": "Engineering", "engagement_frequency": 10, "status": "active"},
+        {"name": "Rachel Park", "role": "executive_sponsor", "title": "CTO", "department": "Technology", "engagement_frequency": 5, "status": "active"},
+        {"name": "David Kim", "role": "decision_maker", "title": "CFO", "department": "Finance", "engagement_frequency": 3, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "expansion_discussion", "date": "2025-12-10", "content": "Champion pitching enterprise tier to CFO"},
+        {"type": "positive_engagement", "date": "2026-02-01", "content": "Executive QBR with strong NPS 62"}
+      ]
+    },
+    {
+      "name": "CloudPeak Analytics",
+      "arr": 4500000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "channel",
+      "renewal_date": "2026-06-15",
+      "narrative": "Deployment stalled at 40%. Integration issues blocking full rollout.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Technology",
+      "region": "EU-West",
+      "stakeholders": [
+        {"name": "Jean-Pierre Martin", "role": "champion", "title": "VP Engineering", "department": "Engineering", "engagement_frequency": 6, "status": "active"},
+        {"name": "Maria Santos", "role": "executive_sponsor", "title": "COO", "department": "Operations", "engagement_frequency": 2, "status": "passive"},
+        {"name": "Thomas Berger", "role": "technical_lead", "title": "Lead Architect", "department": "Engineering", "engagement_frequency": 8, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "deployment_delay", "date": "2025-12-20", "content": "API integration blocked — SSO configuration incompatible"},
+        {"type": "escalation_increase", "date": "2026-02-15", "content": "3 P1 tickets opened in 2 weeks — deployment team frustrated"}
+      ]
+    },
+    {
+      "name": "NovaStar Media",
+      "arr": 3800000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-30",
+      "narrative": "Usage declining silently. No escalations but DAU dropped from 65% to 28%.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Media",
+      "region": "US-West",
+      "stakeholders": [
+        {"name": "Emma Thompson", "role": "champion", "title": "VP Product", "department": "Product", "engagement_frequency": 3, "status": "passive"},
+        {"name": "James Wilson", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "engagement_frequency": 1, "status": "passive"}
+      ],
+      "key_signals": [
+        {"type": "usage_decline", "date": "2026-01-10", "content": "DAU dropped from 65% to 42% — no tickets filed"},
+        {"type": "engagement_gap", "date": "2026-02-28", "content": "Champion missed last 2 scheduled check-ins"}
+      ]
+    },
+    {
+      "name": "TerraForge Industrial",
+      "arr": 5800000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "seasonal_surge",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-31",
+      "narrative": "Manufacturing seasonality. Q1 dip expected, but this year decline is deeper.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 4,
+      "industry": "Manufacturing",
+      "region": "US-Central",
+      "stakeholders": [
+        {"name": "Robert Chen", "role": "champion", "title": "Director of Operations", "department": "Operations", "engagement_frequency": 5, "status": "active"},
+        {"name": "Patricia Lopez", "role": "executive_sponsor", "title": "VP Manufacturing", "department": "Manufacturing", "engagement_frequency": 3, "status": "active"},
+        {"name": "Mike Anderson", "role": "economic_buyer", "title": "CFO", "department": "Finance", "engagement_frequency": 2, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "seasonal_pattern", "date": "2026-01-05", "content": "Expected Q1 seasonal dip — 15% usage reduction"},
+        {"type": "budget_pressure", "date": "2026-02-20", "content": "CFO flagged CS spend review for Q2 planning"}
+      ]
+    },
+    {
+      "name": "Quantum Edge Labs",
+      "arr": 7200000,
+      "target_health": 32,
+      "classification": "critical",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-04-30",
+      "narrative": "VP Eng (champion) departed. No replacement identified. Renewal in 60 days.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Technology",
+      "region": "US-West",
+      "stakeholders": [
+        {"name": "David Park", "role": "champion", "title": "VP Engineering", "department": "Engineering", "engagement_frequency": 0, "status": "departed"},
+        {"name": "Jennifer Lee", "role": "executive_sponsor", "title": "CTO", "department": "Technology", "engagement_frequency": 1, "status": "passive"},
+        {"name": "Amy Zhang", "role": "technical_lead", "title": "Senior Engineer", "department": "Engineering", "engagement_frequency": 4, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "champion_departure", "date": "2026-01-15", "content": "VP Eng David Park resigned — moved to competitor"},
+        {"type": "engagement_gap", "date": "2026-02-01", "content": "No executive contact in 45 days post departure"},
+        {"type": "competitor_mention", "date": "2026-03-01", "content": "Technical lead mentioned evaluating alternatives"}
+      ]
+    },
+    {
+      "name": "Atlas Data Systems",
+      "arr": 4200000,
+      "target_health": 28,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "channel",
+      "renewal_date": "2026-06-30",
+      "narrative": "Critical outage caused 3-day data loss. Customer trust severely damaged.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 1,
+      "industry": "Healthcare",
+      "region": "US-East",
+      "stakeholders": [
+        {"name": "Dr. Michael Brown", "role": "champion", "title": "Chief Medical Officer", "department": "Medical", "engagement_frequency": 2, "status": "active"},
+        {"name": "Susan White", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "engagement_frequency": 1, "status": "active"},
+        {"name": "Tom Harris", "role": "decision_maker", "title": "VP IT", "department": "IT", "engagement_frequency": 6, "status": "active"},
+        {"name": "Linda Martinez", "role": "economic_buyer", "title": "CFO", "department": "Finance", "engagement_frequency": 2, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "critical_incident", "date": "2025-11-20", "content": "3-day outage — patient data processing halted"},
+        {"type": "escalation_increase", "date": "2025-12-10", "content": "Executive escalation from CEO to our VP CS"},
+        {"type": "contract_dispute", "date": "2026-01-30", "content": "Legal team requesting SLA credit — $420K impact"}
+      ]
+    },
+    {
+      "name": "Prism Retail Group",
+      "arr": 3500000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-15",
+      "narrative": "Competitor POC in progress. Decision expected by end of Q1.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Retail",
+      "region": "EU-West",
+      "stakeholders": [
+        {"name": "Sophie Dubois", "role": "champion", "title": "Head of Digital", "department": "Digital", "engagement_frequency": 4, "status": "active"},
+        {"name": "Pierre Laurent", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "engagement_frequency": 1, "status": "passive"},
+        {"name": "Claire Dupont", "role": "decision_maker", "title": "VP Technology", "department": "Technology", "engagement_frequency": 3, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "competitor_mention", "date": "2025-12-15", "content": "Head of Digital mentioned evaluating Competitor X pricing"},
+        {"type": "usage_decline", "date": "2026-01-20", "content": "API call volume dropped 35% in 4 weeks"},
+        {"type": "budget_pressure", "date": "2026-02-10", "content": "CEO questioning renewal — asked for competitive analysis"}
+      ]
+    },
+    {
+      "name": "Pinnacle Education",
+      "arr": 3200000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "proactive_growth",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-30",
+      "narrative": "Stable EdTech deployment. Moderate growth, expanding to new campuses.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Education",
+      "region": "US-Central",
+      "stakeholders": [
+        {"name": "Karen Davis", "role": "champion", "title": "VP Academic Technology", "department": "Academic", "engagement_frequency": 7, "status": "active"},
+        {"name": "Brian Miller", "role": "executive_sponsor", "title": "Provost", "department": "Academic", "engagement_frequency": 2, "status": "active"},
+        {"name": "Jessica Taylor", "role": "technical_lead", "title": "IT Director", "department": "IT", "engagement_frequency": 5, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "positive_engagement", "date": "2026-01-10", "content": "QBR showed 95% student satisfaction"},
+        {"type": "expansion_discussion", "date": "2026-03-05", "content": "Discussing rollout to 3 additional campus locations"}
+      ]
+    },
+    {
+      "name": "Vanguard Logistics",
+      "arr": 3100000,
+      "target_health": 68,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "channel",
+      "renewal_date": "2026-10-31",
+      "narrative": "Supply chain platform partially deployed. Warehouse integration pending.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 0,
+      "industry": "Logistics",
+      "region": "APAC",
+      "stakeholders": [
+        {"name": "Wei Zhang", "role": "champion", "title": "Director of Supply Chain", "department": "Operations", "engagement_frequency": 6, "status": "active"},
+        {"name": "Yuki Tanaka", "role": "executive_sponsor", "title": "COO", "department": "Operations", "engagement_frequency": 3, "status": "active"},
+        {"name": "Raj Patel", "role": "technical_lead", "title": "Integration Lead", "department": "IT", "engagement_frequency": 8, "status": "active"},
+        {"name": "Anna Schmidt", "role": "economic_buyer", "title": "VP Finance", "department": "Finance", "engagement_frequency": 2, "status": "active"}
+      ],
+      "key_signals": [
+        {"type": "deployment_delay", "date": "2026-01-25", "content": "Warehouse WMS integration delayed — API compatibility issues"},
+        {"type": "positive_engagement", "date": "2026-02-15", "content": "Champion confirmed Phase 1 value delivered — requesting Phase 2 timeline"}
+      ]
+    }
+  ]
+}
