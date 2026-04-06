@@ -200,7 +200,7 @@ def register_customer():
         raw_api_key = None
         try:
             from api_key_service import generate_api_key
-            key_record, raw_api_key = generate_api_key(
+            raw_api_key, key_record = generate_api_key(
                 customer_id=customer_id,
                 created_by=user.user_id,
                 name='auto-registration',
