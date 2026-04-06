@@ -698,6 +698,132 @@ def cro_dashboard():
             if ad['health_score'] < healthy_min_val
         )
 
+        # ── NRR Forecast: dual NRR + trajectory + waterfall ──
+        # "Current NRR" = health-weighted baseline (no intervention)
+        # "Projected NRR" = if playbooks execute on at-risk accounts
+        nrr_current = nrr_projection  # already computed above from health correlation
+        nrr_with_intervention = nrr_current
+        nrr_arr_protected = 0
+        nrr_trajectory = {}
+        nrr_waterfall_summary = {}
+        renewals_at_risk = []
+
+        try:
+            ATTRIBUTION_FACTOR = 0.5
+            waterfall_accounts = []
+            total_exposure_wf = 0
+            total_expected_loss = 0
+            total_gross_saved = 0
+            total_attributed = 0
+            total_cost = 0
+
+            for acct in accounts:
+                arr = float(acct.revenue or 0)
+                if arr <= 0:
+                    continue
+                acct_scores = HealthScore.query.filter_by(
+                    account_id=acct.account_id
+                ).order_by(HealthScore.measurement_month.asc()).all()
+                if not acct_scores:
+                    continue
+                health_now = float(acct_scores[-1].health_score)
+                if health_now >= healthy_min_val:
+                    continue  # skip healthy — only model at-risk/critical
+
+                # Project health at T+90 assuming partial trend continuation
+                if len(acct_scores) >= 2:
+                    delta = float(acct_scores[-1].health_score) - float(acct_scores[0].health_score)
+                    projected = health_now + delta * 0.5
+                else:
+                    projected = health_now - 3
+
+                churn_now = max(5, 50 - health_now * 0.5)
+                churn_proj = max(5, 50 - max(projected, 0) * 0.5)
+                expected_loss = arr * churn_now / 100
+                gross_saved = max(0, expected_loss - arr * churn_proj / 100)
+                attributed = gross_saved * ATTRIBUTION_FACTOR
+                pb_cost = round(arr * 0.003, 0)
+
+                total_exposure_wf += arr
+                total_expected_loss += expected_loss
+                total_gross_saved += gross_saved
+                total_attributed += attributed
+                total_cost += pb_cost
+
+                waterfall_accounts.append({
+                    'account_name': acct.account_name,
+                    'arr': arr,
+                    'health_now': round(health_now, 1),
+                    'churn_prob_pct': round(churn_now, 1),
+                    'expected_loss': round(expected_loss, 0),
+                    'attributed_save': round(attributed, 0),
+                })
+
+            waterfall_accounts.sort(key=lambda x: x['expected_loss'], reverse=True)
+
+            if total_revenue > 0 and total_attributed > 0:
+                nrr_lift_pct = (total_attributed / total_revenue) * 100
+                nrr_with_intervention = round(nrr_current + nrr_lift_pct, 1)
+            nrr_arr_protected = round(total_attributed, 0)
+
+            nrr_waterfall_summary = {
+                'total_exposure': round(total_exposure_wf, 0),
+                'expected_loss': round(total_expected_loss, 0),
+                'gross_saved': round(total_gross_saved, 0),
+                'attributed_save': round(total_attributed, 0),
+                'intervention_cost': round(total_cost, 0),
+                'roi_x': round(total_attributed / total_cost, 1) if total_cost > 0 else 0,
+                'accounts': waterfall_accounts[:5],  # top 5
+            }
+
+            # T+30/60/90 trajectory
+            for horizon_days, label in [(30, 't30'), (60, 't60'), (90, 't90')]:
+                crossings = []
+                for acct in accounts:
+                    acct_scores = HealthScore.query.filter_by(
+                        account_id=acct.account_id
+                    ).order_by(HealthScore.measurement_month.asc()).all()
+                    if len(acct_scores) < 2:
+                        continue
+                    delta_pm = (float(acct_scores[-1].health_score) - float(acct_scores[0].health_score))
+                    months_span = max(1, len(acct_scores) - 1)
+                    proj = float(acct_scores[-1].health_score) + (delta_pm / months_span) * (horizon_days / 30)
+                    curr_st = ht.classify(float(acct_scores[-1].health_score))
+                    proj_st = ht.classify(proj)
+                    if curr_st != proj_st:
+                        crossings.append({
+                            'account_name': acct.account_name,
+                            'crossing': f"{curr_st}_to_{proj_st}",
+                        })
+                nrr_at_horizon = nrr_current - (horizon_days / 30) * 0.6
+                nrr_trajectory[label] = {
+                    'nrr_pct': round(nrr_at_horizon, 1),
+                    'crossings': crossings,
+                }
+
+            # Renewals at risk (within 90 days)
+            for acct in accounts:
+                meta = acct.profile_metadata if isinstance(acct.profile_metadata, dict) else {}
+                rd = meta.get('renewal_date') or meta.get('contract_end')
+                if rd:
+                    try:
+                        rdate = datetime.strptime(str(rd)[:10], '%Y-%m-%d').date()
+                        days_until = (rdate - datetime.utcnow().date()).days
+                        if 0 <= days_until <= 90:
+                            h = float(acct.health_score or 0)
+                            renewals_at_risk.append({
+                                'account_name': acct.account_name,
+                                'arr': float(acct.revenue or 0),
+                                'days_until': days_until,
+                                'health_score': round(h, 1),
+                            })
+                    except (ValueError, TypeError):
+                        pass
+            renewals_at_risk.sort(key=lambda x: x['days_until'])
+
+        except Exception as nrr_err:
+            logger.warning(f"NRR forecast enrichment failed (non-fatal): {nrr_err}")
+
         return jsonify({
             'status': 'success',
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
@@ -730,6 +856,13 @@ def cro_dashboard():
             'roi_impact': sum(m.get('dollar_impact', 0) for m in po1_metrics) if is_estimated_roi else 0,
             'nrr_projection': nrr_projection,
             'nrr_change': nrr_change,
+            # Dual NRR: current (no intervention) vs projected (with playbooks)
+            'nrr_current': nrr_current,
+            'nrr_with_intervention': nrr_with_intervention,
+            'nrr_arr_protected': nrr_arr_protected,
+            'nrr_trajectory': nrr_trajectory,
+            'nrr_waterfall_summary': nrr_waterfall_summary,
+            'renewals_at_risk': renewals_at_risk,
             'story_arcs': story_arcs,
             'highest_risk_accounts': highest_risk,
             'quarter_label': _current_quarter_label(),

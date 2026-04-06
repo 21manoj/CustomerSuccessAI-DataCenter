@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -256,6 +257,8 @@ function StatMiniCard({ icon, label, value, valueColor }: {
 export default function AccountsView() {
   const { session } = useSession();
   const customerId = getCustomerIdentifier(session);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const arcFilter = searchParams.get('arc') || '';
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [pillarMap, setPillarMap] = useState<Record<string, PillarScores>>({});
@@ -548,6 +551,19 @@ export default function AccountsView() {
                 <div className="h-full" style={{ width: `${(criticalAccounts.length / totalAccounts) * 100}%`, backgroundColor: STATUS_COLORS.critical }} />
               </>)}
             </div>
+            {/* Arc filter banner (when navigated from story arc click) */}
+            {arcFilter && (
+              <div className="flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                <Activity className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs text-cyan-400 font-medium">Filtered by arc: {arcFilter.replace(/_/g, ' ')}</span>
+                <button
+                  onClick={() => setSearchParams({ view: 'accounts' })}
+                  className="ml-auto text-[10px] text-gray-400 hover:text-white"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
             <div className="relative px-8 py-7 border border-gray-700/50 rounded-xl">
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="w-6 h-6 text-blue-400" />
