@@ -316,15 +316,15 @@ const AppRoutes: React.FC = () => {
           }
         />
         
-        {/* Short persona routes — clean URLs for demos (no /dc-dashboard prefix) */}
+        {/* Short persona routes — clean URLs for demos, accessible to ALL verticals */}
         {/* CRO/CFO require revenue_intelligence entitlement; others require base dashboards */}
-        <Route path="/cro" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="revenue_intelligence"><CRODashboard /></EntitlementGuard></PrivateRoute>} />
-        <Route path="/cfo" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="revenue_intelligence"><CFODashboard /></EntitlementGuard></PrivateRoute>} />
-        <Route path="/ceo" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard></PrivateRoute>} />
-        <Route path="/csm" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><CSMDashboard /></EntitlementGuard></PrivateRoute>} />
-        <Route path="/vpcs" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><VPCSDashboard /></EntitlementGuard></PrivateRoute>} />
-        <Route path="/ops" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><CSOpsIntegrationDashboard /></EntitlementGuard></PrivateRoute>} />
-        <Route path="/sales" element={<PrivateRoute vertical="datacenter"><EntitlementGuard feature="dashboards"><AESalesDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/cro" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><CRODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/cfo" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><CFODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/ceo" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/csm" element={<PrivateRoute><EntitlementGuard feature="dashboards"><CSMDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/vpcs" element={<PrivateRoute><EntitlementGuard feature="dashboards"><VPCSDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/ops" element={<PrivateRoute><EntitlementGuard feature="dashboards"><CSOpsIntegrationDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/sales" element={<PrivateRoute><EntitlementGuard feature="dashboards"><AESalesDashboard /></EntitlementGuard></PrivateRoute>} />
 
         {/* Data Center Dashboard - Legacy (keep for backward compatibility) */}
         <Route
