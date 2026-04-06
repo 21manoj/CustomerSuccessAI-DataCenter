@@ -905,6 +905,8 @@ if __name__ == "__main__":
                     return
 
             # Wrap with Bearer auth extraction
+            from mcp_server.auth import _session_api_keys, _current_session_id_var
+
             class BearerAuthMiddleware:
                 def __init__(self, app):
                     self.app = app
@@ -912,13 +914,28 @@ if __name__ == "__main__":
                     if scope["type"] == "http":
                         headers = dict(scope.get("headers", []))
                         auth_header = headers.get(b"authorization", b"").decode()
+                        session_id = headers.get(b"mcp-session-id", b"").decode()
+
+                        # Extract token from Bearer header OR session cache
+                        token = ""
                         if auth_header.startswith("Bearer "):
                             token = auth_header[7:].strip()
+                            # Cache token by session ID for async task propagation
+                            if session_id:
+                                _session_api_keys[session_id] = token
+                        elif session_id and session_id in _session_api_keys:
+                            # Fallback: retrieve from session cache
+                            token = _session_api_keys[session_id]
+
+                        if token:
                             tok = _current_api_key_var.set(token)
+                            sid = _current_session_id_var.set(session_id) if session_id else None
                             try:
                                 await self.app(scope, receive, send)
                             finally:
                                 _current_api_key_var.reset(tok)
+                                if sid:
+                                    _current_session_id_var.reset(sid)
                             return
                     await self.app(scope, receive, send)
 
