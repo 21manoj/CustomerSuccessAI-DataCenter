@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 # Request-scoped API key storage (set by ASGI middleware, read by tool functions)
 _current_api_key_var: contextvars.ContextVar[str] = contextvars.ContextVar('_current_api_key', default='')
 
+# Session-scoped API key cache — survives across async tasks within the same MCP session.
+# FastMCP may spawn tool execution in a new asyncio.Task where contextvars don't propagate.
+# Key: mcp-session-id (str), Value: Bearer token (str)
+_session_api_keys: dict = {}
+_current_session_id_var: contextvars.ContextVar[str] = contextvars.ContextVar('_current_session_id', default='')
+
 
 # ---------------------------------------------------------------------------
 # Server-level API key (env var — super-admin / backward-compat)
@@ -181,7 +187,15 @@ def extract_api_key() -> Optional[str]:
     key = _current_api_key_var.get('')
     if key:
         return key
-    # Fallback: env vars
+    # Fallback 1: session-scoped cache (for async task propagation)
+    session_id = _current_session_id_var.get('')
+    if session_id and session_id in _session_api_keys:
+        return _session_api_keys[session_id]
+    # Fallback 2: check ALL session keys (last resort — only 1 session typically active)
+    if _session_api_keys:
+        # Return the most recently added key
+        return list(_session_api_keys.values())[-1]
+    # Fallback 3: env vars
     key = os.environ.get("_MCP_CURRENT_API_KEY", "")
     if not key:
         key = os.environ.get("CS_PULSE_API_KEY", "")
