@@ -172,9 +172,16 @@ def run_manifest(args):
             sys.exit(1)
         logger.info(f"  Onboarding provisioned: {complete.get('message', 'ok')!r}")
 
+    if args.extend and args.register:
+        logger.error("  --extend and --register are mutually exclusive")
+        sys.exit(1)
+
     if not customer_id:
         logger.error("  --customer-id required (or use --register to create new)")
         sys.exit(1)
+
+    if args.extend:
+        logger.info(f"  Mode:      EXTEND (adding {args.months} months to customer {customer_id})")
 
     # Authenticate
     client = CSPulseClient(
@@ -239,6 +246,8 @@ def run_manifest(args):
         validate_strict=args.validate_strict,
         validate_sample_size=args.validate_sample_size,
         health_tolerance=args.health_tolerance,
+        extend=getattr(args, 'extend', False),
+        extend_months=args.months,
     )
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
@@ -327,6 +336,11 @@ Examples:
         choices=['baseline', 'intervention'],
         default=None,
         help='Manifest time window: baseline=first 2/3, intervention=last 1/3 with recovery',
+    )
+    parser.add_argument(
+        '--extend',
+        action='store_true',
+        help='Extend existing customer data by generating next N months (use with -c and --months)',
     )
 
     # ── Validation args (V3: merged from V2) ──

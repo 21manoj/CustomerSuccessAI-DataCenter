@@ -782,6 +782,9 @@ class ManifestCSVGenerator:
         customer_id: int = 0,
         seed: int = 42,
         phase: Optional[str] = None,
+        extend_mode: bool = False,
+        extend_from_date: Optional[str] = None,
+        extend_months: int = 6,
     ):
         """
         Args:
@@ -789,7 +792,12 @@ class ManifestCSVGenerator:
             customer_id: Assigned customer_id (overrides manifest if >0)
             seed: Random seed for reproducible noise
             phase: 'baseline', 'intervention', or None (full range)
+            extend_mode: If True, generate continuation data starting after extend_from_date
+            extend_from_date: 'YYYY-MM-DD' — last measurement date from Phase 1
+            extend_months: Number of months to extend (default 6)
         """
+        self.extend_mode = extend_mode
+        self.extend_offset_months = 0
         with open(manifest_path, 'r') as f:
             self.manifest = json.load(f)
 
@@ -836,6 +844,34 @@ class ManifestCSVGenerator:
             )
         else:
             self.data_points = raw_dp
+
+        # ── Extend mode: override date range to continue from Phase 1 ──
+        if extend_mode and extend_from_date:
+            original_start = self.start_date
+            last_date = datetime.strptime(extend_from_date[:10], '%Y-%m-%d')
+            self.extend_offset_months = max(1, int((last_date - original_start).days / 30) + 1)
+
+            # Start generating from the next week after last data
+            if self.frequency == 'weekly':
+                self.start_date = last_date + timedelta(weeks=1)
+                self.data_points = extend_months * 4  # 4 weeks per month
+            elif self.frequency == 'daily':
+                self.start_date = last_date + timedelta(days=1)
+                self.data_points = extend_months * 30
+            else:
+                self.start_date = last_date + timedelta(days=30)
+                self.data_points = extend_months
+
+            self.end_date = self.start_date + timedelta(days=extend_months * 30)
+            # Force intervention phase for narrative events in extension
+            self.phase = 'intervention'
+            logger.info(
+                "  EXTEND mode: offset=%d months, generating %s → %s (%d data points)",
+                self.extend_offset_months,
+                self.start_date.strftime('%Y-%m-%d'),
+                self.end_date.strftime('%Y-%m-%d'),
+                self.data_points,
+            )
 
         # Build measurement dates
         self.dates = self._build_dates()
@@ -1028,6 +1064,7 @@ class ManifestCSVGenerator:
         classification: str = 'healthy',
         has_intervention: bool = False,
         recovery_start_month: Optional[int] = None,
+        offset_months: int = 0,
     ) -> List[float]:
         """
         Generate a time-series of KPI values for one account+KPI.
@@ -1076,15 +1113,22 @@ class ManifestCSVGenerator:
             target_health, target_val, ranges, higher_is_better
         )
 
+        # Extend mode: compute offset in data points so trajectory continues
+        # from the correct position in the overall arc (not starting fresh).
+        offset_points = int(offset_months * 4) if self.frequency == 'weekly' else int(offset_months)
+        total_n = n + offset_points  # total arc length across Phase 1 + extension
+
         values = []
         for i in range(n):
-            t = i / max(n - 1, 1)
+            # effective_i places us at the correct position in the overall arc
+            effective_i = i + offset_points
+            t = effective_i / max(total_n - 1, 1)
 
             if trajectory == 'declining':
                 start_month = decline_start_month or 3
-                start_idx = int(start_month * (n / 6))
-                if i >= start_idx:
-                    decay = (i - start_idx) / max(n - start_idx, 1)
+                start_idx = int(start_month * (total_n / 12))
+                if effective_i >= start_idx:
+                    decay = (effective_i - start_idx) / max(total_n - start_idx, 1)
                     if higher_is_better:
                         modifier = 1.0 - 0.35 * decay
                     else:
@@ -1127,15 +1171,16 @@ class ManifestCSVGenerator:
             # V3.1: Apply recovery boost for intervention phase (progressive)
             if recovery_boost_pct > 0:
                 # In full run (phase=None), only boost the second half of
-                # the timeline — recovery happens AFTER crisis midpoint.
-                if self.phase is None:
-                    midpoint = n // 2
-                    if i >= midpoint:
-                        progress = (i - midpoint + 1) / max(n - midpoint, 1)
+                # the overall arc — recovery happens AFTER crisis midpoint.
+                if self.phase is None and offset_months == 0:
+                    midpoint = total_n // 2
+                    if effective_i >= midpoint:
+                        progress = (effective_i - midpoint + 1) / max(total_n - midpoint, 1)
                     else:
                         progress = 0  # No boost in first half
                 else:
-                    progress = (i + 1) / max(n, 1)
+                    # Extend mode or intervention phase: we're in recovery territory
+                    progress = (effective_i + 1) / max(total_n, 1)
                 boost_range = target_val * recovery_boost_pct * progress
                 if higher_is_better:
                     val += boost_range
@@ -1345,6 +1390,7 @@ class ManifestCSVGenerator:
                     classification=classification,
                     has_intervention=bool(acct.get('intervention')),
                     recovery_start_month=recovery_start,
+                    offset_months=self.extend_offset_months,
                 )
 
                 # Respect per-KPI measurement frequency from catalog.
@@ -2730,12 +2776,28 @@ class ScenarioManifest(BaseScenario):
         sample_size = int(getattr(self.args, 'validate_sample_size', 5))
         health_tolerance = int(getattr(self.args, 'health_tolerance', 1))
 
+        # ── Extend mode: detect latest measurement date ──
+        extend = bool(getattr(self.args, 'extend', False))
+        extend_months = int(getattr(self.args, 'extend_months', 6))
+        extend_from_date = None
+        if extend:
+            extend_from_date = self.client.get_latest_measurement_date(int(customer_id))
+            if not extend_from_date:
+                return self.failure(
+                    f'Cannot extend customer {customer_id}: no existing health data found. '
+                    'Run without --extend first to create baseline data.'
+                )
+            logger.info(f'  Extend: latest data at {extend_from_date}, adding {extend_months} months')
+
         try:
             gen = ManifestCSVGenerator(
                 manifest_path=str(manifest_path),
                 customer_id=int(customer_id),
                 seed=seed,
                 phase=phase,
+                extend_mode=extend,
+                extend_from_date=extend_from_date,
+                extend_months=extend_months,
             )
 
             expected_ids = self._expected_account_ids(int(customer_id), len(gen.accounts))
@@ -2794,8 +2856,15 @@ class ScenarioManifest(BaseScenario):
                 'upload_bytes': {},
                 'upload_status': {},
             }
+            # In extend mode, skip static metadata CSVs (accounts already exist)
+            EXTEND_SKIP = {'accounts', 'products', 'stakeholders',
+                           'account_business_profiles', 'industry_benchmarks'}
+
             t_step12 = time.time()
             for file_type, gen_fn in generators.items():
+                if extend and file_type in EXTEND_SKIP:
+                    logger.info(f'    {file_type}: skipped (extend mode)')
+                    continue
                 t_gen = time.time()
                 csv_content = ManifestCSVGenerator._header_use_account_id(gen_fn())
                 endpoint_metrics['generate_seconds'][file_type] = round(time.time() - t_gen, 3)

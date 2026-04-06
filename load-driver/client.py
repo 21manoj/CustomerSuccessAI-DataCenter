@@ -528,6 +528,28 @@ class CSPulseClient:
 
         return accounts
 
+    def get_latest_measurement_date(self, customer_id: int = None) -> Optional[str]:
+        """Get the latest measurement_month across all accounts.
+
+        Returns 'YYYY-MM-DD' string or None if no data exists.
+        Used by --extend to determine where Phase 1 data ends.
+        """
+        cid = customer_id or self.customer_id
+        try:
+            resp = self.get('/api/health-scores', params={
+                'customer_id': cid,
+                'months': 24,
+            })
+            if isinstance(resp, dict):
+                scores = resp.get('health_scores', [])
+                if scores:
+                    months = [s.get('measurement_month', '') for s in scores if s.get('measurement_month')]
+                    if months:
+                        return max(months)[:10]  # 'YYYY-MM-DD'
+        except Exception as e:
+            logger.debug(f"get_latest_measurement_date failed: {e}")
+        return None
+
     def get_account_scores(self, account_id: int) -> Optional[Dict[str, Any]]:
         """Get latest health, pillar, and KPI scores for account"""
         response = self.get(f'/api/dc2s/scores/account/{account_id}/latest')
