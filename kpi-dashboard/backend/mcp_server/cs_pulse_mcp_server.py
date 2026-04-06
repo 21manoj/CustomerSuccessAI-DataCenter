@@ -695,6 +695,8 @@ def list_accounts(customer_id: int) -> dict:
             "customer_created_at": customer_created,
             "vertical": vertical,
             "total_accounts": len(results),
+            "total_arr": round(total_arr, 2),
+            "avg_health_score": avg_health,
             "portfolio_summary": {
                 "total_arr": round(total_arr, 2),
                 "avg_health_score": avg_health,
