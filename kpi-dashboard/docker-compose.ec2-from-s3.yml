@@ -86,7 +86,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 3G
           cpus: '2.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5059/api/health"]
