@@ -17,6 +17,22 @@ from models import PlaybookTrigger, PlaybookExecution, PlaybookReport
 from models import Product, ActivityLog, CustomerConfig
 from models import CustomerWorkflowConfig, FeatureToggle
 from models import ContextNode, ContextEdge
+# V2 models added post-initial (may not exist in all deployments)
+try:
+    from models import PlaybookExecutionV2
+    HAS_PB_V2 = True
+except ImportError:
+    HAS_PB_V2 = False
+try:
+    from models import PlaybookTask
+    HAS_PB_TASK = True
+except ImportError:
+    HAS_PB_TASK = False
+try:
+    from models import Notification
+    HAS_NOTIFICATION = True
+except ImportError:
+    HAS_NOTIFICATION = False
 from auth_middleware import get_current_customer_id
 from sqlalchemy import and_, or_, func, text
 import logging
@@ -115,6 +131,19 @@ def cleanup_customer(customer_id):
 
         if HAS_ACTION_ECONOMICS:
             deletions.append(('action_economics', lambda: ActionEconomics.query.filter_by(customer_id=customer_id)))
+
+        # V2 models (FK to customers — must delete before customer record)
+        if HAS_PB_V2:
+            deletions.append(('playbook_executions_v2', lambda: PlaybookExecutionV2.query.filter_by(customer_id=customer_id)))
+        if HAS_PB_TASK:
+            deletions.append(('playbook_tasks', lambda: PlaybookTask.query.filter_by(customer_id=customer_id)))
+        if HAS_NOTIFICATION:
+            deletions.append(('notifications', lambda: Notification.query.filter_by(customer_id=customer_id)))
+        # API keys — raw SQL (no ORM model, just purge before customer delete)
+        try:
+            db.session.execute(text("DELETE FROM customer_api_keys WHERE customer_id = :cid"), {"cid": customer_id})
+        except Exception:
+            pass
 
         deletions.extend([
             ('playbook_reports', lambda: PlaybookReport.query.filter_by(customer_id=customer_id)),
