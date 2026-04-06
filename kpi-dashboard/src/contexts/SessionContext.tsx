@@ -9,6 +9,7 @@ type Session = {
   user_name: string;
   email: string;
   vertical?: string;
+  dashboard_family?: string;  // 'datacenter' or 'saas' — set by backend, used for routing
   role?: string;  // 'super_admin' | 'admin' | 'user'
   // UUID migration: UUIDs alongside integer IDs
   customer_uuid?: string;
@@ -44,6 +45,11 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (parsed && !parsed.vertical) {
       const vertical = localStorage.getItem('vertical') || 'saas_premium';
       parsed.vertical = vertical;
+    }
+    // Restore dashboard_family for sessions created before this field existed
+    if (parsed && !parsed.dashboard_family) {
+      const v = (parsed.vertical || '').toLowerCase().replace(/-/g, '_');
+      parsed.dashboard_family = ['dc2_s', 'dc2s', 'dc', 'datacenter'].includes(v) ? 'datacenter' : 'saas';
     }
     return parsed;
   });
