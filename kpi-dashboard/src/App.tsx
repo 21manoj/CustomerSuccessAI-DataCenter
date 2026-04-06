@@ -31,20 +31,26 @@ import CustomVerticalWizard from './components/admin-ui/CustomVerticalWizard';
 import LicenseManagerPage from './components/admin-ui/LicenseManagerPage';
 import ActivityLogPage from './components/admin-ui/ActivityLogPage';
 
-// Normalize vertical: dc2_s, dc2-s, etc. -> datacenter for routing
-const normalizeVertical = (v: string | undefined): 'datacenter' | 'saas' => {
-  if (!v) return 'saas';
-  const lower = v.toLowerCase().replace(/-/g, '_');
-  if (lower === 'dc2_s' || lower === 'dc2s' || lower === 'datacenter') return 'datacenter';
+// Resolve dashboard route from session's dashboard_family (set by backend at login).
+// Data-driven: new verticals work without code changes — backend sets dashboard_family.
+const DC_FAMILIES = new Set(['datacenter']);
+const getDashboardFamily = (session: any): 'datacenter' | 'saas' => {
+  if (session?.dashboard_family) {
+    return DC_FAMILIES.has(session.dashboard_family) ? 'datacenter' : 'saas';
+  }
+  // Fallback: derive from vertical string for sessions created before this change
+  const v = (session?.vertical || localStorage.getItem('vertical') || '').toLowerCase().replace(/-/g, '_');
+  if (['dc2_s', 'dc2s', 'dc', 'datacenter'].includes(v)) return 'datacenter';
   return 'saas';
+};
+const getDashboardRoute = (session: any): string => {
+  return getDashboardFamily(session) === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
 };
 
 // Component to redirect legacy /dashboard to appropriate vertical dashboard
 const DashboardRedirect: React.FC = () => {
   const { session } = useSession();
-  const vertical = normalizeVertical(session?.vertical || localStorage.getItem('vertical') || undefined);
-  const dashboardRoute = vertical === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
-  return <Navigate to={dashboardRoute} replace />;
+  return <Navigate to={getDashboardRoute(session)} replace />;
 };
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; vertical?: string }> = ({ children, vertical }) => {
@@ -55,12 +61,11 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; vertical?: string }> =
     return <Navigate to="/login" replace />;
   }
 
-  // If vertical is specified, check if it matches the session vertical
+  // If vertical is specified, check if it matches the session's dashboard family
   if (vertical) {
-    const sessionVertical = normalizeVertical(session.vertical || localStorage.getItem('vertical') || undefined);
-    if (sessionVertical !== vertical) {
-      const correctRoute = sessionVertical === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
-      return <Navigate to={correctRoute} replace />;
+    const family = getDashboardFamily(session);
+    if (family !== vertical) {
+      return <Navigate to={getDashboardRoute(session)} replace />;
     }
   }
 
@@ -71,11 +76,9 @@ const LoginRoute: React.FC = () => {
   const { session, login } = useSession();
   const navigate = useNavigate();
 
-  // If user is already logged in, redirect to appropriate dashboard based on vertical
+  // If user is already logged in, redirect to appropriate dashboard
   if (session && session.customer_id && session.user_id) {
-    const vertical = normalizeVertical(session.vertical || localStorage.getItem('vertical') || undefined);
-    const dashboardRoute = vertical === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
-    return <Navigate to={dashboardRoute} replace />;
+    return <Navigate to={getDashboardRoute(session)} replace />;
   }
 
   return (
@@ -87,9 +90,7 @@ const LoginRoute: React.FC = () => {
           navigate('/onboarding');
           return;
         }
-        const vertical = normalizeVertical(newSession.vertical || undefined);
-        const dashboardRoute = vertical === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
-        navigate(dashboardRoute);
+        navigate(getDashboardRoute(newSession));
       }}
     />
   );
@@ -98,11 +99,9 @@ const LoginRoute: React.FC = () => {
 const RegisterRoute: React.FC = () => {
   const { session } = useSession();
 
-  // If already logged in, redirect to appropriate dashboard based on vertical
+  // If already logged in, redirect to appropriate dashboard
   if (session && session.customer_id && session.user_id) {
-    const vertical = normalizeVertical(session.vertical || localStorage.getItem('vertical') || undefined);
-    const dashboardRoute = vertical === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
-    return <Navigate to={dashboardRoute} replace />;
+    return <Navigate to={getDashboardRoute(session)} replace />;
   }
 
   return (

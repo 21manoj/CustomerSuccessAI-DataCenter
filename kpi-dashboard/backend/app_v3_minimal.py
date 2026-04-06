@@ -696,28 +696,22 @@ def login():
             customer = None
             db.session.rollback()  # Reset transaction
         
-        # Map database vertical to frontend vertical
-        # Database: 'DC2_S', 'dc2_s', 'dc2-s', 'saas', None
-        # Frontend: 'datacenter', 'saas'
+        # Resolve vertical from DB — data-driven, no hardcoded whitelist.
+        # Returns raw vertical (e.g. 'dc2_s', 'saas_premium', 'msp') + dashboard_family ('datacenter' or 'saas')
+        # for frontend routing. New verticals work without code changes.
+        DC_VERTICALS = {'dc2_s', 'dc2s', 'dc', 'datacenter'}
         user_vertical = user.vertical if hasattr(user, 'vertical') and user.vertical else None
-        
-        # Handle case-insensitive mapping: DC2_S, dc2_s, dc2-s -> datacenter
+
         if user_vertical:
             user_vertical_normalized = user_vertical.lower().replace('-', '_').replace(' ', '_')
-            if user_vertical_normalized in ['dc2_s', 'dc2s', 'dc', 'datacenter']:
-                frontend_vertical = 'datacenter'
-            elif user_vertical_normalized in ['saas', 'saas_premium']:
-                frontend_vertical = 'saas_premium'
-            else:
-                # Default to datacenter if it looks like a DC vertical variant
-                frontend_vertical = 'datacenter' if 'dc' in user_vertical_normalized or 'datacenter' in user_vertical_normalized else 'saas_premium'
         else:
-            # If no vertical set in DB, default to datacenter
-            # (vertical dropdown removed from login screen — backend auto-resolves)
-            frontend_vertical = 'datacenter'
-        
+            user_vertical_normalized = 'saas_premium'  # default for new users
+
+        frontend_vertical = user_vertical_normalized
+        dashboard_family = 'datacenter' if user_vertical_normalized in DC_VERTICALS else 'saas'
+
         # Debug logging
-        print(f"🔍 Login vertical mapping: DB='{user_vertical}' -> Frontend='{frontend_vertical}'")
+        print(f"🔍 Login vertical: DB='{user_vertical}' -> vertical='{frontend_vertical}', family='{dashboard_family}'")
         
         # Log in user - Flask-Login creates secure session
         from flask_login import login_user
@@ -799,7 +793,8 @@ def login():
                 'is_contractor': getattr(user, 'is_contractor', False),
                 'expires_at': user.expires_at.isoformat() if hasattr(user, 'expires_at') and user.expires_at else None,
             },
-            'vertical': frontend_vertical,  # Return mapped vertical
+            'vertical': frontend_vertical,  # Raw vertical from DB (e.g. 'saas_premium', 'dc2_s')
+            'dashboard_family': dashboard_family,  # Routing hint: 'datacenter' or 'saas'
             'session_expires': (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).isoformat() if not remember else None
         })
         

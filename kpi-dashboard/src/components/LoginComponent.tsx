@@ -9,6 +9,7 @@ interface LoginProps {
     user_name: string;
     email: string;
     vertical?: string;
+    dashboard_family?: string;
     role?: string;
     customer_uuid?: string;
     user_uuid?: string;
@@ -55,25 +56,18 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
 
       const data = await response.json();
 
-      // Backend auto-resolves vertical from user's DB record
-      let sessionVertical = data.vertical || 'datacenter';
-
-      // Safety net: Map dc2_s/dc2-s/DC2_S to datacenter for frontend routing
-      if (sessionVertical && (sessionVertical.toLowerCase() === 'dc2_s' || sessionVertical.toLowerCase() === 'dc2-s')) {
-        sessionVertical = 'datacenter';
-      }
-
-      // Ensure valid vertical values — default to datacenter
-      if (sessionVertical !== 'datacenter' && sessionVertical !== 'saas') {
-        sessionVertical = 'datacenter';
-      }
+      // Backend returns raw vertical (e.g. 'saas_premium', 'dc2_s') + dashboard_family ('datacenter'|'saas')
+      // No hardcoded whitelist — new verticals work without code changes
+      const sessionVertical = data.vertical || data.user?.vertical || 'saas_premium';
+      const dashboardFamily = data.dashboard_family || 'saas';
 
       const session = {
         customer_id: data.user?.customer_id || data.customer_id || 1,
         user_id: data.user?.user_id?.toString() || data.user_id?.toString() || '1',
         user_name: data.user?.customer_name || data.user_name || 'User',
         email: data.user?.email || data.email || '',
-        vertical: sessionVertical, // Use frontend-mapped value (datacenter/saas), not raw db (dc2_s)
+        vertical: sessionVertical,
+        dashboard_family: dashboardFamily,
         role: data.user?.role || undefined,
         // UUID migration: store UUIDs from login response
         customer_uuid: data.user?.customer_uuid || undefined,
@@ -88,7 +82,7 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
         allowed_customer_ids: data.user?.allowed_customer_ids || null,
     };
 
-      // Store vertical in localStorage
+      // Store vertical + dashboard_family in localStorage
       localStorage.setItem('vertical', sessionVertical);
 
       onLogin(session);
