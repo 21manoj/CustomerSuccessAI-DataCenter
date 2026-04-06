@@ -83,7 +83,7 @@ TIER_INCLUDES = {
 }
 
 # Default tier for new customers
-DEFAULT_TIER = os.getenv('DEFAULT_CUSTOMER_TIER', 'starter')
+DEFAULT_TIER = os.getenv('DEFAULT_CUSTOMER_TIER', 'enterprise')
 
 
 # ============================================================
