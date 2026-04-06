@@ -2245,10 +2245,23 @@ def get_csm_daily_actions():
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400
 
+        # Optional CSM name filter
+        csm_name_filter = request.args.get('csm_name', None)
+
         # 1. Fetch all DC accounts
         accounts = Account.query.filter(
             Account.customer_id == int(customer_id),
         ).all()
+
+        # Filter by CSM assignment if csm_name provided
+        if csm_name_filter and accounts:
+            filtered = []
+            for acct in accounts:
+                meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
+                csm = meta.get('assigned_csm', 'Unassigned')
+                if csm_name_filter.lower() in csm.lower():
+                    filtered.append(acct)
+            accounts = filtered
 
         if not accounts:
             return jsonify({
@@ -2511,6 +2524,368 @@ def get_csm_daily_actions():
     except Exception as e:
         logger.error(f"Error computing daily actions: {e}", exc_info=True)
         return jsonify({'error': 'Failed to compute daily actions'}), 500
+
+
+# =============================================================================
+# CSM Scorecard — per-CSM performance attribution
+# =============================================================================
+
+@dc2s_api.route('/csm-scorecard', methods=['GET'])
+def get_csm_scorecard_api():
+    """GET /api/dc2s/csm-scorecard?csm_name=<optional>
+    Returns per-CSM accounts managed, health delta, playbook success, revenue impact.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        csm_name_filter = request.args.get('csm_name', None)
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+
+        # Group accounts by assigned CSM from profile metadata
+        csm_accounts = defaultdict(list)
+        for acct in accounts:
+            meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
+            csm = meta.get('assigned_csm', 'Unassigned')
+            if csm_name_filter and csm_name_filter.lower() not in csm.lower():
+                continue
+            csm_accounts[csm].append(acct)
+
+        scorecards = {}
+        for csm, accts in csm_accounts.items():
+            acct_ids = [a.account_id for a in accts]
+            total_arr = sum(float(a.revenue or 0) for a in accts)
+
+            # Health deltas from HealthScore table
+            health_deltas = []
+            for aid in acct_ids:
+                scores = (HealthScore.query
+                    .filter_by(account_id=aid)
+                    .order_by(HealthScore.measurement_month.asc())
+                    .all())
+                if len(scores) >= 2:
+                    delta = float(scores[-1].health_score or 0) - float(scores[0].health_score or 0)
+                    health_deltas.append(delta)
+
+            # Playbook executions on this CSM's accounts
+            try:
+                from models import PlaybookExecutionV2
+                execs = PlaybookExecutionV2.query.filter(
+                    PlaybookExecutionV2.account_id.in_(acct_ids),
+                    PlaybookExecutionV2.customer_id == int(customer_id),
+                ).all()
+            except Exception:
+                execs = []
+
+            resolved = sum(1 for e in execs if e.outcome == 'resolved')
+            rev_protected = sum(float(e.revenue_protected or 0) for e in execs)
+            rev_expanded = sum(float(e.revenue_expanded or 0) for e in execs)
+
+            scorecards[csm] = {
+                'csm_name': csm,
+                'accounts_managed': len(accts),
+                'total_arr': total_arr,
+                'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
+                'accounts_improving': sum(1 for d in health_deltas if d > 5),
+                'accounts_declining': sum(1 for d in health_deltas if d < -5),
+                'playbooks_executed': len(execs),
+                'playbooks_resolved': resolved,
+                'success_rate_pct': round(resolved / len(execs) * 100, 1) if execs else 0,
+                'revenue_protected': rev_protected,
+                'revenue_expanded': rev_expanded,
+                'total_revenue_impact': rev_protected + rev_expanded,
+            }
+
+        return jsonify({
+            'csm_count': len(scorecards),
+            'scorecards': scorecards,
+        })
+
+    except Exception as e:
+        logger.error(f"Error computing CSM scorecard: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to compute CSM scorecard'}), 500
+
+
+# =============================================================================
+# Team Capacity — FTE utilization by role
+# =============================================================================
+
+@dc2s_api.route('/team-capacity', methods=['GET'])
+def get_team_capacity_api():
+    """GET /api/dc2s/team-capacity
+    Returns team capacity utilization, bottleneck detection, portfolio context.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        total_arr = sum(float(a.revenue or 0) for a in accounts)
+        at_risk_count = sum(1 for a in accounts if float(a.health_score or 100) < ht.healthy_min())
+
+        # Group accounts by CSM for real CSM count
+        csm_set = set()
+        for acct in accounts:
+            meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
+            csm = meta.get('assigned_csm')
+            if csm and csm != 'Unassigned':
+                csm_set.add(csm)
+        csm_count = max(len(csm_set), 1)
+        accounts_per_csm = round(len(accounts) / csm_count, 1)
+
+        # Active playbook executions
+        try:
+            from models import PlaybookExecutionV2
+            active_execs = PlaybookExecutionV2.query.filter_by(
+                customer_id=int(customer_id)
+            ).filter(
+                PlaybookExecutionV2.outcome.is_(None)
+            ).all()
+            recent_cutoff = datetime.utcnow() - timedelta(days=90)
+            recent_execs = PlaybookExecutionV2.query.filter(
+                PlaybookExecutionV2.customer_id == int(customer_id),
+                PlaybookExecutionV2.triggered_at >= recent_cutoff,
+            ).all()
+        except Exception:
+            active_execs = []
+            recent_execs = []
+
+        active_csm_hours = sum(float(e.csm_hours_planned or 0) for e in active_execs)
+        target_per_csm = 6
+
+        return jsonify({
+            'csm_count': csm_count,
+            'csm_names': sorted(csm_set),
+            'accounts_per_csm': accounts_per_csm,
+            'target_per_csm': target_per_csm,
+            'total_accounts': len(accounts),
+            'active_playbooks': len(active_execs),
+            'recent_playbooks_90d': len(recent_execs),
+            'active_csm_hours': round(active_csm_hours, 1),
+            'at_risk_accounts': at_risk_count,
+            'total_arr': total_arr,
+            'utilization_pct': round(accounts_per_csm / target_per_csm * 100, 1),
+        })
+
+    except Exception as e:
+        logger.error(f"Error computing team capacity: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to compute team capacity'}), 500
+
+
+# =============================================================================
+# Playbook Success Metrics — aggregated by playbook_id
+# =============================================================================
+
+@dc2s_api.route('/playbook-success-metrics', methods=['GET'])
+def get_playbook_success_metrics_api():
+    """GET /api/dc2s/playbook-success-metrics
+    Returns per-playbook execution outcomes, success rates, and ROI.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        try:
+            from models import PlaybookExecutionV2
+            execs = PlaybookExecutionV2.query.filter_by(customer_id=int(customer_id)).all()
+        except Exception:
+            execs = []
+
+        if not execs:
+            return jsonify({
+                'total_executions': 0,
+                'playbooks': {},
+                'portfolio_summary': {
+                    'total_runs': 0,
+                    'overall_success_rate_pct': 0,
+                    'total_revenue_impact': 0,
+                },
+            })
+
+        by_pb = defaultdict(list)
+        for e in execs:
+            by_pb[e.playbook_id].append(e)
+
+        playbooks = {}
+        total_resolved = 0
+        total_runs = 0
+        total_revenue = 0
+
+        for pb_id, pb_execs in by_pb.items():
+            n = len(pb_execs)
+            resolved = sum(1 for e in pb_execs if e.outcome == 'resolved')
+            rev_protected = sum(float(e.revenue_protected or 0) for e in pb_execs)
+            rev_expanded = sum(float(e.revenue_expanded or 0) for e in pb_execs)
+            health_deltas = [float(e.health_delta or 0) for e in pb_execs if e.health_delta]
+
+            playbooks[pb_id] = {
+                'playbook_id': pb_id,
+                'total_executions': n,
+                'resolved': resolved,
+                'success_rate_pct': round(resolved / n * 100, 1) if n else 0,
+                'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
+                'total_revenue_protected': rev_protected,
+                'total_revenue_expanded': rev_expanded,
+            }
+
+            total_resolved += resolved
+            total_runs += n
+            total_revenue += rev_protected + rev_expanded
+
+        return jsonify({
+            'total_executions': total_runs,
+            'playbooks': playbooks,
+            'portfolio_summary': {
+                'total_runs': total_runs,
+                'overall_success_rate_pct': round(total_resolved / total_runs * 100, 1) if total_runs else 0,
+                'total_revenue_impact': total_revenue,
+            },
+        })
+
+    except Exception as e:
+        logger.error(f"Error computing playbook success metrics: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to compute playbook success metrics'}), 500
+
+
+# =============================================================================
+# Health Score History — portfolio trajectory + per-account monthly scores
+# =============================================================================
+
+@dc2s_api.route('/health-score-history', methods=['GET'])
+def get_health_score_history_api():
+    """GET /api/dc2s/health-score-history?account_id=<optional>&months=<optional>
+    Returns monthly health score trajectory for portfolio (account_id=0 or omitted)
+    or a single account.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        account_id = request.args.get('account_id', 0, type=int)
+        months = min(max(request.args.get('months', 6, type=int), 1), 12)
+
+        cutoff = (datetime.utcnow() - timedelta(days=months * 31)).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0,
+        )
+
+        if account_id and account_id != 0:
+            accounts = [Account.query.filter_by(
+                account_id=account_id, customer_id=int(customer_id)
+            ).first()]
+            if not accounts[0]:
+                return jsonify({'error': f'Account {account_id} not found'}), 404
+        else:
+            accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+
+        if not accounts:
+            return jsonify({'error': 'No accounts found'}), 404
+
+        portfolio_history = []
+        transitions = []
+
+        for acct in accounts:
+            scores = (HealthScore.query
+                .filter(
+                    HealthScore.account_id == acct.account_id,
+                    HealthScore.measurement_month >= cutoff,
+                )
+                .order_by(HealthScore.measurement_month.asc())
+                .all())
+
+            if not scores:
+                continue
+
+            monthly = []
+            prev_status = None
+            for s in scores:
+                score_val = float(s.health_score) if s.health_score else 0
+                status = ht.classify(score_val)
+                change = float(s.change_from_last_month) if s.change_from_last_month else 0
+
+                entry = {
+                    'month': s.measurement_month.strftime('%Y-%m'),
+                    'health_score': round(score_val, 1),
+                    'status': status,
+                    'change': round(change, 1),
+                    'pillars': s.contributing_pillars or {},
+                }
+                monthly.append(entry)
+
+                if prev_status and prev_status != status:
+                    transitions.append({
+                        'account_id': acct.account_id,
+                        'account_name': acct.account_name,
+                        'month': s.measurement_month.strftime('%Y-%m'),
+                        'from_status': prev_status,
+                        'to_status': status,
+                        'score': round(score_val, 1),
+                        'arr': float(acct.revenue or 0),
+                    })
+                prev_status = status
+
+            if monthly:
+                first_score = monthly[0]['health_score']
+                last_score = monthly[-1]['health_score']
+                portfolio_history.append({
+                    'account_id': acct.account_id,
+                    'account_name': acct.account_name,
+                    'arr': float(acct.revenue or 0),
+                    'current_health': last_score,
+                    'current_status': monthly[-1]['status'],
+                    'starting_health': first_score,
+                    'net_change': round(last_score - first_score, 1),
+                    'trajectory': (
+                        'improving' if last_score - first_score > 5
+                        else 'declining' if last_score - first_score < -5
+                        else 'stable'
+                    ),
+                    'monthly_scores': monthly,
+                })
+
+        portfolio_history.sort(key=lambda x: x['net_change'])
+
+        improving = [a for a in portfolio_history if a['trajectory'] == 'improving']
+        declining = [a for a in portfolio_history if a['trajectory'] == 'declining']
+        stable = [a for a in portfolio_history if a['trajectory'] == 'stable']
+
+        turnarounds = [
+            {'account': a['account_name'], 'arr': a['arr'], 'change': a['net_change']}
+            for a in portfolio_history
+            if a.get('current_status') == 'healthy' and a['starting_health'] < ht.healthy_min()
+        ]
+        deteriorations = [
+            {'account': a['account_name'], 'arr': a['arr'], 'change': a['net_change']}
+            for a in portfolio_history
+            if a['current_health'] < ht.healthy_min() and a['starting_health'] >= ht.healthy_min()
+        ]
+
+        # Portfolio trajectory
+        total_arr = sum(a['arr'] for a in portfolio_history) or 1
+        portfolio_trajectory = {
+            'improving_count': len(improving),
+            'declining_count': len(declining),
+            'stable_count': len(stable),
+            'improving_arr_pct': round(sum(a['arr'] for a in improving) / total_arr * 100, 1),
+            'declining_arr_pct': round(sum(a['arr'] for a in declining) / total_arr * 100, 1),
+        }
+
+        return jsonify({
+            'months': months,
+            'account_count': len(portfolio_history),
+            'accounts': portfolio_history,
+            'transitions': transitions,
+            'turnarounds': turnarounds,
+            'deteriorations': deteriorations,
+            'portfolio_trajectory': portfolio_trajectory,
+        })
+
+    except Exception as e:
+        logger.error(f"Error computing health score history: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to compute health score history'}), 500
 
 
 # Export blueprint
