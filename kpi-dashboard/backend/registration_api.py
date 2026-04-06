@@ -199,12 +199,12 @@ def register_customer():
         # Generate API key for MCP access using the standard api_key_service
         raw_api_key = None
         try:
-            from api_key_service import create_api_key
-            key_record, raw_api_key = create_api_key(
+            from api_key_service import generate_api_key
+            key_record, raw_api_key = generate_api_key(
                 customer_id=customer_id,
                 created_by=user.user_id,
-                scope='admin',
                 name='auto-registration',
+                scopes=['admin'],
             )
         except Exception as key_err:
             logger.warning(f"API key creation failed (non-fatal): {key_err}")
