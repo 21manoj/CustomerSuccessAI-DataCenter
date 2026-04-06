@@ -20,7 +20,7 @@ import {
   Cell
 } from 'recharts';
 import {
-  AlertTriangle, TrendingUp, TrendingDown, Shield, Zap,
+  AlertTriangle, TrendingUp, TrendingDown, Minus, Shield, Zap,
   Target, DollarSign, Users, BarChart3, Clock,
   ChevronRight, Eye, Activity, GitBranch, Sparkles,
   ArrowRight, ArrowUpRight, Briefcase, CheckCircle2,
@@ -75,6 +75,7 @@ interface AccountRow {
   region: string;
   last_signal: string;
   classification: string;
+  renewal_date?: string;
 }
 
 interface RenewalItem {
@@ -82,6 +83,32 @@ interface RenewalItem {
   arr: number;
   days_until: number;
   health_score: number;
+}
+
+interface CSMScorecard {
+  csm_name: string;
+  accounts_managed: number;
+  total_arr: number;
+  avg_health_delta: number;
+  accounts_improving: number;
+  accounts_declining: number;
+  playbooks_executed: number;
+  playbooks_resolved: number;
+  success_rate_pct: number;
+  revenue_protected: number;
+  revenue_expanded: number;
+  total_revenue_impact: number;
+}
+
+interface HealthHistoryAccount {
+  account_id: number;
+  account_name: string;
+  arr: number;
+  current_health: number;
+  current_status: string;
+  net_change: number;
+  trajectory: string;
+  monthly_scores: Array<{ month: string; health_score: number; status: string }>;
 }
 
 interface VPCSDashboardData {
@@ -103,8 +130,18 @@ interface VPCSDashboardData {
     nps_score: number;
     actions_completed_pct: number;
   };
+  csm_scorecards: CSMScorecard[];
+  health_history_accounts: HealthHistoryAccount[];
+  portfolio_trajectory: {
+    improving_count: number;
+    declining_count: number;
+    stable_count: number;
+    improving_arr_pct: number;
+    declining_arr_pct: number;
+  };
   period: string;
   last_updated: string;
+  is_live_data: boolean;
 }
 
 // ============================================================================
@@ -133,17 +170,19 @@ const URGENCY_STYLES: Record<string, { bg: string; text: string; label: string }
   low: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Low' },
 };
 
-// Sidebar navigation items
+type VPCSViewId = 'vpcs-overview' | 'accounts' | 'playbooks' | 'renewals' | 'health-trends' | 'team-metrics';
+
+// Sidebar navigation items — view switching within the dashboard
 const NAV_ITEMS = {
   management: [
-    { id: 'vpcs-overview', label: 'Team Overview', path: '/vpcs-dashboard', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'accounts', label: 'All Accounts', path: '/vpcs-dashboard', icon: <Users className="w-4 h-4" /> },
-    { id: 'playbooks', label: 'Playbooks', path: '/vpcs-dashboard', icon: <Target className="w-4 h-4" /> },
-    { id: 'renewals', label: 'Renewals', path: '/vpcs-dashboard', icon: <Calendar className="w-4 h-4" /> },
+    { id: 'vpcs-overview' as VPCSViewId, label: 'Team Overview', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'accounts' as VPCSViewId, label: 'All Accounts', icon: <Users className="w-4 h-4" /> },
+    { id: 'playbooks' as VPCSViewId, label: 'Playbooks', icon: <Target className="w-4 h-4" /> },
+    { id: 'renewals' as VPCSViewId, label: 'Renewals', icon: <Calendar className="w-4 h-4" /> },
   ],
   insights: [
-    { id: 'health-trends', label: 'Health Trends', path: '/vpcs-dashboard', icon: <Activity className="w-4 h-4" /> },
-    { id: 'team-metrics', label: 'Team Metrics', path: '/vpcs-dashboard', icon: <Gauge className="w-4 h-4" /> },
+    { id: 'health-trends' as VPCSViewId, label: 'Health Trends', icon: <Activity className="w-4 h-4" /> },
+    { id: 'team-metrics' as VPCSViewId, label: 'Team Metrics', icon: <Gauge className="w-4 h-4" /> },
   ],
 };
 
@@ -233,8 +272,12 @@ const FALLBACK_DATA: VPCSDashboardData = {
     nps_score: 42,
     actions_completed_pct: 68,
   },
+  csm_scorecards: [],
+  health_history_accounts: [],
+  portfolio_trajectory: { improving_count: 0, declining_count: 0, stable_count: 0, improving_arr_pct: 0, declining_arr_pct: 0 },
   period: 'Q1 2026',
   last_updated: '2m ago',
+  is_live_data: false,
 };
 
 // ============================================================================
@@ -257,13 +300,14 @@ const SkeletonLine: React.FC<{ w?: string }> = ({ w = 'w-full' }) => (
 // SUB-COMPONENTS
 // ============================================================================
 
-/** Left sidebar navigation */
+/** Left sidebar navigation — view switching within dashboard */
 const SidebarNav: React.FC<{
-  activeId: string;
+  activeId: VPCSViewId;
+  onViewChange: (id: VPCSViewId) => void;
   onNavigate: (path: string) => void;
   accountCount?: number;
   actionCount?: number;
-}> = ({ activeId, onNavigate, accountCount, actionCount }) => {
+}> = ({ activeId, onViewChange, onNavigate, accountCount, actionCount }) => {
   const getBadge = (id: string): string | null => {
     if (id === 'accounts' && accountCount) return String(accountCount);
     if (id === 'playbooks' && actionCount) return String(actionCount);
@@ -282,7 +326,7 @@ const SidebarNav: React.FC<{
             return (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.path)}
+                onClick={() => onViewChange(item.id)}
                 className={`flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-all group w-full text-left ${
                   isActive
                     ? 'bg-teal-500/10 text-teal-400'
@@ -315,7 +359,7 @@ const SidebarNav: React.FC<{
             return (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.path)}
+                onClick={() => onViewChange(item.id)}
                 className={`flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-all group w-full text-left ${
                   isActive
                     ? 'bg-teal-500/10 text-teal-400'
@@ -762,6 +806,7 @@ const VPCSDashboard: React.FC = () => {
   const [data, setData] = useState<VPCSDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<VPCSViewId>('vpcs-overview');
 
   // Fetch dashboard data from multiple endpoints
   useEffect(() => {
@@ -773,32 +818,38 @@ const VPCSDashboard: React.FC = () => {
         const customerId = getCustomerIdentifier(session);
         const headers = { 'X-Customer-ID': customerId };
 
-        // Parallel fetch from all endpoints
-        const [accountsResp, actionsResp, healthResp, roiResp] = await Promise.allSettled([
+        // Parallel fetch from all endpoints (including new ones)
+        const [accountsResp, actionsResp, healthResp, roiResp, capacityResp, scorecardResp, playbookMetricsResp, historyResp] = await Promise.allSettled([
           apiCall('/api/dc2s/accounts', { headers }),
           apiCall('/api/dc2s/daily-actions', { headers }),
           apiCall('/api/dc2s/health-summary', { headers }),
           apiCall('/api/outcome-roi/portfolio-summary', { headers }),
+          apiCall('/api/dc2s/team-capacity', { headers }),
+          apiCall('/api/dc2s/csm-scorecard', { headers }),
+          apiCall('/api/dc2s/playbook-success-metrics', { headers }),
+          apiCall('/api/dc2s/health-score-history?months=6', { headers }),
         ]);
 
         // Parse responses (graceful fallback per endpoint)
-        const accountsData = accountsResp.status === 'fulfilled' && accountsResp.value.ok
-          ? await accountsResp.value.json()
-          : null;
-        const actionsData = actionsResp.status === 'fulfilled' && actionsResp.value.ok
-          ? await actionsResp.value.json()
-          : null;
-        const healthData = healthResp.status === 'fulfilled' && healthResp.value.ok
-          ? await healthResp.value.json()
-          : null;
-        const roiData = roiResp.status === 'fulfilled' && roiResp.value.ok
-          ? await roiResp.value.json()
-          : null;
+        const parse = async (r: PromiseSettledResult<Response>) =>
+          r.status === 'fulfilled' && r.value.ok ? r.value.json() : null;
+
+        const accountsData = await parse(accountsResp);
+        const actionsData = await parse(actionsResp);
+        const healthData = await parse(healthResp);
+        const roiData = await parse(roiResp);
+        const capacityData = await parse(capacityResp);
+        const scorecardData = await parse(scorecardResp);
+        const playbookMetrics = await parse(playbookMetricsResp);
+        const historyData = await parse(historyResp);
 
         if (cancelled) return;
 
+        // Track whether we got real data from the backend
+        const hasLiveData = !!(accountsData || actionsData || healthData);
+
         // If no API data at all, show error
-        if (!accountsData && !actionsData && !healthData && !roiData) {
+        if (!hasLiveData) {
           setError('No data available. Upload your data to get started.');
           setLoading(false);
           return;
@@ -815,6 +866,7 @@ const VPCSDashboard: React.FC = () => {
           region: a.region || 'N/A',
           last_signal: a.last_signal || a.latest_signal || 'No recent signals',
           classification: classify(a.health_score || a.overall_health || 0),
+          renewal_date: a.renewal_date || undefined,
         })).sort((a: AccountRow, b: AccountRow) => a.health_score - b.health_score);
 
         // Compute health buckets
@@ -837,61 +889,101 @@ const VPCSDashboard: React.FC = () => {
         // Transform actions data
         const rawActions = actionsData?.actions || actionsData || [];
         const actions: ActionItem[] = (Array.isArray(rawActions) ? rawActions : []).slice(0, 10).map((a: any, i: number) => ({
-          priority: a.priority || i + 1,
+          priority: a.rank || a.priority || i + 1,
           account_name: a.account_name || a.account || 'Unknown',
-          action: a.action || a.description || a.title || 'Action required',
+          action: a.action_title || a.action || a.description || a.title || 'Action required',
           urgency: (a.urgency || a.severity || 'medium').toLowerCase() as ActionItem['urgency'],
-          est_hours: a.est_hours || a.effort_hours || 2,
-          impact_dollars: a.impact_dollars || a.dollar_impact || a.projected_impact || 0,
-          playbook: a.playbook || a.playbook_id || undefined,
+          est_hours: a.estimated_hours || a.est_hours || a.effort_hours || 2,
+          impact_dollars: a.roi_projected_impact || a.impact_dollars || a.dollar_impact || a.projected_impact || 0,
+          playbook: a.related_playbook_id || a.playbook || a.playbook_id || undefined,
         }));
 
-        // Compute playbook completion
-        const completedActions = actionsData?.completed_count || Math.round(actions.length * 0.68);
-        const totalActions = actionsData?.total_count || Math.round(actions.length * 1.5);
-        const completionRate = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 68;
+        // Use real playbook metrics for completion rate
+        const pbSummary = playbookMetrics?.portfolio_summary;
+        const completionRate = pbSummary?.overall_success_rate_pct ?? (roiData?.playbook_success_rate || 68);
+        const totalRuns = pbSummary?.total_runs || 0;
+        const completedRuns = Math.round(totalRuns * completionRate / 100);
 
         // ROI / renewal data
-        const renewalCount = roiData?.renewals_90d_count || healthData?.renewal_count || 6;
-        const renewalArr = roiData?.renewals_90d_arr || 4000000;
+        const renewalCount = roiData?.renewals_90d_count || healthData?.renewal_count || 0;
+        const renewalArr = roiData?.renewals_90d_arr || 0;
 
-        // Build renewals list from accounts with soonest estimated renewals
+        // Build renewals from actual renewal_date on accounts
+        const now = new Date();
         const renewals: RenewalItem[] = accounts
+          .filter((a) => a.renewal_date)
+          .map((a) => {
+            const renewDate = new Date(a.renewal_date!);
+            const diffMs = renewDate.getTime() - now.getTime();
+            const daysUntil = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+            return { account_name: a.account_name, arr: a.arr, days_until: daysUntil, health_score: a.health_score };
+          })
+          .filter((r) => r.days_until <= 90)
+          .sort((a, b) => a.days_until - b.days_until)
+          .slice(0, 6);
+
+        // If no renewal dates available, show top accounts as approximate
+        const finalRenewals = renewals.length > 0 ? renewals : accounts
           .filter((a) => a.arr > 200000)
           .slice(0, 6)
-          .map((a, i) => ({
-            account_name: a.account_name,
-            arr: a.arr,
-            days_until: 20 + i * 14,
-            health_score: a.health_score,
-          }));
+          .map((a, i) => ({ account_name: a.account_name, arr: a.arr, days_until: 20 + i * 14, health_score: a.health_score }));
+
+        // Team capacity from real endpoint
+        const realCsmCount = capacityData?.csm_count || Math.ceil(accounts.length / 5);
+        const realAcctsPerCsm = capacityData?.accounts_per_csm || Math.round(accounts.length / Math.max(1, realCsmCount));
+        const realTargetPerCsm = capacityData?.target_per_csm || 6;
+
+        // CSM scorecards from real endpoint
+        const rawScorecards = scorecardData?.scorecards || {};
+        const csmScorecards: CSMScorecard[] = Object.values(rawScorecards);
+
+        // Health history accounts
+        const historyAccounts: HealthHistoryAccount[] = (historyData?.accounts || []).map((a: any) => ({
+          account_id: a.account_id,
+          account_name: a.account_name,
+          arr: a.arr,
+          current_health: a.current_health,
+          current_status: a.current_status,
+          net_change: a.net_change,
+          trajectory: a.trajectory,
+          monthly_scores: a.monthly_scores || [],
+        }));
+
+        const portfolioTraj = historyData?.portfolio_trajectory || {
+          improving_count: 0, declining_count: 0, stable_count: 0,
+          improving_arr_pct: 0, declining_arr_pct: 0,
+        };
 
         const transformed: VPCSDashboardData = {
           summary_cards: [
-            { label: 'Total Accounts', value: String(accounts.length), subtitle: `Across ${Math.ceil(accounts.length / 5)} CSMs`, accent: 'white', icon: <Users className="w-4 h-4" /> },
+            { label: 'Total Accounts', value: String(accounts.length), subtitle: `Across ${realCsmCount} CSMs`, accent: 'white', icon: <Users className="w-4 h-4" /> },
             { label: 'Avg Health Score', value: avgHealth.toFixed(1), subtitle: 'Portfolio weighted avg', accent: 'teal', icon: <Activity className="w-4 h-4" /> },
-            { label: 'Playbook Completion', value: `${completionRate}%`, subtitle: `${completedActions} of ${totalActions} actions done`, tag: completionRate >= 65 ? 'On track' : undefined, accent: 'green', icon: <CheckCircle2 className="w-4 h-4" /> },
-            { label: 'Renewals This Qtr', value: String(renewalCount), subtitle: `${formatCompact(renewalArr)} ARR renewing`, accent: 'cyan', icon: <Calendar className="w-4 h-4" /> },
+            { label: 'Playbook Success', value: `${Math.round(completionRate)}%`, subtitle: totalRuns > 0 ? `${completedRuns} of ${totalRuns} resolved` : 'No executions yet', tag: completionRate >= 65 ? 'On track' : undefined, accent: 'green', icon: <CheckCircle2 className="w-4 h-4" /> },
+            { label: 'Renewals 90d', value: String(finalRenewals.length || renewalCount), subtitle: `${formatCompact(finalRenewals.reduce((s, r) => s + r.arr, 0) || renewalArr)} ARR renewing`, accent: 'cyan', icon: <Calendar className="w-4 h-4" /> },
           ],
           health_buckets: healthBuckets,
           actions: actions,
           accounts,
-          renewals_90d: renewals,
-          renewal_count_90d: renewalCount,
-          renewal_arr_90d: renewalArr,
+          renewals_90d: finalRenewals,
+          renewal_count_90d: finalRenewals.length || renewalCount,
+          renewal_arr_90d: finalRenewals.reduce((s, r) => s + r.arr, 0) || renewalArr,
           team_capacity: {
-            accounts_per_csm: Math.round(accounts.length / Math.max(1, Math.ceil(accounts.length / 5))),
-            target_per_csm: 6,
-            csm_count: Math.ceil(accounts.length / 5),
+            accounts_per_csm: realAcctsPerCsm,
+            target_per_csm: realTargetPerCsm,
+            csm_count: realCsmCount,
           },
           quick_stats: {
             avg_resolution_days: roiData?.avg_resolution_days || 4.2,
-            playbook_success_rate: roiData?.playbook_success_rate || 73,
+            playbook_success_rate: Math.round(completionRate),
             nps_score: roiData?.nps_score || 42,
-            actions_completed_pct: completionRate,
+            actions_completed_pct: Math.round(completionRate),
           },
-          period: roiData?.quarter_label || 'Q1 2026',
-          last_updated: '2m ago',
+          csm_scorecards: csmScorecards,
+          health_history_accounts: historyAccounts,
+          portfolio_trajectory: portfolioTraj,
+          period: roiData?.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
+          last_updated: 'just now',
+          is_live_data: hasLiveData,
         };
 
         setData(transformed);
@@ -918,7 +1010,7 @@ const VPCSDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
-        <SidebarNav activeId="vpcs-overview" onNavigate={handleNav} />
+        <SidebarNav activeId={activeView} onViewChange={setActiveView} onNavigate={handleNav} />
         <main className="flex-1 p-6 overflow-y-auto">
           <div className="mb-6">
             <SkeletonLine w="w-64" />
@@ -966,7 +1058,8 @@ const VPCSDashboard: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
       {/* ---- Left Sidebar ---- */}
       <SidebarNav
-        activeId="vpcs-overview"
+        activeId={activeView}
+        onViewChange={setActiveView}
         onNavigate={handleNav}
         accountCount={accountCount}
         actionCount={actionCount}
@@ -979,7 +1072,12 @@ const VPCSDashboard: React.FC = () => {
           <div className="flex items-start justify-between mb-6">
             <div>
               <h1 className="text-lg font-semibold text-white tracking-tight">
-                CS TEAM PERFORMANCE
+                {activeView === 'vpcs-overview' && 'CS TEAM PERFORMANCE'}
+                {activeView === 'accounts' && 'ACCOUNT PORTFOLIO'}
+                {activeView === 'playbooks' && 'PLAYBOOK PERFORMANCE'}
+                {activeView === 'renewals' && 'RENEWAL PIPELINE'}
+                {activeView === 'health-trends' && 'HEALTH TRENDS'}
+                {activeView === 'team-metrics' && 'TEAM METRICS'}
                 <span className="text-gray-500 font-normal ml-2">&middot; {d.period}</span>
               </h1>
               <div className="h-0.5 w-12 mt-1.5 rounded-full" style={{ backgroundColor: TEAL }} />
@@ -996,25 +1094,273 @@ const VPCSDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 1: Summary cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            {d.summary_cards.map((card, i) => (
-              <SummaryCardComponent key={i} card={card} />
-            ))}
-          </div>
+          {/* ============ VIEW: Team Overview (default) ============ */}
+          {activeView === 'vpcs-overview' && (
+            <>
+              {/* Row 1: Summary cards */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                {d.summary_cards.map((card, i) => (
+                  <SummaryCardComponent key={i} card={card} />
+                ))}
+              </div>
 
-          {/* Row 2: Health Distribution */}
-          <div className="mb-6">
-            <HealthDistribution buckets={d.health_buckets} />
-          </div>
+              {/* Row 2: Health Distribution */}
+              <div className="mb-6">
+                <HealthDistribution buckets={d.health_buckets} />
+              </div>
 
-          {/* Row 3: Actions Queue */}
-          <div className="mb-6">
-            <ActionsQueueTable actions={d.actions} />
-          </div>
+              {/* Row 3: Actions Queue */}
+              <div className="mb-6">
+                <ActionsQueueTable actions={d.actions} />
+              </div>
 
-          {/* Row 4: Account Portfolio */}
-          <AccountPortfolioTable accounts={d.accounts} />
+              {/* Row 4: Account Portfolio */}
+              <AccountPortfolioTable accounts={d.accounts} />
+            </>
+          )}
+
+          {/* ============ VIEW: All Accounts ============ */}
+          {activeView === 'accounts' && (
+            <AccountPortfolioTable accounts={d.accounts} />
+          )}
+
+          {/* ============ VIEW: Playbooks ============ */}
+          {activeView === 'playbooks' && (
+            <>
+              <div className="mb-6">
+                <ActionsQueueTable actions={d.actions} />
+              </div>
+              {/* Playbook Success Metrics — only if we have data */}
+              <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target className="w-4 h-4 text-teal-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Playbook Success Rate</h3>
+                </div>
+                <div className="text-center py-6">
+                  <p className="text-5xl font-bold text-teal-400 mb-1">{d.quick_stats.playbook_success_rate}%</p>
+                  <p className="text-xs text-gray-500">Resolved / Total Executions</p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ============ VIEW: Renewals ============ */}
+          {activeView === 'renewals' && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-teal-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Renewal Pipeline &middot; Next 90 Days</h3>
+                </div>
+                <span className="text-[10px] text-gray-500">{d.renewals_90d.length} renewals &middot; {formatCompact(d.renewal_arr_90d)} ARR</span>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700/50">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Account</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase">ARR</th>
+                    <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Days Until</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.renewals_90d.map((r, i) => {
+                    const color = classifyColor(r.health_score);
+                    return (
+                      <tr key={i} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                        <td className="px-5 py-3 text-xs font-medium text-white">{r.account_name}</td>
+                        <td className="text-center px-3 py-3">
+                          <span className="text-xs font-semibold" style={{ color }}>{r.health_score}</span>
+                        </td>
+                        <td className="text-right px-4 py-3 text-xs text-gray-300 font-mono">{formatCompact(r.arr)}</td>
+                        <td className="text-right px-5 py-3">
+                          <span className={`text-xs font-semibold ${r.days_until <= 30 ? 'text-red-400' : r.days_until <= 60 ? 'text-yellow-400' : 'text-gray-300'}`}>
+                            {r.days_until}d
+                          </span>
+                          {r.days_until <= 30 && <AlertTriangle className="w-3 h-3 text-red-400 inline ml-1" />}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {d.renewals_90d.length === 0 && (
+                    <tr><td colSpan={4} className="text-center py-8 text-gray-500 text-xs">No renewals in the next 90 days</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ============ VIEW: Health Trends ============ */}
+          {activeView === 'health-trends' && (
+            <>
+              {/* Portfolio trajectory summary */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 text-center">
+                  <TrendingUp className="w-5 h-5 text-green-400 mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-green-400">{d.portfolio_trajectory.improving_count}</p>
+                  <p className="text-xs text-gray-500 mt-1">Improving</p>
+                  <p className="text-[10px] text-gray-600">{d.portfolio_trajectory.improving_arr_pct}% of ARR</p>
+                </div>
+                <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 text-center">
+                  <Minus className="w-5 h-5 text-gray-400 mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-gray-300">{d.portfolio_trajectory.stable_count}</p>
+                  <p className="text-xs text-gray-500 mt-1">Stable</p>
+                </div>
+                <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 text-center">
+                  <TrendingDown className="w-5 h-5 text-red-400 mx-auto mb-2" />
+                  <p className="text-3xl font-bold text-red-400">{d.portfolio_trajectory.declining_count}</p>
+                  <p className="text-xs text-gray-500 mt-1">Declining</p>
+                  <p className="text-[10px] text-gray-600">{d.portfolio_trajectory.declining_arr_pct}% of ARR</p>
+                </div>
+              </div>
+
+              {/* Per-account trajectory table */}
+              <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-700/50 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-teal-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Account Health Trajectories</h3>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-700/50">
+                      <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Account</th>
+                      <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">ARR</th>
+                      <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Current</th>
+                      <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Change</th>
+                      <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Trajectory</th>
+                      <th className="text-center px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Sparkline</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.health_history_accounts.map((a) => {
+                      const color = classifyColor(a.current_health);
+                      const changeColor = a.net_change > 5 ? 'text-green-400' : a.net_change < -5 ? 'text-red-400' : 'text-gray-400';
+                      const trajIcon = a.trajectory === 'improving'
+                        ? <TrendingUp className="w-3 h-3 text-green-400" />
+                        : a.trajectory === 'declining'
+                        ? <TrendingDown className="w-3 h-3 text-red-400" />
+                        : <Minus className="w-3 h-3 text-gray-400" />;
+                      // Simple text sparkline from monthly scores
+                      const scores = a.monthly_scores.map((m) => m.health_score);
+                      const maxS = Math.max(...scores, 100);
+                      const minS = Math.min(...scores, 0);
+                      const range = maxS - minS || 1;
+                      return (
+                        <tr key={a.account_id} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                          <td className="px-5 py-3 text-xs font-medium text-white">{a.account_name}</td>
+                          <td className="text-right px-3 py-3 text-xs text-gray-300 font-mono">{formatCompact(a.arr)}</td>
+                          <td className="text-center px-3 py-3">
+                            <span className="text-xs font-semibold" style={{ color }}>{a.current_health}</span>
+                          </td>
+                          <td className="text-center px-3 py-3">
+                            <span className={`text-xs font-semibold ${changeColor}`}>
+                              {a.net_change > 0 ? '+' : ''}{a.net_change}
+                            </span>
+                          </td>
+                          <td className="text-center px-3 py-3">
+                            <span className="inline-flex items-center gap-1">
+                              {trajIcon}
+                              <span className="text-[10px] text-gray-500 capitalize">{a.trajectory}</span>
+                            </span>
+                          </td>
+                          <td className="px-5 py-3">
+                            {/* SVG mini sparkline */}
+                            <svg width="80" height="20" className="inline-block">
+                              <polyline
+                                fill="none"
+                                stroke={a.trajectory === 'improving' ? '#22c55e' : a.trajectory === 'declining' ? '#ef4444' : '#6b7280'}
+                                strokeWidth="1.5"
+                                points={scores.map((s, i) => `${(i / Math.max(scores.length - 1, 1)) * 76 + 2},${18 - ((s - minS) / range) * 16}`).join(' ')}
+                              />
+                            </svg>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {d.health_history_accounts.length === 0 && (
+                      <tr><td colSpan={6} className="text-center py-8 text-gray-500 text-xs">No health history available. Run process_data to generate scores.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* ============ VIEW: Team Metrics (CSM Scorecard) ============ */}
+          {activeView === 'team-metrics' && (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                {d.summary_cards.map((card, i) => (
+                  <SummaryCardComponent key={i} card={card} />
+                ))}
+              </div>
+
+              {/* CSM Scorecard Table */}
+              <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-700/50 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-teal-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">CSM Performance Scorecard</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700/50">
+                        <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">CSM</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Accounts</th>
+                        <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">ARR</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health &Delta;</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Playbooks</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Success</th>
+                        <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Revenue Impact</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.csm_scorecards.map((sc) => {
+                        const deltaColor = sc.avg_health_delta > 3 ? 'text-green-400' : sc.avg_health_delta < -3 ? 'text-red-400' : 'text-gray-300';
+                        return (
+                          <tr key={sc.csm_name} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                            <td className="px-5 py-3 text-xs font-medium text-white">{sc.csm_name}</td>
+                            <td className="text-center px-3 py-3 text-xs text-gray-300">{sc.accounts_managed}</td>
+                            <td className="text-right px-3 py-3 text-xs text-gray-300 font-mono">{formatCompact(sc.total_arr)}</td>
+                            <td className="text-center px-3 py-3">
+                              <span className={`text-xs font-semibold ${deltaColor}`}>
+                                {sc.avg_health_delta > 0 ? '+' : ''}{sc.avg_health_delta}
+                              </span>
+                              <span className="text-[10px] text-gray-600 ml-1">
+                                ({sc.accounts_improving}&#x2191; {sc.accounts_declining}&#x2193;)
+                              </span>
+                            </td>
+                            <td className="text-center px-3 py-3 text-xs text-gray-300">{sc.playbooks_executed}</td>
+                            <td className="text-center px-3 py-3">
+                              <span className={`text-xs font-semibold ${sc.success_rate_pct >= 70 ? 'text-green-400' : sc.success_rate_pct >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {sc.success_rate_pct}%
+                              </span>
+                            </td>
+                            <td className="text-right px-5 py-3 text-xs text-teal-400 font-semibold font-mono">
+                              {formatCompact(sc.total_revenue_impact)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {d.csm_scorecards.length === 0 && (
+                        <tr><td colSpan={7} className="text-center py-8 text-gray-500 text-xs">No CSM assignment data. Ensure accounts have assigned_csm in profiles.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Team Capacity detail */}
+              <div className="mt-6">
+                <TeamCapacityGauge
+                  accountsPerCsm={d.team_capacity.accounts_per_csm}
+                  targetPerCsm={d.team_capacity.target_per_csm}
+                  csmCount={d.team_capacity.csm_count}
+                />
+              </div>
+            </>
+          )}
         </div>
       </main>
 

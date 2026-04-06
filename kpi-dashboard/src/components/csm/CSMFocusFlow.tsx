@@ -260,6 +260,10 @@ const CSMFocusFlow: React.FC = () => {
   const [loadingApprovals, setLoadingApprovals] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // CSM filter
+  const [csmFilter, setCsmFilter] = useState<string>('');
+  const [csmNames, setCsmNames] = useState<string[]>([]);
+
   // Accounts table sort
   const [sortField, setSortField] = useState<'account_name' | 'health_score' | 'arr'>('health_score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -272,7 +276,10 @@ const CSMFocusFlow: React.FC = () => {
     setLoadingActions(true);
     setError(null);
     try {
-      const res = await fetch('/api/dc2s/daily-actions', { headers });
+      const url = csmFilter
+        ? `/api/dc2s/daily-actions?csm_name=${encodeURIComponent(csmFilter)}`
+        : '/api/dc2s/daily-actions';
+      const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`Actions: ${res.status}`);
       const data = await res.json();
       const raw: any[] = data.actions || data.data || data || [];
@@ -292,7 +299,7 @@ const CSMFocusFlow: React.FC = () => {
     } finally {
       setLoadingActions(false);
     }
-  }, [headers]);
+  }, [headers, csmFilter]);
 
   const fetchAccounts = useCallback(async () => {
     setLoadingAccounts(true);
@@ -404,6 +411,20 @@ const CSMFocusFlow: React.FC = () => {
   }, [headers]);
 
   // ---- EFFECTS ----
+
+  // Fetch CSM names for filter dropdown
+  useEffect(() => {
+    const fetchCsmNames = async () => {
+      try {
+        const res = await fetch('/api/dc2s/team-capacity', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.csm_names?.length) setCsmNames(data.csm_names);
+        }
+      } catch { /* optional — filter just won't show */ }
+    };
+    fetchCsmNames();
+  }, [headers]);
 
   useEffect(() => {
     fetchActions();
@@ -685,10 +706,23 @@ const CSMFocusFlow: React.FC = () => {
                 <span className={`w-1.5 h-1.5 rounded-full ${urgencyDot(action.urgency)}`} />
                 {action.urgency}
               </span>
+              {/* CSM filter dropdown */}
+              {csmNames.length > 1 && (
+                <select
+                  value={csmFilter}
+                  onChange={(e) => setCsmFilter(e.target.value)}
+                  className="text-xs bg-white border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                >
+                  <option value="">All CSMs</option>
+                  {csmNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500">
               {arr > 0 && <span className="font-medium">{formatCurrency(arr)} ARR</span>}
-              {churn > 0 && <span className="text-red-600">{(churn * 100).toFixed(0)}% churn risk</span>}
+              {churn > 0 && <span className="text-red-600">{churn > 1 ? Math.round(churn) : (churn * 100).toFixed(0)}% churn risk</span>}
               <span
                 className="font-semibold"
                 style={{ color: classifyColor(healthScore) }}

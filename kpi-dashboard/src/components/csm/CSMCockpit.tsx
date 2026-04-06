@@ -202,6 +202,7 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
   const [people, setPeople] = useState<Stakeholder[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [historyItems, setHistoryItems] = useState<DailyAction[]>([]);
+  const [healthHistory, setHealthHistory] = useState<Array<{ month: string; health_score: number }>>([]);
   const [notes, setNotes] = useState('');
   const [loadingDetail, setLoadingDetail] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -214,16 +215,37 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
 
     const fetchDetails = async () => {
       try {
-        const [sigRes, recRes] = await Promise.allSettled([
+        const [sigRes, recRes, stakeholderRes, healthHistRes] = await Promise.allSettled([
           fetch(`/api/dc2s/alerts/${account.id}`, { headers }),
           fetch(`/api/dc2s/recommendations/${account.id}`, { headers }),
+          fetch(`/api/context-graph/stakeholder-map?account_id=${account.id}`, { headers }),
+          fetch(`/api/dc2s/health-score-history?account_id=${account.id}&months=6`, { headers }),
         ]);
 
         if (sigRes.status === 'fulfilled' && sigRes.value.ok) {
           const data = await sigRes.value.json();
           setSignals(data.signals || data.alerts || []);
-          setPeople(data.stakeholders || []);
           setTickets(data.tickets || []);
+        }
+        // Stakeholders from dedicated context graph endpoint
+        if (stakeholderRes.status === 'fulfilled' && stakeholderRes.value.ok) {
+          const stData = await stakeholderRes.value.json();
+          const stakeholders = (stData.stakeholders || []).map((s: any, i: number) => ({
+            id: s.node_id || i,
+            name: s.name || 'Unknown',
+            role: s.role || 'Stakeholder',
+            influence_score: s.edge_count || s.influence_score || undefined,
+            engagement_level: s.sentiment || s.engagement_frequency || undefined,
+          }));
+          setPeople(stakeholders);
+        }
+        // Health history for sparkline
+        if (healthHistRes.status === 'fulfilled' && healthHistRes.value.ok) {
+          const hhData = await healthHistRes.value.json();
+          const acctHistory = (hhData.accounts || [])[0];
+          if (acctHistory?.monthly_scores) {
+            setHealthHistory(acctHistory.monthly_scores);
+          }
         }
         if (recRes.status === 'fulfilled' && recRes.value.ok) {
           const data = await recRes.value.json();
@@ -347,6 +369,34 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
                       />
                     </div>
                   </div>
+
+                  {/* Health trend sparkline */}
+                  {healthHistory.length >= 2 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Health Trend (6mo)</h4>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <svg width="100%" height="40" viewBox="0 0 200 40" preserveAspectRatio="none">
+                          {(() => {
+                            const scores = healthHistory.map((h) => h.health_score);
+                            const maxS = Math.max(...scores, 100);
+                            const minS = Math.min(...scores, 0);
+                            const range = maxS - minS || 1;
+                            const last = scores[scores.length - 1];
+                            const first = scores[0];
+                            const color = last > first + 5 ? '#22c55e' : last < first - 5 ? '#ef4444' : '#6b7280';
+                            const points = scores.map((s, i) =>
+                              `${(i / Math.max(scores.length - 1, 1)) * 196 + 2},${36 - ((s - minS) / range) * 32}`
+                            ).join(' ');
+                            return <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={points} />;
+                          })()}
+                        </svg>
+                        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                          <span>{healthHistory[0]?.month}</span>
+                          <span>{healthHistory[healthHistory.length - 1]?.month}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Pillar breakdown */}
                   <div>
