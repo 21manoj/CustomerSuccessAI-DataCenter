@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Fund pools{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-bold">Fund pools</h1>
+<ul class="space-y-3">
+  {% for p in pools %}
+    <li class="rounded border bg-white p-4 shadow-sm">
+      <span class="font-medium">{{ p.name }}</span>
+      <span class="text-sm text-slate-500">({{ p.get_jurisdiction_display }})</span>
+      {% if p.description %}<p class="mt-1 text-sm text-slate-600">{{ p.description }}</p>{% endif %}
+    </li>
+  {% empty %}
+    <li class="text-slate-500">No pools — run <code class="rounded bg-slate-100 px-1">python manage.py load_demo_data</code></li>
+  {% endfor %}
+</ul>
+{% endblock %}

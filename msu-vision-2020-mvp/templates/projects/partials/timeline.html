@@ -1,0 +1,30 @@
+{% comment %}Architecture §6.5.1 — Gantt-style bars{% endcomment %}
+<div class="rounded-lg border border-slate-200 bg-white p-4">
+  <p class="mb-2 text-xs text-slate-500">{{ timeline.range_start }} — {{ timeline.range_end }} ({{ timeline.span_days }} days)</p>
+  {% for row in timeline.rows %}
+    <div class="mb-4">
+      <div class="mb-1 flex flex-wrap items-baseline justify-between gap-2 text-sm">
+        <div>
+          <span>{{ row.milestone.sequence }}. {{ row.milestone.title }}</span>
+          {% if row.milestone.assigned_to %}
+            <span class="ml-2 text-xs text-slate-500">· Lead: {{ row.milestone.assigned_to.get_full_name|default:row.milestone.assigned_to.username }} ({{ row.milestone.assigned_to.username }})</span>
+          {% else %}
+            <span class="ml-2 text-xs text-slate-400">· No milestone lead</span>
+          {% endif %}
+          {% if row.milestone.owners.all %}
+            <span class="mt-0.5 block text-xs text-slate-600">Owners:
+              {% for o in row.milestone.owners.all %}{{ o.get_full_name|default:o.username }} ({{ o.username }}){% if not forloop.last %}, {% endif %}{% endfor %}
+            </span>
+          {% endif %}
+        </div>
+        <span class="text-slate-500">{{ row.milestone.get_status_display }}</span>
+      </div>
+      <div class="timeline-track">
+        <div class="timeline-today" style="left: calc({{ timeline.today_offset_pct }}% - 1px);"></div>
+        <div class="timeline-bar milestone-{{ row.milestone.status }}" style="left: {{ row.left_pct }}%; width: {{ row.width_pct }}%;"></div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-slate-500">Add milestones to see the timeline.</p>
+  {% endfor %}
+</div>

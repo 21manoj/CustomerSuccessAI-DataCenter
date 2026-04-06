@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Needs{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="text-2xl font-bold">Needs</h1>
+  {% load persona_tags %}
+{% if user|has_any_persona:"hod,foundation_admin" %}
+  <a class="rounded bg-emerald-700 px-4 py-2 text-sm text-white hover:bg-emerald-800" href="{% url 'needs:create' %}">New need</a>
+  {% endif %}
+</div>
+<ul class="space-y-3">
+  {% for n in needs %}
+    <li class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <a class="font-medium text-emerald-800 hover:underline" href="{{ n.get_absolute_url }}">{{ n.title }}</a>
+      <span class="ml-2 text-sm text-slate-500">{{ n.get_status_display }} · {{ n.target_amount }} {{ n.target_currency }}</span>
+    </li>
+  {% empty %}
+    <li class="text-slate-500">No needs.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

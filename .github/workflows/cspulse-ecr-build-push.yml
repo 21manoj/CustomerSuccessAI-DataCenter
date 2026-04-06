@@ -26,6 +26,7 @@ on:
     paths:
       - "kpi-dashboard/**"
       - "load-driver/**"
+      - "msu-vision-2020-mvp/**"
       - ".github/workflows/cspulse-ecr-build-push.yml"
 
 env:
@@ -126,3 +127,14 @@ jobs:
             -f load-driver/Dockerfile \
             -t "${ECR_REGISTRY}/cspulse-load-driver:latest" \
             --push load-driver
+
+      - name: Build and push cspulse-msu-vision
+        run: |
+          EXTRA=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.no_cache }}" = "true" ]; then
+            EXTRA="--no-cache"
+          fi
+          docker buildx build --platform linux/amd64 $EXTRA \
+            -f msu-vision-2020-mvp/Dockerfile \
+            -t "${ECR_REGISTRY}/cspulse-msu-vision:latest" \
+            --push msu-vision-2020-mvp

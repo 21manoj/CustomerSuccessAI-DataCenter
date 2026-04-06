@@ -85,6 +85,8 @@ kpi-dashboard/backend/instance/
 kpi-dashboard/backend/uploads/
 
 # ── Separate project directories NOT needed in image ──
+# MSU Vision is a separate image (cspulse-msu-vision); exclude from cspulse-platform context.
+msu-vision-2020-mvp/
 ejouurnal/
 new-app/
 client/

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}New user registration{% endblock %}
+{% block content %}
+<div class="mb-4"><a class="text-sm text-slate-500 hover:text-emerald-700" href="{% url 'account_login' %}">← Back to sign in</a></div>
+<h1 class="mb-2 text-2xl font-bold text-slate-900">New user registration</h1>
+<p class="mb-6 max-w-2xl text-sm text-slate-600">
+  Tell us who you are and how you would like to participate. We will review your request and follow up by email. You do not get a password until an administrator provisions your account.
+</p>
+<form method="post" class="max-w-xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{{ form.non_field_errors }}</div>
+  {% endif %}
+  {% for field in form %}
+    <div>
+      {% if field.name == 'desired_role_codes' %}
+      <fieldset>
+        <legend class="block text-sm font-medium text-slate-800">{{ field.label }}</legend>
+        {% if field.help_text %}<p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+        <div class="mt-3 space-y-2 rounded border border-slate-100 bg-slate-50/80 p-3 text-sm">
+          {{ field }}
+        </div>
+      </fieldset>
+      {% else %}
+      <label class="block text-sm font-medium text-slate-800" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {% if field.help_text %}<p class="mt-0.5 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+      {% render_field field class="mt-1 block w-full rounded border border-slate-300 px-3 py-2 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600" %}
+      {% endif %}
+      {% if field.errors %}<p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <div class="flex flex-wrap gap-3 pt-2">
+    <button type="submit" class="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-800">Submit registration</button>
+    <a class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50" href="{% url 'account_login' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

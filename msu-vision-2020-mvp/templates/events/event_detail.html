@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+<div class="mb-4"><a class="text-sm text-slate-500 hover:text-emerald-700" href="{% url 'events:list' %}">← Events</a></div>
+<h1 class="text-2xl font-bold text-slate-900">{{ event.title }}</h1>
+<p class="mt-1 text-sm text-slate-500">{{ event.get_event_type_display }} · {{ event.get_status_display }}</p>
+<p class="mt-3 text-slate-600">
+  <strong>When:</strong> {{ event.start_datetime|date:"l, F j, Y g:i A" }} — {{ event.end_datetime|date:"g:i A" }}<br>
+  <strong>Where:</strong> {{ event.venue }}{% if event.location %} · {{ event.location }}{% endif %}
+</p>
+{% if event.linked_need %}
+<p class="mt-2 text-sm">Related need: <a class="text-emerald-700 hover:underline" href="{{ event.linked_need.get_absolute_url }}">{{ event.linked_need.title }}</a></p>
+{% endif %}
+{% if event.linked_project %}
+<p class="text-sm">Related project: <a class="text-emerald-700 hover:underline" href="{{ event.linked_project.get_absolute_url }}">{{ event.linked_project.title }}</a></p>
+{% endif %}
+{% if event.target_amount %}
+<p class="mt-2 text-sm text-slate-600">Fundraising target: {{ event.target_amount }} (combined jurisdictions)</p>
+{% endif %}
+{% if can_prefill_contribution %}
+<p class="mt-3 text-sm">
+  <a class="font-medium text-emerald-700 hover:underline" href="{% url 'funding:contribution_create' %}?event={{ event.pk }}{% if event.linked_project_id %}&amp;project={{ event.linked_project_id }}{% endif %}">Record contribution — form prefilled from this event</a>
+</p>
+{% endif %}
+
+<section class="prose prose-sm mt-8 max-w-none text-slate-700">
+  <h2 class="text-lg font-semibold text-slate-800">Plan & schedule</h2>
+  <div class="whitespace-pre-wrap rounded-lg border border-slate-100 bg-slate-50 p-4 font-sans text-sm leading-relaxed">{{ event.description }}</div>
+</section>
+
+{% if event.media_items.exists %}
+<section class="mt-10">
+  <h2 class="mb-4 text-lg font-semibold text-slate-800">Photos</h2>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {% for m in event.media_items.all %}
+    <figure class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <img src="{{ m.file.url }}" alt="{{ m.caption }}" class="h-40 w-full object-cover" loading="lazy">
+      <figcaption class="p-2 text-xs text-slate-600">{{ m.caption }}</figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if event.registrations.exists %}
+<section class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-4">
+  <h3 class="mb-2 font-semibold text-slate-800">Registrations (sample)</h3>
+  <ul class="text-sm text-slate-600">
+    {% for reg in event.registrations.all %}
+    <li>{{ reg.user.username }} — {{ reg.get_role_display }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

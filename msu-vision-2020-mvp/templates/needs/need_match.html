@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Match donors — {{ need.title }}{% endblock %}
+{% block content %}
+<h1 class="mb-2 text-2xl font-bold">Match donors</h1>
+<p class="mb-6 text-slate-600">{{ need.title }}</p>
+<form method="post" class="max-w-xl space-y-4">
+  {% csrf_token %}
+  {% render_field form.donor_ids %}
+  <button type="submit" class="rounded bg-emerald-700 px-4 py-2 text-white">Save</button>
+</form>
+{% endblock %}

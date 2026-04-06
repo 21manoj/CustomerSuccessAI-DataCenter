@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Expenses{% endblock %}
+{% block content %}
+<div class="mb-6 flex justify-between">
+  <h1 class="text-2xl font-bold">Expenses</h1>
+  {% load persona_tags %}
+{% if user|has_any_persona:"foundation_admin,finance_controller,project_lead" %}
+  <a class="rounded bg-emerald-700 px-4 py-2 text-sm text-white" href="{% url 'funding:expense_create' %}">New expense</a>
+  {% endif %}
+</div>
+<table class="w-full text-left text-sm">
+  <thead class="border-b bg-slate-50">
+    <tr>
+      <th class="p-2">Project</th>
+      <th class="p-2">Amount</th>
+      <th class="p-2">Owners</th>
+      <th class="p-2">Status</th>
+      <th class="p-2">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in expenses %}
+    <tr class="border-b">
+      <td class="p-2"><a class="text-emerald-700" href="{{ e.project.get_absolute_url }}">{{ e.project.title }}</a></td>
+      <td class="p-2">{{ e.amount }} {{ e.currency }}</td>
+      <td class="p-2 text-slate-600">{% for o in e.owners.all %}{{ o.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+      <td class="p-2">{{ e.get_status_display }}</td>
+      <td class="p-2 space-x-2">
+        {% if e.status == 'pending' or e.status == 'pending_governance' %}
+        <form method="post" action="{% url 'funding:expense_approve' e.pk %}" class="inline">{% csrf_token %}<button class="text-xs text-blue-700">Approve</button></form>
+        {% endif %}
+        {% if e.status == 'approved' %}
+        <form method="post" action="{% url 'funding:expense_disburse' e.pk %}" class="inline">{% csrf_token %}<button class="text-xs text-green-700">Disburse</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="p-4 text-slate-500">None</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

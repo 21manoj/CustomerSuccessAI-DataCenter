@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-bold">Sign in</h1>
+<div class="mb-6 max-w-lg rounded-lg border border-sky-200 bg-sky-50/90 p-4 text-sm text-sky-950 shadow-sm">
+  <p class="font-semibold text-sky-950">New user registration</p>
+  <p class="mt-1 text-sky-900/90">First time here? Submit your details (name, email, batch year, contact, address, optional LinkedIn, and roles you are interested in). We will review and set up access.</p>
+  <a class="mt-3 inline-flex rounded-lg bg-sky-800 px-4 py-2 text-sm font-medium text-white hover:bg-sky-900" href="{% url 'stakeholders:new_user_register' %}">New user registration →</a>
+</div>
+<form method="post" action="{% url 'account_login' %}" class="max-w-sm space-y-4 rounded border bg-white p-6 shadow-sm">
+  {% csrf_token %}
+  {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+  {% endif %}
+  {% for field in form %}
+    <div>
+      <label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {% render_field field class="mt-1 block w-full rounded border px-3 py-2" %}
+      {% if field.errors %}<p class="text-sm text-red-600">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <button type="submit" class="w-full rounded bg-emerald-700 py-2 text-white">Login</button>
+</form>
+{% if show_demo_login_help %}
+<div class="mt-6 max-w-sm rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm">
+  <p class="font-semibold text-emerald-900">Seeded demo account</p>
+  <p class="mt-1 text-emerald-800">In the <strong>Login</strong> field enter <code class="rounded bg-white px-1">demo</code>, password <code class="rounded bg-white px-1">demo</code> (after <code class="rounded bg-white px-1">load_demo_data</code> or first container start).</p>
+  <p class="mt-2 text-xs text-emerald-800/90">Other personas use password <code class="rounded bg-white px-1">demo123</code> — see dashboard after sign-in.</p>
+  {% if debug %}
+  <form method="post" action="{% url 'demo_login' %}" class="mt-3">
+    {% csrf_token %}
+    <button type="submit" class="w-full rounded bg-emerald-800 py-2 text-white hover:bg-emerald-900">Sign in as demo (dev only)</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+<p class="mt-6 text-center text-xs text-slate-500">Optional: <a class="text-emerald-700" href="/accounts/google/login/">Google</a> after setting <code>GOOGLE_CLIENT_ID</code> in <code>.env</code>.</p>
+<p class="mt-4 text-center text-sm text-slate-600">
+  Already invited with a username? <a class="text-emerald-700 hover:underline" href="{% url 'account_signup' %}">Create password account</a>
+</p>
+{% endblock %}

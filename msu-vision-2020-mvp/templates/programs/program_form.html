@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit{% else %}New{% endif %} program{% endblock %}
+{% block content %}
+<div class="mb-4"><a class="text-sm text-slate-500 hover:text-emerald-700" href="{% url 'programs:list' %}">← Programs</a></div>
+<h1 class="text-2xl font-bold">{% if object %}Edit program{% else %}New program{% endif %}</h1>
+<form method="post" class="mt-6 max-w-2xl space-y-4">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <ul class="text-sm text-red-700">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% for field in form %}
+  <div>
+    <label class="block text-sm font-medium text-slate-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <div class="mt-1">{{ field }}</div>
+    {% if field.help_text %}<p class="mt-0.5 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+    {% for e in field.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+  </div>
+  {% endfor %}
+  <div class="flex gap-2 pt-2">
+    <button type="submit" class="rounded bg-emerald-700 px-4 py-2 text-white hover:bg-emerald-800">Save</button>
+    {% if object %}<a class="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50" href="{{ object.get_absolute_url }}">Cancel</a>{% else %}<a class="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50" href="{% url 'programs:list' %}">Cancel</a>{% endif %}
+  </div>
+</form>
+{% endblock %}

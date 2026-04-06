@@ -1,0 +1,66 @@
+{% load static %}
+{% load persona_tags %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MSU Vision 2020{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'css/timeline.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-full bg-slate-50 text-slate-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="shadow-sm">
+    <div class="border-b border-slate-700/40 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:py-3.5">
+        <a href="{% url 'dashboard:home' %}" class="flex min-w-0 flex-1 items-center sm:flex-none focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-white/40">
+          <img
+            src="{% static 'img/iitkgp-alumni-association-logo.png' %}"
+            alt="IIT Kharagpur Alumni Association Logo"
+            class="h-9 w-auto max-w-full object-contain object-left sm:h-11"
+            width="360"
+            height="48"
+            loading="eager"
+            decoding="async"
+          >
+        </a>
+        <span class="shrink-0 text-xs font-medium uppercase tracking-wide text-white/80 sm:text-sm">MSU Vision 2020</span>
+      </div>
+    </div>
+    <nav class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-end gap-3 px-4 py-2.5 text-sm">
+        {% if user.is_authenticated %}
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'needs:list' %}">Needs</a>
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'projects:list' %}">Projects</a>
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'programs:list' %}">Programs</a>
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'events:list' %}">Events</a>
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'dashboard:project_rollup' %}">Rollup</a>
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'funding:contributions' %}">Funding</a>
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'funding:pools' %}">Pools</a>
+          {% if user|has_any_persona:"governance,foundation_admin" %}
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'dashboard:governance_queue' %}">Governance</a>
+          {% endif %}
+          <a class="text-slate-600 hover:text-emerald-700" href="{% url 'stakeholders:profile' %}">Profile</a>
+          <span class="text-slate-400">|</span>
+          <span class="text-slate-500">{{ user.username }}</span>
+          <a class="rounded bg-slate-200 px-2 py-1 hover:bg-slate-300" href="{% url 'account_logout' %}">Logout</a>
+        {% else %}
+          <a class="rounded bg-emerald-700 px-3 py-1.5 text-white hover:bg-emerald-800" href="{% url 'account_login' %}">Login</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    {% if messages %}
+      <ul class="mb-6 space-y-2">
+        {% for message in messages %}
+          <li class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</body>
+</html>

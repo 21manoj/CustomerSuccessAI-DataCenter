@@ -1,0 +1,32 @@
+/* Architecture §6.3 milestone status colors */
+.milestone-pending { background-color: #9CA3AF; }
+.milestone-approved { background-color: #3B82F6; }
+.milestone-in_progress { background-color: #F59E0B; }
+.milestone-done { background-color: #10B981; }
+.milestone-overdue { background-color: #EF4444; }
+.milestone-cancelled { background-color: #64748B; }
+
+.timeline-track {
+  position: relative;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+  overflow: hidden;
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 4px;
+  height: 20px;
+  border-radius: 4px;
+  min-width: 4px;
+}
+
+.timeline-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #0f766e;
+  z-index: 2;
+}

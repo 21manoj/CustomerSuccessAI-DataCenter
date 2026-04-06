@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Registration received{% endblock %}
+{% block content %}
+<h1 class="mb-4 text-2xl font-bold text-slate-900">Thank you</h1>
+<div class="max-w-xl rounded-lg border border-emerald-200 bg-emerald-50/80 p-6 text-sm text-emerald-950">
+  <p class="font-medium">Your registration request was received.</p>
+  <p class="mt-2 text-emerald-900/90">Our team will review the details you submitted and contact you at the email address you provided. You can close this page or return to sign in if you already have an account.</p>
+</div>
+<p class="mt-6">
+  <a class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800" href="{% url 'account_login' %}">Back to sign in</a>
+</p>
+{% endblock %}

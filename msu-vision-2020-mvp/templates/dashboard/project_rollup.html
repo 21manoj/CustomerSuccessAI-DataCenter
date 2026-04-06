@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Project rollup — MSU Vision 2020{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-bold">All projects — milestone tracker</h1>
+<div class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+  <table class="min-w-full text-left text-sm">
+    <thead class="border-b border-slate-200 bg-slate-50">
+      <tr>
+        <th class="p-3 font-semibold">Project</th>
+        <th class="p-3 font-semibold">Lead</th>
+        <th class="p-3 font-semibold">Progress</th>
+        <th class="p-3 font-semibold min-w-[14rem]">Funding tranches (% budget)</th>
+        <th class="p-3 font-semibold">Status</th>
+        <th class="p-3 font-semibold">Alerts</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr class="border-b border-slate-100 hover:bg-slate-50">
+        <td class="p-3"><a class="text-emerald-700 hover:underline" href="{{ row.project.get_absolute_url }}">{{ row.project.title }}</a></td>
+        <td class="p-3 text-slate-600">{% if row.project.lead %}{{ row.project.lead.username }}{% else %}—{% endif %}</td>
+        <td class="p-3 w-48">
+          <div class="h-2 w-full rounded bg-slate-200">
+            <div class="h-2 rounded bg-emerald-600" style="width: {{ row.progress_pct }}%"></div>
+          </div>
+          <span class="text-xs text-slate-500">{{ row.progress_pct }}%</span>
+        </td>
+        <td class="p-3">{{ row.project.get_status_display }}</td>
+        <td class="p-3">{% if row.overdue_count %}<span class="text-red-600">⚠ {{ row.overdue_count }} overdue</span>{% else %}—{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="p-6 text-center text-slate-500">No projects.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

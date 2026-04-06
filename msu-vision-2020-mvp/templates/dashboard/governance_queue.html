@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Governance{% endblock %}
+{% block content %}
+<h1 class="mb-2 text-2xl font-bold">Governance</h1>
+<p class="mb-4 max-w-3xl text-sm text-slate-600">
+  Find <strong>registered people by persona</strong> (one person may have <strong>multiple</strong> personas), search across everyone, and see simple <strong>availability</strong> hints for
+  <strong>project lead</strong> (active non-completed projects where they are lead) and <strong>volunteer</strong> (project team memberships).
+  Thresholds: ≤{{ roster_lead_cap }} active leads = likely available; ≤{{ roster_volunteer_cap }} volunteer teams = likely available.
+  <strong>Mass-upload</strong> user profiles via CSV; rows without valid personas are <strong>flagged</strong> until you assign them.
+  Below, review pending <strong>approvals</strong> for high-value needs, projects, and expenses.
+</p>
+
+<section class="mb-10 rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+  <h2 class="mb-2 text-lg font-semibold text-emerald-950">Mass upload — user profiles</h2>
+  <p class="mb-3 max-w-3xl text-sm text-emerald-950/85">
+    UTF-8 CSV with columns <code class="rounded bg-white/80 px-1">username</code>, <code class="rounded bg-white/80 px-1">email</code>, and optionally
+    <code class="rounded bg-white/80 px-1">first_name</code>, <code class="rounded bg-white/80 px-1">last_name</code>,
+    <code class="rounded bg-white/80 px-1">personas</code> (e.g. <code class="text-xs">donor|volunteer</code> or comma-separated),
+    <code class="rounded bg-white/80 px-1">organization</code>, <code class="rounded bg-white/80 px-1">jurisdiction</code> (<code class="text-xs">india</code>, <code class="text-xs">us</code>, <code class="text-xs">other</code>).
+    Valid persona codes match the system roles (e.g. <code class="text-xs">foundation_admin</code>, <code class="text-xs">governance</code>, <code class="text-xs">donor</code>, <code class="text-xs">volunteer</code>, …).
+    New users get an <strong>unusable password</strong> until reset. Empty <code class="text-xs">personas</code> flags the row for assignment.
+  </p>
+  <div class="mb-4 flex flex-wrap gap-3">
+    <a class="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50" href="{% url 'dashboard:governance_profile_sample_csv' %}">Download sample CSV</a>
+  </div>
+  <form method="post" action="{% url 'dashboard:governance_profile_bulk_upload' %}" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+    {% csrf_token %}
+    {% for field in bulk_profile_form %}
+    <div class="min-w-[12rem] flex-1">
+      <label class="mb-1 block text-xs font-medium text-emerald-900" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="mt-1 text-xs text-emerald-900/70">{{ field.help_text }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900">Upload &amp; import</button>
+  </form>
+</section>
+
+{% if users_needing_persona %}
+<section class="mb-10 rounded-xl border border-amber-300 bg-amber-50/80 p-5 shadow-sm">
+  <h2 class="mb-2 text-lg font-semibold text-amber-950">Persona not identified</h2>
+  <p class="mb-3 text-sm text-amber-950/85">These accounts need persona assignment (imported without <code class="rounded bg-white px-1 text-xs">personas</code> or not yet reviewed). Assign personas in Django Admin under <strong>User stakeholder personas</strong> or re-import with a valid <code class="text-xs">personas</code> column.</p>
+  <ul class="max-h-48 space-y-2 overflow-y-auto text-sm">
+    {% for u in users_needing_persona %}
+    <li class="flex flex-wrap items-baseline justify-between gap-2 rounded border border-amber-200 bg-white px-3 py-2">
+      <span><strong>{{ u.get_full_name|default:u.username }}</strong> <span class="text-slate-500">@{{ u.username }}</span> · {{ u.email }}</span>
+      <span class="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-950">Needs persona</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="mb-10 rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Directory search</h2>
+  <form method="get" action="{% url 'dashboard:governance_queue' %}" class="mb-4 flex flex-wrap items-end gap-3">
+    <div class="min-w-[16rem] flex-1">
+      <label for="roster-q" class="mb-1 block text-xs font-medium text-slate-600">Name, username, or email</label>
+      <input id="roster-q" type="search" name="q" value="{{ roster_q }}" placeholder="e.g. meera, lead_hostel, @example"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600" autocomplete="off">
+    </div>
+    <button type="submit" class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">Search</button>
+    {% if roster_q %}
+    <a href="{% url 'dashboard:governance_queue' %}" class="text-sm text-emerald-700 underline hover:no-underline">Clear search</a>
+    {% endif %}
+  </form>
+
+  {% if roster_search_hits %}
+  <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <table class="min-w-full text-left text-sm">
+      <thead class="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="p-3">Name</th>
+          <th class="p-3">Username</th>
+          <th class="p-3">Persona(s)</th>
+          <th class="p-3">Org</th>
+          <th class="p-3">Availability</th>
+          <th class="p-3">Load</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in roster_search_hits %}
+        <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+          <td class="p-3 font-medium text-slate-800">{{ row.user.get_full_name|default:"—" }}</td>
+          <td class="p-3 text-slate-600">{{ row.user.username }}</td>
+          <td class="p-3">
+            {% if row.needs_persona_assignment %}
+            <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-950">Persona not identified</span>
+            {% else %}
+            <span class="rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-900">{{ row.role_label }}</span>
+            {% endif %}
+          </td>
+          <td class="p-3 text-slate-600">{% if row.org %}{{ row.org }}{% else %}—{% endif %}</td>
+          <td class="p-3">
+            {% if row.availability == 'available' %}
+            <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900">Likely available</span>
+            {% elif row.availability == 'busy' %}
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-950">Higher load</span>
+            {% else %}
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">—</span>
+            {% endif %}
+          </td>
+          <td class="p-3 text-xs text-slate-500">{{ row.hint }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-2 text-xs text-slate-500">Showing up to 80 matches. Refine the query or use persona cards below.</p>
+  {% elif roster_q %}
+  <p class="text-sm text-slate-500">No active users match “{{ roster_q }}”.</p>
+  {% endif %}
+</section>
+
+<section class="mb-10">
+  <h2 class="mb-4 text-lg font-semibold text-slate-900">By persona</h2>
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in persona_cards %}
+    <article class="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-2 flex items-start justify-between gap-2">
+        <h3 class="font-semibold text-slate-900">{{ card.label }}</h3>
+        <span class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{{ card.count }}</span>
+      </div>
+      <ul class="max-h-56 flex-1 space-y-2 overflow-y-auto text-sm">
+        {% for row in card.rows %}
+        <li class="rounded border border-slate-100 bg-slate-50/90 px-2 py-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-1">
+            <span class="font-medium text-slate-800">{{ row.user.get_full_name|default:row.user.username }}</span>
+            {% if row.availability == 'available' %}
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Open</span>
+            {% elif row.availability == 'busy' %}
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-amber-800">Busy</span>
+            {% endif %}
+          </div>
+          <div class="text-xs text-slate-500">@{{ row.user.username }}{% if row.persona_labels %} · <span class="text-indigo-800">{{ row.persona_labels }}</span>{% endif %}{% if row.hint %} · {{ row.hint }}{% endif %}</div>
+        </li>
+        {% empty %}
+        <li class="text-xs text-slate-400">No one in this persona{% if roster_q %} matching search{% endif %}.</li>
+        {% endfor %}
+      </ul>
+      {% if card.truncated %}
+      <p class="mt-2 text-[10px] text-slate-400">First 40 shown — narrow with search.</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mb-10 rounded-xl border border-violet-200 bg-violet-50/40 p-5">
+  <h2 class="mb-2 text-lg font-semibold text-violet-950">Milestone funding releases</h2>
+  <p class="mb-4 text-sm text-violet-950/80">
+    Completed milestones with a <strong>funding tranche %</strong> and uploaded <strong>proof</strong> await your release (or rejection) before the tranche counts toward funded %.
+  </p>
+  <ul class="space-y-4 text-sm">
+    {% for m in milestones_funding_gov %}
+    <li class="rounded-lg border border-violet-200 bg-white p-4 shadow-sm">
+      <div class="font-medium text-slate-900">
+        <a class="text-emerald-700 hover:underline" href="{{ m.project.get_absolute_url }}">{{ m.project.title }}</a>
+        <span class="text-slate-500">· Milestone {{ m.sequence }}: {{ m.title|truncatewords:12 }}</span>
+      </div>
+      <p class="mt-1 text-xs text-slate-600">Tranche: <strong>{{ m.next_tranche_budget_percent }}%</strong> of project budget ·
+        <a class="text-emerald-700 underline" href="{% url 'projects:milestone_proof_download' m.pk %}">Download proof</a>
+      </p>
+      <form method="post" action="{% url 'projects:milestone_tranche_release' m.pk %}" class="mt-3 flex flex-wrap gap-2">
+        {% csrf_token %}
+        <button type="submit" name="action" value="release" class="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-800">Release tranche</button>
+        <button type="submit" name="action" value="reject" class="rounded border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-50">Reject</button>
+      </form>
+    </li>
+    {% empty %}
+    <li class="text-sm text-slate-500">No milestone funding releases awaiting action.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<h2 class="mb-3 text-lg font-semibold text-slate-900">Pending approvals</h2>
+<p class="mb-4 text-sm text-slate-600">
+  Open each item and use status actions on the detail page (e.g. approve a need to <em>matched</em>, or a project to <em>approved</em>).
+</p>
+<div class="grid gap-8 md:grid-cols-3">
+  <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <h3 class="mb-2 font-semibold text-slate-800">Needs</h3>
+    <ul class="space-y-2 text-sm">
+      {% for n in needs_gov %}
+        <li>
+          <a class="font-medium text-emerald-700 hover:underline" href="{{ n.get_absolute_url }}">{{ n.title }}</a>
+          <p class="text-xs text-slate-500">{{ n.target_amount }} {{ n.target_currency }}</p>
+          <p class="text-xs text-slate-500">Owners: {% for o in n.owners.all %}{{ o.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</p>
+        </li>
+      {% empty %}
+        <li class="text-slate-500">None pending</li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <h3 class="mb-2 font-semibold text-slate-800">Projects</h3>
+    <ul class="space-y-2 text-sm">
+      {% for p in projects_gov %}
+        <li>
+          <a class="font-medium text-emerald-700 hover:underline" href="{{ p.get_absolute_url }}">{{ p.title }}</a>
+          <p class="text-xs text-slate-500">{{ p.budget }} {{ p.budget_currency }}</p>
+          <p class="text-xs text-slate-500">Owners: {% for o in p.owners.all %}{{ o.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</p>
+        </li>
+      {% empty %}
+        <li class="text-slate-500">None pending</li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <h3 class="mb-2 font-semibold text-slate-800">Expenses</h3>
+    <ul class="space-y-3 text-sm">
+      {% for e in expenses_gov %}
+        <li>
+          <span class="font-medium text-slate-800">{{ e.project.title }}</span>
+          <p class="text-xs text-slate-500">{{ e.amount }} {{ e.currency }} · requested by {{ e.requested_by.username }}</p>
+          <p class="text-xs text-slate-500">Owners: {% for o in e.owners.all %}{{ o.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</p>
+          <a class="text-xs text-emerald-700 hover:underline" href="{% url 'projects:detail' e.project.pk %}">Open project →</a>
+        </li>
+      {% empty %}
+        <li class="text-slate-500">None pending</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Contributions{% endblock %}
+{% block content %}
+<div class="mb-6 flex justify-between">
+  <h1 class="text-2xl font-bold">Contributions</h1>
+  {% load persona_tags %}
+{% if user|has_any_persona:"foundation_admin,finance_controller" %}
+  <a class="rounded bg-emerald-700 px-4 py-2 text-sm text-white" href="{% url 'funding:contribution_create' %}">Record</a>
+  {% endif %}
+</div>
+<table class="w-full text-left text-sm">
+  <thead class="border-b bg-slate-50">
+    <tr>
+      <th class="p-2">Donor</th>
+      <th class="p-2">Amount</th>
+      <th class="p-2">USD</th>
+      <th class="p-2">Status</th>
+      <th class="p-2">Pledge</th>
+      <th class="p-2">Received</th>
+      <th class="p-2">Receipt</th>
+      <th class="p-2">Comm.</th>
+      <th class="p-2">Vol. lead</th>
+      <th class="p-2">Project</th>
+      <th class="p-2">Event</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in contributions %}
+    <tr class="border-b">
+      <td class="p-2">{{ c.donor.username }}</td>
+      <td class="p-2">{{ c.amount }} {{ c.currency }}</td>
+      <td class="p-2">{{ c.amount_usd }}</td>
+      <td class="p-2">{{ c.get_status_display }}</td>
+      <td class="p-2">{% if c.pledge_date %}{{ c.pledge_date }}{% else %}—{% endif %}</td>
+      <td class="p-2">{% if c.received_date %}{{ c.received_date }}{% else %}—{% endif %}</td>
+      <td class="p-2">{% if c.receipt_sent %}Y{% if c.receipt_sent_date %} ({{ c.receipt_sent_date }}){% endif %}{% else %}N{% endif %}</td>
+      <td class="p-2">{% if c.communication_capture_url %}<a class="text-emerald-700 underline" href="{{ c.communication_capture_url }}" target="_blank" rel="noopener">link</a>{% else %}—{% endif %}</td>
+      <td class="p-2">{% if c.volunteer_lead %}{{ c.volunteer_lead.username }}{% else %}—{% endif %}</td>
+      <td class="p-2">{% if c.project %}<a class="text-emerald-700" href="{{ c.project.get_absolute_url }}">{{ c.project.title }}</a>{% else %}—{% endif %}</td>
+      <td class="p-2">{% if c.event %}<a class="text-emerald-700" href="{{ c.event.get_absolute_url }}">{{ c.event.title|truncatewords:5 }}</a>{% else %}—{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="11" class="p-4 text-slate-500">None</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

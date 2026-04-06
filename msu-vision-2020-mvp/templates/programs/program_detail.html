@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ program.title }}{% endblock %}
+{% block content %}
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <a class="text-sm text-slate-500 hover:text-emerald-700" href="{% url 'programs:list' %}">← Programs</a>
+  {% if can_edit %}
+  <a class="text-sm text-emerald-700 hover:underline" href="{% url 'programs:update' program.slug %}">Edit program</a>
+  {% endif %}
+</div>
+<h1 class="text-2xl font-bold">{{ program.title }}</h1>
+<p class="mt-1 text-sm text-slate-500">{{ program.get_status_display }}{% if program.slug %} · /programs/{{ program.slug }}/{% endif %}</p>
+{% if program.description %}
+<p class="mt-3 text-slate-700">{{ program.description|linebreaksbr }}</p>
+{% endif %}
+<div class="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
+  {% if program.fund_pool %}
+  <span>Fund pool: <strong>{{ program.fund_pool.name }}</strong></span>
+  {% endif %}
+  {% if program.start_date or program.end_date %}
+  <span>{% if program.start_date %}{{ program.start_date|date:"M j, Y" }}{% else %}?{% endif %} — {% if program.end_date %}{{ program.end_date|date:"M j, Y" }}{% else %}?{% endif %}</span>
+  {% endif %}
+</div>
+
+{% if linked_projects %}
+<section class="mt-8 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+  <h2 class="mb-2 font-semibold text-slate-800">Linked projects</h2>
+  <p class="mb-3 text-xs text-slate-500">Short-lived delivery projects that reference this program (optional).</p>
+  <ul class="space-y-2 text-sm">
+    {% for pr in linked_projects %}
+    <li><a class="text-emerald-700 hover:underline" href="{{ pr.get_absolute_url }}">{{ pr.title }}</a>
+      <span class="text-slate-400">· {{ pr.get_status_display }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if can_edit and not stages %}
+<section class="mt-8 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm">
+  <p class="font-medium text-amber-950">No stages yet.</p>
+  <form method="post" class="mt-2 inline">
+    {% csrf_token %}
+    <button type="submit" name="apply_incubation" value="1" class="rounded bg-amber-800 px-3 py-1.5 text-white hover:bg-amber-900">Apply incubation sample template</button>
+  </form>
+  <span class="mx-2 text-slate-400">or</span>
+  <a class="text-emerald-800 hover:underline" href="{% url 'programs:stage_create' program.slug %}">Add a stage manually</a>
+</section>
+{% endif %}
+
+{% if can_edit %}
+<section class="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+  <h2 class="mb-2 font-semibold text-slate-800">Upload attachment to a stage</h2>
+  <form method="post" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+    {% csrf_token %}
+    <input type="hidden" name="upload_attachment" value="1" />
+    <div>
+      <label class="block text-xs font-medium text-slate-600" for="{{ attachment_form.stage.id_for_label }}">Stage</label>
+      {{ attachment_form.stage }}
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600" for="{{ attachment_form.file.id_for_label }}">File</label>
+      {{ attachment_form.file }}
+    </div>
+    <div class="min-w-[12rem] flex-1">
+      <label class="block text-xs font-medium text-slate-600" for="{{ attachment_form.notes.id_for_label }}">Notes (optional)</label>
+      {{ attachment_form.notes }}
+    </div>
+    <button type="submit" class="rounded bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-900">Upload</button>
+  </form>
+</section>
+<p class="mt-3"><a class="text-sm text-emerald-700 hover:underline" href="{% url 'programs:stage_create' program.slug %}">+ Add stage</a></p>
+{% endif %}
+
+{% for stage in stages %}
+<section class="mt-8 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+  <div class="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-2">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">{{ stage.name }}</h2>
+      <p class="text-xs text-slate-500">Order {{ stage.sequence }} · {{ stage.get_status_display }}</p>
+    </div>
+    {% if can_edit %}
+    <div class="flex flex-wrap gap-2 text-sm">
+      <a class="text-emerald-700 hover:underline" href="{% url 'programs:stage_update' stage.pk %}">Edit stage</a>
+      <a class="text-emerald-700 hover:underline" href="{% url 'programs:milestone_create' stage.pk %}">+ Milestone</a>
+      <form method="post" action="{% url 'programs:stage_delete' stage.pk %}" class="inline" onsubmit="return confirm('Delete this stage and its milestones and attachments?');">
+        {% csrf_token %}
+        <button type="submit" class="text-red-600 hover:underline">Delete</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% if stage.description %}
+  <p class="mt-2 text-sm text-slate-600">{{ stage.description|linebreaksbr }}</p>
+  {% endif %}
+  {% if stage.criteria %}
+  <div class="mt-2 rounded bg-slate-50 p-2 text-sm text-slate-700">
+    <span class="font-medium text-slate-800">Criteria:</span> {{ stage.criteria|linebreaksbr }}
+  </div>
+  {% endif %}
+
+  {% if stage.attachments.exists %}
+  <div class="mt-3">
+    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Attachments</h3>
+    <ul class="mt-1 space-y-1 text-sm">
+      {% for a in stage.attachments.all %}
+      <li>
+        <a class="text-emerald-700 hover:underline" href="{% url 'programs:attachment_download' a.pk %}">{{ a.original_filename }}</a>
+        <span class="text-slate-400">· {{ a.uploaded_by.username }} · {{ a.created_at|date:"M j, Y" }}</span>
+        {% if a.notes %}<span class="text-slate-500">— {{ a.notes }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="mt-4">
+    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Milestones</h3>
+    <ul class="mt-2 space-y-2">
+      {% for m in stage.milestones.all %}
+      <li class="flex flex-wrap items-start justify-between gap-2 rounded border border-slate-100 bg-slate-50/80 p-2 text-sm">
+        <div>
+          <span class="font-medium text-slate-800">{{ m.name }}</span>
+          {% if m.completed_at %}
+          <span class="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-800">Done</span>
+          {% endif %}
+          {% if m.due_date %}<span class="ml-2 text-xs text-slate-500">Due {{ m.due_date|date:"M j, Y" }}</span>{% endif %}
+          {% if m.criteria %}
+          <p class="mt-1 text-xs text-slate-600">{{ m.criteria|linebreaksbr }}</p>
+          {% endif %}
+          <p class="mt-1.5 text-xs text-slate-700">
+            <span class="font-semibold text-slate-800">Owner:</span>
+            {% if m.owner %}
+              {{ m.owner.get_full_name|default:m.owner.username }} <span class="text-slate-500">(@{{ m.owner.username }})</span>
+            {% else %}
+              <span class="text-slate-400">Unassigned</span>
+            {% endif %}
+          </p>
+          {% if m.completed_at %}
+          <p class="text-xs text-slate-600">
+            <span class="font-semibold">Completed:</span> {{ m.completed_at|date:"M j, Y H:i" }}
+            {% if m.completed_by %} by {{ m.completed_by.get_full_name|default:m.completed_by.username }} (@{{ m.completed_by.username }}){% endif %}
+          </p>
+          {% endif %}
+        </div>
+        {% if can_edit %}
+        <div class="flex flex-wrap gap-2 text-xs">
+          <form method="post" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="milestone_id" value="{{ m.pk }}" />
+            <button type="submit" name="toggle_milestone" value="1" class="text-emerald-700 hover:underline">{% if m.completed_at %}Mark not done{% else %}Mark done{% endif %}</button>
+          </form>
+          <a class="text-slate-600 hover:underline" href="{% url 'programs:milestone_update' m.pk %}">Edit</a>
+          <form method="post" action="{% url 'programs:milestone_delete' m.pk %}" class="inline" onsubmit="return confirm('Delete this milestone?');">
+            {% csrf_token %}
+            <button type="submit" class="text-red-600 hover:underline">Delete</button>
+          </form>
+        </div>
+        {% endif %}
+      </li>
+      {% empty %}
+      <li class="text-sm text-slate-400">No milestones.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% empty %}
+{% if not can_edit %}
+<p class="mt-8 text-slate-500">No stages defined for this program.</p>
+{% endif %}
+{% endfor %}
+{% endblock %}

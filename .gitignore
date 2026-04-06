@@ -10,6 +10,7 @@ kpi_dashboard.db
 *_CREDENTIALS*.txt
 .env
 .env.*
+!msu-vision-2020-mvp/.env.example
 *.pem
 __pycache__/
 *.pyc

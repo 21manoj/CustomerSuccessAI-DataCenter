@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}New expense{% endblock %}
+{% block content %}
+<h1 class="mb-6 text-2xl font-bold">New expense</h1>
+<form method="post" class="max-w-xl space-y-4 rounded border bg-white p-6 shadow-sm">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label class="block text-sm font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {% render_field field class="mt-1 block w-full rounded border px-3 py-2" %}
+      {% if field.errors %}<p class="text-sm text-red-600">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <button type="submit" class="rounded bg-emerald-700 px-4 py-2 text-white">Submit</button>
+</form>
+{% endblock %}

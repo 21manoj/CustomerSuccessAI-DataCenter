@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ need.title }}{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <a class="text-sm text-slate-500 hover:text-emerald-700" href="{% url 'needs:list' %}">← Needs</a>
+</div>
+<h1 class="text-2xl font-bold">{{ need.title }}</h1>
+<p class="mt-2 text-slate-600">{{ need.description|linebreaksbr }}</p>
+<dl class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+  <div><dt class="text-slate-500">Status</dt><dd class="font-medium">{{ need.get_status_display }}</dd></div>
+  <div><dt class="text-slate-500">Target</dt><dd>{{ need.target_amount }} {{ need.target_currency }}{% if need.requires_governance_approval %} <span class="text-amber-700">(governance)</span>{% endif %}</dd></div>
+  <div><dt class="text-slate-500">Funding model</dt><dd>{{ need.get_funding_model_display }}</dd></div>
+  <div><dt class="text-slate-500">Jurisdiction</dt><dd>{{ need.get_jurisdiction_display }}</dd></div>
+  <div class="sm:col-span-2"><dt class="text-slate-500">Owners</dt><dd>{% for o in need.owners.all %}{{ o.get_full_name|default:o.username }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-amber-700">None — edit the need to assign owners</span>{% endfor %}</dd></div>
+</dl>
+{% if need.matched_donors.exists %}
+<p class="mt-3 text-sm"><strong>Matched donors:</strong> {% for d in need.matched_donors.all %}{{ d.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+{% if need.attachments.exists %}
+<section class="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+  <h2 class="mb-2 font-semibold text-slate-800">Attachments</h2>
+  <ul class="space-y-2 text-sm">
+    {% for a in need.attachments.all %}
+      <li>
+        <a class="text-emerald-700 hover:underline" href="{% url 'needs:attachment_download' need.pk a.pk %}">{{ a.original_filename }}</a>
+        <span class="text-slate-400">· {{ a.uploaded_by.username }} · {{ a.created_at|date:"M j, Y" }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+<div class="mt-6 flex flex-wrap gap-3">
+  {% if can_edit %}
+    <a class="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50" href="{% url 'needs:edit' need.pk %}">Edit</a>
+  {% endif %}
+  {% if can_match %}
+  <a class="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50" href="{% url 'needs:match' need.pk %}">Match donors</a>
+  {% endif %}
+  {% if need.status == 'matched' and can_create_project %}
+    <a class="rounded bg-emerald-700 px-3 py-1.5 text-sm text-white hover:bg-emerald-800" href="{% url 'projects:create' need.pk %}">Create project</a>
+  {% endif %}
+</div>
+{% if can_transition and allowed_next %}
+<section class="mt-8 rounded-lg border border-slate-200 bg-white p-4">
+  <h2 class="mb-3 font-semibold">Change status</h2>
+  <form method="post" action="{% url 'needs:transition' need.pk %}" class="flex flex-wrap gap-2">
+    {% csrf_token %}
+    {% for s in allowed_next %}
+      <button type="submit" name="next_status" value="{{ s }}" class="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-900">{{ s }}</button>
+    {% endfor %}
+  </form>
+</section>
+{% endif %}
+{% endblock %}

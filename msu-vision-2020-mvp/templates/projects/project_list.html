@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Projects{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl font-bold">Projects</h1>
+  {% if can_add_project %}
+  <a class="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800" href="{% url 'needs:list' %}" title="Open a matched need, then use Create project">Add project</a>
+  {% endif %}
+</div>
+{% if can_add_project %}
+<p class="mb-4 text-sm text-slate-600"><strong>Add project</strong> opens the needs list — open a <strong>matched</strong> need, then <strong>Create project</strong>.</p>
+{% endif %}
+<ul class="space-y-3">
+  {% for p in projects %}
+    <li class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <a class="font-medium text-emerald-800 hover:underline" href="{{ p.get_absolute_url }}">{{ p.title }}</a>
+      <span class="ml-2 text-sm text-slate-500">{{ p.get_status_display }}</span>
+      {% if p.lead %}<span class="text-sm text-slate-500">· Project lead: {{ p.lead.get_full_name|default:p.lead.username }}</span>{% endif %}
+    </li>
+  {% empty %}
+    <li class="text-slate-500">No projects.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

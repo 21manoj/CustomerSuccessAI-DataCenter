@@ -32,6 +32,26 @@ services:
       retries: 5
       start_period: 15s
 
+  msu-vision:
+    image: kpi-dashboard-msu-vision:latest
+    container_name: msu-vision-mvp
+    environment:
+      PORT: "8000"
+      DEBUG: "False"
+      SECRET_KEY: ${MSU_VISION_SECRET_KEY}
+      DATABASE_URL: sqlite:////data/db.sqlite3
+      FORCE_SCRIPT_NAME: /msu2020
+      ALLOWED_HOSTS: ${MSU_VISION_ALLOWED_HOSTS:-d2oqfugrb2ltg9.cloudfront.net,localhost,127.0.0.1}
+      CSRF_TRUSTED_ORIGINS: ${MSU_VISION_CSRF_TRUSTED_ORIGINS:-https://d2oqfugrb2ltg9.cloudfront.net}
+      SHOW_DEMO_LOGIN_HELP: ${MSU_VISION_SHOW_DEMO_LOGIN_HELP:-False}
+      GOOGLE_CLIENT_ID: ${MSU_VISION_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${MSU_VISION_GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - msu_vision_data:/data
+    networks:
+      - cspulse-net
+    restart: always
+
   cs-pulse:
     image: kpi-dashboard-cs-pulse:latest
     container_name: cspulse-platform
@@ -60,6 +80,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      msu-vision:
+        condition: service_started
     networks:
       - cspulse-net
     restart: always
@@ -84,3 +106,4 @@ volumes:
   uploads:
   verticals:
   instance:
+  msu_vision_data:
