@@ -89,8 +89,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      msu-vision:
-        condition: service_started
+    # msu-vision is optional at runtime; nginx resolves it lazily (see nginx-cspulse.conf).
     networks:
       - cspulse-net
     restart: always
