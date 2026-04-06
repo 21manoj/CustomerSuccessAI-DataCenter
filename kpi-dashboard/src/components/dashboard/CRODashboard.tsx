@@ -100,6 +100,20 @@ interface RevenueTimeline {
   events: TimelineEvent[];
 }
 
+interface NRRTrajectoryPoint {
+  nrr_pct: number;
+  crossings: Array<{ account_name: string; crossing: string }>;
+}
+
+interface NRRWaterfallAccount {
+  account_name: string;
+  arr: number;
+  health_now: number;
+  churn_prob_pct: number;
+  expected_loss: number;
+  attributed_save: number;
+}
+
 interface CRODashboardData {
   revenue_cards: RevenueCard[];
   metrics: MetricCard[];
@@ -111,6 +125,21 @@ interface CRODashboardData {
     impact: number;
     scaling: ROIScalingPoint[];
   };
+  // Dual NRR
+  nrr_current: number;
+  nrr_with_intervention: number;
+  nrr_arr_protected: number;
+  nrr_trajectory: Record<string, NRRTrajectoryPoint>;
+  nrr_waterfall: {
+    total_exposure: number;
+    expected_loss: number;
+    gross_saved: number;
+    attributed_save: number;
+    intervention_cost: number;
+    roi_x: number;
+    accounts: NRRWaterfallAccount[];
+  };
+  renewals_at_risk: Array<{ account_name: string; arr: number; days_until: number; health_score: number }>;
   period: string;
   last_updated: string;
 }
@@ -173,8 +202,7 @@ const NAV_ITEMS = {
   ],
   operations: [
     { id: 'accounts' as ViewId, label: 'Accounts', badge: null, icon: <Users className="w-4 h-4" /> },
-    { id: 'playbooks' as ViewId, label: 'Playbooks', badge: null, icon: <Target className="w-4 h-4" /> },
-    { id: 'approvals' as ViewId, label: 'Approvals', badge: null, icon: <Eye className="w-4 h-4" /> },
+    // Playbooks + Approvals hidden until Sprint 1-2 ships execution UI
   ],
 };
 
@@ -670,7 +698,14 @@ const CRODashboard: React.FC = () => {
                 { accounts: 200, label: '200 accts', roi: Math.round((json.playbook_roi_pct || 0) * 3.79) },
               ],
             },
-            period: json.quarter_label || 'Q1 2026',
+            // Dual NRR
+            nrr_current: json.nrr_current || json.nrr_projection || 100,
+            nrr_with_intervention: json.nrr_with_intervention || json.nrr_projection || 100,
+            nrr_arr_protected: json.nrr_arr_protected || 0,
+            nrr_trajectory: json.nrr_trajectory || {},
+            nrr_waterfall: json.nrr_waterfall_summary || { total_exposure: 0, expected_loss: 0, gross_saved: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0, accounts: [] },
+            renewals_at_risk: json.renewals_at_risk || [],
+            period: json.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
             last_updated: json.last_updated || new Date().toISOString(),
           };
           setData(transformed);
@@ -888,14 +923,83 @@ const CRODashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* Row 2: Metric cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            {d.metrics.map((m, i) => (
+          {/* Row 2: Metric cards (first 3) + Dual NRR card */}
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            {d.metrics.slice(0, 3).map((m, i) => (
               <MetricCardComponent key={i} metric={m} />
             ))}
+            {/* Dual NRR Card — replaces single NRR projection */}
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Net Revenue Retention</p>
+              <div className="flex items-end gap-3 mb-2">
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Current</p>
+                  <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
+                </div>
+                <div className="text-gray-600 text-lg pb-1">&rarr;</div>
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
+                  <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+                </div>
+              </div>
+              {d.nrr_arr_protected > 0 && (
+                <p className="text-[10px] text-green-400/80">
+                  {formatCompact(d.nrr_arr_protected)} ARR protectable
+                </p>
+              )}
+              <p className="text-[9px] text-gray-600 mt-1">Current: health-weighted baseline. Projected: if playbooks run on at-risk accounts.</p>
+            </div>
           </div>
 
-          {/* Story Arcs */}
+          {/* NRR Trajectory + Revenue Waterfall */}
+          {(Object.keys(d.nrr_trajectory).length > 0 || d.nrr_waterfall.accounts.length > 0) && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden mb-6">
+              <div className="px-5 py-3 border-b border-gray-700/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">NRR Forecast &middot; Revenue Waterfall</h3>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 divide-x divide-gray-700/50">
+                {/* Left: T+30/60/90 trajectory */}
+                <div className="p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-3">Trajectory</p>
+                  <div className="flex items-end gap-6">
+                    {['t30', 't60', 't90'].map((k, i) => {
+                      const pt = d.nrr_trajectory[k];
+                      if (!pt) return null;
+                      const color = pt.nrr_pct >= 100 ? 'text-green-400' : pt.nrr_pct >= 95 ? 'text-yellow-400' : 'text-red-400';
+                      return (
+                        <div key={k} className="text-center">
+                          <p className={`text-xl font-bold ${color}`}>{pt.nrr_pct}%</p>
+                          <p className="text-[9px] text-gray-500">T+{(i + 1) * 30}d</p>
+                          {pt.crossings.length > 0 && (
+                            <p className="text-[8px] text-orange-400 mt-1">{pt.crossings.length} crossing{pt.crossings.length > 1 ? 's' : ''}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Right: Waterfall summary */}
+                <div className="p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-3">Revenue Impact</p>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between"><span className="text-gray-400">ARR Exposed</span><span className="text-red-400 font-semibold">{formatCompact(d.nrr_waterfall.total_exposure)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Expected Loss</span><span className="text-red-400">{formatCompact(d.nrr_waterfall.expected_loss)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Protectable (attributed)</span><span className="text-green-400 font-semibold">{formatCompact(d.nrr_waterfall.attributed_save)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Intervention Cost</span><span className="text-gray-300">{formatCompact(d.nrr_waterfall.intervention_cost)}</span></div>
+                    {d.nrr_waterfall.roi_x > 0 && (
+                      <div className="flex justify-between border-t border-gray-700/50 pt-1.5"><span className="text-gray-400">Projected ROI</span><span className="text-cyan-400 font-bold">{d.nrr_waterfall.roi_x}x</span></div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Story Arcs — click navigates to filtered account list */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[10px] font-semibold tracking-[0.2em] text-gray-500 uppercase">
@@ -913,7 +1017,10 @@ const CRODashboard: React.FC = () => {
                 <StoryArcRow
                   key={arc.id}
                   arc={arc}
-                  onClick={() => handleViewChange('context-graph')}
+                  onClick={() => {
+                    setSearchParams({ view: 'accounts', arc: arc.id });
+                    setActiveView('accounts');
+                  }}
                 />
               ))}
             </div>
