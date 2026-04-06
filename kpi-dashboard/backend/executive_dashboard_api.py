@@ -1105,6 +1105,45 @@ def cfo_dashboard():
         # Payback months
         payback_months = round((effective_investment / roi_impact) * 12) if roi_impact > 0 else 0
 
+        # ── Cost of Inaction: what we lose if we don't act on at-risk/critical ──
+        account_ids = [a.account_id for a in accounts]
+        latest_scores = _get_latest_health_scores(customer_id, account_ids)
+        at_risk_accounts_list = []
+        total_arr_at_risk = 0
+        total_churn_exposure = 0
+        for acct in accounts:
+            h = _safe_float(getattr(acct, 'health_score', None) or latest_scores.get(acct.account_id, 0))
+            arr = _safe_float(acct.revenue)
+            if h < ht.healthy_min() and arr > 0:
+                churn_pct = max(5, 50 - h * 0.5)
+                annual_loss = arr * churn_pct / 100
+                total_arr_at_risk += arr
+                total_churn_exposure += annual_loss
+                at_risk_accounts_list.append({
+                    'account_name': acct.account_name,
+                    'arr': round(arr, 0),
+                    'health': round(h, 1),
+                    'churn_pct': round(churn_pct, 1),
+                    'annual_loss': round(annual_loss, 0),
+                })
+        at_risk_accounts_list.sort(key=lambda x: x['annual_loss'], reverse=True)
+
+        # ── NRR waterfall (same model as CRO) ──
+        ATTR_FACTOR = 0.5
+        wf_attributed = 0
+        wf_cost = 0
+        wf_expected_loss = 0
+        for entry in at_risk_accounts_list:
+            projected_churn = max(entry['churn_pct'] - 10, 3)  # assume playbook reduces churn by ~10pp
+            gross_saved = entry['arr'] * (entry['churn_pct'] - projected_churn) / 100
+            wf_attributed += gross_saved * ATTR_FACTOR
+            wf_cost += entry['arr'] * 0.003
+            wf_expected_loss += entry['annual_loss']
+
+        nrr_with_intervention = nrr_projection
+        if total_arr > 0 and wf_attributed > 0:
+            nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
+
         return jsonify({
             'status': 'success',
             'total_arr': round(total_arr, 2),
@@ -1114,6 +1153,23 @@ def cfo_dashboard():
             'revenue_protected': revenue_data['revenue_protected'],
             'revenue_risk_type': 'confirmed',
             'revenue_risk_label': 'Confirmed Risk (Context Graph)',
+            # Cost of Inaction
+            'cost_of_inaction': {
+                'arr_at_risk': round(total_arr_at_risk, 0),
+                'annual_churn_exposure': round(total_churn_exposure, 0),
+                'accounts': at_risk_accounts_list[:5],
+                'account_count': len(at_risk_accounts_list),
+            },
+            # NRR/GRR dual
+            'nrr_current': nrr_projection,
+            'nrr_with_intervention': nrr_with_intervention,
+            'nrr_arr_protectable': round(wf_attributed, 0),
+            'nrr_waterfall': {
+                'expected_loss': round(wf_expected_loss, 0),
+                'attributed_save': round(wf_attributed, 0),
+                'intervention_cost': round(wf_cost, 0),
+                'roi_x': round(wf_attributed / wf_cost, 1) if wf_cost > 0 else 0,
+            },
             'cs_investment': cs_investment,
             'estimated_investment': estimated_investment,
             'is_estimated': is_estimated,

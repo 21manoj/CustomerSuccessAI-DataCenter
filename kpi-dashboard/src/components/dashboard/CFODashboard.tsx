@@ -93,6 +93,13 @@ interface AccountROI {
   playbook_runs: number;
 }
 
+interface CostOfInaction {
+  arr_at_risk: number;
+  annual_churn_exposure: number;
+  account_count: number;
+  accounts: Array<{ account_name: string; arr: number; health: number; churn_pct: number; annual_loss: number }>;
+}
+
 interface CFODashboardData {
   summary_cards: FinancialSummaryCard[];
   power_of_1: PowerOf1Row[];
@@ -106,6 +113,13 @@ interface CFODashboardData {
   cost_per_protected_dollar: number;
   financial_ratios: FinancialRatio[];
   accounts: AccountROI[];
+  // NRR/GRR + Cost of Inaction
+  nrr_current: number;
+  nrr_with_intervention: number;
+  grr: number;
+  nrr_arr_protectable: number;
+  cost_of_inaction: CostOfInaction;
+  nrr_waterfall: { expected_loss: number; attributed_save: number; intervention_cost: number; roi_x: number };
   period: string;
   last_updated: string;
 }
@@ -749,7 +763,14 @@ const CFODashboard: React.FC = () => {
               source: a.source || 'benchmark',
               playbook_runs: a.playbook_runs || 0,
             })),
-            period: json.quarter_label || 'Q1 2026',
+            // NRR/GRR + Cost of Inaction
+            nrr_current: json.nrr_current || nrr,
+            nrr_with_intervention: json.nrr_with_intervention || nrr,
+            grr: grr,
+            nrr_arr_protectable: json.nrr_arr_protectable || 0,
+            cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
+            nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
+            period: json.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
             last_updated: json.last_updated || new Date().toISOString(),
           };
           setData(transformed);
@@ -857,6 +878,70 @@ const CFODashboard: React.FC = () => {
             ))}
           </div>
 
+          {/* Row 1b: NRR/GRR + Cost of Inaction */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Dual NRR/GRR */}
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Net Revenue Retention</h3>
+              </div>
+              <div className="flex items-end gap-6 mb-3">
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Current NRR</p>
+                  <p className={`text-3xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
+                </div>
+                <div className="text-gray-600 text-xl pb-1">&rarr;</div>
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
+                  <p className="text-3xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+                </div>
+                <div className="border-l border-gray-700/50 pl-6">
+                  <p className="text-[9px] text-gray-500 mb-0.5">GRR</p>
+                  <p className="text-3xl font-bold text-gray-300">{d.grr}%</p>
+                </div>
+              </div>
+              {d.nrr_arr_protectable > 0 && (
+                <p className="text-[10px] text-green-400/80">{formatCompact(d.nrr_arr_protectable)} ARR protectable with intervention</p>
+              )}
+              <p className="text-[9px] text-gray-600 mt-1">Current: health-weighted baseline. Projected: if playbooks run on at-risk accounts.</p>
+            </div>
+
+            {/* Cost of Inaction */}
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-red-400" />
+                <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Cost of Inaction</h3>
+              </div>
+              <div className="flex items-end gap-6 mb-4">
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">ARR at Risk</p>
+                  <p className="text-2xl font-bold text-red-400">{formatCompact(d.cost_of_inaction.arr_at_risk)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Annual Churn Exposure</p>
+                  <p className="text-2xl font-bold text-orange-400">{formatCompact(d.cost_of_inaction.annual_churn_exposure)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Accounts</p>
+                  <p className="text-2xl font-bold text-gray-300">{d.cost_of_inaction.account_count}</p>
+                </div>
+              </div>
+              {d.cost_of_inaction.accounts.length > 0 && (
+                <div className="space-y-1.5">
+                  {d.cost_of_inaction.accounts.slice(0, 3).map((a, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400 truncate max-w-[140px]">{a.account_name}</span>
+                      <span className="text-gray-500">H:{a.health}</span>
+                      <span className="text-red-400 font-semibold">{formatCompact(a.annual_loss)}/yr</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[9px] text-gray-600 mt-2">Projected annual revenue loss if no intervention on at-risk/critical accounts.</p>
+            </div>
+          </div>
+
           {/* Row 2: Power of 1 Metrics Table */}
           <div className="mb-6">
             <PowerOf1Table rows={d.power_of_1} total={d.power_of_1_total} />
@@ -931,6 +1016,26 @@ const CFODashboard: React.FC = () => {
           timeSaved={d.time_saved_hours}
           costPerProtected={d.cost_per_protected_dollar}
         />
+
+        {/* Revenue Waterfall */}
+        {d.nrr_waterfall.expected_loss > 0 && (
+          <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
+            <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-3">
+              Revenue Waterfall
+            </h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between"><span className="text-gray-400">Expected Loss</span><span className="text-red-400 font-semibold">{formatCompact(d.nrr_waterfall.expected_loss)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Protectable</span><span className="text-green-400 font-semibold">{formatCompact(d.nrr_waterfall.attributed_save)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Cost to Intervene</span><span className="text-gray-300">{formatCompact(d.nrr_waterfall.intervention_cost)}</span></div>
+              {d.nrr_waterfall.roi_x > 0 && (
+                <div className="flex justify-between border-t border-gray-700/50 pt-2">
+                  <span className="text-gray-400">Intervention ROI</span>
+                  <span className="text-cyan-400 font-bold">{d.nrr_waterfall.roi_x}x</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Quick Financial Ratios */}
         <FinancialRatiosWidget ratios={d.financial_ratios} />
