@@ -196,20 +196,19 @@ def register_customer():
                 )
                 db.session.add(trigger)
         
-        # Generate API key for MCP access (same as create_customer MCP tool)
-        import uuid as _uuid
-        import hashlib as _hashlib
-        raw_api_key = 'csp_' + _uuid.uuid4().hex
-        key_prefix = raw_api_key[:12]
-        key_hash = _hashlib.sha256(raw_api_key.encode()).hexdigest()
+        # Generate API key for MCP access using the standard api_key_service
+        raw_api_key = None
         try:
-            db.session.execute(db.text(
-                "INSERT INTO customer_api_keys (customer_id, key_prefix, key_hash, name, is_active, created_at) "
-                "VALUES (:cid, :prefix, :hash, :name, true, NOW())"
-            ), {'cid': customer_id, 'prefix': key_prefix, 'hash': key_hash, 'name': 'auto-registration'})
+            from api_key_service import create_api_key
+            key_record, raw_api_key = create_api_key(
+                customer_id=customer_id,
+                created_by=user.user_id,
+                scope='admin',
+                name='auto-registration',
+            )
         except Exception as key_err:
             logger.warning(f"API key creation failed (non-fatal): {key_err}")
-            raw_api_key = None  # Don't return key if creation failed
+            raw_api_key = None
 
         db.session.commit()
 
