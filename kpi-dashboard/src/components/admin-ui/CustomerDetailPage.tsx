@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { formatDateTime, formatDate, formatShortDateTime } from '../../utils/formatDate';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -298,7 +299,7 @@ const InfoTab: React.FC<{ customer: CustomerDetail; onUpdated: () => void }> = (
       <div className="space-y-4">
         <FieldRow label="Customer ID" value={String(customer.customer_id)} />
         <FieldRow label="Vertical" value={customer.vertical} />
-        <FieldRow label="Created" value={new Date(customer.created_at).toLocaleString()} />
+        <FieldRow label="Created" value={formatDateTime(customer.created_at)} />
         <FieldRow
           label="Reference"
           value={customer.is_reference ? 'Yes' : 'No'}
@@ -394,7 +395,7 @@ const InfoTab: React.FC<{ customer: CustomerDetail; onUpdated: () => void }> = (
                 {activityLog.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
-                      {log.timestamp ? new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}
+                      {log.timestamp ? formatShortDateTime(log.timestamp) : '--'}
                     </td>
                     <td className="px-3 py-2">
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -512,7 +513,7 @@ const UsersTab: React.FC<{ customerId: number }> = ({ customerId }) => {
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-500">
-                  {u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}
+                  {u.last_login ? formatDateTime(u.last_login) : 'Never'}
                 </td>
                 <td className="px-4 py-3">
                   <button
@@ -924,8 +925,8 @@ const LicenseTab: React.FC<{ customerId: number }> = ({ customerId }) => {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <FieldRow label="Type" value={license.license_type} />
           <FieldRow label="Auto-Renew" value={license.auto_renew ? 'Yes' : 'No'} />
-          <FieldRow label="Start" value={new Date(license.license_start).toLocaleDateString()} />
-          <FieldRow label="End" value={new Date(license.license_end).toLocaleDateString()} />
+          <FieldRow label="Start" value={formatDate(license.license_start)} />
+          <FieldRow label="End" value={formatDate(license.license_end)} />
           <FieldRow label="Max Accounts" value={license.max_accounts != null ? String(license.max_accounts) : 'Unlimited'} />
         </div>
 
@@ -1125,10 +1126,10 @@ const ApiKeysTab: React.FC<{ customerId: number }> = ({ customerId }) => {
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-500">
-                  {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : 'Never'}
+                  {k.last_used_at ? formatDateTime(k.last_used_at) : 'Never'}
                 </td>
                 <td className="px-4 py-3 text-gray-500">
-                  {new Date(k.created_at).toLocaleDateString()}
+                  {formatDate(k.created_at)}
                 </td>
                 <td className="px-4 py-3">
                   {k.is_active ? (
@@ -1536,7 +1537,7 @@ const PartnersTab: React.FC<{ customerId: number }> = ({ customerId }) => {
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
-                    {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}
+                    {k.last_used_at ? formatDate(k.last_used_at) : 'Never'}
                   </td>
                   <td className="px-4 py-3">
                     {k.is_active && (
@@ -1583,7 +1584,7 @@ const PartnersTab: React.FC<{ customerId: number }> = ({ customerId }) => {
               {auditLogs.map((log) => (
                 <div key={log.id} className="flex items-start gap-3 text-xs border-b border-gray-50 pb-2">
                   <span className="text-gray-400 whitespace-nowrap">
-                    {new Date(log.created_at).toLocaleString()}
+                    {formatDateTime(log.created_at)}
                   </span>
                   <span className="inline-flex px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-medium">
                     {log.action_type}
@@ -1802,7 +1803,7 @@ const ActivityTab: React.FC<{ customerId: number }> = ({ customerId }) => {
             {entries.map((e) => (
               <tr key={e.id} className="hover:bg-gray-50">
                 <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">
-                  {new Date(e.timestamp).toLocaleString()}
+                  {formatDateTime(e.timestamp)}
                 </td>
                 <td className="px-4 py-2.5 text-gray-700">{e.user_name ?? '--'}</td>
                 <td className="px-4 py-2.5 font-medium text-gray-900">{e.action}</td>

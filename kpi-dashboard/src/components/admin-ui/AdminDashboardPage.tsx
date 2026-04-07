@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatDateTime } from '../../utils/formatDate';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -240,7 +241,7 @@ const AdminDashboardPage: React.FC = () => {
                 {recentActivity.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50">
                     <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">
-                      {new Date(entry.timestamp).toLocaleString()}
+                      {formatDateTime(entry.timestamp)}
                     </td>
                     <td className="py-2.5 pr-4 text-gray-700 whitespace-nowrap">
                       {entry.customer_name ?? '--'}
