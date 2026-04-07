@@ -12,6 +12,8 @@ import { useSession } from '../../contexts/SessionContext';
 import { classify, classifyColor } from '../../utils/healthThresholds';
 import NotificationBell from './NotificationBell';
 import UrgentAlertBanner from './UrgentAlertBanner';
+import ActivePlaybookTracker from './ActivePlaybookTracker';
+import EmailDraftModal from './EmailDraftModal';
 import {
   MOCK_ACCOUNTS, MOCK_ACTIONS, MOCK_APPROVALS,
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
@@ -585,7 +587,10 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
           </div>
-          <button className="flex items-center gap-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition">
+          <button
+            onClick={() => selectedAccount && setEmailDraftAccount({ id: selectedAccount.id, name: selectedAccount.name, health: selectedAccount.health_score })}
+            className="flex items-center gap-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition"
+          >
             <Mail className="w-3.5 h-3.5" />
             Draft Email
           </button>
@@ -616,6 +621,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
 
   // Nav state
   const [activeTab, setActiveTab] = useState<TabKey>('board');
+  const [emailDraftAccount, setEmailDraftAccount] = useState<{ id: number; name: string; health: number } | null>(null);
 
   // Data state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -1060,6 +1066,9 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
             {/* ── HOME VIEW ──────────────────────────────────────────── */}
             {activeTab === 'home' && (
               <div className="p-6 max-w-5xl mx-auto overflow-y-auto h-full">
+                {/* Active Playbook Tracker */}
+                <ActivePlaybookTracker customerId={customerId} />
+
                 <h1 className="text-2xl font-bold text-gray-900 mb-1">
                   {getGreeting()}, {session?.user_name?.split(' ')[0] || 'there'}
                 </h1>
@@ -1427,6 +1436,17 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
         customerId={customerId}
         headers={headers}
       />
+
+      {/* Email Draft Modal */}
+      {emailDraftAccount && (
+        <EmailDraftModal
+          accountId={emailDraftAccount.id}
+          accountName={emailDraftAccount.name}
+          healthScore={emailDraftAccount.health}
+          customerId={customerId}
+          onClose={() => setEmailDraftAccount(null)}
+        />
+      )}
     </div>
   );
 };

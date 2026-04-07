@@ -35,6 +35,8 @@ import {
 import NotificationBell from './NotificationBell';
 import UrgentAlertBanner from './UrgentAlertBanner';
 import PlaybookStartModal from './PlaybookStartModal';
+import ActivePlaybookTracker from './ActivePlaybookTracker';
+import EmailDraftModal from './EmailDraftModal';
 
 // ============================================================================
 // TYPES
@@ -271,8 +273,9 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   const [loadingApprovals, setLoadingApprovals] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Playbook start modal
+  // Playbook start modal + Email draft modal
   const [playbookModal, setPlaybookModal] = useState<{ playbook: any; account: any } | null>(null);
+  const [emailDraftAccount, setEmailDraftAccount] = useState<{ id: number; name: string; health: number } | null>(null);
 
   // CSM filter
   const [csmFilter, setCsmFilter] = useState<string>('');
@@ -587,6 +590,9 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
 
     return (
       <div className="p-6 max-w-4xl mx-auto">
+        {/* Active Playbook Tracker */}
+        <ActivePlaybookTracker customerId={customerId} />
+
         {/* Greeting */}
         <h1 className="text-2xl font-bold text-gray-900 mb-1">
           {greetingText()}, {userName}
@@ -891,7 +897,10 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
                         {rec.playbook_name || `Run ${rec.playbook_id}`}
                       </button>
                     ))}
-                    <button className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => setEmailDraftAccount({ id: action.account_id, name: action.account_name, health: healthScore })}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
                       <Mail className="w-3.5 h-3.5 text-gray-400" />
                       Draft Email
                     </button>
@@ -1258,6 +1267,17 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           customerId={customerId}
           onClose={() => setPlaybookModal(null)}
           onStarted={() => setPlaybookModal(null)}
+        />
+      )}
+
+      {/* Email Draft Modal */}
+      {emailDraftAccount && (
+        <EmailDraftModal
+          accountId={emailDraftAccount.id}
+          accountName={emailDraftAccount.name}
+          healthScore={emailDraftAccount.health}
+          customerId={customerId}
+          onClose={() => setEmailDraftAccount(null)}
         />
       )}
     </div>
