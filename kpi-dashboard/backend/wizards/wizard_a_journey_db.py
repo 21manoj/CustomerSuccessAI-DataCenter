@@ -112,6 +112,29 @@ def run_wizard_a(customer_id: int, account_ids: set = None) -> dict:
     except Exception as e:
         logger.warning(f"Wizard A legacy journey generation failed (non-fatal): {e}")
 
+    # Validate topology after edge generation — log warnings for gaps
+    try:
+        from utils.topology_validator import validate_customer_topology
+        topo = validate_customer_topology(customer_id)
+        avg_score = topo.get('avg_topology_score', 0)
+        summary = topo.get('summary', {})
+        results['topology_score'] = avg_score
+        results['topology_gaps'] = summary
+
+        if avg_score < 50:
+            logger.warning(
+                f"Wizard A: LOW topology score ({avg_score:.0f}/100) for customer {customer_id}. "
+                f"Orphans={summary.get('total_orphan_nodes', 0)}, "
+                f"broken_chains={summary.get('total_broken_chains', 0)}, "
+                f"disconnected_stakeholders={summary.get('total_disconnected_stakeholders', 0)}"
+            )
+        else:
+            logger.info(
+                f"Wizard A: topology score={avg_score:.0f}/100 for customer {customer_id}"
+            )
+    except Exception as topo_err:
+        logger.debug(f"Wizard A: topology validation skipped: {topo_err}")
+
     logger.info(
         f"Wizard A complete: customer={customer_id} "
         f"processed={results['processed']} edges={results['edges_created']}"

@@ -945,3 +945,47 @@ def graph_stakeholder_map():
     except Exception as e:
         logger.error(f"Error in graph_stakeholder_map: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
+
+
+@context_graph_api.route('/api/context-graph/topology-health', methods=['GET'])
+def graph_topology_health():
+    """
+    Validate context graph topology for an account or all accounts.
+
+    Query params:
+        account_id (optional) — validate single account. If omitted, validates all.
+
+    Returns:
+        Topology score, node/edge counts, orphan nodes, broken chains,
+        disconnected stakeholders, and actionable recommendations.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        from utils.topology_validator import validate_topology, validate_customer_topology
+
+        account_id = request.args.get('account_id', type=int)
+
+        if account_id:
+            # Single account validation
+            fail = _guard(customer_id, account_id)
+            if fail[0] is not None:
+                return fail
+
+            report = validate_topology(customer_id, account_id)
+            return jsonify({
+                'status': 'success',
+                'scope': 'account',
+                **report.to_dict(),
+            })
+        else:
+            # Full customer validation
+            result = validate_customer_topology(customer_id)
+            return jsonify({
+                'status': 'success',
+                'scope': 'customer',
+                **result,
+            })
+
+    except Exception as e:
+        logger.error(f"Error in graph_topology_health: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500

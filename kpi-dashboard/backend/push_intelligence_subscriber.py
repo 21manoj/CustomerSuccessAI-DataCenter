@@ -127,6 +127,100 @@ _ARC_PLAYBOOK_MAP = {
 }
 
 
+def _link_stakeholders_to_decision(
+    customer_id: int,
+    account_id: int,
+    account,
+    decision_node,
+) -> None:
+    """Link existing STAKEHOLDER nodes to a DECISION node via INVOLVES edges.
+
+    Also creates lightweight system stakeholder nodes from profile_metadata
+    (assigned_csm, champion) if no STAKEHOLDER nodes exist from CSV.
+    """
+    try:
+        from models import ContextNode, ContextEdge, db
+
+        # 1. Find existing STAKEHOLDER nodes for this account
+        stakeholders = (
+            ContextNode.query
+            .filter_by(
+                account_id=account_id,
+                customer_id=customer_id,
+                node_type='STAKEHOLDER',
+            )
+            .all()
+        )
+
+        # 2. If no CSV stakeholders, create from profile_metadata
+        if not stakeholders and account:
+            meta = account.profile_metadata or {}
+            for field, role in [('assigned_csm', 'CSM'), ('champion', 'Champion'),
+                                ('executive_sponsor', 'Executive Sponsor')]:
+                name = meta.get(field)
+                if name and isinstance(name, str) and name.strip():
+                    sn = ContextNode(
+                        account_id=account_id,
+                        customer_id=customer_id,
+                        node_type='STAKEHOLDER',
+                        source='system',
+                        node_subtype=role.lower().replace(' ', '_'),
+                        title=f'{name} ({role})',
+                        properties={
+                            'name': name.strip(),
+                            'role': role,
+                            'auto_created': True,
+                            'source_field': field,
+                        },
+                        tier=2,
+                        occurred_at=datetime.utcnow(),
+                        source_platform='playbook_auto_trigger',
+                    )
+                    db.session.add(sn)
+                    stakeholders.append(sn)
+
+            if stakeholders:
+                db.session.flush()
+                logger.info(
+                    f"Layer 2: auto-created {len(stakeholders)} STAKEHOLDER node(s) "
+                    f"from profile_metadata for account {account_id}"
+                )
+
+        # 3. Create INVOLVES edges from stakeholders → decision
+        for sh in stakeholders:
+            # Dedup: skip if edge already exists
+            existing = (
+                ContextEdge.query
+                .filter_by(
+                    from_node_id=sh.node_id,
+                    to_node_id=decision_node.node_id,
+                    edge_type='INVOLVES',
+                )
+                .first()
+            )
+            if not existing:
+                db.session.add(ContextEdge(
+                    customer_id=customer_id,
+                    from_node_id=sh.node_id,
+                    to_node_id=decision_node.node_id,
+                    edge_type='INVOLVES',
+                    confidence=0.8,
+                    source_platform='playbook_auto_trigger',
+                    properties={'label': f'{sh.title or "Stakeholder"} involved in decision'},
+                ))
+
+        if stakeholders:
+            db.session.commit()
+
+    except Exception as e:
+        logger.debug(f"_link_stakeholders_to_decision failed (non-fatal): {e}")
+        try:
+            from extensions import db as _db
+            _db.session.rollback()
+        except Exception:
+            pass
+
+
 def evaluate_playbook_triggers_for_customer(customer_id: int) -> list:
     """Evaluate all at-risk/critical accounts for playbook auto-trigger.
 
@@ -296,6 +390,32 @@ def evaluate_playbook_trigger_for_account(
             f"confidence={confidence:.2f}, health={health_score:.1f})"
         )
 
+        # Activity log: playbook auto-trigger
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='playbook_auto_trigger',
+                action_description=(
+                    f"Playbook {playbook_id} auto-triggered for {account_name} "
+                    f"(arc={arc_type}, health={health_score:.1f})"
+                ),
+                resource_type='playbook',
+                resource_id=execution_id,
+                details={
+                    'playbook_id': playbook_id,
+                    'account_id': account_id,
+                    'account_name': account_name,
+                    'arc_type': arc_type,
+                    'arc_confidence': arc_confidence,
+                    'health_score': health_score,
+                    'decision': decision,
+                    'validation_confidence': confidence,
+                },
+            )
+        except Exception:
+            pass
+
         # Write DECISION node to context graph
         try:
             from models import ContextEdge
@@ -324,6 +444,7 @@ def evaluate_playbook_trigger_for_account(
             db.session.flush()
 
             # Link arc_detection signal → playbook decision
+            # If no arc_detection signal exists, CREATE one (fallback)
             arc_signal = (
                 ContextNode.query
                 .filter_by(account_id=account_id, customer_id=customer_id,
@@ -331,16 +452,46 @@ def evaluate_playbook_trigger_for_account(
                 .order_by(ContextNode.occurred_at.desc())
                 .first()
             )
-            if arc_signal:
-                db.session.add(ContextEdge(
+            if not arc_signal:
+                # Create arc_detection signal so the causal chain is complete
+                arc_signal = ContextNode(
+                    account_id=account_id,
                     customer_id=customer_id,
-                    from_node_id=arc_signal.node_id,
-                    to_node_id=decision_node.node_id,
-                    edge_type='TRIGGERED',
-                    confidence=arc_confidence,
+                    node_type='SIGNAL',
+                    source='system',
+                    node_subtype='arc_detection',
+                    title=f'Arc detected: {arc_type} (health={health_score:.0f})',
+                    properties={
+                        'arc_type': arc_type,
+                        'confidence': arc_confidence,
+                        'health_score': health_score,
+                        'auto_created': True,
+                    },
+                    tier=2,
+                    occurred_at=datetime.utcnow(),
                     source_platform='playbook_auto_trigger',
-                    properties={'label': f'Arc detection triggered {playbook_id}'},
-                ))
+                )
+                db.session.add(arc_signal)
+                db.session.flush()
+                logger.info(
+                    f"Layer B: auto-created arc_detection SIGNAL node for "
+                    f"account {account_id} (arc={arc_type})"
+                )
+
+            db.session.add(ContextEdge(
+                customer_id=customer_id,
+                from_node_id=arc_signal.node_id,
+                to_node_id=decision_node.node_id,
+                edge_type='TRIGGERED',
+                confidence=arc_confidence,
+                source_platform='playbook_auto_trigger',
+                properties={'label': f'Arc detection triggered {playbook_id}'},
+            ))
+
+            # Layer 2: Link stakeholders to this DECISION via INVOLVES edges
+            _link_stakeholders_to_decision(
+                customer_id, account_id, account, decision_node
+            )
             db.session.commit()
         except Exception as cg_err:
             logger.warning(f"Context graph DECISION write failed (non-fatal): {cg_err}")

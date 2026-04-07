@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useSession } from '../../contexts/SessionContext';
 import { classify, classifyColor } from '../../utils/healthThresholds';
+import { trackPageView, trackAccountDrill } from '../../utils/activityTracker';
 import NotificationBell from './NotificationBell';
 import UrgentAlertBanner from './UrgentAlertBanner';
 import ActivePlaybookTracker from './ActivePlaybookTracker';
@@ -725,6 +726,10 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    trackPageView('csm_cockpit');
+  }, []);
+
   // ── Computed values ───────────────────────────────────────────────────
 
   const totalARR = useMemo(() => accounts.reduce((s, a) => s + (a.arr || 0), 0), [accounts]);
@@ -831,6 +836,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   // ── Handlers ──────────────────────────────────────────────────────────
 
   const openDrawer = useCallback((account: Account) => {
+    trackAccountDrill(account.id, account.account_name || `Account ${account.id}`);
     setDrawerAccount(account);
     setDrawerOpen(true);
   }, []);

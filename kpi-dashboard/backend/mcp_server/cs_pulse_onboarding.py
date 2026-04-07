@@ -1654,6 +1654,20 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             f"duration={_pipeline_duration}s timings={_step_timings}"
         )
 
+        # Activity log: system action visibility
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='health_recalculation',
+                action_description=f"Pipeline {mode}: {len(acct_list)} accounts, {_pipeline_duration:.1f}s",
+                resource_type='pipeline',
+                details={'mode': mode, 'accounts': len(acct_list), 'duration_s': round(_pipeline_duration, 1)},
+                status=status,
+            )
+        except Exception:
+            pass
+
         return {
             'scope': 'customer',
             'customer_id': customer_id,
@@ -1793,6 +1807,21 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
             run.completed_at = datetime.utcnow()
             db.session.commit()
             result_summary['error'] = str(e)
+
+        # Activity log: wizard execution visibility
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='wizard_execution',
+                action_description=f"Wizard {wizard.upper()} ({wizard_name}): {run.status}",
+                resource_type='wizard',
+                resource_id=run_id,
+                details={'wizard': wizard, 'wizard_name': wizard_name, 'status': run.status},
+                status='success' if run.status == 'completed' else 'failure',
+            )
+        except Exception:
+            pass
 
         return {
             'scope': 'customer',

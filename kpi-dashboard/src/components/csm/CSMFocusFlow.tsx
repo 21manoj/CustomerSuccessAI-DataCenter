@@ -28,6 +28,7 @@ import {
 } from '../../utils/healthThresholds';
 import { useSession } from '../../contexts/SessionContext';
 import { getCustomerIdentifier } from '../../utils/api';
+import { trackPageView, trackAccountDrill } from '../../utils/activityTracker';
 import {
   MOCK_ACCOUNTS, MOCK_ACTIONS, MOCK_APPROVALS,
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
@@ -449,6 +450,10 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   }, [fetchActions, fetchAccounts]);
 
   useEffect(() => {
+    trackPageView('csm_focus_flow');
+  }, []);
+
+  useEffect(() => {
     if (activeView === 'approvals') fetchApprovals();
   }, [activeView, fetchApprovals]);
 
@@ -457,6 +462,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   useEffect(() => {
     if (currentAction?.account_id) {
       fetchAccountDetail(currentAction.account_id);
+      trackAccountDrill(currentAction.account_id, currentAction.account_name || `Account ${currentAction.account_id}`);
     }
   }, [currentAction?.account_id, fetchAccountDetail]);
 
