@@ -156,6 +156,13 @@ def _ingest_signal(source_type: str):
             signal_id, source_type, account_id, customer_id,
         )
 
+        # Wake the background enrichment worker immediately
+        try:
+            from signal_engine.worker import notify_new_signal
+            notify_new_signal()
+        except Exception:
+            pass  # Worker may not be started yet
+
         return jsonify({
             'raw_signal_id': signal_id,
             'signal_db_id': signal.signal_id,
