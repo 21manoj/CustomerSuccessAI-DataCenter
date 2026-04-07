@@ -588,7 +588,7 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
             </button>
           </div>
           <button
-            onClick={() => selectedAccount && setEmailDraftAccount({ id: selectedAccount.id, name: selectedAccount.name, health: selectedAccount.health_score })}
+            onClick={() => drawerAccount && setEmailDraftAccount({ id: drawerAccount.id, name: drawerAccount.name, health: drawerAccount.health_score })}
             className="flex items-center gap-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition"
           >
             <Mail className="w-3.5 h-3.5" />
