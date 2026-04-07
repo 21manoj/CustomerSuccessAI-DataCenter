@@ -150,6 +150,7 @@ const SuperAdminConsole: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
+  const [logFilter, setLogFilter] = useState({ category: '', action_type: '', customer_id: '', search: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -207,15 +208,21 @@ const SuperAdminConsole: React.FC = () => {
     }
   }, []);
 
-  // Load activity log
-  const loadActivityLog = useCallback(async () => {
+  // Load activity log with filters
+  const loadActivityLog = useCallback(async (filters?: typeof logFilter) => {
     try {
-      const data = await api<{ activity_logs: ActivityEntry[] }>('/activity-log?per_page=50');
+      const f = filters || logFilter;
+      const params = new URLSearchParams({ per_page: '100' });
+      if (f.category) params.set('category', f.category);
+      if (f.action_type) params.set('action_type', f.action_type);
+      if (f.customer_id) params.set('customer_id', f.customer_id);
+      if (f.search) params.set('search', f.search);
+      const data = await api<{ activity_logs: ActivityEntry[] }>(`/activity-log?${params}`);
       setActivityLog(data.activity_logs || []);
     } catch (e: any) {
       setError(e.message);
     }
-  }, []);
+  }, [logFilter]);
 
   // Create customer
   const handleCreateCustomer = async () => {
@@ -802,38 +809,94 @@ const SuperAdminConsole: React.FC = () => {
           {/* Activity Log View */}
           {view === 'activity-log' && (
             <div>
-              <h2 className="text-2xl font-bold text-white mb-6">Activity Log</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">Activity Log</h2>
+              {/* Filter bar */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <input
+                  type="text"
+                  placeholder="Search descriptions..."
+                  value={logFilter.search}
+                  onChange={(e) => setLogFilter(f => ({ ...f, search: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && loadActivityLog()}
+                  className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 w-56 focus:border-teal-500 focus:outline-none"
+                />
+                <select
+                  value={logFilter.category}
+                  onChange={(e) => { const f = { ...logFilter, category: e.target.value }; setLogFilter(f); loadActivityLog(f); }}
+                  className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white"
+                >
+                  <option value="">All Categories</option>
+                  <option value="authentication">Authentication</option>
+                  <option value="data_modification">Data Modification</option>
+                  <option value="configuration">Configuration</option>
+                  <option value="system">System</option>
+                  <option value="playbook">Playbook</option>
+                  <option value="query">AI Query</option>
+                  <option value="export">Export</option>
+                  <option value="upload">Upload</option>
+                  <option value="security">Security</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Customer ID"
+                  value={logFilter.customer_id}
+                  onChange={(e) => setLogFilter(f => ({ ...f, customer_id: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && loadActivityLog()}
+                  className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 w-28 focus:border-teal-500 focus:outline-none"
+                />
+                <button
+                  onClick={() => loadActivityLog()}
+                  className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm rounded-lg"
+                >
+                  Search
+                </button>
+                <button
+                  onClick={() => { const f = { category: '', action_type: '', customer_id: '', search: '' }; setLogFilter(f); loadActivityLog(f); }}
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg"
+                >
+                  Clear
+                </button>
+                <span className="text-gray-500 text-xs self-center ml-2">{activityLog.length} entries</span>
+              </div>
               <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-800 text-gray-500 text-xs uppercase">
                       <th className="text-left px-4 py-3">Time</th>
+                      <th className="text-left px-4 py-3">Category</th>
                       <th className="text-left px-4 py-3">Action</th>
                       <th className="text-left px-4 py-3">Description</th>
                       <th className="text-left px-4 py-3">Customer</th>
+                      <th className="text-left px-4 py-3">User</th>
                       <th className="text-left px-4 py-3">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activityLog.map((entry) => (
-                      <tr key={entry.id} className="border-b border-gray-800/50">
+                      <tr key={entry.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                         <td className="px-4 py-2 text-gray-500 text-xs whitespace-nowrap">
                           {fmtDate(entry.created_at)}
                         </td>
                         <td className="px-4 py-2">
+                          <span className="px-1.5 py-0.5 bg-gray-800/80 rounded text-xs text-gray-400">{(entry as any).action_category || '—'}</span>
+                        </td>
+                        <td className="px-4 py-2">
                           <span className="px-2 py-0.5 bg-gray-800 rounded text-xs text-gray-300">{entry.action_type}</span>
                         </td>
-                        <td className="px-4 py-2 text-gray-300 text-xs max-w-md truncate">{entry.action_description}</td>
-                        <td className="px-4 py-2 text-gray-400 font-mono">{entry.customer_id || '—'}</td>
+                        <td className="px-4 py-2 text-gray-300 text-xs max-w-sm truncate" title={entry.action_description}>{entry.action_description}</td>
+                        <td className="px-4 py-2 text-gray-400 text-xs">
+                          {(entry as any).customer_name ? `${(entry as any).customer_name} (#${entry.customer_id})` : (entry.customer_id || '—')}
+                        </td>
+                        <td className="px-4 py-2 text-gray-400 text-xs">{(entry as any).user_name || '—'}</td>
                         <td className="px-4 py-2">
-                          <span className={`px-2 py-0.5 rounded text-xs ${entry.status === 'success' ? 'bg-green-900/40 text-green-300' : 'bg-red-900/40 text-red-300'}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs ${entry.status === 'success' ? 'bg-green-900/40 text-green-300' : entry.status === 'error' ? 'bg-red-900/40 text-red-300' : 'bg-yellow-900/40 text-yellow-300'}`}>
                             {entry.status}
                           </span>
                         </td>
                       </tr>
                     ))}
                     {activityLog.length === 0 && (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No activity logged yet</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No activity logged yet. Adjust filters or check later.</td></tr>
                     )}
                   </tbody>
                 </table>
