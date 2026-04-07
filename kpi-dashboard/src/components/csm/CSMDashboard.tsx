@@ -15,10 +15,17 @@ import { Layout, Layers } from 'lucide-react';
 import CSMFocusFlow from './CSMFocusFlow';
 import CSMCockpit from './CSMCockpit';
 import AskAIPortal from '../ai/AskAIPortal';
+import { useNotifications } from '../../hooks/useNotifications';
+import { useSession } from '../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../utils/api';
 
 type LayoutMode = 'focus' | 'cockpit';
 
 const CSMDashboard: React.FC = () => {
+  const { session } = useSession();
+  const customerId = getCustomerIdentifier(session);
+  const { notifications, unreadCount, urgentAlerts, markAsRead, markAllRead } = useNotifications(customerId);
+
   const [layout, setLayout] = useState<LayoutMode>(() => {
     return (localStorage.getItem('csm_layout') as LayoutMode) || 'focus';
   });
@@ -56,7 +63,10 @@ const CSMDashboard: React.FC = () => {
       </div>
 
       {/* Active Layout */}
-      {layout === 'focus' ? <CSMFocusFlow /> : <CSMCockpit />}
+      {layout === 'focus'
+        ? <CSMFocusFlow notifications={notifications} unreadCount={unreadCount} urgentAlerts={urgentAlerts} onMarkRead={markAsRead} onMarkAllRead={markAllRead} />
+        : <CSMCockpit notifications={notifications} unreadCount={unreadCount} urgentAlerts={urgentAlerts} onMarkRead={markAsRead} onMarkAllRead={markAllRead} />
+      }
 
       {/* AI Assistant — same AskAIPortal as CRO/CFO */}
       <AskAIPortal persona="vpcs" />

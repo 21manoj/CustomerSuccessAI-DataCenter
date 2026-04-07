@@ -32,6 +32,9 @@ import {
   MOCK_ACCOUNTS, MOCK_ACTIONS, MOCK_APPROVALS,
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
 } from './mockData';
+import NotificationBell from './NotificationBell';
+import UrgentAlertBanner from './UrgentAlertBanner';
+import PlaybookStartModal from './PlaybookStartModal';
 
 // ============================================================================
 // TYPES
@@ -235,7 +238,15 @@ const ErrorBanner: React.FC<{ message: string; onRetry?: () => void }> = ({ mess
 // MAIN COMPONENT
 // ============================================================================
 
-const CSMFocusFlow: React.FC = () => {
+interface CSMFocusFlowProps {
+  notifications?: import('../../hooks/useNotifications').Notification[];
+  unreadCount?: number;
+  urgentAlerts?: import('../../hooks/useNotifications').Notification[];
+  onMarkRead?: (id: number) => void;
+  onMarkAllRead?: () => void;
+}
+
+const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadCount = 0, urgentAlerts = [], onMarkRead = () => {}, onMarkAllRead = () => {} }) => {
   const { session } = useSession();
   const customerId = getCustomerIdentifier(session);
 
@@ -259,6 +270,9 @@ const CSMFocusFlow: React.FC = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Playbook start modal
+  const [playbookModal, setPlaybookModal] = useState<{ playbook: any; account: any } | null>(null);
 
   // CSM filter
   const [csmFilter, setCsmFilter] = useState<string>('');
@@ -695,6 +709,9 @@ const CSMFocusFlow: React.FC = () => {
 
     return (
       <div className="flex-1 flex flex-col min-h-0">
+        {/* Urgent Alert Banner */}
+        <UrgentAlertBanner alerts={urgentAlerts} onDismiss={onMarkRead} />
+
         {/* Queue Header */}
         <div className="flex-shrink-0 px-6 pt-5 pb-3 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
@@ -729,6 +746,12 @@ const CSMFocusFlow: React.FC = () => {
               >
                 Health: {healthScore}
               </span>
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={unreadCount}
+                onMarkRead={onMarkRead}
+                onMarkAllRead={onMarkAllRead}
+              />
             </div>
           </div>
           <h2 className="text-lg font-bold text-gray-900 mt-1">{action.account_name}</h2>
@@ -859,6 +882,10 @@ const CSMFocusFlow: React.FC = () => {
                         key={i}
                         className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-blue-300 transition-colors"
                         title={rec.description}
+                        onClick={() => setPlaybookModal({
+                          playbook: rec,
+                          account: { account_id: action.account_id, account_name: action.account_name, health_score: healthScore, arr: arr },
+                        })}
                       >
                         <Zap className="w-3.5 h-3.5 text-blue-500" />
                         {rec.playbook_name || `Run ${rec.playbook_id}`}
@@ -1222,6 +1249,17 @@ const CSMFocusFlow: React.FC = () => {
         {error && <ErrorBanner message={error} onRetry={() => { fetchActions(); fetchAccounts(); }} />}
         {viewContent()}
       </div>
+
+      {/* Playbook Start Modal */}
+      {playbookModal && (
+        <PlaybookStartModal
+          playbook={playbookModal.playbook}
+          account={playbookModal.account}
+          customerId={customerId}
+          onClose={() => setPlaybookModal(null)}
+          onStarted={() => setPlaybookModal(null)}
+        />
+      )}
     </div>
   );
 };
