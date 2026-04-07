@@ -51,6 +51,9 @@ COPY kpi-dashboard/backend/requirements-core.txt ./requirements-core.txt
 RUN pip install --no-cache-dir -r requirements-core.txt
 RUN pip install --no-cache-dir Cython>=3.0.0
 
+# Cache bust: ARG changes every commit → forces COPY layer to rebuild
+ARG CACHE_BUST=unknown
+
 # Copy backend source (filtered by .dockerignore)
 COPY kpi-dashboard/backend/ ./
 

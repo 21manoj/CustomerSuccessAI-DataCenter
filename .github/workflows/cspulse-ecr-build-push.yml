@@ -100,7 +100,8 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.no_cache }}" = "true" ]; then
             EXTRA="--no-cache"
           fi
-          docker buildx build --platform linux/amd64 $EXTRA \
+          docker buildx build --platform linux/amd64 $EXTRA --pull \
+            --build-arg CACHE_BUST=${{ github.sha }} \
             -f kpi-dashboard/Dockerfile.cspulse \
             -t "${ECR_REGISTRY}/cspulse-platform:latest" \
             --push .
