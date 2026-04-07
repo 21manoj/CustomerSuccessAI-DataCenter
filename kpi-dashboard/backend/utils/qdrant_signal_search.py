@@ -22,9 +22,18 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Embedding config
-EMBEDDING_MODEL = 'text-embedding-3-small'  # Cheaper + faster than 3-large for signal search
-EMBEDDING_DIM = 1536  # text-embedding-3-small dimension
+# Embedding config — Voyage AI (Anthropic's embedding partner)
+# Replaces OpenAI text-embedding-3-small to eliminate the OpenAI dependency.
+# Voyage-3-lite: 512 dims, $0.02/1M tokens, optimized for retrieval.
+# Fallback: OpenAI text-embedding-3-small if VOYAGE_API_KEY not set.
+EMBEDDING_PROVIDER = os.environ.get('EMBEDDING_PROVIDER', 'voyage')  # 'voyage' or 'openai'
+VOYAGE_MODEL = 'voyage-3-lite'
+VOYAGE_DIM = 512
+OPENAI_MODEL = 'text-embedding-3-small'
+OPENAI_DIM = 1536
+# Active config (resolved at module load)
+EMBEDDING_MODEL = VOYAGE_MODEL if EMBEDDING_PROVIDER == 'voyage' else OPENAI_MODEL
+EMBEDDING_DIM = VOYAGE_DIM if EMBEDDING_PROVIDER == 'voyage' else OPENAI_DIM
 COLLECTION_PREFIX = 'cspulse_signals'
 
 
@@ -35,7 +44,8 @@ class SignalVectorStore:
         self.customer_id = customer_id
         self.collection_name = f'{COLLECTION_PREFIX}_{customer_id}'
         self._client = None
-        self._openai = None
+        self._embed_client = None
+        self._provider = EMBEDDING_PROVIDER
 
     @property
     def client(self):
@@ -52,35 +62,73 @@ class SignalVectorStore:
         return self._client
 
     @property
-    def openai_client(self):
-        if self._openai is None:
-            try:
-                import openai
-                api_key = os.environ.get('OPENAI_API_KEY')
-                if not api_key:
-                    raise ValueError('OPENAI_API_KEY must be set for embeddings')
-                self._openai = openai.OpenAI(api_key=api_key)
-            except ImportError:
-                raise ImportError('openai not installed')
-        return self._openai
+    def embed_client(self):
+        """Lazy-init embedding client (Voyage or OpenAI fallback)."""
+        if self._embed_client is None:
+            if self._provider == 'voyage':
+                try:
+                    import voyageai
+                    api_key = os.environ.get('VOYAGE_API_KEY')
+                    if not api_key:
+                        logger.warning('VOYAGE_API_KEY not set — falling back to OpenAI embeddings')
+                        self._provider = 'openai'
+                        return self.embed_client  # Recurse to OpenAI path
+                    self._embed_client = voyageai.Client(api_key=api_key)
+                except ImportError:
+                    logger.warning('voyageai not installed — falling back to OpenAI embeddings')
+                    self._provider = 'openai'
+                    return self.embed_client
+
+            if self._provider == 'openai':
+                try:
+                    import openai
+                    api_key = os.environ.get('OPENAI_API_KEY')
+                    if not api_key:
+                        raise ValueError('No embedding API key available (VOYAGE_API_KEY or OPENAI_API_KEY)')
+                    self._embed_client = openai.OpenAI(api_key=api_key)
+                except ImportError:
+                    raise ImportError('openai not installed. pip install openai')
+
+        return self._embed_client
 
     def _embed(self, text: str) -> list[float]:
-        """Generate embedding vector for text."""
-        resp = self.openai_client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=text[:8000],  # Truncate to model limit
-        )
-        return resp.data[0].embedding
+        """Generate embedding vector for text using configured provider."""
+        if self._provider == 'voyage':
+            result = self.embed_client.embed(
+                [text[:8000]],
+                model=VOYAGE_MODEL,
+                input_type='query',
+            )
+            return result.embeddings[0]
+        else:
+            resp = self.embed_client.embeddings.create(
+                model=OPENAI_MODEL,
+                input=text[:8000],
+            )
+            return resp.data[0].embedding
 
     def _embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of texts."""
-        # OpenAI supports up to 2048 inputs per batch
         truncated = [t[:8000] for t in texts]
-        resp = self.openai_client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=truncated,
-        )
-        return [d.embedding for d in resp.data]
+        if self._provider == 'voyage':
+            # Voyage supports up to 128 inputs per batch
+            all_embeddings = []
+            batch_size = 128
+            for i in range(0, len(truncated), batch_size):
+                batch = truncated[i:i + batch_size]
+                result = self.embed_client.embed(
+                    batch,
+                    model=VOYAGE_MODEL,
+                    input_type='document',
+                )
+                all_embeddings.extend(result.embeddings)
+            return all_embeddings
+        else:
+            resp = self.embed_client.embeddings.create(
+                model=OPENAI_MODEL,
+                input=truncated,
+            )
+            return [d.embedding for d in resp.data]
 
     def _signal_text(self, node) -> str:
         """Build searchable text from a ContextNode (any type: SIGNAL, DECISION, OUTCOME, STAKEHOLDER)."""
@@ -116,15 +164,34 @@ class SignalVectorStore:
         return '\n'.join(p for p in parts if p)
 
     def ensure_collection(self):
-        """Create collection if it doesn't exist."""
+        """Create collection if it doesn't exist. Uses active provider's dimension."""
         from qdrant_client.models import Distance, VectorParams
+        dim = VOYAGE_DIM if self._provider == 'voyage' else OPENAI_DIM
         collections = [c.name for c in self.client.get_collections().collections]
         if self.collection_name not in collections:
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
             )
-            logger.info(f'Created QDRANT collection: {self.collection_name}')
+            logger.info(f'Created QDRANT collection: {self.collection_name} (dim={dim}, provider={self._provider})')
+        else:
+            # Check if existing collection has wrong dimension (provider switch)
+            try:
+                info = self.client.get_collection(self.collection_name)
+                existing_dim = info.config.params.vectors.size if info.config else None
+                if existing_dim and existing_dim != dim:
+                    logger.warning(
+                        f'Collection {self.collection_name} has dim={existing_dim} but '
+                        f'provider={self._provider} needs dim={dim}. Rebuilding collection.'
+                    )
+                    self.client.delete_collection(self.collection_name)
+                    self.client.create_collection(
+                        collection_name=self.collection_name,
+                        vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+                    )
+                    logger.info(f'Rebuilt QDRANT collection: {self.collection_name} (dim={dim})')
+            except Exception as e:
+                logger.debug(f'Collection dimension check failed (non-fatal): {e}')
 
     def index_signals(self, limit: int = 500) -> int:
         """

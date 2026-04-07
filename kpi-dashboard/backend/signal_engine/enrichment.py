@@ -64,7 +64,7 @@ ENRICHMENT_PROMPT = """You are a B2B Customer Success signal extraction engine f
 Industry context: {vertical_description}
 Key pillars: {vertical_pillars}
 Industry terminology: {vertical_terms}
-
+{similar_signals_block}
 Analyze the following customer communication and extract structured intelligence.
 Return ONLY valid JSON. No preamble. No markdown fences. No explanation.
 
@@ -75,7 +75,7 @@ Confidence scores reflect explicitness:
   0.0 = not determinable from the text
 
 If confidence for any field is below 0.6, set requires_review to true.
-
+{dedup_instruction}
 VALID INTENT CODES (use ONLY these):
 {intent_codes}
 
@@ -92,6 +92,8 @@ RESPOND WITH THIS EXACT JSON STRUCTURE:
   "intent_signals": ["<intent_code>", ...],
   "stakeholder_roles": [{{"role": "<title>", "name": "<name or null>"}}],
   "suggested_action": "<one sentence recommended CSM action>",
+  "is_duplicate": <boolean>,
+  "duplicate_reason": "<null or explanation if duplicate>",
   "confidence": {{
     "sentiment_score": <float>,
     "intent_signals": <float>,
@@ -146,6 +148,102 @@ def _record_call(customer_id: int, account_id: int):
 
 
 # ============================================================
+# Qdrant Context Retrieval (RAG for enrichment)
+# ============================================================
+
+def _retrieve_similar_signals(
+    customer_id: int,
+    account_id: int,
+    raw_text: str,
+    top_k: int = 5,
+) -> tuple:
+    """Search Qdrant for similar past signals to provide context.
+
+    Returns:
+        (similar_signals_block, dedup_instruction, similar_signals_list)
+        - similar_signals_block: formatted string for prompt injection
+        - dedup_instruction: instruction if potential duplicates found
+        - similar_signals_list: raw list of matches for post-processing
+    """
+    similar_signals: List[dict] = []
+
+    try:
+        from utils.qdrant_signal_search import SignalVectorStore
+        store = SignalVectorStore(customer_id)
+        similar_signals = store.search(
+            query=raw_text[:500],  # Use signal text as semantic query
+            account_id=account_id,
+            top_k=top_k,
+            threshold=0.4,  # Lower threshold to catch more context
+        )
+        if similar_signals:
+            logger.debug(
+                "QSIM enrichment: Qdrant returned %d similar signals for account %d",
+                len(similar_signals), account_id,
+            )
+    except Exception as e:
+        logger.debug("QSIM enrichment: Qdrant unavailable, enriching without context: %s", e)
+
+    # Fall back to SQL if Qdrant unavailable
+    if not similar_signals:
+        try:
+            from models import ContextNode
+            recent = (
+                ContextNode.query
+                .filter_by(account_id=account_id, node_type='SIGNAL')
+                .order_by(ContextNode.occurred_at.desc())
+                .limit(top_k)
+                .all()
+            )
+            similar_signals = [
+                {
+                    'title': n.title or '(no title)',
+                    'subtype': n.node_subtype or 'signal',
+                    'score': 0.5,  # No similarity score from SQL
+                    'sentiment': (n.properties or {}).get('sentiment', 'unknown'),
+                }
+                for n in recent
+            ]
+        except Exception:
+            pass  # Proceed without context
+
+    # Build prompt block
+    if similar_signals:
+        lines = []
+        for s in similar_signals[:5]:
+            score = s.get('score', 0)
+            lines.append(
+                f"  - [{s.get('subtype', 'signal')}] {s.get('title', '?')} "
+                f"(similarity: {score:.0%}, sentiment: {s.get('sentiment', '?')})"
+            )
+        similar_block = (
+            "\nRECENT SIMILAR SIGNALS FOR THIS ACCOUNT (from semantic search):\n"
+            + "\n".join(lines)
+            + "\n\nUse these to:\n"
+            "  1. Detect if the new signal is a DUPLICATE of an existing one\n"
+            "  2. Understand the account's recent trajectory and context\n"
+            "  3. Correlate this signal with existing patterns\n"
+        )
+
+        # Check for high-similarity matches that might be duplicates
+        high_sim = [s for s in similar_signals if s.get('score', 0) >= 0.85]
+        if high_sim:
+            dedup = (
+                "\nDUPLICATE CHECK: One or more existing signals have >85% similarity. "
+                "If this new signal conveys the SAME information, set is_duplicate=true "
+                "and explain in duplicate_reason. Do NOT set is_duplicate for signals "
+                "that are related but contain NEW information.\n"
+            )
+        else:
+            dedup = ""
+    else:
+        similar_block = ""
+        dedup = ""
+
+    return similar_block, dedup, similar_signals
+
+
+# ============================================================
 # LLM Enrichment
 # ============================================================
 
@@ -156,7 +254,10 @@ def enrich_signal(
     customer_id: int,
     vertical: str = 'dc2_s',
 ) -> Dict:
-    """Enrich a raw signal using Claude Sonnet.
+    """Enrich a raw signal using Qdrant context retrieval + Claude Sonnet.
+
+    Flow: Qdrant semantic search → context stuffing → Claude LLM → structured output.
+    Falls back to Claude-only if Qdrant unavailable.
 
     Returns enrichment dict with sentiment, intent, urgency, etc.
     On failure, returns partial result with requires_review=True.
@@ -181,13 +282,20 @@ def enrich_signal(
             'suggested_action': f'Rate limited: {limit_error}',
         }
 
-    # Build vertical-aware prompt
+    # Step 1: Retrieve similar signals from Qdrant for context
+    similar_block, dedup_instruction, similar_signals = _retrieve_similar_signals(
+        customer_id, account_id, raw_text,
+    )
+
+    # Step 2: Build vertical-aware prompt WITH Qdrant context
     v_ctx = VERTICAL_CONTEXT.get(vertical, VERTICAL_CONTEXT['dc2_s'])
     prompt = ENRICHMENT_PROMPT.format(
         vertical_name=v_ctx['name'],
         vertical_description=v_ctx['description'],
         vertical_pillars=v_ctx['pillars'],
         vertical_terms=v_ctx['key_terms'],
+        similar_signals_block=similar_block,
+        dedup_instruction=dedup_instruction,
         intent_codes=', '.join(VALID_INTENTS),
         raw_text=raw_text[:3000],  # Truncate for cost control
     )
@@ -218,10 +326,17 @@ def enrich_signal(
         enrichment = _validate_enrichment(enrichment)
         enrichment['llm_model_version'] = DEFAULT_MODEL
 
+        # Track context source for observability
+        enrichment['_context_source'] = 'qdrant' if similar_signals else 'sql_fallback'
+        enrichment['_similar_signal_count'] = len(similar_signals)
+
         logger.info(
-            "QSIM enrichment complete: signal=%s intents=%s urgency=%.2f review=%s",
+            "QSIM enrichment complete: signal=%s intents=%s urgency=%.2f review=%s "
+            "context=%s(%d) duplicate=%s",
             signal_id, enrichment.get('intent_signals', []),
             enrichment.get('urgency_score', 0), enrichment.get('requires_review', False),
+            enrichment.get('_context_source', 'none'), len(similar_signals),
+            enrichment.get('is_duplicate', False),
         )
 
         return enrichment
@@ -259,6 +374,12 @@ def _validate_enrichment(data: Dict) -> Dict:
     if 'intent_signals' in data:
         data['intent_signals'] = [i for i in data['intent_signals'] if i in VALID_INTENTS]
 
+    # Validate duplicate detection fields
+    if 'is_duplicate' not in data:
+        data['is_duplicate'] = False
+    if 'duplicate_reason' not in data:
+        data['duplicate_reason'] = None
+
     # Check confidence threshold
     confidence = data.get('confidence', {})
     low_confidence = any(
@@ -267,6 +388,10 @@ def _validate_enrichment(data: Dict) -> Dict:
         if isinstance(v, (int, float))
     )
     if low_confidence:
+        data['requires_review'] = True
+
+    # Duplicates always require review (human confirmation before discard)
+    if data.get('is_duplicate'):
         data['requires_review'] = True
 
     return data
