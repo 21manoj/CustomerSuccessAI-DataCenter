@@ -58,4 +58,4 @@ structlog
 # MCP Server (expose CS Pulse as tool provider for external LLMs)
 fastmcp>=2.2.0
 qdrant-client>=1.7.0
-voyageai>=0.3.0
+# Voyage AI embeddings via REST API (no SDK needed — avoids langsmith/langchain dep chain)
