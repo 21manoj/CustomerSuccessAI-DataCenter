@@ -63,23 +63,17 @@ class SignalVectorStore:
 
     @property
     def embed_client(self):
-        """Lazy-init embedding client (Voyage or OpenAI fallback)."""
+        """Lazy-init embedding client (OpenAI SDK for fallback only)."""
         if self._embed_client is None:
             if self._provider == 'voyage':
-                try:
-                    import voyageai
-                    api_key = os.environ.get('VOYAGE_API_KEY')
-                    if not api_key:
-                        logger.warning('VOYAGE_API_KEY not set — falling back to OpenAI embeddings')
-                        self._provider = 'openai'
-                        return self.embed_client  # Recurse to OpenAI path
-                    self._embed_client = voyageai.Client(api_key=api_key)
-                except ImportError:
-                    logger.warning('voyageai not installed — falling back to OpenAI embeddings')
+                # Voyage uses REST API directly — no SDK needed
+                api_key = os.environ.get('VOYAGE_API_KEY')
+                if not api_key:
+                    logger.warning('VOYAGE_API_KEY not set — falling back to OpenAI embeddings')
                     self._provider = 'openai'
                     return self.embed_client
-
-            if self._provider == 'openai':
+                self._embed_client = api_key  # Store key; REST calls use requests
+            else:
                 try:
                     import openai
                     api_key = os.environ.get('OPENAI_API_KEY')
@@ -91,15 +85,31 @@ class SignalVectorStore:
 
         return self._embed_client
 
+    def _voyage_embed_rest(self, texts: list[str], input_type: str = 'document') -> list[list[float]]:
+        """Call Voyage AI embedding API via REST (no SDK dependency)."""
+        import requests as _requests
+        api_key = self.embed_client  # For voyage, embed_client stores the API key
+        resp = _requests.post(
+            'https://api.voyageai.com/v1/embeddings',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': VOYAGE_MODEL,
+                'input': texts,
+                'input_type': input_type,
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return [item['embedding'] for item in data['data']]
+
     def _embed(self, text: str) -> list[float]:
         """Generate embedding vector for text using configured provider."""
         if self._provider == 'voyage':
-            result = self.embed_client.embed(
-                [text[:8000]],
-                model=VOYAGE_MODEL,
-                input_type='query',
-            )
-            return result.embeddings[0]
+            return self._voyage_embed_rest([text[:8000]], input_type='query')[0]
         else:
             resp = self.embed_client.embeddings.create(
                 model=OPENAI_MODEL,
@@ -116,12 +126,7 @@ class SignalVectorStore:
             batch_size = 128
             for i in range(0, len(truncated), batch_size):
                 batch = truncated[i:i + batch_size]
-                result = self.embed_client.embed(
-                    batch,
-                    model=VOYAGE_MODEL,
-                    input_type='document',
-                )
-                all_embeddings.extend(result.embeddings)
+                all_embeddings.extend(self._voyage_embed_rest(batch, input_type='document'))
             return all_embeddings
         else:
             resp = self.embed_client.embeddings.create(
