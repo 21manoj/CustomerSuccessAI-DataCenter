@@ -163,14 +163,21 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
     }}
   }},
   
-  "reasoning": "<detailed explanation in markdown format. Use headers (##), bold text (**text**), numbered lists (1.), and bullet points (-) to structure your response. Example format: ## Overall Health Status: **STATUS** followed by ## Top Risk Factors with numbered list, ## Immediate Actions with bullet points, and ## Estimated Churn Risk: **X%** with explanation paragraph>",
-  
+  "reasoning": "<detailed explanation in markdown format. MUST include: ## KPI vs Signal Channel section (see rules below). Use headers (##), bold, numbered lists, and bullet points. Cite specific references [K1], [Q2] etc.>",
+
   "key_insights": [
-    "<insight 1>",
+    "<insight citing [Kn] and/or [Qn] references>",
     "<insight 2>",
     "<insight 3>"
   ],
-  
+
+  "data_alignment": {{
+    "alignment": "<agree|disagree|mixed>",
+    "kpi_summary": "<one line: which KPIs drive the assessment, citing [K1]-[Kn]>",
+    "signal_summary": "<one line: which signals drive the assessment, citing [Q1]-[Qn]>",
+    "combined_reason": "<one line: why at-risk or healthy, combining both channels>"
+  }},
+
   "recommended_actions": [
     {{
       "action": "<specific action to take>",
@@ -195,62 +202,147 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
 4. If signals conflict, explain the conflict and weight them appropriately
 5. Consider signal recency (recent signals matter more, especially last 4 weeks)
 6. Consider signal severity (critical signals override low severity)
-7. Look for patterns across quantitative + qualitative signals
-8. External signals (funding, exec changes) can override internal signals
-9. Be honest about confidence - if data is sparse or contradictory, say so
-10. Provide SPECIFIC actions, not vague advice ("Schedule call with CTO" not "Improve engagement")
+7. External signals (funding, exec changes) can override internal signals
+8. Be honest about confidence - if data is sparse or contradictory, say so
+9. Provide SPECIFIC actions, not vague advice ("Schedule call with CTO" not "Improve engagement")
+
+**CITATION RULES** (mandatory):
+10. **Cite KPI references**: In reasoning, key_insights, and supporting_signals, cite specific KPIs using their [K1]-[Kn] references from the QUANTITATIVE SIGNALS section. Say "[K2] GPU utilization at 38%" not "usage is declining".
+11. **Cite signal references**: Cite specific qualitative signals using their [Q1]-[Qn] references from the QUALITATIVE SIGNALS section. Say "[Q3] email from CTO indicates competitive evaluation" not "signals suggest churn".
+12. **Stakeholder attribution**: When a qualitative signal is from an Executive or Champion (marked in the signal), mention the role. "[Q2] from CTO" carries more weight than "[Q5] routine check-in".
+13. **Only cite references that exist**: Only use [K1]-[Kn] and [Q1]-[Qn] references provided in the input. Never invent references.
+
+**KPI vs SIGNAL CHANNEL CORRELATION** (mandatory):
+14. **Include a ## KPI vs Signal Channel section in reasoning** that explicitly states:
+    - Whether KPIs and qualitative signals **agree**, **disagree**, or are **mixed**
+    - The **combined reason** for your prediction using both channels:
+      - KPIs healthy + signals bad → "At-risk due to relationship/experience, not usage. [K1],[K2] in range but [Q1] champion loss + [Q3] competitor mention = churn risk."
+      - Signals positive + KPIs declining → "At-risk despite engagement. [Q1] positive QBR but [K2],[K4] declining = usage/adoption problem."
+      - Both bad → "Clear at-risk. Both [K1]-[K3] and [Q1]-[Q3] negative."
+      - Both good → "Healthy. [K1]-[K3] in range, [Q1] positive engagement."
+15. **Populate data_alignment**: Fill the data_alignment JSON with alignment (agree/disagree/mixed), kpi_summary, signal_summary, and combined_reason citing specific [Kn] and [Qn] refs.
 """
         
         return prompt.strip()
     
     @staticmethod
     def format_quantitative_signals(signals: List[Dict]) -> str:
-        """Format quantitative signals for prompt"""
+        """Format quantitative signals with stable [K1]-[Kn] references for citation.
+
+        Each KPI gets a traceable ref so the LLM can cite specific metrics
+        in reasoning: '[K2] GPU utilization at 38% (target >60%)'.
+        """
         if not signals:
             return "No quantitative signals available"
-        
+
         context_lines = []
-        for i, signal in enumerate(signals[:10], 1):  # Top 10 signals
+        for i, signal in enumerate(signals[:15], 1):  # Top 15 KPIs
             payload = signal.get('payload', {})
-            
+
             pillar = payload.get('pillar', 'unknown')
             metric_type = payload.get('metric_type', 'unknown')
             current_value = payload.get('current_value', 0)
             trend = payload.get('trend', 0)
-            
-            trend_direction = "↑" if trend > 0 else "↓"
+            healthy_min = payload.get('healthy_min')
+            healthy_max = payload.get('healthy_max')
+            kpi_code = payload.get('kpi_code', '')
+
+            trend_direction = "↑" if trend > 0 else "↓" if trend < 0 else "→"
             trend_magnitude = abs(trend * 100)
-            
+
+            # Value vs range context
+            range_ctx = ""
+            if healthy_min is not None and healthy_max is not None:
+                if current_value < healthy_min:
+                    range_ctx = f" ⚠ BELOW target range [{healthy_min}-{healthy_max}]"
+                elif current_value > healthy_max:
+                    range_ctx = f" ⚠ ABOVE target range [{healthy_min}-{healthy_max}]"
+                else:
+                    range_ctx = f" ✓ in range [{healthy_min}-{healthy_max}]"
+            elif healthy_min is not None:
+                if current_value < healthy_min:
+                    range_ctx = f" ⚠ below target (>{healthy_min})"
+                else:
+                    range_ctx = f" ✓ above target (>{healthy_min})"
+
+            kpi_label = f" ({kpi_code})" if kpi_code else ""
+
             context_lines.append(
-                f"Signal {i} [{pillar.upper()}]: {metric_type} = {current_value} "
-                f"({trend_direction} {trend_magnitude:.1f}% trend)"
+                f"[K{i}] [{pillar.upper()}] {metric_type}{kpi_label} = {current_value}"
+                f" ({trend_direction} {trend_magnitude:.1f}% trend){range_ctx}"
             )
-        
+
         return "\n".join(context_lines)
     
+    # Stakeholder role normalization for high-impact signal attribution
+    _EXECUTIVE_KEYWORDS = {
+        'ceo', 'cto', 'cio', 'cfo', 'coo', 'ciso', 'cmo', 'cro',
+        'vp', 'vice president', 'svp', 'evp', 'president', 'chief',
+        'director', 'head of', 'general manager',
+    }
+    _CHAMPION_KEYWORDS = {'champion', 'sponsor', 'advocate'}
+
+    @classmethod
+    def _normalize_sender_role(cls, title: str, level: str) -> str:
+        """Derive sender_role from stakeholder_title and stakeholder_level.
+
+        Returns: 'executive', 'champion', or '' (empty = no special role).
+        """
+        combined = f"{title} {level}".lower()
+        if any(kw in combined for kw in cls._CHAMPION_KEYWORDS):
+            return 'Champion'
+        if any(kw in combined for kw in cls._EXECUTIVE_KEYWORDS):
+            return 'Executive'
+        return ''
+
     @staticmethod
     def format_qualitative_signals(signals: List[Dict]) -> str:
-        """Format qualitative signals for prompt"""
+        """Format qualitative signals with stable [Q1]-[Qn] references and stakeholder roles.
+
+        Each signal gets a traceable ref so the LLM can cite it:
+        '[Q2] email from CTO indicates competitive evaluation'.
+        Stakeholder role (Executive, Champion) is shown when available.
+        """
         if not signals:
             return "No qualitative signals available"
-        
+
         context_lines = []
-        for i, signal in enumerate(signals[:10], 1):  # Top 10 signals
+        for i, signal in enumerate(signals[:15], 1):  # Top 15 signals
             payload = signal.get('payload', {})
-            
+
             signal_type = payload.get('signal_type', 'unknown')
             signal_source = payload.get('signal_source', 'internal')
             sentiment = payload.get('sentiment', 'neutral')
             severity = payload.get('severity', 'medium')
-            text = payload.get('text', '')[:200]  # Truncate long text
-            
-            source_indicator = "🌐" if signal_source == "external" else "💬"
-            
-            context_lines.append(
-                f"Signal {i} [{signal_type}] {source_indicator}: "
-                f"({sentiment}/{severity}) {text}"
+            text = payload.get('text', '')[:200]
+
+            # Stakeholder attribution
+            stakeholder_title = payload.get('stakeholder_title', '')
+            stakeholder_level = payload.get('stakeholder_level', '')
+            stakeholder_name = payload.get('stakeholder_name', '')
+            sender_role = SignalAnalystPrompts._normalize_sender_role(
+                stakeholder_title or '', stakeholder_level or '',
             )
-        
+
+            source_indicator = "🌐" if signal_source == "external" else "💬"
+
+            # Build "From:" line when stakeholder info available
+            from_ctx = ""
+            if stakeholder_title or stakeholder_name:
+                parts = []
+                if stakeholder_name:
+                    parts.append(stakeholder_name)
+                if stakeholder_title:
+                    parts.append(stakeholder_title)
+                if sender_role:
+                    parts.append(f"[{sender_role}]")
+                from_ctx = f" From: {', '.join(parts)} —"
+
+            context_lines.append(
+                f"[Q{i}] [{signal_type}] {source_indicator} "
+                f"({sentiment}/{severity}){from_ctx} {text}"
+            )
+
         return "\n".join(context_lines)
     
     @staticmethod

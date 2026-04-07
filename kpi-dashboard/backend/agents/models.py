@@ -157,8 +157,13 @@ class SignalAnalystOutput(BaseModel):
         description="Count of signals analyzed by type"
     )
     
-    # Decision matrix (quantitative vs qualitative alignment)
-    data_alignment: Optional[Dict] = Field(None, description="Alignment between quantitative and qualitative data (agreement/disagreement)")
+    # KPI vs Signal channel correlation (populated by LLM per citation rules)
+    data_alignment: Optional[Dict] = Field(
+        None,
+        description="KPI vs Signal channel alignment. Expected keys: "
+        "alignment ('agree'|'disagree'|'mixed'), kpi_summary (citing [K1]-[Kn]), "
+        "signal_summary (citing [Q1]-[Qn]), combined_reason (one line)."
+    )
     
     # Metadata
     analysis_timestamp: datetime = Field(default_factory=datetime.now)
