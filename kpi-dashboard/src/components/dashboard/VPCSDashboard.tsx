@@ -31,6 +31,7 @@ import { classify, classifyColor, thresholdValues } from '../../utils/healthThre
 import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
+import { trackPageView, trackDashboardSwitch } from '../../utils/activityTracker';
 import AskAIPortal from '../ai/AskAIPortal';
 
 // ============================================================================
@@ -806,7 +807,11 @@ const VPCSDashboard: React.FC = () => {
   const [data, setData] = useState<VPCSDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<VPCSViewId>('vpcs-overview');
+  const [activeView, setActiveViewRaw] = useState<VPCSViewId>('vpcs-overview');
+  const setActiveView = useCallback((view: VPCSViewId) => {
+    trackDashboardSwitch(activeView, `vpcs_${view}`);
+    setActiveViewRaw(view);
+  }, [activeView]);
 
   // Fetch dashboard data from multiple endpoints
   useEffect(() => {
@@ -987,6 +992,7 @@ const VPCSDashboard: React.FC = () => {
         };
 
         setData(transformed);
+        trackPageView('vpcs_dashboard', { accounts: transformed.accounts?.length || 0 });
       } catch {
         if (!cancelled) {
           setError('Unable to load VP CS dashboard data. Please check your connection and try again.');

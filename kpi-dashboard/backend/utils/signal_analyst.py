@@ -197,18 +197,41 @@ Be specific and action-oriented. Avoid generic advice."""
             db.session.add(insight_node)
             db.session.flush()
 
-            # Connect to most recent customer signal (RELATES_TO — non-causal)
-            recent = (ContextNode.query
-                      .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
-                      .order_by(ContextNode.occurred_at.desc())
-                      .first())
-            if recent:
+            # Connect customer signals → AI insight (LED_TO — causal chain)
+            recent_signals = (
+                ContextNode.query
+                .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
+                .order_by(ContextNode.occurred_at.desc())
+                .limit(3)
+                .all()
+            )
+            for sig in recent_signals:
                 db.session.add(ContextEdge(
-                    from_node_id=recent.node_id,
+                    customer_id=customer_id,
+                    from_node_id=sig.node_id,
                     to_node_id=insight_node.node_id,
-                    edge_type='RELATES_TO',
-                    confidence=1.0,
-                    properties={'label': 'AI observation of health drop'},
+                    edge_type='LED_TO',
+                    confidence=0.85,
+                    source_platform='signal_analyst',
+                    properties={'label': f'Signal led to health drop insight'},
+                ))
+
+            # Connect AI insight → downstream DECISION nodes (if any exist for this account)
+            recent_decision = (
+                ContextNode.query
+                .filter_by(account_id=account_id, customer_id=customer_id, node_type='DECISION')
+                .order_by(ContextNode.occurred_at.desc())
+                .first()
+            )
+            if recent_decision:
+                db.session.add(ContextEdge(
+                    customer_id=customer_id,
+                    from_node_id=insight_node.node_id,
+                    to_node_id=recent_decision.node_id,
+                    edge_type='TRIGGERED',
+                    confidence=0.7,
+                    source_platform='signal_analyst',
+                    properties={'label': 'AI insight informed decision'},
                 ))
             db.session.commit()
         except Exception as graph_err:
@@ -443,7 +466,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
             db.session.add(insight_node)
             db.session.flush()
 
-            # Link to the triggering customer signal
+            # Link triggering customer signal → proactive insight (causal)
             trigger_signal = (
                 ContextNode.query
                 .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
@@ -454,11 +477,72 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                 db.session.add(ContextEdge(
                     from_node_id=trigger_signal.node_id,
                     to_node_id=insight_node.node_id,
-                    edge_type='CAUSED_BY',  # causal — the signal CAUSED the insight
+                    edge_type='LED_TO',
                     confidence=1.0,
                     customer_id=customer_id,
+                    source_platform='signal_analyst',
                     properties={'label': f'Proactive detection: {signal_type}'},
                 ))
+
+            # For stakeholder-related signals, auto-create DECISION + INVOLVES
+            _STAKEHOLDER_SIGNAL_TYPES = {
+                'champion_change', 'champion_loss', 'executive_change',
+                'stakeholder_departure', 'stakeholder_escalation',
+            }
+            if signal_type in _STAKEHOLDER_SIGNAL_TYPES:
+                # Create a DECISION node for the recommended action
+                decision_node = ContextNode(
+                    account_id=account_id,
+                    customer_id=customer_id,
+                    node_type='DECISION',
+                    source='system',
+                    node_subtype=f'respond_to_{signal_type}',
+                    title=f'Action needed: {risk_info["label"]}',
+                    properties={
+                        'recommended_playbook': risk_info['playbook'],
+                        'signal_type': signal_type,
+                        'auto_created': True,
+                        'triggered_by': 'signal_analyst_proactive',
+                    },
+                    tier=2,
+                    occurred_at=datetime.utcnow(),
+                    source_platform='signal_analyst',
+                )
+                db.session.add(decision_node)
+                db.session.flush()
+
+                # Signal → Decision (TRIGGERED)
+                db.session.add(ContextEdge(
+                    customer_id=customer_id,
+                    from_node_id=insight_node.node_id,
+                    to_node_id=decision_node.node_id,
+                    edge_type='TRIGGERED',
+                    confidence=0.9,
+                    source_platform='signal_analyst',
+                    properties={'label': f'{signal_type} triggered response decision'},
+                ))
+
+                # Link stakeholders via INVOLVES
+                stakeholders = (
+                    ContextNode.query
+                    .filter_by(
+                        account_id=account_id,
+                        customer_id=customer_id,
+                        node_type='STAKEHOLDER',
+                    )
+                    .all()
+                )
+                for sh in stakeholders:
+                    db.session.add(ContextEdge(
+                        customer_id=customer_id,
+                        from_node_id=sh.node_id,
+                        to_node_id=decision_node.node_id,
+                        edge_type='INVOLVES',
+                        confidence=0.7,
+                        source_platform='signal_analyst',
+                        properties={'label': f'{sh.title or "Stakeholder"} involved'},
+                    ))
+
             db.session.commit()
         except Exception as graph_err:
             logger.error(f"signal_analyst: proactive CG write failed: {graph_err}", exc_info=True)

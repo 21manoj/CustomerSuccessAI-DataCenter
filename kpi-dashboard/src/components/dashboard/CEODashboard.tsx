@@ -30,6 +30,7 @@ import { classify, classifyColor, thresholdValues } from '../../utils/healthThre
 import DashboardTopBar from './DashboardTopBar';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
+import { trackPageView } from '../../utils/activityTracker';
 import AskAIPortal from '../ai/AskAIPortal';
 
 // ============================================================================
@@ -854,6 +855,7 @@ const CEODashboard: React.FC = () => {
             period: 'Q1 2026',
             last_updated: 'just now',
           });
+          trackPageView('ceo_dashboard', { companies: companies.length, total_arr: totalArr });
         } else if (!cancelled) {
           setError('No portfolio data available. Upload your data to get started.');
         }

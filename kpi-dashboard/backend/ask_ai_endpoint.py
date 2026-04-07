@@ -383,6 +383,19 @@ def ask_v2():
         # ── Build Response ─────────────────────────────────────────────
         elapsed_ms = int((time.time() - start_time) * 1000)
 
+        # Activity log: AI query visibility for customer admins
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='ai_query',
+                action_description=f"Ask AI ({persona}): {query_text[:80]}",
+                resource_type='ai',
+                details={'persona': persona, 'tools_called': tools_called, 'elapsed_ms': elapsed_ms, 'rounds': min(round_num + 1, max_rounds)},
+            )
+        except Exception:
+            pass
+
         return jsonify({
             'response': final_text,
             'artifacts': all_artifacts,

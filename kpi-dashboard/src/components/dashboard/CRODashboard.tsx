@@ -709,6 +709,7 @@ const CRODashboard: React.FC = () => {
             last_updated: json.last_updated || new Date().toISOString(),
           };
           setData(transformed);
+          trackPageView('cro_dashboard', { accounts: transformed.risk_accounts?.length || 0 });
         }
       } catch {
         if (!cancelled) {

@@ -1,0 +1,173 @@
+{
+  "customer": {
+    "name": "Topology Test DC2S",
+    "vertical": "dc2_s",
+    "admin_email": "admin@topologytest.com",
+    "admin_name": "Test Admin",
+    "domain": "topologytest.com"
+  },
+  "accounts": [
+    {
+      "name": "Alpha Champion Loss",
+      "arr": 5000000,
+      "target_health": 34,
+      "classification": "critical",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-15",
+      "narrative": "VP Engineering and key champion departed. New leader evaluating competitors. GPU utilization crashed.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "AI/ML",
+      "region": "US-West",
+      "stakeholders": [
+        {"name": "Sarah Mitchell", "role": "champion", "title": "VP Engineering", "department": "Engineering", "engagement_frequency": 8, "status": "departed"},
+        {"name": "James Chen", "role": "successor", "title": "Director of Engineering", "department": "Engineering", "engagement_frequency": 3, "sentiment": "negative"},
+        {"name": "Laura Park", "role": "executive_sponsor", "title": "CTO", "department": "Technology", "engagement_frequency": 2, "sentiment": "neutral"},
+        {"name": "Mike Torres", "role": "technical_lead", "title": "Sr. DevOps Engineer", "department": "Engineering", "engagement_frequency": 6, "sentiment": "neutral"}
+      ],
+      "key_signals": [
+        {"type": "champion_loss", "month": 3, "description": "VP Engineering Sarah Mitchell resigned. James Chen appointed as interim."},
+        {"type": "usage_decline", "month": 4, "description": "GPU utilization dropped from 85% to 38% within 3 weeks."},
+        {"type": "competitor_mention", "month": 4, "description": "New director evaluating AWS and CoreWeave for AI workloads."},
+        {"type": "executive_escalation", "month": 5, "description": "CTO Laura Park demanding exec-to-exec meeting on platform future."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "csm_assigned", "description": "Senior CSM assigned with executive mandate."},
+          {"type": "kpi_recovery", "description": "GPU utilization recovering: 38% to 72% after optimization playbook."},
+          {"type": "executive_engagement", "description": "CTO re-engaged after product roadmap preview."}
+        ],
+        "outcomes": [
+          {"type": "churn_averted", "revenue_impact": 2500000, "description": "12-month renewal secured after executive intervention."},
+          {"type": "revenue_protected", "revenue_impact": 4000000, "description": "Full ARR protected through stakeholder re-engagement."}
+        ]
+      }
+    },
+    {
+      "name": "Beta Silent Churn",
+      "arr": 3200000,
+      "target_health": 42,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "var",
+      "renewal_date": "2026-08-01",
+      "narrative": "Usage declining silently. No support tickets, no QBRs, no engagement for 120+ days. Classic ghost account.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Financial Services",
+      "region": "US-East",
+      "stakeholders": [
+        {"name": "David Ross", "role": "champion", "title": "VP Infrastructure", "department": "IT", "engagement_frequency": 1, "sentiment": "neutral"},
+        {"name": "Amanda Liu", "role": "economic_buyer", "title": "CFO", "department": "Finance", "engagement_frequency": 0, "sentiment": "neutral"}
+      ],
+      "key_signals": [
+        {"type": "engagement_gap", "month": 2, "description": "No login activity from any stakeholder for 60+ days."},
+        {"type": "usage_decline", "month": 3, "description": "Compute utilization dropped from 70% to 25%. Workloads migrating silently."},
+        {"type": "nps_decline", "month": 4, "description": "NPS dropped from 45 to 15. No feedback provided, just the score."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "executive_engagement", "description": "VP Infrastructure re-engaged after discovery of silent workload migration."}
+        ],
+        "outcomes": [
+          {"type": "churn_averted", "revenue_impact": 1600000, "description": "Workload migration halted. 6-month commitment secured with migration support."}
+        ]
+      }
+    },
+    {
+      "name": "Gamma Stalled Deploy",
+      "arr": 4100000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-15",
+      "narrative": "HIPAA deployment stalled at 45% for 4 months. Technical champion frustrated. Expansion budget on hold.",
+      "kpi_trajectory": "flat",
+      "decline_start_month": 3,
+      "industry": "Healthcare",
+      "region": "US-Central",
+      "stakeholders": [
+        {"name": "Rachel Kim", "role": "champion", "title": "Director of IT", "department": "IT", "engagement_frequency": 5, "sentiment": "negative"},
+        {"name": "Dr. Brian Foster", "role": "executive_sponsor", "title": "CMIO", "department": "Clinical", "engagement_frequency": 2, "sentiment": "neutral"},
+        {"name": "Nancy Huang", "role": "technical_lead", "title": "Cloud Architect", "department": "IT", "engagement_frequency": 7, "sentiment": "negative"}
+      ],
+      "key_signals": [
+        {"type": "support_escalation", "month": 3, "description": "HIPAA deployment stalled at 45%. 12 open support tickets unresolved."},
+        {"type": "stakeholder_escalation", "month": 4, "description": "Director Rachel Kim escalated to our VP Sales. Threatening to pause contract."},
+        {"type": "engagement_gap", "month": 5, "description": "Weekly deployment syncs cancelled. Champion going dark."}
+      ],
+      "intervention": {
+        "signals": [
+          {"type": "csm_assigned", "description": "Dedicated deployment engineer assigned. Weekly cadence restored."},
+          {"type": "kpi_recovery", "description": "HIPAA deployment accelerated from 45% to 92%."}
+        ],
+        "outcomes": [
+          {"type": "engagement_recovery", "revenue_impact": 820000, "description": "Champion re-engaged. Deployment on track for completion."},
+          {"type": "expansion_approved", "revenue_impact": 1230000, "description": "Phase 2 clinical workload migration approved after deployment success."}
+        ]
+      }
+    },
+    {
+      "name": "Delta Expansion Star",
+      "arr": 3800000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-01",
+      "narrative": "Strong champion driving expansion. New department onboarding. Reference customer. Ready for next-gen GPU cluster.",
+      "kpi_trajectory": "improving",
+      "industry": "Data Analytics",
+      "region": "US-West",
+      "stakeholders": [
+        {"name": "Chris Dawson", "role": "champion", "title": "CTO", "department": "Technology", "engagement_frequency": 9, "sentiment": "positive"},
+        {"name": "Elena Vasquez", "role": "economic_buyer", "title": "VP Finance", "department": "Finance", "engagement_frequency": 4, "sentiment": "positive"},
+        {"name": "Ryan Patel", "role": "technical_lead", "title": "Data Platform Lead", "department": "Engineering", "engagement_frequency": 8, "sentiment": "positive"}
+      ],
+      "key_signals": [
+        {"type": "champion_change", "month": 3, "description": "CTO Chris Dawson agreed to be reference customer. Conference keynote scheduled."}
+      ],
+      "intervention": {
+        "outcomes": [
+          {"type": "expansion_approved", "revenue_impact": 1520000, "description": "New GPU cluster for ML training pipeline. 200% capacity increase approved."},
+          {"type": "expansion_approved", "revenue_impact": 760000, "description": "Marketing analytics department onboarded as new use case."}
+        ]
+      }
+    },
+    {
+      "name": "Epsilon Steady State",
+      "arr": 2600000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "var",
+      "renewal_date": "2027-02-15",
+      "narrative": "Stable operations. Moderate engagement. Renewal expected on time. Low-touch, reliable account.",
+      "kpi_trajectory": "stable",
+      "industry": "Manufacturing",
+      "region": "US-East",
+      "stakeholders": [
+        {"name": "Tom Bradley", "role": "champion", "title": "IT Director", "department": "IT", "engagement_frequency": 4, "sentiment": "positive"}
+      ]
+    }
+  ],
+  "kpis": {
+    "selection": "top_4_per_pillar",
+    "count": 20,
+    "codes": [
+      "P1-KPI1", "P1-KPI2", "P1-KPI4", "P1-KPI5",
+      "P2-KPI1", "P2-KPI2", "P2-KPI3", "P2-KPI4",
+      "P3-KPI1", "P3-KPI2", "P3-KPI3", "P3-KPI4",
+      "P4-KPI1", "P4-KPI2", "P4-KPI3", "P4-KPI4",
+      "P5-KPI1", "P5-KPI2", "P5-KPI3", "P5-KPI4"
+    ],
+    "pillars": ["P1", "P2", "P3", "P4", "P5"]
+  },
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  }
+}

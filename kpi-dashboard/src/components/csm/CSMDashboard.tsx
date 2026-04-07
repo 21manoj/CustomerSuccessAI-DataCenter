@@ -10,7 +10,7 @@
  * Includes floating AI chatbot available in both layouts.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Layout, Layers } from 'lucide-react';
 import CSMFocusFlow from './CSMFocusFlow';
 import CSMCockpit from './CSMCockpit';
@@ -18,6 +18,7 @@ import AskAIPortal from '../ai/AskAIPortal';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useSession } from '../../contexts/SessionContext';
 import { getCustomerIdentifier } from '../../utils/api';
+import { trackPageView, trackDashboardSwitch } from '../../utils/activityTracker';
 
 type LayoutMode = 'focus' | 'cockpit';
 
@@ -31,10 +32,14 @@ const CSMDashboard: React.FC = () => {
   });
 
   const switchLayout = useCallback((mode: LayoutMode) => {
+    trackDashboardSwitch(layout, `csm_${mode}`);
     setLayout(mode);
     localStorage.setItem('csm_layout', mode);
-  }, []);
+  }, [layout]);
 
+  useEffect(() => {
+    trackPageView('csm_dashboard', { layout });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative min-h-screen">

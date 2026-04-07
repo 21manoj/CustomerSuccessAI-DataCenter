@@ -171,6 +171,31 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                     f"urgency={urgency:.1f}"
                 )
 
+                # Activity log: urgent alert created
+                try:
+                    from activity_logging import ActivityLogger
+                    ActivityLogger.log_activity(
+                        customer_id=customer_id,
+                        action_type='urgent_alert',
+                        action_description=(
+                            f"Urgent alert: ${abs(revenue_impact):,.0f} revenue at risk "
+                            f"for {account_name} (urgency={urgency:.1f})"
+                        ),
+                        resource_type='notification',
+                        resource_id=str(notification.id),
+                        details={
+                            'account_id': account_id,
+                            'account_name': account_name,
+                            'revenue_impact': revenue_impact,
+                            'confidence': confidence,
+                            'days_to_renewal': days_to_renewal,
+                            'urgency_score': round(urgency, 1),
+                            'outcome_title': to_node.title,
+                        },
+                    )
+                except Exception:
+                    pass
+
                 # ── 6. Write system alert node to context graph ──
                 try:
                     alert_node = ContextNode(
@@ -194,14 +219,42 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                     db.session.add(alert_node)
                     db.session.flush()
 
-                    # CAUSED_BY ← the risky OUTCOME node that triggered this alert
+                    # Forward causal: risky OUTCOME → urgent alert SIGNAL
                     db.session.add(ContextEdge(
+                        customer_id=customer_id,
                         from_node_id=to_node.node_id,
                         to_node_id=alert_node.node_id,
-                        edge_type='CAUSED_BY',
+                        edge_type='LED_TO',
                         confidence=edge.confidence,
-                        properties={'label': 'Revenue risk triggered urgent alert'},
+                        source_platform='urgent_signal_scanner',
+                        properties={'label': 'Revenue risk outcome triggered urgent alert'},
                     ))
+
+                    # Connect alert back to upstream SIGNAL nodes that caused the OUTCOME
+                    try:
+                        upstream_edges = (
+                            ContextEdge.query
+                            .filter(
+                                ContextEdge.to_node_id == to_node.node_id,
+                                ContextEdge.customer_id == customer_id,
+                            )
+                            .limit(3)
+                            .all()
+                        )
+                        for ue in upstream_edges:
+                            upstream_node = db.session.get(ContextNode, ue.from_node_id)
+                            if upstream_node and upstream_node.node_type == 'SIGNAL':
+                                db.session.add(ContextEdge(
+                                    customer_id=customer_id,
+                                    from_node_id=upstream_node.node_id,
+                                    to_node_id=alert_node.node_id,
+                                    edge_type='RELATES_TO',
+                                    confidence=ue.confidence * 0.8 if ue.confidence else 0.6,
+                                    source_platform='urgent_signal_scanner',
+                                    properties={'label': 'Upstream signal related to urgent alert'},
+                                ))
+                    except Exception:
+                        pass  # Non-fatal — upstream linking is best-effort
                     db.session.commit()
                 except Exception as graph_err:
                     logger.error(
