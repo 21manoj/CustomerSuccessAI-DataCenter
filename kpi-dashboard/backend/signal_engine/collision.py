@@ -99,22 +99,22 @@ def check_cg_collision(
             node = ContextNode.query.filter(
                 ContextNode.account_id == account_id,
                 ContextNode.node_subtype.in_(cg_subtypes),
-                ContextNode.detected_at >= cutoff,
-            ).order_by(ContextNode.detected_at.desc()).first()
+                ContextNode.occurred_at >= cutoff,
+            ).order_by(ContextNode.occurred_at.desc()).first()
 
             if node:
                 logger.info(
                     "CG collision: account=%s intent=%s matched node=%s (subtype=%s)",
-                    account_id, intent, node.id, node.node_subtype,
+                    account_id, intent, node.node_id, node.node_subtype,
                 )
                 return {
                     'collision': True,
-                    'cg_node_id': node.id,
+                    'cg_node_id': node.node_id,
                     'cg_node_subtype': node.node_subtype,
                     'matched_intent': intent,
                     'action': 'enrich',
-                    'reason': f"QSIM intent '{intent}' matches CG node {node.id} "
-                              f"(subtype={node.node_subtype}, detected {node.detected_at})",
+                    'reason': f"QSIM intent '{intent}' matches CG node {node.node_id} "
+                              f"(subtype={node.node_subtype}, occurred {node.occurred_at})",
                 }
 
     except ImportError:

@@ -1176,6 +1176,15 @@ try:
             print("   Signal Engine DB schema ensured")
         except Exception as _e:
             print(f"   ⚠️  Signal Engine DB migration skipped: {_e}")
+
+        # Start background enrichment worker
+        try:
+            from signal_engine.worker import SignalEnrichmentWorker
+            _enrichment_worker = SignalEnrichmentWorker()
+            _enrichment_worker.start()
+            print("   ✅ Signal Enrichment Worker started (background daemon)")
+        except Exception as _e:
+            print(f"   ⚠️  Signal Enrichment Worker failed to start: {_e}")
     else:
         print("ℹ️  Signal Engine disabled (FEATURE_SIGNAL_ENGINE=false)")
         # Purge any orphaned QSIM data when toggle is OFF
