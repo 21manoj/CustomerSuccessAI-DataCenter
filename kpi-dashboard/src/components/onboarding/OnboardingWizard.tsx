@@ -1,332 +1,418 @@
-import React, { useState, useEffect } from 'react';
-import VerticalSelector from './VerticalSelector';
-import TemplatePreview from './TemplatePreview';
-import SmartUploadZone from './SmartUploadZone';
-import FieldMapperAI from './FieldMapperAI';
-import ProcessingProgress from './ProcessingProgress';
-import SuccessSummary from './SuccessSummary';
-import {
-  getVerticals,
-  getTemplate,
-  uploadFile,
-  getImportSummary,
-  VerticalOption,
-  TemplateInfo,
-  FieldMapping,
-  ProcessingStatus,
-  ImportSummary
-} from '../../utils/onboardingApi';
-import { useSession } from '../../contexts/SessionContext';
+/**
+ * Onboarding Wizard — Multi-CSV Upload Flow
+ * ==========================================
+ *
+ * 4-step wizard aligned with the backend's multi-file CSV pipeline:
+ *   Step 1: Welcome — customer info, what to expect
+ *   Step 2: Required CSVs — accounts.csv + kpi_measurements.csv
+ *   Step 3: Optional CSVs — signals, stakeholders, products, engagement, profiles, outcomes
+ *   Step 4: Process — trigger pipeline, poll for completion, link to dashboard
+ *
+ * Backend endpoints used:
+ *   POST /api/onboarding/upload        (FormData: file + file_type)
+ *   POST /api/onboarding/process-data  (JSON: { customer_id })
+ *   GET  /api/onboarding/status/<cid>  (poll for pipeline completion)
+ *   GET  /api/onboarding/templates/<t> (download CSV template)
+ *
+ * Route: /onboarding (App.tsx)
+ */
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  CheckCircle, Upload, Loader2, AlertTriangle, Download,
+  ChevronRight, FileSpreadsheet, ArrowRight, RefreshCw, X,
+} from 'lucide-react';
+import { useSession } from '../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../utils/api';
 
-type OnboardingStep =
-  | 'vertical-selection'
-  | 'template-preview'
-  | 'upload'
-  | 'field-mapping'
-  | 'processing'
-  | 'success';
+// ── File definitions ──
 
-const WIZARD_STEPS: OnboardingStep[] = [
-  'vertical-selection',
-  'template-preview',
-  'upload',
-  'field-mapping',
-  'processing',
-  'success'
+interface FileDef {
+  key: string;
+  label: string;
+  desc: string;
+}
+
+const REQUIRED_FILES: FileDef[] = [
+  { key: 'accounts.csv', label: 'Accounts', desc: 'Customer accounts with ARR, industry, region, renewal date' },
+  { key: 'kpi_measurements.csv', label: 'KPI Measurements', desc: 'Monthly KPI data points per account per pillar' },
 ];
 
-// Parse a CSV line handling quoted values and escaped quotes ("")
-const parseCSVLine = (line: string): string[] => {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
+const OPTIONAL_FILES: FileDef[] = [
+  { key: 'enhanced_qualitative_signals.csv', label: 'Qualitative Signals', desc: 'NPS comments, support escalations, sentiment data' },
+  { key: 'stakeholders.csv', label: 'Stakeholders', desc: 'Key contacts — champions, executive sponsors, technical leads' },
+  { key: 'products.csv', label: 'Products', desc: 'Product/service catalog per account' },
+  { key: 'engagement_events.csv', label: 'Engagement Events', desc: 'Meetings, QBRs, emails, calls with dates' },
+  { key: 'account_business_profiles.csv', label: 'Business Profiles', desc: 'Industry vertical, region, contract details per account' },
+  { key: 'outcomes.csv', label: 'Outcomes', desc: 'Revenue events — churn, expansion, renewal with $ impact' },
+];
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+type Step = 1 | 2 | 3 | 4;
 
-    if (char === '"') {
-      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
-        // Escaped quote inside quoted field
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-};
+interface UploadState {
+  status: 'idle' | 'uploading' | 'success' | 'error';
+  rows?: number;
+  message?: string;
+}
 
-const OnboardingWizard: React.FC = () => {
+// ── Component ──
+
+export const OnboardingWizard: React.FC = () => {
   const { session } = useSession();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('vertical-selection');
-  const [verticals, setVerticals] = useState<VerticalOption[]>([]);
-  const [selectedVertical, setSelectedVertical] = useState<string | null>(null);
-  const [template, setTemplate] = useState<TemplateInfo | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [sourceColumns, setSourceColumns] = useState<string[]>([]);
-  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
-  const [sessionId, setSessionId] = useState<string>('');
-  const [uploadId, setUploadId] = useState<string>('');
-  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const customerId = getCustomerIdentifier(session);
 
-  useEffect(() => {
-    if (session?.customer_id) {
-      loadVerticals();
-    } else {
-      navigate('/login');
-    }
-  }, [session, navigate]);
+  const [step, setStep] = useState<Step>(1);
+  const [uploads, setUploads] = useState<Record<string, UploadState>>({});
+  const [processing, setProcessing] = useState(false);
+  const [processResult, setProcessResult] = useState<any>(null);
+  const [error, setError] = useState('');
 
-  const loadVerticals = async () => {
+  // Upload a single CSV file
+  const uploadFile = useCallback(async (fileKey: string, file: File) => {
+    setUploads(prev => ({ ...prev, [fileKey]: { status: 'uploading' } }));
+    setError('');
     try {
-      const verticalsData = await getVerticals();
-      setVerticals(verticalsData);
-    } catch (error) {
-      console.error('Error loading verticals:', error);
-    }
-  };
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('file_type', fileKey);
 
-  const handleVerticalSelect = async (verticalId: string) => {
-    setSelectedVertical(verticalId);
-    try {
-      const templateData = await getTemplate(verticalId);
-      setTemplate(templateData);
-      setCurrentStep('template-preview');
-    } catch (error) {
-      console.error('Error loading template:', error);
-    }
-  };
+      const resp = await fetch('/api/onboarding/upload', { method: 'POST', body: formData });
+      const data = await resp.json().catch(() => ({}));
 
-  const handleCustomKPIs = () => {
-    handleVerticalSelect('datacenter');
-  };
-
-  const handleFileSelect = async (file: File) => {
-    setUploadedFile(file);
-
-    // Only parse headers from CSV text files
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    if (extension === 'xlsx' || extension === 'xls') {
-      // Excel files: the backend handles parsing, so skip client-side header extraction
-      // and go straight to field mapping with template KPI names as source columns
-      if (template) {
-        setSourceColumns(template.kpis.map(k => k.name));
+      if (!resp.ok) {
+        setUploads(prev => ({
+          ...prev,
+          [fileKey]: { status: 'error', message: data.error || data.message || `Upload failed (${resp.status})` },
+        }));
+        return;
       }
-      setCurrentStep('field-mapping');
-      return;
+
+      setUploads(prev => ({
+        ...prev,
+        [fileKey]: {
+          status: 'success',
+          rows: data.rows_loaded || data.rows || data.records_loaded || 0,
+          message: data.message || 'Uploaded',
+        },
+      }));
+    } catch (e: any) {
+      setUploads(prev => ({ ...prev, [fileKey]: { status: 'error', message: e.message } }));
     }
+  }, []);
 
-    // CSV parsing
+  // Download CSV template
+  const downloadTemplate = useCallback(async (fileKey: string) => {
     try {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(line => line.trim());
-
-      if (lines.length > 0) {
-        const columns = parseCSVLine(lines[0]);
-        setSourceColumns(columns);
-      }
-    } catch (error) {
-      console.error('Error parsing file:', error);
-      // If parsing fails, use template KPI names as fallback
-      if (template) {
-        setSourceColumns(template.kpis.map(k => k.name));
-      }
+      const resp = await fetch(`/api/onboarding/templates/${fileKey}`);
+      if (!resp.ok) return;
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileKey;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Silent fail — template download is best-effort
     }
+  }, []);
 
-    setCurrentStep('field-mapping');
-  };
-
-  const handleFieldMappingContinue = async () => {
-    if (!uploadedFile) return;
-
-    // Generate unique session ID
-    const newSessionId = `onboarding_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setSessionId(newSessionId);
-    setUploadError(null);
-
+  // Process data pipeline
+  const processData = useCallback(async () => {
+    setProcessing(true);
+    setError('');
     try {
-      const result = await uploadFile(
-        uploadedFile,
-        fieldMappings,
-        newSessionId,
-        undefined,
-        selectedVertical || 'datacenter'
-      );
-      setUploadId(result.uploadId);
-      setCurrentStep('processing');
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload file. Please try again.');
-    }
-  };
-
-  const handleProcessingComplete = async (status: ProcessingStatus) => {
-    try {
-      const summary = await getImportSummary(uploadId);
-      setImportSummary(summary);
-      setCurrentStep('success');
-    } catch (error) {
-      console.error('Error getting summary:', error);
-      setImportSummary({
-        customersImported: 0,
-        kpisProcessed: 0,
-        healthyAccounts: 0,
-        atRiskAccounts: 0,
-        criticalAccounts: 0,
-        portfolioHealth: 0,
-        priorityActions: 0
+      const resp = await fetch('/api/onboarding/process-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id: customerId }),
       });
-      setCurrentStep('success');
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        setError(err.error || err.message || 'Processing failed');
+        setProcessing(false);
+        return;
+      }
+
+      // Poll for completion
+      const poll = async () => {
+        try {
+          const sr = await fetch(`/api/onboarding/status/${customerId}`);
+          if (sr.ok) {
+            const status = await sr.json();
+            if (status.status === 'success' || status.status === 'completed') {
+              setProcessResult(status);
+              setProcessing(false);
+              return;
+            }
+            if (status.status === 'error' || status.status === 'failed') {
+              setError(status.error || status.message || 'Processing failed');
+              setProcessing(false);
+              return;
+            }
+          }
+        } catch { /* continue polling */ }
+        setTimeout(poll, 3000);
+      };
+      setTimeout(poll, 2000);
+    } catch (e: any) {
+      setError(e.message);
+      setProcessing(false);
     }
+  }, [customerId]);
+
+  const requiredDone = REQUIRED_FILES.every(f => uploads[f.key]?.status === 'success');
+  const uploadCount = Object.values(uploads).filter(u => u.status === 'success').length;
+
+  // ── File upload card ──
+
+  const FileCard = ({ def, required }: { def: FileDef; required?: boolean }) => {
+    const u = uploads[def.key];
+    const inputId = `upload-${def.key.replace(/\./g, '-')}`;
+    return (
+      <div className={`border rounded-lg p-4 transition-colors ${
+        u?.status === 'success' ? 'border-green-700 bg-green-950/20' :
+        u?.status === 'error' ? 'border-red-700 bg-red-950/20' :
+        'border-gray-700 bg-gray-900/40 hover:border-gray-600'
+      }`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <FileSpreadsheet className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="text-sm font-medium text-white">{def.label}</span>
+              {required && <span className="text-[10px] px-1.5 py-0.5 bg-amber-900/50 text-amber-300 rounded font-medium">Required</span>}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{def.desc}</p>
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="text-[10px] text-gray-600 font-mono">{def.key}</span>
+              <button
+                onClick={() => downloadTemplate(def.key)}
+                className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-0.5"
+              >
+                <Download className="h-3 w-3" /> Template
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {u?.status === 'success' && (
+              <span className="flex items-center gap-1 text-xs text-green-400">
+                <CheckCircle className="h-4 w-4" />
+                {u.rows ? `${u.rows} rows` : 'Done'}
+              </span>
+            )}
+            {u?.status === 'uploading' && <Loader2 className="h-4 w-4 text-teal-400 animate-spin" />}
+            {u?.status === 'error' && (
+              <span className="text-xs text-red-400 max-w-[180px] truncate" title={u.message}>{u.message}</span>
+            )}
+            <label htmlFor={inputId} className={`cursor-pointer px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              u?.status === 'success' ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-teal-600 text-white hover:bg-teal-500'
+            }`}>
+              {u?.status === 'success' ? 'Replace' : 'Upload'}
+            </label>
+            <input
+              id={inputId}
+              type="file"
+              accept=".csv,.tsv"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(def.key, f); e.target.value = ''; }}
+            />
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const handleAction = (action: 'dashboard' | 'alerts' | 'assistant' | 'tour') => {
-    switch (action) {
-      case 'dashboard':
-        navigate('/executive-dashboard');
-        break;
-      case 'alerts':
-        navigate('/dashboard');
-        break;
-      case 'assistant':
-        navigate('/dashboard');
-        break;
-      case 'tour':
-        // Clear tour completion flag so it auto-launches in DCPlatform
-        localStorage.removeItem('tour_completed');
-        navigate('/dc-dashboard');
-        break;
-    }
-  };
+  // ── Step bar ──
 
-  const handleBack = () => {
-    const currentIndex = WIZARD_STEPS.indexOf(currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(WIZARD_STEPS[currentIndex - 1]);
-    }
-  };
-
-  const getStepNumber = (step: OnboardingStep): number => {
-    return WIZARD_STEPS.indexOf(step) + 1;
-  };
-
-  // Displayable steps (exclude 'success' from progress bar)
-  const displaySteps = WIZARD_STEPS.length - 1; // 5 steps shown
+  const steps = [
+    { n: 1, label: 'Welcome' },
+    { n: 2, label: 'Required Data' },
+    { n: 3, label: 'Optional Data' },
+    { n: 4, label: 'Process' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Progress Indicator */}
-      {currentStep !== 'success' && (
-        <div className="bg-white border-b border-gray-200 px-8 py-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">
-                Step {Math.min(getStepNumber(currentStep), displaySteps)} of {displaySteps}
-              </span>
-              <span className="text-sm text-gray-500">
-                {Math.round((Math.min(getStepNumber(currentStep), displaySteps) / displaySteps) * 100)}% Complete
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {Array.from({ length: displaySteps }).map((_, index) => {
-                const stepNum = index + 1;
-                const currentNum = Math.min(getStepNumber(currentStep), displaySteps);
-                const isActive = stepNum === currentNum;
-                const isComplete = stepNum < currentNum;
+    <div className="min-h-screen bg-[#0f1419] text-white">
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">CS Pulse Onboarding</h1>
+            <p className="text-gray-500 text-sm mt-0.5">Upload your data to generate health scores and insights</p>
+          </div>
+          <button onClick={() => navigate('/')} className="text-gray-500 hover:text-gray-300"><X className="h-5 w-5" /></button>
+        </div>
 
-                return (
-                  <React.Fragment key={index}>
-                    <div className={`flex-1 h-2 rounded-full ${
-                      isComplete ? 'bg-green-500' :
-                      isActive ? 'bg-blue-500' :
-                      'bg-gray-200'
-                    }`} />
-                    {index < displaySteps - 1 && (
-                      <div className={`w-2 h-2 rounded-full ${
-                        isComplete ? 'bg-green-500' :
-                        isActive ? 'bg-blue-500' :
-                        'bg-gray-200'
-                      }`} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
+        {/* Step indicator */}
+        <div className="flex items-center gap-1.5 mb-8">
+          {steps.map((s, i) => (
+            <React.Fragment key={s.n}>
+              <button
+                onClick={() => { if (s.n <= step || (s.n === 3 && requiredDone) || (s.n === 4 && requiredDone)) setStep(s.n as Step); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  step === s.n ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/30'
+                    : step > s.n ? 'bg-green-900/40 text-green-300'
+                    : 'bg-gray-800/80 text-gray-500'
+                }`}
+              >
+                {step > s.n ? <CheckCircle className="h-3.5 w-3.5" /> : <span className="w-4 text-center">{s.n}</span>}
+                <span className="hidden sm:inline">{s.label}</span>
+              </button>
+              {i < steps.length - 1 && <ChevronRight className="h-3 w-3 text-gray-700" />}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* ── Step 1: Welcome ── */}
+        {step === 1 && (
+          <div className="space-y-6">
+            <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold mb-3">Welcome to CS Pulse</h2>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                We need two files to get started: your <strong className="text-white">accounts list</strong> (with ARR and renewal dates)
+                and <strong className="text-white">KPI measurements</strong> (monthly metrics per account).
+                Everything else — signals, stakeholders, products — is optional but improves accuracy.
+              </p>
+              <div className="grid grid-cols-3 gap-3 mt-5 text-xs">
+                <div className="bg-gray-800/60 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-teal-400">2</div>
+                  <div className="text-gray-500 mt-0.5">Required files</div>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-gray-300">6</div>
+                  <div className="text-gray-500 mt-0.5">Optional files</div>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-gray-300">~5 min</div>
+                  <div className="text-gray-500 mt-0.5">Total time</div>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setStep(2)}
+              className="w-full py-3 bg-teal-600 hover:bg-teal-500 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
+            >
+              Start Upload <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Step 2: Required CSVs ── */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Required Data</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Upload these two files to enable health scoring. Click "Template" to download a sample CSV.</p>
+            </div>
+            <div className="space-y-3">
+              {REQUIRED_FILES.map(f => <FileCard key={f.key} def={f} required />)}
+            </div>
+            <div className="flex justify-between pt-4">
+              <button onClick={() => setStep(1)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm">Back</button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!requiredDone}
+                className={`px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                  requiredDone ? 'bg-teal-600 hover:bg-teal-500 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Next: Optional Data <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Step Content */}
-      {currentStep === 'vertical-selection' && (
-        <VerticalSelector
-          verticals={verticals}
-          selectedVertical={selectedVertical}
-          onSelect={handleVerticalSelect}
-          onCustom={handleCustomKPIs}
-        />
-      )}
-
-      {currentStep === 'template-preview' && template && selectedVertical && (
-        <TemplatePreview
-          template={template}
-          vertical={selectedVertical}
-          onSkip={() => setCurrentStep('upload')}
-          onContinue={() => setCurrentStep('upload')}
-        />
-      )}
-
-      {currentStep === 'upload' && (
-        <SmartUploadZone
-          onFileSelect={handleFileSelect}
-          acceptedFormats={['.csv', '.xlsx', '.xls']}
-          maxSizeBytes={10 * 1024 * 1024}
-          showPreview={true}
-          onBack={handleBack}
-        />
-      )}
-
-      {currentStep === 'field-mapping' && uploadedFile && selectedVertical && (
-        <FieldMapperAI
-          sourceColumns={sourceColumns}
-          targetFields={template?.kpis.map(k => k.name) || []}
-          vertical={selectedVertical}
-          onMappingChange={setFieldMappings}
-          onContinue={handleFieldMappingContinue}
-          onBack={() => setCurrentStep('upload')}
-        />
-      )}
-
-      {currentStep === 'field-mapping' && uploadError && (
-        <div className="max-w-4xl mx-auto px-4 mt-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600">{uploadError}</p>
+        {/* ── Step 3: Optional CSVs ── */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Optional Data</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                These files enrich your health scores with signals, stakeholder maps, and revenue outcomes.
+                Skip any you don't have — you can always upload them later from the admin panel.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {OPTIONAL_FILES.map(f => <FileCard key={f.key} def={f} />)}
+            </div>
+            <div className="flex justify-between pt-4">
+              <button onClick={() => setStep(2)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm">Back</button>
+              <button
+                onClick={() => setStep(4)}
+                className="px-6 py-2 bg-teal-600 hover:bg-teal-500 rounded-xl text-sm font-medium flex items-center gap-2"
+              >
+                Process Data <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {currentStep === 'processing' && sessionId && (
-        <ProcessingProgress
-          sessionId={sessionId}
-          onComplete={handleProcessingComplete}
-        />
-      )}
+        {/* ── Step 4: Process ── */}
+        {step === 4 && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">Process Your Data</h2>
 
-      {currentStep === 'success' && importSummary && (
-        <SuccessSummary
-          summary={importSummary}
-          onAction={handleAction}
-        />
-      )}
+            {/* Upload summary */}
+            <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-300">Upload Summary</h3>
+                <span className="text-xs text-gray-500">{uploadCount} file{uploadCount !== 1 ? 's' : ''} uploaded</span>
+              </div>
+              <div className="space-y-1">
+                {Object.entries(uploads).filter(([, v]) => v.status === 'success').map(([key, v]) => (
+                  <div key={key} className="flex items-center gap-2 text-xs">
+                    <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
+                    <span className="text-gray-300 font-mono">{key}</span>
+                    {v.rows ? <span className="text-gray-500">({v.rows.toLocaleString()} rows)</span> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-950/30 border border-red-800 rounded-lg p-3 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-red-300">{error}</span>
+              </div>
+            )}
+
+            {processResult ? (
+              <div className="bg-green-950/20 border border-green-800 rounded-xl p-8 text-center">
+                <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-green-300 mb-2">Onboarding Complete!</h3>
+                <p className="text-sm text-gray-400 mb-6">Health scores calculated. Your dashboard is ready.</p>
+                <div className="flex justify-center gap-3">
+                  <button onClick={() => navigate('/dc-dashboard')} className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 rounded-lg text-sm font-medium transition-colors">
+                    Go to Dashboard
+                  </button>
+                  <button onClick={() => navigate('/dc-dashboard/csm')} className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors">
+                    CSM View
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between">
+                <button onClick={() => setStep(3)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm">Back</button>
+                <button
+                  onClick={processData}
+                  disabled={processing}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                    processing ? 'bg-gray-700 text-gray-400 cursor-wait' : 'bg-teal-600 hover:bg-teal-500 text-white'
+                  }`}
+                >
+                  {processing ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Processing...</>
+                  ) : (
+                    <><RefreshCw className="h-4 w-4" /> Calculate Health Scores</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

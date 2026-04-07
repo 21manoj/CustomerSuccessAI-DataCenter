@@ -6,7 +6,7 @@ import CSPlatform from './components/CSPlatform';
 import Dashboard_dc from './components/Dashboard_dc';
 import ExecutiveDashboard from './components/ExecutiveDashboard';
 import DCPlatform from './components/dc/platform/dc_Platform';
-import { OnboardingWizard } from './components/onboarding/OnboardingWizard.main';
+import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import RegistrationForm from './components/RegistrationForm';
 import JourneyVisualizer from './components/wizard/JourneyVisualizer';
 import JourneyDashboardV3 from './components/journey-visualizer/JourneyDashboardV3';
@@ -119,19 +119,7 @@ const RegisterRoute: React.FC = () => {
 };
 
 const OnboardingWizardRoute: React.FC = () => {
-  const navigate = useNavigate();
-  
-  return (
-    <OnboardingWizard 
-      onComplete={(data) => {
-        console.log('Onboarding complete:', data);
-        // Redirect handled in OnboardingWizard component
-      }}
-      onCancel={() => {
-        navigate('/');
-      }}
-    />
-  );
+  return <OnboardingWizard />;
 };
 
 const RegisterFormComponent: React.FC = () => {
