@@ -411,78 +411,97 @@ def reactivate_customer(cid):
         return jsonify({"error": str(e)}), 500
 
 
-def _purge_customer_data(cid: int) -> dict:
+def _purge_customer_data(cid: int, _retries: int = 3) -> dict:
     """Canonical customer purge — SINGLE SOURCE OF TRUTH for all delete endpoints.
 
     Queries information_schema for ALL FK references to both customers and accounts
-    tables, then deletes in safe order. No hardcoded table lists to maintain.
+    tables, then deletes in safe order. Retries on deadlock. No hardcoded table lists.
     """
     from sqlalchemy import text
     import shutil, glob
-    deleted = {}
+    import time as _time
 
-    # 1. Get account IDs
-    account_ids = [
-        r[0] for r in db.session.execute(
-            text("SELECT account_id FROM accounts WHERE customer_id = :cid"), {"cid": cid}
-        ).fetchall()
-    ]
-
-    # 2. Delete from ALL tables with FK to accounts (information_schema scan)
-    if account_ids:
-        aid_list = ','.join(str(a) for a in account_ids)
+    for attempt in range(_retries):
         try:
-            acct_fk = db.session.execute(text("""
-                SELECT DISTINCT tc.table_name, kcu.column_name
-                FROM information_schema.table_constraints tc
-                JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-                JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'accounts'
-                  AND tc.table_name != 'accounts'
-            """)).fetchall()
-            for tbl, col in acct_fk:
+            deleted = {}
+
+            # 1. Get account IDs
+            account_ids = [
+                r[0] for r in db.session.execute(
+                    text("SELECT account_id FROM accounts WHERE customer_id = :cid"), {"cid": cid}
+                ).fetchall()
+            ]
+
+            # 2. Delete from ALL tables with FK to accounts (information_schema scan)
+            if account_ids:
+                aid_list = ','.join(str(a) for a in account_ids)
                 try:
-                    db.session.execute(text("SAVEPOINT sp_purge"))
-                    r = db.session.execute(text(f"DELETE FROM {tbl} WHERE {col} IN ({aid_list})"))
-                    if r.rowcount > 0:
-                        deleted[tbl] = r.rowcount
-                    db.session.execute(text("RELEASE SAVEPOINT sp_purge"))
+                    acct_fk = db.session.execute(text("""
+                        SELECT DISTINCT tc.table_name, kcu.column_name
+                        FROM information_schema.table_constraints tc
+                        JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+                        JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+                        WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'accounts'
+                          AND tc.table_name != 'accounts'
+                    """)).fetchall()
+                    for tbl, col in acct_fk:
+                        try:
+                            db.session.execute(text("SAVEPOINT sp_purge"))
+                            r = db.session.execute(text(f"DELETE FROM {tbl} WHERE {col} IN ({aid_list})"))
+                            if r.rowcount > 0:
+                                deleted[tbl] = r.rowcount
+                            db.session.execute(text("RELEASE SAVEPOINT sp_purge"))
+                        except Exception:
+                            try:
+                                db.session.execute(text("ROLLBACK TO SAVEPOINT sp_purge"))
+                            except Exception:
+                                pass
                 except Exception:
-                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_purge"))
-        except Exception:
-            pass
+                    pass
 
-    # 3. Delete from ALL tables with FK to customers (information_schema scan)
-    try:
-        cust_fk = db.session.execute(text("""
-            SELECT DISTINCT tc.table_name
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
-            WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'customers'
-              AND tc.table_name != 'customers'
-        """)).fetchall()
-        for (tbl,) in cust_fk:
+            # 3. Delete from ALL tables with FK to customers (information_schema scan)
             try:
-                db.session.execute(text("SAVEPOINT sp_purge"))
-                r = db.session.execute(text(f"DELETE FROM {tbl} WHERE customer_id = :cid"), {"cid": cid})
-                if r.rowcount > 0:
-                    deleted[tbl] = r.rowcount
-                db.session.execute(text("RELEASE SAVEPOINT sp_purge"))
+                cust_fk = db.session.execute(text("""
+                    SELECT DISTINCT tc.table_name
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+                    WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'customers'
+                      AND tc.table_name != 'customers'
+                """)).fetchall()
+                for (tbl,) in cust_fk:
+                    try:
+                        db.session.execute(text("SAVEPOINT sp_purge"))
+                        r = db.session.execute(text(f"DELETE FROM {tbl} WHERE customer_id = :cid"), {"cid": cid})
+                        if r.rowcount > 0:
+                            deleted[tbl] = r.rowcount
+                        db.session.execute(text("RELEASE SAVEPOINT sp_purge"))
+                    except Exception:
+                        try:
+                            db.session.execute(text("ROLLBACK TO SAVEPOINT sp_purge"))
+                        except Exception:
+                            pass
             except Exception:
-                db.session.execute(text("ROLLBACK TO SAVEPOINT sp_purge"))
-    except Exception:
-        pass
+                pass
 
-    # 4. Delete the customer record (raw SQL — NOT ORM .delete())
-    db.session.execute(text("DELETE FROM customers WHERE customer_id = :cid"), {"cid": cid})
-    deleted['customers'] = 1
+            # 4. Delete the customer record (raw SQL)
+            db.session.execute(text("DELETE FROM customers WHERE customer_id = :cid"), {"cid": cid})
+            deleted['customers'] = 1
 
-    # 5. Filesystem cleanup
-    for d in glob.glob(f'verticals/customer{cid}-*'):
-        shutil.rmtree(d, ignore_errors=True)
-        deleted['filesystem'] = d
+            # 5. Filesystem cleanup
+            for d in glob.glob(f'verticals/customer{cid}-*'):
+                shutil.rmtree(d, ignore_errors=True)
+                deleted['filesystem'] = d
 
-    return deleted
+            return deleted
+
+        except Exception as e:
+            err_str = str(e).lower()
+            db.session.rollback()
+            if 'deadlock' in err_str and attempt < _retries - 1:
+                logger.warning(f"Deadlock on purge customer {cid}, retry {attempt + 1}/{_retries}")
+                _time.sleep(0.5 * (attempt + 1))  # backoff
+                continue
+            raise  # re-raise on last attempt or non-deadlock errors
 
 
 @admin_ui_api.route("/api/admin-ui/customers/<int:cid>/purge", methods=["DELETE"])
@@ -529,15 +548,20 @@ def bulk_purge_customers():
                 continue
 
             customer_name = c.customer_name
-            # Use the canonical purge function (single source of truth)
-            _purge_customer_data(cid)
-            results.append({"customer_id": cid, "name": customer_name, "status": "purged"})
+            try:
+                _purge_customer_data(cid)
+                db.session.commit()
+                results.append({"customer_id": cid, "name": customer_name, "status": "purged"})
+                logger.info(f"BULK PURGE: purged customer {cid} ({customer_name})")
+            except Exception as e:
+                db.session.rollback()
+                results.append({"customer_id": cid, "name": customer_name, "status": "error", "error": str(e)[:200]})
+                logger.error(f"BULK PURGE: failed customer {cid}: {e}")
 
-        db.session.commit()
-        logger.info(f"BULK PURGE: {len(results)} customers processed")
-        return jsonify({"status": "success", "results": results, "purged": len([r for r in results if r['status'] == 'purged'])})
+        purged = len([r for r in results if r['status'] == 'purged'])
+        logger.info(f"BULK PURGE: {purged}/{len(results)} customers purged")
+        return jsonify({"status": "success", "results": results, "purged": purged})
     except Exception as e:
-        db.session.rollback()
         logger.error(f"Bulk purge failed: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
