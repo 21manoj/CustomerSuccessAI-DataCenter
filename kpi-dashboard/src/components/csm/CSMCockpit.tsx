@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useSession } from '../../contexts/SessionContext';
 import { classify, classifyColor } from '../../utils/healthThresholds';
+import NotificationBell from './NotificationBell';
+import UrgentAlertBanner from './UrgentAlertBanner';
 import {
   MOCK_ACCOUNTS, MOCK_ACTIONS, MOCK_APPROVALS,
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
@@ -599,7 +601,15 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-const CSMCockpit: React.FC = () => {
+interface CSMCockpitProps {
+  notifications?: import('../../hooks/useNotifications').Notification[];
+  unreadCount?: number;
+  urgentAlerts?: import('../../hooks/useNotifications').Notification[];
+  onMarkRead?: (id: number) => void;
+  onMarkAllRead?: () => void;
+}
+
+const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount = 0, urgentAlerts = [], onMarkRead = () => {}, onMarkAllRead = () => {} }) => {
   const { session } = useSession();
   const customerId = session?.customer_id?.toString() || '';
   const headers = useMemo(() => ({ 'X-Customer-ID': customerId }), [customerId]);
@@ -946,14 +956,12 @@ const CSMCockpit: React.FC = () => {
 
         {/* Right: notifications + avatar */}
         <div className="flex items-center gap-3">
-          <button className="relative p-1.5 hover:bg-gray-100 rounded-lg transition">
-            <Bell className="w-5 h-5 text-gray-500" />
-            {(approvals.length > 0 || criticalCount > 0) && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {approvals.length + criticalCount}
-              </span>
-            )}
-          </button>
+          <NotificationBell
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onMarkRead={onMarkRead}
+            onMarkAllRead={onMarkAllRead}
+          />
           <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-semibold">
             {session?.user_name
               ? session.user_name
@@ -966,6 +974,9 @@ const CSMCockpit: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Urgent Alert Banner */}
+      <UrgentAlertBanner alerts={urgentAlerts} onDismiss={onMarkRead} />
 
       {/* ── Portfolio Summary Strip ────────────────────────────────────── */}
       {activeTab === 'board' && (
