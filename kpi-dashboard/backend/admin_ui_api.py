@@ -482,7 +482,34 @@ def purge_customer(cid):
             except Exception:
                 db.session.execute(text("ROLLBACK TO SAVEPOINT sp_del"))
 
-        # 3. Delete the customer record itself
+        # 3. Catch-all: delete from ANY table that still references this customer
+        # This handles tables added after the list above was written
+        try:
+            remaining_fk_tables = db.session.execute(text("""
+                SELECT DISTINCT tc.table_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.constraint_column_usage ccu
+                  ON tc.constraint_name = ccu.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND ccu.table_name = 'customers'
+                  AND tc.table_name != 'customers'
+            """)).fetchall()
+            for (tbl,) in remaining_fk_tables:
+                try:
+                    db.session.execute(text("SAVEPOINT sp_catchall"))
+                    r = db.session.execute(
+                        text(f"DELETE FROM {tbl} WHERE customer_id = :cid"),
+                        {"cid": cid}
+                    )
+                    if r.rowcount > 0:
+                        deleted[f'{tbl}_catchall'] = r.rowcount
+                    db.session.execute(text("RELEASE SAVEPOINT sp_catchall"))
+                except Exception:
+                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_catchall"))
+        except Exception as e:
+            logger.warning(f"FK catch-all scan failed (non-fatal): {e}")
+
+        # Delete the customer record itself
         db.session.execute(
             text("DELETE FROM customers WHERE customer_id = :cid"),
             {"cid": cid}
