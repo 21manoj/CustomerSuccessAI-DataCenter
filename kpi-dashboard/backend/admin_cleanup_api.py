@@ -206,12 +206,40 @@ def cleanup_customer(customer_id):
                 logger.warning(f"  ⚠️  Error deleting from {table_name}: {e}")
                 errors.append(f"{table_name}: {str(e)}")
 
-        # Catch-all: query information_schema for ALL FK references to customers table
-        # and delete any remaining rows. This prevents FK violations from tables
-        # added after the hardcoded deletion list above.
+        # Catch-all: delete from ALL tables with FK to customers or accounts.
+        # Queries information_schema so new tables are handled automatically.
         if not dry_run:
+            # Get account IDs for account-level FK cleanup
+            acct_ids = [a.account_id for a in Account.query.filter_by(customer_id=customer_id).all()]
+
+            # Account-level FK tables (reference accounts.account_id)
+            if acct_ids:
+                try:
+                    acct_fk_tables = db.session.execute(text("""
+                        SELECT DISTINCT tc.table_name, kcu.column_name
+                        FROM information_schema.table_constraints tc
+                        JOIN information_schema.key_column_usage kcu
+                          ON tc.constraint_name = kcu.constraint_name
+                        JOIN information_schema.constraint_column_usage ccu
+                          ON tc.constraint_name = ccu.constraint_name
+                        WHERE tc.constraint_type = 'FOREIGN KEY'
+                          AND ccu.table_name = 'accounts'
+                          AND tc.table_name != 'accounts'
+                    """)).fetchall()
+                    aid_list = ",".join(str(a) for a in acct_ids)
+                    for tbl, col in acct_fk_tables:
+                        try:
+                            r = db.session.execute(text(f"DELETE FROM {tbl} WHERE {col} IN ({aid_list})"))
+                            if r.rowcount > 0:
+                                logger.info(f"  ✓ FK catch-all (account): deleted {r.rowcount} from {tbl}")
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            # Customer-level FK tables (reference customers.customer_id)
             try:
-                fk_tables = db.session.execute(text("""
+                cust_fk_tables = db.session.execute(text("""
                     SELECT DISTINCT tc.table_name
                     FROM information_schema.table_constraints tc
                     JOIN information_schema.constraint_column_usage ccu
@@ -220,22 +248,24 @@ def cleanup_customer(customer_id):
                       AND ccu.table_name = 'customers'
                       AND tc.table_name != 'customers'
                 """)).fetchall()
-                for (tbl,) in fk_tables:
+                for (tbl,) in cust_fk_tables:
                     try:
                         r = db.session.execute(
                             text(f"DELETE FROM {tbl} WHERE customer_id = :cid"),
                             {"cid": customer_id}
                         )
                         if r.rowcount > 0:
-                            logger.info(f"  ✓ FK catch-all: deleted {r.rowcount} rows from {tbl}")
+                            logger.info(f"  ✓ FK catch-all: deleted {r.rowcount} from {tbl}")
                     except Exception:
-                        pass  # table might not have customer_id column directly
+                        pass
             except Exception as fk_err:
                 logger.warning(f"  FK catch-all scan failed: {fk_err}")
 
-        # Delete customer itself
+        # Delete customer itself (raw SQL — ORM .delete() can trigger FK cascade errors)
         if not dry_run:
-            db.session.delete(customer)
+            db.session.execute(text(
+                "DELETE FROM customers WHERE customer_id = :cid"
+            ), {"cid": customer_id})
             logger.info(f"  ✓ Deleted customer {customer_id}")
 
         # Commit if not dry-run
