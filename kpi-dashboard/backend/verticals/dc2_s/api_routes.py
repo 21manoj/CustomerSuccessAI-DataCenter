@@ -2623,7 +2623,7 @@ def get_team_capacity_api():
 
         accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
         total_arr = sum(float(a.revenue or 0) for a in accounts)
-        at_risk_count = sum(1 for a in accounts if float(a.health_score or 100) < ht.healthy_min())
+        at_risk_count = sum(1 for a in accounts if float(getattr(a, 'health_score', None) or 100) < ht.healthy_min())
 
         # Group accounts by CSM for real CSM count
         csm_set = set()

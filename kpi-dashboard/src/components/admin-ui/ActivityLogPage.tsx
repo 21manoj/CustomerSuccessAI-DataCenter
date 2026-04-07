@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { formatDateTime } from '../../utils/formatDate';
 import {
   Search,
   ChevronLeft,
@@ -329,7 +330,7 @@ const ActivityLogPage: React.FC = () => {
                     className={`hover:bg-gray-50 ${entry.action === 'entitlement_rejected' ? 'bg-amber-50/40' : ''}`}
                   >
                     <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">
-                      {new Date(entry.timestamp).toLocaleString()}
+                      {formatDateTime(entry.timestamp)}
                     </td>
                     <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">
                       {entry.customer_name ?? (entry.customer_id ? `#${entry.customer_id}` : '--')}

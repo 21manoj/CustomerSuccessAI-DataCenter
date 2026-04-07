@@ -425,7 +425,13 @@ def _purge_customer_data(cid: int, _retries: int = 3) -> dict:
         try:
             deleted = {}
 
-            # 1. Get account IDs
+            # 1. Lock the customer row to prevent concurrent process_data writes
+            db.session.execute(
+                text("SELECT customer_id FROM customers WHERE customer_id = :cid FOR UPDATE"),
+                {"cid": cid}
+            )
+
+            # Get account IDs
             account_ids = [
                 r[0] for r in db.session.execute(
                     text("SELECT account_id FROM accounts WHERE customer_id = :cid"), {"cid": cid}
