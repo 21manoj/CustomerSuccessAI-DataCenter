@@ -194,10 +194,11 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
    - Health score < 50 = High churn risk, focus on retention
    - Health score 50-70 = At-risk, monitor closely and engage proactively
    - Health score > 70 = Healthy, focus on expansion opportunities
-2. **Temporal Correlation**: Signals grouped by WEEK or MONTH are likely related:
-   - If Signal A in Week 5 and KPI change in Week 6 → likely cause-and-effect
-   - Multiple signals in same week/month → correlated events
-   - Look for temporal sequences: Week N (signal) → Week N+1 (KPI change) → Week N+2 (health drop)
+2. **Temporal Correlation**: Both [Kn] and [Qn] signals include dates. USE THEM to find cause-and-effect:
+   - If [Q1] champion_loss on Mar 15 and [K2] usage dropped on Mar 22 → [Q1] CAUSED [K2] (7-day lag = intervention window)
+   - Multiple signals in same week → correlated events, cite all
+   - The GAP between a qualitative signal and the KPI change is the INTERVENTION WINDOW — call it out explicitly
+   - Example: "[Q1] champion loss (Mar 15) preceded [K2] GPU utilization crash (Mar 22) by 7 days — this was the window for intervention"
 3. Base predictions ONLY on signals provided, not assumptions
 4. If signals conflict, explain the conflict and weight them appropriately
 5. Consider signal recency (recent signals matter more, especially last 4 weeks)
@@ -227,16 +228,25 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
     
     @staticmethod
     def format_quantitative_signals(signals: List[Dict]) -> str:
-        """Format quantitative signals with stable [K1]-[Kn] references for citation.
+        """Format quantitative signals with stable [K1]-[Kn] references, dates, and ranges.
 
-        Each KPI gets a traceable ref so the LLM can cite specific metrics
-        in reasoning: '[K2] GPU utilization at 38% (target >60%)'.
+        Each KPI gets a traceable ref + measurement date so the LLM can
+        build a timeline: '[K2] Mar 22: GPU utilization = 52% ⚠ below target'.
+        Signals are sorted chronologically for temporal correlation.
         """
         if not signals:
             return "No quantitative signals available"
 
+        # Sort by date (most recent last = natural timeline reading)
+        def _sort_key(s):
+            p = s.get('payload', {})
+            d = p.get('measurement_month') or p.get('measurement_date') or p.get('date') or ''
+            return str(d)
+
+        sorted_signals = sorted(signals[:20], key=_sort_key)
+
         context_lines = []
-        for i, signal in enumerate(signals[:15], 1):  # Top 15 KPIs
+        for i, signal in enumerate(sorted_signals[:15], 1):  # Top 15 KPIs
             payload = signal.get('payload', {})
 
             pillar = payload.get('pillar', 'unknown')
@@ -246,6 +256,22 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
             healthy_min = payload.get('healthy_min')
             healthy_max = payload.get('healthy_max')
             kpi_code = payload.get('kpi_code', '')
+
+            # Date context
+            raw_date = payload.get('measurement_month') or payload.get('measurement_date') or payload.get('date') or ''
+            date_str = ''
+            if raw_date:
+                # Format: "Mar 22" or "2026-03" → "Mar 2026"
+                try:
+                    from datetime import datetime as _dt
+                    if len(str(raw_date)) <= 7:  # YYYY-MM
+                        d = _dt.strptime(str(raw_date)[:7], '%Y-%m')
+                        date_str = d.strftime('%b %Y')
+                    else:
+                        d = _dt.fromisoformat(str(raw_date)[:10])
+                        date_str = d.strftime('%b %d')
+                except (ValueError, TypeError):
+                    date_str = str(raw_date)[:10]
 
             trend_direction = "↑" if trend > 0 else "↓" if trend < 0 else "→"
             trend_magnitude = abs(trend * 100)
@@ -266,9 +292,10 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
                     range_ctx = f" ✓ above target (>{healthy_min})"
 
             kpi_label = f" ({kpi_code})" if kpi_code else ""
+            date_prefix = f" {date_str}:" if date_str else ""
 
             context_lines.append(
-                f"[K{i}] [{pillar.upper()}] {metric_type}{kpi_label} = {current_value}"
+                f"[K{i}]{date_prefix} [{pillar.upper()}] {metric_type}{kpi_label} = {current_value}"
                 f" ({trend_direction} {trend_magnitude:.1f}% trend){range_ctx}"
             )
 
@@ -297,17 +324,25 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
 
     @staticmethod
     def format_qualitative_signals(signals: List[Dict]) -> str:
-        """Format qualitative signals with stable [Q1]-[Qn] references and stakeholder roles.
+        """Format qualitative signals with stable [Q1]-[Qn] references, dates, and stakeholder roles.
 
-        Each signal gets a traceable ref so the LLM can cite it:
-        '[Q2] email from CTO indicates competitive evaluation'.
-        Stakeholder role (Executive, Champion) is shown when available.
+        Each signal gets a traceable ref + date so the LLM can build a timeline:
+        '[Q2] Mar 15: [champion_loss] From: Sarah, CTO [Executive] — VP departed...'
+        Signals are sorted chronologically for temporal correlation with KPIs.
         """
         if not signals:
             return "No qualitative signals available"
 
+        # Sort by date (chronological — oldest first for timeline reading)
+        def _sort_key(s):
+            p = s.get('payload', {})
+            d = p.get('signal_date') or p.get('date') or p.get('occurred_at') or ''
+            return str(d)
+
+        sorted_signals = sorted(signals[:20], key=_sort_key)
+
         context_lines = []
-        for i, signal in enumerate(signals[:15], 1):  # Top 15 signals
+        for i, signal in enumerate(sorted_signals[:15], 1):  # Top 15 signals
             payload = signal.get('payload', {})
 
             signal_type = payload.get('signal_type', 'unknown')
@@ -315,6 +350,22 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
             sentiment = payload.get('sentiment', 'neutral')
             severity = payload.get('severity', 'medium')
             text = payload.get('text', '')[:200]
+
+            # Date context
+            raw_date = payload.get('signal_date') or payload.get('date') or payload.get('occurred_at') or ''
+            date_str = ''
+            if raw_date:
+                try:
+                    from datetime import datetime as _dt
+                    if isinstance(raw_date, str) and len(raw_date) >= 10:
+                        d = _dt.fromisoformat(raw_date[:10])
+                        date_str = d.strftime('%b %d')
+                    elif hasattr(raw_date, 'strftime'):
+                        date_str = raw_date.strftime('%b %d')
+                    else:
+                        date_str = str(raw_date)[:10]
+                except (ValueError, TypeError):
+                    date_str = str(raw_date)[:10]
 
             # Stakeholder attribution
             stakeholder_title = payload.get('stakeholder_title', '')
@@ -338,8 +389,10 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
                     parts.append(f"[{sender_role}]")
                 from_ctx = f" From: {', '.join(parts)} —"
 
+            date_prefix = f" {date_str}:" if date_str else ""
+
             context_lines.append(
-                f"[Q{i}] [{signal_type}] {source_indicator} "
+                f"[Q{i}]{date_prefix} [{signal_type}] {source_indicator} "
                 f"({sentiment}/{severity}){from_ctx} {text}"
             )
 
