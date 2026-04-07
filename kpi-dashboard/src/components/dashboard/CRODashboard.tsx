@@ -20,7 +20,7 @@ import {
 import {
   AlertTriangle, TrendingUp, TrendingDown, Shield, Zap,
   Target, DollarSign, Users, BarChart3, Clock,
-  ChevronRight, Eye, Activity, GitBranch, Sparkles,
+  ChevronRight, ChevronDown, Eye, Activity, GitBranch, Sparkles,
   ArrowRight, Briefcase, Info
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
@@ -332,31 +332,59 @@ const SidebarNav: React.FC<{ activeId: ViewId; onViewChange: (view: ViewId) => v
   );
 };
 
-/** Large revenue card */
-const RevenueCardComponent: React.FC<{ card: RevenueCard }> = ({ card }) => {
+/** Large revenue card with expandable drill-down */
+const RevenueCardComponent: React.FC<{ card: RevenueCard; riskAccounts?: RiskAccount[] }> = ({ card, riskAccounts }) => {
+  const [expanded, setExpanded] = React.useState(false);
   const accent = ACCENT_MAP[card.accent] || '#06b6d4';
+  const isRiskCard = card.accent === 'red' && riskAccounts && riskAccounts.length > 0;
+
   return (
-    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 relative overflow-hidden group hover:border-gray-600/50 transition-all">
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 relative overflow-hidden group hover:border-gray-600/50 transition-all">
       {/* Accent bar */}
       <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: accent }} />
-      {/* Glow effect */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 opacity-10 blur-2xl"
-        style={{ backgroundColor: accent }}
-      />
-      <div className="relative">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 opacity-10 blur-2xl" style={{ backgroundColor: accent }} />
+      <div className="relative p-5">
         <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{card.label}</p>
-        <p className="text-3xl font-bold text-white mb-1" style={{ color: accent }}>
-          {formatCompact(card.amount)}
-        </p>
+        <p className="text-3xl font-bold text-white mb-1" style={{ color: accent }}>{formatCompact(card.amount)}</p>
         <p className="text-xs text-gray-500 mb-3">{card.subtitle}</p>
         {card.account_count != null && card.account_count > 0 && (
-        <div className="flex items-center gap-1 text-xs text-gray-400">
-          <Users className="w-3 h-3" />
-          <span>{card.account_count} accounts</span>
-        </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <Users className="w-3 h-3" />
+              <span>{card.account_count} accounts</span>
+            </div>
+            {isRiskCard && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-0.5"
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                {expanded ? 'Hide' : 'Show'} details
+              </button>
+            )}
+          </div>
         )}
       </div>
+      {/* Expandable account drill-down */}
+      {expanded && isRiskCard && (
+        <div className="px-5 pb-4 border-t border-gray-700/30 pt-3 space-y-2">
+          {riskAccounts!.slice(0, 5).map((a) => {
+            const cls = classify(a.health_score);
+            return (
+              <div key={a.account_id} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cls === 'critical' ? 'bg-red-400' : 'bg-yellow-400'}`} />
+                  <span className="text-gray-300 truncate">{a.account_name}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                  <span className="text-gray-500">{formatCompact(a.arr)}</span>
+                  <span className={`font-semibold ${cls === 'critical' ? 'text-red-400' : 'text-yellow-400'}`}>{a.health_score}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -435,54 +463,123 @@ const StoryArcRow: React.FC<{ arc: StoryArc; onClick: () => void }> = ({ arc, on
   );
 };
 
-/** Risk account card */
+/** NRR per-account attribution — expandable below waterfall */
+const NRRAccountAttribution: React.FC<{ accounts: NRRWaterfallAccount[] }> = ({ accounts }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const sorted = [...accounts].sort((a, b) => a.expected_loss - b.expected_loss); // worst first (most negative)
+  return (
+    <div className="px-4 pb-3 border-t border-gray-700/30">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between py-2"
+      >
+        <span className="text-[10px] text-gray-500 uppercase tracking-wide">Per-Account NRR Impact</span>
+        <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+      {expanded && (
+        <div className="space-y-1">
+          {sorted.map((a, i) => {
+            const isDetractor = a.expected_loss < 0;
+            const isSaver = a.attributed_save > 0;
+            return (
+              <div key={i} className="flex items-center justify-between text-xs py-0.5">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDetractor ? 'bg-red-400' : isSaver ? 'bg-green-400' : 'bg-gray-500'}`} />
+                  <span className="text-gray-300 truncate">{a.account_name}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                  <span className="text-gray-500 w-14 text-right">{formatCompact(a.arr)}</span>
+                  <span className="text-gray-500 w-10 text-right">{a.churn_prob_pct}%</span>
+                  {isDetractor && <span className="text-red-400 font-semibold w-16 text-right">{formatCompact(a.expected_loss)}</span>}
+                  {isSaver && <span className="text-green-400 font-semibold w-16 text-right">+{formatCompact(a.attributed_save)}</span>}
+                  {!isDetractor && !isSaver && <span className="text-gray-500 w-16 text-right">—</span>}
+                </div>
+              </div>
+            );
+          })}
+          <div className="text-[9px] text-gray-600 pt-1 border-t border-gray-800">
+            Churn % derived from health score. Expected loss = ARR × churn probability.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** Risk account card with expandable pillar breakdown */
 const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void }> = ({ account, onClick }) => {
-  const { healthy_min, at_risk_min } = thresholdValues();
+  const [showPillars, setShowPillars] = React.useState(false);
   const cls = classify(account.health_score);
   const color = classifyColor(account.health_score);
   const barWidth = Math.max(5, Math.min(100, account.health_score));
+  const pillars = account.pillar_scores || {};
+  const pillarEntries = Object.entries(pillars).sort(([, a], [, b]) => a - b); // worst first
 
   return (
-    <button
-      onClick={onClick}
-      className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 hover:border-gray-600/50 transition-all text-left group w-full"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white truncate">{account.account_name}</p>
-          <p className="text-xs text-gray-500">{formatCompact(account.arr)} ARR</p>
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 hover:border-gray-600/50 transition-all text-left w-full">
+      <button onClick={onClick} className="p-4 w-full text-left group">
+        <div className="flex items-start justify-between mb-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-white truncate">{account.account_name}</p>
+            <p className="text-xs text-gray-500">{formatCompact(account.arr)} ARR</p>
+          </div>
+          <span
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+              cls === 'critical' ? 'bg-red-500/20 text-red-400'
+              : cls === 'at_risk' ? 'bg-yellow-500/20 text-yellow-400'
+              : 'bg-green-500/20 text-green-400'
+            }`}
+          >
+            {cls === 'critical' ? 'Critical' : cls === 'at_risk' ? 'At Risk' : 'Healthy'}
+          </span>
         </div>
-        <span
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
-            cls === 'critical' ? 'bg-red-500/20 text-red-400'
-            : cls === 'at_risk' ? 'bg-yellow-500/20 text-yellow-400'
-            : 'bg-green-500/20 text-green-400'
-          }`}
-        >
-          {cls === 'critical' ? 'Critical' : cls === 'at_risk' ? 'At Risk' : 'Healthy'}
-        </span>
-      </div>
-      {/* Health bar */}
-      <div className="mb-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-500">Health Score</span>
-          <span className="text-xs font-semibold" style={{ color }}>{account.health_score}</span>
+        {/* Health bar */}
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500">Health Score</span>
+            <span className="text-xs font-semibold" style={{ color }}>{account.health_score}</span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${barWidth}%`, background: `linear-gradient(90deg, ${color}, ${color}88)` }} />
+          </div>
         </div>
-        <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${barWidth}%`,
-              background: `linear-gradient(90deg, ${color}, ${color}88)`,
-            }}
-          />
+        <div className="flex items-center gap-1 text-xs text-gray-500">
+          <AlertTriangle className="w-3 h-3" />
+          <span>{account.signal_count > 0 ? `${account.signal_count} active signals` : 'No recent signals'}</span>
         </div>
-      </div>
-      <div className="flex items-center gap-1 text-xs text-gray-500">
-        <AlertTriangle className="w-3 h-3" />
-        <span>{account.signal_count > 0 ? `${account.signal_count} active signals` : 'No recent signals'}</span>
-      </div>
-    </button>
+      </button>
+      {/* Expandable pillar breakdown */}
+      {pillarEntries.length > 0 && (
+        <div className="px-4 pb-3">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowPillars(!showPillars); }}
+            className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-1"
+          >
+            <ChevronDown className={`w-3 h-3 transition-transform ${showPillars ? 'rotate-180' : ''}`} />
+            {showPillars ? 'Hide' : 'Show'} Pillar Breakdown
+          </button>
+          {showPillars && (
+            <div className="mt-2 space-y-1.5">
+              {pillarEntries.map(([pillar, score], idx) => {
+                const pColor = classifyColor(score);
+                const pWidth = Math.max(5, Math.min(100, score));
+                const isWorst = idx === 0 && score < 50;
+                return (
+                  <div key={pillar} className="flex items-center gap-2">
+                    <span className={`text-[10px] w-8 font-mono ${isWorst ? 'text-red-400 font-bold' : 'text-gray-500'}`}>{pillar}</span>
+                    <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pWidth}%`, backgroundColor: pColor }} />
+                    </div>
+                    <span className={`text-[10px] w-6 text-right ${isWorst ? 'text-red-400 font-bold' : 'text-gray-400'}`}>{Math.round(score)}</span>
+                    {isWorst && <span className="text-[9px] text-red-400">← worst</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -920,7 +1017,7 @@ const CRODashboard: React.FC = () => {
           {/* Row 1: Revenue cards */}
           <div className="grid grid-cols-3 gap-4 mb-4">
             {d.revenue_cards.map((card, i) => (
-              <RevenueCardComponent key={i} card={card} />
+              <RevenueCardComponent key={i} card={card} riskAccounts={i === 0 ? d.risk_accounts : undefined} />
             ))}
           </div>
 
@@ -997,6 +1094,10 @@ const CRODashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
+              {/* Per-account NRR attribution (expandable) */}
+              {d.nrr_waterfall.accounts.length > 0 && (
+                <NRRAccountAttribution accounts={d.nrr_waterfall.accounts} />
+              )}
             </div>
           )}
 

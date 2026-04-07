@@ -21,7 +21,7 @@ import {
 import {
   DollarSign, TrendingUp, Shield, Target, BarChart3, Layers,
   FileText, ArrowUpRight, Sparkles, PieChart, Activity,
-  Users, Eye, Zap, GitBranch, Clock, AlertTriangle
+  Users, Eye, Zap, GitBranch, Clock, AlertTriangle, Info
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import DashboardTopBar from './DashboardTopBar';
@@ -638,6 +638,64 @@ const FinancialRatiosWidget: React.FC<{ ratios: FinancialRatio[] }> = ({ ratios 
   </div>
 );
 
+/** Cost of Inaction panel — shows formula and per-account math */
+const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction'] }> = ({ data: coi }) => {
+  const [showFormula, setShowFormula] = useState(false);
+  return (
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-400" />
+          <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Cost of Inaction</h3>
+        </div>
+        <button
+          onClick={() => setShowFormula(!showFormula)}
+          className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-0.5"
+          title="Show calculation methodology"
+        >
+          <Info className="w-3 h-3" />
+          {showFormula ? 'Hide' : 'How calculated?'}
+        </button>
+      </div>
+      {showFormula && (
+        <div className="bg-gray-800/50 rounded-lg p-3 mb-3 text-[10px] text-gray-400 space-y-1">
+          <p className="text-gray-300 font-medium">Methodology</p>
+          <p>Churn probability = max(5%, 50% - health_score × 0.5)</p>
+          <p>Annual loss per account = ARR × churn probability</p>
+          <p>Annual churn exposure = sum of all at-risk account losses</p>
+          <p className="text-gray-500 pt-1">Accounts included: health &lt; 70 (at-risk + critical)</p>
+        </div>
+      )}
+      <div className="flex items-end gap-6 mb-4">
+        <div>
+          <p className="text-[9px] text-gray-500 mb-0.5">ARR at Risk</p>
+          <p className="text-2xl font-bold text-red-400">{formatCompact(coi.arr_at_risk)}</p>
+        </div>
+        <div>
+          <p className="text-[9px] text-gray-500 mb-0.5">Annual Churn Exposure</p>
+          <p className="text-2xl font-bold text-orange-400">{formatCompact(coi.annual_churn_exposure)}</p>
+        </div>
+        <div>
+          <p className="text-[9px] text-gray-500 mb-0.5">Accounts</p>
+          <p className="text-2xl font-bold text-gray-300">{coi.account_count}</p>
+        </div>
+      </div>
+      {coi.accounts.length > 0 && (
+        <div className="space-y-1.5">
+          {coi.accounts.slice(0, 5).map((a, i) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <span className="text-gray-400 truncate max-w-[120px]">{a.account_name}</span>
+              <span className="text-gray-500 text-[10px]">{formatCompact(a.arr)} × {a.churn_pct}%</span>
+              <span className="text-red-400 font-semibold">{formatCompact(a.annual_loss)}/yr</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[9px] text-gray-600 mt-2">Projected annual revenue loss if no intervention on at-risk/critical accounts.</p>
+    </div>
+  );
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -907,39 +965,8 @@ const CFODashboard: React.FC = () => {
               <p className="text-[9px] text-gray-600 mt-1">Current: health-weighted baseline. Projected: if playbooks run on at-risk accounts.</p>
             </div>
 
-            {/* Cost of Inaction */}
-            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-4 h-4 text-red-400" />
-                <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Cost of Inaction</h3>
-              </div>
-              <div className="flex items-end gap-6 mb-4">
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">ARR at Risk</p>
-                  <p className="text-2xl font-bold text-red-400">{formatCompact(d.cost_of_inaction.arr_at_risk)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Annual Churn Exposure</p>
-                  <p className="text-2xl font-bold text-orange-400">{formatCompact(d.cost_of_inaction.annual_churn_exposure)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Accounts</p>
-                  <p className="text-2xl font-bold text-gray-300">{d.cost_of_inaction.account_count}</p>
-                </div>
-              </div>
-              {d.cost_of_inaction.accounts.length > 0 && (
-                <div className="space-y-1.5">
-                  {d.cost_of_inaction.accounts.slice(0, 3).map((a, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400 truncate max-w-[140px]">{a.account_name}</span>
-                      <span className="text-gray-500">H:{a.health}</span>
-                      <span className="text-red-400 font-semibold">{formatCompact(a.annual_loss)}/yr</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="text-[9px] text-gray-600 mt-2">Projected annual revenue loss if no intervention on at-risk/critical accounts.</p>
-            </div>
+            {/* Cost of Inaction — with formula transparency */}
+            <CostOfInactionPanel data={d.cost_of_inaction} />
           </div>
 
           {/* Row 2: Power of 1 Metrics Table */}
