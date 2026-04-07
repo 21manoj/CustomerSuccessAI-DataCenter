@@ -836,7 +836,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   // ── Handlers ──────────────────────────────────────────────────────────
 
   const openDrawer = useCallback((account: Account) => {
-    trackAccountDrill(account.id, account.account_name || `Account ${account.id}`);
+    trackAccountDrill(account.id, account.name || `Account ${account.id}`);
     setDrawerAccount(account);
     setDrawerOpen(true);
   }, []);
