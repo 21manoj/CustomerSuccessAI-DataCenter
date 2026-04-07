@@ -198,9 +198,10 @@ interface DrawerProps {
   onClose: () => void;
   customerId: string;
   headers: Record<string, string>;
+  onDraftEmail?: (acct: { id: number; name: string; health: number }) => void;
 }
 
-const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customerId, headers }) => {
+const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customerId, headers, onDraftEmail }) => {
   const [tab, setTab] = useState<DrawerTab>('overview');
   const [signals, setSignals] = useState<Signal[]>([]);
   const [people, setPeople] = useState<Stakeholder[]>([]);
@@ -588,7 +589,7 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
             </button>
           </div>
           <button
-            onClick={() => drawerAccount && setEmailDraftAccount({ id: drawerAccount.id, name: drawerAccount.name, health: drawerAccount.health_score })}
+            onClick={() => account && onDraftEmail?.({ id: account.id, name: account.name, health: account.health_score })}
             className="flex items-center gap-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg transition"
           >
             <Mail className="w-3.5 h-3.5" />
@@ -1435,6 +1436,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
         onClose={closeDrawer}
         customerId={customerId}
         headers={headers}
+        onDraftEmail={(acct) => setEmailDraftAccount(acct)}
       />
 
       {/* Email Draft Modal */}
