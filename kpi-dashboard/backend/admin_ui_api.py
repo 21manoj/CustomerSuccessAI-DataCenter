@@ -1629,16 +1629,39 @@ def update_customer_config(cid, config_type):
             db.session.add(config)
 
         new_config = data.get("config", data)
+
+        # Capture before values for audit trail
+        before_values = {}
         if config_type == "pillar_weights":
+            before_values = {'pillar_weights': config.dc2s_pillar_weights}
             config.dc2s_pillar_weights = new_config
         elif config_type == "enabled_kpis":
+            before_values = {'enabled_kpis': config.dc2s_enabled_kpis}
             config.dc2s_enabled_kpis = new_config
         elif config_type == "kpi_weights":
+            before_values = {'kpi_weights': config.dc2s_kpi_weights}
             config.dc2s_kpi_weights = new_config
         else:
             return jsonify({"error": f"Unknown config type: {config_type}"}), 400
 
         db.session.commit()
+
+        # S3 Audit: Log weight/config change with before/after
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=cid,
+                action_type='category_weight_update' if 'weight' in config_type else 'settings_update',
+                action_description=f'Config {config_type} updated for customer {cid}',
+                resource_type='customer_config',
+                resource_id=str(cid),
+                changed_fields=[config_type],
+                before_values=before_values,
+                after_values={config_type: new_config},
+            )
+        except Exception:
+            pass
+
         return jsonify({"status": "success", "config_type": config_type})
     except Exception as e:
         db.session.rollback()
@@ -1654,14 +1677,35 @@ def delete_customer_config(cid, config_type):
         if not config:
             return "", 204
 
+        before_values = {}
         if config_type == "pillar_weights":
+            before_values = {'pillar_weights': config.dc2s_pillar_weights}
             config.dc2s_pillar_weights = None
         elif config_type == "enabled_kpis":
+            before_values = {'enabled_kpis': config.dc2s_enabled_kpis}
             config.dc2s_enabled_kpis = None
         elif config_type == "kpi_weights":
+            before_values = {'kpi_weights': config.dc2s_kpi_weights}
             config.dc2s_kpi_weights = None
 
         db.session.commit()
+
+        # S3 Audit: Log config reset with before values
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=cid,
+                action_type='category_weight_update',
+                action_description=f'Config {config_type} reset to defaults for customer {cid}',
+                resource_type='customer_config',
+                resource_id=str(cid),
+                changed_fields=[config_type],
+                before_values=before_values,
+                after_values={config_type: None},
+            )
+        except Exception:
+            pass
+
         return "", 204
     except Exception as e:
         db.session.rollback()

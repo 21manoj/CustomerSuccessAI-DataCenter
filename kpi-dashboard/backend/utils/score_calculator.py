@@ -549,9 +549,36 @@ class ScoreCalculator:
             # Insert health score
             if health_score:
                 db.session.add(HealthScore(**health_score))
-            
+
             db.session.commit()
             print("  ✅ Scores saved successfully")
+
+            # S4 Audit: Log score recalculation with pillar breakdown
+            if health_score:
+                try:
+                    from activity_logging import ActivityLogger
+                    ActivityLogger.log_activity(
+                        customer_id=self.customer_id,
+                        action_type='health_recalculation',
+                        action_description=(
+                            f'Health score calculated: {health_score["health_score"]} '
+                            f'({health_score["health_status"]}) for account {health_score["account_id"]} '
+                            f'month {health_score["measurement_month"]}'
+                        ),
+                        resource_type='health_score',
+                        resource_id=str(health_score['account_id']),
+                        details={
+                            'health_score': float(health_score['health_score']),
+                            'health_status': health_score['health_status'],
+                            'trend': health_score.get('trend'),
+                            'change': float(health_score['change_from_last_month']) if health_score.get('change_from_last_month') else None,
+                            'pillar_scores': health_score.get('contributing_pillars'),
+                            'pillar_weights': health_score.get('pillar_weights'),
+                            'measurement_month': str(health_score['measurement_month']),
+                        },
+                    )
+                except Exception:
+                    pass  # Audit logging is non-fatal
             
         except Exception as e:
             db.session.rollback()
