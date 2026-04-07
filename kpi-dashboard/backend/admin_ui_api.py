@@ -411,120 +411,91 @@ def reactivate_customer(cid):
         return jsonify({"error": str(e)}), 500
 
 
+def _purge_customer_data(cid: int) -> dict:
+    """Canonical customer purge — SINGLE SOURCE OF TRUTH for all delete endpoints.
+
+    Queries information_schema for ALL FK references to both customers and accounts
+    tables, then deletes in safe order. No hardcoded table lists to maintain.
+    """
+    from sqlalchemy import text
+    import shutil, glob
+    deleted = {}
+
+    # 1. Get account IDs
+    account_ids = [
+        r[0] for r in db.session.execute(
+            text("SELECT account_id FROM accounts WHERE customer_id = :cid"), {"cid": cid}
+        ).fetchall()
+    ]
+
+    # 2. Delete from ALL tables with FK to accounts (information_schema scan)
+    if account_ids:
+        aid_list = ','.join(str(a) for a in account_ids)
+        try:
+            acct_fk = db.session.execute(text("""
+                SELECT DISTINCT tc.table_name, kcu.column_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'accounts'
+                  AND tc.table_name != 'accounts'
+            """)).fetchall()
+            for tbl, col in acct_fk:
+                try:
+                    db.session.execute(text("SAVEPOINT sp_purge"))
+                    r = db.session.execute(text(f"DELETE FROM {tbl} WHERE {col} IN ({aid_list})"))
+                    if r.rowcount > 0:
+                        deleted[tbl] = r.rowcount
+                    db.session.execute(text("RELEASE SAVEPOINT sp_purge"))
+                except Exception:
+                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_purge"))
+        except Exception:
+            pass
+
+    # 3. Delete from ALL tables with FK to customers (information_schema scan)
+    try:
+        cust_fk = db.session.execute(text("""
+            SELECT DISTINCT tc.table_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'customers'
+              AND tc.table_name != 'customers'
+        """)).fetchall()
+        for (tbl,) in cust_fk:
+            try:
+                db.session.execute(text("SAVEPOINT sp_purge"))
+                r = db.session.execute(text(f"DELETE FROM {tbl} WHERE customer_id = :cid"), {"cid": cid})
+                if r.rowcount > 0:
+                    deleted[tbl] = r.rowcount
+                db.session.execute(text("RELEASE SAVEPOINT sp_purge"))
+            except Exception:
+                db.session.execute(text("ROLLBACK TO SAVEPOINT sp_purge"))
+    except Exception:
+        pass
+
+    # 4. Delete the customer record (raw SQL — NOT ORM .delete())
+    db.session.execute(text("DELETE FROM customers WHERE customer_id = :cid"), {"cid": cid})
+    deleted['customers'] = 1
+
+    # 5. Filesystem cleanup
+    for d in glob.glob(f'verticals/customer{cid}-*'):
+        shutil.rmtree(d, ignore_errors=True)
+        deleted['filesystem'] = d
+
+    return deleted
+
+
 @admin_ui_api.route("/api/admin-ui/customers/<int:cid>/purge", methods=["DELETE"])
 @super_admin_required
 def purge_customer(cid):
-    """Hard-delete a customer and ALL related data (cascade). Irreversible."""
+    """Hard-delete a customer and ALL related data. Uses canonical _purge_customer_data."""
     try:
         c = db.session.get(Customer, cid)
         if not c:
             return jsonify({"error": f"Customer {cid} not found"}), 404
-
         customer_name = c.customer_name
-        from sqlalchemy import text
-
-        # Get account IDs for this customer (needed for account_id-only tables)
-        account_ids = [
-            r[0] for r in db.session.execute(
-                text("SELECT account_id FROM accounts WHERE customer_id = :cid"),
-                {"cid": cid}
-            ).fetchall()
-        ]
-
-        deleted = {}
-
-        # 1. Delete from account_id-only tables
-        # Use SAVEPOINTs so a missing table doesn't abort the entire transaction
-        if account_ids:
-            aid_list = ','.join(str(a) for a in account_ids)
-            for tbl in ['dc2s_kpis', 'health_scores', 'kpi_scores', 'kpis',
-                        'pillar_scores', 'qualitative_signals']:
-                try:
-                    db.session.execute(text("SAVEPOINT sp_del"))
-                    r = db.session.execute(
-                        text(f"DELETE FROM {tbl} WHERE account_id IN ({aid_list})")
-                    )
-                    deleted[tbl] = r.rowcount
-                    db.session.execute(text("RELEASE SAVEPOINT sp_del"))
-                except Exception:
-                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_del"))
-
-        # 2. Delete from customer_id tables (order: children first)
-        customer_id_tables = [
-            'context_edges', 'context_nodes', 'webhook_events',
-            'playbook_webhook_logs', 'playbook_webhook_triggers',
-            'integration_sync_logs', 'integration_credentials', 'integration_connectors',
-            'approval_requests', 'agent_memory', 'activity_logs',
-            'action_economics', 'account_notes', 'account_snapshots',
-            'crm_field_mappings', 'customer_action_bindings', 'customer_contacts',
-            'customer_insights', 'customer_workflow_configs',
-            'feature_toggles', 'financial_projections', 'health_trends',
-            'journey_data', 'kpi_reference_ranges', 'kpi_time_series', 'kpi_uploads',
-            'notifications', 'playbook_tasks',
-            'playbook_executions_v2', 'playbook_executions', 'playbook_reports', 'playbook_triggers',
-            'portfolio_memberships',
-            'product_aggregate_trends', 'product_catalog', 'product_trends', 'products',
-            'query_audits', 'rag_knowledge_base', 'rag_query_log',
-            'roi_snapshots', 'weight_calibration_history', 'wizard_learnings', 'wizard_runs',
-            'customer_api_keys', 'users', 'accounts',
-            'customer_configs',
-        ]
-        for tbl in customer_id_tables:
-            try:
-                db.session.execute(text("SAVEPOINT sp_del"))
-                r = db.session.execute(
-                    text(f"DELETE FROM {tbl} WHERE customer_id = :cid"),
-                    {"cid": cid}
-                )
-                if r.rowcount > 0:
-                    deleted[tbl] = r.rowcount
-                db.session.execute(text("RELEASE SAVEPOINT sp_del"))
-            except Exception:
-                db.session.execute(text("ROLLBACK TO SAVEPOINT sp_del"))
-
-        # 3. Catch-all: delete from ANY table that still references this customer
-        # This handles tables added after the list above was written
-        try:
-            remaining_fk_tables = db.session.execute(text("""
-                SELECT DISTINCT tc.table_name
-                FROM information_schema.table_constraints tc
-                JOIN information_schema.constraint_column_usage ccu
-                  ON tc.constraint_name = ccu.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                  AND ccu.table_name = 'customers'
-                  AND tc.table_name != 'customers'
-            """)).fetchall()
-            for (tbl,) in remaining_fk_tables:
-                try:
-                    db.session.execute(text("SAVEPOINT sp_catchall"))
-                    r = db.session.execute(
-                        text(f"DELETE FROM {tbl} WHERE customer_id = :cid"),
-                        {"cid": cid}
-                    )
-                    if r.rowcount > 0:
-                        deleted[f'{tbl}_catchall'] = r.rowcount
-                    db.session.execute(text("RELEASE SAVEPOINT sp_catchall"))
-                except Exception:
-                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_catchall"))
-        except Exception as e:
-            logger.warning(f"FK catch-all scan failed (non-fatal): {e}")
-
-        # Delete the customer record itself
-        db.session.execute(
-            text("DELETE FROM customers WHERE customer_id = :cid"),
-            {"cid": cid}
-        )
-        deleted['customers'] = 1
-
-        # 4. Clean up filesystem (verticals/customer{id}-*)
-        import shutil, glob
-        vert_dir = glob.glob(f'verticals/customer{cid}-*')
-        for d in vert_dir:
-            shutil.rmtree(d, ignore_errors=True)
-            deleted['filesystem'] = d
-
+        deleted = _purge_customer_data(cid)
         db.session.commit()
-
         logger.info(f"PURGED customer {cid} ({customer_name}): {deleted}")
         return jsonify({
             "status": "success",
@@ -557,54 +528,9 @@ def bulk_purge_customers():
                 results.append({"customer_id": cid, "status": "not_found"})
                 continue
 
-            # Delegate to single purge logic (inline for transaction efficiency)
-            from sqlalchemy import text
             customer_name = c.customer_name
-            account_ids = [
-                r[0] for r in db.session.execute(
-                    text("SELECT account_id FROM accounts WHERE customer_id = :cid"),
-                    {"cid": cid}
-                ).fetchall()
-            ]
-            if account_ids:
-                aid_list = ','.join(str(a) for a in account_ids)
-                for tbl in ['dc2s_kpis', 'health_scores', 'kpi_scores', 'kpis',
-                            'pillar_scores', 'qualitative_signals']:
-                    try:
-                        db.session.execute(text("SAVEPOINT sp_bulk"))
-                        db.session.execute(text(f"DELETE FROM {tbl} WHERE account_id IN ({aid_list})"))
-                        db.session.execute(text("RELEASE SAVEPOINT sp_bulk"))
-                    except Exception:
-                        db.session.execute(text("ROLLBACK TO SAVEPOINT sp_bulk"))
-
-            for tbl in ['context_edges', 'context_nodes', 'webhook_events',
-                        'playbook_webhook_logs', 'playbook_webhook_triggers',
-                        'integration_sync_logs', 'integration_credentials', 'integration_connectors',
-                        'approval_requests', 'agent_memory', 'activity_logs',
-                        'action_economics', 'account_notes', 'account_snapshots',
-                        'crm_field_mappings', 'customer_action_bindings', 'customer_contacts',
-                        'customer_insights', 'customer_workflow_configs',
-                        'feature_toggles', 'financial_projections', 'health_trends',
-                        'journey_data', 'kpi_reference_ranges', 'kpi_time_series', 'kpi_uploads',
-                        'playbook_executions', 'playbook_reports', 'playbook_triggers',
-                        'portfolio_memberships',
-                        'product_aggregate_trends', 'product_catalog', 'product_trends', 'products',
-                        'query_audits', 'rag_knowledge_base', 'rag_query_log',
-                        'roi_snapshots', 'weight_calibration_history', 'wizard_runs',
-                        'customer_api_keys', 'users', 'accounts', 'customer_configs']:
-                try:
-                    db.session.execute(text("SAVEPOINT sp_bulk"))
-                    db.session.execute(text(f"DELETE FROM {tbl} WHERE customer_id = :cid"), {"cid": cid})
-                    db.session.execute(text("RELEASE SAVEPOINT sp_bulk"))
-                except Exception:
-                    db.session.execute(text("ROLLBACK TO SAVEPOINT sp_bulk"))
-
-            db.session.execute(text("DELETE FROM customers WHERE customer_id = :cid"), {"cid": cid})
-
-            import shutil, glob
-            for d in glob.glob(f'verticals/customer{cid}-*'):
-                shutil.rmtree(d, ignore_errors=True)
-
+            # Use the canonical purge function (single source of truth)
+            _purge_customer_data(cid)
             results.append({"customer_id": cid, "name": customer_name, "status": "purged"})
 
         db.session.commit()
