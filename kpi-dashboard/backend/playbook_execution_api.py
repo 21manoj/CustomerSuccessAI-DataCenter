@@ -194,7 +194,9 @@ def execute_step(execution_id):
                 'result': result,
             })
 
+        from sqlalchemy.orm.attributes import flag_modified
         v2.action_log = action_log
+        flag_modified(v2, 'action_log')
         v2.actions_completed = sum(1 for s in action_log if s.get('status') == 'completed')
         db.session.commit()
 

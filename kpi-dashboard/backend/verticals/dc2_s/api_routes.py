@@ -1721,7 +1721,10 @@ def update_dc2s_playbook_step(execution_id, step_id):
             return jsonify({'error': 'Step not found'}), 404
 
         # Persist updated action_log and recalculate totals
+        # NOTE: SQLAlchemy JSON columns need flag_modified for reliable dirty detection
+        from sqlalchemy.orm.attributes import flag_modified
         v2.action_log = action_log
+        flag_modified(v2, 'action_log')
         v2.actions_completed = sum(1 for s in action_log if s.get('status') == 'completed')
         v2.csm_hours_actual = sum(s.get('actual_hours') or 0 for s in action_log)
         db.session.commit()
@@ -2542,8 +2545,7 @@ def get_team_capacity_api():
 
         accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
         total_arr = sum(float(a.revenue or 0) for a in accounts)
-        # Use getattr — Account ORM object may not have health_score as a direct column
-        at_risk_count = sum(1 for a in accounts if float(getattr(a, 'health_score', None) or 100) < ht.healthy_min())
+        at_risk_count = sum(1 for a in accounts if float(a.health_score or 100) < ht.healthy_min())
 
         # Group accounts by CSM for real CSM count
         csm_set = set()
