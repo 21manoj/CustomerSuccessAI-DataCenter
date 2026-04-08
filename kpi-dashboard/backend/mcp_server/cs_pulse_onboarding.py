@@ -455,6 +455,24 @@ def create_customer(
         except Exception:
             directory_provisioned = False
 
+        # ── Auto-enable ALL features for Beta ──
+        ALL_FEATURES = [
+            'context_graph', 'story_arcs', 'signal_edges',
+            'stakeholder_tracking', 'decision_lifecycle',
+            'outcome_economics', 'industry_benchmarks',
+        ]
+        from models import FeatureToggle as _FT
+        for feat in ALL_FEATURES:
+            existing = _FT.query.filter_by(customer_id=customer_id, feature_name=feat).first()
+            if not existing:
+                db.session.add(_FT(
+                    customer_id=customer_id,
+                    feature_name=feat if feat != 'context_graph' else 'context_graph',
+                    enabled=True,
+                    config={sub: True for sub in ALL_FEATURES if sub != 'context_graph'} if feat == 'context_graph' else {},
+                    description='Auto-enabled at customer creation (Beta)',
+                ))
+
         db.session.commit()
 
         result = {
