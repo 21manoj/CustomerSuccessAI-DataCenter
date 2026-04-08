@@ -1148,7 +1148,14 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
                           </span>
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium text-gray-900 block truncate">{a.action}</span>
-                            <span className="text-xs text-gray-500">{a.account_name}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-gray-500">{a.account_name}</span>
+                              {(a as any).primary_champion && (
+                                <span className="text-xs text-purple-600 truncate max-w-[120px]" title={(a as any).primary_champion}>
+                                  &middot; {(a as any).primary_champion}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                             a.urgency === 'critical' ? 'bg-red-100 text-red-700' :

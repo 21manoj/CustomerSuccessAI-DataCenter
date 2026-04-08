@@ -821,6 +821,26 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           </div>
           <h2 className="text-lg font-bold text-gray-900 mt-1">{action.account_name}</h2>
           <p className="text-sm text-gray-600 mt-0.5">{action.action}</p>
+          {(action as any).arc_type && (
+            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              {((action as any).arc_type || '').replace(/_/g, ' ')}
+            </span>
+          )}
+          {(action as any).primary_champion && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                {(action as any).primary_champion}
+                {(action as any).champion_title && <span className="text-purple-400">({(action as any).champion_title})</span>}
+              </span>
+              {((action as any).decision_makers || []).slice(0, 2).map((dm: string, idx: number) => (
+                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs">
+                  {dm}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Scrollable Context */}
