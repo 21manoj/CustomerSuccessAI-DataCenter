@@ -1046,13 +1046,13 @@ const CRODashboard: React.FC = () => {
             {d.metrics.slice(0, 3).map((m, i) => (
               <MetricCardComponent key={i} metric={m} />
             ))}
-            {/* Dual NRR Card — replaces single NRR projection */}
+            {/* Dual NRR Card — health-weighted baseline */}
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Net Revenue Retention</p>
               <div className="flex items-end gap-3 mb-2">
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Current</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Current (health-weighted)</p>
                   <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
                 </div>
                 <div className="text-gray-600 text-lg pb-1">&rarr;</div>
@@ -1066,7 +1066,7 @@ const CRODashboard: React.FC = () => {
                   {formatCompact(d.nrr_arr_protected)} ARR protectable
                 </p>
               )}
-              <p className="text-[9px] text-gray-600 mt-1">Current: health-weighted baseline. Projected: if playbooks run on at-risk accounts.</p>
+              <p className="text-[9px] text-gray-600 mt-1">Health-weighted: derived from account health scores &times; ARR. Playbook projection: if interventions run on at-risk accounts.</p>
             </div>
           </div>
 
