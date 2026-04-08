@@ -282,6 +282,33 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   const [csmFilter, setCsmFilter] = useState<string>('');
   const [csmNames, setCsmNames] = useState<string[]>([]);
 
+  // Action search filter
+  const [actionSearch, setActionSearch] = useState('');
+
+  // Toast notifications for critical alerts
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string; account: string }>>([]);
+  const dismissedToastsRef = React.useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    const criticals = urgentAlerts.filter(
+      a => a.priority === 'critical' && !dismissedToastsRef.current.has(a.id)
+    );
+    if (criticals.length > 0) {
+      const newToasts = criticals.map(a => ({
+        id: a.id,
+        message: a.payload?.message || a.payload?.title || 'Critical alert',
+        account: a.payload?.account_name || `Account ${a.account_id || ''}`,
+      }));
+      setToasts(prev => [...prev, ...newToasts]);
+      criticals.forEach(a => dismissedToastsRef.current.add(a.id));
+      // Auto-dismiss after 8 seconds
+      const ids = criticals.map(a => a.id);
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => !ids.includes(t.id)));
+      }, 8000);
+    }
+  }, [urgentAlerts]);
+
   // Accounts table sort
   const [sortField, setSortField] = useState<'account_name' | 'health_score' | 'arr'>('health_score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -457,8 +484,22 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
     if (activeView === 'approvals') fetchApprovals();
   }, [activeView, fetchApprovals]);
 
+  // Filter actions by search term
+  const filteredActions = useMemo(() => {
+    if (!actionSearch.trim()) return actions;
+    const q = actionSearch.toLowerCase();
+    return actions.filter(a =>
+      (a.account_name || '').toLowerCase().includes(q) ||
+      (a.action || '').toLowerCase().includes(q) ||
+      (a.playbook_id || '').toLowerCase().includes(q)
+    );
+  }, [actions, actionSearch]);
+
+  // Reset index when search changes
+  useEffect(() => { setCurrentIdx(0); }, [actionSearch]);
+
   // Load detail when the current action changes
-  const currentAction = actions[currentIdx] || null;
+  const currentAction = filteredActions[currentIdx] || null;
   useEffect(() => {
     if (currentAction?.account_id) {
       fetchAccountDetail(currentAction.account_id);
@@ -527,7 +568,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   };
 
   const handleComplete = () => {
-    if (currentIdx < actions.length - 1) setCurrentIdx(currentIdx + 1);
+    if (currentIdx < filteredActions.length - 1) setCurrentIdx(currentIdx + 1);
   };
 
   const handlePrev = () => {
@@ -535,7 +576,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   };
 
   const handleSkip = () => {
-    if (currentIdx < actions.length - 1) setCurrentIdx(currentIdx + 1);
+    if (currentIdx < filteredActions.length - 1) setCurrentIdx(currentIdx + 1);
   };
 
   const handleSnooze = () => {
@@ -571,6 +612,8 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
             key={id}
             onClick={() => setActiveView(id)}
             title={label}
+            aria-label={`Navigate to ${label}`}
+            aria-current={active ? 'page' : undefined}
             className={`
               relative w-10 h-10 flex items-center justify-center rounded-lg transition-colors
               ${active ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'}
@@ -692,7 +735,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   // ============================================================================
 
   const renderActions = () => {
-    if (loadingActions && actions.length === 0) {
+    if (loadingActions && filteredActions.length === 0) {
       return (
         <div className="flex-1 flex flex-col">
           <div className="p-6 space-y-4">
@@ -703,7 +746,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
       );
     }
 
-    if (actions.length === 0) {
+    if (filteredActions.length === 0) {
       return (
         <EmptyState
           icon={Zap}
@@ -729,18 +772,28 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-xs font-mono text-gray-400 tracking-wider">
-                TODAY'S QUEUE &gt;&gt; {currentIdx + 1}/{actions.length}
+                TODAY'S QUEUE &gt;&gt; {currentIdx + 1}/{filteredActions.length}
               </span>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${urgencyColor(action.urgency)}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${urgencyDot(action.urgency)}`} />
                 {action.urgency}
               </span>
+              {/* Search filter */}
+              <input
+                type="text"
+                value={actionSearch}
+                onChange={(e) => setActionSearch(e.target.value)}
+                placeholder="Search accounts or actions..."
+                className="text-xs bg-white border border-gray-200 rounded px-2 py-1 text-gray-600 w-48 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                aria-label="Search actions by account name or action text"
+              />
               {/* CSM filter dropdown */}
               {csmNames.length > 1 && (
                 <select
                   value={csmFilter}
                   onChange={(e) => setCsmFilter(e.target.value)}
                   className="text-xs bg-white border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                  aria-label="Filter by CSM"
                 >
                   <option value="">All CSMs</option>
                   {csmNames.map((name) => (
@@ -930,6 +983,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           <button
             onClick={handlePrev}
             disabled={currentIdx === 0}
+            aria-label="Previous action"
             className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="w-4 h-4" /> Prev
@@ -938,13 +992,15 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           <div className="flex items-center gap-2">
             <button
               onClick={handleSnooze}
+              aria-label="Snooze action for 1 day"
               className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
             >
               <Clock className="w-4 h-4" /> Snooze 1d
             </button>
             <button
               onClick={handleSkip}
-              disabled={currentIdx >= actions.length - 1}
+              disabled={currentIdx >= filteredActions.length - 1}
+              aria-label="Skip to next action"
               className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Skip <SkipForward className="w-4 h-4" />
@@ -953,7 +1009,8 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
 
           <button
             onClick={handleComplete}
-            disabled={currentIdx >= actions.length - 1 && actions.length > 0}
+            disabled={currentIdx >= filteredActions.length - 1 && filteredActions.length > 0}
+            aria-label="Complete action and go to next"
             className="inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             Complete & Next <ChevronRight className="w-4 h-4" />
@@ -1255,7 +1312,32 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+      {/* Toast notifications for critical alerts */}
+      {toasts.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 space-y-2" role="alert" aria-live="assertive">
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              className="bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-3 animate-slide-in max-w-sm"
+            >
+              <span className="w-2 h-2 rounded-full bg-white mt-1.5 flex-shrink-0 animate-pulse" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{t.account}</p>
+                <p className="text-xs text-red-100">{t.message}</p>
+              </div>
+              <button
+                onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+                className="text-red-200 hover:text-white text-lg leading-none"
+                aria-label="Dismiss notification"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Left icon rail */}
       {renderRail()}
 
