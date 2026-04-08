@@ -1384,7 +1384,7 @@ class ActionEconomics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
-    execution_id = db.Column(db.String(36), db.ForeignKey('playbook_executions.execution_id'), nullable=True, index=True)
+    execution_id = db.Column(db.String(60), nullable=True, index=True)  # V2 execution IDs
 
     # What action was taken
     action_type = db.Column(db.String(50), nullable=False, index=True)
