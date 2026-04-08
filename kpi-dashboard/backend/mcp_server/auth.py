@@ -260,12 +260,32 @@ def validate_customer_key(raw_key: str):
       - SHA-256 hash verification
       - Expiry check
       - Usage tracking (last_used_at, last_used_ip)
+
+    NOTE: Ensures Flask app context for DB access — MCP tools call this
+    BEFORE their own `with app.app_context():` block.
     """
     if not raw_key:
         return None
     try:
         from api_key_service import validate_api_key as db_validate
-        return db_validate(raw_key)
+
+        # Try direct call first (works if already in app context)
+        try:
+            return db_validate(raw_key)
+        except RuntimeError:
+            pass  # "Working outside application context" — create one
+
+        # MCP tools call _require_auth before entering app context.
+        # Create a minimal Flask app context for the DB lookup.
+        try:
+            from mcp_server.cs_pulse_mcp_server import _get_flask_app
+            app = _get_flask_app()
+            with app.app_context():
+                return db_validate(raw_key)
+        except Exception as ctx_err:
+            logger.warning("Customer key validation (app context fallback): %s", ctx_err)
+            return None
+
     except Exception as e:
         logger.warning("Customer key validation failed: %s", e)
         return None
