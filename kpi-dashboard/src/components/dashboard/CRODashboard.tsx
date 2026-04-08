@@ -506,8 +506,8 @@ const NRRAccountAttribution: React.FC<{ accounts: NRRWaterfallAccount[] }> = ({ 
   );
 };
 
-/** Risk account card with expandable pillar breakdown */
-const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void }> = ({ account, onClick }) => {
+/** Risk account card with expandable pillar breakdown + action buttons */
+const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void; onDraftEmail?: (account: RiskAccount) => void }> = ({ account, onClick, onDraftEmail }) => {
   const [showPillars, setShowPillars] = React.useState(false);
   const cls = classify(account.health_score);
   const color = classifyColor(account.health_score);
@@ -579,6 +579,25 @@ const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void }> =
           )}
         </div>
       )}
+      {/* Quick action buttons */}
+      <div className="px-4 pb-3 flex items-center gap-2">
+        {onDraftEmail && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDraftEmail(account); }}
+            className="text-[10px] px-2 py-1 rounded bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+            aria-label={`Draft email to ${account.account_name}`}
+          >
+            Draft Email
+          </button>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          className="text-[10px] px-2 py-1 rounded bg-gray-700/50 text-gray-400 hover:bg-gray-600/50 transition-colors"
+          aria-label={`View timeline for ${account.account_name}`}
+        >
+          View Timeline
+        </button>
+      </div>
     </div>
   );
 };
@@ -720,6 +739,7 @@ const CRODashboard: React.FC = () => {
   const [selectedAccountId, setSelectedAccountId] = useState<string | number | null>(null);
 
   const [activePeriod, setActivePeriod] = useState<'Q3' | 'Q4' | 'TTM'>('Q4');
+  const [emailDraftAccount, setEmailDraftAccount] = useState<RiskAccount | null>(null);
 
   // Update URL when view changes
   const handleViewChange = useCallback((view: ViewId) => {
@@ -1128,6 +1148,34 @@ const CRODashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Renewals at Risk — compact banner */}
+          {d.renewals_at_risk.length > 0 && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-yellow-600/30 p-4 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
+                  <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Renewals at Risk</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                    {d.renewals_at_risk.length}
+                  </span>
+                </div>
+                <span className="text-[10px] text-gray-500">{formatCompact(d.renewals_at_risk.reduce((s: number, r: any) => s + r.arr, 0))} ARR in next 90d</span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {d.renewals_at_risk.slice(0, 6).map((r, i) => (
+                  <div key={i} className="flex-shrink-0 bg-gray-800/50 rounded-lg px-3 py-2 text-xs">
+                    <p className="text-white font-medium truncate max-w-[120px]">{r.account_name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-gray-500">{formatCompact(r.arr)}</span>
+                      <span className="font-semibold" style={{ color: classifyColor(r.health_score) }}>{r.health_score}</span>
+                      <span className={`font-medium ${r.days_until <= 30 ? 'text-red-400' : 'text-yellow-400'}`}>{r.days_until}d</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Highest Risk Accounts */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -1147,6 +1195,7 @@ const CRODashboard: React.FC = () => {
                   key={account.account_id}
                   account={account}
                   onClick={() => fetchTimeline(account.account_id)}
+                  onDraftEmail={(a) => setEmailDraftAccount(a)}
                 />
               ))}
             </div>
@@ -1225,6 +1274,44 @@ const CRODashboard: React.FC = () => {
 
       {/* Floating AI Advisor */}
       <AskAIPortal persona="cro" />
+
+      {/* Email Draft Modal — inline for CRO quick action */}
+      {emailDraftAccount && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={() => setEmailDraftAccount(null)}>
+          <div className="bg-[#1a1f2e] rounded-xl border border-gray-700 w-full max-w-lg p-6 mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">Draft Email — {emailDraftAccount.account_name}</h3>
+              <button onClick={() => setEmailDraftAccount(null)} className="text-gray-500 hover:text-white" aria-label="Close">&times;</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-wide block mb-1">Subject</label>
+                <input
+                  defaultValue={`Account Health Review — ${emailDraftAccount.account_name} (Score: ${emailDraftAccount.health_score})`}
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-wide block mb-1">Body</label>
+                <textarea
+                  rows={6}
+                  defaultValue={`Hi team,\n\nI'd like to discuss ${emailDraftAccount.account_name} (${formatCompact(emailDraftAccount.arr)} ARR). Current health score is ${emailDraftAccount.health_score}, classified as ${classify(emailDraftAccount.health_score) === 'critical' ? 'Critical' : 'At Risk'}.\n\nKey concerns:\n- ${emailDraftAccount.signal_count} active signals flagged\n\nLet's schedule a review this week.\n\nBest regards`}
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setEmailDraftAccount(null)} className="px-4 py-2 text-xs text-gray-400 hover:text-white transition-colors">Cancel</button>
+                <button
+                  onClick={() => { setEmailDraftAccount(null); }}
+                  className="px-4 py-2 text-xs font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors"
+                >
+                  Copy to Clipboard
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </div>
   );

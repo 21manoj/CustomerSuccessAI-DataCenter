@@ -445,7 +445,7 @@ const SummaryCardComponent: React.FC<{ card: SummaryCard }> = ({ card }) => {
 };
 
 /** Health distribution section — 3 buckets */
-const HealthDistribution: React.FC<{ buckets: HealthBucket[] }> = ({ buckets }) => (
+const HealthDistribution: React.FC<{ buckets: HealthBucket[]; onBucketClick?: (label: string) => void }> = ({ buckets, onBucketClick }) => (
   <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
     <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -460,7 +460,15 @@ const HealthDistribution: React.FC<{ buckets: HealthBucket[] }> = ({ buckets }) 
     </div>
     <div className="grid grid-cols-3 divide-x divide-gray-700/50">
       {buckets.map((bucket) => (
-        <div key={bucket.label} className={`p-5 ${bucket.bgClass} relative overflow-hidden`}>
+        <div
+          key={bucket.label}
+          className={`p-5 ${bucket.bgClass} relative overflow-hidden ${onBucketClick ? 'cursor-pointer hover:brightness-110 transition-all' : ''}`}
+          onClick={() => onBucketClick?.(bucket.label)}
+          role={onBucketClick ? 'button' : undefined}
+          tabIndex={onBucketClick ? 0 : undefined}
+          aria-label={`${bucket.label}: ${bucket.count} accounts, ${formatCompact(bucket.arr)} ARR`}
+          onKeyDown={(e) => { if (e.key === 'Enter' && onBucketClick) onBucketClick(bucket.label); }}
+        >
           {/* Glow */}
           <div
             className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-12 opacity-10 blur-2xl"
@@ -808,9 +816,11 @@ const VPCSDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveViewRaw] = useState<VPCSViewId>('vpcs-overview');
+  const [healthFilter, setHealthFilter] = useState<string | null>(null);
   const setActiveView = useCallback((view: VPCSViewId) => {
     trackDashboardSwitch(activeView, `vpcs_${view}`);
     setActiveViewRaw(view);
+    if (view !== 'accounts') setHealthFilter(null);
   }, [activeView]);
 
   // Fetch dashboard data from multiple endpoints
@@ -1110,9 +1120,15 @@ const VPCSDashboard: React.FC = () => {
                 ))}
               </div>
 
-              {/* Row 2: Health Distribution */}
+              {/* Row 2: Health Distribution — click bucket to drill into filtered accounts */}
               <div className="mb-6">
-                <HealthDistribution buckets={d.health_buckets} />
+                <HealthDistribution
+                  buckets={d.health_buckets}
+                  onBucketClick={(label) => {
+                    setHealthFilter(label);
+                    setActiveView('accounts');
+                  }}
+                />
               </div>
 
               {/* Row 3: Actions Queue */}
@@ -1127,7 +1143,31 @@ const VPCSDashboard: React.FC = () => {
 
           {/* ============ VIEW: All Accounts ============ */}
           {activeView === 'accounts' && (
-            <AccountPortfolioTable accounts={d.accounts} />
+            <>
+              {healthFilter && (
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Filtered by:</span>
+                  <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-700 text-white">{healthFilter}</span>
+                  <button
+                    onClick={() => setHealthFilter(null)}
+                    className="text-xs text-teal-400 hover:text-teal-300 ml-1"
+                    aria-label="Clear health filter"
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              )}
+              <AccountPortfolioTable
+                accounts={healthFilter
+                  ? d.accounts.filter(a => {
+                      const cls = classify(a.health_score);
+                      const map: Record<string, string> = { 'Healthy': 'healthy', 'At-Risk': 'at_risk', 'Critical': 'critical' };
+                      return cls === (map[healthFilter] ?? healthFilter.toLowerCase());
+                    })
+                  : d.accounts
+                }
+              />
+            </>
           )}
 
           {/* ============ VIEW: Playbooks ============ */}

@@ -125,6 +125,7 @@ interface CFODashboardData {
   cs_investment: number;
   roi_impact: number;
   is_estimated_investment: boolean;
+  renewals_at_risk: Array<{ account_name: string; arr: number; days_until: number; health_score: number }>;
   period: string;
   last_updated: string;
 }
@@ -886,6 +887,7 @@ const CFODashboard: React.FC = () => {
             nrr_arr_protectable: json.nrr_arr_protectable || 0,
             cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
             nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
+            renewals_at_risk: json.renewals_at_risk || [],
             total_arr: totalArr,
             cs_investment: csInvestment,
             roi_impact: roiImpact,
@@ -991,6 +993,42 @@ const CFODashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Portfolio Pulse — Traffic Light Summary */}
+          <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                {(() => {
+                  const accts = d.accounts;
+                  const healthy = accts.filter(a => a.health_score >= 70);
+                  const atRisk = accts.filter(a => a.health_score >= 50 && a.health_score < 70);
+                  const critical = accts.filter(a => a.health_score < 50);
+                  const buckets = [
+                    { count: healthy.length, arr: healthy.reduce((s, a) => s + a.arr, 0), color: '#22c55e', label: 'Healthy' },
+                    { count: atRisk.length, arr: atRisk.reduce((s, a) => s + a.arr, 0), color: '#eab308', label: 'At Risk' },
+                    { count: critical.length, arr: critical.reduce((s, a) => s + a.arr, 0), color: '#ef4444', label: 'Critical' },
+                  ];
+                  return buckets.map((b, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: b.color + '33', border: `2px solid ${b.color}` }}>
+                        {b.count}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-white">{b.label}</p>
+                        <p className="text-[10px] text-gray-500">{formatCompact(b.arr)} ARR</p>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">Portfolio Pulse</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {d.accounts.filter(a => a.health_score >= 70).length} healthy, {d.accounts.filter(a => a.health_score < 50).length} need intervention
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Row 1: Financial summary cards */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             {d.summary_cards.map((card, i) => (
@@ -1030,6 +1068,42 @@ const CFODashboard: React.FC = () => {
             {/* Cost of Inaction — with formula transparency */}
             <CostOfInactionPanel data={d.cost_of_inaction} />
           </div>
+
+          {/* Renewals at Risk Banner */}
+          {d.renewals_at_risk.length > 0 && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-yellow-600/30 p-4 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
+                    Renewals at Risk &middot; Next 90 Days
+                  </h3>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                    {d.renewals_at_risk.length}
+                  </span>
+                </div>
+                <span className="text-[10px] text-gray-500">
+                  {formatCompact(d.renewals_at_risk.reduce((s, r) => s + r.arr, 0))} ARR
+                </span>
+              </div>
+              <div className="space-y-1">
+                {d.renewals_at_risk.slice(0, 5).map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs py-1">
+                    <span className="text-gray-300">{r.account_name}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-500">{formatCompact(r.arr)}</span>
+                      <span className="font-semibold" style={{ color: classifyColor(r.health_score) }}>
+                        {r.health_score}
+                      </span>
+                      <span className={`text-${r.days_until <= 30 ? 'red' : r.days_until <= 60 ? 'yellow' : 'gray'}-400 font-medium w-12 text-right`}>
+                        {r.days_until}d
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Row 2: Power of 1 Metrics Table */}
           <div className="mb-6">
@@ -1132,18 +1206,54 @@ const CFODashboard: React.FC = () => {
         {/* Export Options */}
         <div className="space-y-2.5">
           <button
-            onClick={() => alert('Export via Claude.ai: Ask "Generate a CFO brief for Q1" in the MCP chat')}
+            onClick={() => {
+              // CSV export — account-level data
+              const headers = ['Account', 'ARR', 'Health Score', 'Classification', 'Investment', 'Impact', 'ROI %', 'Playbook Runs'];
+              const rows = d.accounts.map(a => [a.account_name, a.arr, a.health_score, a.classification, a.investment, a.impact, a.roi_pct, a.playbook_runs].join(','));
+              const csv = [headers.join(','), ...rows].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `cfo-brief-${d.period.replace(/\s+/g, '-')}.csv`;
+              link.click();
+              URL.revokeObjectURL(url);
+            }}
             className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-600/20 transition-colors"
           >
             <FileText className="w-3.5 h-3.5" />
-            Export CFO Brief
+            Export CFO Brief (CSV)
           </button>
           <button
-            onClick={() => alert('Export via Claude.ai: Ask "Generate a board deck with ROI data" in the MCP chat')}
+            onClick={() => {
+              // Summary CSV with portfolio metrics
+              const summary = [
+                `CS Pulse CFO Brief - ${d.period}`,
+                '',
+                `Total ARR,${d.total_arr}`,
+                `CS Investment,${d.cs_investment}`,
+                `Revenue Protected,${d.roi_impact}`,
+                `Portfolio ROI,${d.summary_cards[3]?.value || ''}`,
+                `NRR Current,${d.nrr_current}%`,
+                `NRR With Intervention,${d.nrr_with_intervention}%`,
+                `GRR,${d.grr}%`,
+                '',
+                'Power of 1 Metrics',
+                'Metric,Baseline,Current,Improvement %,Dollar Impact',
+                ...d.power_of_1.map(m => [m.metric, m.baseline, m.current, m.improvement, m.dollar_impact].join(',')),
+              ].join('\n');
+              const blob = new Blob([summary], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `cfo-portfolio-summary-${d.period.replace(/\s+/g, '-')}.csv`;
+              link.click();
+              URL.revokeObjectURL(url);
+            }}
             className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-purple-600/10 border border-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-600/20 transition-colors"
           >
             <Layers className="w-3.5 h-3.5" />
-            Generate Board Deck
+            Export Portfolio Summary (CSV)
           </button>
         </div>
 
