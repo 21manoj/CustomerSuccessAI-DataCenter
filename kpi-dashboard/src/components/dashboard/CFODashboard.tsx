@@ -120,6 +120,11 @@ interface CFODashboardData {
   nrr_arr_protectable: number;
   cost_of_inaction: CostOfInaction;
   nrr_waterfall: { expected_loss: number; attributed_save: number; intervention_cost: number; roi_x: number };
+  // Raw numeric values for Investment Allocation widget
+  total_arr: number;
+  cs_investment: number;
+  roi_impact: number;
+  is_estimated_investment: boolean;
   period: string;
   last_updated: string;
 }
@@ -557,66 +562,119 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
   );
 };
 
-/** Investment Efficiency gauge (right sidebar) */
-const EfficiencyGauge: React.FC<{
-  score: number;
-  automationRate: number;
-  timeSaved: number;
-  costPerProtected: number;
-}> = ({ score, automationRate, timeSaved, costPerProtected }) => {
-  const circumference = 2 * Math.PI * 40;
-  const progress = (score / 100) * circumference;
+/** Investment Allocation Intelligence (right sidebar) — replaces old EfficiencyGauge */
+const InvestmentAllocationWidget: React.FC<{
+  totalArr: number;
+  csInvestment: number;
+  roiImpact: number;
+  isEstimated: boolean;
+}> = ({ totalArr, csInvestment, roiImpact, isEstimated }) => {
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Industry benchmark: 1.5% - 2.5% of ARR for CS investment (TSIA)
+  const pctOfArr = totalArr > 0 ? (csInvestment / totalArr) * 100 : 0;
+  const benchmarkLow = totalArr * 0.015;
+  const benchmarkHigh = totalArr * 0.025;
+  const inRange = csInvestment >= benchmarkLow * 0.8 && csInvestment <= benchmarkHigh * 1.2;
+  const roi = csInvestment > 0 ? roiImpact / csInvestment : 0;
+
+  // Allocation breakdown (industry benchmarks when estimated)
+  const playbookAlloc = csInvestment * 0.30;
+  const csmAlloc = csInvestment * 0.45;
+  const overheadAlloc = csInvestment * 0.25;
 
   return (
     <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
-      <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-4">
-        Investment Efficiency
-      </h3>
-      {/* Gauge */}
-      <div className="flex justify-center mb-4">
-        <div className="relative w-24 h-24">
-          <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-            <circle cx="48" cy="48" r="40" fill="none" stroke="#1f2937" strokeWidth="6" />
-            <circle
-              cx="48"
-              cy="48"
-              r="40"
-              fill="none"
-              stroke="#10b981"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={circumference - progress}
-              className="transition-all duration-1000"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-emerald-400">{score}</span>
-            <span className="text-[9px] text-gray-500">/ 100</span>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">
+          CS Investment
+        </h3>
+        <button
+          onClick={() => setShowDetails(!showDetails)}
+          className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-0.5"
+        >
+          <Info className="w-3 h-3" />
+          {showDetails ? 'Hide' : 'Details'}
+        </button>
+      </div>
+
+      {/* Primary metric: % of ARR */}
+      <div className="text-center mb-3">
+        <p className="text-3xl font-bold text-white">{pctOfArr.toFixed(1)}%</p>
+        <p className="text-[10px] text-gray-500">of ARR invested in CS</p>
+        <p className={`text-[9px] mt-1 ${inRange ? 'text-emerald-400' : 'text-amber-400'}`}>
+          {inRange ? '✓ Within' : '⚠ Outside'} industry range (1.5% - 2.5%)
+        </p>
+      </div>
+
+      {/* Summary row */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-gray-800/50 rounded-lg p-2 text-center">
+          <p className="text-xs font-semibold text-white">{formatCompact(csInvestment)}</p>
+          <p className="text-[9px] text-gray-500">CS Spend</p>
+        </div>
+        <div className="bg-gray-800/50 rounded-lg p-2 text-center">
+          <p className="text-xs font-semibold text-emerald-400">{roi > 0 ? `${roi.toFixed(1)}x` : '—'}</p>
+          <p className="text-[9px] text-gray-500">ROI</p>
+        </div>
+      </div>
+
+      {isEstimated && (
+        <p className="text-[9px] text-amber-400/70 mb-2">* Estimated from Power-of-1 benchmarks</p>
+      )}
+
+      {/* Expandable details */}
+      {showDetails && (
+        <div className="border-t border-gray-700/50 pt-3 mt-2 space-y-3">
+          {/* Allocation breakdown */}
+          <div>
+            <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-2">Where Your CS Dollars Go</p>
+            <div className="space-y-1.5">
+              {[
+                { label: 'Playbook interventions', amount: playbookAlloc, pct: 30, color: 'bg-cyan-500' },
+                { label: 'CSM team capacity', amount: csmAlloc, pct: 45, color: 'bg-emerald-500' },
+                { label: 'Operational overhead', amount: overheadAlloc, pct: 25, color: 'bg-gray-500' },
+              ].map(item => (
+                <div key={item.label}>
+                  <div className="flex justify-between text-[10px] mb-0.5">
+                    <span className="text-gray-400">{item.label}</span>
+                    <span className="text-gray-300">{formatCompact(item.amount)} ({item.pct}%)</span>
+                  </div>
+                  <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Benchmark context */}
+          <div className="bg-gray-800/30 rounded-lg p-2.5">
+            <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-1.5">Industry Benchmark (TSIA)</p>
+            <div className="flex justify-between text-[10px]">
+              <span className="text-gray-400">Your ARR</span>
+              <span className="text-white">{formatCompact(totalArr)}</span>
+            </div>
+            <div className="flex justify-between text-[10px]">
+              <span className="text-gray-400">Recommended CS budget</span>
+              <span className="text-gray-300">{formatCompact(benchmarkLow)} – {formatCompact(benchmarkHigh)}</span>
+            </div>
+            <div className="flex justify-between text-[10px]">
+              <span className="text-gray-400">Your CS spend</span>
+              <span className={inRange ? 'text-emerald-400' : 'text-amber-400'}>{formatCompact(csInvestment)}</span>
+            </div>
+            <div className="flex justify-between text-[10px] border-t border-gray-700/30 pt-1 mt-1">
+              <span className="text-gray-400">Return on CS spend</span>
+              <span className="text-white font-semibold">{formatCompact(roiImpact)} protected</span>
+            </div>
+          </div>
+
+          <p className="text-[8px] text-gray-600">
+            Benchmark: TSIA CS benchmark 2024, Gainsight Pulse, KeyBanc SaaS Metrics.
+            Allocation split is industry-average for mid-market SaaS.
+          </p>
         </div>
-      </div>
-      {/* Stats */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Automation Rate</span>
-          <span className="text-xs font-semibold text-emerald-400">{automationRate}%</span>
-        </div>
-        <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-emerald-500 rounded-full transition-all"
-            style={{ width: `${automationRate}%` }}
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Time Saved</span>
-          <span className="text-xs font-medium text-gray-300">{timeSaved} hrs/mo</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Cost per Impact $</span>
-          <span className="text-xs font-medium text-cyan-400">${costPerProtected.toFixed(2)}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -828,6 +886,10 @@ const CFODashboard: React.FC = () => {
             nrr_arr_protectable: json.nrr_arr_protectable || 0,
             cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
             nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
+            total_arr: totalArr,
+            cs_investment: csInvestment,
+            roi_impact: roiImpact,
+            is_estimated_investment: isEstimatedInvestment,
             period: json.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
             last_updated: json.last_updated || new Date().toISOString(),
           };
@@ -1036,12 +1098,12 @@ const CFODashboard: React.FC = () => {
 
       {/* ---- Right Sidebar ---- */}
       <aside className="w-80 flex-shrink-0 bg-[#0d1117] border-l border-gray-700/50 py-6 px-4 overflow-y-auto flex flex-col gap-5">
-        {/* Investment Efficiency Score */}
-        <EfficiencyGauge
-          score={d.efficiency_score}
-          automationRate={d.automation_rate}
-          timeSaved={d.time_saved_hours}
-          costPerProtected={d.cost_per_protected_dollar}
+        {/* Investment Allocation Intelligence */}
+        <InvestmentAllocationWidget
+          totalArr={d.total_arr}
+          csInvestment={d.cs_investment}
+          roiImpact={d.roi_impact}
+          isEstimated={d.is_estimated_investment}
         />
 
         {/* Revenue Waterfall */}
