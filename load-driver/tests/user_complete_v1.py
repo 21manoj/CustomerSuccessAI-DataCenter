@@ -273,7 +273,9 @@ def validate_response(tool_name: str, result: dict) -> tuple:
         actions = result.get("actions", [])
         return True, f"{len(actions)} actions"
     elif tool_name == "calculate_power_of_1":
-        return result.get("dollar_impact") is not None, f"${result.get('dollar_impact', 0):,.0f}"
+        # MCP tool returns total_impact (not dollar_impact)
+        impact = result.get("total_impact") or result.get("dollar_impact") or result.get("direct_impact") or 0
+        return impact > 0, f"${impact:,.0f}"
     elif tool_name == "get_portfolio_roi_summary":
         story = result.get("story", {})
         return "summary" in story or "total_arr" in result, "has ROI data"
@@ -1104,7 +1106,7 @@ def phase1_5d_persona_validation(
     # CFO
     try:
         po1 = mcp.call("calculate_power_of_1", {"customer_id": customer_id, "metric_id": "NRR"})
-        dollar_impact = po1.get("dollar_impact", 0)
+        dollar_impact = po1.get("total_impact") or po1.get("dollar_impact") or po1.get("direct_impact") or 0
         econ = mcp.call("get_playbook_economics", {"customer_id": customer_id})
         has_costs = bool(econ.get("playbooks") or econ.get("portfolio_summary"))
         passed = dollar_impact > 0 and has_costs
