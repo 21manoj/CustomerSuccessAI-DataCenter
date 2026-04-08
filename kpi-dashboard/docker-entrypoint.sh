@@ -42,12 +42,16 @@ echo "Starting Nginx..."
 nginx -g "daemon on;"
 
 # Start Flask backend with Gunicorn
+# PID file enables zero-downtime reload via: kill -HUP $(cat /tmp/gunicorn.pid)
+# Graceful timeout gives in-flight requests 30s to finish before worker kill
 echo "Starting Gunicorn (workers=${GUNICORN_WORKERS:-4}, timeout=${GUNICORN_TIMEOUT:-120})..."
 cd /app/backend
 exec gunicorn \
     --bind 0.0.0.0:5059 \
     --workers "${GUNICORN_WORKERS:-4}" \
     --timeout "${GUNICORN_TIMEOUT:-120}" \
+    --graceful-timeout 30 \
+    --pid /tmp/gunicorn.pid \
     --access-logfile - \
     --error-logfile - \
     --log-level info \
