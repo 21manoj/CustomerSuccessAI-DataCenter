@@ -617,10 +617,15 @@ def get_dc2s_accounts():
         # Apply user-level account filtering (contractors/restricted users)
         results = _filter_user_accounts(results, key='account_id')
 
+        # Include customer context for top-bar resolution (super admin sessions)
+        from models import Customer as _Cust
+        _cust = _Cust.query.filter_by(customer_id=int(customer_id)).first()
         return jsonify({
             'accounts': results,
             'total': len(results),
-            'enabled_pillars': enabled_pillar_codes
+            'enabled_pillars': enabled_pillar_codes,
+            'customer_id': int(customer_id),
+            'customer_name': _cust.name if _cust else f'Customer {customer_id}',
         })
 
     except Exception as e:
@@ -2200,6 +2205,36 @@ def get_csm_daily_actions():
 
         all_actions = []
 
+        # ── Batch-load stakeholder context for all accounts (single query) ──
+        _stakeholder_map = {}  # {account_id: {'champion': str, 'decision_makers': [str]}}
+        try:
+            from models import ContextNode as _CNode
+            _acct_ids = [a.account_id for a in accounts]
+            if _acct_ids:
+                _stk_nodes = _CNode.query.filter(
+                    _CNode.account_id.in_(_acct_ids),
+                    _CNode.customer_id == int(customer_id),
+                    _CNode.node_type == 'STAKEHOLDER',
+                ).all()
+                for sn in _stk_nodes:
+                    aid = sn.account_id
+                    if aid not in _stakeholder_map:
+                        _stakeholder_map[aid] = {'champion': None, 'champion_title': None, 'decision_makers': []}
+                    props = sn.properties or {}
+                    subtype = (sn.node_subtype or '').lower()
+                    title_lower = (sn.title or '').lower()
+                    name = sn.title or ''
+                    role = sn.node_subtype or ''
+                    # Identify champion
+                    if 'champion' in subtype or 'champion' in title_lower:
+                        _stakeholder_map[aid]['champion'] = name
+                        _stakeholder_map[aid]['champion_title'] = role
+                    # Identify decision-makers (executives, directors, VPs)
+                    elif any(r in subtype for r in ['executive', 'director', 'vp', 'cto', 'cio', 'cfo', 'svp']):
+                        _stakeholder_map[aid]['decision_makers'].append(f"{name} ({role})")
+        except Exception as _stk_err:
+            logger.debug(f"Stakeholder batch load (non-fatal): {_stk_err}")
+
         # ── Prepend system-triggered PlaybookTask records (status='pending') ──
         # These are created by signal_analyst / urgent_signal_scanner and take
         # precedence over generated recommendations.
@@ -2258,7 +2293,22 @@ def get_csm_daily_actions():
         except Exception as _pt_err:
             logger.warning(f"PlaybookTask prepend failed (non-fatal): {_pt_err}")
 
+        # ── Arc-type labels for personalized action titles ──
+        _ARC_LABELS = {
+            'champion_loss':        ('Champion Recovery', 'Re-establish executive sponsor relationship'),
+            'infrastructure_decay': ('Infrastructure Stabilization', 'Address degrading operational metrics'),
+            'crisis_recovery':      ('Crisis Recovery', 'Stabilize account after critical incident'),
+            'land_and_expand':      ('Expansion Nurture', 'Capitalize on healthy growth trajectory'),
+            'steady_state':         ('Retention Assurance', 'Maintain engagement and prevent drift'),
+            'seasonal_pattern':     ('Seasonal Prep', 'Prepare for upcoming demand cycle'),
+            'competitive_threat':   ('Competitive Defense', 'Counter competitor engagement signals'),
+            'budget_pressure':      ('Financial Alignment', 'Navigate budget constraints to protect renewal'),
+        }
+
         for account in accounts:
+            _arc = getattr(account, 'arc_type', None) or ''
+            _arc_label, _arc_hint = _ARC_LABELS.get(_arc, (None, None))
+
             # 2. Trailing 30-day weighted average for stable health scores
             trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
 
@@ -2345,11 +2395,15 @@ def get_csm_daily_actions():
                 effort = 20  # Low effort: just a review call
                 priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
                 roi_ctx = _get_roi_context('follow_up', None, arr)
+                # Personalize title based on arc type
+                _follow_title = f'{_arc_label} Check-in' if _arc_label else 'Health Check Follow-up'
+                _follow_desc = f'{_arc_hint}. ' if _arc_hint else ''
+                _follow_desc += f'Health score at {overall_health:.0f}. Schedule intervention call.'
                 all_actions.append({
                     'account_id': account.account_id,
                     'account_name': account.account_name,
-                    'action_title': 'Health Check Follow-up',
-                    'action_description': f'Health score at {overall_health:.0f}. Schedule intervention call.',
+                    'action_title': _follow_title,
+                    'action_description': _follow_desc,
                     'action_type': 'follow_up',
                     'related_playbook_id': None,
                     'urgency': _determine_urgency(overall_health, churn_prob, expansion_prob_val),
@@ -2413,10 +2467,19 @@ def get_csm_daily_actions():
         all_actions.sort(key=lambda a: a['priority_index'], reverse=True)
         top_actions = all_actions[:10]
 
-        # Assign rank and id
+        # Assign rank, id, and stakeholder context
         for i, action in enumerate(top_actions, 1):
             action['rank'] = i
             action['id'] = f"act-{i:03d}"
+            # Inject stakeholder context from batch-loaded map
+            stk = _stakeholder_map.get(action.get('account_id'), {})
+            action['primary_champion'] = stk.get('champion')
+            action['champion_title'] = stk.get('champion_title')
+            action['decision_makers'] = stk.get('decision_makers', [])[:3]
+            # Inject arc_type for frontend personalization
+            if 'arc_type' not in action:
+                acct_obj = next((a for a in accounts if a.account_id == action.get('account_id')), None)
+                action['arc_type'] = getattr(acct_obj, 'arc_type', None) if acct_obj else None
 
         # Summary
         urgency_counts = {'critical': 0, 'high': 0, 'opportunity': 0, 'medium': 0}
