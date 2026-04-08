@@ -1038,7 +1038,7 @@ const CFODashboard: React.FC = () => {
 
           {/* Row 1b: NRR/GRR + Cost of Inaction */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* Dual NRR/GRR */}
+            {/* Dual NRR/GRR — Power-of-1 investment model */}
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-4 h-4 text-cyan-400" />
@@ -1046,7 +1046,7 @@ const CFODashboard: React.FC = () => {
               </div>
               <div className="flex items-end gap-6 mb-3">
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Current NRR</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Current NRR (Power-of-1)</p>
                   <p className={`text-3xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
                 </div>
                 <div className="text-gray-600 text-xl pb-1">&rarr;</div>
@@ -1062,7 +1062,7 @@ const CFODashboard: React.FC = () => {
               {d.nrr_arr_protectable > 0 && (
                 <p className="text-[10px] text-green-400/80">{formatCompact(d.nrr_arr_protectable)} ARR protectable with intervention</p>
               )}
-              <p className="text-[9px] text-gray-600 mt-1">Current: health-weighted baseline. Projected: if playbooks run on at-risk accounts.</p>
+              <p className="text-[9px] text-gray-600 mt-1">Power-of-1 model: 1% KPI improvement scaled by ARR. CRO view uses health-weighted baseline (may differ). Playbook projection: if interventions run on at-risk accounts.</p>
             </div>
 
             {/* Cost of Inaction — with formula transparency */}
