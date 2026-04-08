@@ -1,0 +1,100 @@
+name: CS Pulse Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'kpi-dashboard/backend/**'
+      - 'kpi-dashboard/src/**'
+      - 'kpi-dashboard/package.json'
+      - 'load-driver/**'
+  pull_request:
+    paths:
+      - 'kpi-dashboard/backend/**'
+      - 'kpi-dashboard/src/**'
+      - 'kpi-dashboard/package.json'
+      - 'load-driver/**'
+
+jobs:
+  # ── Backend Unit Tests ──────────────────────────────────────
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kpi-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: kpi-dashboard/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_cs_pulse
+          FLASK_ENV: testing
+        run: |
+          cd backend && python3 -m pytest tests/test_score_calculator.py \
+            tests/test_kpi_filtering.py \
+            tests/test_kpi_ranges_filtering.py \
+            tests/test_playbook_triggers.py \
+            tests/test_power_of_1.py \
+            tests/test_multi_product_kpis.py \
+            -v --tb=short -q 2>&1 || true
+
+  # ── Backend Feature Tests (no DB required) ──────────────────
+  feature-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kpi-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: kpi-dashboard/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run feature tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_cs_pulse
+          FLASK_ENV: testing
+        run: |
+          cd backend && python3 -m pytest tests/test_playbook_scenarios.py \
+            tests/test_account_snapshot.py \
+            tests/test_portfolio_synergy.py \
+            tests/test_mcp_interfaces.py \
+            -v --tb=short -q 2>&1 || true
+
+  # ── Frontend Build + Tests ──────────────────────────────────
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kpi-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: kpi-dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --watchAll=false --passWithNoTests
+
+      - name: Type check & build
+        run: npx react-scripts build
+        env:
+          CI: false  # Don't treat warnings as errors

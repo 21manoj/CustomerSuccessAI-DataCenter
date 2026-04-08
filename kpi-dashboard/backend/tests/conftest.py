@@ -8,9 +8,100 @@ Usage:
 import os
 import sys
 import pytest
+from datetime import datetime, timedelta
 
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+
+# ═══════════════════════════════════════════════════════════════
+# Factory Fixtures — create test data without DB
+# ═══════════════════════════════════════════════════════════════
+
+@pytest.fixture
+def make_account():
+    """Factory for account dicts (no DB required)."""
+    _counter = [0]
+    def _factory(*, name=None, health_score=75, arr=1_000_000, classification='healthy',
+                 industry='Technology', region='US-West', csm='Alice Chen'):
+        _counter[0] += 1
+        return {
+            'account_id': _counter[0],
+            'account_name': name or f'Test Account {_counter[0]}',
+            'health_score': health_score,
+            'arr': arr,
+            'classification': classification,
+            'industry': industry,
+            'region': region,
+            'csm_name': csm,
+        }
+    return _factory
+
+
+@pytest.fixture
+def make_kpi_measurement():
+    """Factory for KPI measurement dicts."""
+    def _factory(*, account_id=1, kpi_code='P1-KPI1', value=85.0,
+                 measurement_date=None):
+        return {
+            'account_id': account_id,
+            'kpi_code': kpi_code,
+            'value': value,
+            'measurement_date': measurement_date or datetime.utcnow().strftime('%Y-%m-%d'),
+        }
+    return _factory
+
+
+@pytest.fixture
+def make_health_score():
+    """Factory for health score records."""
+    def _factory(*, account_id=1, overall_score=72, measurement_month=None,
+                 pillar_scores=None):
+        return {
+            'account_id': account_id,
+            'overall_score': overall_score,
+            'measurement_month': measurement_month or datetime.utcnow().strftime('%Y-%m'),
+            'pillar_scores': pillar_scores or {
+                'P1': 75, 'P2': 70, 'P3': 68, 'P4': 72, 'P5': 74
+            },
+        }
+    return _factory
+
+
+@pytest.fixture
+def make_signal():
+    """Factory for qualitative signal dicts."""
+    _counter = [0]
+    def _factory(*, account_id=1, signal_type='champion_loss', severity='high',
+                 content='Champion departed', source='slack'):
+        _counter[0] += 1
+        return {
+            'signal_id': f'sig_{_counter[0]}',
+            'account_id': account_id,
+            'signal_type': signal_type,
+            'severity': severity,
+            'content': content,
+            'source_channel': source,
+            'created_at': datetime.utcnow().isoformat(),
+        }
+    return _factory
+
+
+@pytest.fixture
+def portfolio_accounts(make_account):
+    """A realistic 10-account portfolio with mixed health states."""
+    return [
+        make_account(name='Alpha Corp', health_score=85, arr=5_000_000, classification='healthy'),
+        make_account(name='Beta Inc', health_score=78, arr=3_200_000, classification='healthy'),
+        make_account(name='Gamma LLC', health_score=72, arr=2_800_000, classification='healthy'),
+        make_account(name='Delta Systems', health_score=65, arr=4_100_000, classification='at_risk'),
+        make_account(name='Epsilon Tech', health_score=58, arr=1_500_000, classification='at_risk'),
+        make_account(name='Zeta Cloud', health_score=55, arr=2_200_000, classification='at_risk'),
+        make_account(name='Eta Networks', health_score=45, arr=3_800_000, classification='critical'),
+        make_account(name='Theta Data', health_score=38, arr=1_200_000, classification='critical'),
+        make_account(name='Iota Services', health_score=82, arr=6_000_000, classification='healthy'),
+        make_account(name='Kappa Labs', health_score=91, arr=2_500_000, classification='healthy'),
+    ]
 
 
 @pytest.fixture
