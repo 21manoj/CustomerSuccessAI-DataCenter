@@ -810,7 +810,8 @@ def cro_dashboard():
                         rdate = datetime.strptime(str(rd)[:10], '%Y-%m-%d').date()
                         days_until = (rdate - datetime.utcnow().date()).days
                         if 0 <= days_until <= 90:
-                            h = float(acct.health_score or 0)
+                            hs_obj = latest_health.get(acct.account_id)
+                            h = float(hs_obj.health_score) if hs_obj and hs_obj.health_score else 0
                             renewals_at_risk.append({
                                 'account_name': acct.account_name,
                                 'arr': float(acct.revenue or 0),
