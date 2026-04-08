@@ -429,8 +429,7 @@ class PlaybookExecution(db.Model):
     outcome_notes = db.Column(db.Text, nullable=True)
     llm_validation_result = db.Column(db.JSON, nullable=True)    # Signal Analyst output that approved this execution
 
-    # Relationship to reports (cascade delete)
-    reports = db.relationship('PlaybookReport', backref='execution', cascade='all, delete-orphan', passive_deletes=True)
+    # NOTE: PlaybookReport FK removed — reports now work with both V1 and V2 execution IDs
 
     # Indexes for common queries
     __table_args__ = (
@@ -530,7 +529,7 @@ class PlaybookExecutionV2(db.Model):
 class PlaybookReport(db.Model):
     __tablename__ = 'playbook_reports'
     report_id = db.Column(db.Integer, primary_key=True)
-    execution_id = db.Column(db.String(36), db.ForeignKey('playbook_executions.execution_id', ondelete='CASCADE'), nullable=False, unique=True, index=True)  # UUID
+    execution_id = db.Column(db.String(60), nullable=False, unique=True, index=True)  # V2 execution IDs can be longer than 36 chars
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=True, index=True)
     playbook_id = db.Column(db.String(50), nullable=False, index=True)  # 'voc-sprint', 'activation-blitz', etc.
