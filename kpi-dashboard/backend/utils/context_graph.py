@@ -456,19 +456,27 @@ def aggregate_revenue_across_accounts(
     protected = 0.0
     expansion = 0.0
 
+    # Classify revenue_impact_type values into 3 buckets.
+    # DB stores full subtypes (revenue_at_risk, churn_averted, renewal_secured, etc.)
+    RISK_TYPES = {'at_risk', 'lost', 'revenue_at_risk', 'engagement_decline',
+                  'renewal_uncertainty', 'capacity_constraint', 'partner_friction'}
+    PROTECTED_TYPES = {'protected', 'revenue_protected', 'churn_averted',
+                       'renewal_secured', 'revenue_saved'}
+    EXPANSION_TYPES = {'expansion', 'upsell', 'cross_sell', 'expansion_realized'}
+
     for node in outcome_nodes:
         try:
-            impact = abs(float(node.revenue_impact))
+            raw = float(node.revenue_impact)
         except (TypeError, ValueError):
             continue
         impact_type = (node.revenue_impact_type or '').lower()
 
-        if impact_type in ('at_risk', 'lost'):
-            at_risk += impact
-        elif impact_type == 'protected':
-            protected += impact
-        elif impact_type == 'expansion':
-            expansion += impact
+        if impact_type in RISK_TYPES:
+            at_risk += abs(raw)
+        elif impact_type in PROTECTED_TYPES:
+            protected += abs(raw)
+        elif impact_type in EXPANSION_TYPES:
+            expansion += abs(raw)
 
     return {
         'revenue_at_risk': round(at_risk, 2),
