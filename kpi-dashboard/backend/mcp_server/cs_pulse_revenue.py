@@ -263,131 +263,36 @@ def execute_playbook(
     app = _get_flask_app()
 
     with app.app_context():
-        from models import Account, HealthScore, PlaybookExecutionV2
-        from extensions import db
-        import uuid
-        from datetime import datetime
+        from models import Account
+        from utils.playbook_lifecycle import start_execution
 
-        account = Account.query.filter_by(
-            account_id=account_id, customer_id=customer_id
-        ).first()
-        if not account:
-            raise ToolError(f"Account {account_id} not found for customer {customer_id}")
-
-        # Get current health
-        latest_hs = (
-            HealthScore.query
-            .filter_by(account_id=account_id)
-            .order_by(HealthScore.measurement_month.desc())
-            .first()
-        )
-        health_now = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
-        health_status = 'critical' if health_now and health_now < 50 else (
-            'at_risk' if health_now and health_now < 70 else 'healthy'
-        ) if health_now else None
-
-        arr = float(account.revenue or 0)
-
-        # Playbook name lookup
-        pb_names = {
-            'PB-01': 'Deployment Acceleration', 'PB-02': 'RMA Prevention',
-            'PB-03': 'GPU Optimization', 'PB-04': 'Capacity Planning',
-            'PB-05': 'Health Monitoring', 'PB-06': 'Customer Engagement',
-            'PB-07': 'Seasonal Planning', 'PB-08': 'Expansion Accelerator',
-        }
-
-        # Playbook hours from PLAYBOOK_CONFIG (if available)
-        csm_hours = 0
         try:
-            from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
-            cfg = PLAYBOOK_CONFIG.get(playbook_id, {})
-            csm_hours = sum(sc.get('estimated_hours', 0) for sc in cfg.get('sub_components', []))
-        except Exception:
-            csm_hours = 40  # default
+            execution = start_execution(customer_id, account_id, playbook_id, triggered_by)
+        except ValueError as e:
+            raise ToolError(str(e))
 
-        execution_id = f"exec-{playbook_id}-{account_id}-{uuid.uuid4().hex[:8]}"
-
-        execution = PlaybookExecutionV2(
-            execution_id=execution_id,
-            customer_id=customer_id,
-            account_id=account_id,
-            playbook_id=playbook_id,
-            playbook_name=pb_names.get(playbook_id, playbook_id),
-            triggered_by=triggered_by,
-            arc_type=account.arc_type,
-            status='in_progress',
-            phase='stabilize',
-            csm_hours_planned=csm_hours,
-            csm_hourly_rate=85.0,
-            total_cost=csm_hours * 85.0,
-            health_at_trigger=health_now,
-            health_status_at_trigger=health_status,
-            arr_at_trigger=arr,
-            actions_planned=len(cfg.get('sub_components', [])) if 'cfg' in dir() else 4,
-        )
-        db.session.add(execution)
-        db.session.commit()
+        account = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
 
         return {
             'scope': 'execution',
-            'execution_id': execution_id,
+            'execution_id': execution.execution_id,
             'customer_id': customer_id,
             'account_id': account_id,
-            'account_name': account.account_name,
+            'account_name': account.account_name if account else f"Account {account_id}",
             'playbook_id': playbook_id,
-            'playbook_name': pb_names.get(playbook_id, playbook_id),
+            'playbook_name': execution.playbook_name,
             'status': 'in_progress',
             'triggered_by': triggered_by,
-            'health_at_trigger': health_now,
-            'arr_at_trigger': arr,
-            'csm_hours_planned': csm_hours,
-            'estimated_cost': round(csm_hours * 85.0, 2),
+            'health_at_trigger': execution.health_at_trigger,
+            'arr_at_trigger': execution.arr_at_trigger,
+            'csm_hours_planned': execution.csm_hours_planned,
+            'estimated_cost': round(execution.total_cost or 0, 2),
         }
 
 
 # ===================================================================
 # Tool: close_playbook
 # ===================================================================
-
-def _health_to_annual_churn_prob(health: float) -> float:
-    """Map health score to annualized churn probability.
-
-    Based on industry benchmarks (TSIA, KeyBanc SaaS):
-      - Critical (<50): 35-45% annual churn
-      - At-risk (50-69): 15-25% annual churn
-      - Healthy (>=70): 3-8% annual churn
-    Uses linear interpolation within each band.
-    """
-    if health is None:
-        return 0.20  # unknown → assume 20%
-    if health < 30:
-        return 0.45
-    if health < 50:
-        return 0.45 - (health - 30) / 20 * 0.10   # 45% → 35%
-    if health < 70:
-        return 0.25 - (health - 50) / 20 * 0.10   # 25% → 15%
-    if health < 85:
-        return 0.08 - (health - 70) / 15 * 0.03   # 8% → 5%
-    return 0.03                                     # >85: 3%
-
-
-def _get_full_playbook_cost(playbook_id: str, arr: float) -> float:
-    """Get full intervention cost from cost bridge (CSM labor + platform + overhead).
-
-    Uses the same cost bridge as get_playbook_economics for consistency.
-    Adds 20% overhead for exec time, coordination, and context-switching.
-    """
-    try:
-        from playbook_cost_bridge import calculate_cost_bridge
-        bridge = calculate_cost_bridge(account_arr=arr)
-        pb_econ = bridge.playbooks.get(playbook_id)
-        if pb_econ:
-            return pb_econ.manual_cost * 1.20  # +20% overhead
-    except Exception:
-        pass
-    # Fallback: 40 hrs × CSM rate + 20% overhead
-    return 40 * 95 * 1.20
-
 
 @mcp.tool
 def close_playbook(
@@ -424,147 +329,21 @@ def close_playbook(
     app = _get_flask_app()
 
     with app.app_context():
-        from models import PlaybookExecutionV2
-        from extensions import db
-        from datetime import datetime
+        from utils.playbook_lifecycle import close_execution, health_to_annual_churn_prob
 
-        execution = PlaybookExecutionV2.query.filter_by(
-            execution_id=execution_id, customer_id=customer_id
-        ).first()
-        if not execution:
-            raise ToolError(f"Execution {execution_id} not found for customer {customer_id}")
-
-        if execution.status == 'completed':
-            raise ToolError(f"Execution {execution_id} is already closed")
-
-        # Update outcome fields
-        execution.status = 'completed'
-        execution.outcome = outcome
-        execution.outcome_notes = outcome_notes
-        execution.closed_at = datetime.utcnow()
-
-        if health_at_close is not None:
-            execution.health_at_close = health_at_close
-            execution.health_status_at_close = (
-                'critical' if health_at_close < 50 else
-                'at_risk' if health_at_close < 70 else 'healthy'
-            )
-            if execution.health_at_trigger:
-                execution.health_delta = health_at_close - execution.health_at_trigger
-
-        # ── Revenue attribution (churn probability model) ──
-        # Attribution = (churn_before - churn_after) × ARR × attribution_factor
-        # attribution_factor accounts for:
-        #   - Not all recovery is due to the playbook (organic regression to mean)
-        #   - Industry benchmark: 40-60% of recovery is attributable to intervention
-        #   (Source: TSIA CS Benchmark 2024, Gainsight Pulse)
-        INTERVENTION_ATTRIBUTION = 0.50  # 50% of churn reduction attributed to playbook
-
-        arr = float(execution.arr_at_trigger or 0)
-        if revenue_protected is None and health_at_close is not None and execution.health_at_trigger:
-            churn_before = _health_to_annual_churn_prob(execution.health_at_trigger)
-            churn_after = _health_to_annual_churn_prob(health_at_close)
-            churn_reduction = max(0, churn_before - churn_after)
-            revenue_protected = round(churn_reduction * arr * INTERVENTION_ATTRIBUTION, 0)
-        elif revenue_protected is None:
-            revenue_protected = 0
-
-        execution.revenue_protected = revenue_protected
-        execution.revenue_expanded = revenue_expanded
-
-        # ── Full intervention cost (cost bridge, not just CSM hours) ──
-        full_cost = _get_full_playbook_cost(execution.playbook_id, arr)
-
-        if csm_hours_actual is not None:
-            execution.csm_hours_actual = csm_hours_actual
-        else:
-            execution.csm_hours_actual = execution.csm_hours_planned
-
-        execution.total_cost = round(full_cost, 2)
-        total_value = revenue_protected + revenue_expanded
-        execution.realized_roi_pct = round(total_value / full_cost, 1) if full_cost > 0 else 0
-
-        if arr > 0:
-            execution.nrr_impact_pct = round(
-                (revenue_protected + revenue_expanded - (execution.revenue_lost or 0))
-                / arr * 100, 2
-            )
-
-        # ── Write OUTCOME node to context graph (Signal→Decision→Outcome) ──
         try:
-            from models import ContextNode, ContextEdge
-            from datetime import datetime as _dt
-
-            # Determine revenue_impact_type
-            if revenue_protected > 0 and outcome == 'resolved':
-                ri_type = 'revenue_protected'
-            elif revenue_expanded > 0:
-                ri_type = 'expansion_closed'
-            elif outcome == 'timeout':
-                ri_type = 'revenue_at_risk'
-            else:
-                ri_type = 'intervention_outcome'
-
-            net_impact = revenue_protected + revenue_expanded
-            outcome_node = ContextNode(
-                account_id=execution.account_id,
+            execution = close_execution(
                 customer_id=customer_id,
-                node_type='OUTCOME',
-                source='system',
-                node_subtype='playbook_outcome',
-                title=f'{outcome.title()}: {execution.playbook_id} — ${net_impact:,.0f} protected',
-                revenue_impact=net_impact if net_impact > 0 else -(arr * 0.01),
-                revenue_impact_type=ri_type,
-                properties={
-                    'execution_id': execution_id,
-                    'playbook_id': execution.playbook_id,
-                    'outcome': outcome,
-                    'health_at_trigger': execution.health_at_trigger,
-                    'health_at_close': health_at_close,
-                    'health_delta': execution.health_delta,
-                    'revenue_protected': revenue_protected,
-                    'revenue_expanded': revenue_expanded,
-                    'total_cost': round(full_cost, 2),
-                    'roi_x': execution.realized_roi_pct,
-                },
-                tier=1,
-                occurred_at=_dt.utcnow(),
-                source_platform='playbook_execution',
-                source_event_id=f'close:{execution_id}',
+                execution_id=execution_id,
+                outcome=outcome,
+                outcome_notes=outcome_notes,
+                health_at_close=health_at_close,
+                revenue_protected=revenue_protected,
+                revenue_expanded=revenue_expanded,
+                csm_hours_actual=csm_hours_actual,
             )
-            db.session.add(outcome_node)
-            db.session.flush()
-
-            # Link DECISION → OUTCOME
-            # Strategy: find the most recent DECISION node for this account
-            # (any subtype — renewal_confirmed, executive_sponsor, champion, etc.)
-            # This connects the playbook outcome to the END of the existing
-            # causal chain (Signal → Decision → ... → Playbook Outcome).
-            decision_node = (
-                ContextNode.query
-                .filter(
-                    ContextNode.account_id == execution.account_id,
-                    ContextNode.customer_id == customer_id,
-                    ContextNode.node_type == 'DECISION',
-                )
-                .order_by(ContextNode.occurred_at.desc())
-                .first()
-            )
-            if decision_node:
-                db.session.add(ContextEdge(
-                    customer_id=customer_id,
-                    from_node_id=decision_node.node_id,
-                    to_node_id=outcome_node.node_id,
-                    edge_type='RESULTED_IN',
-                    confidence=1.0,
-                    source_platform='playbook_execution',
-                    properties={'label': f'{execution.playbook_id} → {outcome}'},
-                ))
-        except Exception as _cg_err:
-            import logging as _log_cg
-            _log_cg.getLogger(__name__).warning(f"Context graph OUTCOME write failed (non-fatal): {_cg_err}")
-
-        db.session.commit()
+        except ValueError as e:
+            raise ToolError(str(e))
 
         return {
             'scope': 'execution_closed',
@@ -575,14 +354,14 @@ def close_playbook(
             'health_at_trigger': execution.health_at_trigger,
             'health_at_close': health_at_close,
             'health_delta': execution.health_delta,
-            'churn_prob_before': round(_health_to_annual_churn_prob(execution.health_at_trigger) * 100, 1),
-            'churn_prob_after': round(_health_to_annual_churn_prob(health_at_close) * 100, 1) if health_at_close else None,
-            'revenue_protected': revenue_protected,
-            'revenue_expanded': revenue_expanded,
-            'full_intervention_cost': round(full_cost, 2),
-            'realized_roi_x': execution.realized_roi_pct,  # now expressed as multiple (e.g., 12.5x)
+            'churn_prob_before': round(health_to_annual_churn_prob(execution.health_at_trigger) * 100, 1),
+            'churn_prob_after': round(health_to_annual_churn_prob(health_at_close) * 100, 1) if health_at_close else None,
+            'revenue_protected': execution.revenue_protected,
+            'revenue_expanded': execution.revenue_expanded,
+            'full_intervention_cost': execution.total_cost,
+            'realized_roi_x': execution.realized_roi_pct,
             'nrr_impact_pct': execution.nrr_impact_pct,
-            'arr': arr,
+            'arr': float(execution.arr_at_trigger or 0),
         }
 
 

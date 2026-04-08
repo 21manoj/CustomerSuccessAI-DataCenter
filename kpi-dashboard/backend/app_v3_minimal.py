@@ -550,14 +550,16 @@ if limiter:
 # Load persisted data on startup
 @app.before_request
 def initialize_data_once():
-    """Load persisted data from database on first request"""
+    """Load persisted data from database on first request.
+
+    NOTE: Playbook executions are now DB-first (PlaybookExecutionV2) — no in-memory cache.
+    Only reports still use in-memory loading.
+    """
     if not hasattr(app, '_data_initialized'):
         try:
-            from playbook_execution_api import load_executions_from_db
             from playbook_reports_api import load_reports_from_db
-            load_executions_from_db()
             load_reports_from_db()
-            print("✓ Initialized persisted data from DB (executions + reports)")
+            print("✓ Initialized persisted data from DB (reports)")
             app._data_initialized = True
         except Exception as e:
             print(f"Warning: Could not initialize persisted data: {e}")
