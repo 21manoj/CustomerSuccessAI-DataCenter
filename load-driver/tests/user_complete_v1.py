@@ -628,12 +628,598 @@ def phase4_delete_and_verify(base_url: str, customer_id: int, rest: RESTClient, 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Phase 1.5: Post-Onboarding Seeder
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Arc-type → (signal_subtype, playbook_id, expected_outcome, health_boost_range)
+ARC_ACTION_MAP = {
+    'champion_loss':        ('champion_departure',  'PB-06', 'resolved',  (8, 12)),
+    'infrastructure_decay': ('escalation',          'PB-02', 'resolved',  (6, 10)),
+    'crisis_recovery':      ('critical_incident',   'PB-05', 'escalated', (2, 5)),
+    'budget_pressure':      ('budget_cut',          'PB-04', 'resolved',  (8, 14)),
+    'land_and_expand':      ('expansion_signal',    'PB-08', 'resolved',  (3, 6)),
+    'steady_state':         ('usage_decline',       'PB-01', 'resolved',  (4, 8)),
+    'competitive_threat':   ('competitor_mention',   'PB-06', 'resolved',  (6, 10)),
+    'seasonal_pattern':     ('usage_decline',       'PB-07', 'resolved',  (5, 8)),
+}
+DEFAULT_ARC_ACTION = ('health_drop', 'PB-01', 'resolved', (6, 10))
+
+SEEDER_LOG_DIR = RESULTS_DIR / "seeder"
+
+
+def phase1_5a_data_audit(mcp: MCPClient, customer_id: int, verbose: bool) -> dict:
+    """Step 1.5a: Audit onboarded data — learn the customer before acting."""
+    print(f"\n  ── Step 1.5a: Data Audit ──")
+    audit: Dict[str, Any] = {"passed": False}
+
+    # 1. Onboarding checklist
+    try:
+        onboard = mcp.call("complete_onboarding", {"customer_id": customer_id, "check_only": True})
+        checklist = onboard.get("checklist", {})
+        audit["customer_name"] = onboard.get("customer_name", f"Customer {customer_id}")
+        audit["csv_files"] = checklist.get("data_files_present", [])
+        audit["account_count"] = checklist.get("account_count", 0)
+        audit["kpi_count"] = checklist.get("kpi_record_count", 0)
+        audit["scores_calculated"] = checklist.get("scores_calculated", False)
+        audit["wizard_runs"] = checklist.get("wizard_runs", 0)
+        status = "✅" if checklist.get("scores_calculated") else "⚠️"
+        print(f"    Onboarding: {status} {audit['account_count']} accounts, "
+              f"{audit['kpi_count']} KPIs, {len(audit['csv_files'])} CSVs, "
+              f"{audit['wizard_runs']} wizard runs")
+        if verbose:
+            print(f"    CSVs: {', '.join(audit['csv_files'])}")
+    except Exception as e:
+        print(f"    Onboarding check: ❌ {e}")
+        audit["onboarding_error"] = str(e)
+
+    # 2. List all accounts with health, ARR, arc
+    try:
+        accts = mcp.call("list_accounts", {"customer_id": customer_id})
+        all_accounts = accts.get("accounts", [])
+        audit["total_arr"] = accts.get("total_arr", sum(a.get("arr", 0) or a.get("revenue", 0) or 0 for a in all_accounts))
+        audit["all_accounts"] = all_accounts
+
+        # Classify
+        healthy = [a for a in all_accounts if (a.get("health_score") or 0) >= 70]
+        at_risk = [a for a in all_accounts if 50 <= (a.get("health_score") or 0) < 70]
+        critical = [a for a in all_accounts if (a.get("health_score") or 0) < 50]
+        audit["health_distribution"] = {
+            "healthy": len(healthy), "at_risk": len(at_risk), "critical": len(critical),
+        }
+
+        # Sort worst and best
+        sorted_accts = sorted(all_accounts, key=lambda a: a.get("health_score") or 0)
+        audit["worst_accounts"] = [
+            {"id": a.get("account_id"), "name": a.get("account_name", "?"),
+             "health": a.get("health_score", 0), "arc": a.get("arc_type"),
+             "arr": a.get("arr") or a.get("revenue") or 0}
+            for a in sorted_accts[:5]
+        ]
+        audit["best_accounts"] = [
+            {"id": a.get("account_id"), "name": a.get("account_name", "?"),
+             "health": a.get("health_score", 0), "arc": a.get("arc_type"),
+             "arr": a.get("arr") or a.get("revenue") or 0}
+            for a in sorted_accts[-3:]
+        ]
+
+        dist = audit["health_distribution"]
+        print(f"    Accounts: {len(all_accounts)} total, "
+              f"H:{dist['healthy']} AR:{dist['at_risk']} C:{dist['critical']}, "
+              f"ARR: ${audit['total_arr']:,.0f}")
+        for w in audit["worst_accounts"][:3]:
+            print(f"      Worst: {w['name']} (health={w['health']:.0f}, arc={w['arc'] or 'none'})")
+    except Exception as e:
+        print(f"    Accounts: ❌ {e}")
+        audit["accounts_error"] = str(e)
+        audit["all_accounts"] = []
+        audit["worst_accounts"] = []
+        audit["best_accounts"] = []
+
+    # 3. KPI catalog
+    try:
+        catalog = mcp.call("get_kpi_catalog", {"customer_id": customer_id})
+        audit["vertical"] = catalog.get("vertical", "unknown")
+        audit["pillar_count"] = len(catalog.get("pillars", []))
+        audit["catalog_kpi_count"] = sum(len(p.get("kpis", [])) for p in catalog.get("pillars", []))
+        print(f"    Catalog: {audit['vertical']}, {audit['pillar_count']} pillars, "
+              f"{audit['catalog_kpi_count']} KPIs")
+    except Exception as e:
+        print(f"    Catalog: ❌ {e}")
+        audit["vertical"] = "unknown"
+
+    audit["passed"] = bool(audit.get("all_accounts"))
+    return audit
+
+
+def phase1_5b_health_check(mcp: MCPClient, customer_id: int, audit: dict, verbose: bool) -> dict:
+    """Step 1.5b: Validate health scores exist for all accounts."""
+    print(f"\n  ── Step 1.5b: Health Score Validation ──")
+    result: Dict[str, Any] = {"passed": False, "checks_passed": 0, "checks_failed": 0}
+
+    expected_count = audit.get("account_count", 0) or len(audit.get("all_accounts", []))
+
+    # 1. Health history
+    try:
+        history = mcp.call("get_health_score_history", {"customer_id": customer_id, "months": 6})
+        accounts_with_scores = history.get("account_count", 0) or len(history.get("accounts", []))
+        result["accounts_with_scores"] = accounts_with_scores
+        result["accounts_missing_scores"] = max(0, expected_count - accounts_with_scores)
+
+        # Score range from account list (already fetched in audit)
+        scores = [a.get("health_score", 0) for a in audit.get("all_accounts", []) if a.get("health_score")]
+        result["score_range"] = [round(min(scores), 1), round(max(scores), 1)] if scores else [0, 0]
+        result["avg_health"] = round(sum(scores) / len(scores), 1) if scores else 0
+
+        # Checks
+        if accounts_with_scores >= expected_count:
+            result["checks_passed"] += 1
+            print(f"    ✅ All {accounts_with_scores} accounts have health scores")
+        else:
+            result["checks_failed"] += 1
+            print(f"    ⚠️ {accounts_with_scores}/{expected_count} accounts have scores")
+
+        if result["score_range"][0] > 0:
+            result["checks_passed"] += 1
+            print(f"    ✅ No zero-health accounts (range: {result['score_range'][0]}-{result['score_range'][1]})")
+        else:
+            result["checks_failed"] += 1
+            print(f"    ⚠️ Some accounts have 0 health")
+
+        if result["score_range"][1] < 100:
+            result["checks_passed"] += 1
+        else:
+            result["checks_failed"] += 1
+            print(f"    ⚠️ Some accounts have exactly 100 health (suspicious)")
+
+    except Exception as e:
+        print(f"    Health history: ❌ {e}")
+        result["health_error"] = str(e)
+
+    # 2. Cross-check at-risk
+    try:
+        at_risk = mcp.call("get_at_risk_accounts", {"customer_id": customer_id})
+        at_risk_count = len(at_risk.get("accounts", []))
+        expected_at_risk = audit["health_distribution"]["at_risk"] + audit["health_distribution"]["critical"]
+        result["at_risk_count"] = at_risk_count
+        if at_risk_count >= expected_at_risk * 0.8:  # 80% tolerance
+            result["checks_passed"] += 1
+            print(f"    ✅ At-risk accounts: {at_risk_count} (expected ~{expected_at_risk})")
+        else:
+            result["checks_failed"] += 1
+            print(f"    ⚠️ At-risk count mismatch: got {at_risk_count}, expected ~{expected_at_risk}")
+    except Exception as e:
+        print(f"    At-risk check: ❌ {e}")
+
+    result["passed"] = result["checks_failed"] == 0
+    return result
+
+
+def phase1_5c_seed_signals_and_playbooks(
+    mcp: MCPClient, customer_id: int, audit: dict,
+    max_playbooks: int = 4, verbose: bool = False,
+) -> dict:
+    """Step 1.5c: Execute + close playbooks based on account arc types."""
+    print(f"\n  ── Step 1.5c: Seed Signals & Playbooks ──")
+    result: Dict[str, Any] = {"executions": [], "passed": False}
+
+    worst = audit.get("worst_accounts", [])[:max_playbooks]
+    best = audit.get("best_accounts", [])
+
+    if not worst:
+        print(f"    ⚠️ No accounts to seed (empty worst list)")
+        result["passed"] = True
+        return result
+
+    import random as _rng
+    _rng.seed(customer_id)
+
+    targets = list(worst)
+    # Add best account for expansion playbook if we have room
+    if best and len(targets) < max_playbooks:
+        targets.append(best[-1])  # highest health
+
+    resolved_count = 0
+    escalated_count = 0
+    total_protected = 0
+
+    for i, acct in enumerate(targets):
+        aid = acct["id"]
+        aname = acct["name"]
+        health = acct.get("health", 50)
+        arr = acct.get("arr", 0)
+        arc = acct.get("arc") or ""
+
+        # Lookup arc action or default
+        signal_sub, pb_id, default_outcome, boost_range = ARC_ACTION_MAP.get(arc, DEFAULT_ARC_ACTION)
+
+        # For best account, always use expansion
+        if acct in best[-1:] and health >= 70:
+            signal_sub, pb_id, default_outcome = 'expansion_signal', 'PB-08', 'resolved'
+            boost_range = (2, 5)
+
+        # Decide outcome (70% resolved, 30% escalated — except expansion always resolves)
+        outcome = default_outcome
+        if pb_id != 'PB-08' and _rng.random() < 0.3:
+            outcome = 'escalated'
+            boost_range = (1, 4)
+
+        health_boost = _rng.uniform(*boost_range)
+        health_at_close = min(95, health + health_boost)
+        revenue_expanded = round(arr * 0.15) if pb_id == 'PB-08' and outcome == 'resolved' else 0
+
+        # Execute
+        try:
+            exec_result = mcp.call("execute_playbook", {
+                "customer_id": customer_id,
+                "account_id": aid,
+                "playbook_id": pb_id,
+                "triggered_by": "signal_analyst",
+            }, timeout=30)
+            exec_id = exec_result.get("execution_id")
+            if not exec_id:
+                print(f"    ❌ {aname}: execute_playbook returned no execution_id")
+                continue
+
+            # Close
+            close_args: Dict[str, Any] = {
+                "customer_id": customer_id,
+                "execution_id": exec_id,
+                "outcome": outcome,
+                "outcome_notes": f"Seeder: {arc or 'default'} arc → {pb_id}",
+                "health_at_close": round(health_at_close, 1),
+            }
+            if revenue_expanded:
+                close_args["revenue_expanded"] = revenue_expanded
+
+            close_result = mcp.call("close_playbook", close_args, timeout=30)
+
+            rev_protected = close_result.get("revenue_protected", 0) or 0
+            roi_x = close_result.get("realized_roi_x", 0) or 0
+            h_delta = close_result.get("health_delta", 0) or 0
+
+            if outcome == 'resolved':
+                resolved_count += 1
+            else:
+                escalated_count += 1
+            total_protected += rev_protected + revenue_expanded
+
+            status = "✅" if outcome == "resolved" else "⬆️"
+            print(f"    {status} {aname}: {pb_id} ({arc or 'default'}) → {outcome} "
+                  f"Δh={h_delta:+.1f} ${rev_protected:,.0f} protected {f'${revenue_expanded:,.0f} expanded ' if revenue_expanded else ''}"
+                  f"ROI={roi_x}x")
+
+            result["executions"].append({
+                "execution_id": exec_id,
+                "account_id": aid,
+                "account_name": aname,
+                "arc_type": arc,
+                "playbook_id": pb_id,
+                "outcome": outcome,
+                "health_at_trigger": health,
+                "health_at_close": round(health_at_close, 1),
+                "health_delta": round(h_delta, 1),
+                "revenue_protected": rev_protected,
+                "revenue_expanded": revenue_expanded,
+                "roi_x": roi_x,
+            })
+
+        except Exception as e:
+            print(f"    ❌ {aname}: {pb_id} failed — {e}")
+            result["executions"].append({
+                "account_name": aname, "playbook_id": pb_id, "error": str(e),
+            })
+
+    result["total_executions"] = len(result["executions"])
+    result["resolved"] = resolved_count
+    result["escalated"] = escalated_count
+    result["total_revenue_protected"] = total_protected
+    result["passed"] = resolved_count + escalated_count > 0
+
+    print(f"    Summary: {resolved_count} resolved, {escalated_count} escalated, "
+          f"${total_protected:,.0f} revenue impact")
+    return result
+
+
+def _generate_ask_ai_questions(customer_id: int, audit: dict, per_persona: int = 5) -> list:
+    """Generate customer-specific Ask AI questions from audit data."""
+    worst = audit.get("worst_accounts", [{}])
+    best = audit.get("best_accounts", [{}])
+    w0 = worst[0] if worst else {"id": 0, "name": "Unknown", "health": 0, "arc": None}
+    w1 = worst[1] if len(worst) > 1 else w0
+    b0 = best[-1] if best else {"id": 0, "name": "Unknown", "health": 80}
+    dist = audit.get("health_distribution", {})
+    cid = customer_id
+
+    questions = []
+
+    # ── CSM (tool-backed questions) ──
+    csm_qs = [
+        (f"What should I do about {w0['name']} (health {w0['health']:.0f})?",
+         "get_csm_daily_actions", {"customer_id": cid}),
+        (f"Show me the health breakdown for {w0['name']}",
+         "get_account_health", {"customer_id": cid, "account_id": w0["id"]}),
+        (f"Who is the champion at {w0['name']}?",
+         "get_stakeholder_map", {"customer_id": cid, "account_id": w0["id"]}),
+        (f"What happened at {w1['name']} recently?",
+         "get_account_journey_timeline", {"customer_id": cid, "account_id": w1["id"]}),
+        (f"What playbook should I run for {w0['name']}?",
+         "get_playbook_recommendations", {"customer_id": cid, "account_id": w0["id"]}),
+    ]
+
+    # ── VP CS ──
+    vpcs_qs = [
+        ("Which accounts need immediate attention?",
+         "get_at_risk_accounts", {"customer_id": cid}),
+        ("Show me the portfolio health trajectory",
+         "get_health_score_history", {"customer_id": cid, "account_id": 0, "months": 6}),
+        (f"What's the team workload like?",
+         "get_csm_daily_actions", {"customer_id": cid}),
+        (f"How are our playbooks performing?",
+         "get_playbook_success_metrics", {"customer_id": cid}),
+        ("NRR forecast for next quarter?",
+         "get_nrr_forecast", {"customer_id": cid}),
+    ]
+
+    # ── CRO ──
+    cro_qs = [
+        ("How much ARR is at risk right now?",
+         "get_at_risk_accounts", {"customer_id": cid}),
+        (f"Revenue breakdown for {w0['name']}?",
+         "get_revenue_at_risk", {"customer_id": cid, "account_id": w0["id"]}),
+        ("What's driving NRR this quarter?",
+         "get_nrr_forecast", {"customer_id": cid}),
+        ("Portfolio ROI summary for the board?",
+         "get_portfolio_roi_summary", {"customer_id": cid}),
+        (f"If we improve NRR by 1%, what's the dollar impact?",
+         "calculate_power_of_1", {"customer_id": cid, "metric_id": "NRR"}),
+    ]
+
+    # ── CFO ──
+    cfo_qs = [
+        ("What's the ROI on our CS investment?",
+         "get_portfolio_roi_summary", {"customer_id": cid}),
+        ("Show me playbook cost economics",
+         "get_playbook_economics", {"customer_id": cid}),
+        (f"Power of 1: 1% expansion rate improvement?",
+         "calculate_power_of_1", {"customer_id": cid, "metric_id": "expansion_rate"}),
+        (f"What's the full ROI story for {w0['name']}?",
+         "get_outcome_roi_story", {"customer_id": cid, "account_id": w0["id"]}),
+        (f"1% improvement in ticket resolution time?",
+         "calculate_power_of_1", {"customer_id": cid, "metric_id": "ticket_resolution_time"}),
+    ]
+
+    for persona, qs in [("CSM", csm_qs), ("VPCS", vpcs_qs), ("CRO", cro_qs), ("CFO", cfo_qs)]:
+        for q_text, tool, args in qs[:per_persona]:
+            questions.append((persona, q_text, tool, args))
+
+    return questions
+
+
+def phase1_5d_persona_validation(
+    mcp: MCPClient, customer_id: int, audit: dict,
+    per_persona: int = 5, verbose: bool = False,
+) -> dict:
+    """Step 1.5d: Validate persona workflows + Ask AI."""
+    print(f"\n  ── Step 1.5d: Persona Workflow Validation ──")
+    result: Dict[str, Any] = {"workflow_checks": {}, "ask_ai": [], "passed": False}
+
+    # ── Part A: Workflow validation per persona ──
+    print(f"    Part A: Workflow checks")
+    checks = {}
+
+    # CSM
+    try:
+        actions = mcp.call("get_csm_daily_actions", {"customer_id": customer_id})
+        action_list = actions.get("actions", [])
+        has_stakeholders = any(a.get("primary_champion") for a in action_list)
+        has_arcs = any(a.get("arc_type") for a in action_list)
+        passed = len(action_list) >= 3
+        checks["CSM"] = {
+            "actions_count": len(action_list),
+            "has_stakeholders": has_stakeholders,
+            "has_arcs": has_arcs,
+            "passed": passed,
+        }
+        print(f"      CSM:  {'✅' if passed else '❌'} {len(action_list)} actions, "
+              f"stakeholders={'✅' if has_stakeholders else '❌'}, arcs={'✅' if has_arcs else '❌'}")
+    except Exception as e:
+        checks["CSM"] = {"error": str(e), "passed": False}
+        print(f"      CSM:  ❌ {e}")
+
+    # VP CS
+    try:
+        pb_metrics = mcp.call("get_playbook_success_metrics", {"customer_id": customer_id})
+        summary = pb_metrics.get("portfolio_summary", {})
+        success_rate = summary.get("overall_success_rate_pct", 0)
+        total_runs = summary.get("total_runs", 0)
+        passed = success_rate > 0 and total_runs > 0
+        checks["VPCS"] = {
+            "playbook_success_rate": success_rate,
+            "total_runs": total_runs,
+            "passed": passed,
+        }
+        print(f"      VPCS: {'✅' if passed else '❌'} {success_rate:.0f}% success rate, {total_runs} runs")
+    except Exception as e:
+        checks["VPCS"] = {"error": str(e), "passed": False}
+        print(f"      VPCS: ❌ {e}")
+
+    # CRO
+    try:
+        nrr = mcp.call("get_nrr_forecast", {"customer_id": customer_id})
+        projected_nrr = nrr.get("projected_nrr") or nrr.get("revenue_waterfall", {}).get("projected_nrr")
+        has_trajectory = bool(nrr.get("trajectory") or nrr.get("revenue_waterfall"))
+        passed = has_trajectory
+        checks["CRO"] = {
+            "projected_nrr": projected_nrr,
+            "has_trajectory": has_trajectory,
+            "passed": passed,
+        }
+        print(f"      CRO:  {'✅' if passed else '❌'} NRR={projected_nrr}, trajectory={'✅' if has_trajectory else '❌'}")
+    except Exception as e:
+        checks["CRO"] = {"error": str(e), "passed": False}
+        print(f"      CRO:  ❌ {e}")
+
+    # CFO
+    try:
+        po1 = mcp.call("calculate_power_of_1", {"customer_id": customer_id, "metric_id": "NRR"})
+        dollar_impact = po1.get("dollar_impact", 0)
+        econ = mcp.call("get_playbook_economics", {"customer_id": customer_id})
+        has_costs = bool(econ.get("playbooks") or econ.get("portfolio_summary"))
+        passed = dollar_impact > 0 and has_costs
+        checks["CFO"] = {
+            "power_of_1_nrr": dollar_impact,
+            "has_playbook_costs": has_costs,
+            "passed": passed,
+        }
+        print(f"      CFO:  {'✅' if passed else '❌'} Power-of-1 NRR=${dollar_impact:,.0f}, "
+              f"costs={'✅' if has_costs else '❌'}")
+    except Exception as e:
+        checks["CFO"] = {"error": str(e), "passed": False}
+        print(f"      CFO:  ❌ {e}")
+
+    result["workflow_checks"] = checks
+
+    # ── Part B: Ask AI questions ──
+    print(f"\n    Part B: Ask AI ({per_persona} per persona)")
+    questions = _generate_ask_ai_questions(customer_id, audit, per_persona)
+    ai_results = []
+    persona_stats: Dict[str, Dict] = {}
+
+    for i, (persona, question, tool_name, args) in enumerate(questions, 1):
+        try:
+            t0 = time.time()
+            resp = mcp.call(tool_name, args, timeout=30)
+            elapsed = time.time() - t0
+            passed_q, reason = validate_response(tool_name, resp)
+            grade = grade_response(passed_q, resp, tool_name)
+        except Exception as e:
+            elapsed = 0
+            passed_q = False
+            reason = str(e)[:100]
+            grade = "F"
+
+        status = "✅" if passed_q else "❌"
+        print(f"      {i:2d}/{len(questions)} [{persona:4s}] {question[:50]:50s} {status} {grade} ({elapsed:.1f}s)")
+
+        ai_results.append({
+            "persona": persona, "question": question, "tool": tool_name,
+            "passed": passed_q, "grade": grade, "reason": reason,
+            "latency_s": round(elapsed, 2),
+        })
+
+        if persona not in persona_stats:
+            persona_stats[persona] = {"total": 0, "passed": 0, "grades": []}
+        persona_stats[persona]["total"] += 1
+        persona_stats[persona]["passed"] += int(passed_q)
+        persona_stats[persona]["grades"].append(grade)
+
+    # Summary
+    total_passed = sum(s["passed"] for s in persona_stats.values())
+    total_q = sum(s["total"] for s in persona_stats.values())
+    result["ask_ai"] = ai_results
+    result["ask_ai_pass_rate"] = f"{total_passed}/{total_q}"
+
+    # Compute overall grade
+    all_grades = [r["grade"] for r in ai_results]
+    a_count = all_grades.count("A")
+    f_count = all_grades.count("F")
+    if f_count == 0 and a_count >= total_q * 0.7:
+        result["overall_grade"] = "A"
+    elif f_count == 0:
+        result["overall_grade"] = "A-"
+    elif f_count <= total_q * 0.1:
+        result["overall_grade"] = "B+"
+    elif f_count <= total_q * 0.25:
+        result["overall_grade"] = "B"
+    else:
+        result["overall_grade"] = "C"
+
+    print(f"\n    Ask AI: {total_passed}/{total_q} passed — Grade: {result['overall_grade']}")
+    for persona, stats in sorted(persona_stats.items()):
+        pct = stats["passed"] / max(stats["total"], 1) * 100
+        print(f"      {persona:5s}: {stats['passed']}/{stats['total']} ({pct:.0f}%)")
+
+    result["passed"] = all(c.get("passed", False) for c in checks.values()) and f_count <= total_q * 0.25
+    return result
+
+
+def phase1_5_post_onboarding_seeder(
+    mcp: MCPClient, customer_id: int,
+    max_playbooks: int = 4, per_persona_ai: int = 5,
+    verbose: bool = False, log_dir: Optional[str] = None,
+) -> dict:
+    """Phase 1.5 orchestrator: audit → health → seed → validate."""
+    print(f"\n{'='*60}")
+    print(f"  PHASE 1.5: Post-Onboarding Seeder (customer_id={customer_id})")
+    print(f"{'='*60}")
+
+    t0 = time.time()
+    seeder_result: Dict[str, Any] = {"customer_id": customer_id}
+
+    # 1.5a: Audit
+    audit = phase1_5a_data_audit(mcp, customer_id, verbose)
+    seeder_result["audit"] = audit
+    if not audit.get("passed"):
+        print(f"\n  ⚠️ Data audit failed — skipping remaining seeder steps")
+        seeder_result["status"] = "AUDIT_FAILED"
+        return seeder_result
+
+    # 1.5b: Health check
+    health = phase1_5b_health_check(mcp, customer_id, audit, verbose)
+    seeder_result["health_check"] = health
+
+    # 1.5c: Seed playbooks
+    playbooks = phase1_5c_seed_signals_and_playbooks(
+        mcp, customer_id, audit, max_playbooks=max_playbooks, verbose=verbose,
+    )
+    seeder_result["playbook_executions"] = playbooks
+
+    # 1.5d: Persona validation + Ask AI
+    persona = phase1_5d_persona_validation(
+        mcp, customer_id, audit, per_persona=per_persona_ai, verbose=verbose,
+    )
+    seeder_result["persona_validation"] = persona
+
+    elapsed = time.time() - t0
+    seeder_result["duration_s"] = round(elapsed, 1)
+    seeder_result["status"] = "COMPLETE"
+
+    # Summary
+    pb = playbooks
+    pv = persona
+    print(f"\n  ── Phase 1.5 Summary ({elapsed:.1f}s) ──")
+    print(f"    Audit:     {'✅' if audit['passed'] else '❌'} {audit.get('account_count', 0)} accounts, "
+          f"${audit.get('total_arr', 0):,.0f} ARR")
+    print(f"    Health:    {'✅' if health['passed'] else '❌'} {health.get('checks_passed', 0)} checks passed")
+    print(f"    Playbooks: {'✅' if pb['passed'] else '❌'} {pb.get('resolved', 0)} resolved, "
+          f"{pb.get('escalated', 0)} escalated, ${pb.get('total_revenue_protected', 0):,.0f} protected")
+    print(f"    Personas:  {'✅' if pv['passed'] else '❌'} Ask AI {pv.get('ask_ai_pass_rate', '?')} — "
+          f"Grade: {pv.get('overall_grade', '?')}")
+
+    # Write log file
+    _log_dir = Path(log_dir) if log_dir else SEEDER_LOG_DIR
+    _log_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = (audit.get("customer_name") or "unknown").replace(" ", "_")[:30]
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+    log_path = _log_dir / f"{customer_id}_{safe_name}_{ts}.json"
+    try:
+        log_path.write_text(json.dumps(seeder_result, indent=2, default=str))
+        print(f"    Log: {log_path}")
+    except Exception as e:
+        print(f"    Log write failed: {e}")
+
+    return seeder_result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Full Cycle Runner
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
-                    verbose: bool, skip_delete: bool = False, mcp_host: str = None) -> dict:
-    """Run one complete cycle: create → questions → extend → compare → delete."""
+                    verbose: bool, skip_delete: bool = False, mcp_host: str = None,
+                    skip_seeder: bool = False, seeder_playbooks: int = 4,
+                    seeder_ask_ai: int = 5, log_dir: Optional[str] = None) -> dict:
+    """Run one complete cycle: create → seed → questions → extend → compare → delete."""
     cycle_result = {"cycle": cycle, "start_time": datetime.utcnow().isoformat()}
     t_cycle = time.time()
 
@@ -660,6 +1246,20 @@ def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
 
     # Get accounts for persona questions
     accounts = baseline.get("list_accounts", {}).get("accounts", [])
+
+    # Phase 1.5: Post-onboarding seeder (audit + health + playbooks + persona validation)
+    if not skip_seeder:
+        p1_5 = phase1_5_post_onboarding_seeder(
+            mcp, customer_id,
+            max_playbooks=seeder_playbooks,
+            per_persona_ai=seeder_ask_ai,
+            verbose=verbose,
+            log_dir=log_dir,
+        )
+        cycle_result["phase1_5"] = p1_5
+        # Use enriched account list from audit (has arc_type, health, etc.)
+        if p1_5.get("audit", {}).get("all_accounts"):
+            accounts = p1_5["audit"]["all_accounts"]
 
     # Phase 2: Questions
     p2 = phase2_run_questions(mcp, customer_id, accounts, verbose)
@@ -695,7 +1295,9 @@ def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
 # Concurrent Runner
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run_concurrent(base_url: str, manifest_path: str, count: int, verbose: bool):
+def run_concurrent(base_url: str, manifest_path: str, count: int, verbose: bool,
+                    skip_seeder: bool = False, seeder_playbooks: int = 4,
+                    seeder_ask_ai: int = 5, log_dir: Optional[str] = None):
     """Run N customers in parallel threads."""
     print(f"\n{'#'*60}")
     print(f"  CONCURRENT TEST: {count} customers in parallel")
@@ -708,7 +1310,9 @@ def run_concurrent(base_url: str, manifest_path: str, count: int, verbose: bool)
         name = f"UCv1-{idx}"
         try:
             r = run_full_cycle(base_url, manifest_path, idx, seed=42 + idx,
-                                verbose=verbose, skip_delete=True)
+                                verbose=verbose, skip_delete=True,
+                                skip_seeder=skip_seeder, seeder_playbooks=seeder_playbooks,
+                                seeder_ask_ai=seeder_ask_ai, log_dir=log_dir)
             with lock:
                 results[name] = r
         except Exception as e:
@@ -772,6 +1376,11 @@ def main():
         default=None,
         help="MCP server host:port (default: derive from --base-url). Use EC2 IP for direct access: 54.89.77.21:8001",
     )
+    # Phase 1.5 seeder args
+    parser.add_argument("--skip-seeder", action="store_true", help="Skip Phase 1.5 post-onboarding seeder")
+    parser.add_argument("--seeder-playbooks", type=int, default=4, help="Number of playbook executions per customer (default: 4, max: 10)")
+    parser.add_argument("--seeder-ask-ai", type=int, default=5, help="Ask AI questions per persona (default: 5)")
+    parser.add_argument("--log-dir", default=None, help="Seeder log output directory (default: results/seeder/)")
     args = parser.parse_args()
 
     if not Path(args.manifest).exists():
@@ -813,6 +1422,10 @@ def main():
             verbose=args.verbose,
             skip_delete=args.skip_delete,
             mcp_host=args.mcp_host,
+            skip_seeder=args.skip_seeder,
+            seeder_playbooks=min(args.seeder_playbooks, 10),
+            seeder_ask_ai=args.seeder_ask_ai,
+            log_dir=args.log_dir,
         )
         all_results.append(result)
 
@@ -837,7 +1450,9 @@ def main():
 
     # Concurrent
     if args.concurrent > 0:
-        run_concurrent(args.base_url, args.manifest, args.concurrent, args.verbose)
+        run_concurrent(args.base_url, args.manifest, args.concurrent, args.verbose,
+                        skip_seeder=args.skip_seeder, seeder_playbooks=min(args.seeder_playbooks, 10),
+                        seeder_ask_ai=args.seeder_ask_ai, log_dir=args.log_dir)
 
     print(f"\n✅ User-Complete-V1 finished. Results in {RESULTS_DIR}/")
 
