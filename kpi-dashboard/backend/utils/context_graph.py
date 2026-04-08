@@ -387,9 +387,19 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     # Normalize revenue_impact_type → bucket name
     # close_playbook writes 'revenue_protected', data generator writes 'protected'
     _BUCKET_ALIASES = {
+        # Protected bucket
         'revenue_protected': 'protected', 'churn_averted': 'protected',
+        'renewal_secured': 'protected', 'engagement_recovery': 'protected',
+        'intervention_outcome': 'protected', 'playbook_outcome': 'protected',
+        # Lost bucket
         'revenue_at_risk': 'lost', 'revenue_lost': 'lost',
+        'engagement_decline': 'lost', 'renewal_uncertainty': 'lost',
+        'capacity_constraint': 'lost', 'churn_risk': 'lost',
+        'partial_recovery': 'lost', 'partner_friction': 'lost',
+        # Expansion bucket
         'expansion_closed': 'expansion', 'revenue_expanded': 'expansion',
+        'expansion_approved': 'expansion', 'expansion_opportunity': 'expansion',
+        'revenue_growth': 'expansion',
     }
     for n in outcome_nodes:
         impact = abs(float(n.revenue_impact) * float(n.confidence or 1.0))
