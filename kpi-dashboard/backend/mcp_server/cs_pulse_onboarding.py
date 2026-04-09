@@ -1626,6 +1626,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             run_proactive_signal_scan,
             calculate_health_scores,
             run_wizard_a_step,
+            run_llm_tier1_inference,
             run_wizard_b_step,
             run_signal_analyst,
             run_urgent_scanner,
@@ -1670,6 +1671,12 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         if _wa_step:
             steps_completed.append(_wa_step)
         _step_timings['wizard_a'] = _wa_duration
+
+        # Stage 3a: LLM Tier 1 Inference (gated — only runs if WITH_LLM enabled + API key)
+        _llm_step, _llm_duration = run_llm_tier1_inference(customer_id)
+        if _llm_step:
+            steps_completed.append(_llm_step)
+        _step_timings['llm_inference'] = _llm_duration
 
         # Stage 3b: Wizard B — pattern analysis (auto after Wizard A, needs ≥5 journeys)
         _wb_step, _wb_duration = run_wizard_b_step(customer_id)

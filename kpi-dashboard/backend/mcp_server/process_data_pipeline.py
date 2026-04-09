@@ -262,6 +262,58 @@ def run_wizard_a_step(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Stage 3a: LLM Tier 1 Inference (gated behind WITH_LLM flag)
+# ═══════════════════════════════════════════════════════════════
+
+def run_llm_tier1_inference(customer_id: int) -> Tuple[Optional[str], float]:
+    """Infer context graph from KPI patterns using Claude.
+
+    Gated behind WITH_LLM feature flag + API key availability.
+    Runs after Wizard A (needs health scores + arc types) and before
+    Wizard B (enriches context for pattern analysis).
+
+    Returns (step_description, duration_seconds).
+    """
+    t0 = time.time()
+    try:
+        from llm.tier1_inference import infer_context_from_kpis
+        result = infer_context_from_kpis(customer_id)
+
+        duration = round(time.time() - t0, 2)
+        status = result.get('status', 'error')
+
+        if status == 'skipped':
+            logger.info(
+                'LLM Tier 1 skipped: customer=%d reason=%s',
+                customer_id, result.get('reason', ''),
+            )
+            return None, duration
+
+        if status == 'completed':
+            sigs = result.get('signals', 0)
+            decs = result.get('decisions', 0)
+            outs = result.get('outcomes', 0)
+            edges = result.get('edges', 0)
+            analyzed = result.get('accounts_analyzed', 0)
+            logger.info(
+                'LLM Tier 1 complete: customer=%d analyzed=%d '
+                'signals=%d decisions=%d outcomes=%d edges=%d (%.1fs)',
+                customer_id, analyzed, sigs, decs, outs, edges, duration,
+            )
+            if sigs + decs + outs > 0:
+                return (
+                    f'llm_tier1_{analyzed}_accounts_{sigs}sig_{decs}dec_{outs}out_{edges}edges',
+                    duration,
+                )
+
+        return None, duration
+
+    except Exception as e:
+        logger.warning('LLM Tier 1 failed (non-fatal): %s', e)
+        return None, round(time.time() - t0, 2)
+
+
+# ═══════════════════════════════════════════════════════════════
 # Stage 3b: Wizard B — Pattern analysis (auto after Wizard A)
 # ═══════════════════════════════════════════════════════════════
 

@@ -23,6 +23,7 @@ class FeatureToggle(Enum):
     MCP_SERVER = "mcp_server"
     SIGNAL_ENGINE = "signal_engine"
     ASK_AI_V2 = "ask_ai_v2"
+    WITH_LLM = "with_llm"
 
 @dataclass
 class FeatureConfig:
@@ -126,6 +127,14 @@ class FeatureToggleManager:
                 version="1.0.0",
                 dependencies=[],
                 environment_required=None
+            ),
+            FeatureToggle.WITH_LLM: FeatureConfig(
+                enabled=False,
+                description="LLM reasoning layer: Tier 1 KPI inference, causal reasoning, "
+                            "action plan generation. Requires ANTHROPIC_API_KEY.",
+                version="0.9.0",
+                dependencies=[],
+                environment_required="ANTHROPIC_API_KEY"
             ),
         }
         
