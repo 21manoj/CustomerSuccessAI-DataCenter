@@ -1630,6 +1630,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             run_signal_analyst,
             run_urgent_scanner,
             run_roi_engine,
+            seed_playbook_templates,
             run_qdrant_indexing,
             publish_health_events,
             record_wizard_run,
@@ -1695,6 +1696,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         if _roi_step:
             steps_completed.append(_roi_step)
         _step_timings['roi_engine'] = round(_time.time() - _t_stage, 2)
+
+        # Stage 6b: Seed playbook templates (once per customer)
+        _pb_step = seed_playbook_templates(customer_id)
+        if _pb_step:
+            steps_completed.append(_pb_step)
 
         # Stage 7: QDRANT indexing
         _t_stage = _time.time()

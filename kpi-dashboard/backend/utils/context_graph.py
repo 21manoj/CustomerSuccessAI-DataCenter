@@ -469,12 +469,17 @@ def aggregate_revenue_across_accounts(
     expansion = 0.0
 
     # Classify revenue_impact_type values into 3 buckets.
-    # DB stores full subtypes (revenue_at_risk, churn_averted, renewal_secured, etc.)
-    RISK_TYPES = {'at_risk', 'lost', 'revenue_at_risk', 'engagement_decline',
-                  'renewal_uncertainty', 'capacity_constraint', 'partner_friction'}
+    # Must match _BUCKET_ALIASES in get_revenue_at_risk() above.
+    RISK_TYPES = {'at_risk', 'lost', 'revenue_at_risk', 'revenue_lost',
+                  'engagement_decline', 'renewal_uncertainty', 'capacity_constraint',
+                  'partner_friction', 'churn_risk', 'churn_lost', 'contraction',
+                  'partial_recovery'}
     PROTECTED_TYPES = {'protected', 'revenue_protected', 'churn_averted',
-                       'renewal_secured', 'revenue_saved'}
-    EXPANSION_TYPES = {'expansion', 'upsell', 'cross_sell', 'expansion_realized'}
+                       'renewal_secured', 'revenue_saved', 'engagement_recovery',
+                       'renewal_confirmed', 'intervention_outcome', 'playbook_outcome'}
+    EXPANSION_TYPES = {'expansion', 'upsell', 'cross_sell', 'expansion_realized',
+                       'expansion_closed', 'expansion_approved', 'expansion_opportunity',
+                       'revenue_growth', 'new_logo'}
 
     for node in outcome_nodes:
         try:

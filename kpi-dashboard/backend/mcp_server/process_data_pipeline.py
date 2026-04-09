@@ -456,6 +456,60 @@ def run_roi_engine(customer_id: int) -> Optional[str]:
 
 
 # ═══════════════════════════════════════════════════════════════
+# Stage 6b: Seed Playbook Templates (if none exist for customer)
+# ═══════════════════════════════════════════════════════════════
+
+def seed_playbook_templates(customer_id: int) -> Optional[str]:
+    """Seed default playbook templates from vertical config if none exist.
+
+    Only runs once per customer (when CustomerPlaybook count = 0).
+    Playbooks are used by the UI Playbooks page and signal analyst triggers.
+    """
+    try:
+        from models import CustomerPlaybook
+        from extensions import db
+
+        existing = CustomerPlaybook.query.filter_by(customer_id=customer_id).count()
+        if existing > 0:
+            return None  # already seeded
+
+        # Load playbook config from vertical
+        try:
+            from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
+        except ImportError:
+            return None
+
+        seeded = 0
+        for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
+            pb = CustomerPlaybook(
+                customer_id=customer_id,
+                playbook_id=pb_id,
+                name=pb_cfg['name'],
+                description=pb_cfg.get('description', ''),
+                trigger_conditions=pb_cfg.get('trigger_conditions', {}),
+                trigger_kpis=pb_cfg.get('trigger_kpis', []),
+                trigger_logic='AND',
+                steps=pb_cfg.get('sub_components', []),
+                estimated_hours=sum(
+                    s.get('estimated_hours', 0)
+                    for s in pb_cfg.get('sub_components', [])
+                ),
+                automation_level=pb_cfg.get('automation_level', 'manual'),
+                status='active',
+            )
+            db.session.add(pb)
+            seeded += 1
+
+        db.session.commit()
+        if seeded:
+            logger.info(f"Seeded {seeded} playbook templates for customer {customer_id}")
+            return f'playbook_templates_seeded_{seeded}'
+    except Exception as e:
+        logger.warning(f"Playbook seeding failed (non-fatal): {e}")
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════
 # Stage 7: QDRANT Indexing
 # ═══════════════════════════════════════════════════════════════
 

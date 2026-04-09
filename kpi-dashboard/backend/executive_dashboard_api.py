@@ -681,6 +681,26 @@ def cro_dashboard():
                     nrr_baseline = nrr_detail.get('baseline', nrr_projection)
                     nrr_change = round(nrr_projection - nrr_baseline, 0)
 
+        # ── Wizard B NRR override (lifecycle-based, more accurate than health correlation) ──
+        try:
+            from models import WizardLearning
+            wl = WizardLearning.query.filter_by(
+                customer_id=customer_id, is_active=True,
+            ).order_by(WizardLearning.created_at.desc()).first()
+            if wl and wl.learnings:
+                nrr_f = wl.learnings.get('portfolio_nrr_forecast', {})
+                wb_nrr = nrr_f.get('current_nrr_pct')
+                wb_without = nrr_f.get('without_cs_pulse_nrr_pct')
+                if wb_nrr is not None:
+                    nrr_projection = round(float(wb_nrr), 1)
+                    nrr_change = round(nrr_projection - 100, 1)
+                    # Also expose before/after CS Pulse
+                    nrr_current = round(float(wb_without), 1) if wb_without else nrr_projection
+                    nrr_with_intervention = nrr_projection
+                    nrr_arr_protected = round(float(nrr_f.get('cs_pulse_arr_protected', 0)), 0)
+        except Exception as wb_err:
+            logger.debug(f"Wizard B NRR override failed (non-fatal): {wb_err}")
+
         # ── Highest risk accounts (only at-risk/critical, sorted by lowest health) ──
         pillar_scores_map = _get_latest_pillar_scores(account_ids)
         account_details.sort(key=lambda a: a['health_score'])
