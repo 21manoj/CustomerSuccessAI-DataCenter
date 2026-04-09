@@ -1165,6 +1165,26 @@ def cfo_dashboard():
         if total_arr > 0 and wf_attributed > 0:
             nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
 
+        # ── Wizard B NRR override (same as CRO endpoint) ──
+        try:
+            from models import WizardLearning
+            wl = WizardLearning.query.filter_by(
+                customer_id=customer_id, is_active=True,
+            ).order_by(WizardLearning.created_at.desc()).first()
+            if wl and wl.learnings:
+                nrr_f = wl.learnings.get('portfolio_nrr_forecast', {})
+                wb_nrr = nrr_f.get('current_nrr_pct')
+                if wb_nrr is not None:
+                    nrr_projection = round(float(wb_nrr), 1)
+                    nrr_with_intervention = nrr_projection
+                    wb_arr = nrr_f.get('cs_pulse_arr_protected', 0)
+                    if wb_arr:
+                        nrr_with_intervention = round(
+                            nrr_projection + (float(wb_arr) / max(total_arr, 1)) * 0.5, 1
+                        )
+        except Exception as wb_err:
+            logger.debug(f"CFO Wizard B NRR override failed (non-fatal): {wb_err}")
+
         return jsonify({
             'status': 'success',
             'total_arr': round(total_arr, 2),
