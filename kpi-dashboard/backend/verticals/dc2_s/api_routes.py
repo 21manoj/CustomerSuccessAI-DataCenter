@@ -625,7 +625,7 @@ def get_dc2s_accounts():
             'total': len(results),
             'enabled_pillars': enabled_pillar_codes,
             'customer_id': int(customer_id),
-            'customer_name': _cust.name if _cust else f'Customer {customer_id}',
+            'customer_name': _cust.customer_name if _cust else f'Customer {customer_id}',
         })
 
     except Exception as e:
