@@ -327,7 +327,7 @@ def phase1_create_and_load(base_url: str, manifest_path: str, seed: int, cycle: 
     manifest_data["customer"]["domain"] = f"ucv1-c{cycle}-{ts}.test"
     manifest_data["customer"]["admin_email"] = f"admin@ucv1-c{cycle}-{ts}.test"
     if "admin_password" not in manifest_data["customer"]:
-        manifest_data["customer"]["admin_password"] = "CSPulse2026!"
+        manifest_data["customer"]["admin_password"] = "test123"
     patched_manifest = tempfile.NamedTemporaryFile(
         mode="w", suffix=".json", prefix="ucv1_", delete=False, dir=str(LOAD_DRIVER_DIR / "manifests")
     )
