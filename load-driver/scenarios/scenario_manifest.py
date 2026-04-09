@@ -736,6 +736,23 @@ class ManifestCSVGenerator:
         ],
     }
 
+    # ── Lifecycle decision/outcome metadata for dynamic ARR events ──
+    LIFECYCLE_DECISION_META = {
+        'churn':    ('Non-Renewal Decision',       'economic_buyer',  'Did not renew contract',          'Account churned',                  'critical'),
+        'expand':   ('Expansion Approved',          'economic_buyer',  'Approved expansion budget',       'Expansion contract signed',        'low'),
+        'contract': ('Seat Reduction Approved',     'economic_buyer',  'Reduced seat count',              'Contract adjusted downward',       'medium'),
+        'renew':    ('Renewal Confirmed',           'champion',        'Renewed at current terms',        'Renewal locked in',                'low'),
+        'new':      ('New Customer Onboarded',      'champion',        'Signed initial contract',         'Onboarding in progress',           'low'),
+    }
+
+    LIFECYCLE_OUTCOME_META = {
+        'churn_lost':          ('ARR Lost — Churn',         'Account churned. Full ARR lost.',                                      'resolved'),
+        'expansion_closed':    ('ARR Expansion Closed',     'Contract expansion executed. Additional capacity provisioned.',         'resolved'),
+        'contraction':         ('ARR Contraction',          'Account reduced scope. ARR decreased.',                                'resolved'),
+        'renewal_confirmed':   ('Renewal Confirmed',        'Account renewed at current ARR.',                                      'resolved'),
+        'new_logo':            ('New Logo Acquired',        'New customer onboarded.',                                              'resolved'),
+    }
+
     # ── Outcome metadata: type → (title_template, description, arr_impact_pct, status)
     # Used by generate_outcomes_csv() — arc spine defines WHICH outcome types appear.
     # Adding a new outcome type: add one entry here + reference it in an arc's spine.
@@ -895,6 +912,74 @@ class ManifestCSVGenerator:
         # consumed by generate_signal_edges_csv(). Reset here so generate_all()
         # calls are idempotent.
         self._registry = RefRegistry()
+
+        # ── Lifecycle events: churn, expansion, contraction, new logos ──
+        self._resolve_lifecycle_events()
+
+    def _resolve_lifecycle_events(self):
+        """Parse lifecycle blocks from manifest accounts + new_accounts."""
+        self.lifecycle_events = {}  # account_name → {event, event_month, delta_pct, reason, arr}
+        for acct in self.accounts:
+            lc = acct.get('lifecycle')
+            if lc:
+                self.lifecycle_events[acct['name']] = {
+                    'event': lc['event'],
+                    'event_month': lc.get('event_month', 6),
+                    'delta_pct': lc.get('delta_pct', 0),
+                    'reason': lc.get('reason', ''),
+                    'arr': acct['arr'],
+                }
+
+        # New accounts that join mid-timeline
+        self.new_accounts_list = self.manifest.get('new_accounts', [])
+        # Append new_accounts to self.accounts so they get IDs and CSV rows
+        for na in self.new_accounts_list:
+            na_entry = {
+                'name': na['name'],
+                'arr': na['arr'],
+                'target_health': na.get('target_health', 70),
+                'classification': na.get('classification', 'healthy'),
+                'story_arc': na.get('story_arc', 'land_and_expand'),
+                'partner_tier': na.get('partner_tier', 'direct'),
+                'renewal_date': na.get('renewal_date', '2027-06-01'),
+                'narrative': na.get('narrative', f"New logo onboarded month {na.get('onboard_month', 4)}."),
+                'kpi_trajectory': na.get('kpi_trajectory', 'improving'),
+                'industry': na.get('industry', 'Technology'),
+                'region': na.get('region', 'North America'),
+                'stakeholders': na.get('stakeholders', []),
+                'key_signals': na.get('key_signals', []),
+            }
+            self.accounts.append(na_entry)
+            self.lifecycle_events[na['name']] = {
+                'event': 'new',
+                'event_month': na.get('onboard_month', 4),
+                'delta_pct': 0,
+                'reason': na.get('reason', 'New logo acquisition'),
+                'arr': na['arr'],
+            }
+
+        # Build narrative plans for any newly added accounts
+        if self.new_accounts_list:
+            total_months = max(1, int((self.end_date - self.start_date).days / 30))
+            arc_phase = self.phase or 'baseline'
+            for na in self.new_accounts_list:
+                idx = next(i for i, a in enumerate(self.accounts) if a['name'] == na['name'])
+                aid = self._account_id(idx)
+                self.planner.plan(
+                    account_id=aid,
+                    arc_type=na.get('story_arc', 'land_and_expand'),
+                    start_date=self.start_date,
+                    total_months=total_months,
+                    classification=na.get('classification', 'healthy'),
+                    phase=arc_phase,
+                )
+
+        if self.lifecycle_events:
+            logger.info(
+                "  Lifecycle events: %d accounts (%s)",
+                len(self.lifecycle_events),
+                ', '.join(f"{n}={e['event']}" for n, e in self.lifecycle_events.items()),
+            )
 
     def _build_narrative_plans(self):
         """Create narrative timeline plans for all accounts."""
@@ -1266,7 +1351,7 @@ class ManifestCSVGenerator:
         }
         # Registry pipeline — order is fixed
         pipeline = [
-            ('enhanced_qualitative_signals.csv', self.generate_signals_csv),
+            ('qualitative_signals.csv', self.generate_signals_csv),
             ('decisions.csv',                    self.generate_decisions_csv),
             ('outcomes.csv',                     self.generate_outcomes_csv),
             ('signal_edges.csv',                 self.generate_signal_edges_csv),
@@ -1299,6 +1384,16 @@ class ManifestCSVGenerator:
             aid = self._account_id(idx)
             arr = acct['arr']
 
+            # ── Lifecycle ARR adjustments ──
+            lc = self.lifecycle_events.get(acct['name'])
+            if lc:
+                if lc['event'] == 'churn':
+                    arr = 0  # churned — ARR lost
+                elif lc['event'] == 'expand':
+                    arr = int(acct['arr'] * (1 + lc['delta_pct'] / 100))
+                elif lc['event'] == 'contract':
+                    arr = int(acct['arr'] * (1 + lc['delta_pct'] / 100))  # delta_pct is negative
+
             if arr >= 5_000_000:
                 tier = 'Enterprise'
             elif arr >= 1_000_000:
@@ -1307,7 +1402,12 @@ class ManifestCSVGenerator:
                 tier = 'SMB'
 
             cls = acct.get('classification', 'healthy')
-            status = 'at_risk' if cls in ('critical', 'at_risk') else 'active'
+            if lc and lc['event'] == 'churn':
+                status = 'churned'
+            elif cls in ('critical', 'at_risk'):
+                status = 'at_risk'
+            else:
+                status = 'active'
 
             champion = None
             exec_sponsor = None
@@ -1365,6 +1465,9 @@ class ManifestCSVGenerator:
             'measured_at', 'value', 'target', 'weight', 'unit', 'status',
         ])
 
+        # Pre-compute lifecycle date boundaries per account
+        total_months_gen = max(1, int((self.end_date - self.start_date).days / 30))
+
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             target_health = acct['target_health']
@@ -1372,6 +1475,26 @@ class ManifestCSVGenerator:
             decline_start = acct.get('decline_start_month')
             recovery_start = acct.get('recovery_start_month')
             classification = acct.get('classification', 'healthy')
+
+            # ── Lifecycle: determine KPI emission window ──
+            lc = self.lifecycle_events.get(acct['name'])
+            churn_cutoff_date = None
+            new_start_date = None
+            if lc:
+                if lc['event'] == 'churn':
+                    # Stop emitting KPIs after churn month
+                    churn_cutoff_date = (self.start_date + timedelta(days=lc['event_month'] * 30)).strftime('%Y-%m-%d')
+                    # Force declining trajectory before churn
+                    if trajectory not in ('declining', 'slow_decline'):
+                        trajectory = 'declining'
+                        decline_start = max(1, lc['event_month'] - 2)
+                elif lc['event'] == 'new':
+                    # New accounts: start emitting KPIs from onboard month
+                    new_start_date = (self.start_date + timedelta(days=lc['event_month'] * 30)).strftime('%Y-%m-%d')
+                elif lc['event'] == 'expand':
+                    # Expanding accounts trend upward
+                    if trajectory in ('declining', 'slow_decline', 'stable'):
+                        trajectory = 'improving'
 
             for kpi_code in self.kpi_codes:
                 meta = self.kpi_catalog.get(kpi_code, {})
@@ -1399,6 +1522,12 @@ class ManifestCSVGenerator:
                 # Map kpi_dates back to series indices (series was generated for self.dates)
                 date_to_idx = {d: i for i, d in enumerate(self.dates)}
                 for date_str in kpi_dates:
+                    # Lifecycle window filtering
+                    if churn_cutoff_date and date_str > churn_cutoff_date:
+                        continue  # churned — no more KPIs
+                    if new_start_date and date_str < new_start_date:
+                        continue  # not yet onboarded
+
                     idx = date_to_idx.get(date_str, 0)
                     val = series[idx] if idx < len(series) else series[-1]
                     status = self._classify_status(kpi_code, val)
@@ -1412,11 +1541,14 @@ class ManifestCSVGenerator:
 
     def generate_signals_csv(self) -> str:
         """
-        Generate enhanced_qualitative_signals.csv with narrative timeline dates.
+        Generate qualitative_signals.csv with ONLY causal signals (Tier 1).
+
+        Shifted-left: no more enhanced_qualitative_signals.csv with 30+ filler
+        signals per account. Only narrative-planned (arc spine), manifest
+        key_signals, and intervention recovery signals are emitted.
 
         Resets self._registry and registers every written signal so that
-        generate_signal_edges_csv() can resolve 'signal:N' symbolic refs
-        without any counter reconstruction.
+        generate_signal_edges_csv() can resolve 'signal:N' symbolic refs.
         """
         # Registry reset — ensures generate_all() calls are idempotent
         self._registry.reset()
@@ -1501,50 +1633,8 @@ class ManifestCSVGenerator:
                 ])
                 self._registry.register_signal(aid, sig_ref, date_str)
 
-            # Auto-generated filler signals (2 per month for 6 months)
+            # (Filler signals removed — shift-left: only Tier 1 causal signals emitted)
             cls = acct.get('classification', 'healthy')
-            for month in range(6):
-                for _ in range(2):
-                    counter += 1
-                    date = self.start_date + timedelta(days=30 * month + random.randint(0, 29))
-
-                    if cls == 'critical':
-                        templates = [
-                            'Escalation review meeting conducted',
-                            'Support ticket volume above normal',
-                            'Performance metrics under review',
-                            'Stakeholder alignment meeting scheduled',
-                        ]
-                        sentiment = random.choice(['negative', 'neutral'])
-                    elif cls == 'at_risk':
-                        templates = [
-                            'Quarterly check-in completed',
-                            'Usage patterns reviewed with team',
-                            'Renewal discussion in progress',
-                            'Technical review session held',
-                        ]
-                        sentiment = random.choice(['neutral', 'negative', 'neutral'])
-                    else:
-                        templates = [
-                            'Regular QBR completed successfully',
-                            'Product adoption metrics trending well',
-                            'Champion engagement remains strong',
-                            'Expansion discussion in early stages',
-                        ]
-                        sentiment = random.choice(['positive', 'neutral', 'positive'])
-
-                    score = {'positive': 0.6, 'neutral': 0.1, 'negative': -0.5}[sentiment]
-                    sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
-                    date_str = date.strftime('%Y-%m-%d')
-                    w.writerow([
-                        sig_ref, aid, date_str,
-                        random.choice(['meeting', 'health_check', 'observation', 'customer_feedback']),
-                        random.choice(templates),
-                        sentiment,
-                        round(score + random.gauss(0, 0.1), 2),
-                        arc, '', '', sig_ref,
-                    ])
-                    self._registry.register_signal(aid, sig_ref, date_str)
 
             # Intervention-phase recovery signals (from V2 — manifest-defined)
             # Fire when --phase=intervention OR when running full (phase=None)
@@ -1966,11 +2056,37 @@ class ManifestCSVGenerator:
             else:
                 phases_to_emit = ['baseline', 'deterioration', 'intervention', 'resolution']
             arc_outcome_events = []
+
+            # For accounts with lifecycle events, suppress overlapping arc outcomes
+            # to prevent double-counting revenue impact in Wizard B NRR.
+            #
+            # Churn:    arc negatives (revenue_at_risk, churn_risk) are superseded
+            #           by the definitive churn_lost lifecycle outcome.
+            # Expand:   arc expansions (expansion_closed, revenue_growth) are
+            #           superseded by the definitive lifecycle expansion_closed.
+            # Contract: arc negatives superseded by lifecycle contraction.
+            _lc = self.lifecycle_events.get(acct['name'])
+            _suppress_arc_negatives = (_lc and _lc['event'] in ('churn', 'contract'))
+            _suppress_arc_expansions = (_lc and _lc['event'] == 'expand')
+            _negative_outcome_types = {
+                'revenue_at_risk', 'churn_risk', 'engagement_decline',
+                'renewal_uncertainty', 'capacity_constraint', 'partial_recovery',
+                'partner_friction',
+            }
+            _expansion_outcome_types = {
+                'expansion_closed', 'expansion_approved', 'expansion_opportunity',
+                'revenue_growth',
+            }
+
             for p in phases_to_emit:
-                arc_outcome_events.extend(
-                    e for e in arc_def.get(p, [])
-                    if e['type'] == 'outcome'
-                )
+                for e in arc_def.get(p, []):
+                    if e['type'] != 'outcome':
+                        continue
+                    if _suppress_arc_negatives and e['subtype'] in _negative_outcome_types:
+                        continue
+                    if _suppress_arc_expansions and e['subtype'] in _expansion_outcome_types:
+                        continue
+                    arc_outcome_events.append(e)
 
             # Narrative-planned dates for outcomes
             planned_outcomes = self.planner.get_events(aid, 'outcome')
@@ -2089,6 +2205,46 @@ class ManifestCSVGenerator:
             logger.debug("  Revenue audit %s: lost=$%s prot=$%s ratio=%.0f%%",
                          acct['name'], f'{_exp_lost:,.0f}', f'{_exp_prot:,.0f}', _ratio * 100)
 
+        # ── Lifecycle revenue events: real ARR changes for Wizard B NRR ──
+        for idx, acct in enumerate(self.accounts):
+            lc = self.lifecycle_events.get(acct['name'])
+            if not lc:
+                continue
+            aid = self._account_id(idx)
+            arr = lc['arr']  # original ARR before lifecycle event
+            evt = lc['event']
+            evt_month = lc['event_month']
+            evt_date = (self.start_date + timedelta(days=evt_month * 30)).strftime('%Y-%m-%d')
+
+            if evt == 'churn':
+                otype, rev = 'churn_lost', -arr
+            elif evt == 'expand':
+                delta = arr * lc['delta_pct'] / 100
+                otype, rev = 'expansion_closed', delta
+            elif evt == 'contract':
+                delta = arr * abs(lc['delta_pct']) / 100
+                otype, rev = 'contraction', -delta
+            elif evt == 'renew':
+                otype, rev = 'renewal_confirmed', 0
+            elif evt == 'new':
+                otype, rev = 'new_logo', arr
+            else:
+                continue
+
+            lc_meta = self.LIFECYCLE_OUTCOME_META.get(otype, (otype, '', 'resolved'))
+            title, desc, status = lc_meta
+
+            w.writerow([
+                aid, evt_date, otype,
+                f'{title} — {acct["name"]}',
+                f'{desc} {lc.get("reason", "")}',
+                round(rev, 2),
+                status,
+                '',  # linked_signal_id
+            ])
+            self._registry.register_outcome(aid, otype, otype, evt_date)
+            logger.debug("  Lifecycle outcome: %s %s rev=$%s", acct['name'], otype, f'{rev:,.0f}')
+
         return out.getvalue()
 
     def generate_decisions_csv(self) -> str:
@@ -2194,6 +2350,43 @@ class ManifestCSVGenerator:
                     ])
                     self._registry.register_decision(aid, dec_id, decision_date)
 
+        # ── Lifecycle decisions: churn/expand/contract/new decisions ──
+        for idx, acct in enumerate(self.accounts):
+            lc = self.lifecycle_events.get(acct['name'])
+            if not lc:
+                continue
+            aid = self._account_id(idx)
+            evt = lc['event']
+            evt_month = lc['event_month']
+            arr = lc['arr']
+            # Decision happens ~2 weeks before the outcome
+            dec_date = (self.start_date + timedelta(days=evt_month * 30 - 14)).strftime('%Y-%m-%d')
+
+            meta = self.LIFECYCLE_DECISION_META.get(evt)
+            if not meta:
+                continue
+            title, role, chosen, outcome_desc, risk = meta
+
+            if evt == 'churn':
+                rev_impact = -arr
+            elif evt == 'expand':
+                rev_impact = arr * lc['delta_pct'] / 100
+            elif evt == 'contract':
+                rev_impact = arr * lc['delta_pct'] / 100  # negative
+            elif evt == 'new':
+                rev_impact = arr
+            else:
+                rev_impact = 0
+
+            dec_id = f'lc_dec_{aid}_{evt}'
+            w.writerow([
+                aid, dec_date, dec_id,
+                f'{title} — {acct["name"]}',
+                role, f'{chosen}. {lc.get("reason", "")}', outcome_desc, risk,
+                round(rev_impact, 2),
+            ])
+            self._registry.register_decision(aid, dec_id, dec_date)
+
         return out.getvalue()
 
     def generate_signal_edges_csv(self) -> str:
@@ -2267,6 +2460,143 @@ class ManifestCSVGenerator:
                 edges_written += 1
 
             logger.debug("  aid=%d: %d edges written (%s)", aid, edges_written, arc_phase)
+
+        # ── Lifecycle causal edges: decision → outcome ──
+        for idx, acct in enumerate(self.accounts):
+            lc = self.lifecycle_events.get(acct['name'])
+            if not lc:
+                continue
+            aid = self._account_id(idx)
+            evt = lc['event']
+
+            # Map lifecycle event → outcome type
+            lc_outcome_map = {
+                'churn': 'churn_lost',
+                'expand': 'expansion_closed',
+                'contract': 'contraction',
+                'renew': 'renewal_confirmed',
+                'new': 'new_logo',
+            }
+            otype = lc_outcome_map.get(evt)
+            if not otype:
+                continue
+
+            dec_ref = f'decision:lc_dec_{aid}_{evt}'
+            outcome_ref = f'outcome:{otype}'
+
+            dec_resolved = self._registry.resolve(aid, dec_ref)
+            out_resolved = self._registry.resolve(aid, outcome_ref)
+
+            if dec_resolved and out_resolved:
+                w.writerow([
+                    aid,
+                    dec_resolved[0],
+                    out_resolved[0],
+                    'LED_TO',
+                    1.0,
+                    f'Lifecycle: {evt} decision led to {otype}',
+                    0.95,
+                    14,
+                ])
+
+        # ── Tier 1 key_signal → nearest decision wiring ──
+        # key_signals from the manifest are the causally significant events
+        # (champion_departure, usage_decline, etc.). The arc edge_topology
+        # only references narrative-planned signals (signal:1, signal:2).
+        # This pass connects orphaned key_signals to the nearest decision
+        # for the same account, completing the causal chain.
+        _SIGNAL_TO_DECISION_AFFINITY = {
+            'champion_departure':   ['escalation_to_exec', 'emergency_retention', 'recovery_plan'],
+            'usage_decline':        ['feature_adoption_push', 'recovery_plan', 'renewal_strategy'],
+            'competitor_mention':   ['emergency_retention', 'renewal_strategy', 'renewal_incentive'],
+            'nps_decline':          ['escalation_to_exec', 'renewal_strategy'],
+            'support_spike':        ['technical_remediation', 'recovery_plan'],
+            'feature_adoption_drop': ['feature_adoption_push', 'recovery_plan'],
+            'engagement_drop':      ['renewal_strategy', 'escalation_to_exec'],
+            'engagement_decline':   ['renewal_strategy', 'escalation_to_exec'],
+            'budget_review':        ['renewal_incentive', 'renewal_strategy'],
+            'login_decline':        ['feature_adoption_push', 'renewal_strategy'],
+            'renewal_risk':         ['renewal_strategy', 'renewal_incentive'],
+            'csat_drop':            ['escalation_to_exec', 'renewal_strategy'],
+            'competitor_evaluation': ['renewal_incentive', 'emergency_retention'],
+            'onboarding_delay':     ['recovery_plan', 'technical_remediation'],
+            'ttfv_exceeded':        ['recovery_plan', 'technical_remediation'],
+        }
+
+        for idx, acct in enumerate(self.accounts):
+            aid = self._account_id(idx)
+            key_signals = acct.get('key_signals', [])
+            if not key_signals:
+                continue
+
+            # Get all registered signals and decisions for this account
+            all_sigs = self._registry._signals.get(aid, [])
+            all_decs = self._registry._decisions.get(aid, [])
+            if not all_decs:
+                continue
+
+            # Build set of signal refs already used as edge sources (from arc topology)
+            # We track which signals were already connected by collecting from_refs written above
+            # Since we can't easily track that, use the key_signal ref pattern to find them
+            phase_prefix = f'{self.phase}_' if self.phase else ''
+
+            for ks_idx, ks in enumerate(key_signals):
+                ks_type = ks.get('type', '')
+                ks_date = ks.get('date', '2026-01-01')
+
+                # Find this key_signal's ref in the registry
+                # key_signals register after narrative signals, so their ordinal is
+                # (num_narrative_signals + ks_idx + 1)
+                planned_count = len(self.planner.get_events(aid, 'signal'))
+                sig_ordinal = planned_count + ks_idx + 1
+                if sig_ordinal > len(all_sigs):
+                    continue
+                sig_ref, sig_date = all_sigs[sig_ordinal - 1]
+
+                # Find best matching decision by affinity + temporal proximity
+                affinity_list = _SIGNAL_TO_DECISION_AFFINITY.get(ks_type, [])
+
+                best_dec = None
+                best_score = -1
+                for dec_ref, dec_date in all_decs:
+                    # Decision must come after or on same day as signal
+                    if dec_date < sig_date:
+                        continue
+                    # Score: affinity match + temporal proximity
+                    score = 0
+                    for aff in affinity_list:
+                        if aff in dec_ref:
+                            score += 10
+                            break
+                    # Closer in time = better (max 5 points for same-day)
+                    try:
+                        days_gap = (datetime.strptime(dec_date, '%Y-%m-%d') - datetime.strptime(sig_date, '%Y-%m-%d')).days
+                        score += max(0, 5 - days_gap // 7)
+                    except (ValueError, TypeError):
+                        pass
+                    if score > best_score:
+                        best_score = score
+                        best_dec = (dec_ref, dec_date)
+
+                # Fallback: if no affinity match, use first decision after signal
+                if not best_dec:
+                    for dec_ref, dec_date in all_decs:
+                        if dec_date >= sig_date:
+                            best_dec = (dec_ref, dec_date)
+                            break
+
+                if best_dec:
+                    dec_ref, dec_date = best_dec
+                    try:
+                        lag = (datetime.strptime(dec_date, '%Y-%m-%d') - datetime.strptime(sig_date, '%Y-%m-%d')).days
+                    except (ValueError, TypeError):
+                        lag = 14
+                    w.writerow([
+                        aid, sig_ref, dec_ref,
+                        'LED_TO', 0.8,
+                        f'{ks_type} led to decision',
+                        0.75, max(lag, 1),
+                    ])
 
         return out.getvalue()
 
@@ -2404,7 +2734,7 @@ class ManifestCSVGenerator:
         return {
             'accounts':                H(self.generate_accounts_csv()),
             'kpi_measurements':        H(self.generate_kpi_measurements_csv()),
-            'enhanced_signals':        signals_csv,
+            'qualitative_signals':     signals_csv,
             'products':                H(self.generate_products_csv()),
             'stakeholders':            H(self.generate_stakeholders_csv()),
             'engagement_events':       H(self.generate_engagement_events_csv()),
@@ -2838,7 +3168,7 @@ class ScenarioManifest(BaseScenario):
             filename_map = {
                 'accounts': 'accounts.csv',
                 'kpi_measurements': 'kpi_measurements.csv',
-                'enhanced_signals': 'enhanced_qualitative_signals.csv',
+                'enhanced_signals': 'qualitative_signals.csv',
                 'products': 'products.csv',
                 'stakeholders': 'stakeholders.csv',
                 'engagement_events': 'engagement_events.csv',
