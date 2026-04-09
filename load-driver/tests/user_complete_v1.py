@@ -393,6 +393,29 @@ def phase1_create_and_load(base_url: str, manifest_path: str, seed: int, cycle: 
             print(f"  combined tail: {combined_out[-1500:]}")
         return {"error": "Could not parse customer_id"}
 
+    # If no API key from driver output, generate one via super-admin endpoint
+    if not api_key:
+        try:
+            sess = requests.Session()
+            # Login as super admin (required for API key creation)
+            login_resp = sess.post(f"{base_url}/api/login", json={
+                "email": "admin@cspulse.io", "password": "admin123",
+            }, timeout=15)
+            if login_resp.status_code == 200 and login_resp.json().get("status") == "success":
+                key_resp = sess.post(
+                    f"{base_url}/api/admin-ui/customers/{customer_id}/api-keys",
+                    json={"name": "ucv1-auto", "scopes": ["read", "write"]},
+                    timeout=15,
+                )
+                if key_resp.status_code in (200, 201):
+                    api_key = key_resp.json().get("api_key")
+                    if api_key:
+                        print(f"  🔑 API key generated via super-admin endpoint")
+                else:
+                    print(f"  ⚠️  API key creation returned {key_resp.status_code}: {key_resp.text[:100]}")
+        except Exception as e:
+            print(f"  ⚠️  API key generation failed: {e}")
+
     elapsed = time.time() - t0
     print(f"  ✅ Customer created: ID={customer_id}, API key={'yes' if api_key else 'NO'}")
     print(f"  ⏱  Load time: {elapsed:.1f}s")
@@ -1341,7 +1364,8 @@ def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
 
 def run_concurrent(base_url: str, manifest_path: str, count: int, verbose: bool,
                     skip_seeder: bool = False, seeder_playbooks: int = 4,
-                    seeder_ask_ai: int = 5, log_dir: Optional[str] = None):
+                    seeder_ask_ai: int = 5, log_dir: Optional[str] = None,
+                    mcp_host: str = None):
     """Run N customers in parallel threads."""
     print(f"\n{'#'*60}")
     print(f"  CONCURRENT TEST: {count} customers in parallel")
@@ -1355,6 +1379,7 @@ def run_concurrent(base_url: str, manifest_path: str, count: int, verbose: bool,
         try:
             r = run_full_cycle(base_url, manifest_path, idx, seed=42 + idx,
                                 verbose=verbose, skip_delete=True,
+                                mcp_host=mcp_host,
                                 skip_seeder=skip_seeder, seeder_playbooks=seeder_playbooks,
                                 seeder_ask_ai=seeder_ask_ai, log_dir=log_dir)
             with lock:
@@ -1496,7 +1521,8 @@ def main():
     if args.concurrent > 0:
         run_concurrent(args.base_url, args.manifest, args.concurrent, args.verbose,
                         skip_seeder=args.skip_seeder, seeder_playbooks=min(args.seeder_playbooks, 10),
-                        seeder_ask_ai=args.seeder_ask_ai, log_dir=args.log_dir)
+                        seeder_ask_ai=args.seeder_ask_ai, log_dir=args.log_dir,
+                        mcp_host=args.mcp_host)
 
     print(f"\n✅ User-Complete-V1 finished. Results in {RESULTS_DIR}/")
 
