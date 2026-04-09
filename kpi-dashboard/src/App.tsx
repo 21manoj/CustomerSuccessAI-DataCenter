@@ -337,7 +337,16 @@ const AppRoutes: React.FC = () => {
           }
         />
         
-        {/* SaaS Dashboard */}
+        {/* SaaS Persona Dashboard Routes */}
+        <Route path="/saas-dashboard/csm" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="dashboards"><CSMDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/vpcs" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="dashboards"><VPCSDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/cro" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="revenue_intelligence"><CRODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/cfo" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="revenue_intelligence"><CFODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/ceo" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/sales" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="dashboards"><AESalesDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/ops" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="dashboards"><CSOpsIntegrationDashboard /></EntitlementGuard></PrivateRoute>} />
+
+        {/* SaaS Dashboard — base platform (must come AFTER sub-routes) */}
         <Route
           path="/saas-dashboard"
           element={
