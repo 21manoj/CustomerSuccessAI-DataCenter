@@ -429,6 +429,8 @@ def phase1_create_and_load(base_url: str, manifest_path: str, seed: int, cycle: 
     return {
         "customer_id": customer_id,
         "api_key": api_key,
+        "admin_email": manifest_data["customer"].get("admin_email"),
+        "admin_password": manifest_data["customer"].get("admin_password", "test123"),
         "load_time_s": round(elapsed, 1),
         "stdout_tail": result.stdout[-500:] if result.stdout else "",
         "manifest_path": manifest_path,  # original (for extend)
@@ -525,7 +527,8 @@ def phase2_run_questions(mcp: MCPClient, customer_id: int, accounts: list, verbo
 
 
 def phase3_extend_and_compare(base_url: str, manifest_path: str, customer_id: int,
-                               mcp: MCPClient, baseline: dict, seed: int, verbose: bool) -> dict:
+                               mcp: MCPClient, baseline: dict, seed: int, verbose: bool,
+                               admin_email: str = None, admin_password: str = None) -> dict:
     """Phase 3: Extend data months 7-12, compare predictions vs actuals."""
     print(f"\n{'='*60}")
     print(f"  PHASE 3: Extend Data & Compare")
@@ -555,6 +558,10 @@ def phase3_extend_and_compare(base_url: str, manifest_path: str, customer_id: in
         "--seed", str(seed),
         "--no-validate-strict",
     ]
+    if admin_email:
+        cmd += ["--email", admin_email]
+    if admin_password:
+        cmd += ["--password", admin_password]
     print(f"  Extending data (months 7-12)...")
     t0 = time.time()
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -1333,20 +1340,21 @@ def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
     cycle_result["phase2"] = p2
 
     # Phase 3: Extend & Compare
-    p3 = phase3_extend_and_compare(base_url, manifest_path, customer_id, mcp, baseline, seed, verbose)
+    p3 = phase3_extend_and_compare(base_url, manifest_path, customer_id, mcp, baseline, seed, verbose,
+                                    admin_email=p1.get("admin_email"), admin_password=p1.get("admin_password"))
     cycle_result["phase3"] = p3
 
     # Phase 4: Delete
     if not skip_delete:
-        # Need admin REST client for delete
-        # Use the customer's own admin credentials (created during registration)
+        # Need admin REST client for delete — use credentials from Phase 1
         try:
-            # Attempt login with the manifest's admin email
-            manifest_data = json.loads(Path(manifest_path).read_text())
-            cust = manifest_data.get("customer", {})
-            admin_email = cust.get("admin_email", f"admin@ucv1-{cycle}.test")
-            admin_password = cust.get("admin_password", "CSPulse2026!")
-            rest = RESTClient(base_url, admin_email, admin_password)
+            p1_email = p1.get("admin_email")
+            p1_password = p1.get("admin_password", "test123")
+            if not p1_email:
+                # Fallback: read from original manifest
+                manifest_data = json.loads(Path(manifest_path).read_text())
+                p1_email = manifest_data.get("customer", {}).get("admin_email", f"admin@ucv1-{cycle}.test")
+            rest = RESTClient(base_url, p1_email, p1_password)
             p4 = phase4_delete_and_verify(base_url, customer_id, rest, mcp, verbose)
         except Exception as e:
             print(f"  ⚠️  Delete failed (admin login issue): {e}")
