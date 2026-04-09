@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { getPillarMeta } from '../../../utils/pillarDefaults';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -66,8 +67,6 @@ const PILLAR_KEYS: PillarKey[] = ['P1', 'P2', 'P3', 'P4', 'P5'];
 
 // Pillar names are vertical-aware — populated from session context or API pillar_labels.
 // These are DC2_S defaults; getPillarMeta() overrides for SaaS.
-import { getPillarMeta } from '../../../utils/pillarDefaults';
-
 const _getVertical = (): string => {
   try { return (localStorage.getItem('vertical') || sessionStorage.getItem('vertical') || 'dc2_s').toLowerCase(); } catch { return 'dc2_s'; }
 };
