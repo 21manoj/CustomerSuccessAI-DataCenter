@@ -47,7 +47,7 @@ const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ accent = 'red', custo
       headers['X-Customer-ID'] = session.customer_uuid;
     }
 
-    fetch('/api/dc2s/accounts', { credentials: 'include', headers })
+    fetch('/api/v1/accounts', { credentials: 'include', headers })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data?.customer_name) {

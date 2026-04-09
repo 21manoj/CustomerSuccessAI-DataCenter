@@ -222,10 +222,10 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
     const fetchDetails = async () => {
       try {
         const [sigRes, recRes, stakeholderRes, healthHistRes] = await Promise.allSettled([
-          fetch(`/api/dc2s/alerts/${account.id}`, { headers }),
-          fetch(`/api/dc2s/recommendations/${account.id}`, { headers }),
+          fetch(`/api/v1/alerts/${account.id}`, { headers }),
+          fetch(`/api/v1/recommendations/${account.id}`, { headers }),
           fetch(`/api/context-graph/stakeholder-map?account_id=${account.id}`, { headers }),
-          fetch(`/api/dc2s/health-score-history?account_id=${account.id}&months=6`, { headers }),
+          fetch(`/api/v1/health-score-history?account_id=${account.id}&months=6`, { headers }),
         ]);
 
         if (sigRes.status === 'fulfilled' && sigRes.value.ok) {
@@ -654,8 +654,8 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
 
     try {
       const [acctRes, actRes] = await Promise.allSettled([
-        fetch('/api/dc2s/accounts', { headers }),
-        fetch('/api/dc2s/daily-actions', { headers }),
+        fetch('/api/v1/accounts', { headers }),
+        fetch('/api/v1/daily-actions', { headers }),
       ]);
 
       let acctLoaded = false;

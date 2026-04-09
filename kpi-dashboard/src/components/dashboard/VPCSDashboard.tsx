@@ -835,14 +835,14 @@ const VPCSDashboard: React.FC = () => {
 
         // Parallel fetch from all endpoints (including new ones)
         const [accountsResp, actionsResp, healthResp, roiResp, capacityResp, scorecardResp, playbookMetricsResp, historyResp] = await Promise.allSettled([
-          apiCall('/api/dc2s/accounts', { headers }),
-          apiCall('/api/dc2s/daily-actions', { headers }),
-          apiCall('/api/dc2s/health-summary', { headers }),
+          apiCall('/api/v1/accounts', { headers }),
+          apiCall('/api/v1/daily-actions', { headers }),
+          apiCall('/api/v1/health-summary', { headers }),
           apiCall('/api/outcome-roi/portfolio-summary', { headers }),
-          apiCall('/api/dc2s/team-capacity', { headers }),
-          apiCall('/api/dc2s/csm-scorecard', { headers }),
-          apiCall('/api/dc2s/playbook-success-metrics', { headers }),
-          apiCall('/api/dc2s/health-score-history?months=6', { headers }),
+          apiCall('/api/v1/team-capacity', { headers }),
+          apiCall('/api/v1/csm-scorecard', { headers }),
+          apiCall('/api/v1/playbook-success-metrics', { headers }),
+          apiCall('/api/v1/health-score-history?months=6', { headers }),
         ]);
 
         // Parse responses (graceful fallback per endpoint)

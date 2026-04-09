@@ -1111,7 +1111,7 @@ const ExecutiveDashboard: React.FC = () => {
       // Load CSM Daily Actions (DC vertical)
       try {
         setDailyLoading(true);
-        const dailyRes = await fetch('/api/dc2s/daily-actions', {
+        const dailyRes = await fetch('/api/v1/daily-actions', {
           credentials: 'include',
           headers,
         });

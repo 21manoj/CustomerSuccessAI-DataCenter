@@ -84,7 +84,7 @@ export const getAccountHealthScore = async (accountId: number | string): Promise
   const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
 
   // Fetch pillar breakdown from DC2S health-score endpoint
-  const healthResp = await apiCall(`/api/dc2s/health-score/${accountId}`, { method: 'GET', headers });
+  const healthResp = await apiCall(`/api/v1/health-score/${accountId}`, { method: 'GET', headers });
 
   // Fetch trends for trend delta calculation
   const trendsResp = await apiCall(`/api/health-trends?account_id=${accountId}`, { method: 'GET', headers });
@@ -153,7 +153,7 @@ export const getPortfolioOverview = async (): Promise<PortfolioOverview> => {
   const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
 
   // Use health-summary for aggregated stats
-  const summaryResp = await apiCall('/api/dc2s/health-summary', { method: 'GET', headers });
+  const summaryResp = await apiCall('/api/v1/health-summary', { method: 'GET', headers });
 
   // Get accounts for detailed risk analysis
   const accountsResp = await apiCall('/api/accounts', { method: 'GET', headers });
@@ -259,7 +259,7 @@ export const getSmartActions = async (): Promise<SmartAction[]> => {
   const customerId = getCustomerId();
   const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
 
-  const response = await apiCall('/api/dc2s/daily-actions', { method: 'GET', headers });
+  const response = await apiCall('/api/v1/daily-actions', { method: 'GET', headers });
 
   if (!response.ok) {
     return [];
