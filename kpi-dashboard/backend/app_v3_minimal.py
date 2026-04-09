@@ -485,6 +485,14 @@ if HAS_DC2S_API:
     app.register_blueprint(dc2s_api, url_prefix='/api/dc2s')
     print("✅ Registered DC2_S API: /api/dc2s/*")
 
+# Register Vertical-Agnostic API v1 (proxies to DC2S handlers with vertical context)
+try:
+    from api_v1_routes import api_v1
+    app.register_blueprint(api_v1)
+    print("✅ Registered API v1 (vertical-agnostic): /api/v1/*")
+except Exception as e:
+    print(f"⚠️  API v1 not available: {e}")
+
 # Register DC2_S Config API (Phase 1 Migration)
 try:
     from dc2s_config_api import dc2s_config_api
