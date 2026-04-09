@@ -1,10 +1,15 @@
 """
 Vertical-Agnostic API v1 Routes
 
-Proxy layer that delegates to vertical-specific handlers (currently DC2S)
-while injecting vertical context (pillar labels, KPI labels) into responses.
-All persona dashboards should call /api/v1/* instead of /api/dc2s/*.
+Proxy layer that dispatches to the correct vertical handler based on the
+customer's configuration, while injecting vertical context (pillar labels,
+KPI labels) into responses.
 
+Dispatch order:
+  1. Check if a vertical-specific handler exists (e.g., saas_premium.api_routes.get_accounts)
+  2. Fall back to DC2S handler (works for all verticals since it queries by customer_id)
+
+All persona dashboards call /api/v1/* instead of /api/dc2s/*.
 The /api/dc2s/* routes remain as aliases for backward compatibility.
 """
 
@@ -56,24 +61,43 @@ def _inject_vertical_context(data, customer_id):
     return data
 
 
-def _proxy(handler_fn, inject_context=True, **kwargs):
-    """Call a DC2S handler and optionally inject vertical context.
+# ─── Vertical dispatch ───────────────────────────────────────────────────────
 
-    Returns the Flask response directly. If the handler returns 200 and
-    inject_context is True, vertical/pillar/kpi labels are added to the JSON.
+# Registry of vertical-specific handler overrides.
+# Key: (vertical_slug, endpoint_name) → callable
+# When a SaaS-specific handler is created, register it here.
+# Example: _VERTICAL_HANDLERS[('saas_premium', 'accounts')] = saas_get_accounts
+_VERTICAL_HANDLERS = {}
+
+
+def _dispatch(endpoint_name, default_handler, inject_context=True, **kwargs):
+    """Dispatch to vertical-specific handler if one exists, else use default.
+
+    1. Resolve customer's vertical
+    2. Check _VERTICAL_HANDLERS for a vertical-specific override
+    3. Fall back to default_handler (DC2S — works for all verticals)
+    4. Inject vertical context into successful responses
     """
-    response = handler_fn(**kwargs) if kwargs else handler_fn()
+    customer_id = get_current_customer_id()
+    vertical = _resolve_vertical(customer_id) if customer_id else 'dc2_s'
 
+    # Check for vertical-specific override
+    handler = _VERTICAL_HANDLERS.get((vertical, endpoint_name))
+    if handler is None:
+        handler = default_handler
+
+    # Call the handler
+    response = handler(**kwargs) if kwargs else handler()
+
+    # Inject vertical context
     if inject_context and hasattr(response, 'status_code') and response.status_code == 200:
         try:
             data = response.get_json()
-            if isinstance(data, dict):
-                customer_id = get_current_customer_id()
-                if customer_id:
-                    _inject_vertical_context(data, customer_id)
+            if isinstance(data, dict) and customer_id:
+                _inject_vertical_context(data, customer_id)
                 return jsonify(data)
         except Exception as e:
-            logger.debug("v1 proxy context injection failed (non-fatal): %s", e)
+            logger.debug("v1 dispatch context injection failed (non-fatal): %s", e)
 
     return response
 
@@ -84,74 +108,90 @@ def _proxy(handler_fn, inject_context=True, **kwargs):
 def v1_accounts():
     """List all accounts with health scores — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_dc2s_accounts
-    return _proxy(get_dc2s_accounts)
+    return _dispatch('accounts', get_dc2s_accounts)
 
 
 @api_v1.route('/accounts/<int:account_id>')
 def v1_account_detail(account_id):
     """Account detail — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_dc2s_account_detail
-    return _proxy(get_dc2s_account_detail, account_id=account_id)
+    return _dispatch('account_detail', get_dc2s_account_detail, account_id=account_id)
 
 
 @api_v1.route('/health-scores/<int:account_id>')
 def v1_health_score(account_id):
     """Health score for a single account — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_dc2s_health_score
-    return _proxy(get_dc2s_health_score, account_id=account_id)
+    return _dispatch('health_score', get_dc2s_health_score, account_id=account_id)
 
 
 @api_v1.route('/health-summary')
 def v1_health_summary():
     """Portfolio health summary — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_dc2s_health_summary
-    return _proxy(get_dc2s_health_summary)
+    return _dispatch('health_summary', get_dc2s_health_summary)
 
 
 @api_v1.route('/health-score-history')
 def v1_health_score_history():
     """Health score history — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_health_score_history_api
-    return _proxy(get_health_score_history_api)
+    return _dispatch('health_score_history', get_health_score_history_api)
 
 
 @api_v1.route('/daily-actions')
 def v1_daily_actions():
     """CSM daily actions — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_csm_daily_actions
-    return _proxy(get_csm_daily_actions)
+    return _dispatch('daily_actions', get_csm_daily_actions)
 
 
 @api_v1.route('/recommendations/<int:account_id>')
 def v1_recommendations(account_id):
     """Playbook recommendations for an account — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_dc2s_recommendations
-    return _proxy(get_dc2s_recommendations, account_id=account_id)
+    return _dispatch('recommendations', get_dc2s_recommendations, account_id=account_id)
 
 
 @api_v1.route('/alerts/<int:account_id>')
 def v1_alerts(account_id):
     """Alerts for an account — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_dc2s_alerts
-    return _proxy(get_dc2s_alerts, account_id=account_id)
+    return _dispatch('alerts', get_dc2s_alerts, account_id=account_id)
 
 
 @api_v1.route('/team-capacity')
 def v1_team_capacity():
     """Team capacity — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_team_capacity_api
-    return _proxy(get_team_capacity_api)
+    return _dispatch('team_capacity', get_team_capacity_api)
 
 
 @api_v1.route('/csm-scorecard')
 def v1_csm_scorecard():
     """CSM scorecard — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_csm_scorecard_api
-    return _proxy(get_csm_scorecard_api)
+    return _dispatch('csm_scorecard', get_csm_scorecard_api)
 
 
 @api_v1.route('/playbook-success-metrics')
 def v1_playbook_success_metrics():
     """Playbook success metrics — vertical-agnostic."""
     from verticals.dc2_s.api_routes import get_playbook_success_metrics_api
-    return _proxy(get_playbook_success_metrics_api)
+    return _dispatch('playbook_success_metrics', get_playbook_success_metrics_api)
+
+
+# ─── Vertical handler registration API ──────────────────────────────────────
+
+def register_vertical_handler(vertical: str, endpoint: str, handler):
+    """Register a vertical-specific handler override.
+
+    Example:
+        from api_v1_routes import register_vertical_handler
+        register_vertical_handler('saas_premium', 'accounts', saas_get_accounts)
+
+    When a SaaS customer calls /api/v1/accounts, saas_get_accounts will be
+    used instead of the DC2S default.
+    """
+    _VERTICAL_HANDLERS[(vertical, endpoint)] = handler
+    logger.info("v1: registered %s handler for endpoint '%s'", vertical, endpoint)
