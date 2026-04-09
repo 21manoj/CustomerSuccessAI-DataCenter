@@ -64,16 +64,27 @@ const STATUS_LABELS: Record<string, string> = {
 
 const PILLAR_KEYS: PillarKey[] = ['P1', 'P2', 'P3', 'P4', 'P5'];
 
+// Pillar names are vertical-aware — populated from session context or API pillar_labels.
+// These are DC2_S defaults; getPillarMeta() overrides for SaaS.
+import { getPillarMeta } from '../../../utils/pillarDefaults';
+
+const _getVertical = (): string => {
+  try { return (localStorage.getItem('vertical') || sessionStorage.getItem('vertical') || 'dc2_s').toLowerCase(); } catch { return 'dc2_s'; }
+};
+const _meta = getPillarMeta(_getVertical());
+
 const PILLAR_NAMES: Record<PillarKey, string> = {
-  P1: 'Deployment Velocity',
-  P2: 'Operational Stability',
-  P3: 'AI Workload Perf',
-  P4: 'Channel & Partner',
-  P5: 'Expansion Readiness',
+  P1: _meta.P1?.name || 'Pillar 1',
+  P2: _meta.P2?.name || 'Pillar 2',
+  P3: _meta.P3?.name || 'Pillar 3',
+  P4: _meta.P4?.name || 'Pillar 4',
+  P5: _meta.P5?.name || 'Pillar 5',
 };
 
 const PILLAR_SHORT: Record<PillarKey, string> = {
-  P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand',
+  P1: _meta.P1?.code || 'P1', P2: _meta.P2?.code || 'P2',
+  P3: _meta.P3?.code || 'P3', P4: _meta.P4?.code || 'P4',
+  P5: _meta.P5?.code || 'P5',
 };
 
 const PILLAR_PLAYBOOK: Record<PillarKey, string> = {

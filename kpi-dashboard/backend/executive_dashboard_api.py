@@ -845,8 +845,17 @@ def cro_dashboard():
         except Exception as nrr_err:
             logger.warning(f"NRR forecast enrichment failed (non-fatal): {nrr_err}")
 
+        # Vertical-aware pillar labels
+        try:
+            from api_v1_routes import _get_pillar_labels
+            pillar_labels = _get_pillar_labels(customer_id)
+        except Exception:
+            pillar_labels = {}
+
         return jsonify({
             'status': 'success',
+            'pillar_labels': pillar_labels,
+            'vertical': getattr(accounts[0], 'vertical', 'dc2_s') if accounts else 'dc2_s',
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
@@ -1185,8 +1194,17 @@ def cfo_dashboard():
         except Exception as wb_err:
             logger.debug(f"CFO Wizard B NRR override failed (non-fatal): {wb_err}")
 
+        # Vertical-aware pillar labels
+        try:
+            from api_v1_routes import _get_pillar_labels
+            cfo_pillar_labels = _get_pillar_labels(customer_id)
+        except Exception:
+            cfo_pillar_labels = {}
+
         return jsonify({
             'status': 'success',
+            'pillar_labels': cfo_pillar_labels,
+            'vertical': getattr(accounts[0], 'vertical', 'dc2_s') if accounts else 'dc2_s',
             'total_arr': round(total_arr, 2),
             'account_count': len(accounts),
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)

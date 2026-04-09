@@ -807,9 +807,23 @@ const CFODashboard: React.FC = () => {
             };
           });
 
+          // Vertical-aware pillar names from API response or localStorage
+          const apiPillarLabels = json.pillar_labels || {};
+          let _storedLabels: Record<string, string> = {};
+          try { _storedLabels = JSON.parse(localStorage.getItem('pillar_labels') || '{}'); } catch {}
+          const _pl = Object.keys(apiPillarLabels).length > 0 ? apiPillarLabels : _storedLabels;
           const pillarDisplayNames: Record<string, string> = {
-            P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand',
+            P1: _pl.P1 || 'Pillar 1', P2: _pl.P2 || 'Pillar 2',
+            P3: _pl.P3 || 'Pillar 3', P4: _pl.P4 || 'Pillar 4',
+            P5: _pl.P5 || 'Pillar 5',
           };
+          // Store for other components
+          if (json.pillar_labels) {
+            try { localStorage.setItem('pillar_labels', JSON.stringify(json.pillar_labels)); } catch {}
+          }
+          if (json.vertical) {
+            try { localStorage.setItem('vertical', json.vertical); } catch {}
+          }
 
           const pillarInvs: PillarInvestment[] = (json.pillar_investments || []).map((p: any) => ({
             pillar: pillarDisplayNames[p.pillar] || p.name || p.pillar,

@@ -566,7 +566,7 @@ const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void; onD
                 const isWorst = idx === 0 && score < 50;
                 return (
                   <div key={pillar} className="flex items-center gap-2">
-                    <span className={`text-[10px] w-8 font-mono ${isWorst ? 'text-red-400 font-bold' : 'text-gray-500'}`}>{pillar}</span>
+                    <span className={`text-[10px] w-20 truncate font-mono ${isWorst ? 'text-red-400 font-bold' : 'text-gray-500'}`} title={(() => { try { const pl = JSON.parse(localStorage.getItem('pillar_labels') || '{}'); return pl[pillar] || pillar; } catch { return pillar; } })()}>{(() => { try { const pl = JSON.parse(localStorage.getItem('pillar_labels') || '{}'); return pl[pillar] || pillar; } catch { return pillar; } })()}</span>
                     <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${pWidth}%`, backgroundColor: pColor }} />
                     </div>
@@ -765,6 +765,13 @@ const CRODashboard: React.FC = () => {
         });
         if (!resp.ok) throw new Error(`API returned ${resp.status}`);
         const json = await resp.json();
+        // Store vertical context for pillar label resolution across components
+        if (json.pillar_labels) {
+          try { localStorage.setItem('pillar_labels', JSON.stringify(json.pillar_labels)); } catch {}
+        }
+        if (json.vertical) {
+          try { localStorage.setItem('vertical', json.vertical); } catch {}
+        }
         if (!cancelled) {
           // Transform flat API response into CRODashboardData shape
           const isEstimatedRoi = json.playbook_roi_estimated === true;

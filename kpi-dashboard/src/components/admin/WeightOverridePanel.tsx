@@ -18,12 +18,20 @@ interface PillarWeight {
   weight: number;
 }
 
+// Vertical-aware pillar names
+const _getPillarName = (code: string): string => {
+  try {
+    const pl = JSON.parse(localStorage.getItem('pillar_labels') || '{}');
+    return pl[code] || code;
+  } catch { return code; }
+};
+
 const DEFAULT_PILLARS: PillarWeight[] = [
-  { code: 'P1', name: 'Deployment Velocity', weight: 0.15 },
-  { code: 'P2', name: 'Operational Stability', weight: 0.20 },
-  { code: 'P3', name: 'AI Workload Performance', weight: 0.25 },
-  { code: 'P4', name: 'Channel & Partner Health', weight: 0.15 },
-  { code: 'P5', name: 'Expansion Readiness', weight: 0.25 },
+  { code: 'P1', name: _getPillarName('P1') || 'Pillar 1', weight: 0.15 },
+  { code: 'P2', name: _getPillarName('P2') || 'Pillar 2', weight: 0.20 },
+  { code: 'P3', name: _getPillarName('P3') || 'Pillar 3', weight: 0.25 },
+  { code: 'P4', name: _getPillarName('P4') || 'Pillar 4', weight: 0.15 },
+  { code: 'P5', name: _getPillarName('P5') || 'Pillar 5', weight: 0.25 },
 ];
 
 const WeightOverridePanel: React.FC<{ customerId: number }> = ({ customerId }) => {
