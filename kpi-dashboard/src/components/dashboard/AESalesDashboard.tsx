@@ -635,8 +635,8 @@ const AESalesDashboard: React.FC = () => {
 
         // Fetch accounts and health summary in parallel
         const [accountsResp, healthResp, roiResp] = await Promise.all([
-          apiCall('/api/dc2s/accounts', { headers }).catch(() => null),
-          apiCall('/api/dc2s/health-summary', { headers }).catch(() => null),
+          apiCall('/api/v1/accounts', { headers }).catch(() => null),
+          apiCall('/api/v1/health-summary', { headers }).catch(() => null),
           apiCall('/api/outcome-roi/portfolio-summary', { headers }).catch(() => null),
         ]);
 

@@ -277,8 +277,8 @@ const CSMFocusFlow: React.FC = () => {
     setError(null);
     try {
       const url = csmFilter
-        ? `/api/dc2s/daily-actions?csm_name=${encodeURIComponent(csmFilter)}`
-        : '/api/dc2s/daily-actions';
+        ? `/api/v1/daily-actions?csm_name=${encodeURIComponent(csmFilter)}`
+        : '/api/v1/daily-actions';
       const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`Actions: ${res.status}`);
       const data = await res.json();
@@ -305,7 +305,7 @@ const CSMFocusFlow: React.FC = () => {
     setLoadingAccounts(true);
     setError(null);
     try {
-      const res = await fetch('/api/dc2s/accounts', { headers });
+      const res = await fetch('/api/v1/accounts', { headers });
       if (!res.ok) throw new Error(`Accounts: ${res.status}`);
       const data = await res.json();
       const raw: any[] = data.accounts || data.data || data || [];
@@ -347,9 +347,9 @@ const CSMFocusFlow: React.FC = () => {
     setRecommendations([]);
     try {
       const [detailRes, healthRes, recsRes] = await Promise.allSettled([
-        fetch(`/api/dc2s/accounts/${accountId}`, { headers }),
-        fetch(`/api/dc2s/health-score/${accountId}`, { headers }),
-        fetch(`/api/dc2s/recommendations/${accountId}`, { headers }),
+        fetch(`/api/v1/accounts/${accountId}`, { headers }),
+        fetch(`/api/v1/health-score/${accountId}`, { headers }),
+        fetch(`/api/v1/recommendations/${accountId}`, { headers }),
       ]);
 
       // Build account detail from both endpoints
@@ -416,7 +416,7 @@ const CSMFocusFlow: React.FC = () => {
   useEffect(() => {
     const fetchCsmNames = async () => {
       try {
-        const res = await fetch('/api/dc2s/team-capacity', { headers });
+        const res = await fetch('/api/v1/team-capacity', { headers });
         if (res.ok) {
           const data = await res.json();
           if (data.csm_names?.length) setCsmNames(data.csm_names);
