@@ -2053,16 +2053,11 @@ class ManifestCSVGenerator:
                 )
 
                 for ri, (ro_type, ro_title, ro_desc, ro_status) in enumerate(selected_recovery):
-                    if ro_type == 'churn_averted':
-                        rev_impact = arr * acct_rng.uniform(0.3, 0.5)
-                    elif ro_type in ('revenue_protected', 'renewal_secured'):
-                        rev_impact = arr * acct_rng.uniform(0.1, 0.25)
-                    elif ro_type == 'expansion_approved':
-                        rev_impact = arr * acct_rng.uniform(0.15, 0.3)
-                    elif ro_type == 'revenue_growth':
-                        rev_impact = arr * acct_rng.uniform(0.1, 0.2)
-                    else:
-                        rev_impact = arr * acct_rng.uniform(0.05, 0.1)
+                    # Deterministic: use OUTCOME_METADATA percentages (not random)
+                    # This ensures recovery outcomes reconcile against baseline outcomes
+                    # and drill-down from portfolio → account → node is traceable.
+                    ro_meta = self.OUTCOME_METADATA.get(ro_type, (None, None, 0.10, None))
+                    rev_impact = arr * abs(ro_meta[2])  # ro_meta[2] = impact_pct
 
                     day_offset = int(total_days * (ri + 1) / (n_recovery_outcomes + 1))
                     outcome_date = (self.start_date + timedelta(days=day_offset)).strftime('%Y-%m-%d')
@@ -2076,6 +2071,23 @@ class ManifestCSVGenerator:
                         auto_sig_ref,
                     ])
                     self._registry.register_outcome(aid, ro_type, ro_type, outcome_date)
+
+            # ── Revenue reconciliation audit (log expected bucket totals) ──
+            _expansion_types = {'expansion_opportunity', 'expansion_approved',
+                                'expansion_closed', 'revenue_growth'}
+            _all_outcome_types = [evt['subtype'] for evt in arc_outcome_events]
+            if self.phase == 'intervention':
+                _all_outcome_types += [r[0] for r in selected_recovery] if 'selected_recovery' in dir() else []
+            _exp_lost = sum(arr * abs(self.OUTCOME_METADATA.get(o, (None, None, 0, None))[2])
+                           for o in _all_outcome_types
+                           if self.OUTCOME_METADATA.get(o, (None, None, 0, None))[2] < 0)
+            _exp_prot = sum(arr * abs(self.OUTCOME_METADATA.get(o, (None, None, 0, None))[2])
+                           for o in _all_outcome_types
+                           if self.OUTCOME_METADATA.get(o, (None, None, 0, None))[2] > 0
+                           and o not in _expansion_types)
+            _ratio = _exp_prot / max(_exp_lost, 1)
+            logger.debug("  Revenue audit %s: lost=$%s prot=$%s ratio=%.0f%%",
+                         acct['name'], f'{_exp_lost:,.0f}', f'{_exp_prot:,.0f}', _ratio * 100)
 
         return out.getvalue()
 
