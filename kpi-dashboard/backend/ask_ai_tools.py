@@ -195,6 +195,19 @@ TOOL_DEFINITIONS = [
             "required": ["customer_id"]
         }
     },
+    {
+        "name": "generate_action_plan",
+        "description": "Generate a specific, time-bound action plan for an account. Returns named stakeholders, talking points with real numbers, deadlines, and ROI projections. Use when CSM asks 'What should I do about [account]?' or 'How do I save [account]?'. Requires WITH_LLM feature flag.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "account_id": {"type": "integer", "description": "The account to generate a plan for"},
+                "planning_horizon_days": {"type": "integer", "description": "Planning horizon in days (default 90)", "default": 90}
+            },
+            "required": ["customer_id", "account_id"]
+        }
+    },
 ]
 
 
@@ -270,6 +283,13 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
     elif tool_name == 'get_portfolio_roi_summary':
         from mcp_server.cs_pulse_revenue import get_portfolio_roi_summary
         return get_portfolio_roi_summary(customer_id=customer_id)
+    elif tool_name == 'generate_action_plan':
+        from llm.action_plan_generator import generate_action_plan
+        return generate_action_plan(
+            customer_id=customer_id,
+            account_id=tool_input['account_id'],
+            horizon_days=tool_input.get('planning_horizon_days', 90),
+        )
     else:
         return {"error": f"Unknown tool: {tool_name}"}
 
