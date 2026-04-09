@@ -196,6 +196,31 @@ TOOL_DEFINITIONS = [
         }
     },
     {
+        "name": "analyze_root_cause",
+        "description": "Analyze the root cause of an account's health trajectory. Returns causal chain (trigger → symptom → response → outcome), contributing factors, stakeholder dynamics, and prediction. Use when asked 'Why is [account] declining?' or 'What caused [account]'s health drop?'. Requires WITH_LLM.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "account_id": {"type": "integer", "description": "The account to analyze"}
+            },
+            "required": ["customer_id", "account_id"]
+        }
+    },
+    {
+        "name": "explain_kpi_anomaly",
+        "description": "Explain why a specific KPI changed significantly. Correlates the KPI change with signals, decisions, and stakeholder events in the same timeframe. Use when asked 'Why did [KPI] drop?' or 'What caused the NPS decline?'. Requires WITH_LLM.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "account_id": {"type": "integer", "description": "The account to analyze"},
+                "kpi_code": {"type": "string", "description": "KPI code (e.g., P1-KPI1, P3-KPI2)"}
+            },
+            "required": ["customer_id", "account_id", "kpi_code"]
+        }
+    },
+    {
         "name": "generate_action_plan",
         "description": "Generate a specific, time-bound action plan for an account. Returns named stakeholders, talking points with real numbers, deadlines, and ROI projections. Use when CSM asks 'What should I do about [account]?' or 'How do I save [account]?'. Requires WITH_LLM feature flag.",
         "input_schema": {
@@ -283,6 +308,19 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
     elif tool_name == 'get_portfolio_roi_summary':
         from mcp_server.cs_pulse_revenue import get_portfolio_roi_summary
         return get_portfolio_roi_summary(customer_id=customer_id)
+    elif tool_name == 'analyze_root_cause':
+        from llm.causal_reasoning import analyze_root_cause
+        return analyze_root_cause(
+            customer_id=customer_id,
+            account_id=tool_input['account_id'],
+        )
+    elif tool_name == 'explain_kpi_anomaly':
+        from llm.anomaly_explainer import explain_anomaly
+        return explain_anomaly(
+            customer_id=customer_id,
+            account_id=tool_input['account_id'],
+            kpi_code=tool_input['kpi_code'],
+        )
     elif tool_name == 'generate_action_plan':
         from llm.action_plan_generator import generate_action_plan
         return generate_action_plan(
