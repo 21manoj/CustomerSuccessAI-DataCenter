@@ -909,6 +909,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         #   - Fresh customer: no data in DB
         #   - Incremental: data in DB but newer CSVs on disk
         # ----------------------------------------------------------
+        _csv_load_t0 = _time.time()
         if (not data_in_db and has_csv_dir) or has_new_csvs:
             csv_files = [f.name for f in data_dir.iterdir()
                          if f.is_file() and f.suffix == '.csv']
@@ -1078,6 +1079,17 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                 sig_ref = row.get('signal_ref')
                                 if sig_ref and str(sig_ref) != 'nan':
                                     from models import ContextNode as CN_
+                                    # Dedup: skip if a ContextNode with same account+title+date already exists
+                                    _sig_title = str(row.get('content') if str(row.get('content', '')).lower() not in ('nan', '', 'none') else row.get('signal_type', 'Signal'))[:200]
+                                    _sig_date = pd.to_datetime(row.get('signal_date')) if row.get('signal_date') else _dt.utcnow()
+                                    _existing_cn = CN_.query.filter(
+                                        CN_.customer_id == customer_id,
+                                        CN_.account_id == acct_id,
+                                        CN_.node_type == 'SIGNAL',
+                                        CN_.title == _sig_title,
+                                    ).first()
+                                    if _existing_cn:
+                                        continue
                                     sig_node = CN_(
                                         customer_id=customer_id, account_id=acct_id,
                                         node_type='SIGNAL',
@@ -1096,7 +1108,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         steps_completed.append('signals_loaded')
 
                 _db.session.commit()
+                _step_timings_csv = round(_time.time() - _csv_load_t0, 2)
             except Exception as e:
+                _step_timings_csv = round(_time.time() - _csv_load_t0, 2)
                 errors.append(f"csv_loading: {str(e)}")
                 try:
                     _db.session.rollback()
@@ -1104,6 +1118,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     pass
 
             # Steps 4-9: Context graph CSVs
+            _cg_load_t0 = _time.time()
             # On incremental loads (has_new_csvs), skip CG node re-loading if nodes
             # already exist — only load new KPIs/signals above. CG regeneration is
             # handled by the ContextGraphRegenerationSubscriber when health changes.
@@ -1310,21 +1325,34 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     steps_completed.append('engagement_events_loaded')
 
                 # Enhanced Qualitative Signals → SIGNAL ContextNodes
-                # Dedup: track source_event_ids already created (from qualitative_signals.csv
-                # at line 1038-1053) to prevent duplicate ContextNodes.
-                _existing_sig_refs = set()
-                try:
-                    _existing = ContextNode.query.filter_by(
-                        customer_id=customer_id, node_type='SIGNAL', source='customer'
-                    ).with_entities(ContextNode.source_event_id).all()
-                    _existing_sig_refs = {r[0] for r in _existing if r[0]}
-                except Exception:
-                    pass
+                # Skip if qualitative_signals.csv was already processed above
+                # (the QualitativeSignal path at line ~1051 creates ContextNodes
+                # for signals with signal_ref — processing the same file again
+                # here would create duplicates).
+                _eqs_already_processed = any(
+                    'qualitative_signals' in f for f in csv_files
+                )
 
-                eqs_path = data_dir / 'enhanced_qualitative_signals.csv'
-                if not eqs_path.exists():
-                    eqs_path = data_dir / 'context_graph' / 'enhanced_qualitative_signals.csv'
-                if eqs_path.exists() and not _skip_cg_reload:
+                _existing_sig_refs = set()
+                if not _eqs_already_processed:
+                    try:
+                        _existing = ContextNode.query.filter_by(
+                            customer_id=customer_id, node_type='SIGNAL', source='customer'
+                        ).with_entities(ContextNode.source_event_id).all()
+                        _existing_sig_refs = {r[0] for r in _existing if r[0]}
+                    except Exception:
+                        pass
+
+                # Only process enhanced_qualitative_signals.csv (old format) if
+                # qualitative_signals.csv wasn't already handled above
+                eqs_path = None
+                if not _eqs_already_processed:
+                    eqs_path = data_dir / 'enhanced_qualitative_signals.csv'
+                    if not eqs_path.exists():
+                        eqs_path = data_dir / 'context_graph' / 'enhanced_qualitative_signals.csv'
+                    if not eqs_path.exists():
+                        eqs_path = None
+                if eqs_path and not _skip_cg_reload:
                     df_eqs = pd.read_csv(str(eqs_path))
                     _eqs_deduped = 0
                     for _, row in df_eqs.iterrows():
@@ -1556,7 +1584,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     steps_completed.append(f'edges_loaded_{edges_created}')
 
                 steps_completed.append('context_graph_loaded')
+                _step_timings_cg = round(_time.time() - _cg_load_t0, 2)
             except Exception as e:
+                _step_timings_cg = round(_time.time() - _cg_load_t0, 2)
                 errors.append(f"context_graph: {str(e)}")
                 try:
                     _db.session.rollback()
@@ -1564,6 +1594,8 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     pass
 
         else:
+            _step_timings_csv = 0
+            _step_timings_cg = 0
             steps_completed.append(
                 f'data_already_in_db_{len(existing_accounts)}_accounts_{existing_kpi_count}_kpis'
             )
@@ -1576,6 +1608,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             run_proactive_signal_scan,
             calculate_health_scores,
             run_wizard_a_step,
+            run_wizard_b_step,
             run_signal_analyst,
             run_urgent_scanner,
             run_roi_engine,
@@ -1585,11 +1618,15 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         )
 
         _step_timings = {}
+        _step_timings['csv_load'] = _step_timings_csv
+        _step_timings['cg_load'] = _step_timings_cg
 
         # Stage 1: Proactive signal scan
+        _t_stage = _time.time()
         _step = run_proactive_signal_scan(customer_id)
         if _step:
             steps_completed.append(_step)
+        _step_timings['signal_scan'] = round(_time.time() - _t_stage, 2)
 
         # Stage 2: Health score calculation (immutable — only new months)
         acct_list = Account.query.filter_by(customer_id=customer_id).all()
@@ -1604,9 +1641,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         _step_timings.update(_health_timings)
 
         # Publish health events for downstream subscribers
+        _t_stage = _time.time()
         if _changed_account_ids:
             existing_acct_ids = [a.account_id for a in acct_list]
             publish_health_events(customer_id, existing_acct_ids)
+        _step_timings['event_publish'] = round(_time.time() - _t_stage, 2)
 
         # Stage 3: Wizard A — arc classification (incremental)
         _wa_step, _wa_duration = run_wizard_a_step(customer_id, _changed_account_ids, mode)
@@ -1614,23 +1653,37 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             steps_completed.append(_wa_step)
         _step_timings['wizard_a'] = _wa_duration
 
+        # Stage 3b: Wizard B — pattern analysis (auto after Wizard A, needs ≥5 journeys)
+        _wb_step, _wb_duration = run_wizard_b_step(customer_id)
+        if _wb_step:
+            steps_completed.append(_wb_step)
+        _step_timings['wizard_b'] = _wb_duration
+
         # Stage 4: Signal analyst (Layer A)
+        _t_stage = _time.time()
         run_signal_analyst(customer_id)
+        _step_timings['signal_analyst'] = round(_time.time() - _t_stage, 2)
 
         # Stage 5: Urgent signal scanner (Layer C)
+        _t_stage = _time.time()
         _urgent_step = run_urgent_scanner(customer_id)
         if _urgent_step:
             steps_completed.append(_urgent_step)
+        _step_timings['urgent_scanner'] = round(_time.time() - _t_stage, 2)
 
         # Stage 6: ROI engine
+        _t_stage = _time.time()
         _roi_step = run_roi_engine(customer_id)
         if _roi_step:
             steps_completed.append(_roi_step)
+        _step_timings['roi_engine'] = round(_time.time() - _t_stage, 2)
 
         # Stage 7: QDRANT indexing
+        _t_stage = _time.time()
         _qdrant_step = run_qdrant_indexing(customer_id)
         if _qdrant_step:
             steps_completed.append(_qdrant_step)
+        _step_timings['qdrant'] = round(_time.time() - _t_stage, 2)
 
         # ── Result + tracking ──
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'

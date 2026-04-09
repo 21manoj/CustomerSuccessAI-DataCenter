@@ -503,11 +503,53 @@ class PatternAnalyzer:
         if not self.customer_id:
             return
 
-        # Load account ARR map: account_id → revenue (float)
+        # Load account ARR map: account_id → STARTING revenue (before lifecycle events).
+        # Account.revenue is post-lifecycle (churned=$0, expanded=new ARR).
+        # We reconstruct starting ARR by reversing definitive lifecycle outcomes.
         accounts = Account.query.filter_by(customer_id=self.customer_id).all()
-        arr_map = {a.account_id: float(a.revenue or 0) for a in accounts}
+        _current_arr = {a.account_id: float(a.revenue or 0) for a in accounts}
 
-        # Load OUTCOME revenue per account: account_id → {protected, expansion, lost}
+        # Reverse lifecycle events to get starting ARR
+        _lifecycle_deltas = {}  # account_id → net ARR change from lifecycle
+        _lc_outcomes = (
+            ContextNode.query
+            .filter(
+                ContextNode.customer_id == self.customer_id,
+                ContextNode.node_type == 'OUTCOME',
+                ContextNode.node_subtype.in_(['churn_lost', 'contraction', 'expansion_closed', 'new_logo']),
+                ContextNode.revenue_impact.isnot(None),
+            )
+            .all()
+        )
+        for n in _lc_outcomes:
+            _lifecycle_deltas.setdefault(n.account_id, 0.0)
+            _lifecycle_deltas[n.account_id] += float(n.revenue_impact or 0)
+
+        # starting_arr = current_arr - net_delta
+        # e.g., Eiger: current=$0, delta=-$12M → starting = $0 - (-$12M) = $12M
+        # e.g., Grindelwald: current=$12.76M, delta=+$3.3M → starting = $12.76M - $3.3M = $9.45M
+        arr_map = {}
+        for a in accounts:
+            current = float(a.revenue or 0)
+            delta = _lifecycle_deltas.get(a.account_id, 0.0)
+            arr_map[a.account_id] = current - delta  # starting ARR
+        # Save for use in forecast_portfolio_nrr (which needs same starting ARR basis)
+        self._starting_arr_map = arr_map
+
+        # Load OUTCOME revenue per account for NRR calculation.
+        #
+        # IMPORTANT: NRR uses ONLY definitive lifecycle ARR events — actual
+        # revenue movements (churn, contraction, expansion, new logo).
+        # Arc-based narrative outcomes (revenue_protected, churn_averted,
+        # revenue_at_risk) are story annotations, NOT actual ARR changes.
+        # Including them double-counts and inflates NRR.
+        #
+        # Definitive events:  churn_lost, contraction → lost bucket
+        #                     expansion_closed, new_logo → expansion bucket
+        # Narrative events:   everything else → tracked separately for drill-down
+        _DEFINITIVE_LOST = {'churn_lost', 'contraction'}
+        _DEFINITIVE_EXPANSION = {'expansion_closed', 'new_logo'}
+
         outcome_nodes = (
             ContextNode.query
             .filter(
@@ -520,11 +562,24 @@ class PatternAnalyzer:
         revenue_by_account: Dict[int, Dict[str, float]] = defaultdict(
             lambda: {'protected': 0.0, 'expansion': 0.0, 'lost': 0.0}
         )
+        self._new_logo_account_ids = set()
+        _new_logo_account_ids = self._new_logo_account_ids
         for n in outcome_nodes:
-            impact = abs(float(n.revenue_impact or 0)) * float(n.confidence or 1.0)
-            bucket = n.revenue_impact_type or 'expansion'
-            if bucket in ('protected', 'expansion', 'lost'):
-                revenue_by_account[n.account_id][bucket] += impact
+            impact = abs(float(n.revenue_impact or 0))
+            raw_type = n.revenue_impact_type or n.node_subtype or ''
+            if raw_type in _DEFINITIVE_LOST:
+                revenue_by_account[n.account_id]['lost'] += impact
+            elif raw_type == 'new_logo':
+                # New logos contribute expansion but are NOT in NRR denominator
+                revenue_by_account[n.account_id]['expansion'] += impact
+                _new_logo_account_ids.add(n.account_id)
+            elif raw_type in _DEFINITIVE_EXPANSION:
+                revenue_by_account[n.account_id]['expansion'] += impact
+            # Narrative outcomes (churn_averted, revenue_protected, etc.)
+            # are NOT counted in NRR — they're drill-down context only
+
+        # Save for forecast_portfolio_nrr (per-account lifecycle revenue)
+        self._nrr_revenue_by_account = dict(revenue_by_account)
 
         # Group journeys by pattern and compute NRR per group
         patterns = defaultdict(list)
@@ -541,7 +596,11 @@ class PatternAnalyzer:
             for j in journeys:
                 aid = j.get('account_id', 0)
                 arr = arr_map.get(aid, 0)
-                total_arr += arr
+
+                # New logos don't go in NRR denominator — they're new revenue,
+                # not retained revenue from the starting cohort.
+                if aid not in _new_logo_account_ids:
+                    total_arr += arr
 
                 rev = revenue_by_account.get(aid, {})
                 total_protected += rev.get('protected', 0)
@@ -553,9 +612,10 @@ class PatternAnalyzer:
                     intervention_successes += 1
 
             n = len(journeys)
-            # NRR = (retained ARR + expansion - contraction) / starting ARR
+            # NRR = (starting ARR - churn - contraction + expansion) / starting ARR
+            # Uses only definitive lifecycle events, not narrative annotations.
             if total_arr > 0:
-                net_revenue = total_arr + total_expansion + total_protected - total_lost
+                net_revenue = total_arr - total_lost + total_expansion
                 avg_nrr = net_revenue / total_arr
             else:
                 avg_nrr = 1.0
@@ -645,7 +705,11 @@ class PatternAnalyzer:
         from datetime import datetime, timedelta, date
 
         accounts_db = Account.query.filter_by(customer_id=self.customer_id).all()
-        arr_map = {a.account_id: float(a.revenue or 0) for a in accounts_db}
+        # Use starting ARR (reconstructed in correlate_nrr_impact) for consistent denominator.
+        # Falls back to current ARR if correlate_nrr_impact hasn't run.
+        arr_map = getattr(self, '_starting_arr_map', None) or {
+            a.account_id: float(a.revenue or 0) for a in accounts_db
+        }
         arc_map = {a.account_id: a.arc_type for a in accounts_db}
 
         # Renewal dates from profile_metadata
@@ -720,61 +784,159 @@ class PatternAnalyzer:
         # Build per-account forecast
         account_forecasts = []
         total_arr = 0.0
-        weighted_nrr_sum = 0.0
+        _new_logos = getattr(self, '_new_logo_account_ids', set())
 
-        patterns = defaultdict(list)
-        for j in self.journeys:
-            patterns[j['pattern_type']].append(j)
+        # ── FIX 3: Direct per-account NRR from lifecycle outcomes ──
+        # Instead of pattern-group averages, compute each account's actual
+        # NRR contribution from definitive lifecycle events.
+        _rev_by_account = getattr(self, '_nrr_revenue_by_account', {})
 
         forecast_months = max(1, forecast_horizon_days // 30)
 
-        for pattern_type, journeys in patterns.items():
+        for j in self.journeys:
+            aid = j.get('account_id', 0)
+            arr = arr_map.get(aid, 0)
+            pattern_type = j.get('pattern_type', '')
+
+            if aid in _new_logos:
+                continue  # new logos not in NRR denominator
+
+            total_arr += arr
+
+            # Per-account NRR from actual lifecycle events
+            rev = _rev_by_account.get(aid, {})
+            acct_lost = rev.get('lost', 0)
+            acct_expansion = rev.get('expansion', 0)
+            acct_nrr = (arr - acct_lost + acct_expansion) / arr if arr > 0 else 1.0
+
             corr = self.nrr_correlations.get(pattern_type, {})
-            pattern_nrr = corr.get('avg_nrr', 1.0)
             intervention_rate = corr.get('intervention_success_rate', 0.0)
 
-            for j in journeys:
-                aid = j.get('account_id', 0)
-                arr = arr_map.get(aid, 0)
-                total_arr += arr
-                weighted_nrr_sum += arr * pattern_nrr
+            health_end = j.get('ending_health', 0)
+            slope = slope_map.get(aid, 0.0)
+            health_traj = self._extrapolate_health(health_end, slope, forecast_months)
 
-                health_end = j.get('ending_health', 0)
-                slope = slope_map.get(aid, 0.0)
-                health_traj = self._extrapolate_health(health_end, slope, forecast_months)
+            # Renewal urgency
+            renewal_date = renewal_map.get(aid)
+            renewal_urgency = None
+            days_to_renewal = None
+            if renewal_date:
+                days_to_renewal = (renewal_date - date.today()).days
+                projected_at_renewal = health_traj[-1]['projected_health'] if health_traj else health_end
+                if days_to_renewal <= 30 and projected_at_renewal < 50:
+                    renewal_urgency = 'urgent'
+                elif days_to_renewal <= 60 and projected_at_renewal < 60:
+                    renewal_urgency = 'warning'
+                elif days_to_renewal <= 90 and slope < -1:
+                    renewal_urgency = 'watch'
 
-                # Renewal urgency
-                renewal_date = renewal_map.get(aid)
-                renewal_urgency = None
-                days_to_renewal = None
-                if renewal_date:
-                    days_to_renewal = (renewal_date - date.today()).days
-                    projected_at_renewal = health_traj[-1]['projected_health'] if health_traj else health_end
-                    if days_to_renewal <= 30 and projected_at_renewal < 50:
-                        renewal_urgency = 'urgent'
-                    elif days_to_renewal <= 60 and projected_at_renewal < 60:
-                        renewal_urgency = 'warning'
-                    elif days_to_renewal <= 90 and slope < -1:
-                        renewal_urgency = 'watch'
+            # FIX 1: Use Account.arc_type for playbook lookup (matches arc_playbook_map.json)
+            acct_arc = arc_map.get(aid) or pattern_type
 
-                account_forecasts.append({
-                    'account_id': aid,
-                    'account_name': j.get('account_name', f'Account {aid}'),
-                    'arr': arr,
-                    'pattern': pattern_type,
-                    'current_nrr': pattern_nrr,
-                    'health_start': j.get('starting_health', 0),
-                    'health_end': health_end,
-                    'health_slope_30d': round(slope, 2),
-                    'health_trajectory': health_traj,
-                    'intervention_success_rate': intervention_rate,
-                    'renewal_date': str(renewal_date) if renewal_date else None,
-                    'days_to_renewal': days_to_renewal,
-                    'renewal_urgency': renewal_urgency,
-                })
+            account_forecasts.append({
+                'account_id': aid,
+                'account_name': j.get('account_name', f'Account {aid}'),
+                'arr': arr,
+                'pattern': pattern_type,
+                'arc_type': acct_arc,
+                'current_nrr': acct_nrr,
+                'health_start': j.get('starting_health', 0),
+                'health_end': health_end,
+                'health_lowest': j.get('lowest_health', health_end),
+                'health_slope_30d': round(slope, 2),
+                'health_trajectory': health_traj,
+                'intervention_success_rate': intervention_rate,
+                'renewal_date': str(renewal_date) if renewal_date else None,
+                'days_to_renewal': days_to_renewal,
+                'renewal_urgency': renewal_urgency,
+            })
 
-        # Current portfolio NRR (revenue-weighted)
-        current_nrr = weighted_nrr_sum / total_arr if total_arr > 0 else 1.0
+        # ── Identify intervention-saved accounts ──────────────────────
+        # An account was "saved by CS Pulse" if:
+        #   1. It had a crisis/recovery journey (health dipped significantly)
+        #   2. Health recovered (ending > lowest + 10)
+        #   3. It has positive outcomes (churn_averted, revenue_protected, renewal_secured)
+        # For the "without CS Pulse" scenario, these accounts would have churned.
+        from models import ContextNode as _CN, PlaybookExecutionV2 as _PBE
+        _positive_outcome_types = {
+            'churn_averted', 'revenue_protected', 'renewal_secured',
+            'renewal_confirmed', 'engagement_recovery',
+        }
+
+        # Build account status map (churned accounts can't be "saved")
+        _status_map = {a.account_id: (a.account_status or 'active') for a in accounts_db}
+
+        saved_account_ids = set()
+        saved_arr = 0.0
+        for j in self.journeys:
+            aid = j.get('account_id', 0)
+
+            # Hard rule: churned accounts are NOT saved
+            if _status_map.get(aid, 'active') == 'churned':
+                continue
+
+            ending = j.get('ending_health') or 0
+            lowest = j.get('lowest_health') or j.get('starting_health') or ending
+            starting = j.get('starting_health') or ending
+
+            # Check 1: health recovered from a dip (ending meaningfully above lowest)
+            health_recovered = ending > lowest + 10
+
+            # Check 2: account had crisis-level health at some point
+            was_in_crisis = lowest < 50 or starting < 50
+
+            if not (health_recovered and was_in_crisis):
+                continue
+
+            # Check 3: has positive intervention outcomes in context graph
+            has_positive_outcome = False
+            try:
+                positive_count = (
+                    _CN.query
+                    .filter(
+                        _CN.customer_id == self.customer_id,
+                        _CN.account_id == aid,
+                        _CN.node_type == 'OUTCOME',
+                        _CN.node_subtype.in_(_positive_outcome_types),
+                    )
+                    .count()
+                )
+                has_positive_outcome = positive_count > 0
+            except Exception:
+                # Fallback: check if playbook was executed on this account
+                try:
+                    pb_count = _PBE.query.filter_by(account_id=aid).count()
+                    has_positive_outcome = pb_count > 0
+                except Exception:
+                    pass
+
+            if has_positive_outcome:
+                saved_account_ids.add(aid)
+                saved_arr += arr_map.get(aid, 0)
+
+        # ── FIX 3: Compute NRR directly from per-account lifecycle outcomes ──
+        # "With CS Pulse" = actual NRR from definitive events
+        # "Without CS Pulse" = saved accounts would have churned
+        _total_lost = sum(r.get('lost', 0) for aid, r in _rev_by_account.items()
+                         if aid not in _new_logos)
+        _total_expansion = sum(r.get('expansion', 0) for aid, r in _rev_by_account.items()
+                              if aid not in _new_logos)
+        current_nrr = (total_arr - _total_lost + _total_expansion) / total_arr if total_arr > 0 else 1.0
+
+        # Without CS Pulse: saved accounts would have churned entirely.
+        # Other accounts keep their actual lifecycle outcomes.
+        without_nrr_numerator = 0.0
+        for j in self.journeys:
+            aid = j.get('account_id', 0)
+            if aid in _new_logos:
+                continue
+            arr = arr_map.get(aid, 0)
+            if aid in saved_account_ids:
+                without_nrr_numerator += 0  # full churn — $0 retained
+            else:
+                rev = _rev_by_account.get(aid, {})
+                without_nrr_numerator += arr - rev.get('lost', 0) + rev.get('expansion', 0)
+        without_cs_pulse_nrr = without_nrr_numerator / total_arr if total_arr > 0 else 1.0
 
         # ── Trajectory: portfolio NRR at T+30/60/90 ────────────────────
         # Use health-to-churn mapping to project NRR at each horizon
@@ -821,8 +983,8 @@ class PatternAnalyzer:
 
                 projected_save = acct['arr'] * (intervened_nrr - acct['current_nrr'])
 
-                # Playbook cost from arc mapping
-                arc = acct['pattern']
+                # FIX 1: Use arc_type (from Wizard A) for playbook lookup
+                arc = acct.get('arc_type') or acct['pattern']
                 playbooks = arc_playbook_map.get(arc, [])
                 primary_pb = playbooks[0] if playbooks else None
                 pb_cost = _get_playbook_cost(primary_pb, acct['arr']) if primary_pb else 0
@@ -884,24 +1046,30 @@ class PatternAnalyzer:
         total_intervention_cost = 0
 
         for acct in account_forecasts:
-            health_now = acct['health_end']
-            if health_now >= 70:
-                continue  # healthy accounts not at risk
-
+            aid = acct['account_id']
             arr = acct['arr']
-            churn_before = _churn_prob(health_now)
-            # Project health at T+90 to estimate post-intervention churn
-            proj_h = acct['health_trajectory'][-1]['projected_health'] if acct.get('health_trajectory') else health_now
-            churn_after = _churn_prob(proj_h)
+            health_now = acct['health_end']
+            health_lowest = acct.get('health_lowest', health_now)
+
+            # FIX 2: Revenue waterfall uses PAST recovery (lowest → current),
+            # not future projection. This attributes value to interventions
+            # that already happened, not speculative future improvement.
+            # "Before intervention" = churn probability at lowest health point
+            # "After intervention" = churn probability at current health
+            churn_before = _churn_prob(health_lowest)
+            churn_after = _churn_prob(health_now)
 
             expected_loss_before = churn_before * arr
             expected_loss_after = churn_after * arr
             gross_saved = max(0, expected_loss_before - expected_loss_after)
             attributed = gross_saved * ATTRIBUTION_FACTOR
 
-            # Playbook cost — use Account.arc_type (Wizard A, stable) not journey pattern
-            aid = acct['account_id']
-            acct_arc = arc_map.get(aid) or acct['pattern']
+            # Skip accounts that never had meaningful risk
+            if gross_saved < 1000 and health_lowest >= 70:
+                continue
+
+            # Playbook cost — use arc_type for lookup
+            acct_arc = arc_map.get(aid) or acct.get('arc_type') or acct['pattern']
             pbs = arc_playbook_map.get(acct_arc, [])
             pb = pbs[0] if pbs else None
             pb_cost = _get_playbook_cost(pb, arr) if pb else 0
@@ -917,10 +1085,10 @@ class PatternAnalyzer:
                 'account_id': acct['account_id'],
                 'account_name': acct['account_name'],
                 'arr': arr,
+                'health_lowest': round(health_lowest, 1),
                 'health_now': round(health_now, 1),
-                'projected_health_t90': round(proj_h, 1),
-                'churn_prob_now_pct': round(churn_before * 100, 1),
-                'churn_prob_projected_pct': round(churn_after * 100, 1),
+                'churn_prob_at_lowest_pct': round(churn_before * 100, 1),
+                'churn_prob_now_pct': round(churn_after * 100, 1),
                 'expected_loss': round(expected_loss_before, 0),
                 'residual_risk': round(expected_loss_after, 0),
                 'gross_saved': round(gross_saved, 0),
@@ -973,8 +1141,12 @@ class PatternAnalyzer:
         pattern_breakdown.sort(key=lambda x: x['nrr_pct'])
 
         self.portfolio_nrr_forecast = {
+            'without_cs_pulse_nrr_pct': round(without_cs_pulse_nrr * 100, 2),
             'current_nrr_pct': round(current_nrr * 100, 2),
             'with_interventions_nrr_pct': round(with_interventions_nrr * 100, 2),
+            'cs_pulse_delta_pct': round((current_nrr - without_cs_pulse_nrr) * 100, 2),
+            'cs_pulse_arr_protected': round(saved_arr, 2),
+            'cs_pulse_accounts_saved': len(saved_account_ids),
             'delta_arr': round(delta_arr, 2),
             'total_arr': round(total_arr, 2),
             'total_accounts': len(account_forecasts),
@@ -987,8 +1159,12 @@ class PatternAnalyzer:
             'top_interventions': top_interventions[:10],
         }
 
-        print(f"\n   Portfolio NRR: {current_nrr * 100:.1f}% → {with_interventions_nrr * 100:.1f}% "
-              f"(+${delta_arr:,.0f} if interventions succeed)")
+        print(f"\n   Without CS Pulse: {without_cs_pulse_nrr * 100:.1f}% NRR")
+        print(f"   With CS Pulse:    {current_nrr * 100:.1f}% NRR "
+              f"(+{(current_nrr - without_cs_pulse_nrr) * 100:.1f}pp, "
+              f"${saved_arr:,.0f} protected, {len(saved_account_ids)} accounts saved)")
+        print(f"   With further interventions: {with_interventions_nrr * 100:.1f}% NRR "
+              f"(+${delta_arr:,.0f})")
         print(f"   At-risk accounts: {len(top_interventions)} / {len(account_forecasts)} "
               f"(${total_intervention_arr:,.0f} ARR)")
         if renewals_at_risk:

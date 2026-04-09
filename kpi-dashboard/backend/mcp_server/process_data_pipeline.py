@@ -262,6 +262,96 @@ def run_wizard_a_step(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Stage 3b: Wizard B — Pattern analysis (auto after Wizard A)
+# ═══════════════════════════════════════════════════════════════
+
+MIN_ACCOUNTS_FOR_WIZARD_B = 5  # Need enough accounts per pattern for meaningful analysis
+
+
+def run_wizard_b_step(customer_id: int) -> Tuple[Optional[str], float]:
+    """Run Wizard B pattern analysis if enough journey data exists.
+
+    Wizard B reads JourneyData (written by Wizard A) and produces:
+    - Pattern profiles (cross-account stats per arc type)
+    - Transition matrix (phase transition probabilities)
+    - Early warning rules
+    - NRR correlations (pattern → retention impact)
+    - Portfolio NRR forecast (current vs with-interventions)
+
+    Skips if fewer than MIN_ACCOUNTS_FOR_WIZARD_B journeys exist.
+
+    Returns (step_description, duration_seconds).
+    """
+    t0 = time.time()
+    try:
+        from models import JourneyData
+
+        journey_count = JourneyData.query.filter_by(customer_id=customer_id).count()
+        if journey_count < MIN_ACCOUNTS_FOR_WIZARD_B:
+            logger.info(
+                f"Wizard B skipped: only {journey_count} journeys for customer {customer_id} "
+                f"(need >= {MIN_ACCOUNTS_FOR_WIZARD_B})"
+            )
+            return None, round(time.time() - t0, 2)
+
+        from wizards.wizard_b_pattern_db import run_wizard_b
+        result = run_wizard_b(customer_id)
+
+        duration = round(time.time() - t0, 2)
+
+        # Cache NRR forecast in WizardLearning for get_nrr_forecast to read
+        nrr_intel = result.get('nrr_intelligence', {})
+        if nrr_intel.get('forecast'):
+            try:
+                from models import WizardLearning
+                from extensions import db
+
+                existing = WizardLearning.query.filter_by(
+                    customer_id=customer_id, is_active=True
+                ).first()
+
+                learnings_data = existing.learnings if existing else {}
+                learnings_data['portfolio_nrr_forecast'] = nrr_intel['forecast']
+                learnings_data['pattern_profiles'] = result.get('pattern_profiles', {})
+                learnings_data['nrr_correlations'] = nrr_intel.get('correlations', {})
+
+                if existing:
+                    existing.learnings = learnings_data
+                    existing.version = int(existing.version or 0) + 1
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(existing, 'learnings')
+                else:
+                    wl = WizardLearning(
+                        customer_id=customer_id,
+                        is_active=True,
+                        version=1,
+                        learnings=learnings_data,
+                    )
+                    db.session.add(wl)
+                db.session.commit()
+            except Exception as cache_err:
+                logger.warning(f"Wizard B NRR cache write failed (non-fatal): {cache_err}")
+
+        logger.info(
+            f"Wizard B complete: customer={customer_id} "
+            f"patterns={result.get('total_patterns', 0)} "
+            f"transitions={result.get('total_transitions', 0)} "
+            f"warnings={result.get('total_warnings', 0)} "
+            f"journeys={result.get('total_journeys', 0)} "
+            f"nrr_forecast={'yes' if nrr_intel.get('forecast') else 'no'} "
+            f"duration={duration}s"
+        )
+        return (
+            f"wizard_b_{result.get('total_patterns', 0)}_patterns_"
+            f"{result.get('total_journeys', 0)}_journeys"
+        ), duration
+
+    except Exception as e:
+        logger.warning(f"Wizard B failed (non-fatal): {e}", exc_info=True)
+        return None, round(time.time() - t0, 2)
+
+
+# ═══════════════════════════════════════════════════════════════
 # Stage 4: Signal Analyst (Layer A)
 # ═══════════════════════════════════════════════════════════════
 

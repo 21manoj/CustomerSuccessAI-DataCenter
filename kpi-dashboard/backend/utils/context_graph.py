@@ -391,15 +391,17 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         'revenue_protected': 'protected', 'churn_averted': 'protected',
         'renewal_secured': 'protected', 'engagement_recovery': 'protected',
         'intervention_outcome': 'protected', 'playbook_outcome': 'protected',
+        'renewal_confirmed': 'protected',
         # Lost bucket
         'revenue_at_risk': 'lost', 'revenue_lost': 'lost',
         'engagement_decline': 'lost', 'renewal_uncertainty': 'lost',
         'capacity_constraint': 'lost', 'churn_risk': 'lost',
+        'churn_lost': 'lost', 'contraction': 'lost',
         'partial_recovery': 'lost', 'partner_friction': 'lost',
         # Expansion bucket
         'expansion_closed': 'expansion', 'revenue_expanded': 'expansion',
         'expansion_approved': 'expansion', 'expansion_opportunity': 'expansion',
-        'revenue_growth': 'expansion',
+        'revenue_growth': 'expansion', 'new_logo': 'expansion',
     }
     for n in outcome_nodes:
         impact = abs(float(n.revenue_impact) * float(n.confidence or 1.0))

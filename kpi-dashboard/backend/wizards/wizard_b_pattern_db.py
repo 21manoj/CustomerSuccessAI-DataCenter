@@ -60,12 +60,8 @@ def run_wizard_b(customer_id: int) -> dict:
             for k, v in analyzer.nrr_correlations.items()
         }
     if analyzer.portfolio_nrr_forecast:
-        nrr_summary['forecast'] = {
-            'current_nrr_pct': analyzer.portfolio_nrr_forecast.get('current_nrr_pct'),
-            'with_interventions_nrr_pct': analyzer.portfolio_nrr_forecast.get('with_interventions_nrr_pct'),
-            'delta_arr': analyzer.portfolio_nrr_forecast.get('delta_arr'),
-            'at_risk_accounts': analyzer.portfolio_nrr_forecast.get('at_risk_accounts'),
-        }
+        # Pass through full forecast — includes before/after CS Pulse fields
+        nrr_summary['forecast'] = analyzer.portfolio_nrr_forecast
 
     return {
         'status': 'completed',
