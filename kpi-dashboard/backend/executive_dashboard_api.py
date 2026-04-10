@@ -1186,6 +1186,7 @@ def cfo_dashboard():
             wf_expected_loss += entry['annual_loss']
 
         nrr_with_intervention = nrr_projection
+        nrr_current_without = nrr_projection  # default: same as projection (no CS Pulse delta)
         if total_arr > 0 and wf_attributed > 0:
             nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
 
@@ -1201,16 +1202,20 @@ def cfo_dashboard():
                 wb_without = nrr_f.get('without_cs_pulse_nrr_pct')
                 if wb_nrr is not None:
                     nrr_projection = round(float(wb_nrr), 1)
-                    nrr_with_intervention = nrr_projection
+                    # NRR card: "Without CS Pulse" vs "With CS Pulse"
+                    # nrr_current = without CS Pulse (the counterfactual)
+                    # nrr_with_intervention = actual (with CS Pulse)
+                    nrr_current_without = round(float(wb_without), 1) if wb_without else nrr_projection
+                    nrr_with_intervention = nrr_projection  # actual NRR = "with CS Pulse"
+                    # Override nrr_current to show the "before" story
+                    # (the variable is confusingly named — it means "baseline to compare against")
+
+                    # GRR: NRR minus expansion contribution (~5pp typical)
+                    grr_projection = round(float(wb_nrr) - 5, 0)
+
+                    # ARR protected by CS Pulse
                     wb_arr = nrr_f.get('cs_pulse_arr_protected', 0)
-                    if wb_arr:
-                        nrr_with_intervention = round(
-                            nrr_projection + (float(wb_arr) / max(total_arr, 1)) * 0.5, 1
-                        )
-                    # GRR from Wizard B (NRR minus expansion contribution)
-                    wb_delta = nrr_f.get('cs_pulse_delta_pct', 0)
-                    if wb_delta and float(wb_delta) > 0:
-                        grr_projection = round(float(wb_nrr) - 5, 0)  # GRR ≈ NRR - expansion margin
+                    wf_attributed = float(wb_arr) if wb_arr else wf_attributed
 
                 # Waterfall from Wizard B revenue_waterfall (more accurate than formula)
                 wb_wf = nrr_f.get('revenue_waterfall', {})
@@ -1248,7 +1253,7 @@ def cfo_dashboard():
                 'account_count': len(at_risk_accounts_list),
             },
             # NRR/GRR dual
-            'nrr_current': nrr_projection,
+            'nrr_current': nrr_current_without,
             'nrr_with_intervention': nrr_with_intervention,
             'nrr_arr_protectable': round(wf_attributed, 0),
             'nrr_waterfall': {

@@ -1059,21 +1059,21 @@ const CRODashboard: React.FC = () => {
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Net Revenue Retention</p>
               <div className="flex items-end gap-3 mb-2">
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Current (health-weighted)</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Without CS Pulse</p>
                   <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
                 </div>
                 <div className="text-gray-600 text-lg pb-1">&rarr;</div>
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse</p>
                   <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
                 </div>
               </div>
               {d.nrr_arr_protected > 0 && (
                 <p className="text-[10px] text-green-400/80">
-                  {formatCompact(d.nrr_arr_protected)} ARR protectable
+                  {formatCompact(d.nrr_arr_protected)} ARR protected
                 </p>
               )}
-              <p className="text-[9px] text-gray-600 mt-1">Health-weighted: derived from account health scores &times; ARR. Playbook projection: if interventions run on at-risk accounts.</p>
+              <p className="text-[9px] text-gray-600 mt-1">NRR from lifecycle outcomes. Without CS Pulse = counterfactual if saved accounts had churned.</p>
             </div>
           </div>
 

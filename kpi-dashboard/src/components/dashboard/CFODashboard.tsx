@@ -1060,12 +1060,12 @@ const CFODashboard: React.FC = () => {
               </div>
               <div className="flex items-end gap-6 mb-3">
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Current NRR (Power-of-1)</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Without CS Pulse</p>
                   <p className={`text-3xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
                 </div>
                 <div className="text-gray-600 text-xl pb-1">&rarr;</div>
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse</p>
                   <p className="text-3xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
                 </div>
                 <div className="border-l border-gray-700/50 pl-6">
@@ -1074,9 +1074,9 @@ const CFODashboard: React.FC = () => {
                 </div>
               </div>
               {d.nrr_arr_protectable > 0 && (
-                <p className="text-[10px] text-green-400/80">{formatCompact(d.nrr_arr_protectable)} ARR protectable with intervention</p>
+                <p className="text-[10px] text-green-400/80">{formatCompact(d.nrr_arr_protectable)} ARR protected by CS Pulse</p>
               )}
-              <p className="text-[9px] text-gray-600 mt-1">Power-of-1 model: 1% KPI improvement scaled by ARR. CRO view uses health-weighted baseline (may differ). Playbook projection: if interventions run on at-risk accounts.</p>
+              <p className="text-[9px] text-gray-600 mt-1">NRR derived from actual lifecycle outcomes (churn, contraction, expansion). Without CS Pulse = counterfactual if saved accounts had churned.</p>
             </div>
 
             {/* Cost of Inaction — with formula transparency */}
