@@ -1655,20 +1655,76 @@ class ManifestCSVGenerator:
                     ])
                     self._registry.register_signal(aid, sig_ref, date_str)
 
-            _csm_actions = intervention.get('csm_actions') or intervention.get('actions', [])
-            if _emit_intervention and _csm_actions:
-                for ca in _csm_actions:
+            # CSM actions → moved to generate_decisions_csv (they are DECISION nodes, not signals)
+            # Here we emit automation signals triggered by key_signals
+
+            # Automation signals: CS Pulse system reactions to key_signal events
+            _AUTOMATION_TRIGGERS = {
+                'champion_departure':   ('health_score_alert',  'positive', 0.8,
+                    'CS Pulse detected champion departure. Health recalculated → Critical. PB-03 queued. VP CS notified.'),
+                'usage_decline':        ('health_score_alert',  'negative', -0.5,
+                    'CS Pulse: DAU threshold breach detected. Account health declining. Intervention window opened.'),
+                'nps_decline':          ('health_score_alert',  'negative', -0.4,
+                    'CS Pulse: NPS drop below threshold. Churn probability score updated. CSM task queued.'),
+                'competitor_mention':   ('sla_started',         'negative', -0.6,
+                    'CS Pulse: Competitor evaluation signal. 30-day intervention SLA started. Battlecard auto-generated for CSM.'),
+                'competitor_evaluation':('sla_started',         'negative', -0.6,
+                    'CS Pulse: Decision maker evaluating competitor. 30-day intervention SLA started. Internal champion path activated.'),
+                'support_spike':        ('support_pod_alert',   'negative', -0.5,
+                    'CS Pulse: Support ticket volume 4x threshold. Dedicated pod assignment triggered. CSAT tracking activated.'),
+                'csat_drop':            ('health_score_alert',  'negative', -0.4,
+                    'CS Pulse: CSAT dropped below 3.0. Executive sponsor flagged for direct outreach.'),
+                'feature_adoption_drop':('health_score_alert',  'negative', -0.3,
+                    'CS Pulse: Feature adoption collapse detected. Churn probability elevated to high.'),
+                'budget_review':        ('risk_alert',          'negative', -0.3,
+                    'CS Pulse: Economic buyer budget scrutiny detected. ROI report auto-generated for champion to present to CFO.'),
+                'login_decline':        ('health_score_alert',  'negative', -0.3,
+                    'CS Pulse: Login frequency declining. Usage health pillar score updated.'),
+                'renewal_risk':         ('sla_started',         'negative', -0.5,
+                    'CS Pulse: Renewal flagged at risk. VP CS escalation SLA started. 5-day response window.'),
+            }
+
+            if _emit_intervention:
+                pb = intervention.get('playbook', '')
+                key_sigs = acct.get('key_signals', [])
+                # Playbook-triggered signal: emitted just before first action date
+                if pb and key_sigs:
+                    first_sig_date = min(
+                        datetime.strptime(s.get('date', '2026-01-01'), '%Y-%m-%d')
+                        for s in key_sigs
+                    )
+                    trigger_date = (first_sig_date + timedelta(days=3)).strftime('%Y-%m-%d')
                     counter += 1
-                    sig_ref = f'{phase_prefix}csm_action_{aid}_{counter}'
-                    date_str = ca.get('date', '2026-02-01')
+                    pb_sig_ref = f'{phase_prefix}pb_trigger_{aid}_{counter}'
                     w.writerow([
-                        sig_ref, aid, date_str,
-                        'csm_action',
-                        f'{ca["action"]} -> {ca["outcome"]}',
+                        pb_sig_ref, aid, trigger_date,
+                        'playbook_triggered',
+                        f'CS Pulse triggered {pb} for {acct["name"]}. Risk signals confirmed. Playbook execution started.',
                         'positive', 0.8,
-                        arc, 'intervention', '', sig_ref,
+                        arc, 'intervention', '', pb_sig_ref,
                     ])
-                    self._registry.register_signal(aid, sig_ref, date_str)
+                    self._registry.register_signal(aid, pb_sig_ref, trigger_date)
+
+                # One automation signal per key_signal type
+                emitted_auto_types = set()
+                for ks in key_sigs:
+                    ks_type = ks.get('type', '')
+                    if ks_type in _AUTOMATION_TRIGGERS and ks_type not in emitted_auto_types:
+                        auto_type, auto_sentiment, auto_score, auto_content = _AUTOMATION_TRIGGERS[ks_type]
+                        # Emit 1 day after the triggering signal
+                        ks_date = datetime.strptime(ks.get('date', '2026-01-01'), '%Y-%m-%d')
+                        auto_date = (ks_date + timedelta(days=1)).strftime('%Y-%m-%d')
+                        counter += 1
+                        auto_ref = f'{phase_prefix}auto_{aid}_{counter}'
+                        w.writerow([
+                            auto_ref, aid, auto_date,
+                            auto_type,
+                            auto_content,
+                            auto_sentiment.replace('very_', ''), auto_score,
+                            arc, 'automation', '', auto_ref,
+                        ])
+                        self._registry.register_signal(aid, auto_ref, auto_date)
+                        emitted_auto_types.add(ks_type)
 
             # V3.1: Auto-generated recovery signals for intervention phase
             if _emit_intervention:
@@ -2386,6 +2442,54 @@ class ManifestCSVGenerator:
                 round(rev_impact, 2),
             ])
             self._registry.register_decision(aid, dec_id, dec_date)
+
+        # ── Manifest-defined intervention actions → DECISION nodes ──
+        # intervention.actions are specific CSM/exec steps (e.g. "Emergency stakeholder mapping")
+        # tied to a named playbook. These are Tier 1 decisions with real dates and outcomes.
+        phase_prefix = f'{self.phase}_' if self.phase else ''
+        for idx, acct in enumerate(self.accounts):
+            intervention = acct.get('intervention', {})
+            actions = intervention.get('actions') or intervention.get('csm_actions', [])
+            pb = intervention.get('playbook', '')
+            if not actions:
+                continue
+            aid = self._account_id(idx)
+            arr = acct['arr']
+            cls = acct.get('classification', 'healthy')
+            rev_impact = arr * 0.1 if cls != 'critical' else arr * (-0.1)
+
+            # Identify champion name for decision_maker attribution
+            stakeholders = acct.get('stakeholders', [])
+            champion_name = next(
+                (s['name'] for s in stakeholders if s.get('role') in ('champion', 'executive_sponsor')),
+                'executive_sponsor'
+            )
+            exec_name = next(
+                (s['name'] for s in stakeholders if s.get('role') == 'executive_sponsor'),
+                champion_name
+            )
+
+            for ai, action in enumerate(actions):
+                dec_id = f'{phase_prefix}intervention_dec_{aid}_{ai + 1}'
+                pb_prefix = f'[{pb}] ' if pb else ''
+                title = f'{pb_prefix}{action["action"]} — {acct["name"]}'
+                # Alternate decision maker: first action = champion/CSM, subsequent = exec
+                role = 'executive_sponsor' if ai > 0 else 'champion'
+                person = exec_name if ai > 0 else champion_name
+                chosen = action['action']
+                outcome_desc = action.get('outcome', '')
+                # Title includes person name for rich timeline display
+                rich_title = f'{pb_prefix}{action["action"]} ({person}) — {acct["name"]}'
+                w.writerow([
+                    aid, action.get('date', self.end_date.strftime('%Y-%m-%d')),
+                    dec_id, rich_title[:200],
+                    role, chosen, outcome_desc, 'high',
+                    round(rev_impact, 2),
+                ])
+                self._registry.register_decision(
+                    aid, dec_id,
+                    action.get('date', self.end_date.strftime('%Y-%m-%d'))
+                )
 
         return out.getvalue()
 

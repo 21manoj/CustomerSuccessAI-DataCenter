@@ -1108,16 +1108,25 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     ).first()
                                     if _existing_cn:
                                         continue
+                                    _sig_type = str(row.get('signal_type', 'signal') or 'signal')
+                                    _is_automation = _sig_type in (
+                                        'playbook_triggered', 'health_score_alert',
+                                        'sla_started', 'support_pod_alert', 'risk_alert'
+                                    )
+                                    _sig_phase = str(row.get('phase', '') or row.get('arc_phase', '') or '')
                                     sig_node = CN_(
                                         customer_id=customer_id, account_id=acct_id,
                                         node_type='SIGNAL',
                                         source='customer',
-                                        node_subtype=str(row.get('signal_type', 'signal') or 'signal'),
+                                        node_subtype=_sig_type,
                                         title=str(row.get('content') if str(row.get('content', '')).lower() not in ('nan', '', 'none') else row.get('signal_type', 'Signal'))[:200],
                                         properties={'signal_ref': str(sig_ref),
                                                     'sentiment': str(row.get('sentiment', '') or ''),
-                                                    'sentiment_score': str(row.get('sentiment_score', '') or '')},
-                                        tier=2,
+                                                    'sentiment_score': str(row.get('sentiment_score', '') or ''),
+                                                    'signal_type': _sig_type,
+                                                    'automation': 'true' if _is_automation else 'false',
+                                                    'phase': _sig_phase},
+                                        tier=1 if _is_automation else 2,
                                         occurred_at=pd.to_datetime(row.get('signal_date')) if row.get('signal_date') else _dt.utcnow(),
                                         source_platform=str(row.get('source_platform', 'csv_import')),
                                         source_event_id=str(sig_ref),
@@ -1290,17 +1299,27 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         # source_event_id uses 'decision:<id>' prefix so _resolve_edge_ref
                         # can find this node via srcid_to_node lookup
                         src_eid = f'decision:{dec_id}' if dec_id and dec_id != 'nan' else None
+                        # Parse decision_date for correct timeline ordering
+                        raw_dec_date = row.get('decision_date')
+                        dec_occurred_at = pd.to_datetime(raw_dec_date) if raw_dec_date and str(raw_dec_date) != 'nan' else _dt.utcnow()
+                        # Extract playbook code from title (e.g. "[PB-03] ..." → "PB-03")
+                        dec_title = str(row.get('title', row.get('decision_name', '')))
+                        playbook_code = ''
+                        if dec_title.startswith('[PB-'):
+                            playbook_code = dec_title[1:dec_title.index(']')] if ']' in dec_title else ''
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
                             source='customer',
                             node_subtype=str(row.get('decision_maker_role', 'action')),
-                            title=str(row.get('title', row.get('decision_name', ''))),
+                            title=dec_title,
                             properties={'chosen_option': str(row.get('chosen_option', '')),
                                         'outcome_description': str(row.get('outcome_description', '')),
                                         'risk_level': str(row.get('risk_level', '')),
-                                        'decision_id': dec_id},
-                            tier=1, occurred_at=_dt.utcnow(),
+                                        'decision_id': dec_id,
+                                        'playbook': playbook_code,
+                                        'revenue_impact': str(row.get('revenue_impact', ''))},
+                            tier=1, occurred_at=dec_occurred_at,
                             source_platform=str(row.get('source_platform', 'csv_import')),
                             source_event_id=src_eid,
                         ))
