@@ -1151,14 +1151,17 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             # handled by the ContextGraphRegenerationSubscriber when health changes.
             try:
                 from models import ContextNode, ContextEdge
+                # Require at least 10 nodes before treating as "already loaded"
+                # to prevent false-skips after partial/failed first runs.
+                _cg_node_count = ContextNode.query.filter_by(
+                    customer_id=customer_id).count()
                 _skip_cg_reload = (has_new_csvs and mode != 'full_recalc'
-                                   and ContextNode.query.filter_by(
-                                       customer_id=customer_id).first() is not None)
+                                   and _cg_node_count >= 10)
                 if _skip_cg_reload:
                     import logging as _log_cg
                     _log_cg.getLogger(__name__).info(
                         f"Incremental load: skipping CG node re-loading for customer {customer_id} "
-                        f"(CG nodes already exist, will regenerate via event subscriber)"
+                        f"({_cg_node_count} nodes already exist, will regenerate via event subscriber)"
                     )
                     steps_completed.append('context_graph_incremental_skip')
 
