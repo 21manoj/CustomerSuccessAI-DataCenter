@@ -440,7 +440,11 @@ def _get_po1_benchmark_investment(total_arr):
         total_inv = sum(
             m.get('total_investment', 0) for m in data.get('metrics', {}).values()
         )
-        return round(total_inv * arr_scale, 2)
+        raw = total_inv * arr_scale
+        # Cap at 1.5% of ARR — conservative industry benchmark (TSIA)
+        # Linear scaling overshoots for large portfolios
+        max_inv = total_arr * 0.015
+        return round(min(raw, max_inv), 2)
     except Exception:
         # Fallback: 0.5% of ARR as rough CS investment estimate
         return round(total_arr * 0.005, 2)
@@ -681,6 +685,9 @@ def cro_dashboard():
                     nrr_baseline = nrr_detail.get('baseline', nrr_projection)
                     nrr_change = round(nrr_projection - nrr_baseline, 0)
 
+        # Initialize NRR current (will be overridden by Wizard B if available)
+        nrr_current = nrr_projection  # default: health-weighted baseline
+
         # ── Wizard B NRR override (lifecycle-based, more accurate than health correlation) ──
         try:
             from models import WizardLearning
@@ -719,10 +726,12 @@ def cro_dashboard():
         )
 
         # ── NRR Forecast: dual NRR + trajectory + waterfall ──
-        # "Current NRR" = health-weighted baseline (no intervention)
-        # "Projected NRR" = if playbooks execute on at-risk accounts
-        nrr_current = nrr_projection  # already computed above from health correlation
-        nrr_with_intervention = nrr_current
+        # nrr_current was set by Wizard B override above (= "without CS Pulse")
+        # Only reset if Wizard B didn't set it
+        if nrr_current == nrr_projection:
+            # No Wizard B data — nrr_current is the health-weighted baseline
+            pass
+        nrr_with_intervention = nrr_projection  # actual NRR = "with CS Pulse"
         nrr_arr_protected = 0
         nrr_trajectory = {}
         nrr_waterfall_summary = {}
