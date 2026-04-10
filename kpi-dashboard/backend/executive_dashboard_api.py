@@ -949,6 +949,14 @@ def cfo_dashboard():
             roi_impact = _safe_float(roi_snap.historical_impact or roi_snap.forward_impact)
             if roi_snap.historical_investment:
                 roi_investment = _safe_float(roi_snap.historical_investment)
+            # Guard: ROI snapshot can be wildly inflated when outcome engine
+            # double-counts (abs of negative outcomes + positive outcomes).
+            # Cap at 500% — anything higher means the data is unreliable.
+            # Fall through to Power-of-1 benchmark below.
+            if roi_pct > 500:
+                logger.info(f"CFO ROI capped: snapshot says {roi_pct}% (unreliable), will use Po1 benchmark")
+                roi_pct = 0
+                roi_impact = 0.0
 
             # Extract Power of 1 metrics from snapshot details
             # Supports two formats:
@@ -1023,8 +1031,8 @@ def cfo_dashboard():
                     if isinstance(grr_detail, dict):
                         grr_projection = round(grr_detail.get('current', 85))
 
-        # ── Power-of-1 benchmark fallback when no ROI snapshot ──
-        if not power_of_1_metrics and total_arr > 0:
+        # ── Power-of-1 benchmark fallback when no ROI snapshot or ROI was capped ──
+        if (not power_of_1_metrics or roi_pct == 0) and total_arr > 0:
             power_of_1_metrics = _get_po1_benchmark_metrics(total_arr)
             # Estimate ROI from benchmark totals
             if estimated_investment > 0:
@@ -1145,7 +1153,14 @@ def cfo_dashboard():
             h = _safe_float(getattr(acct, 'health_score', None) or latest_scores.get(acct.account_id, 0))
             arr = _safe_float(acct.revenue)
             if h < ht.healthy_min() and arr > 0:
-                churn_pct = max(5, 50 - h * 0.5)
+                # Realistic annual churn probability from health score:
+                # health<30 → 45%, health 30-50 → 25-35%, health 50-70 → 8-15%
+                if h < 30:
+                    churn_pct = 45
+                elif h < 50:
+                    churn_pct = 35 - (h - 30) / 20 * 10  # 35% at 30, 25% at 50
+                else:
+                    churn_pct = 15 - (h - 50) / 20 * 7   # 15% at 50, 8% at 70
                 annual_loss = arr * churn_pct / 100
                 total_arr_at_risk += arr
                 total_churn_exposure += annual_loss
@@ -1174,7 +1189,7 @@ def cfo_dashboard():
         if total_arr > 0 and wf_attributed > 0:
             nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
 
-        # ── Wizard B NRR override (same as CRO endpoint) ──
+        # ── Wizard B NRR override + waterfall enrichment ──
         try:
             from models import WizardLearning
             wl = WizardLearning.query.filter_by(
@@ -1183,6 +1198,7 @@ def cfo_dashboard():
             if wl and wl.learnings:
                 nrr_f = wl.learnings.get('portfolio_nrr_forecast', {})
                 wb_nrr = nrr_f.get('current_nrr_pct')
+                wb_without = nrr_f.get('without_cs_pulse_nrr_pct')
                 if wb_nrr is not None:
                     nrr_projection = round(float(wb_nrr), 1)
                     nrr_with_intervention = nrr_projection
@@ -1191,6 +1207,17 @@ def cfo_dashboard():
                         nrr_with_intervention = round(
                             nrr_projection + (float(wb_arr) / max(total_arr, 1)) * 0.5, 1
                         )
+                    # GRR from Wizard B (NRR minus expansion contribution)
+                    wb_delta = nrr_f.get('cs_pulse_delta_pct', 0)
+                    if wb_delta and float(wb_delta) > 0:
+                        grr_projection = round(float(wb_nrr) - 5, 0)  # GRR ≈ NRR - expansion margin
+
+                # Waterfall from Wizard B revenue_waterfall (more accurate than formula)
+                wb_wf = nrr_f.get('revenue_waterfall', {})
+                if wb_wf and wb_wf.get('total_expected_loss', 0) > 0:
+                    wf_expected_loss = float(wb_wf.get('total_expected_loss', 0))
+                    wf_attributed = float(wb_wf.get('total_attributed_save', 0))
+                    wf_cost = float(wb_wf.get('total_intervention_cost', 0))
         except Exception as wb_err:
             logger.debug(f"CFO Wizard B NRR override failed (non-fatal): {wb_err}")
 
@@ -1210,6 +1237,7 @@ def cfo_dashboard():
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
+            'expansion_pipeline': revenue_data.get('expansion_pipeline', 0),
             'revenue_risk_type': 'confirmed',
             'revenue_risk_label': 'Confirmed Risk (Context Graph)',
             # Cost of Inaction
