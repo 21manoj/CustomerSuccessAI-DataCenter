@@ -1196,6 +1196,7 @@ def cfo_dashboard():
 
         nrr_with_intervention = nrr_projection
         nrr_current_without = nrr_projection  # default: same as projection (no CS Pulse delta)
+        grr_without = grr_projection  # default GRR without CS Pulse
         if total_arr > 0 and wf_attributed > 0:
             nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
 
@@ -1219,8 +1220,15 @@ def cfo_dashboard():
                     # Override nrr_current to show the "before" story
                     # (the variable is confusingly named — it means "baseline to compare against")
 
-                    # GRR: NRR minus expansion contribution (~5pp typical)
-                    grr_projection = round(float(wb_nrr) - 5, 0)
+                    # GRR from Wizard B (actual lifecycle-based, not estimated)
+                    wb_grr = nrr_f.get('current_grr_pct')
+                    wb_grr_without = nrr_f.get('without_cs_pulse_grr_pct')
+                    if wb_grr is not None:
+                        grr_projection = round(float(wb_grr), 1)
+                        grr_without = round(float(wb_grr_without), 1) if wb_grr_without else grr_projection
+                    else:
+                        grr_projection = round(float(wb_nrr) - 5, 0)
+                        grr_without = grr_projection
 
                     # ARR protected by CS Pulse
                     wb_arr = nrr_f.get('cs_pulse_arr_protected', 0)
@@ -1279,6 +1287,7 @@ def cfo_dashboard():
             'roi_impact': round(roi_impact, 2),
             'nrr_projection': nrr_projection,
             'grr_projection': grr_projection,
+            'grr_without': grr_without,
             'power_of_1_metrics': power_of_1_metrics,
             'roi_scaling': roi_scaling,
             'pillar_investments': pillar_investments,

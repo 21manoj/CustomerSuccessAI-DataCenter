@@ -117,6 +117,7 @@ interface CFODashboardData {
   nrr_current: number;
   nrr_with_intervention: number;
   grr: number;
+  grr_without: number;
   nrr_arr_protectable: number;
   cost_of_inaction: CostOfInaction;
   nrr_waterfall: { expected_loss: number; attributed_save: number; intervention_cost: number; roi_x: number };
@@ -898,6 +899,7 @@ const CFODashboard: React.FC = () => {
             nrr_current: json.nrr_current || nrr,
             nrr_with_intervention: json.nrr_with_intervention || nrr,
             grr: grr,
+            grr_without: json.grr_without || grr,
             nrr_arr_protectable: json.nrr_arr_protectable || 0,
             cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
             nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
@@ -1070,7 +1072,17 @@ const CFODashboard: React.FC = () => {
                 </div>
                 <div className="border-l border-gray-700/50 pl-6">
                   <p className="text-[9px] text-gray-500 mb-0.5">GRR</p>
-                  <p className="text-3xl font-bold text-gray-300">{d.grr}%</p>
+                  <div className="flex items-end gap-2">
+                    {d.grr_without && d.grr_without !== d.grr ? (
+                      <>
+                        <p className="text-xl font-bold text-red-400">{d.grr_without}%</p>
+                        <span className="text-gray-600 text-sm pb-0.5">&rarr;</span>
+                        <p className="text-xl font-bold text-green-400">{d.grr}%</p>
+                      </>
+                    ) : (
+                      <p className="text-3xl font-bold text-gray-300">{d.grr}%</p>
+                    )}
+                  </div>
                 </div>
               </div>
               {d.nrr_arr_protectable > 0 && (

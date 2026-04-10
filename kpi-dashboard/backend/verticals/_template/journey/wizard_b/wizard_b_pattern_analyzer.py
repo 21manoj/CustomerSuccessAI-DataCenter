@@ -938,6 +938,24 @@ class PatternAnalyzer:
                 without_nrr_numerator += arr - rev.get('lost', 0) + rev.get('expansion', 0)
         without_cs_pulse_nrr = without_nrr_numerator / total_arr if total_arr > 0 else 1.0
 
+        # ── GRR: same as NRR but excludes expansion ──
+        # GRR = (Starting ARR - Churn - Contraction) / Starting ARR
+        current_grr = (total_arr - _total_lost) / total_arr if total_arr > 0 else 1.0
+
+        # Without CS Pulse GRR: saved accounts churn entirely
+        without_grr_numerator = 0.0
+        for j in self.journeys:
+            aid = j.get('account_id', 0)
+            if aid in _new_logos:
+                continue
+            arr = arr_map.get(aid, 0)
+            if aid in saved_account_ids:
+                without_grr_numerator += 0  # full churn
+            else:
+                rev = _rev_by_account.get(aid, {})
+                without_grr_numerator += arr - rev.get('lost', 0)  # no expansion in GRR
+        without_cs_pulse_grr = without_grr_numerator / total_arr if total_arr > 0 else 1.0
+
         # ── Trajectory: portfolio NRR at T+30/60/90 ────────────────────
         # Use health-to-churn mapping to project NRR at each horizon
         def _health_to_churn_90d(h, arc):
@@ -1145,6 +1163,10 @@ class PatternAnalyzer:
             'current_nrr_pct': round(current_nrr * 100, 2),
             'with_interventions_nrr_pct': round(with_interventions_nrr * 100, 2),
             'cs_pulse_delta_pct': round((current_nrr - without_cs_pulse_nrr) * 100, 2),
+            # GRR before/after CS Pulse
+            'without_cs_pulse_grr_pct': round(without_cs_pulse_grr * 100, 2),
+            'current_grr_pct': round(current_grr * 100, 2),
+            'cs_pulse_grr_delta_pct': round((current_grr - without_cs_pulse_grr) * 100, 2),
             'cs_pulse_arr_protected': round(saved_arr, 2),
             'cs_pulse_accounts_saved': len(saved_account_ids),
             'delta_arr': round(delta_arr, 2),
