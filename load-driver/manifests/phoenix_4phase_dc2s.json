@@ -1,0 +1,307 @@
+{
+  "manifest_version": "2.0",
+  "customer": {
+    "name": "Phoenix Data Centers",
+    "domain": "phoenix-dc.com",
+    "vertical": "dc2_s",
+    "admin_email": "admin@phoenix-dc.com",
+    "admin_name": "Phoenix Admin",
+    "total_arr": 52400000,
+    "description": "4-phase lifecycle test portfolio: baseline (m1-3), decline (m4-5), intervention (m6-7), recovery (m8-9). 10 accounts with diverse arcs."
+  },
+  "time_range": {
+    "start": "2025-07-01",
+    "end": "2026-03-31",
+    "frequency": "weekly",
+    "data_points_per_kpi": 39
+  },
+  "kpis": {
+    "selection": "top_4_per_pillar",
+    "count": 20,
+    "codes": [
+      "P1-KPI1", "P1-KPI2", "P1-KPI4", "P1-KPI5",
+      "P2-KPI1", "P2-KPI2", "P2-KPI3", "P2-KPI4",
+      "P3-KPI1", "P3-KPI2", "P3-KPI3", "P3-KPI5",
+      "P4-KPI1", "P4-KPI2", "P4-KPI3", "P4-KPI5",
+      "P5-KPI1", "P5-KPI2", "P5-KPI3", "P5-KPI5"
+    ]
+  },
+  "context_graph": {
+    "stakeholders_per_account": [3, 5],
+    "events_per_account": [8, 12],
+    "include_decisions": true,
+    "include_outcomes": true,
+    "include_signal_edges": true,
+    "include_benchmarks": true
+  },
+  "lifecycle_events": {
+    "Crest Computing": {"event": "churn", "event_month": 6, "delta_pct": -100},
+    "Apex GPU Labs": {"event": "expand", "event_month": 8, "delta_pct": 25},
+    "Pinnacle Networks": {"event": "expand", "event_month": 8, "delta_pct": 15},
+    "Valley Dataworks": {"event": "new", "event_month": 3}
+  },
+  "accounts": [
+    {
+      "name": "Phoenix Hyperscale",
+      "arr": 8500000,
+      "target_health": 82,
+      "classification": "at_risk",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "Large GPU compute customer. Champion VP Infra departed in month 4, triggering health decline from 82→55. Emergency retention playbook triggered month 6. New champion identified month 7. Health recovering to 74 by month 9.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "products": [
+        {"name": "GPU Compute Cluster", "category": "compute", "arr": 4500000},
+        {"name": "AI Training Pipeline", "category": "ml_ops", "arr": 2500000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 1500000}
+      ],
+      "stakeholders": [
+        {"name": "David Kim", "role": "champion", "title": "VP Infrastructure", "department": "Engineering", "influence_score": 9, "sentiment": "departed", "engagement_frequency": "none"},
+        {"name": "Rachel Torres", "role": "successor", "title": "Director of Platform Eng", "department": "Engineering", "influence_score": 7, "sentiment": "neutral", "engagement_frequency": "monthly"},
+        {"name": "James Walsh", "role": "executive_sponsor", "title": "CTO", "department": "Engineering", "influence_score": 10, "sentiment": "concerned", "engagement_frequency": "quarterly"},
+        {"name": "Priya Sharma", "role": "technical_lead", "title": "ML Ops Lead", "department": "Data Science", "influence_score": 6, "sentiment": "negative", "engagement_frequency": "weekly"}
+      ],
+      "key_signals": [
+        {"type": "champion_loss", "date": "2025-10-15", "content": "VP Infrastructure David Kim resigned. 12-year tenure, primary relationship holder.", "sentiment": "very_negative"},
+        {"type": "usage_decline", "date": "2025-11-01", "content": "GPU cluster utilization dropped from 87% to 52% after champion departure.", "sentiment": "negative"},
+        {"type": "escalation", "date": "2025-12-01", "content": "CTO James Walsh escalated concerns about renewal. Emergency QBR requested.", "sentiment": "negative"},
+        {"type": "csm_intervention", "date": "2026-01-15", "content": "New CSM Sarah Rivera assigned. First QBR held with CTO and new Director.", "sentiment": "positive"},
+        {"type": "kpi_recovery", "date": "2026-02-15", "content": "GPU utilization recovering to 68% after workload migration optimization.", "sentiment": "positive"}
+      ]
+    },
+    {
+      "name": "Atlas Cloud Services",
+      "arr": 6200000,
+      "target_health": 78,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-01",
+      "narrative": "Mid-size customer with stalled Kubernetes deployment. Budget pressure in month 4 led to reduced scope. Intervention in month 6 with executive engagement. Partial recovery by month 9.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "products": [
+        {"name": "Managed Kubernetes", "category": "platform", "arr": 3200000},
+        {"name": "High-Performance Storage", "category": "storage", "arr": 2000000},
+        {"name": "Network Fabric", "category": "networking", "arr": 1000000}
+      ],
+      "stakeholders": [
+        {"name": "Michael Chen", "role": "champion", "title": "VP Engineering", "department": "Engineering", "influence_score": 8, "sentiment": "neutral", "engagement_frequency": "monthly"},
+        {"name": "Sarah Liu", "role": "economic_buyer", "title": "CFO", "department": "Finance", "influence_score": 9, "sentiment": "negative", "engagement_frequency": "quarterly"},
+        {"name": "Tom Nakamura", "role": "technical_lead", "title": "DevOps Lead", "department": "Engineering", "influence_score": 7, "sentiment": "positive", "engagement_frequency": "weekly"}
+      ],
+      "key_signals": [
+        {"type": "budget_pressure", "date": "2025-10-20", "content": "CFO Sarah Liu announced 15% budget reduction across infrastructure.", "sentiment": "very_negative"},
+        {"type": "usage_decline", "date": "2025-11-10", "content": "K8s node count reduced from 120 to 80. Migration project paused.", "sentiment": "negative"},
+        {"type": "executive_engagement", "date": "2026-01-10", "content": "CRO hosted exec dinner with CFO. Discussed optimization vs. reduction.", "sentiment": "positive"},
+        {"type": "kpi_recovery", "date": "2026-02-20", "content": "K8s utilization recovering as optimization playbook takes effect.", "sentiment": "positive"}
+      ]
+    },
+    {
+      "name": "Zenith Data Corp",
+      "arr": 4800000,
+      "target_health": 75,
+      "classification": "at_risk",
+      "story_arc": "silent_churn",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-08-01",
+      "narrative": "Account showing steady decline. No intervention applied (control group). Health drops from 75→52 and stays there. Champion disengaged but not departed.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "products": [
+        {"name": "High-Performance Storage", "category": "storage", "arr": 2500000},
+        {"name": "Disaster Recovery", "category": "resilience", "arr": 1500000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 800000}
+      ],
+      "stakeholders": [
+        {"name": "Lisa Park", "role": "champion", "title": "Director of Infrastructure", "department": "IT", "influence_score": 6, "sentiment": "negative", "engagement_frequency": "quarterly"},
+        {"name": "Robert Diaz", "role": "executive_sponsor", "title": "VP IT", "department": "IT", "influence_score": 8, "sentiment": "neutral", "engagement_frequency": "none"}
+      ],
+      "key_signals": [
+        {"type": "engagement_gap", "date": "2025-10-15", "content": "Champion Lisa Park declined last two QBR invitations.", "sentiment": "negative"},
+        {"type": "usage_decline", "date": "2025-11-15", "content": "Storage utilization dropped from 78% to 55%. DR tests skipped.", "sentiment": "negative"},
+        {"type": "competitor_mention", "date": "2026-01-05", "content": "Internal source reports Zenith evaluating AWS Direct Connect as alternative.", "sentiment": "very_negative"}
+      ]
+    },
+    {
+      "name": "Meridian Compute",
+      "arr": 3500000,
+      "target_health": 62,
+      "classification": "at_risk",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-04-15",
+      "narrative": "Originally at-risk account with infrastructure reliability issues. Health drops from 62→41. Intervention in month 6 with platform optimization. Partial recovery to 58.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "products": [
+        {"name": "GPU Compute Cluster", "category": "compute", "arr": 1800000},
+        {"name": "Network Fabric", "category": "networking", "arr": 1000000},
+        {"name": "Edge Computing Nodes", "category": "edge", "arr": 700000}
+      ],
+      "stakeholders": [
+        {"name": "Kevin O'Brien", "role": "champion", "title": "CTO", "department": "Engineering", "influence_score": 9, "sentiment": "negative", "engagement_frequency": "monthly"},
+        {"name": "Anna Martinez", "role": "technical_lead", "title": "Network Architect", "department": "Engineering", "influence_score": 7, "sentiment": "negative", "engagement_frequency": "weekly"}
+      ],
+      "key_signals": [
+        {"type": "critical_incident", "date": "2025-09-15", "content": "Sev-1: Network fabric failure took down 60% of edge nodes for 4 hours.", "sentiment": "very_negative"},
+        {"type": "escalation", "date": "2025-10-01", "content": "CTO Kevin O'Brien escalated to our CEO. Demanded immediate reliability SLA review.", "sentiment": "very_negative"},
+        {"type": "csm_intervention", "date": "2025-12-15", "content": "Dedicated support pod deployed. Weekly reliability reviews with CTO.", "sentiment": "positive"}
+      ]
+    },
+    {
+      "name": "Apex GPU Labs",
+      "arr": 7100000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-01",
+      "narrative": "Star account. Healthy throughout, strong champion. Expansion approved in month 8 — adding AI Training Pipeline. ARR grows 25% to $8.9M.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 99,
+      "products": [
+        {"name": "GPU Compute Cluster", "category": "compute", "arr": 4200000},
+        {"name": "Managed Kubernetes", "category": "platform", "arr": 1900000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 1000000}
+      ],
+      "stakeholders": [
+        {"name": "Jennifer Wu", "role": "champion", "title": "VP AI/ML", "department": "Research", "influence_score": 10, "sentiment": "positive", "engagement_frequency": "weekly"},
+        {"name": "Daniel Park", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "influence_score": 10, "sentiment": "positive", "engagement_frequency": "monthly"},
+        {"name": "Maria Santos", "role": "technical_lead", "title": "ML Platform Lead", "department": "Engineering", "influence_score": 8, "sentiment": "positive", "engagement_frequency": "daily"}
+      ],
+      "key_signals": [
+        {"type": "executive_engagement", "date": "2026-01-20", "content": "CEO Daniel Park requested expansion proposal for AI Training Pipeline.", "sentiment": "positive"},
+        {"type": "feature_adoption", "date": "2026-02-10", "content": "GPU utilization hit 95%. Champion Jennifer Wu advocating for capacity expansion.", "sentiment": "positive"}
+      ]
+    },
+    {
+      "name": "Nova Infrastructure",
+      "arr": 5500000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "Reliable mid-tier account. Health stable around 74-76. No drama, consistent usage. Renewal expected at current terms.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 99,
+      "products": [
+        {"name": "Managed Kubernetes", "category": "platform", "arr": 2500000},
+        {"name": "High-Performance Storage", "category": "storage", "arr": 2000000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 1000000}
+      ],
+      "stakeholders": [
+        {"name": "Chris Lee", "role": "champion", "title": "Director of Infrastructure", "department": "Engineering", "influence_score": 7, "sentiment": "positive", "engagement_frequency": "monthly"},
+        {"name": "Amy Chang", "role": "economic_buyer", "title": "VP Finance", "department": "Finance", "influence_score": 8, "sentiment": "neutral", "engagement_frequency": "quarterly"}
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Summit Platforms",
+      "arr": 2800000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "proactive_growth",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-10-01",
+      "narrative": "Small but growing account. Slight dip in month 4-5 (65) due to team reorganization, recovered quickly by month 6 (71). Growth trajectory in months 8-9.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 3,
+      "products": [
+        {"name": "Managed Kubernetes", "category": "platform", "arr": 1500000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 800000},
+        {"name": "Edge Computing Nodes", "category": "edge", "arr": 500000}
+      ],
+      "stakeholders": [
+        {"name": "Tyler Ross", "role": "champion", "title": "Head of DevOps", "department": "Engineering", "influence_score": 7, "sentiment": "positive", "engagement_frequency": "weekly"},
+        {"name": "Samantha Hill", "role": "executive_sponsor", "title": "CTO", "department": "Engineering", "influence_score": 9, "sentiment": "positive", "engagement_frequency": "monthly"}
+      ],
+      "key_signals": [
+        {"type": "stakeholder_change", "date": "2025-10-10", "content": "Team reorg: 3 DevOps engineers moved to new platform team. Temporary knowledge gap.", "sentiment": "neutral"},
+        {"type": "kpi_recovery", "date": "2026-01-05", "content": "New team up to speed. Deployment velocity back to baseline.", "sentiment": "positive"}
+      ]
+    },
+    {
+      "name": "Pinnacle Networks",
+      "arr": 9000000,
+      "target_health": 88,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-01",
+      "narrative": "Largest and healthiest account. Strong executive relationship. Expansion approved in month 8 — adding Disaster Recovery + Edge. ARR grows 15% to $10.4M.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 99,
+      "products": [
+        {"name": "GPU Compute Cluster", "category": "compute", "arr": 4000000},
+        {"name": "AI Training Pipeline", "category": "ml_ops", "arr": 2500000},
+        {"name": "Network Fabric", "category": "networking", "arr": 1500000},
+        {"name": "Managed Kubernetes", "category": "platform", "arr": 1000000}
+      ],
+      "stakeholders": [
+        {"name": "Elena Volkov", "role": "champion", "title": "Chief AI Officer", "department": "AI Strategy", "influence_score": 10, "sentiment": "positive", "engagement_frequency": "weekly"},
+        {"name": "Marcus Johnson", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "influence_score": 10, "sentiment": "positive", "engagement_frequency": "monthly"},
+        {"name": "Sophie Martin", "role": "technical_lead", "title": "VP Platform Engineering", "department": "Engineering", "influence_score": 9, "sentiment": "positive", "engagement_frequency": "daily"}
+      ],
+      "key_signals": [
+        {"type": "executive_engagement", "date": "2026-01-25", "content": "CEO Marcus Johnson joined expansion review. Approved DR + Edge addition.", "sentiment": "positive"},
+        {"type": "feature_adoption", "date": "2026-02-15", "content": "AI Training Pipeline throughput up 40%. Champion Elena Volkov presenting at industry conference.", "sentiment": "positive"}
+      ]
+    },
+    {
+      "name": "Crest Computing",
+      "arr": 1800000,
+      "target_health": 58,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "tier_2",
+      "renewal_date": "2026-03-01",
+      "narrative": "Small at-risk account that churns in month 6. Health declines from 58→35. Champion departed, no exec sponsor. Despite signals, no intervention was applied. Lost to AWS Direct Connect.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 1,
+      "products": [
+        {"name": "High-Performance Storage", "category": "storage", "arr": 1000000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 800000}
+      ],
+      "stakeholders": [
+        {"name": "Brian Foster", "role": "champion", "title": "IT Manager", "department": "IT", "influence_score": 4, "sentiment": "departed", "engagement_frequency": "none"},
+        {"name": "Karen White", "role": "successor", "title": "IT Coordinator", "department": "IT", "influence_score": 2, "sentiment": "negative", "engagement_frequency": "none"}
+      ],
+      "key_signals": [
+        {"type": "champion_loss", "date": "2025-08-15", "content": "IT Manager Brian Foster resigned. No executive sponsor identified.", "sentiment": "very_negative"},
+        {"type": "engagement_gap", "date": "2025-09-20", "content": "Zero engagement for 60+ days. QBR declined. Support tickets unanswered.", "sentiment": "very_negative"},
+        {"type": "competitor_mention", "date": "2025-11-10", "content": "Successor Karen White mentioned evaluating AWS Direct Connect in ticket #4521.", "sentiment": "very_negative"},
+        {"type": "contract_dispute", "date": "2026-01-05", "content": "Crest Computing sent formal notice of non-renewal. Cited reliability concerns.", "sentiment": "very_negative"}
+      ]
+    },
+    {
+      "name": "Valley Dataworks",
+      "arr": 3200000,
+      "target_health": 60,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "tier_1",
+      "renewal_date": "2027-03-01",
+      "narrative": "New customer onboarding in month 3. Starts at health 60 (onboarding). Stabilizes to 68 by month 7. Growth trajectory to 73 by month 9. Strong champion engagement.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 99,
+      "products": [
+        {"name": "GPU Compute Cluster", "category": "compute", "arr": 1800000},
+        {"name": "Managed Kubernetes", "category": "platform", "arr": 900000},
+        {"name": "Monitoring & Observability", "category": "ops", "arr": 500000}
+      ],
+      "stakeholders": [
+        {"name": "Alex Rivera", "role": "champion", "title": "Head of Cloud", "department": "Engineering", "influence_score": 8, "sentiment": "positive", "engagement_frequency": "weekly"},
+        {"name": "Jordan Blake", "role": "executive_sponsor", "title": "CTO", "department": "Engineering", "influence_score": 9, "sentiment": "positive", "engagement_frequency": "monthly"}
+      ],
+      "key_signals": [
+        {"type": "onboarding_milestone", "date": "2025-10-01", "content": "Initial GPU cluster deployment complete. 40% capacity provisioned.", "sentiment": "positive"},
+        {"type": "feature_adoption", "date": "2025-12-01", "content": "K8s deployment ahead of schedule. Champion Alex Rivera highly engaged.", "sentiment": "positive"},
+        {"type": "executive_engagement", "date": "2026-02-01", "content": "CTO Jordan Blake approved phase 2 expansion request.", "sentiment": "positive"}
+      ]
+    }
+  ]
+}
