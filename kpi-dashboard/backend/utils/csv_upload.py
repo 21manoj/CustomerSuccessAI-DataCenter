@@ -47,7 +47,8 @@ class FileTypeInfo:
 # Covers every name used by MCP, Flask onboarding, Flask V3, and load-driver
 _ALIASES: dict[str, str] = {
     # Short names (Flask onboarding FILE_TYPES)
-    'accounts':                      'accounts.csv',
+    'account_details':               'account_details.csv',
+    'accounts':                      'accounts.csv',  # backward compat (old required columns)
     'kpis':                          'kpi_measurements.csv',
     'kpi_measurements':              'kpi_measurements.csv',
     'kpi_data':                      'kpi_measurements.csv',

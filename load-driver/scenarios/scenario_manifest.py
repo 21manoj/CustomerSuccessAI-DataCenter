@@ -686,6 +686,25 @@ class ManifestCSVGenerator:
         {"name": "Monitoring & Observability", "category": "ops", "tier": "standard"},
     ]
 
+    SAAS_PRODUCTS = [
+        {"name": "Core Platform", "category": "core", "tier": "standard"},
+        {"name": "Analytics Suite", "category": "analytics", "tier": "premium"},
+        {"name": "API Platform", "category": "integration", "tier": "enterprise"},
+        {"name": "Mobile App", "category": "mobile", "tier": "standard"},
+        {"name": "Workflow Automation", "category": "automation", "tier": "premium"},
+        {"name": "Admin Console", "category": "admin", "tier": "standard"},
+        {"name": "Data Export & BI", "category": "reporting", "tier": "enterprise"},
+        {"name": "SSO & Security", "category": "security", "tier": "enterprise"},
+    ]
+
+    @property
+    def _product_catalog(self):
+        """Return vertical-appropriate product catalog."""
+        vertical = self.customer_info.get('vertical', 'dc2_s')
+        if 'saas' in vertical.lower():
+            return self.SAAS_PRODUCTS
+        return self.DC_PRODUCTS
+
     RECOVERY_SIGNAL_TEMPLATES = {
         'critical': [
             {"type": "csm_intervention", "content": "New CSM {csm_name} assigned. First QBR scheduled for next week.", "sentiment": "positive"},
@@ -1342,12 +1361,10 @@ class ManifestCSVGenerator:
 
         # Registry-independent generators (order irrelevant)
         independent = {
-            'accounts.csv':                  self.generate_accounts_csv,
+            'account_details.csv':           self.generate_account_details_csv,
             'kpi_measurements.csv':          self.generate_kpi_measurements_csv,
-            'products.csv':                  self.generate_products_csv,
             'stakeholders.csv':              self.generate_stakeholders_csv,
             'engagement_events.csv':         self.generate_engagement_events_csv,
-            'account_business_profiles.csv': self.generate_profiles_csv,
         }
         # Registry pipeline — order is fixed
         pipeline = [
@@ -1452,6 +1469,170 @@ class ManifestCSVGenerator:
                 champion.get('title', '') if isinstance(champion, dict) else '',
                 (champion.get('name', '').lower().replace(' ', '.') + '@' + acct['name'].lower().replace(' ', '') + '.com') if isinstance(champion, dict) and champion.get('name') else '',
                 random.randint(40, 95) if isinstance(champion, dict) else 70,
+            ])
+
+        return out.getvalue()
+
+    def generate_account_details_csv(self) -> str:
+        """Generate account_details.csv — enriched accounts with embedded products + profile.
+
+        Consolidates accounts.csv + products.csv + account_business_profiles.csv
+        into a single file. Products are a JSON array column: [{name, category, arr}].
+        """
+        out = io.StringIO()
+        w = csv.writer(out)
+        w.writerow([
+            'source_account_id', 'customer_id', 'account_name', 'industry', 'region',
+            'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
+            'renewal_date', 'csm_name', 'csm_email', 'csm_manager',
+            'account_status', 'uuid',
+            'executive_sponsor',
+            'primary_champion_name', 'primary_champion_title',
+            'primary_champion_email', 'primary_champion_engagement_score',
+            # Enriched fields
+            'products', 'employee_count', 'tech_stack', 'cloud_provider',
+            'deployment_type',
+        ])
+
+        industries = ['Technology', 'Financial Services', 'Healthcare',
+                       'Manufacturing', 'Energy', 'Cloud Infrastructure',
+                       'AI/ML', 'Telecommunications']
+        tech_stacks_dc = ['VMware, Kubernetes, Prometheus', 'OpenStack, Ceph, Grafana',
+                          'Bare Metal, Docker, Datadog', 'Azure Stack, Terraform, Splunk',
+                          'AWS Outpost, K8s, New Relic']
+        tech_stacks_saas = ['React, Node.js, PostgreSQL', 'Vue, Python, MongoDB',
+                            'Angular, Java, MySQL', 'Next.js, Go, Redis',
+                            'Svelte, Rust, ClickHouse']
+        cloud_providers = ['AWS', 'Azure', 'GCP', 'On-Prem', 'Hybrid']
+
+        product_catalog = self._product_catalog
+        vertical = self.customer_info.get('vertical', 'dc2_s')
+        is_saas = 'saas' in vertical.lower()
+        tech_stacks = tech_stacks_saas if is_saas else tech_stacks_dc
+
+        for idx, acct in enumerate(self.accounts):
+            aid = self._account_id(idx)
+            arr = acct['arr']
+            acct_rng = random.Random(self.seed + idx + 3000)
+
+            # ── Lifecycle ARR adjustments ──
+            lc = self.lifecycle_events.get(acct['name'])
+            if lc:
+                if lc['event'] == 'churn':
+                    arr = 0
+                elif lc['event'] == 'expand':
+                    arr = int(acct['arr'] * (1 + lc['delta_pct'] / 100))
+                elif lc['event'] == 'contract':
+                    arr = int(acct['arr'] * (1 + lc['delta_pct'] / 100))
+
+            tier = 'Enterprise' if arr >= 5_000_000 else ('Mid-Market' if arr >= 1_000_000 else 'SMB')
+            cls = acct.get('classification', 'healthy')
+            if lc and lc['event'] == 'churn':
+                status = 'churned'
+            elif cls in ('critical', 'at_risk'):
+                status = 'at_risk'
+            else:
+                status = 'active'
+
+            # ── Stakeholders ──
+            champion = None
+            exec_sponsor = None
+            for sh in acct.get('stakeholders', []):
+                role = sh.get('role', '')
+                if role in ('champion', 'economic_buyer') and not champion:
+                    champion = sh
+                if role == 'executive_sponsor' and not exec_sponsor:
+                    exec_sponsor = sh
+            champion = champion or (acct.get('stakeholders', [{}])[0] if acct.get('stakeholders') else {})
+            exec_sponsor_name = exec_sponsor['name'] if exec_sponsor else ''
+
+            # ── Contract dates ──
+            renewal = acct.get('renewal_date', '2026-09-01')
+            renewal_dt = datetime.strptime(renewal, '%Y-%m-%d')
+            contract_start = (renewal_dt - timedelta(days=365)).strftime('%Y-%m-%d')
+
+            # ── CSM assignment ──
+            csm_names = ['Sarah Rivera', 'Alex Chen', 'Jordan Blake', 'Morgan Lee', 'Taylor Kim']
+            csm = csm_names[idx % len(csm_names)]
+            csm_email = csm.lower().replace(' ', '.') + '@novastar-dc.com'
+
+            # ── Products: from manifest or generated ──
+            manifest_products = acct.get('products', [])
+            if manifest_products:
+                # Use manifest-defined products with ARR split
+                products_json = []
+                remaining_arr = arr
+                for i, mp in enumerate(manifest_products):
+                    if isinstance(mp, str):
+                        mp = {'name': mp}
+                    p_arr = mp.get('arr')
+                    if p_arr is None:
+                        # Split ARR proportionally among products
+                        if i == len(manifest_products) - 1:
+                            p_arr = remaining_arr
+                        else:
+                            p_arr = int(arr / len(manifest_products))
+                        remaining_arr -= p_arr
+                    products_json.append({
+                        'name': mp.get('name', f'Product {i+1}'),
+                        'category': mp.get('category', ''),
+                        'arr': p_arr,
+                    })
+            else:
+                # Generate from vertical product catalog
+                n_products = acct_rng.randint(3, min(5, len(product_catalog)))
+                selected = acct_rng.sample(product_catalog, n_products)
+                products_json = []
+                remaining_arr = arr
+                for i, prod in enumerate(selected):
+                    if i == len(selected) - 1:
+                        p_arr = remaining_arr
+                    else:
+                        p_arr = int(arr * acct_rng.uniform(0.15, 0.35))
+                        remaining_arr -= p_arr
+                    products_json.append({
+                        'name': prod['name'],
+                        'category': prod['category'],
+                        'arr': max(0, p_arr),
+                    })
+
+            import json as _json
+            products_str = _json.dumps(products_json)
+
+            champion_name = champion.get('name', '') if isinstance(champion, dict) else ''
+            champion_email = ''
+            if champion_name:
+                domain = acct['name'].lower().replace(' ', '') + '.com'
+                champion_email = champion_name.lower().replace(' ', '.') + '@' + domain
+
+            w.writerow([
+                aid,
+                self.customer_id,
+                acct['name'],
+                acct_rng.choice(industries),
+                acct_rng.choice(['North America', 'EMEA', 'APAC']),
+                vertical,
+                tier,
+                arr,
+                arr,
+                contract_start,
+                renewal,
+                renewal,
+                csm,
+                csm_email,
+                'Sam Rivera',  # csm_manager
+                status,
+                f'dc_acct_{uuid_mod.uuid4().hex[:12]}',
+                exec_sponsor_name,
+                champion_name,
+                champion.get('title', '') if isinstance(champion, dict) else '',
+                champion_email,
+                acct_rng.randint(40, 95) if isinstance(champion, dict) and champion_name else 70,
+                products_str,
+                acct_rng.randint(100, 5000),  # employee_count
+                acct_rng.choice(tech_stacks),  # tech_stack
+                acct_rng.choice(cloud_providers),  # cloud_provider
+                'hybrid' if acct_rng.random() > 0.6 else 'cloud',  # deployment_type
             ])
 
         return out.getvalue()
@@ -1758,8 +1939,8 @@ class ManifestCSVGenerator:
             else:
                 n_products = acct_rng.randint(3, 4)
 
-            n_products = min(n_products, len(self.DC_PRODUCTS))
-            selected = acct_rng.sample(self.DC_PRODUCTS, n_products)
+            n_products = min(n_products, len(self._product_catalog))
+            selected = acct_rng.sample(self._product_catalog, n_products)
 
             for prod in selected:
                 deploy_date = self.start_date - timedelta(days=acct_rng.randint(30, 365))
@@ -2732,13 +2913,11 @@ class ManifestCSVGenerator:
         outcomes_csv  = H(self.generate_outcomes_csv())   # registers outcomes
         edges_csv     = H(self.generate_signal_edges_csv()) # resolves from registry
         return {
-            'accounts':                H(self.generate_accounts_csv()),
+            'account_details':         H(self.generate_account_details_csv()),
             'kpi_measurements':        H(self.generate_kpi_measurements_csv()),
             'qualitative_signals':     signals_csv,
-            'products':                H(self.generate_products_csv()),
             'stakeholders':            H(self.generate_stakeholders_csv()),
             'engagement_events':       H(self.generate_engagement_events_csv()),
-            'account_business_profiles': H(self.generate_profiles_csv()),
             'outcomes':                outcomes_csv,
             'decisions':               decisions_csv,
             'signal_edges':            edges_csv,
@@ -3166,26 +3345,22 @@ class ScenarioManifest(BaseScenario):
             # Step 1: Generate + upload CSVs (streamed per file)
             logger.info('  Step 1/2: Generate + upload CSVs')
             filename_map = {
-                'accounts': 'accounts.csv',
+                'account_details': 'account_details.csv',
                 'kpi_measurements': 'kpi_measurements.csv',
                 'enhanced_signals': 'qualitative_signals.csv',
-                'products': 'products.csv',
                 'stakeholders': 'stakeholders.csv',
                 'engagement_events': 'engagement_events.csv',
-                'account_business_profiles': 'account_business_profiles.csv',
                 'outcomes': 'outcomes.csv',
                 'decisions': 'decisions.csv',
                 'signal_edges': 'signal_edges.csv',
                 'industry_benchmarks': 'industry_benchmarks.csv',
             }
             generators = {
-                'accounts': gen.generate_accounts_csv,
+                'account_details': gen.generate_account_details_csv,
                 'kpi_measurements': gen.generate_kpi_measurements_csv,
                 'enhanced_signals': gen.generate_signals_csv,
-                'products': gen.generate_products_csv,
                 'stakeholders': gen.generate_stakeholders_csv,
                 'engagement_events': gen.generate_engagement_events_csv,
-                'account_business_profiles': gen.generate_profiles_csv,
                 'outcomes': gen.generate_outcomes_csv,
                 'decisions': gen.generate_decisions_csv,
                 'signal_edges': gen.generate_signal_edges_csv,
@@ -3199,8 +3374,7 @@ class ScenarioManifest(BaseScenario):
                 'upload_status': {},
             }
             # In extend mode, skip static metadata CSVs (accounts already exist)
-            EXTEND_SKIP = {'accounts', 'products', 'stakeholders',
-                           'account_business_profiles', 'industry_benchmarks'}
+            EXTEND_SKIP = {'account_details', 'stakeholders', 'industry_benchmarks'}
 
             t_step12 = time.time()
             for file_type, gen_fn in generators.items():
