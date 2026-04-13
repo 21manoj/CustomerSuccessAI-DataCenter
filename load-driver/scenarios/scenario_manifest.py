@@ -3338,9 +3338,10 @@ class ScenarioManifest(BaseScenario):
                 'expected_account_ids_preview': expected_ids[:5],
                 'expected_distribution': expected_distribution,
             }
+            _mode_label = 'MINIMAL (2 CSVs, LLM inference)' if getattr(self.args, 'minimal', False) else 'FULL (all CSVs)'
             logger.info(f'    {gen.customer_info["name"]}: '
                         f'{len(gen.accounts)} accounts, {len(gen.kpi_codes)} KPIs, '
-                        f'{gen.data_points} data points')
+                        f'{gen.data_points} data points, mode={_mode_label}')
 
             # Step 1: Generate + upload CSVs (streamed per file)
             logger.info('  Step 1/2: Generate + upload CSVs')
@@ -3375,9 +3376,19 @@ class ScenarioManifest(BaseScenario):
             }
             # In extend mode, skip static metadata CSVs (accounts already exist)
             EXTEND_SKIP = {'account_details', 'stakeholders', 'industry_benchmarks'}
+            # In minimal mode, only upload account_details + kpi_measurements
+            minimal = bool(getattr(self.args, 'minimal', False))
+            MINIMAL_ONLY = {'account_details', 'kpi_measurements'}
 
             t_step12 = time.time()
             for file_type, gen_fn in generators.items():
+                if minimal and file_type not in MINIMAL_ONLY:
+                    # In extend+minimal, also skip account_details (already loaded)
+                    if extend and file_type == 'account_details':
+                        logger.info(f'    {file_type}: skipped (extend+minimal)')
+                        continue
+                    logger.info(f'    {file_type}: skipped (minimal mode — LLM will infer)')
+                    continue
                 if extend and file_type in EXTEND_SKIP:
                     logger.info(f'    {file_type}: skipped (extend mode)')
                     continue

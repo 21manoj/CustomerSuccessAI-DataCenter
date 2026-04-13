@@ -248,6 +248,7 @@ def run_manifest(args):
         health_tolerance=args.health_tolerance,
         extend=getattr(args, 'extend', False),
         extend_months=args.months,
+        minimal=getattr(args, 'minimal', False),
     )
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
@@ -341,6 +342,13 @@ Examples:
         '--extend',
         action='store_true',
         help='Extend existing customer data by generating next N months (use with -c and --months)',
+    )
+    parser.add_argument(
+        '--minimal',
+        action='store_true',
+        help='Upload only account_details.csv + kpi_measurements.csv (2-CSV mode for LLM inference). '
+             'Context graph CSVs (signals, decisions, outcomes, edges, engagement) are NOT uploaded — '
+             'LLM Tier1 infers the context graph from KPI trajectories + account details.',
     )
 
     # ── Validation args (V3: merged from V2) ──
