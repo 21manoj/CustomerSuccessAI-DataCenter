@@ -147,7 +147,11 @@ def run_manifest(args):
             logger.error(f"  Registration failed: {resp}")
             sys.exit(1)
         customer_id = int(resp['customer_id'])
+        api_key = resp.get('api_key', '')
         logger.info(f"  Registered: customer_id={customer_id}")
+        if api_key:
+            logger.info(f"  API Key: {api_key}")
+            logger.info(f"  ⚠️  Save this key — it is returned ONCE and required for MCP access.")
 
         # Provision onboarding directory
         # num_accounts=0 in manifest mode: the accounts.csv will create
