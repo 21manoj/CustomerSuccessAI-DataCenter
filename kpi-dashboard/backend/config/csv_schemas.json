@@ -2,11 +2,53 @@
   "_description": "Single source of truth for CSV column definitions. Both backend generate_synthetic_customer_data.py and load-driver csv_generator.py MUST use these exact column names. The onboarding API (onboarding_api_v2_config_aware.py) validates against these.",
   "_version": "2.0",
   "_updated": "2026-03-15",
-  "_consolidation_note": "Consolidated from 15 to 11 files. Customers provide 8 files; platform auto-generates 2 (decisions, signal_edges) and seeds 1 curated file (industry_benchmarks from config/industry_benchmarks/{vertical}.csv).",
+  "_consolidation_note": "Consolidated from 15 to 11 files. Primary onboarding: account_details.csv (enriched) + kpi_measurements.csv. Context graph CSVs optional. accounts.csv accepted as backward-compat alias for account_details.csv.",
   "regular_model": {
-    "_description": "4 CSVs that every customer provides (with or without context graph).",
+    "_description": "2 primary CSVs for onboarding. account_details.csv consolidates accounts + products + stakeholder metadata + business profiles into one file.",
     "files": {
+      "account_details.csv": {
+        "required_columns": [
+          "source_account_id",
+          "account_name",
+          "industry",
+          "region",
+          "arr"
+        ],
+        "recommended_columns": [
+          "csm_name",
+          "csm_email",
+          "csm_manager",
+          "primary_champion_name",
+          "primary_champion_title",
+          "primary_champion_email",
+          "executive_sponsor",
+          "products",
+          "contract_start",
+          "contract_end",
+          "renewal_date",
+          "account_status",
+          "tier"
+        ],
+        "optional_columns": [
+          "customer_id",
+          "vertical",
+          "primary_champion_engagement_score",
+          "employee_count",
+          "tech_stack",
+          "cloud_provider",
+          "deployment_type",
+          "competitive_landscape",
+          "strategic_initiatives",
+          "budget_cycle",
+          "fiscal_year_end",
+          "revenue",
+          "uuid"
+        ],
+        "db_table": "accounts + products + context_nodes(STAKEHOLDER)",
+        "note": "Enriched account file. 'products' is a JSON array: [{\"name\": \"...\", \"arr\": 1000000, \"adoption\": null}]. adoption is auto-populated by process_data from P1 pillar score. 'account_status' values: active|onboarding|at_risk|churned|paused. Supersedes accounts.csv + products.csv + account_business_profiles.csv."
+      },
       "accounts.csv": {
+        "_deprecated": true,
         "required_columns": [
           "source_account_id",
           "customer_id",
@@ -27,7 +69,8 @@
           "account_status",
           "uuid"
         ],
-        "db_table": "accounts"
+        "db_table": "accounts",
+        "note": "DEPRECATED: Use account_details.csv instead. Accepted for backward compatibility — treated as account_details.csv with fewer columns."
       },
       "kpi_measurements.csv": {
         "required_columns": [
@@ -401,6 +444,9 @@
     "customers.csv": "Removed \u2014 customer record created by /api/onboarding/complete before CSV upload",
     "qualitative_signals.csv": "Replaced by enhanced_qualitative_signals.csv (superset)",
     "profiles.csv": "Merged into account_business_profiles.csv",
-    "decision_evidence.csv": "Merged into signal_edges.csv (SOURCED_FROM edge_type)"
+    "decision_evidence.csv": "Merged into signal_edges.csv (SOURCED_FROM edge_type)",
+    "accounts.csv": "Superseded by account_details.csv. Still accepted as backward-compat alias.",
+    "products.csv": "Absorbed into account_details.csv 'products' JSON column. Standalone upload still accepted.",
+    "account_business_profiles.csv": "Absorbed into account_details.csv optional columns. Standalone upload still accepted."
   }
 }
