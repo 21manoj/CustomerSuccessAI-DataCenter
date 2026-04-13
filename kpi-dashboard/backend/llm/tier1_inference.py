@@ -167,6 +167,48 @@ def _build_account_summaries(customer_id: int) -> List[Dict]:
             [f'{h:.0f}' for h in health_values]
         )
 
+        # ── Enriched context: products, stakeholders, contract ──
+        pm = acct.profile_metadata or {}
+
+        # Products from profile_metadata
+        products_list = pm.get('products', [])
+        product_names = []
+        for p in (products_list if isinstance(products_list, list) else []):
+            if isinstance(p, dict):
+                pname = p.get('name', '')
+                parr = p.get('arr', '')
+                padopt = p.get('adoption', '')
+                product_names.append(f"{pname} (ARR: ${parr:,})" if parr else pname)
+            elif isinstance(p, str):
+                product_names.append(p)
+
+        # Stakeholders from profile_metadata
+        stakeholder_summary = []
+        champ = pm.get('primary_champion_name', '')
+        champ_title = pm.get('primary_champion_title', '')
+        champ_score = pm.get('primary_champion_engagement_score', '')
+        if champ:
+            stakeholder_summary.append(f"{champ} ({champ_title}, engagement: {champ_score})" if champ_title else champ)
+        exec_sp = pm.get('executive_sponsor', '')
+        if exec_sp:
+            stakeholder_summary.append(f"{exec_sp} (Executive Sponsor)")
+        csm = pm.get('csm_name', '')
+        if csm:
+            stakeholder_summary.append(f"{csm} (CSM)")
+
+        # Contract dates
+        renewal_date = pm.get('renewal_date', '')
+        days_until_renewal = None
+        if renewal_date:
+            try:
+                from datetime import datetime as _dtparse, date as _dtoday
+                rd = _dtparse.strptime(str(renewal_date)[:10], '%Y-%m-%d').date()
+                days_until_renewal = (rd - _dtoday.today()).days
+            except (ValueError, TypeError):
+                pass
+
+        product_adoption = pm.get('product_adoption', '')
+
         summaries.append({
             'account_id': acct.account_id,
             'account_name': acct.account_name,
@@ -180,6 +222,11 @@ def _build_account_summaries(customer_id: int) -> List[Dict]:
             'kpi_changes': kpi_changes[:5],  # Top 5 movers
             'peak_health': peak_health,
             'lowest_health': lowest_health,
+            # Enriched context
+            'products': product_names,
+            'stakeholders': stakeholder_summary,
+            'product_adoption': product_adoption,
+            'days_until_renewal': days_until_renewal,
         })
 
     return summaries
@@ -223,10 +270,24 @@ def _call_claude(summaries: List[Dict], customer_id: int) -> List[Dict]:
                 for c in s['kpi_changes']
             ) or '  (no significant KPI changes)'
 
+            # Build enriched context strings
+            products_str = ', '.join(s.get('products', [])) or '(none)'
+            stakeholders_str = '; '.join(s.get('stakeholders', [])) or '(none)'
+            adoption_str = f"{s.get('product_adoption', 'N/A')}"
+            days_renewal = s.get('days_until_renewal')
+            if days_renewal is not None:
+                contract_str = f"Renews in {days_renewal} days" + (' ⚠️ URGENT' if days_renewal < 90 else '')
+            else:
+                contract_str = '(unknown)'
+
             account_blocks.append(ACCOUNT_TEMPLATE.format(
                 account_name=s['account_name'],
                 arr=s['arr'],
                 industry=s['industry'],
+                products=products_str,
+                stakeholders=stakeholders_str,
+                product_adoption=adoption_str,
+                contract_info=contract_str,
                 health_trajectory=s['health_trajectory'],
                 current_health=s['current_health'],
                 health_status=s['health_status'],

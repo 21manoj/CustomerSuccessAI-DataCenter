@@ -5,11 +5,11 @@ Used by tier1_inference.py to ask Claude to infer signals, outcomes,
 decisions, and causal edges from KPI time series + health scores alone.
 """
 
-SYSTEM_PROMPT = """You are a Customer Success analyst AI for CS Pulse, a B2B SaaS health monitoring platform.
+SYSTEM_PROMPT = """You are a Customer Success analyst AI for CS Pulse, a B2B revenue intelligence platform.
 
-You are given KPI time series and health score trajectories for a batch of customer accounts.
-Your job is to INFER what likely happened — what signals fired, what decisions were made,
-and what outcomes occurred — based solely on the data patterns.
+You are given KPI time series, health score trajectories, product portfolio, and stakeholder context
+for a batch of customer accounts. Your job is to INFER what likely happened — what signals fired,
+what decisions were made, and what outcomes occurred — using the data patterns AND contextual clues.
 
 RULES:
 - Only infer events that the data strongly supports. Don't fabricate.
@@ -18,12 +18,28 @@ RULES:
 - Use specific dates from the KPI data (when a metric changed significantly).
 - Revenue impact on outcomes should be proportional to the account's ARR.
 - If health is stable (±5 points), infer minimal events — don't over-explain stability.
+- Reference specific PRODUCTS when a KPI change maps to a product (e.g., "GPU Compute utilization declined").
+- Reference STAKEHOLDERS by name when inferring decisions (e.g., "CTO Michael Torres likely escalated").
+- When renewal is < 90 days AND health < 60, always infer a churn_risk or renewal_risk signal.
+
+SIGNAL TYPE GUIDANCE (use these HIGH_RISK types when evidence supports them):
+- champion_loss / champion_change: Champion engagement score < 40, or stakeholder sentiment=departed
+- stakeholder_departure / executive_change: Key role changes visible in engagement patterns
+- budget_cut / budget_pressure: Sudden ARR contraction, capacity utilization drops
+- usage_decline / engagement_gap: DAU/adoption drops > 20%, product adoption declining
+- escalation / support_escalation: Ticket resolution time spikes, escalation rate increases
+- competitor_mention: Usage decline + engagement gap together (competitive displacement pattern)
+- critical_incident: Uptime drops, MTBF spikes, SLA violations
 
 OUTPUT FORMAT: Return a JSON object for each account. Do NOT include markdown formatting."""
 
 ACCOUNT_TEMPLATE = """Account: {account_name}
 ARR: ${arr:,.0f}
 Industry: {industry}
+Products: {products}
+Key Stakeholders: {stakeholders}
+Product Adoption Score: {product_adoption}
+Contract: {contract_info}
 Health trajectory (monthly): {health_trajectory}
 Current health: {current_health} ({health_status})
 Health change: {health_delta:+.1f} over {months} months
@@ -41,7 +57,7 @@ For EACH account, return a JSON object with this exact schema:
   "account_name": "...",
   "inferred_signals": [
     {{
-      "type": "champion_departure|usage_decline|nps_decline|support_spike|budget_pressure|competitor_mention|engagement_drop|feature_adoption_drop",
+      "type": "champion_loss|champion_change|stakeholder_departure|executive_change|budget_cut|budget_pressure|usage_decline|engagement_gap|escalation|support_escalation|critical_incident|competitor_mention|nps_decline|feature_adoption_drop|churn_risk",
       "date": "YYYY-MM-DD",
       "content": "Brief description of what likely happened",
       "sentiment": "negative|neutral|positive",
