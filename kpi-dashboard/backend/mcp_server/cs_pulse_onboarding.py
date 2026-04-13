@@ -932,11 +932,32 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             csv_files = [f.name for f in data_dir.iterdir()
                          if f.is_file() and f.suffix == '.csv']
 
-            # Step 1: Load accounts
-            accounts_csv = data_dir / 'accounts.csv'
+            # Step 1: Load accounts (prefer account_details.csv, fallback to accounts.csv)
+            accounts_csv = data_dir / 'account_details.csv'
+            _using_enriched = True
+            if not accounts_csv.exists():
+                accounts_csv = data_dir / 'accounts.csv'
+                _using_enriched = False
+            _products_extracted = False
+            _stakeholders_extracted = False
+
+            # All profile_metadata keys we extract from CSV columns
+            _PROFILE_KEYS = [
+                'contract_start', 'contract_end', 'renewal_date',
+                'csm_name', 'csm_email', 'csm_manager',
+                'executive_sponsor', 'tier',
+                'primary_champion_name', 'primary_champion_title',
+                'primary_champion_email', 'primary_champion_engagement_score',
+                # Enriched account_details.csv fields
+                'employee_count', 'tech_stack', 'cloud_provider',
+                'deployment_type', 'competitive_landscape',
+                'strategic_initiatives', 'budget_cycle', 'fiscal_year_end',
+            ]
+
             if accounts_csv.exists():
                 df_accts = pd.read_csv(str(accounts_csv))
                 if not df_accts.empty:
+                    _created_acct_ids = []  # track for post-load stakeholder extraction
                     for _, row in df_accts.iterrows():
                         aname = row.get('account_name', row.get('name', ''))
                         existing = Account.query.filter_by(
@@ -945,14 +966,21 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         if not existing:
                             # Build profile_metadata from CSV columns
                             _profile = {}
-                            for _pkey in ['contract_start', 'contract_end', 'renewal_date',
-                                          'csm_name', 'csm_email', 'csm_manager',
-                                          'executive_sponsor', 'tier',
-                                          'primary_champion_name', 'primary_champion_title',
-                                          'primary_champion_email', 'primary_champion_engagement_score']:
+                            for _pkey in _PROFILE_KEYS:
                                 _pval = row.get(_pkey)
                                 if _pval is not None and str(_pval) != 'nan' and str(_pval) != '':
                                     _profile[_pkey] = str(_pval) if not isinstance(_pval, (int, float)) else _pval
+
+                            # Parse products JSON column if present
+                            _products_raw = row.get('products')
+                            if _products_raw is not None and str(_products_raw) not in ('nan', '', 'None'):
+                                try:
+                                    import json as _json
+                                    _prods = _json.loads(_products_raw) if isinstance(_products_raw, str) else _products_raw
+                                    if isinstance(_prods, list):
+                                        _profile['products'] = _prods
+                                except (ValueError, TypeError):
+                                    pass
 
                             acct = Account(
                                 customer_id=customer_id, account_name=aname,
@@ -964,19 +992,112 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                 profile_metadata=_profile if _profile else None,
                             )
                             _db.session.add(acct)
+                            _db.session.flush()  # get account_id
+                            _created_acct_ids.append(acct.account_id)
                         else:
                             # Update existing account with any missing profile_metadata
                             _profile = existing.profile_metadata or {}
                             _updated = False
-                            for _pkey in ['contract_start', 'contract_end', 'renewal_date']:
+                            for _pkey in _PROFILE_KEYS:
                                 _pval = row.get(_pkey)
                                 if _pval is not None and str(_pval) != 'nan' and _pkey not in _profile:
-                                    _profile[_pkey] = str(_pval)
+                                    _profile[_pkey] = str(_pval) if not isinstance(_pval, (int, float)) else _pval
                                     _updated = True
+                            # Parse products JSON on update too
+                            _products_raw = row.get('products')
+                            if _products_raw is not None and str(_products_raw) not in ('nan', '', 'None') and 'products' not in _profile:
+                                try:
+                                    import json as _json
+                                    _prods = _json.loads(_products_raw) if isinstance(_products_raw, str) else _products_raw
+                                    if isinstance(_prods, list):
+                                        _profile['products'] = _prods
+                                        _updated = True
+                                except (ValueError, TypeError):
+                                    pass
                             if _updated:
                                 existing.profile_metadata = _profile
+                            _created_acct_ids.append(existing.account_id)
                     _db.session.flush()
                     steps_completed.append('accounts_loaded_from_csv')
+
+                    # ── Auto-extract products from profile_metadata into Product table ──
+                    from models import Product
+                    _prod_count = 0
+                    for acct in Account.query.filter_by(customer_id=customer_id).all():
+                        pm = acct.profile_metadata or {}
+                        prods = pm.get('products', [])
+                        if not isinstance(prods, list):
+                            continue
+                        for p in prods:
+                            pname = p.get('name', '') if isinstance(p, dict) else str(p)
+                            if not pname:
+                                continue
+                            existing_prod = Product.query.filter_by(
+                                account_id=acct.account_id, product_name=pname).first()
+                            if not existing_prod:
+                                _db.session.add(Product(
+                                    account_id=acct.account_id,
+                                    customer_id=customer_id,
+                                    product_name=pname,
+                                    product_type=p.get('category', '') if isinstance(p, dict) else '',
+                                    revenue=p.get('arr') if isinstance(p, dict) else None,
+                                    status='active',
+                                ))
+                                _prod_count += 1
+                    if _prod_count > 0:
+                        _db.session.flush()
+                        _products_extracted = True
+                        steps_completed.append(f'products_extracted_from_account_details({_prod_count})')
+
+                    # ── Auto-create STAKEHOLDER ContextNodes from profile_metadata ──
+                    from models import ContextNode
+                    _stk_count = 0
+                    _STAKEHOLDER_FIELDS = [
+                        ('primary_champion_name', 'champion', 'primary_champion_title', 'primary_champion_email'),
+                        ('executive_sponsor', 'executive_sponsor', None, None),
+                        ('csm_name', 'csm', None, 'csm_email'),
+                        ('csm_manager', 'cs_manager', None, None),
+                    ]
+                    for acct in Account.query.filter_by(customer_id=customer_id).all():
+                        pm = acct.profile_metadata or {}
+                        for name_field, role, title_field, email_field in _STAKEHOLDER_FIELDS:
+                            name_val = pm.get(name_field)
+                            if not name_val or str(name_val) in ('nan', '', 'None'):
+                                continue
+                            # Check if stakeholder already exists for this account+role
+                            existing_stk = ContextNode.query.filter_by(
+                                customer_id=customer_id,
+                                account_id=acct.account_id,
+                                node_type='STAKEHOLDER',
+                                node_subtype=role,
+                            ).first()
+                            if not existing_stk:
+                                title_val = pm.get(title_field, '') if title_field else role.replace('_', ' ').title()
+                                email_val = pm.get(email_field, '') if email_field else ''
+                                _db.session.add(ContextNode(
+                                    customer_id=customer_id,
+                                    account_id=acct.account_id,
+                                    node_type='STAKEHOLDER',
+                                    source='account_details',
+                                    node_subtype=role,
+                                    title=f'{name_val} ({title_val})' if title_val else name_val,
+                                    properties={
+                                        'name': str(name_val),
+                                        'role': role,
+                                        'job_title': str(title_val) if title_val else '',
+                                        'email': str(email_val) if email_val else '',
+                                        'auto_created': True,
+                                        'source_field': name_field,
+                                    },
+                                    tier=1,
+                                    occurred_at=_dt.utcnow(),
+                                    source_platform='account_details_extraction',
+                                ))
+                                _stk_count += 1
+                    if _stk_count > 0:
+                        _db.session.flush()
+                        _stakeholders_extracted = True
+                        steps_completed.append(f'stakeholders_extracted_from_account_details({_stk_count})')
 
             existing_accounts = Account.query.filter_by(customer_id=customer_id).all()
             existing_acct_ids = [a.account_id for a in existing_accounts]
@@ -1157,7 +1278,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                 stakeholder_path = data_dir / 'stakeholders.csv'
                 if not stakeholder_path.exists():
                     stakeholder_path = data_dir / 'context_graph' / 'stakeholders.csv'
-                if stakeholder_path.exists() and not _skip_cg_reload:
+                if stakeholder_path.exists() and not _skip_cg_reload and not _stakeholders_extracted:
                     df_s = pd.read_csv(str(stakeholder_path))
                     for _, row in df_s.iterrows():
                         acct_id = _resolve_acct_id(row)
@@ -1412,11 +1533,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     _loaded = len(df_eqs) - _eqs_deduped
                     steps_completed.append(f'enhanced_signals_cg_loaded_{_loaded}_deduped_{_eqs_deduped}')
 
-                # Products
+                # Products (skip if already extracted from account_details.csv)
                 try:
                     from models import Product
                     prod_path = data_dir / 'products.csv'
-                    if prod_path.exists():
+                    if prod_path.exists() and not _products_extracted:
                         df_p = pd.read_csv(str(prod_path))
                         for _, row in df_p.iterrows():
                             acct_id = _resolve_acct_id(row)
@@ -1672,6 +1793,38 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             existing_acct_ids = [a.account_id for a in acct_list]
             publish_health_events(customer_id, existing_acct_ids)
         _step_timings['event_publish'] = round(_time.time() - _t_stage, 2)
+
+        # Stage 2b: Back-fill product adoption from P1 pillar score
+        _t_adoption = _time.time()
+        try:
+            from models import HealthScore as _HS
+            _adoption_count = 0
+            for acct in acct_list:
+                pm = acct.profile_metadata or {}
+                prods = pm.get('products', [])
+                if not isinstance(prods, list) or not prods:
+                    continue
+                # Get latest health score with contributing_pillars
+                latest_hs = _HS.query.filter_by(
+                    account_id=acct.account_id
+                ).order_by(_HS.measurement_month.desc()).first()
+                if latest_hs and latest_hs.contributing_pillars:
+                    p1_score = latest_hs.contributing_pillars.get('P1')
+                    if p1_score is not None:
+                        for p in prods:
+                            if isinstance(p, dict):
+                                p['adoption'] = round(float(p1_score), 1)
+                        pm['products'] = prods
+                        pm['product_adoption'] = round(float(p1_score), 1)
+                        acct.profile_metadata = pm
+                        _adoption_count += 1
+            if _adoption_count > 0:
+                _db.session.commit()
+                steps_completed.append(f'product_adoption_backfill({_adoption_count})')
+        except Exception as _adopt_err:
+            import logging as _log_adopt
+            _log_adopt.getLogger(__name__).debug(f"Product adoption back-fill failed (non-fatal): {_adopt_err}")
+        _step_timings['product_adoption'] = round(_time.time() - _t_adoption, 2)
 
         # Stage 3: Wizard A — arc classification (incremental)
         _wa_step, _wa_duration = run_wizard_a_step(customer_id, _changed_account_ids, mode)
