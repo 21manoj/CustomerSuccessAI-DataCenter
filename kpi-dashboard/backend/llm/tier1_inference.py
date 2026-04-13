@@ -368,7 +368,8 @@ def _write_inferred_nodes(
         # Write inferred outcomes
         for out in inf.get('inferred_outcomes', []):
             try:
-                source_eid = f'llm_out:{account_id}:{out["type"]}'
+                out_date = out.get('date', dt.utcnow().strftime('%Y-%m-%d'))
+                source_eid = f'llm_out:{account_id}:{out["type"]}:{out_date}'
                 rev_impact = out.get('revenue_impact', 0)
                 # Scale revenue impact to ARR if it looks like a percentage
                 if rev_impact and 0 < abs(rev_impact) < 1:
@@ -379,7 +380,7 @@ def _write_inferred_nodes(
                     account_id=account_id,
                     node_type='OUTCOME',
                     title=out.get('title', f'Inferred: {out["type"]}')[:500],
-                    occurred_at=dt.utcnow(),
+                    occurred_at=dt.strptime(out_date[:10], '%Y-%m-%d'),
                     properties={
                         'outcome_type': out['type'],
                         'inferred_by': 'llm_tier1',

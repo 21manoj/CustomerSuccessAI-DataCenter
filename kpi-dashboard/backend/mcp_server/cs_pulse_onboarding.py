@@ -1177,7 +1177,8 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                 'engagement_frequency': str(row.get('engagement_frequency', '')),
                                 'sentiment': str(row.get('sentiment', '')),
                             },
-                            tier=1, occurred_at=_dt.utcnow(),
+                            tier=1,
+                            occurred_at=pd.to_datetime(row.get('first_observed_at')) if row.get('first_observed_at') and str(row.get('first_observed_at')) != 'nan' else _dt.utcnow(),
                             source_platform=str(row.get('source_platform', 'csv_import')),
                         ))
                     _db.session.flush()
@@ -1259,6 +1260,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         # Store outcome_type as source_event_id for edge resolution
                         outcome_type = str(row.get('outcome_type', 'revenue'))
                         outcome_src_id = f"outcome:{outcome_type}" if outcome_type else None
+                        # Parse outcome_date for correct timeline ordering
+                        raw_out_date = row.get('outcome_date')
+                        out_occurred_at = pd.to_datetime(raw_out_date) if raw_out_date and str(raw_out_date) != 'nan' else _dt.utcnow()
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
@@ -1269,7 +1273,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                             revenue_impact_type=outcome_type,
                             properties={'evidence': str(row.get('evidence', '')),
                                         'confidence': str(row.get('confidence', ''))},
-                            tier=1, occurred_at=_dt.utcnow(),
+                            tier=1, occurred_at=out_occurred_at,
                             source_platform=str(row.get('source_platform', 'csv_import')),
                             source_event_id=outcome_src_id,
                         ))
@@ -1290,6 +1294,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         # source_event_id uses 'decision:<id>' prefix so _resolve_edge_ref
                         # can find this node via srcid_to_node lookup
                         src_eid = f'decision:{dec_id}' if dec_id and dec_id != 'nan' else None
+                        # Parse decision_date for correct timeline ordering
+                        raw_dec_date = row.get('decision_date')
+                        dec_occurred_at = pd.to_datetime(raw_dec_date) if raw_dec_date and str(raw_dec_date) != 'nan' else _dt.utcnow()
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
@@ -1300,7 +1307,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                         'outcome_description': str(row.get('outcome_description', '')),
                                         'risk_level': str(row.get('risk_level', '')),
                                         'decision_id': dec_id},
-                            tier=1, occurred_at=_dt.utcnow(),
+                            tier=1, occurred_at=dec_occurred_at,
                             source_platform=str(row.get('source_platform', 'csv_import')),
                             source_event_id=src_eid,
                         ))

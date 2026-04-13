@@ -192,7 +192,7 @@ Be specific and action-oriented. Avoid generic advice."""
                     'triggered_by':    'signal_analyst',
                 },
                 tier=2,
-                occurred_at=datetime.utcnow(),
+                occurred_at=datetime.utcnow(),  # detection timestamp (when we noticed), not narrative date
             )
             db.session.add(insight_node)
             db.session.flush()
@@ -205,6 +205,12 @@ Be specific and action-oriented. Avoid generic advice."""
                 .limit(3)
                 .all()
             )
+
+            # Back-date insight to most recent triggering signal for timeline coherence
+            if recent_signals and recent_signals[0].occurred_at:
+                insight_node.occurred_at = recent_signals[0].occurred_at
+                db.session.flush()
+
             for sig in recent_signals:
                 db.session.add(ContextEdge(
                     customer_id=customer_id,
@@ -461,7 +467,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     'triggered_by':    'signal_analyst_proactive',
                 },
                 tier=2,
-                occurred_at=datetime.utcnow(),
+                occurred_at=datetime.utcnow(),  # placeholder, back-dated below
             )
             db.session.add(insight_node)
             db.session.flush()
@@ -473,6 +479,12 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                 .order_by(ContextNode.occurred_at.desc())
                 .first()
             )
+
+            # Back-date insight to triggering signal for timeline coherence
+            if trigger_signal and trigger_signal.occurred_at:
+                insight_node.occurred_at = trigger_signal.occurred_at
+                db.session.flush()
+
             if trigger_signal:
                 db.session.add(ContextEdge(
                     from_node_id=trigger_signal.node_id,
@@ -505,7 +517,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                         'triggered_by': 'signal_analyst_proactive',
                     },
                     tier=2,
-                    occurred_at=datetime.utcnow(),
+                    occurred_at=insight_node.occurred_at or datetime.utcnow(),
                     source_platform='signal_analyst',
                 )
                 db.session.add(decision_node)

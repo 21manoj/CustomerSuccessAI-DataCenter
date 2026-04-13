@@ -51,6 +51,7 @@ For EACH account, return a JSON object with this exact schema:
   "inferred_outcomes": [
     {{
       "type": "churn_risk|revenue_at_risk|churn_averted|revenue_protected|expansion_opportunity|renewal_secured",
+      "date": "YYYY-MM-DD",
       "title": "Brief title",
       "revenue_impact": 0,
       "confidence": 0.5-0.9
@@ -102,6 +103,7 @@ EXAMPLE OUTPUT:
   "inferred_outcomes": [
     {
       "type": "revenue_at_risk",
+      "date": "2026-02-01",
       "title": "Revenue at Risk — Acme Corp",
       "revenue_impact": -6000000,
       "confidence": 0.8
