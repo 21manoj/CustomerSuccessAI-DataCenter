@@ -1,12 +1,12 @@
 /**
- * Journey Intelligence View — 3-Line Health Graph
+ * Journey Intelligence View — 3 Independent Graphs
  *
- * Standalone view showing three health score lines for an account:
- *   Line 1 (blue):   KPI-only health (no decay) — structural truth
- *   Line 2 (gray):   KPI-decayed — same scores with exponential recency decay
- *   Line 3 (purple): Signal-DNA composite — decayed KPIs + signal impact
+ *   Graph 1 (blue):   KPI Health — structural truth from KPIs only, no decay
+ *   Graph 2 (amber):  Signal Score — independent signal-only score (0-100), recency-decayed
+ *   Graph 3 (green):  Composite — weighted blend of decayed KPI + decayed Signal (70/30)
  *
- * The GAP between Line 1 and Line 3 shows "what KPIs alone miss."
+ * The GAP between Graph 1 and Graph 3 shows "what KPIs alone miss."
+ * Graph 2 shows the qualitative evidence surface independently.
  *
  * API: GET /api/journey-intelligence/<account_id>
  */
@@ -17,9 +17,9 @@ import { Activity, ChevronDown, AlertTriangle, TrendingUp, TrendingDown, Zap, In
 // ── Types ──
 
 interface ScorePoint { month: string; score: number; }
-interface DecayedPoint extends ScorePoint { decay_factor: number; }
-interface CompositePoint extends ScorePoint { signal_adjustment: number; active_signals?: { type: string; recency: number; impact: number }[]; }
-interface Signal { date: string; type: string; sentiment: string; impact: number; weight: number; health_at_time: number; title?: string; }
+interface SignalScorePoint extends ScorePoint { signal_count: number; active_signals?: { type: string; score: number; recency: number }[]; }
+interface CompositePoint extends ScorePoint { kpi_component: number; signal_component: number; signal_influence: number; }
+interface Signal { date: string; type: string; sentiment: string; signal_score: number; weight: number; health_at_time: number; title?: string; }
 interface PlaybookExec { triggered_at: string | null; closed_at: string | null; playbook_id: string; playbook_name?: string; outcome?: string; health_at_trigger?: number; health_at_close?: number; triggered_by?: string; }
 interface AccountOption { account_id: number; account_name: string; health: number | null; arr: number; signal_count: number; }
 
@@ -30,9 +30,10 @@ interface JourneyData {
   time_range: { start: string; end: string };
   lambda: number;
   half_life_days: number;
+  signal_blend_ratio: number;
   kpi_only: ScorePoint[];
-  kpi_decayed: DecayedPoint[];
-  signal_dna: CompositePoint[];
+  signal_score: SignalScorePoint[];
+  composite: CompositePoint[];
   signals: Signal[];
   playbook_executions: PlaybookExec[];
   thresholds: { healthy: number; at_risk: number };
@@ -45,6 +46,14 @@ const CHART_H = 400;
 const PAD = { top: 30, right: 30, bottom: 60, left: 55 };
 const INNER_W = CHART_W - PAD.left - PAD.right;
 const INNER_H = CHART_H - PAD.top - PAD.bottom;
+
+// ── Colors ──
+const COLOR_KPI = '#60a5fa';       // blue
+const COLOR_SIGNAL = '#f59e0b';    // amber
+const COLOR_COMPOSITE = '#34d399'; // green
+const COLOR_KPI_DIM = '#1e3a5f';
+const COLOR_SIGNAL_DIM = '#92400e';
+const COLOR_COMPOSITE_DIM = '#065f46';
 
 // ── Helpers ──
 
@@ -68,7 +77,6 @@ const JourneyIntelligenceView: React.FC = () => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Fetch account list on mount
   useEffect(() => {
     fetch('/api/journey-intelligence/accounts', { credentials: 'include' })
       .then(r => r.json())
@@ -80,7 +88,6 @@ const JourneyIntelligenceView: React.FC = () => {
       .catch(() => setError('Failed to load accounts'));
   }, []);
 
-  // Fetch journey data when account changes
   useEffect(() => {
     if (!selectedId) return;
     setLoading(true);
@@ -95,7 +102,6 @@ const JourneyIntelligenceView: React.FC = () => {
       .finally(() => setLoading(false));
   }, [selectedId]);
 
-  // ── Scale functions ──
   const { scaleX, scaleY, timeLabels } = useMemo(() => {
     if (!data || !data.kpi_only.length) return { scaleX: () => 0, scaleY: () => 0, timeLabels: [] };
     const months = data.kpi_only.map(p => new Date(p.month).getTime());
@@ -109,7 +115,6 @@ const JourneyIntelligenceView: React.FC = () => {
     };
   }, [data]);
 
-  // ── Build SVG paths ──
   const buildPath = useCallback((points: ScorePoint[]) => {
     if (!points.length) return '';
     return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.month)} ${scaleY(p.score)}`).join(' ');
@@ -133,7 +138,7 @@ const JourneyIntelligenceView: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Activity className="w-6 h-6 text-amber-400" />
+          <Activity className="w-6 h-6 text-emerald-400" />
           <h1 className="text-2xl font-bold">Journey Intelligence</h1>
         </div>
 
@@ -144,9 +149,7 @@ const JourneyIntelligenceView: React.FC = () => {
             className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-2 text-sm transition-colors"
           >
             <span className="text-gray-300">{selectedAccount?.account_name || 'Select account'}</span>
-            {selectedAccount && (
-              <span className="text-gray-500 text-xs">{formatARR(selectedAccount.arr)}</span>
-            )}
+            {selectedAccount && <span className="text-gray-500 text-xs">{formatARR(selectedAccount.arr)}</span>}
             <ChevronDown className="w-4 h-4 text-gray-500" />
           </button>
           {showDropdown && (
@@ -162,9 +165,7 @@ const JourneyIntelligenceView: React.FC = () => {
                     <span className="ml-2 text-gray-500 text-xs">{formatARR(a.arr)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {a.signal_count > 0 && (
-                      <span className="text-xs text-amber-400">{a.signal_count} signals</span>
-                    )}
+                    {a.signal_count > 0 && <span className="text-xs text-amber-400">{a.signal_count} signals</span>}
                     {a.health !== null && (
                       <span className={`text-xs font-semibold ${a.health >= 70 ? 'text-emerald-400' : a.health >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
                         {a.health.toFixed(0)}
@@ -180,7 +181,7 @@ const JourneyIntelligenceView: React.FC = () => {
 
       {loading && (
         <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-purple-400" />
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-400" />
         </div>
       )}
 
@@ -189,35 +190,39 @@ const JourneyIntelligenceView: React.FC = () => {
           {/* Summary Cards */}
           <div className="grid grid-cols-5 gap-4 mb-6">
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">KPI Health (Current)</p>
-              <p className="text-2xl font-bold text-blue-400 mt-1">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">KPI Health</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: COLOR_KPI }}>
                 {data.kpi_only[data.kpi_only.length - 1]?.score.toFixed(1)}
               </p>
             </div>
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Composite (DNA)</p>
-              <p className="text-2xl font-bold text-amber-400 mt-1">
-                {data.signal_dna[data.signal_dna.length - 1]?.score.toFixed(1)}
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Signal Score</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: COLOR_SIGNAL }}>
+                {data.signal_score[data.signal_score.length - 1]?.score.toFixed(1)}
               </p>
             </div>
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Signal Gap</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Composite (DNA)</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: COLOR_COMPOSITE }}>
+                {data.composite[data.composite.length - 1]?.score.toFixed(1)}
+              </p>
+            </div>
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Signal Influence</p>
               {(() => {
-                const gap = (data.signal_dna[data.signal_dna.length - 1]?.score || 0) - (data.kpi_only[data.kpi_only.length - 1]?.score || 0);
+                const inf = data.composite[data.composite.length - 1]?.signal_influence || 0;
                 return (
-                  <p className={`text-2xl font-bold mt-1 ${gap >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {gap >= 0 ? '+' : ''}{gap.toFixed(1)}
+                  <p className={`text-2xl font-bold mt-1 ${inf >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {inf >= 0 ? '+' : ''}{inf.toFixed(1)}
                   </p>
                 );
               })()}
             </div>
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Signals</p>
-              <p className="text-2xl font-bold text-amber-400 mt-1">{data.signals.length}</p>
-            </div>
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Playbooks</p>
-              <p className="text-2xl font-bold text-teal-400 mt-1">{data.playbook_executions.length}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Signals / Playbooks</p>
+              <p className="text-2xl font-bold text-gray-300 mt-1">
+                {data.signals.length} / {data.playbook_executions.length}
+              </p>
             </div>
           </div>
 
@@ -227,7 +232,7 @@ const JourneyIntelligenceView: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-200">Health Score Journey</h2>
               <div className="flex items-center gap-1 text-xs text-gray-500">
                 <Info className="w-3 h-3" />
-                <span>Decay: {data.half_life_days}d half-life (λ={data.lambda})</span>
+                <span>Blend: {Math.round((data.signal_blend_ratio || 0.3) * 100)}% signal / {Math.round((1 - (data.signal_blend_ratio || 0.3)) * 100)}% KPI | Decay: {data.half_life_days}d half-life</span>
               </div>
             </div>
 
@@ -267,7 +272,7 @@ const JourneyIntelligenceView: React.FC = () => {
                 const x1 = scaleX(pb.triggered_at);
                 const x2 = pb.closed_at ? scaleX(pb.closed_at) : x1 + 20;
                 return (
-                  <g key={i}>
+                  <g key={`pb-${i}`}>
                     <rect x={x1} y={PAD.top} width={Math.max(x2 - x1, 4)} height={INNER_H} fill="rgba(20,184,166,0.08)" rx={2} />
                     <line x1={x1} x2={x1} y1={PAD.top} y2={PAD.top + INNER_H} stroke="rgba(20,184,166,0.3)" strokeDasharray="2 2" />
                     <text x={x1 + 3} y={CHART_H - PAD.bottom + 34} fill="rgba(20,184,166,0.6)" fontSize="8" transform={`rotate(-30, ${x1 + 3}, ${CHART_H - PAD.bottom + 34})`}>
@@ -277,65 +282,62 @@ const JourneyIntelligenceView: React.FC = () => {
                 );
               })}
 
-              {/* Gap fill between KPI-only and composite */}
+              {/* Gap fill between KPI-only and Composite */}
               {data.kpi_only.length > 1 && (
                 <path
                   d={
                     data.kpi_only.map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.month)} ${scaleY(p.score)}`).join(' ') +
                     ' ' +
-                    [...data.signal_dna].reverse().map((p, i) => `${i === 0 ? 'L' : 'L'} ${scaleX(p.month)} ${scaleY(p.score)}`).join(' ') +
+                    [...data.composite].reverse().map((p, i) => `${i === 0 ? 'L' : 'L'} ${scaleX(p.month)} ${scaleY(p.score)}`).join(' ') +
                     ' Z'
                   }
-                  fill="rgba(245,158,11,0.08)"
+                  fill="rgba(52,211,153,0.1)"
                 />
               )}
 
-              {/* Line 2: KPI-decayed (gray dashed) */}
-              <path d={buildPath(data.kpi_decayed)} fill="none" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />
+              {/* Graph 2: Signal Score (amber, dashed) */}
+              <path d={buildPath(data.signal_score)} fill="none" stroke={COLOR_SIGNAL} strokeWidth={2} strokeDasharray="6 3" />
 
-              {/* Line 1: KPI-only (blue solid) */}
-              <path d={buildPath(data.kpi_only)} fill="none" stroke="#60a5fa" strokeWidth={2.5} />
+              {/* Graph 1: KPI-only (blue solid) */}
+              <path d={buildPath(data.kpi_only)} fill="none" stroke={COLOR_KPI} strokeWidth={2.5} />
 
-              {/* Line 3: Signal-DNA composite (purple solid) */}
-              <path d={buildPath(data.signal_dna)} fill="none" stroke="#f59e0b" strokeWidth={2.5} />
+              {/* Graph 3: Composite (green solid) */}
+              <path d={buildPath(data.composite)} fill="none" stroke={COLOR_COMPOSITE} strokeWidth={2.5} />
 
               {/* Data points on KPI-only */}
               {data.kpi_only.map((p, i) => (
                 <circle
-                  key={`kpi-${i}`}
-                  cx={scaleX(p.month)}
-                  cy={scaleY(p.score)}
-                  r={hoveredIdx === i ? 5 : 3}
-                  fill="#60a5fa"
-                  stroke="#1e3a5f"
-                  strokeWidth={1}
-                  onMouseEnter={() => setHoveredIdx(i)}
-                  style={{ cursor: 'pointer' }}
+                  key={`kpi-${i}`} cx={scaleX(p.month)} cy={scaleY(p.score)}
+                  r={hoveredIdx === i ? 5 : 3} fill={COLOR_KPI} stroke={COLOR_KPI_DIM} strokeWidth={1}
+                  onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'pointer' }}
                 />
               ))}
 
-              {/* Data points on composite */}
-              {data.signal_dna.map((p, i) => (
+              {/* Data points on Signal Score */}
+              {data.signal_score.map((p, i) => (
                 <circle
-                  key={`dna-${i}`}
-                  cx={scaleX(p.month)}
-                  cy={scaleY(p.score)}
-                  r={hoveredIdx === i ? 5 : 3}
-                  fill="#f59e0b"
-                  stroke="#92400e"
-                  strokeWidth={1}
-                  onMouseEnter={() => setHoveredIdx(i)}
-                  style={{ cursor: 'pointer' }}
+                  key={`sig-${i}`} cx={scaleX(p.month)} cy={scaleY(p.score)}
+                  r={hoveredIdx === i ? 4 : 2.5} fill={COLOR_SIGNAL} stroke={COLOR_SIGNAL_DIM} strokeWidth={1}
+                  onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'pointer' }}
                 />
               ))}
 
-              {/* Signal markers */}
+              {/* Data points on Composite */}
+              {data.composite.map((p, i) => (
+                <circle
+                  key={`comp-${i}`} cx={scaleX(p.month)} cy={scaleY(p.score)}
+                  r={hoveredIdx === i ? 5 : 3} fill={COLOR_COMPOSITE} stroke={COLOR_COMPOSITE_DIM} strokeWidth={1}
+                  onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'pointer' }}
+                />
+              ))}
+
+              {/* Signal event markers */}
               {data.signals.map((sig, i) => {
                 const x = scaleX(sig.date);
-                const y = scaleY(sig.health_at_time + sig.impact);
-                const isPositive = sig.impact > 0;
+                const y = scaleY(sig.signal_score);
+                const isPositive = sig.signal_score >= 50;
                 return (
-                  <g key={`sig-${i}`}>
+                  <g key={`sig-marker-${i}`}>
                     <polygon
                       points={isPositive
                         ? `${x},${y - 7} ${x - 5},${y + 3} ${x + 5},${y + 3}`
@@ -351,42 +353,34 @@ const JourneyIntelligenceView: React.FC = () => {
               {/* Hover tooltip */}
               {hoveredIdx !== null && data.kpi_only[hoveredIdx] && (
                 <g>
-                  {/* Vertical line */}
                   <line
-                    x1={scaleX(data.kpi_only[hoveredIdx].month)}
-                    x2={scaleX(data.kpi_only[hoveredIdx].month)}
-                    y1={PAD.top}
-                    y2={PAD.top + INNER_H}
-                    stroke="rgba(255,255,255,0.2)"
-                    strokeDasharray="3 3"
+                    x1={scaleX(data.kpi_only[hoveredIdx].month)} x2={scaleX(data.kpi_only[hoveredIdx].month)}
+                    y1={PAD.top} y2={PAD.top + INNER_H} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3"
                   />
-                  {/* Tooltip box */}
                   <foreignObject
                     x={Math.min(scaleX(data.kpi_only[hoveredIdx].month) + 10, CHART_W - 200)}
-                    y={PAD.top + 10}
-                    width={185}
-                    height={120}
+                    y={PAD.top + 10} width={190} height={130}
                   >
                     <div className="bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-xs shadow-xl">
                       <p className="font-semibold text-gray-300 mb-1.5">{formatDate(data.kpi_only[hoveredIdx].month)}</p>
                       <div className="flex justify-between mb-1">
-                        <span className="text-blue-400">KPI-only:</span>
-                        <span className="font-bold text-blue-300">{data.kpi_only[hoveredIdx].score.toFixed(1)}</span>
+                        <span style={{ color: COLOR_KPI }}>KPI Health:</span>
+                        <span className="font-bold" style={{ color: COLOR_KPI }}>{data.kpi_only[hoveredIdx].score.toFixed(1)}</span>
                       </div>
                       <div className="flex justify-between mb-1">
-                        <span className="text-gray-400">Decayed:</span>
-                        <span className="font-bold text-gray-300">{data.kpi_decayed[hoveredIdx]?.score.toFixed(1)}</span>
+                        <span style={{ color: COLOR_SIGNAL }}>Signal Score:</span>
+                        <span className="font-bold" style={{ color: COLOR_SIGNAL }}>{data.signal_score[hoveredIdx]?.score.toFixed(1)}</span>
                       </div>
                       <div className="flex justify-between mb-1">
-                        <span className="text-amber-400">Composite:</span>
-                        <span className="font-bold text-amber-300">{data.signal_dna[hoveredIdx]?.score.toFixed(1)}</span>
+                        <span style={{ color: COLOR_COMPOSITE }}>Composite:</span>
+                        <span className="font-bold" style={{ color: COLOR_COMPOSITE }}>{data.composite[hoveredIdx]?.score.toFixed(1)}</span>
                       </div>
-                      {data.signal_dna[hoveredIdx]?.signal_adjustment !== 0 && (
+                      {data.composite[hoveredIdx]?.signal_influence !== 0 && (
                         <div className="flex justify-between border-t border-gray-700 pt-1 mt-1">
-                          <span className="text-amber-400">Signal gap:</span>
-                          <span className={`font-bold ${(data.signal_dna[hoveredIdx]?.signal_adjustment || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {(data.signal_dna[hoveredIdx]?.signal_adjustment || 0) >= 0 ? '+' : ''}
-                            {data.signal_dna[hoveredIdx]?.signal_adjustment.toFixed(1)}
+                          <span className="text-gray-400">Signal influence:</span>
+                          <span className={`font-bold ${(data.composite[hoveredIdx]?.signal_influence || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {(data.composite[hoveredIdx]?.signal_influence || 0) >= 0 ? '+' : ''}
+                            {data.composite[hoveredIdx]?.signal_influence.toFixed(1)}
                           </span>
                         </div>
                       )}
@@ -399,16 +393,16 @@ const JourneyIntelligenceView: React.FC = () => {
             {/* Legend */}
             <div className="flex items-center gap-6 mt-3 px-2">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-0.5 bg-blue-400" />
-                <span className="text-xs text-gray-400">KPI-only (no decay)</span>
+                <div className="w-6 h-0.5" style={{ backgroundColor: COLOR_KPI }} />
+                <span className="text-xs text-gray-400">KPI Health (no decay)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-0.5 bg-gray-500" style={{ borderTop: '1.5px dashed #6b7280' }} />
-                <span className="text-xs text-gray-400">KPI-decayed</span>
+                <div className="w-6 h-0.5" style={{ backgroundColor: COLOR_SIGNAL, borderTop: '1.5px dashed #f59e0b' }} />
+                <span className="text-xs text-gray-400">Signal Score (recency-decayed)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-0.5 bg-amber-500" />
-                <span className="text-xs text-gray-400">Signal-DNA composite</span>
+                <div className="w-6 h-0.5" style={{ backgroundColor: COLOR_COMPOSITE }} />
+                <span className="text-xs text-gray-400">Composite ({Math.round((data.signal_blend_ratio || 0.3) * 100)}% signal)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-0 h-0 border-l-[4px] border-r-[4px] border-b-[7px] border-l-transparent border-r-transparent border-b-emerald-500" />
@@ -431,9 +425,9 @@ const JourneyIntelligenceView: React.FC = () => {
                     <th className="text-left py-2 px-2">Date</th>
                     <th className="text-left py-2 px-2">Signal</th>
                     <th className="text-center py-2 px-2">Sentiment</th>
-                    <th className="text-right py-2 px-2">Impact</th>
+                    <th className="text-right py-2 px-2">Signal Score</th>
                     <th className="text-right py-2 px-2">Weight</th>
-                    <th className="text-right py-2 px-2">Health at Time</th>
+                    <th className="text-right py-2 px-2">KPI at Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -442,13 +436,13 @@ const JourneyIntelligenceView: React.FC = () => {
                       <td className="py-2 px-2 text-gray-400">{formatDate(sig.date)}</td>
                       <td className="py-2 px-2 text-gray-200">{signalLabel(sig.type)}</td>
                       <td className="py-2 px-2 text-center">
-                        {sig.impact > 0
+                        {sig.signal_score >= 50
                           ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400 inline" />
                           : <TrendingDown className="w-3.5 h-3.5 text-red-400 inline" />
                         }
                       </td>
-                      <td className={`py-2 px-2 text-right font-semibold ${sig.impact >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {sig.impact >= 0 ? '+' : ''}{sig.impact}
+                      <td className={`py-2 px-2 text-right font-semibold ${sig.signal_score >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {sig.signal_score}
                       </td>
                       <td className="py-2 px-2 text-right text-gray-400">{sig.weight.toFixed(1)}x</td>
                       <td className="py-2 px-2 text-right text-gray-300">{sig.health_at_time.toFixed(1)}</td>
