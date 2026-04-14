@@ -19,6 +19,7 @@ import CSOpsIntegrationDashboard from './components/ops/CSOpsIntegrationDashboar
 import CEODashboard from './components/dashboard/CEODashboard';
 import VPCSDashboard from './components/dashboard/VPCSDashboard';
 import AESalesDashboard from './components/dashboard/AESalesDashboard';
+import JourneyIntelligenceView from './components/journey-visualizer/JourneyIntelligenceView';
 import AuctusAIWebsite from './components/AuctusAIWebsite';
 import SuperAdminConsole from './components/SuperAdminConsole';
 import EntitlementGuard from './components/shared/EntitlementGuard';
@@ -218,6 +219,14 @@ const AppRoutes: React.FC = () => {
           element={
             <PrivateRoute vertical="datacenter">
               <DCPlatform />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dc-dashboard/journey-intelligence"
+          element={
+            <PrivateRoute vertical="datacenter">
+              <JourneyIntelligenceView />
             </PrivateRoute>
           }
         />

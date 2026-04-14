@@ -1129,6 +1129,14 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Entitlement API not available: {e}")
 
+# Journey Intelligence API (3-line health graph: KPI-only, KPI-decayed, Signal-DNA)
+try:
+    from journey_intelligence_api import journey_intelligence_api
+    app.register_blueprint(journey_intelligence_api)
+    print("✅ Registered Journey Intelligence API: /api/journey-intelligence/*")
+except ImportError as e:
+    print(f"⚠️  Warning: Journey Intelligence API not available: {e}")
+
 # Initialize Agent Tool Registry at startup
 try:
     from agent_tool_registry import register_all_tools

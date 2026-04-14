@@ -118,6 +118,7 @@ const TABS: Tab[] = [
   { id: 'test-runner',           label: 'Test Runner',                icon: FlaskConical,  route: '/test-runner',                           requiredFeature: 'test_runner_advanced' },
   { id: 'outcome-roi',           label: 'Outcome ROI',                starterLabel: 'ROI Analysis',       icon: DollarSign,    route: '/outcome-roi',                           requiredFeature: 'power_of_1' },
   { id: 'portco',                label: 'Power of 1 (Portfolio CEO)', starterLabel: 'Portfolio Synergy',  icon: Layers,        route: '/portco-dashboard',                      requiredFeature: 'portfolio_synergy' },
+  { id: 'journey-intelligence',   label: 'Journey Intelligence',        icon: Activity,      route: '/dc-dashboard/journey-intelligence',     requiredFeature: 'health_scores' },
   { id: 'revenue-intelligence',  label: 'Revenue Intelligence',       icon: GitBranch,     route: '/dc-dashboard/revenue-intelligence',     requiredFeature: 'revenue_intelligence' },
   { id: 'data-integration',      label: 'Data Integration',           starterLabel: 'Upload Data',        icon: Upload,        route: '/dc-dashboard/data-integration',         requiredFeature: 'data_upload' },
   { id: 'settings',              label: 'Settings',                   icon: Settings,      route: '/dc-dashboard/settings' },
