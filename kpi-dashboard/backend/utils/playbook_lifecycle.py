@@ -99,8 +99,16 @@ def start_execution(
     account_id: int,
     playbook_id: str,
     triggered_by: str = 'csm_manual',
+    triggered_at: datetime = None,
+    health_at_trigger: float = None,
 ) -> PlaybookExecutionV2:
     """Create a PlaybookExecutionV2 record with health/ARR snapshot.
+
+    Args:
+        triggered_at: Optional explicit timestamp. If None, uses server default (now).
+                      Use this for time-aware playbook creation from historical signals.
+        health_at_trigger: Optional explicit health score at trigger time.
+                           If None, queries the latest HealthScore from DB.
 
     Returns the persisted V2 record (already committed to DB).
     Raises ValueError if account not found.
@@ -111,14 +119,17 @@ def start_execution(
     if not account:
         raise ValueError(f"Account {account_id} not found for customer {customer_id}")
 
-    # Get current health
-    latest_hs = (
-        HealthScore.query
-        .filter_by(account_id=account_id)
-        .order_by(HealthScore.measurement_month.desc())
-        .first()
-    )
-    health_now = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
+    # Get health: use explicit value, or query latest from DB
+    if health_at_trigger is not None:
+        health_now = health_at_trigger
+    else:
+        latest_hs = (
+            HealthScore.query
+            .filter_by(account_id=account_id)
+            .order_by(HealthScore.measurement_month.desc())
+            .first()
+        )
+        health_now = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
     health_status = _classify_health(health_now)
 
     arr = float(account.revenue or 0)
@@ -161,6 +172,9 @@ def start_execution(
         actions_completed=0,
         action_log=action_log if action_log else None,
     )
+    # Time-aware: set explicit triggered_at if provided (overrides server_default)
+    if triggered_at is not None:
+        execution.triggered_at = triggered_at
     db.session.add(execution)
     db.session.commit()
 
@@ -176,8 +190,13 @@ def close_execution(
     revenue_protected: float = None,
     revenue_expanded: float = 0,
     csm_hours_actual: float = None,
+    closed_at: datetime = None,
 ) -> PlaybookExecutionV2:
     """Close a PlaybookExecutionV2 with outcome data, ROI, and context graph OUTCOME node.
+
+    Args:
+        closed_at: Optional explicit close timestamp. If None, uses now.
+                   Use for time-aware closure of historical playbooks.
 
     Returns the updated V2 record (already committed to DB).
     Raises ValueError if execution not found or already closed.
@@ -194,7 +213,7 @@ def close_execution(
     execution.status = 'completed'
     execution.outcome = outcome
     execution.outcome_notes = outcome_notes
-    execution.closed_at = datetime.utcnow()
+    execution.closed_at = closed_at or datetime.utcnow()
 
     if health_at_close is not None:
         execution.health_at_close = health_at_close
@@ -234,14 +253,21 @@ def close_execution(
         )
 
     # ── Write OUTCOME node to context graph ──
-    _write_context_graph_outcome(execution, customer_id, outcome, revenue_protected, revenue_expanded, arr, full_cost)
+    _write_context_graph_outcome(execution, customer_id, outcome, revenue_protected, revenue_expanded, arr, full_cost,
+                                 occurred_at=execution.closed_at)
 
     db.session.commit()
     return execution
 
 
-def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protected, revenue_expanded, arr, full_cost):
-    """Write OUTCOME node and DECISION→OUTCOME edge to context graph."""
+def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protected, revenue_expanded, arr, full_cost,
+                                  occurred_at=None):
+    """Write OUTCOME node and DECISION→OUTCOME edge to context graph.
+
+    Args:
+        occurred_at: Optional timestamp for the OUTCOME node. If None, uses utcnow().
+                     Time-aware closures pass execution.closed_at for timeline coherence.
+    """
     try:
         # Determine revenue_impact_type
         if revenue_protected > 0 and outcome == 'resolved':
@@ -276,7 +302,7 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                 'roi_x': execution.realized_roi_pct,
             },
             tier=1,
-            occurred_at=datetime.utcnow(),
+            occurred_at=occurred_at or datetime.utcnow(),
             source_platform='playbook_execution',
             source_event_id=f'close:{execution.execution_id}',
         )

@@ -496,13 +496,11 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     properties={'label': f'Proactive detection: {signal_type}'},
                 ))
 
-            # For stakeholder-related signals, auto-create DECISION + INVOLVES
-            _STAKEHOLDER_SIGNAL_TYPES = {
-                'champion_change', 'champion_loss', 'executive_change',
-                'stakeholder_departure', 'stakeholder_escalation',
-            }
-            if signal_type in _STAKEHOLDER_SIGNAL_TYPES:
-                # Create a DECISION node for the recommended action
+            # Create DECISION node for ALL high-risk signals (not just stakeholder types)
+            playbook_id = risk_info.get('playbook')
+            signal_occurred_at = insight_node.occurred_at or datetime.utcnow()
+
+            if playbook_id:
                 decision_node = ContextNode(
                     account_id=account_id,
                     customer_id=customer_id,
@@ -511,13 +509,13 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     node_subtype=f'respond_to_{signal_type}',
                     title=f'Action needed: {risk_info["label"]}',
                     properties={
-                        'recommended_playbook': risk_info['playbook'],
+                        'recommended_playbook': playbook_id,
                         'signal_type': signal_type,
                         'auto_created': True,
                         'triggered_by': 'signal_analyst_proactive',
                     },
                     tier=2,
-                    occurred_at=insight_node.occurred_at or datetime.utcnow(),
+                    occurred_at=signal_occurred_at,
                     source_platform='signal_analyst',
                 )
                 db.session.add(decision_node)
@@ -534,26 +532,32 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     properties={'label': f'{signal_type} triggered response decision'},
                 ))
 
-                # Link stakeholders via INVOLVES
-                stakeholders = (
-                    ContextNode.query
-                    .filter_by(
-                        account_id=account_id,
-                        customer_id=customer_id,
-                        node_type='STAKEHOLDER',
+                # Link stakeholders via INVOLVES (for all signal types — stakeholders
+                # are relevant to any intervention, not just stakeholder-related signals)
+                _STAKEHOLDER_SIGNAL_TYPES = {
+                    'champion_change', 'champion_loss', 'executive_change',
+                    'stakeholder_departure', 'stakeholder_escalation',
+                }
+                if signal_type in _STAKEHOLDER_SIGNAL_TYPES:
+                    stakeholders = (
+                        ContextNode.query
+                        .filter_by(
+                            account_id=account_id,
+                            customer_id=customer_id,
+                            node_type='STAKEHOLDER',
+                        )
+                        .all()
                     )
-                    .all()
-                )
-                for sh in stakeholders:
-                    db.session.add(ContextEdge(
-                        customer_id=customer_id,
-                        from_node_id=sh.node_id,
-                        to_node_id=decision_node.node_id,
-                        edge_type='INVOLVES',
-                        confidence=0.7,
-                        source_platform='signal_analyst',
-                        properties={'label': f'{sh.title or "Stakeholder"} involved'},
-                    ))
+                    for sh in stakeholders:
+                        db.session.add(ContextEdge(
+                            customer_id=customer_id,
+                            from_node_id=sh.node_id,
+                            to_node_id=decision_node.node_id,
+                            edge_type='INVOLVES',
+                            confidence=0.7,
+                            source_platform='signal_analyst',
+                            properties={'label': f'{sh.title or "Stakeholder"} involved'},
+                        ))
 
             db.session.commit()
         except Exception as graph_err:
@@ -562,6 +566,23 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                 db.session.rollback()
             except Exception:
                 pass
+
+        # ── 9. Execute playbook (time-aware) ──
+        # After CG commit, create PlaybookExecutionV2 from the recommended playbook.
+        # This is Layer A's independent path — separate from Layer B (health+arc trigger).
+        if playbook_id:
+            try:
+                pb_result = _execute_playbook_from_signal(
+                    customer_id=customer_id,
+                    account_id=account_id,
+                    playbook_id=playbook_id,
+                    signal_type=signal_type,
+                    signal_date=signal_occurred_at,
+                )
+                if pb_result:
+                    payload['playbook_execution'] = pb_result
+            except Exception as pb_err:
+                logger.warning(f"signal_analyst: playbook execution failed (non-fatal): {pb_err}")
 
         return payload
 
@@ -867,3 +888,175 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
 
 # Keep old name as alias for backward compatibility
 _call_openai = _call_llm
+
+
+# ─────────────────────────────────────────────────────────────────────
+#  Time-aware playbook execution from signal detection
+# ─────────────────────────────────────────────────────────────────────
+
+# Playbook duration in days (how long an intervention typically takes)
+_PLAYBOOK_DURATION_DAYS = {
+    'PB-DC-01': 21, 'PB-DC-02': 14, 'PB-DC-03': 30, 'PB-DC-04': 21,
+    'PB-01': 21, 'PB-02': 14, 'PB-03': 21, 'PB-04': 14,
+    'PB-05': 21, 'PB-06': 30, 'PB-07': 21, 'PB-08': 30,
+}
+
+
+def _get_health_at_date(account_id: int, target_date) -> Optional[float]:
+    """Get the health score closest to (but not after) a target date.
+
+    Returns the health_score float, or None if no score exists before that date.
+    """
+    try:
+        from models import HealthScore
+        target = target_date.date() if hasattr(target_date, 'date') else target_date
+        hs = (
+            HealthScore.query
+            .filter(
+                HealthScore.account_id == account_id,
+                HealthScore.measurement_month <= target,
+            )
+            .order_by(HealthScore.measurement_month.desc())
+            .first()
+        )
+        if hs and hs.health_score is not None:
+            return float(hs.health_score)
+        # Fallback: get ANY health score for this account (earliest available)
+        hs_any = (
+            HealthScore.query
+            .filter_by(account_id=account_id)
+            .order_by(HealthScore.measurement_month.asc())
+            .first()
+        )
+        return float(hs_any.health_score) if hs_any and hs_any.health_score else None
+    except Exception as e:
+        logger.debug(f"_get_health_at_date failed for account {account_id}: {e}")
+        return None
+
+
+def _execute_playbook_from_signal(
+    customer_id: int,
+    account_id: int,
+    playbook_id: str,
+    signal_type: str,
+    signal_date: datetime,
+) -> Optional[dict]:
+    """Create a time-aware PlaybookExecutionV2 from a detected signal.
+
+    If the signal is old enough (>14 days), auto-closes the execution
+    with health-at-close looked up from the appropriate date.
+
+    Dedup: skips if a PlaybookExecutionV2 already exists for the same
+    account+playbook within 7 days of the signal date.
+
+    Returns dict with execution details, or None if skipped/failed.
+    """
+    try:
+        from models import PlaybookExecutionV2, db
+        from utils.playbook_lifecycle import start_execution, close_execution
+
+        # ── Dedup: check for existing execution near signal date ──
+        dedup_start = signal_date - timedelta(days=7)
+        dedup_end = signal_date + timedelta(days=7)
+        existing = (
+            PlaybookExecutionV2.query
+            .filter(
+                PlaybookExecutionV2.customer_id == customer_id,
+                PlaybookExecutionV2.account_id == account_id,
+                PlaybookExecutionV2.playbook_id == playbook_id,
+                PlaybookExecutionV2.triggered_at >= dedup_start,
+                PlaybookExecutionV2.triggered_at <= dedup_end,
+            )
+            .first()
+        )
+        if existing:
+            logger.debug(
+                f"signal_analyst: playbook {playbook_id} already exists for "
+                f"account {account_id} near {signal_date.date()} — skipping"
+            )
+            return None
+
+        # ── Get health at signal time ──
+        health_at_trigger = _get_health_at_date(account_id, signal_date)
+
+        # ── Create execution with signal's timestamp ──
+        try:
+            execution = start_execution(
+                customer_id=customer_id,
+                account_id=account_id,
+                playbook_id=playbook_id,
+                triggered_by='signal_analyst',
+                triggered_at=signal_date,
+                health_at_trigger=health_at_trigger,
+            )
+        except ValueError as e:
+            logger.debug(f"signal_analyst: start_execution failed: {e}")
+            return None
+
+        logger.info(
+            f"signal_analyst: ✅ PlaybookExecution created for account {account_id} "
+            f"— {playbook_id} triggered by {signal_type} at {signal_date.date()} "
+            f"(health={health_at_trigger})"
+        )
+
+        result = {
+            'execution_id': execution.execution_id,
+            'playbook_id': playbook_id,
+            'account_id': account_id,
+            'triggered_at': signal_date.isoformat(),
+            'health_at_trigger': health_at_trigger,
+            'signal_type': signal_type,
+        }
+
+        # ── Auto-close if signal is old enough ──
+        days_elapsed = (datetime.utcnow() - signal_date).days
+        playbook_duration = _PLAYBOOK_DURATION_DAYS.get(playbook_id, 21)
+
+        if days_elapsed > playbook_duration:
+            closed_at = signal_date + timedelta(days=playbook_duration)
+            health_at_close = _get_health_at_date(account_id, closed_at)
+
+            # Determine outcome from health trajectory
+            if health_at_trigger is not None and health_at_close is not None:
+                if health_at_close > health_at_trigger + 5:
+                    outcome = 'resolved'
+                elif health_at_close < health_at_trigger - 10:
+                    outcome = 'timeout'
+                else:
+                    outcome = 'resolved'  # stabilized = success
+            else:
+                outcome = 'resolved'
+
+            try:
+                close_execution(
+                    customer_id=customer_id,
+                    execution_id=execution.execution_id,
+                    outcome=outcome,
+                    outcome_notes=(
+                        f'Auto-closed: {playbook_id} triggered by {signal_type} '
+                        f'at {signal_date.date()}, closed after {playbook_duration}d'
+                    ),
+                    health_at_close=health_at_close,
+                    closed_at=closed_at,
+                )
+                result['outcome'] = outcome
+                result['closed_at'] = closed_at.isoformat()
+                result['health_at_close'] = health_at_close
+                logger.info(
+                    f"signal_analyst: ✅ Auto-closed {execution.execution_id} as {outcome} "
+                    f"(health {health_at_trigger}→{health_at_close}, closed={closed_at.date()})"
+                )
+            except Exception as close_err:
+                logger.warning(f"signal_analyst: auto-close failed for {execution.execution_id}: {close_err}")
+                result['auto_close_error'] = str(close_err)
+
+        return result
+
+    except Exception as e:
+        logger.error(f"signal_analyst: _execute_playbook_from_signal failed: {e}", exc_info=True)
+        try:
+            from extensions import db as _db
+            _db.session.rollback()
+        except Exception:
+            pass
+        return None
