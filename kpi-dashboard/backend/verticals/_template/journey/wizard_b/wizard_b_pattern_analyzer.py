@@ -861,6 +861,7 @@ class PatternAnalyzer:
         _positive_outcome_types = {
             'churn_averted', 'revenue_protected', 'renewal_secured',
             'renewal_confirmed', 'engagement_recovery',
+            'playbook_outcome',  # from close_execution() in playbook_lifecycle
         }
 
         # Build account status map (churned accounts can't be "saved")

@@ -3548,7 +3548,71 @@ class ScenarioManifest(BaseScenario):
             except Exception as e:
                 result['errors'].append(f'Playbook close error for {acct["account_name"]}: {e}')
 
-        # Step 6: Trigger Wizard B to update NRR correlations
+        # Step 6: Create lifecycle OUTCOME nodes for NRR calculation
+        # Wizard B needs churn_lost/expansion_closed nodes to compute NRR
+        lifecycle_nodes = []
+        for acct_name, event in lifecycle_events.items():
+            event_type = event.get('event', '')
+            delta_pct = event.get('delta_pct', 0)
+            # Find matching account
+            matching_acct = None
+            for a in accounts_resp:
+                if not isinstance(a, dict):
+                    continue
+                a_name = a.get('account_name') or a.get('name') or ''
+                if a_name == acct_name or acct_name.lower() in a_name.lower():
+                    matching_acct = a
+                    break
+            if not matching_acct:
+                continue
+            aid = int(matching_acct.get('account_id') or matching_acct.get('id', 0))
+            arr = float(matching_acct.get('revenue') or matching_acct.get('arr') or 0)
+
+            if event_type == 'churn':
+                lifecycle_nodes.append({
+                    'account_id': aid,
+                    'node_type': 'OUTCOME',
+                    'node_subtype': 'churn_lost',
+                    'title': f'Churned: {acct_name} (${arr:,.0f} ARR lost)',
+                    'revenue_impact': -arr,
+                    'revenue_impact_type': 'churn_lost',
+                    'source': 'manifest',
+                    'source_event_id': f'lifecycle:churn:{aid}',
+                    'source_platform': 'load_driver',
+                    'tier': 1,
+                    'properties': {'lifecycle_event': 'churn', 'delta_pct': delta_pct},
+                })
+            elif event_type == 'expand' and delta_pct > 0:
+                expansion_arr = arr * (delta_pct / 100)
+                lifecycle_nodes.append({
+                    'account_id': aid,
+                    'node_type': 'OUTCOME',
+                    'node_subtype': 'expansion_closed',
+                    'title': f'Expansion: {acct_name} (+{delta_pct}%, ${expansion_arr:,.0f})',
+                    'revenue_impact': expansion_arr,
+                    'revenue_impact_type': 'expansion_closed',
+                    'source': 'manifest',
+                    'source_event_id': f'lifecycle:expand:{aid}',
+                    'source_platform': 'load_driver',
+                    'tier': 1,
+                    'properties': {'lifecycle_event': 'expand', 'delta_pct': delta_pct},
+                })
+
+        if lifecycle_nodes:
+            try:
+                ingest_resp = self.client.ingest_context_graph(
+                    customer_id=customer_id,
+                    nodes=lifecycle_nodes,
+                    edges=[],
+                )
+                result['api_calls'] += 1
+                created = ingest_resp.get('nodes_created', 0) if ingest_resp else 0
+                logger.info(f'    Lifecycle OUTCOME nodes: {created} created ({len(lifecycle_nodes)} submitted)')
+                result['lifecycle_outcomes_created'] = created
+            except Exception as e:
+                result['errors'].append(f'Lifecycle OUTCOME ingest failed (non-fatal): {e}')
+
+        # Step 7: Trigger Wizard B to update NRR correlations
         if result['closed'] > 0:
             logger.info('    Triggering Wizard B to update NRR correlations...')
             try:

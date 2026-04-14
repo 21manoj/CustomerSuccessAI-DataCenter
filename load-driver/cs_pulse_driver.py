@@ -153,6 +153,13 @@ def run_manifest(args):
             logger.info(f"  API Key: {api_key}")
             logger.info(f"  ⚠️  Save this key — it is returned ONCE and required for MCP access.")
 
+        # Login the reg_client so it has a session cookie for onboarding
+        reg_client.email = email
+        reg_client.password = password
+        reg_client.customer_id = customer_id
+        if not reg_client.login():
+            logger.warning("  Post-registration login failed — trying onboarding without session")
+
         # Provision onboarding directory
         # num_accounts=0 in manifest mode: the accounts.csv will create
         # the real accounts. Passing num_accounts>0 creates placeholder
