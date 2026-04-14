@@ -899,8 +899,11 @@ class ManifestCSVGenerator:
                 self.data_points = extend_months
 
             self.end_date = self.start_date + timedelta(days=extend_months * 30)
-            # Force intervention phase for narrative events in extension
-            self.phase = 'intervention'
+            # Use phase from args if provided, otherwise default to intervention
+            # For 4-phase testing: --extend --phase baseline = continue decline
+            #                      --extend --phase intervention = recovery signals
+            if not self.phase:
+                self.phase = 'intervention'
             logger.info(
                 "  EXTEND mode: offset=%d months, generating %s → %s (%d data points)",
                 self.extend_offset_months,
