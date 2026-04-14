@@ -16,7 +16,7 @@ RULES:
 - Each inference must have a confidence score (0.5-0.9). Higher = more certain.
 - Signals should precede decisions, which should precede outcomes (temporal ordering).
 - Use specific dates from the KPI data (when a metric changed significantly).
-- Revenue impact on outcomes should be proportional to the account's ARR.
+- Do NOT include revenue_impact in outcomes — revenue is computed deterministically by the platform from health scores × ARR. Your job is to infer the outcome TYPE, not the dollar amount.
 - If health is stable (±5 points), infer minimal events — don't over-explain stability.
 - Reference specific PRODUCTS when a KPI change maps to a product (e.g., "GPU Compute utilization declined").
 - Reference STAKEHOLDERS by name when inferring decisions (e.g., "CTO Michael Torres likely escalated").
@@ -69,7 +69,6 @@ For EACH account, return a JSON object with this exact schema:
       "type": "churn_risk|revenue_at_risk|churn_averted|revenue_protected|expansion_opportunity|renewal_secured",
       "date": "YYYY-MM-DD",
       "title": "Brief title",
-      "revenue_impact": 0,
       "confidence": 0.5-0.9
     }}
   ],
@@ -121,7 +120,6 @@ EXAMPLE OUTPUT:
       "type": "revenue_at_risk",
       "date": "2026-02-01",
       "title": "Revenue at Risk — Acme Corp",
-      "revenue_impact": -6000000,
       "confidence": 0.8
     }
   ],

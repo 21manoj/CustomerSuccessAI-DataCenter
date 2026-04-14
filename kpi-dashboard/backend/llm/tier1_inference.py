@@ -427,14 +427,13 @@ def _write_inferred_nodes(
                 logger.debug('LLM decision write error: %s', e)
 
         # Write inferred outcomes
+        # NOTE: revenue_impact is NOT set from LLM inference — LLM guesses are
+        # non-deterministic and cause 30-50% variance in revenue-at-risk numbers.
+        # Revenue is computed deterministically by the ROI engine from health × ARR.
         for out in inf.get('inferred_outcomes', []):
             try:
                 out_date = out.get('date', dt.utcnow().strftime('%Y-%m-%d'))
                 source_eid = f'llm_out:{account_id}:{out["type"]}:{out_date}'
-                rev_impact = out.get('revenue_impact', 0)
-                # Scale revenue impact to ARR if it looks like a percentage
-                if rev_impact and 0 < abs(rev_impact) < 1:
-                    rev_impact = arr * rev_impact
 
                 node = upsert_node(
                     customer_id=customer_id,
@@ -452,8 +451,8 @@ def _write_inferred_nodes(
                     node_subtype=out['type'],
                     tier=2,
                     confidence=out.get('confidence', 0.7),
-                    revenue_impact=rev_impact if rev_impact else None,
-                    revenue_impact_type=out['type'] if rev_impact else None,
+                    revenue_impact=None,  # deterministic: computed by ROI engine from health × ARR
+                    revenue_impact_type=out['type'],
                 )
                 if node:
                     created_node_ids[f'outcome:{out["type"]}'] = node.node_id
