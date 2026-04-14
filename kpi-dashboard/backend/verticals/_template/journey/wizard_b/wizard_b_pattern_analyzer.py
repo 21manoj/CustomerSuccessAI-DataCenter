@@ -867,27 +867,6 @@ class PatternAnalyzer:
         # Build account status map (churned accounts can't be "saved")
         _status_map = {a.account_id: (a.account_status or 'active') for a in accounts_db}
 
-        # Pre-load HealthScore min/max as fallback when journey data lacks health fields
-        from models import HealthScore as _HS
-        _hs_cache: Dict[int, tuple] = {}  # aid → (lowest, ending)
-        try:
-            from sqlalchemy import func as _fn
-            _hs_rows = (
-                db.session.query(
-                    _HS.account_id,
-                    _fn.min(_HS.health_score),
-                    _fn.max(_HS.measurement_month),
-                )
-                .filter(_HS.account_id.in_([j.get('account_id', 0) for j in self.journeys]))
-                .group_by(_HS.account_id)
-                .all()
-            )
-            for aid, lo, latest_month in _hs_rows:
-                latest = _HS.query.filter_by(account_id=aid, measurement_month=latest_month).first()
-                _hs_cache[aid] = (float(lo) if lo else 100, float(latest.health_score) if latest else 0)
-        except Exception:
-            pass
-
         saved_account_ids = set()
         saved_arr = 0.0
         for j in self.journeys:
@@ -900,11 +879,6 @@ class PatternAnalyzer:
             ending = j.get('ending_health') or 0
             lowest = j.get('lowest_health') or j.get('starting_health') or ending
             starting = j.get('starting_health') or ending
-
-            # Fallback: use HealthScore table when journey data is empty
-            if not ending and not lowest and aid in _hs_cache:
-                lowest, ending = _hs_cache[aid]
-                starting = ending  # approximate
 
             # Check 1: health recovered from a dip (ending meaningfully above lowest)
             health_recovered = ending > lowest + 10
