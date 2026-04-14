@@ -254,6 +254,7 @@ def run_manifest(args):
         extend_months=args.months,
         minimal=getattr(args, 'minimal', False),
         end_date=getattr(args, 'end_date', None),
+        playbooks=getattr(args, 'playbooks', False),
     )
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
@@ -359,6 +360,13 @@ Examples:
         help='Upload only account_details.csv + kpi_measurements.csv (2-CSV mode for LLM inference). '
              'Context graph CSVs (signals, decisions, outcomes, edges, engagement) are NOT uploaded — '
              'LLM Tier1 infers the context graph from KPI trajectories + account details.',
+    )
+    parser.add_argument(
+        '--playbooks',
+        action='store_true',
+        help='Execute and close playbooks on at-risk accounts after process-data. '
+             'Uses arc→playbook mapping to trigger interventions, then closes with '
+             'churn-model revenue attribution. Makes NRR move and ROI accumulate.',
     )
 
     # ── Validation args (V3: merged from V2) ──

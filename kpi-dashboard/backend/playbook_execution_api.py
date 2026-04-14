@@ -273,6 +273,57 @@ def update_execution(execution_id):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@playbook_execution_api.route('/api/playbooks/executions/<execution_id>/close', methods=['POST'])
+def close_execution_endpoint(execution_id):
+    """Close a playbook execution with full revenue attribution and context graph OUTCOME.
+
+    Calls close_execution() from playbook_lifecycle, which:
+    - Computes revenue_protected via churn probability model
+    - Writes OUTCOME node to context graph
+    - Creates DECISION→OUTCOME edge
+    - Calculates realized ROI
+
+    Body: {outcome, outcome_notes, health_at_close, revenue_protected,
+           revenue_expanded, csm_hours_actual}
+    """
+    try:
+        customer_id = get_current_customer_id()
+        data = request.json or {}
+
+        outcome = data.get('outcome', 'resolved')
+        if outcome not in ('resolved', 'escalated', 'timeout', 'manual_close'):
+            return jsonify({'status': 'error', 'message': f'Invalid outcome: {outcome}'}), 400
+
+        from utils.playbook_lifecycle import close_execution
+        try:
+            v2 = close_execution(
+                customer_id=int(customer_id),
+                execution_id=execution_id,
+                outcome=outcome,
+                outcome_notes=data.get('outcome_notes', ''),
+                health_at_close=data.get('health_at_close'),
+                revenue_protected=data.get('revenue_protected'),
+                revenue_expanded=data.get('revenue_expanded', 0),
+                csm_hours_actual=data.get('csm_hours_actual'),
+            )
+        except ValueError as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 404
+
+        return jsonify({
+            'status': 'success',
+            'execution': _v2_to_camelcase(v2),
+            'revenue_protected': float(v2.revenue_protected or 0),
+            'revenue_expanded': float(v2.revenue_expanded or 0),
+            'realized_roi_pct': float(v2.realized_roi_pct or 0),
+            'health_delta': float(v2.health_delta or 0),
+            'nrr_impact_pct': float(v2.nrr_impact_pct or 0),
+        })
+
+    except Exception as e:
+        logger.error(f"Error closing execution {execution_id}: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @playbook_execution_api.route('/api/playbooks/executions/<execution_id>', methods=['DELETE'])
 def delete_execution(execution_id):
     """Delete an execution."""

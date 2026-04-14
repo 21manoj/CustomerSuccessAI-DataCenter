@@ -588,6 +588,49 @@ class CSPulseClient:
         response = self.get(f'/api/playbooks/executions/{execution_id}')
         return response
 
+    def close_playbook(
+        self,
+        execution_id: str,
+        outcome: str = 'resolved',
+        outcome_notes: str = '',
+        health_at_close: float = None,
+        revenue_protected: float = None,
+        revenue_expanded: float = 0,
+        csm_hours_actual: float = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Close a playbook execution with full revenue attribution.
+
+        Calls the lifecycle close endpoint which computes churn-model
+        revenue_protected, writes OUTCOME context graph nodes, and
+        calculates realized ROI.
+        """
+        payload = {'outcome': outcome, 'outcome_notes': outcome_notes}
+        if health_at_close is not None:
+            payload['health_at_close'] = health_at_close
+        if revenue_protected is not None:
+            payload['revenue_protected'] = revenue_protected
+        if revenue_expanded is not None and revenue_expanded > 0:
+            payload['revenue_expanded'] = revenue_expanded
+        if csm_hours_actual is not None:
+            payload['csm_hours_actual'] = csm_hours_actual
+        return self.post(f'/api/playbooks/executions/{execution_id}/close', payload)
+
+    def get_all_executions(self) -> Optional[Dict[str, Any]]:
+        """Get all playbook executions for the current customer."""
+        return self.get('/api/playbooks/executions')
+
+    def trigger_wizard(self, customer_id: int, wizard: str = 'b') -> Optional[Dict[str, Any]]:
+        """Trigger a wizard run (a, b, or c).
+
+        Uses session auth — customer_id is resolved from the session cookie.
+        """
+        endpoint = f'/api/data/trigger-wizard-{wizard}'
+        return self.post(endpoint, {})
+
+    def get_accounts_with_health(self) -> Optional[Dict[str, Any]]:
+        """Get all accounts with current health scores."""
+        return self.get('/api/health-scores?months=1')
+
     def cleanup_customer(self, customer_id: int, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         """Post-test cleanup: delete all customer data"""
         payload = {'dry_run': dry_run}

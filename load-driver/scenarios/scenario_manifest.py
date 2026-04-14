@@ -3287,6 +3287,282 @@ class ScenarioManifest(BaseScenario):
 
         return checks
 
+    # ── Playbook execution orchestration ──
+
+    # Arc → playbook mapping (mirrors push_intelligence_subscriber._ARC_PLAYBOOK_MAP)
+    _ARC_PLAYBOOK_MAP = {
+        'crisis_recovery':          'PB-02',
+        'exec_sponsor_change':      'PB-04',
+        'competitive_displacement': 'PB-03',
+        'stalled_deployment':       'PB-01',
+        'silent_churn':             'PB-06',
+        'expansion_champion':       'PB-08',
+        'land_and_expand':          'PB-08',
+        'seasonal_surge':           'PB-07',
+        'infrastructure_decay':     'PB-05',
+        'proactive_growth':         'PB-08',
+        'crisis':                   'PB-02',
+        'champion_loss':            'PB-04',
+        'budget_pressure':          'PB-06',
+        'recovery':                 'PB-02',
+        'onboarding':               'PB-01',
+        'stable':                   None,
+        'steady_performer':         None,
+        'expansion':                'PB-08',
+    }
+
+    def _execute_and_close_playbooks(
+        self,
+        customer_id: int,
+        manifest: Dict[str, Any],
+        manifest_accounts: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Execute playbooks on at-risk accounts, then close them with revenue attribution.
+
+        Flow:
+        1. Get current health scores from the server
+        2. Identify at-risk/critical accounts (health < 70)
+        3. Map arc_type → playbook_id
+        4. Execute playbooks via API
+        5. Close playbooks with outcome based on manifest trajectory:
+           - 'resolved' if account is expected to recover (classification != critical or has recovery arc)
+           - 'timeout' if account is expected to churn
+        6. Trigger Wizard B to update NRR correlations
+
+        Returns summary dict with counts, revenue protected, errors.
+        """
+        result = {
+            'executed': 0,
+            'closed': 0,
+            'total_revenue_protected': 0,
+            'total_revenue_expanded': 0,
+            'api_calls': 0,
+            'executions': [],
+            'errors': [],
+        }
+
+        # Build manifest lookup: account_name → account spec
+        manifest_by_name = {}
+        lifecycle_events = manifest.get('lifecycle_events', {})
+        for acct in manifest_accounts:
+            name = acct.get('name', '')
+            manifest_by_name[name] = acct
+
+        # Step 1: Get accounts with health scores
+        accounts_resp = self.client.get_accounts() or []
+        result['api_calls'] += 1
+        if not accounts_resp:
+            result['errors'].append('No accounts found — cannot execute playbooks')
+            return result
+
+        # Also get health scores for all accounts
+        health_resp = self.client.get_accounts_with_health() or {}
+        result['api_calls'] += 1
+        health_scores = health_resp.get('health_scores', [])
+
+        # Build latest health per account_id
+        latest_health: Dict[int, float] = {}
+        for hs in health_scores:
+            aid = hs.get('account_id')
+            score = hs.get('health_score')
+            if aid is not None and score is not None:
+                aid = int(aid)
+                score = float(score)
+                # Keep the most recent (list is ordered by account_id, measurement_month)
+                latest_health[aid] = score
+
+        # Step 2: Identify at-risk/critical accounts
+        at_risk_accounts = []
+        for acct in accounts_resp:
+            if not isinstance(acct, dict):
+                continue
+            aid = acct.get('account_id') or acct.get('id')
+            if aid is None:
+                continue
+            aid = int(aid)
+            health = latest_health.get(aid)
+            if health is None:
+                # Try from the account response itself
+                health = acct.get('health_score') or acct.get('overall_score')
+                if health is not None:
+                    health = float(health)
+            if health is not None and health < 70:
+                at_risk_accounts.append({
+                    'account_id': aid,
+                    'account_name': acct.get('account_name') or acct.get('name') or f'Account {aid}',
+                    'health': health,
+                    'revenue': float(acct.get('revenue') or acct.get('arr') or 0),
+                })
+
+        if not at_risk_accounts:
+            logger.info('    No at-risk accounts found — skipping playbook execution')
+            return result
+
+        logger.info(f'    Found {len(at_risk_accounts)} at-risk/critical accounts')
+
+        # Step 3: Match accounts to manifest arcs and determine playbooks
+        for acct in at_risk_accounts:
+            acct_name = acct['account_name']
+            # Find matching manifest account by name
+            manifest_acct = manifest_by_name.get(acct_name)
+            if not manifest_acct:
+                # Try fuzzy match (account name might differ slightly)
+                for mname, mspec in manifest_by_name.items():
+                    if mname.lower() in acct_name.lower() or acct_name.lower() in mname.lower():
+                        manifest_acct = mspec
+                        break
+
+            arc_type = None
+            if manifest_acct:
+                arc_type = manifest_acct.get('arc_type') or manifest_acct.get('story_arc')
+            if not arc_type:
+                # Default based on health
+                arc_type = 'crisis_recovery' if acct['health'] < 50 else 'silent_churn'
+
+            playbook_id = self._ARC_PLAYBOOK_MAP.get(arc_type)
+            if not playbook_id:
+                logger.debug(f'    {acct_name}: arc={arc_type} → no playbook mapped, skipping')
+                continue
+
+            acct['arc_type'] = arc_type
+            acct['playbook_id'] = playbook_id
+            acct['manifest_acct'] = manifest_acct
+
+        # Step 4: Execute playbooks
+        executions = []
+        for acct in at_risk_accounts:
+            if 'playbook_id' not in acct:
+                continue
+            try:
+                resp = self.client.trigger_playbook(
+                    playbook_id=acct['playbook_id'],
+                    account_id=acct['account_id'],
+                    context={'arc_type': acct['arc_type'], 'triggered_by': 'load_driver'},
+                )
+                result['api_calls'] += 1
+                if resp and resp.get('status') == 'success':
+                    exec_data = resp.get('execution', {})
+                    execution_id = exec_data.get('execution_id') or exec_data.get('id')
+                    if execution_id:
+                        acct['execution_id'] = execution_id
+                        executions.append(acct)
+                        result['executed'] += 1
+                        logger.info(
+                            f'    ✅ {acct["account_name"]}: {acct["playbook_id"]} triggered '
+                            f'(health={acct["health"]:.0f}, arc={acct["arc_type"]})'
+                        )
+                    else:
+                        result['errors'].append(f'No execution_id in response for {acct["account_name"]}')
+                else:
+                    result['errors'].append(
+                        f'Playbook trigger failed for {acct["account_name"]}: {str(resp)[:100]}'
+                    )
+            except Exception as e:
+                result['errors'].append(f'Playbook trigger error for {acct["account_name"]}: {e}')
+
+        if not executions:
+            logger.warning('    No playbooks were successfully triggered')
+            return result
+
+        # Step 5: Close playbooks with outcomes
+        # Determine outcome based on manifest trajectory
+        for acct in executions:
+            manifest_acct = acct.get('manifest_acct')
+            lifecycle = lifecycle_events.get(acct['account_name'], {})
+
+            # Determine outcome
+            if lifecycle.get('event') == 'churn':
+                outcome = 'timeout'
+                outcome_notes = f'Account churned (lifecycle event: churn at month {lifecycle.get("event_month", "?")})'
+            elif acct['arc_type'] in ('silent_churn', 'competitive_displacement') and acct['health'] < 40:
+                outcome = 'escalated'
+                outcome_notes = f'Escalated — health critically low ({acct["health"]:.0f}), arc={acct["arc_type"]}'
+            else:
+                outcome = 'resolved'
+                outcome_notes = (
+                    f'Intervention successful — {acct["playbook_id"]} completed for '
+                    f'{acct["account_name"]} (arc={acct["arc_type"]})'
+                )
+
+            # Estimate health at close based on manifest trajectory
+            health_at_close = None
+            if manifest_acct:
+                traj = manifest_acct.get('health_trajectory', {})
+                # Use end-of-trajectory health as close health
+                end_health = traj.get('end') or traj.get('recovery_target')
+                if end_health:
+                    health_at_close = float(end_health)
+
+            if health_at_close is None:
+                # Estimate: if resolved, health improved by 10-15 points
+                if outcome == 'resolved':
+                    health_at_close = min(85, acct['health'] + random.uniform(10, 18))
+                elif outcome == 'escalated':
+                    health_at_close = max(25, acct['health'] - random.uniform(2, 8))
+                else:  # timeout
+                    health_at_close = max(20, acct['health'] - random.uniform(5, 15))
+
+            # Revenue expansion for expansion arcs
+            revenue_expanded = 0
+            if lifecycle.get('event') == 'expand' and outcome == 'resolved':
+                delta_pct = lifecycle.get('delta_pct', 15)
+                revenue_expanded = acct['revenue'] * (delta_pct / 100)
+
+            try:
+                close_resp = self.client.close_playbook(
+                    execution_id=acct['execution_id'],
+                    outcome=outcome,
+                    outcome_notes=outcome_notes,
+                    health_at_close=round(health_at_close, 1),
+                    revenue_expanded=revenue_expanded,
+                )
+                result['api_calls'] += 1
+                if close_resp and close_resp.get('status') == 'success':
+                    result['closed'] += 1
+                    rev_protected = float(close_resp.get('revenue_protected', 0))
+                    rev_expanded = float(close_resp.get('revenue_expanded', 0) if close_resp.get('revenue_expanded') else 0)
+                    roi = close_resp.get('realized_roi_pct', 0)
+                    result['total_revenue_protected'] += rev_protected
+                    result['total_revenue_expanded'] += rev_expanded
+                    result['executions'].append({
+                        'account_name': acct['account_name'],
+                        'account_id': acct['account_id'],
+                        'playbook_id': acct['playbook_id'],
+                        'execution_id': acct['execution_id'],
+                        'outcome': outcome,
+                        'health_before': round(acct['health'], 1),
+                        'health_after': round(health_at_close, 1),
+                        'revenue_protected': rev_protected,
+                        'revenue_expanded': rev_expanded,
+                        'roi_x': roi,
+                    })
+                    logger.info(
+                        f'    ✅ {acct["account_name"]}: closed as {outcome} '
+                        f'(health {acct["health"]:.0f}→{health_at_close:.0f}, '
+                        f'protected=${rev_protected:,.0f}, ROI={roi}x)'
+                    )
+                else:
+                    result['errors'].append(
+                        f'Playbook close failed for {acct["account_name"]}: {str(close_resp)[:100]}'
+                    )
+            except Exception as e:
+                result['errors'].append(f'Playbook close error for {acct["account_name"]}: {e}')
+
+        # Step 6: Trigger Wizard B to update NRR correlations
+        if result['closed'] > 0:
+            logger.info('    Triggering Wizard B to update NRR correlations...')
+            try:
+                wb_resp = self.client.trigger_wizard(customer_id, wizard='b')
+                result['api_calls'] += 1
+                wb_status = wb_resp.get('status', 'unknown') if wb_resp else 'failed'
+                result['wizard_b_status'] = wb_status
+                logger.info(f'    Wizard B: {wb_status}')
+            except Exception as e:
+                result['errors'].append(f'Wizard B trigger failed (non-fatal): {e}')
+                result['wizard_b_status'] = f'error: {e}'
+
+        return result
+
     # ── Main run method ──
 
     def run(self) -> Dict[str, Any]:
@@ -3504,6 +3780,25 @@ class ScenarioManifest(BaseScenario):
                     api_calls=api_calls,
                     errors=errors + validation.get('errors', []),
                     details=results,
+                )
+
+            # Step 4: Playbook execution (optional — triggers interventions on at-risk accounts)
+            playbooks_enabled = bool(getattr(self.args, 'playbooks', False))
+            if playbooks_enabled:
+                logger.info('  Step 5: Playbook execution on at-risk accounts')
+                pb_result = self._execute_and_close_playbooks(
+                    customer_id=int(customer_id),
+                    manifest=gen.manifest,
+                    manifest_accounts=gen.accounts,
+                )
+                results['playbooks'] = pb_result
+                api_calls += pb_result.get('api_calls', 0)
+                if pb_result.get('errors'):
+                    errors.extend(pb_result['errors'])
+                logger.info(
+                    f'    Playbooks: {pb_result.get("executed", 0)} triggered, '
+                    f'{pb_result.get("closed", 0)} closed, '
+                    f'${pb_result.get("total_revenue_protected", 0):,.0f} protected'
                 )
 
         except Exception as e:
