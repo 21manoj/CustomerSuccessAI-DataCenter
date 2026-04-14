@@ -225,7 +225,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/dc-dashboard/journey-intelligence"
           element={
-            <PrivateRoute vertical="datacenter">
+            <PrivateRoute>
               <JourneyIntelligenceView />
             </PrivateRoute>
           }
