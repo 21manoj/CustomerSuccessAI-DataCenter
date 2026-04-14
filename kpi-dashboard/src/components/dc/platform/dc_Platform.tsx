@@ -69,7 +69,7 @@ import DCRevenueIntelligence from '../revenue-intelligence/DCRevenueIntelligence
 // TYPES
 // ============================================================
 
-type TabId = 'executive' | 'tenants' | 'signals' | 'ai-insights' | 'admin-insights' | 'playbooks' | 'approvals' | 'test-runner' | 'revenue-intelligence' | 'data-integration' | 'settings' | 'outcome-roi' | 'portco';
+type TabId = 'executive' | 'tenants' | 'signals' | 'ai-insights' | 'admin-insights' | 'playbooks' | 'approvals' | 'test-runner' | 'journey-intelligence' | 'revenue-intelligence' | 'data-integration' | 'settings' | 'outcome-roi' | 'portco';
 
 interface Tab {
   id: TabId;
