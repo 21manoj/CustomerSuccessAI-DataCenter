@@ -1768,14 +1768,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         _step_timings['csv_load'] = _step_timings_csv
         _step_timings['cg_load'] = _step_timings_cg
 
-        # Stage 1: Proactive signal scan
-        _t_stage = _time.time()
-        _step = run_proactive_signal_scan(customer_id)
-        if _step:
-            steps_completed.append(_step)
-        _step_timings['signal_scan'] = round(_time.time() - _t_stage, 2)
-
         # Stage 2: Health score calculation (immutable — only new months)
+        # NOTE: Proactive signal scan moved to Stage 2c (after health scores exist)
+        # so that signal-triggered playbooks can look up health_at_trigger.
         acct_list = Account.query.filter_by(customer_id=customer_id).all()
         _health_step, _changed_account_ids, _health_timings = calculate_health_scores(
             customer_id=customer_id,
@@ -1825,6 +1820,14 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             import logging as _log_adopt
             _log_adopt.getLogger(__name__).debug(f"Product adoption back-fill failed (non-fatal): {_adopt_err}")
         _step_timings['product_adoption'] = round(_time.time() - _t_adoption, 2)
+
+        # Stage 2c: Proactive signal scan (runs AFTER health scores so
+        # signal-triggered playbooks can look up health_at_trigger/close)
+        _t_stage = _time.time()
+        _step = run_proactive_signal_scan(customer_id)
+        if _step:
+            steps_completed.append(_step)
+        _step_timings['signal_scan'] = round(_time.time() - _t_stage, 2)
 
         # Stage 3: Wizard A — arc classification (incremental)
         _wa_step, _wa_duration = run_wizard_a_step(customer_id, _changed_account_ids, mode)
