@@ -629,8 +629,9 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
         #
         # Use last process_data run timestamp as cutoff to avoid re-analyzing
         # old signals that were already triggered in a previous run.
-        # Falls back to 7-day window if no WizardRun exists (first run).
-        cutoff = datetime.utcnow() - timedelta(days=7)  # default for first run
+        # For FIRST RUN (no WizardRun exists): scan ALL historical signals —
+        # they need playbook executions created with time-aware timestamps.
+        cutoff = None  # None = scan everything (first run)
         try:
             from models import WizardRun
             last_run = (
@@ -645,8 +646,10 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
             if last_run and last_run.created_at:
                 cutoff = last_run.created_at
                 logger.info(f"signal_analyst: using last process_data run as cutoff: {cutoff}")
+            else:
+                logger.info(f"signal_analyst: first run for customer {customer_id} — scanning ALL historical signals")
         except Exception:
-            pass  # fall back to 7-day window
+            pass  # cutoff stays None = scan everything
 
         seen = set()  # (account_id, signal_type) to avoid duplicate triggers
 
@@ -672,17 +675,18 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
             pass
 
         # Source 1: ContextNode table
-        recent_cg = (
+        _cg_query = (
             ContextNode.query
             .filter(
                 ContextNode.customer_id == customer_id,
                 ContextNode.account_id.in_(acct_ids),
                 ContextNode.node_type == 'SIGNAL',
                 ContextNode.source == 'customer',
-                ContextNode.occurred_at >= cutoff,
             )
-            .all()
         )
+        if cutoff is not None:
+            _cg_query = _cg_query.filter(ContextNode.occurred_at >= cutoff)
+        recent_cg = _cg_query.all()
         for node in recent_cg:
             if len(triggered) >= max_proactive:
                 logger.info(
@@ -698,28 +702,47 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
                     if key not in seen:
                         seen.add(key)
                         content = node.title or props.get('content', sig_type)
-                        result = analyze_on_signal(
-                            customer_id=customer_id,
-                            account_id=node.account_id,
-                            signal_type=sig_type,
-                            signal_content=str(content)[:500],
-                            signal_sentiment=props.get('sentiment', 'negative'),
-                        )
-                        if result:
-                            triggered.append((node.account_id, sig_type, content))
+                        signal_date = node.occurred_at or datetime.utcnow()
+                        signal_age_days = (datetime.utcnow() - signal_date).days if node.occurred_at else 0
+
+                        # Fast path: for historical signals (>14 days old),
+                        # skip LLM analysis and directly create time-aware
+                        # playbook execution. LLM is for real-time alerts.
+                        if signal_age_days > 14:
+                            risk_info = HIGH_RISK_SIGNAL_TYPES[sig_type]
+                            pb_id = risk_info.get('playbook')
+                            if pb_id:
+                                pb_result = _execute_playbook_from_signal(
+                                    customer_id=customer_id,
+                                    account_id=node.account_id,
+                                    playbook_id=pb_id,
+                                    signal_type=sig_type,
+                                    signal_date=signal_date,
+                                )
+                                if pb_result:
+                                    triggered.append((node.account_id, sig_type, content))
+                        else:
+                            # Recent signal: full LLM analysis path
+                            result = analyze_on_signal(
+                                customer_id=customer_id,
+                                account_id=node.account_id,
+                                signal_type=sig_type,
+                                signal_content=str(content)[:500],
+                                signal_sentiment=props.get('sentiment', 'negative'),
+                            )
+                            if result:
+                                triggered.append((node.account_id, sig_type, content))
 
         # Source 2: QualitativeSignal table (catches incremental loads where CG skip is on)
         try:
             from models import QualitativeSignal
-            cutoff_date = cutoff.date() if hasattr(cutoff, 'date') else cutoff
-            recent_qual = (
-                QualitativeSignal.query
-                .filter(
-                    QualitativeSignal.account_id.in_(acct_ids),
-                    QualitativeSignal.signal_date >= cutoff_date,
-                )
-                .all()
+            _qs_query = QualitativeSignal.query.filter(
+                QualitativeSignal.account_id.in_(acct_ids),
             )
+            if cutoff is not None:
+                cutoff_date = cutoff.date() if hasattr(cutoff, 'date') else cutoff
+                _qs_query = _qs_query.filter(QualitativeSignal.signal_date >= cutoff_date)
+            recent_qual = _qs_query.all()
             high_risk_qual = [
                 qs for qs in recent_qual
                 if (qs.signal_type or '') in HIGH_RISK_SIGNAL_TYPES
@@ -740,19 +763,37 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
                 if key not in seen:
                     seen.add(key)
                     content = qs.content or sig_type
-                    logger.info(
-                        f"signal_analyst: PROACTIVE trigger — account {qs.account_id} "
-                        f"signal_type={sig_type} content={str(content)[:80]}"
-                    )
-                    result = analyze_on_signal(
-                        customer_id=customer_id,
-                        account_id=qs.account_id,
-                        signal_type=sig_type,
-                        signal_content=str(content)[:500],
-                        signal_sentiment=qs.sentiment or 'negative',
-                    )
-                    if result:
-                        triggered.append((qs.account_id, sig_type, content))
+                    signal_date = datetime.combine(qs.signal_date, datetime.min.time()) if qs.signal_date else datetime.utcnow()
+                    signal_age_days = (datetime.utcnow() - signal_date).days if qs.signal_date else 0
+
+                    # Fast path for historical signals (same as Source 1)
+                    if signal_age_days > 14:
+                        risk_info = HIGH_RISK_SIGNAL_TYPES[sig_type]
+                        pb_id = risk_info.get('playbook')
+                        if pb_id:
+                            pb_result = _execute_playbook_from_signal(
+                                customer_id=customer_id,
+                                account_id=qs.account_id,
+                                playbook_id=pb_id,
+                                signal_type=sig_type,
+                                signal_date=signal_date,
+                            )
+                            if pb_result:
+                                triggered.append((qs.account_id, sig_type, content))
+                    else:
+                        logger.info(
+                            f"signal_analyst: PROACTIVE trigger — account {qs.account_id} "
+                            f"signal_type={sig_type} content={str(content)[:80]}"
+                        )
+                        result = analyze_on_signal(
+                            customer_id=customer_id,
+                            account_id=qs.account_id,
+                            signal_type=sig_type,
+                            signal_content=str(content)[:500],
+                            signal_sentiment=qs.sentiment or 'negative',
+                        )
+                        if result:
+                            triggered.append((qs.account_id, sig_type, content))
         except Exception as qs_err:
             logger.error(f"QualitativeSignal proactive scan failed: {qs_err}", exc_info=True)
 
