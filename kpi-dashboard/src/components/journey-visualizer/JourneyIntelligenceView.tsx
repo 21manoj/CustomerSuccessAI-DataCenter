@@ -133,7 +133,7 @@ const JourneyIntelligenceView: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Activity className="w-6 h-6 text-purple-400" />
+          <Activity className="w-6 h-6 text-amber-400" />
           <h1 className="text-2xl font-bold">Journey Intelligence</h1>
         </div>
 
@@ -163,7 +163,7 @@ const JourneyIntelligenceView: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     {a.signal_count > 0 && (
-                      <span className="text-xs text-purple-400">{a.signal_count} signals</span>
+                      <span className="text-xs text-amber-400">{a.signal_count} signals</span>
                     )}
                     {a.health !== null && (
                       <span className={`text-xs font-semibold ${a.health >= 70 ? 'text-emerald-400' : a.health >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
@@ -196,7 +196,7 @@ const JourneyIntelligenceView: React.FC = () => {
             </div>
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide">Composite (DNA)</p>
-              <p className="text-2xl font-bold text-purple-400 mt-1">
+              <p className="text-2xl font-bold text-amber-400 mt-1">
                 {data.signal_dna[data.signal_dna.length - 1]?.score.toFixed(1)}
               </p>
             </div>
@@ -286,7 +286,7 @@ const JourneyIntelligenceView: React.FC = () => {
                     [...data.signal_dna].reverse().map((p, i) => `${i === 0 ? 'L' : 'L'} ${scaleX(p.month)} ${scaleY(p.score)}`).join(' ') +
                     ' Z'
                   }
-                  fill="rgba(168,85,247,0.08)"
+                  fill="rgba(245,158,11,0.08)"
                 />
               )}
 
@@ -297,7 +297,7 @@ const JourneyIntelligenceView: React.FC = () => {
               <path d={buildPath(data.kpi_only)} fill="none" stroke="#60a5fa" strokeWidth={2.5} />
 
               {/* Line 3: Signal-DNA composite (purple solid) */}
-              <path d={buildPath(data.signal_dna)} fill="none" stroke="#a855f7" strokeWidth={2.5} />
+              <path d={buildPath(data.signal_dna)} fill="none" stroke="#f59e0b" strokeWidth={2.5} />
 
               {/* Data points on KPI-only */}
               {data.kpi_only.map((p, i) => (
@@ -321,8 +321,8 @@ const JourneyIntelligenceView: React.FC = () => {
                   cx={scaleX(p.month)}
                   cy={scaleY(p.score)}
                   r={hoveredIdx === i ? 5 : 3}
-                  fill="#a855f7"
-                  stroke="#3b1764"
+                  fill="#f59e0b"
+                  stroke="#92400e"
                   strokeWidth={1}
                   onMouseEnter={() => setHoveredIdx(i)}
                   style={{ cursor: 'pointer' }}
@@ -378,8 +378,8 @@ const JourneyIntelligenceView: React.FC = () => {
                         <span className="font-bold text-gray-300">{data.kpi_decayed[hoveredIdx]?.score.toFixed(1)}</span>
                       </div>
                       <div className="flex justify-between mb-1">
-                        <span className="text-purple-400">Composite:</span>
-                        <span className="font-bold text-purple-300">{data.signal_dna[hoveredIdx]?.score.toFixed(1)}</span>
+                        <span className="text-amber-400">Composite:</span>
+                        <span className="font-bold text-amber-300">{data.signal_dna[hoveredIdx]?.score.toFixed(1)}</span>
                       </div>
                       {data.signal_dna[hoveredIdx]?.signal_adjustment !== 0 && (
                         <div className="flex justify-between border-t border-gray-700 pt-1 mt-1">
@@ -407,7 +407,7 @@ const JourneyIntelligenceView: React.FC = () => {
                 <span className="text-xs text-gray-400">KPI-decayed</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-0.5 bg-purple-500" />
+                <div className="w-6 h-0.5 bg-amber-500" />
                 <span className="text-xs text-gray-400">Signal-DNA composite</span>
               </div>
               <div className="flex items-center gap-2">
