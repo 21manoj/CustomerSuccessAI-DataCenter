@@ -821,6 +821,7 @@ class ManifestCSVGenerator:
         extend_mode: bool = False,
         extend_from_date: Optional[str] = None,
         extend_months: int = 6,
+        end_date_override: Optional[str] = None,
     ):
         """
         Args:
@@ -831,6 +832,7 @@ class ManifestCSVGenerator:
             extend_mode: If True, generate continuation data starting after extend_from_date
             extend_from_date: 'YYYY-MM-DD' — last measurement date from Phase 1
             extend_months: Number of months to extend (default 6)
+            end_date_override: 'YYYY-MM-DD' — override manifest end date (for 4-phase testing)
         """
         self.extend_mode = extend_mode
         self.extend_offset_months = 0
@@ -860,6 +862,19 @@ class ManifestCSVGenerator:
         self.start_date = datetime.strptime(self.time_range['start'], '%Y-%m-%d')
         self.end_date = datetime.strptime(self.time_range['end'], '%Y-%m-%d')
         self.frequency = self.time_range.get('frequency', 'weekly')
+
+        # Override end date (for 4-phase testing: truncate KPI generation)
+        if end_date_override:
+            self.end_date = datetime.strptime(end_date_override, '%Y-%m-%d')
+            # Recalculate data points based on truncated range
+            total_days = (self.end_date - self.start_date).days
+            if self.frequency == 'weekly':
+                raw_dp = max(1, total_days // 7)
+            elif self.frequency == 'daily':
+                raw_dp = max(1, total_days)
+            else:
+                raw_dp = max(1, total_days // 30)
+            logger.info("  end_date override: %s (%d data points)", end_date_override, raw_dp)
 
         # Phase windowing (from V2)
         if phase == 'baseline':
@@ -3313,6 +3328,7 @@ class ScenarioManifest(BaseScenario):
                 )
             logger.info(f'  Extend: latest data at {extend_from_date}, adding {extend_months} months')
 
+        end_date_override = getattr(self.args, 'end_date', None)
         try:
             gen = ManifestCSVGenerator(
                 manifest_path=str(manifest_path),
@@ -3322,6 +3338,7 @@ class ScenarioManifest(BaseScenario):
                 extend_mode=extend,
                 extend_from_date=extend_from_date,
                 extend_months=extend_months,
+                end_date_override=end_date_override,
             )
 
             expected_ids = self._expected_account_ids(int(customer_id), len(gen.accounts))

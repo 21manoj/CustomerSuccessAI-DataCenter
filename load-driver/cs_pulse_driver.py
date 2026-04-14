@@ -253,6 +253,7 @@ def run_manifest(args):
         extend=getattr(args, 'extend', False),
         extend_months=args.months,
         minimal=getattr(args, 'minimal', False),
+        end_date=getattr(args, 'end_date', None),
     )
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
@@ -346,6 +347,11 @@ Examples:
         '--extend',
         action='store_true',
         help='Extend existing customer data by generating next N months (use with -c and --months)',
+    )
+    parser.add_argument(
+        '--end-date',
+        help='Override manifest end date (YYYY-MM-DD). Truncates KPI generation to this date. '
+             'Use for 4-phase testing: --end-date 2025-09-30 for 3-month baseline.',
     )
     parser.add_argument(
         '--minimal',
