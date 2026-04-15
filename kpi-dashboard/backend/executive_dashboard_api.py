@@ -31,7 +31,7 @@ except Exception:
 
 from models import (
     Account, HealthScore, PillarScore, KPIScore,
-    ContextNode, ContextEdge, PlaybookExecution, PlaybookExecutionV2, ROISnapshot,
+    ContextNode, ContextEdge, PlaybookExecutionV2, ROISnapshot,
 )
 import utils.health_thresholds as ht
 from utils.context_graph import aggregate_revenue_across_accounts
@@ -400,25 +400,9 @@ def _calculate_early_warning_days(customer_id, account_ids):
 
 
 def _get_playbook_investment(customer_id):
-    """Estimate total CS investment from playbook executions."""
-    executions = (
-        PlaybookExecution.query
-        .filter_by(customer_id=customer_id)
-        .all()
-    )
-
-    total_cost = 0.0
-    for ex in executions:
-        # Extract cost from execution_data if available
-        data = ex.execution_data or {}
-        cost = data.get('estimated_cost') or data.get('cost') or 0
-        if cost:
-            total_cost += _safe_float(cost)
-        else:
-            # Estimate: ~$2,000 per playbook execution as baseline
-            total_cost += 2000.0
-
-    return round(total_cost, 2)
+    """Total CS investment from PlaybookExecutionV2 (actual playbook costs)."""
+    executions = PlaybookExecutionV2.query.filter_by(customer_id=customer_id).all()
+    return round(sum(_safe_float(ex.total_cost) for ex in executions), 2)
 
 
 def _get_po1_benchmark_investment(total_arr):
@@ -1079,19 +1063,18 @@ def cfo_dashboard():
             else:
                 month_end = month_start.replace(month=month_start.month + 1)
 
-            exec_count = (
-                PlaybookExecution.query
+            month_execs = (
+                PlaybookExecutionV2.query
                 .filter(
-                    PlaybookExecution.customer_id == customer_id,
-                    PlaybookExecution.started_at >= month_start,
-                    PlaybookExecution.started_at < month_end,
+                    PlaybookExecutionV2.customer_id == customer_id,
+                    PlaybookExecutionV2.triggered_at >= month_start,
+                    PlaybookExecutionV2.triggered_at < month_end,
                 )
-                .count()
+                .all()
             )
 
-            month_investment = exec_count * 2000.0 if exec_count > 0 else 0
-            # Estimate return as a multiple of investment based on ROI
-            month_return = round(month_investment * (1 + roi_pct / 100.0), 2) if roi_pct > 0 else 0
+            month_investment = sum(_safe_float(ex.total_cost) for ex in month_execs)
+            month_return = sum(_safe_float(ex.revenue_protected) + _safe_float(ex.revenue_expanded) for ex in month_execs)
 
             investment_timeline.append({
                 'month': month_label,
@@ -1717,11 +1700,11 @@ def executive_ask():
             .first()
         )
 
-        # Playbook executions (recent)
+        # Playbook executions (recent, V2)
         recent_playbooks = (
-            PlaybookExecution.query
-            .filter(PlaybookExecution.account_id.in_(account_ids))
-            .order_by(PlaybookExecution.started_at.desc())
+            PlaybookExecutionV2.query
+            .filter(PlaybookExecutionV2.account_id.in_(account_ids))
+            .order_by(PlaybookExecutionV2.triggered_at.desc())
             .limit(30)
             .all()
         )
