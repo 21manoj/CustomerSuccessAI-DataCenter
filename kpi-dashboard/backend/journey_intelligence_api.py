@@ -70,7 +70,7 @@ def _recency_weight(tau_days: float, lam: float = DEFAULT_LAMBDA) -> float:
 
 
 def _compute_signal_score(signal_events: list, month_dates: list, lam: float = DEFAULT_LAMBDA) -> list:
-    """Compute an independent signal-only score (0-100) at each month.
+    """Compute an independent signal-only score (0-100) at each month WITH recency decay.
 
     Each signal has a score (e.g., champion_loss=15, executive_engagement=90).
     At each month, compute a recency-weighted average of all signals up to that point.
@@ -92,7 +92,7 @@ def _compute_signal_score(signal_events: list, month_dates: list, lam: float = D
             if R < 0.05:
                 continue
             W = sig['weight']
-            S = sig['score']  # signal's own score on 0-100
+            S = sig['score']
             numerator += W * S * R
             denominator += W * R
             if R >= 0.10:
@@ -105,13 +105,47 @@ def _compute_signal_score(signal_events: list, month_dates: list, lam: float = D
         if denominator > 0:
             signal_score = numerator / denominator
         else:
-            signal_score = 50.0  # neutral when no signals
+            signal_score = 50.0
 
         result.append({
             'month': month_date.isoformat(),
             'score': round(signal_score, 1),
             'signal_count': len(active),
             'active_signals': active[:5],
+        })
+
+    return result
+
+
+def _compute_signal_score_raw(signal_events: list, month_dates: list) -> list:
+    """Compute signal-only score WITHOUT recency decay (raw, unweighted).
+
+    Simple weighted average of ALL signals up to each month — no decay.
+    Shows the cumulative signal picture without time bias.
+    """
+    result = []
+    for month_date in month_dates:
+        t = datetime(month_date.year, month_date.month, 15)
+
+        numerator = 0.0
+        denominator = 0.0
+
+        for sig in signal_events:
+            if sig['datetime'] > t:
+                continue
+            W = sig['weight']
+            S = sig['score']
+            numerator += W * S
+            denominator += W
+
+        if denominator > 0:
+            raw_score = numerator / denominator
+        else:
+            raw_score = 50.0
+
+        result.append({
+            'month': month_date.isoformat(),
+            'score': round(raw_score, 1),
         })
 
     return result
@@ -263,9 +297,10 @@ def get_journey_intelligence(account_id):
                 'title': sig.title[:80] if sig.title else None,
             })
 
-        # 3. Compute Signal Score (Graph 2) — independent, signals only
+        # 3. Compute Signal Scores — independent, signals only
         month_dates = [m for m, _ in kpi_series]
         signal_score_series = _compute_signal_score(signal_events, month_dates)
+        signal_score_raw = _compute_signal_score_raw(signal_events, month_dates)
 
         # 4. Compute Composite (Graph 3) — blend of KPI + signal with decay
         composite_series = _compute_composite(kpi_series, signal_score_series)
@@ -302,6 +337,7 @@ def get_journey_intelligence(account_id):
             'signal_blend_ratio': SIGNAL_BLEND_RATIO,
             'kpi_only': kpi_only,
             'signal_score': signal_score_series,
+            'signal_score_raw': signal_score_raw,
             'composite': composite_series,
             'signals': signals_output,
             'playbook_executions': playbooks,

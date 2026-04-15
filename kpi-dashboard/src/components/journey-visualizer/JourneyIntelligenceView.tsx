@@ -33,6 +33,7 @@ interface JourneyData {
   signal_blend_ratio: number;
   kpi_only: ScorePoint[];
   signal_score: SignalScorePoint[];
+  signal_score_raw: ScorePoint[];
   composite: CompositePoint[];
   signals: Signal[];
   playbook_executions: PlaybookExec[];
@@ -49,10 +50,12 @@ const INNER_H = CHART_H - PAD.top - PAD.bottom;
 
 // ── Colors ──
 const COLOR_KPI = '#60a5fa';       // blue
-const COLOR_SIGNAL = '#f59e0b';    // amber
+const COLOR_SIGNAL = '#f59e0b';    // amber (decayed)
+const COLOR_SIGNAL_RAW = '#ef4444'; // red (raw, no decay)
 const COLOR_COMPOSITE = '#34d399'; // green
 const COLOR_KPI_DIM = '#1e3a5f';
 const COLOR_SIGNAL_DIM = '#92400e';
+const COLOR_SIGNAL_RAW_DIM = '#7f1d1d';
 const COLOR_COMPOSITE_DIM = '#065f46';
 
 // ── Helpers ──
@@ -295,7 +298,10 @@ const JourneyIntelligenceView: React.FC = () => {
                 />
               )}
 
-              {/* Graph 2: Signal Score (amber, dashed) */}
+              {/* Graph 2a: Signal Score Raw (red, dotted — no decay) */}
+              <path d={buildPath(data.signal_score_raw)} fill="none" stroke={COLOR_SIGNAL_RAW} strokeWidth={1.5} strokeDasharray="3 3" opacity={0.6} />
+
+              {/* Graph 2b: Signal Score Decayed (amber, dashed) */}
               <path d={buildPath(data.signal_score)} fill="none" stroke={COLOR_SIGNAL} strokeWidth={2} strokeDasharray="6 3" />
 
               {/* Graph 1: KPI-only (blue solid) */}
@@ -313,7 +319,16 @@ const JourneyIntelligenceView: React.FC = () => {
                 />
               ))}
 
-              {/* Data points on Signal Score */}
+              {/* Data points on Signal Score Raw */}
+              {data.signal_score_raw.map((p, i) => (
+                <circle
+                  key={`raw-${i}`} cx={scaleX(p.month)} cy={scaleY(p.score)}
+                  r={hoveredIdx === i ? 3.5 : 2} fill={COLOR_SIGNAL_RAW} stroke={COLOR_SIGNAL_RAW_DIM} strokeWidth={1} opacity={0.7}
+                  onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'pointer' }}
+                />
+              ))}
+
+              {/* Data points on Signal Score Decayed */}
               {data.signal_score.map((p, i) => (
                 <circle
                   key={`sig-${i}`} cx={scaleX(p.month)} cy={scaleY(p.score)}
@@ -359,7 +374,7 @@ const JourneyIntelligenceView: React.FC = () => {
                   />
                   <foreignObject
                     x={Math.min(scaleX(data.kpi_only[hoveredIdx].month) + 10, CHART_W - 200)}
-                    y={PAD.top + 10} width={190} height={130}
+                    y={PAD.top + 10} width={190} height={155}
                   >
                     <div className="bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-xs shadow-xl">
                       <p className="font-semibold text-gray-300 mb-1.5">{formatDate(data.kpi_only[hoveredIdx].month)}</p>
@@ -368,7 +383,11 @@ const JourneyIntelligenceView: React.FC = () => {
                         <span className="font-bold" style={{ color: COLOR_KPI }}>{data.kpi_only[hoveredIdx].score.toFixed(1)}</span>
                       </div>
                       <div className="flex justify-between mb-1">
-                        <span style={{ color: COLOR_SIGNAL }}>Signal Score:</span>
+                        <span style={{ color: COLOR_SIGNAL_RAW }}>Signal (raw):</span>
+                        <span className="font-bold" style={{ color: COLOR_SIGNAL_RAW }}>{data.signal_score_raw[hoveredIdx]?.score.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span style={{ color: COLOR_SIGNAL }}>Signal (decayed):</span>
                         <span className="font-bold" style={{ color: COLOR_SIGNAL }}>{data.signal_score[hoveredIdx]?.score.toFixed(1)}</span>
                       </div>
                       <div className="flex justify-between mb-1">
@@ -397,8 +416,12 @@ const JourneyIntelligenceView: React.FC = () => {
                 <span className="text-xs text-gray-400">KPI Health (no decay)</span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="w-6 h-0.5" style={{ backgroundColor: COLOR_SIGNAL_RAW, borderTop: '1.5px dotted #ef4444' }} />
+                <span className="text-xs text-gray-400">Signal (raw)</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-6 h-0.5" style={{ backgroundColor: COLOR_SIGNAL, borderTop: '1.5px dashed #f59e0b' }} />
-                <span className="text-xs text-gray-400">Signal Score (recency-decayed)</span>
+                <span className="text-xs text-gray-400">Signal (decayed)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-0.5" style={{ backgroundColor: COLOR_COMPOSITE }} />
