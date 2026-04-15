@@ -57,12 +57,18 @@ const COLOR_KPI_DIM = '#1e3a5f';
 const COLOR_SIGNAL_DIM = '#92400e';
 const COLOR_SIGNAL_RAW_DIM = '#7f1d1d';
 const COLOR_COMPOSITE_DIM = '#065f46';
+const COLOR_PLAYBOOK = '#14b8a6';  // teal for playbook markers
 
 // ── Helpers ──
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+};
+
+const formatDateFull = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
 const formatARR = (n: number) => n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${(n / 1e3).toFixed(0)}K`;
@@ -365,6 +371,28 @@ const JourneyIntelligenceView: React.FC = () => {
                 );
               })}
 
+              {/* Playbook execution markers (⚡ diamond at trigger date) */}
+              {data.playbook_executions.map((pb, i) => {
+                if (!pb.triggered_at) return null;
+                const x = scaleX(pb.triggered_at);
+                const trigHealth = pb.health_at_trigger || 70;
+                const y = scaleY(trigHealth);
+                return (
+                  <g key={`pb-marker-${i}`}>
+                    {/* Diamond shape */}
+                    <polygon
+                      points={`${x},${y - 8} ${x + 6},${y} ${x},${y + 8} ${x - 6},${y}`}
+                      fill={COLOR_PLAYBOOK}
+                      stroke="#0d9488"
+                      strokeWidth={1.5}
+                      opacity={0.9}
+                    />
+                    {/* ⚡ inside diamond */}
+                    <text x={x} y={y + 3} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">⚡</text>
+                  </g>
+                );
+              })}
+
               {/* Hover tooltip */}
               {hoveredIdx !== null && data.kpi_only[hoveredIdx] && (
                 <g>
@@ -435,6 +463,10 @@ const JourneyIntelligenceView: React.FC = () => {
                 <div className="w-0 h-0 border-l-[4px] border-r-[4px] border-t-[7px] border-l-transparent border-r-transparent border-t-red-500" />
                 <span className="text-xs text-gray-400">Negative signal</span>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rotate-45 bg-teal-500 rounded-sm" />
+                <span className="text-xs text-gray-400">Playbook ⚡</span>
+              </div>
             </div>
           </div>
 
@@ -489,7 +521,7 @@ const JourneyIntelligenceView: React.FC = () => {
                         <span className="text-sm font-medium text-gray-200">{pb.playbook_name || pb.playbook_id}</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {pb.triggered_at ? formatDate(pb.triggered_at) : '?'} → {pb.closed_at ? formatDate(pb.closed_at) : 'Open'}
+                        {pb.triggered_at ? formatDateFull(pb.triggered_at) : '?'} → {pb.closed_at ? formatDateFull(pb.closed_at) : 'Open'}
                         {pb.triggered_by && <span className="ml-1 text-gray-600">({pb.triggered_by})</span>}
                       </p>
                     </div>
