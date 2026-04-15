@@ -50,6 +50,34 @@ def health_to_annual_churn_prob(health: float) -> float:
     return 0.03                                     # >85: 3%
 
 
+def health_to_annual_expansion_prob(health: float) -> float:
+    """Map health score to annualized expansion probability.
+
+    Based on industry benchmarks (KeyBanc SaaS Survey 2024, Gainsight Pulse):
+      - Critical (<50):  0-2% expansion (firefighting, no bandwidth for growth)
+      - At-risk (50-69):  5-10% expansion (stabilizing, limited upsell)
+      - Healthy (70-84): 15-25% expansion (engaged, open to growth conversations)
+      - Champion (>=85): 25-35% expansion (advocates, driving adoption internally)
+    Uses linear interpolation within each band.
+    """
+    if health is None:
+        return 0.05  # unknown → assume 5%
+    if health < 30:
+        return 0.0
+    if health < 50:
+        return 0.0 + (health - 30) / 20 * 0.02       # 0% → 2%
+    if health < 70:
+        return 0.05 + (health - 50) / 20 * 0.05       # 5% → 10%
+    if health < 85:
+        return 0.15 + (health - 70) / 15 * 0.10       # 15% → 25%
+    return 0.25 + min((health - 85) / 15 * 0.10, 0.10)  # 25% → 35% (capped)
+
+
+# Expansion attribution factor: what % of expansion is attributable to CS intervention
+# Lower than churn attribution (0.50) because expansion is also driven by product/sales
+EXPANSION_ATTRIBUTION = 0.30
+
+
 def get_full_playbook_cost(playbook_id: str, arr: float) -> float:
     """Get full intervention cost from cost bridge (CSM labor + platform + overhead).
 
@@ -253,6 +281,14 @@ def close_execution(
         revenue_protected = round(churn_reduction * arr * INTERVENTION_ATTRIBUTION, 0)
     elif revenue_protected is None:
         revenue_protected = 0
+
+    # ── Expansion attribution (expansion probability model) ──
+    if revenue_expanded == 0 and health_at_close is not None and execution.health_at_trigger:
+        exp_before = health_to_annual_expansion_prob(execution.health_at_trigger)
+        exp_after = health_to_annual_expansion_prob(health_at_close)
+        exp_increase = max(0, exp_after - exp_before)
+        if exp_increase > 0:
+            revenue_expanded = round(exp_increase * arr * EXPANSION_ATTRIBUTION, 0)
 
     execution.revenue_protected = revenue_protected
     execution.revenue_expanded = revenue_expanded
