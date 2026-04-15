@@ -1150,12 +1150,11 @@ def cfo_dashboard():
                     acct_arr = float(acct.revenue or 0) if acct else 0
                     # NRR delta: this playbook's total value as % of portfolio ARR
                     nrr_delta = ((prot + exp) / total_arr * 100) if total_arr > 0 else 0
-                    # Cost breakdown (from playbook cost bridge)
+                    # Cost breakdown using cost bridge ratios (CSM 45%, Platform 30%, Overhead 25%)
                     csm_hours = float(ex.csm_hours_actual or ex.csm_hours_planned or 0)
-                    csm_rate = 150  # $/hr benchmark
-                    csm_cost = round(csm_hours * csm_rate, 0)
-                    platform_cost = round(cost * 0.33, 0) if cost > 0 else 0  # ~33% platform
-                    overhead_cost = round(cost - csm_cost - platform_cost, 0) if cost > csm_cost + platform_cost else 0
+                    csm_cost = round(cost * 0.45, 0)
+                    platform_cost = round(cost * 0.30, 0)
+                    overhead_cost = round(cost * 0.25, 0)
                     proof_data['executions'].append({
                         'playbook_id': ex.playbook_id,
                         'account_name': acct.account_name if acct else f'Account {ex.account_id}',

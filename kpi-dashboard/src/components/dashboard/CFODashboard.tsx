@@ -1205,7 +1205,6 @@ const CFODashboard: React.FC = () => {
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Cost</th>
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Protected</th>
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Expanded</th>
-                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">NRR &Delta;</th>
                     <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">ROI</th>
                   </tr>
                 </thead>
@@ -1231,11 +1230,49 @@ const CFODashboard: React.FC = () => {
                       </td>
                       <td className="text-right px-3 py-3 text-xs text-green-400 font-semibold font-mono">{formatCompact(e.revenue_protected)}</td>
                       <td className="text-right px-3 py-3 text-xs text-teal-400 font-semibold font-mono">{e.revenue_expanded > 0 ? formatCompact(e.revenue_expanded) : '—'}</td>
-                      <td className="text-right px-3 py-3 text-xs text-cyan-400 font-semibold">+{e.nrr_delta_pp?.toFixed(2) || '0'}pp</td>
                       <td className="text-right px-5 py-3 text-xs text-cyan-400 font-bold">{e.roi_x}x</td>
                     </tr>
                   ))}
                 </tbody>
+                {/* Summary footer with Wizard B NRR attribution */}
+                <tfoot>
+                  <tr className="border-t border-gray-600/50">
+                    <td colSpan={3} className="px-5 py-3 text-xs font-semibold text-white">
+                      Total
+                    </td>
+                    <td className="text-right px-3 py-3 text-xs text-gray-300 font-semibold font-mono">
+                      {formatCompact(d.proof_executions.reduce((s, e) => s + e.cost, 0))}
+                    </td>
+                    <td className="text-right px-3 py-3 text-xs text-green-400 font-bold font-mono">
+                      {formatCompact(d.proof_executions.reduce((s, e) => s + e.revenue_protected, 0))}
+                    </td>
+                    <td className="text-right px-3 py-3 text-xs text-teal-400 font-bold font-mono">
+                      {formatCompact(d.proof_executions.reduce((s, e) => s + (e.revenue_expanded || 0), 0))}
+                    </td>
+                    <td className="text-right px-5 py-3 text-xs text-cyan-400 font-bold">
+                      {(() => {
+                        const tc = d.proof_executions.reduce((s, e) => s + e.cost, 0);
+                        const tv = d.proof_executions.reduce((s, e) => s + e.revenue_protected + (e.revenue_expanded || 0), 0);
+                        return tc > 0 ? `${Math.round(tv / tc)}x` : '—';
+                      })()}
+                    </td>
+                  </tr>
+                  {d.wizard_b_nrr && (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-3">
+                        <div className="flex items-center gap-4 text-[10px]">
+                          <span className="text-gray-500">Portfolio NRR Impact:</span>
+                          <span className="text-green-400 font-bold">+{d.wizard_b_nrr.delta.toFixed(1)}pp</span>
+                          <span className="text-gray-600">({d.wizard_b_nrr.without.toFixed(1)}% &rarr; {d.wizard_b_nrr.with_pulse.toFixed(1)}%)</span>
+                          <span className="text-gray-500">&middot;</span>
+                          <span className="text-cyan-400">{d.wizard_b_nrr.accounts_saved} accounts saved from churn</span>
+                          <span className="text-gray-500">&middot;</span>
+                          <span className="text-green-400">{formatCompact(d.wizard_b_nrr.arr_protected)} ARR protected</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
               </table>
               </div>
             </div>
