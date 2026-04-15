@@ -2745,6 +2745,96 @@ def get_team_capacity_api():
 
 
 # =============================================================================
+# Renewals Pipeline — accounts with upcoming renewals + risk assessment
+# =============================================================================
+
+@dc2s_api.route('/renewals', methods=['GET'])
+def get_renewals_api():
+    """GET /api/dc2s/renewals?days=90
+    Returns accounts with renewal_date within window, sorted by risk.
+    Risk = health score × days until renewal.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Customer ID required'}), 400
+
+        days_window = int(request.args.get('days', 90))
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+
+        from datetime import date as _date
+        today = _date.today()
+        renewals = []
+
+        for acct in accounts:
+            meta = acct.profile_metadata or {}
+            rd_str = meta.get('renewal_date') or meta.get('contract_renewal_date') or meta.get('contract_end')
+            if not rd_str:
+                continue
+            try:
+                rd = datetime.strptime(str(rd_str)[:10], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+
+            days_until = (rd - today).days
+            if days_until < 0 or days_until > days_window:
+                continue
+
+            # Get health score
+            h, status, _ = get_precalculated_scores(acct.account_id)
+            health = h or 50
+
+            # Risk level based on health + days
+            if health < ht.at_risk_min() and days_until <= 30:
+                risk_level = 'critical'
+            elif health < ht.healthy_min() and days_until <= 60:
+                risk_level = 'high'
+            elif health < ht.healthy_min() or days_until <= 30:
+                risk_level = 'medium'
+            else:
+                risk_level = 'low'
+
+            csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
+            champion = meta.get('primary_champion_name')
+
+            renewals.append({
+                'account_id': acct.account_id,
+                'account_name': acct.account_name,
+                'arr': float(acct.revenue or 0),
+                'health_score': round(health, 1),
+                'renewal_date': str(rd),
+                'days_until': days_until,
+                'risk_level': risk_level,
+                'csm_name': csm,
+                'champion_name': champion,
+                'industry': acct.industry,
+            })
+
+        # Sort: critical first, then by days_until ascending
+        risk_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        renewals.sort(key=lambda r: (risk_order.get(r['risk_level'], 9), r['days_until']))
+
+        total_arr = sum(r['arr'] for r in renewals)
+        critical_count = sum(1 for r in renewals if r['risk_level'] in ('critical', 'high'))
+        critical_arr = sum(r['arr'] for r in renewals if r['risk_level'] in ('critical', 'high'))
+
+        return jsonify({
+            'renewals': renewals,
+            'summary': {
+                'total_count': len(renewals),
+                'total_arr': total_arr,
+                'critical_count': critical_count,
+                'critical_arr': critical_arr,
+                'days_window': days_window,
+            },
+        })
+
+    except Exception as e:
+        logger.error(f"Error computing renewals: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to compute renewals'}), 500
+
+
+# =============================================================================
 # Playbook Success Metrics — aggregated by playbook_id
 # =============================================================================
 

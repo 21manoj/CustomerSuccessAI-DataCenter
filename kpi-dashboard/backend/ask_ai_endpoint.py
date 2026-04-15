@@ -380,6 +380,45 @@ def ask_v2():
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results_for_claude})
 
+        # ── Ensure final_text is non-empty ─────────────────────────────
+        if not final_text and tools_called:
+            # Claude exhausted tool rounds without returning final text.
+            # Make one more call asking it to summarize.
+            try:
+                messages.append({"role": "user", "content": (
+                    "Based on the data you gathered from the tools above, "
+                    "provide a concise answer to the original question. "
+                    "Be specific with numbers, account names, and actionable recommendations."
+                )})
+                summary_resp = client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    system=system_prompt,
+                    messages=messages,
+                    max_tokens=2048,
+                    temperature=0.3,
+                )
+                for block in summary_resp.content:
+                    if block.type == "text":
+                        final_text = block.text
+                        break
+                try:
+                    if _budget_record:
+                        _budget_record(customer_id, 'ask_ai_v2',
+                                       tokens_in=summary_resp.usage.input_tokens,
+                                       tokens_out=summary_resp.usage.output_tokens,
+                                       model='claude-sonnet-4-20250514')
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.warning(f"Ask AI v2: summary fallback failed: {e}")
+
+        if not final_text:
+            final_text = ("I retrieved data about your portfolio but couldn't generate a summary. "
+                          "Please try rephrasing your question.")
+            logger.warning(f"Ask AI v2: empty final_text for customer {customer_id} "
+                           f"after {min(round_num + 1, max_rounds)} rounds, "
+                           f"tools called: {tools_called}")
+
         # ── Build Response ─────────────────────────────────────────────
         elapsed_ms = int((time.time() - start_time) * 1000)
 

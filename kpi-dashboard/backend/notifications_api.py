@@ -82,6 +82,128 @@ def get_unread_notifications():
 
 
 # ---------------------------------------------------------------------------
+# POST /api/notifications/seed — Generate initial notifications from current state
+# ---------------------------------------------------------------------------
+
+@notifications_api.route('/api/notifications/seed', methods=['POST'])
+def seed_notifications():
+    """
+    Generate notifications from current at-risk conditions if none exist.
+    Idempotent: skips if customer already has unread notifications.
+    Call this on first dashboard load to populate the notification bell.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        # Skip if already has unread notifications
+        existing = Notification.query.filter_by(
+            customer_id=int(customer_id),
+        ).filter(Notification.read_at.is_(None)).count()
+
+        if existing > 0:
+            return jsonify({'seeded': 0, 'reason': f'Already has {existing} unread notifications'})
+
+        from models import Account, HealthScore
+        import utils.health_thresholds as ht
+        from datetime import datetime as dt, date as _date
+
+        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
+        seeded = 0
+
+        for acct in accounts:
+            meta = acct.profile_metadata or {}
+            # Get latest health score
+            latest_hs = (
+                HealthScore.query
+                .filter_by(account_id=acct.account_id)
+                .order_by(HealthScore.measurement_month.desc())
+                .first()
+            )
+            health = float(latest_hs.health_score) if latest_hs else None
+            if health is None:
+                continue
+
+            arr = float(acct.revenue or 0)
+            acct_name = acct.account_name
+
+            # Critical health notification
+            if health < ht.at_risk_min():
+                notif = Notification(
+                    customer_id=int(customer_id),
+                    account_id=acct.account_id,
+                    type='urgent_alert',
+                    priority='critical',
+                    payload={
+                        'title': f'Critical Health: {acct_name}',
+                        'summary': f'Health score dropped to {health:.0f} (critical threshold: {ht.at_risk_min()}). '
+                                   f'${arr:,.0f} ARR at risk. Immediate intervention recommended.',
+                        'account_name': acct_name,
+                        'health_score': health,
+                        'arr': arr,
+                    },
+                )
+                db.session.add(notif)
+                seeded += 1
+
+            # At-risk notification
+            elif health < ht.healthy_min():
+                notif = Notification(
+                    customer_id=int(customer_id),
+                    account_id=acct.account_id,
+                    type='signal_insight',
+                    priority='high',
+                    payload={
+                        'title': f'At-Risk: {acct_name}',
+                        'summary': f'Health score at {health:.0f} (at-risk range). '
+                                   f'Monitor closely and consider proactive outreach.',
+                        'account_name': acct_name,
+                        'health_score': health,
+                        'arr': arr,
+                    },
+                )
+                db.session.add(notif)
+                seeded += 1
+
+            # Renewal approaching with non-healthy status
+            rd_str = meta.get('renewal_date') or meta.get('contract_renewal_date')
+            if rd_str and health < ht.healthy_min():
+                try:
+                    rd = dt.strptime(str(rd_str)[:10], '%Y-%m-%d').date()
+                    days_until = (rd - _date.today()).days
+                    if 0 <= days_until <= 90:
+                        notif = Notification(
+                            customer_id=int(customer_id),
+                            account_id=acct.account_id,
+                            type='urgent_alert',
+                            priority='critical' if days_until <= 30 else 'high',
+                            payload={
+                                'title': f'Renewal Risk: {acct_name}',
+                                'summary': f'Renewal in {days_until} days with health {health:.0f}. '
+                                           f'${arr:,.0f} ARR. Run renewal safeguard playbook.',
+                                'account_name': acct_name,
+                                'days_until_renewal': days_until,
+                                'health_score': health,
+                                'arr': arr,
+                            },
+                        )
+                        db.session.add(notif)
+                        seeded += 1
+                except (ValueError, TypeError):
+                    pass
+
+        if seeded > 0:
+            db.session.commit()
+
+        return jsonify({'seeded': seeded})
+
+    except Exception as e:
+        logger.error(f"Error seeding notifications: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to seed notifications'}), 500
+
+
+# ---------------------------------------------------------------------------
 # PUT /api/notifications/<notification_id>/read
 # ---------------------------------------------------------------------------
 
