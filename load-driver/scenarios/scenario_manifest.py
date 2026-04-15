@@ -3316,6 +3316,7 @@ class ScenarioManifest(BaseScenario):
         customer_id: int,
         manifest_accounts: List[Dict[str, Any]],
         accounts_resp: list,
+        lifecycle_events: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Execute playbooks defined explicitly in the manifest.
 
@@ -3381,9 +3382,12 @@ class ScenarioManifest(BaseScenario):
                         context={
                             'triggered_by': triggered_by,
                             'manifest_defined': True,
-                            'triggered_at': triggered_at,
+                            'triggered_at': triggered_at,  # REST endpoint looks up health at this date
                         },
                     )
+                    # Note: triggered_at is passed in context and the REST endpoint
+                    # uses it to set PlaybookExecutionV2.triggered_at + look up
+                    # health_at_trigger from HealthScore at that historical date.
                     result['api_calls'] += 1
 
                     if not (trigger_resp and trigger_resp.get('status') == 'success'):
@@ -3436,8 +3440,12 @@ class ScenarioManifest(BaseScenario):
                     except Exception as e:
                         result['errors'].append(f'Close error for {acct_name}/{playbook_id}: {e}')
 
-        # Trigger Wizard B if any playbooks were closed
-        if result['closed'] > 0:
+        # Create lifecycle OUTCOME nodes (churn_lost, expansion_closed) for NRR
+        if lifecycle_events and accounts_resp:
+            self._create_lifecycle_outcomes(customer_id, accounts_resp, lifecycle_events, result)
+
+        # Trigger Wizard B if any playbooks were closed or lifecycle events exist
+        if result['closed'] > 0 or lifecycle_events:
             self._trigger_wizard_b(customer_id, result)
 
         return result
@@ -3897,7 +3905,7 @@ class ScenarioManifest(BaseScenario):
             EXTEND_SKIP = {'account_details', 'stakeholders', 'industry_benchmarks'}
             # In minimal mode, only upload account_details + kpi_measurements
             minimal = bool(getattr(self.args, 'minimal', False))
-            MINIMAL_ONLY = {'account_details', 'kpi_measurements'}
+            MINIMAL_ONLY = {'account_details', 'kpi_measurements', 'enhanced_signals'}
 
             t_step12 = time.time()
             for file_type, gen_fn in generators.items():
@@ -4018,6 +4026,7 @@ class ScenarioManifest(BaseScenario):
                     customer_id=int(customer_id),
                     manifest_accounts=gen.accounts,
                     accounts_resp=_accts_for_pb,
+                    lifecycle_events=gen.manifest.get('lifecycle_events', {}),
                 )
                 results['manifest_playbooks'] = mpb_result
                 api_calls += mpb_result.get('api_calls', 0)

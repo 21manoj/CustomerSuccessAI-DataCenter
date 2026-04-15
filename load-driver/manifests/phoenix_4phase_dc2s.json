@@ -44,7 +44,7 @@
     {
       "name": "Phoenix Hyperscale",
       "arr": 8500000,
-      "target_health": 82,
+      "target_health": 70,
       "classification": "at_risk",
       "story_arc": "crisis_recovery",
       "partner_tier": "direct",
@@ -86,7 +86,7 @@
     {
       "name": "Atlas Cloud Services",
       "arr": 6200000,
-      "target_health": 78,
+      "target_health": 68,
       "classification": "at_risk",
       "story_arc": "stalled_deployment",
       "partner_tier": "direct",

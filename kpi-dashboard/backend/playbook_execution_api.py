@@ -73,12 +73,35 @@ def create_execution():
         if account_id:
             # Use lifecycle module for full V2 creation with health snapshot
             from utils.playbook_lifecycle import start_execution
+            from datetime import datetime as _dt
+
+            # Time-aware: accept explicit triggered_at for manifest-defined playbooks
+            _triggered_at = None
+            _health_at_trigger = None
+            _triggered_by = data.get('triggered_by') or (data.get('context', {}).get('triggered_by')) or 'csm_manual'
+            _raw_triggered_at = data.get('triggered_at') or (data.get('context', {}).get('triggered_at'))
+            if _raw_triggered_at:
+                try:
+                    _triggered_at = _dt.fromisoformat(str(_raw_triggered_at).replace('Z', '+00:00')).replace(tzinfo=None)
+                    # Look up health at that historical date
+                    from models import HealthScore
+                    _hs = (HealthScore.query
+                           .filter(HealthScore.account_id == int(account_id),
+                                   HealthScore.measurement_month <= _triggered_at.date())
+                           .order_by(HealthScore.measurement_month.desc()).first())
+                    if _hs and _hs.health_score:
+                        _health_at_trigger = float(_hs.health_score)
+                except Exception:
+                    pass
+
             try:
                 v2 = start_execution(
                     customer_id=int(customer_id),
                     account_id=int(account_id),
                     playbook_id=playbook_id,
-                    triggered_by='csm_manual',
+                    triggered_by=_triggered_by,
+                    triggered_at=_triggered_at,
+                    health_at_trigger=_health_at_trigger,
                 )
             except ValueError as e:
                 return jsonify({'status': 'error', 'message': str(e)}), 404
