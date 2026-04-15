@@ -353,6 +353,35 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                 source_platform='playbook_execution',
                 properties={'label': f'{execution.playbook_id} → {outcome}'},
             ))
+
+        # ── Link recent SIGNAL nodes → OUTCOME for causal traversal ──
+        # Enables "Why did this happen?" queries via get_causal_chain.
+        # Connect up to 3 most recent signals for this account.
+        recent_signals = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == execution.account_id,
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_type == 'SIGNAL',
+            )
+            .order_by(ContextNode.occurred_at.desc())
+            .limit(3)
+            .all()
+        )
+        for sig in recent_signals:
+            db.session.add(ContextEdge(
+                customer_id=customer_id,
+                from_node_id=sig.node_id,
+                to_node_id=outcome_node.node_id,
+                edge_type='LED_TO',
+                confidence=0.7,
+                source_platform='playbook_execution',
+                properties={
+                    'label': f'{sig.node_subtype or "signal"} contributed to {outcome}',
+                    'inferred_by': 'playbook_close_linker',
+                },
+            ))
+
     except Exception as cg_err:
         logger.warning(f"Context graph OUTCOME write failed (non-fatal): {cg_err}")
 
