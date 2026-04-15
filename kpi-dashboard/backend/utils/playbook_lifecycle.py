@@ -215,6 +215,29 @@ def close_execution(
     execution.outcome_notes = outcome_notes
     execution.closed_at = closed_at or datetime.utcnow()
 
+    # ── Auto-lookup health_at_close from HealthScore if not provided ──
+    if health_at_close is None:
+        try:
+            close_date = execution.closed_at or datetime.utcnow()
+            close_month = close_date.strftime('%Y-%m')
+            hs = HealthScore.query.filter_by(
+                account_id=execution.account_id,
+                measurement_month=close_month,
+            ).first()
+            if hs:
+                health_at_close = float(hs.health_score)
+            else:
+                # Fallback: most recent health score before close date
+                hs = (HealthScore.query
+                      .filter(HealthScore.account_id == execution.account_id,
+                              HealthScore.measurement_month <= close_month)
+                      .order_by(HealthScore.measurement_month.desc())
+                      .first())
+                if hs:
+                    health_at_close = float(hs.health_score)
+        except Exception:
+            pass  # Continue without health_at_close
+
     if health_at_close is not None:
         execution.health_at_close = health_at_close
         execution.health_status_at_close = _classify_health(health_at_close)
