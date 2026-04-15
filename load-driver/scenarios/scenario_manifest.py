@@ -3311,6 +3311,137 @@ class ScenarioManifest(BaseScenario):
         'expansion':                'PB-08',
     }
 
+    def _execute_manifest_playbooks(
+        self,
+        customer_id: int,
+        manifest_accounts: List[Dict[str, Any]],
+        accounts_resp: list,
+    ) -> Dict[str, Any]:
+        """Execute playbooks defined explicitly in the manifest.
+
+        Reads `playbook_executions` array from each account in the manifest.
+        Creates PlaybookExecutionV2 records with manifest-specified dates,
+        then closes them. health_at_trigger and health_at_close are looked up
+        from the server's HealthScore table (accurate post-process_data values).
+
+        This runs AFTER process_data so health scores exist for date lookups.
+        """
+        result = {
+            'executed': 0,
+            'closed': 0,
+            'total_revenue_protected': 0,
+            'api_calls': 0,
+            'executions': [],
+            'errors': [],
+        }
+
+        # Build name→account_id map from server response
+        name_to_id = {}
+        for acct in accounts_resp:
+            if not isinstance(acct, dict):
+                continue
+            name = acct.get('account_name') or acct.get('name') or ''
+            aid = acct.get('account_id') or acct.get('id')
+            if name and aid:
+                name_to_id[name] = int(aid)
+
+        for manifest_acct in manifest_accounts:
+            pb_specs = manifest_acct.get('playbook_executions', [])
+            if not pb_specs:
+                continue
+
+            acct_name = manifest_acct.get('name', '')
+            account_id = name_to_id.get(acct_name)
+            if not account_id:
+                # Try fuzzy match
+                for sname, sid in name_to_id.items():
+                    if acct_name.lower() in sname.lower() or sname.lower() in acct_name.lower():
+                        account_id = sid
+                        break
+            if not account_id:
+                result['errors'].append(f'Account not found for manifest playbook: {acct_name}')
+                continue
+
+            for pb in pb_specs:
+                playbook_id = pb.get('playbook_id')
+                triggered_at = pb.get('triggered_at')
+                closed_at = pb.get('closed_at')
+                outcome = pb.get('outcome', 'resolved')
+                notes = pb.get('notes', '')
+                triggered_by = pb.get('triggered_by', 'health_drop')
+
+                if not playbook_id or not triggered_at:
+                    continue
+
+                # Step 1: Trigger playbook
+                try:
+                    trigger_resp = self.client.trigger_playbook(
+                        playbook_id=playbook_id,
+                        account_id=account_id,
+                        context={
+                            'triggered_by': triggered_by,
+                            'manifest_defined': True,
+                            'triggered_at': triggered_at,
+                        },
+                    )
+                    result['api_calls'] += 1
+
+                    if not (trigger_resp and trigger_resp.get('status') == 'success'):
+                        result['errors'].append(f'Trigger failed for {acct_name}/{playbook_id}: {str(trigger_resp)[:80]}')
+                        continue
+
+                    exec_data = trigger_resp.get('execution', {})
+                    execution_id = exec_data.get('execution_id') or exec_data.get('id')
+                    if not execution_id:
+                        result['errors'].append(f'No execution_id for {acct_name}/{playbook_id}')
+                        continue
+
+                    result['executed'] += 1
+                    logger.info(f'    ✅ {acct_name}: {playbook_id} triggered (manifest-defined, date={triggered_at})')
+
+                except Exception as e:
+                    result['errors'].append(f'Trigger error for {acct_name}/{playbook_id}: {e}')
+                    continue
+
+                # Step 2: Close playbook if closed_at is specified
+                if closed_at:
+                    try:
+                        close_resp = self.client.close_playbook(
+                            execution_id=execution_id,
+                            outcome=outcome,
+                            outcome_notes=notes,
+                        )
+                        result['api_calls'] += 1
+
+                        if close_resp and close_resp.get('status') == 'success':
+                            result['closed'] += 1
+                            rev_prot = float(close_resp.get('revenue_protected', 0))
+                            result['total_revenue_protected'] += rev_prot
+                            roi = close_resp.get('realized_roi_pct', 0)
+                            result['executions'].append({
+                                'account_name': acct_name,
+                                'playbook_id': playbook_id,
+                                'outcome': outcome,
+                                'triggered_at': triggered_at,
+                                'closed_at': closed_at,
+                                'revenue_protected': rev_prot,
+                                'roi_x': roi,
+                            })
+                            logger.info(
+                                f'    ✅ {acct_name}: {playbook_id} closed as {outcome} '
+                                f'(manifest dates {triggered_at}→{closed_at}, protected=${rev_prot:,.0f})'
+                            )
+                        else:
+                            result['errors'].append(f'Close failed for {acct_name}/{playbook_id}: {str(close_resp)[:80]}')
+                    except Exception as e:
+                        result['errors'].append(f'Close error for {acct_name}/{playbook_id}: {e}')
+
+        # Trigger Wizard B if any playbooks were closed
+        if result['closed'] > 0:
+            self._trigger_wizard_b(customer_id, result)
+
+        return result
+
     def _execute_and_close_playbooks(
         self,
         customer_id: int,
@@ -3874,10 +4005,34 @@ class ScenarioManifest(BaseScenario):
                     details=results,
                 )
 
-            # Step 4: Playbook execution (optional — triggers interventions on at-risk accounts)
+            # Step 4a: Manifest-defined playbook executions (explicit dates from manifest)
+            has_manifest_playbooks = any(
+                acct.get('playbook_executions') for acct in gen.accounts
+            )
+            if has_manifest_playbooks:
+                logger.info('  Step 5a: Manifest-defined playbook executions')
+                # Need accounts list from server for name→id mapping
+                _accts_for_pb = self.client.get_accounts() or []
+                result['api_calls'] = result.get('api_calls', 0) + 1
+                mpb_result = self._execute_manifest_playbooks(
+                    customer_id=int(customer_id),
+                    manifest_accounts=gen.accounts,
+                    accounts_resp=_accts_for_pb,
+                )
+                results['manifest_playbooks'] = mpb_result
+                api_calls += mpb_result.get('api_calls', 0)
+                if mpb_result.get('errors'):
+                    errors.extend(mpb_result['errors'])
+                logger.info(
+                    f'    Manifest playbooks: {mpb_result.get("executed", 0)} triggered, '
+                    f'{mpb_result.get("closed", 0)} closed, '
+                    f'${mpb_result.get("total_revenue_protected", 0):,.0f} protected'
+                )
+
+            # Step 4b: Auto-detect playbook execution (optional — --playbooks flag)
             playbooks_enabled = bool(getattr(self.args, 'playbooks', False))
-            if playbooks_enabled:
-                logger.info('  Step 5: Playbook execution on at-risk accounts')
+            if playbooks_enabled and not has_manifest_playbooks:
+                logger.info('  Step 5b: Auto-detect playbook execution on at-risk accounts')
                 pb_result = self._execute_and_close_playbooks(
                     customer_id=int(customer_id),
                     manifest=gen.manifest,
@@ -3889,7 +4044,7 @@ class ScenarioManifest(BaseScenario):
                 if pb_result.get('errors'):
                     errors.extend(pb_result['errors'])
                 logger.info(
-                    f'    Playbooks: {pb_result.get("executed", 0)} triggered, '
+                    f'    Auto playbooks: {pb_result.get("executed", 0)} triggered, '
                     f'{pb_result.get("closed", 0)} closed, '
                     f'${pb_result.get("total_revenue_protected", 0):,.0f} protected'
                 )

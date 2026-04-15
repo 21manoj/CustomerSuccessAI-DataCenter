@@ -50,8 +50,9 @@
       "partner_tier": "direct",
       "renewal_date": "2026-06-15",
       "narrative": "Large GPU compute customer. Champion VP Infra departed in month 4, triggering health decline from 82→55. Emergency retention playbook triggered month 6. New champion identified month 7. Health recovering to 74 by month 9.",
-      "kpi_trajectory": "declining",
-      "decline_start_month": 3,
+      "kpi_trajectory": "recovering",
+      "recovery_start_month": 6,
+      "intervention": {"enabled": true},
       "products": [
         {"name": "GPU Compute Cluster", "category": "compute", "arr": 4500000},
         {"name": "AI Training Pipeline", "category": "ml_ops", "arr": 2500000},
@@ -68,7 +69,18 @@
         {"type": "usage_decline", "date": "2025-11-01", "content": "GPU cluster utilization dropped from 87% to 52% after champion departure.", "sentiment": "negative"},
         {"type": "escalation", "date": "2025-12-01", "content": "CTO James Walsh escalated concerns about renewal. Emergency QBR requested.", "sentiment": "negative"},
         {"type": "csm_intervention", "date": "2026-01-15", "content": "New CSM Sarah Rivera assigned. First QBR held with CTO and new Director.", "sentiment": "positive"},
-        {"type": "kpi_recovery", "date": "2026-02-15", "content": "GPU utilization recovering to 68% after workload migration optimization.", "sentiment": "positive"}
+        {"type": "kpi_recovery", "date": "2026-02-15", "content": "GPU utilization recovering to 68% after workload migration optimization.", "sentiment": "positive"},
+        {"type": "champion_reengagement", "date": "2026-03-03", "content": "New champion Rachel Torres fully onboarded. Monthly exec reviews established.", "sentiment": "positive"}
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-12-15",
+          "closed_at": "2026-01-15",
+          "outcome": "resolved",
+          "triggered_by": "health_drop",
+          "notes": "Emergency retention playbook after champion departure + CTO escalation. New CSM assigned, QBR held with CTO and new Director."
+        }
       ]
     },
     {
@@ -80,8 +92,9 @@
       "partner_tier": "direct",
       "renewal_date": "2026-05-01",
       "narrative": "Mid-size customer with stalled Kubernetes deployment. Budget pressure in month 4 led to reduced scope. Intervention in month 6 with executive engagement. Partial recovery by month 9.",
-      "kpi_trajectory": "declining",
-      "decline_start_month": 3,
+      "kpi_trajectory": "recovering",
+      "recovery_start_month": 6,
+      "intervention": {"enabled": true},
       "products": [
         {"name": "Managed Kubernetes", "category": "platform", "arr": 3200000},
         {"name": "High-Performance Storage", "category": "storage", "arr": 2000000},
@@ -96,7 +109,18 @@
         {"type": "budget_pressure", "date": "2025-10-20", "content": "CFO Sarah Liu announced 15% budget reduction across infrastructure.", "sentiment": "very_negative"},
         {"type": "usage_decline", "date": "2025-11-10", "content": "K8s node count reduced from 120 to 80. Migration project paused.", "sentiment": "negative"},
         {"type": "executive_engagement", "date": "2026-01-10", "content": "CRO hosted exec dinner with CFO. Discussed optimization vs. reduction.", "sentiment": "positive"},
-        {"type": "kpi_recovery", "date": "2026-02-20", "content": "K8s utilization recovering as optimization playbook takes effect.", "sentiment": "positive"}
+        {"type": "kpi_recovery", "date": "2026-02-20", "content": "K8s utilization recovering as optimization playbook takes effect.", "sentiment": "positive"},
+        {"type": "champion_reengagement", "date": "2026-03-10", "content": "VP Engineering Michael Chen re-engaged. Budget approved for Q2 expansion.", "sentiment": "positive"}
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-01",
+          "triggered_at": "2025-11-15",
+          "closed_at": "2025-12-15",
+          "outcome": "resolved",
+          "triggered_by": "health_drop",
+          "notes": "Deployment acceleration after budget pressure stalled K8s rollout. CRO exec dinner with CFO led to optimization plan."
+        }
       ]
     },
     {
@@ -133,9 +157,10 @@
       "story_arc": "infrastructure_decay",
       "partner_tier": "tier_1",
       "renewal_date": "2026-04-15",
-      "narrative": "Originally at-risk account with infrastructure reliability issues. Health drops from 62→41. Intervention in month 6 with platform optimization. Partial recovery to 58.",
-      "kpi_trajectory": "declining",
-      "decline_start_month": 2,
+      "narrative": "Originally at-risk account with infrastructure reliability issues. Health drops from 62→41. Intervention in month 5 with platform optimization. Partial recovery to 58.",
+      "kpi_trajectory": "recovering",
+      "recovery_start_month": 5,
+      "intervention": {"enabled": true},
       "products": [
         {"name": "GPU Compute Cluster", "category": "compute", "arr": 1800000},
         {"name": "Network Fabric", "category": "networking", "arr": 1000000},
@@ -148,7 +173,19 @@
       "key_signals": [
         {"type": "critical_incident", "date": "2025-09-15", "content": "Sev-1: Network fabric failure took down 60% of edge nodes for 4 hours.", "sentiment": "very_negative"},
         {"type": "escalation", "date": "2025-10-01", "content": "CTO Kevin O'Brien escalated to our CEO. Demanded immediate reliability SLA review.", "sentiment": "very_negative"},
-        {"type": "csm_intervention", "date": "2025-12-15", "content": "Dedicated support pod deployed. Weekly reliability reviews with CTO.", "sentiment": "positive"}
+        {"type": "csm_intervention", "date": "2025-12-15", "content": "Dedicated support pod deployed. Weekly reliability reviews with CTO.", "sentiment": "positive"},
+        {"type": "kpi_recovery", "date": "2026-01-20", "content": "Edge node uptime recovered to 99.5% after network fabric remediation.", "sentiment": "positive"},
+        {"type": "health_improvement", "date": "2026-02-15", "content": "CTO Kevin O'Brien expressed renewed confidence. Weekly reviews continuing.", "sentiment": "positive"}
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-05",
+          "triggered_at": "2025-11-01",
+          "closed_at": "2025-12-15",
+          "outcome": "resolved",
+          "triggered_by": "health_drop",
+          "notes": "Health monitoring + platform optimization. Dedicated support pod deployed after Sev-1 network failure."
+        }
       ]
     },
     {
@@ -208,8 +245,9 @@
       "partner_tier": "tier_1",
       "renewal_date": "2026-10-01",
       "narrative": "Small but growing account. Slight dip in month 4-5 (65) due to team reorganization, recovered quickly by month 6 (71). Growth trajectory in months 8-9.",
-      "kpi_trajectory": "stable",
-      "decline_start_month": 3,
+      "kpi_trajectory": "recovering",
+      "recovery_start_month": 4,
+      "intervention": {"enabled": true},
       "products": [
         {"name": "Managed Kubernetes", "category": "platform", "arr": 1500000},
         {"name": "Monitoring & Observability", "category": "ops", "arr": 800000},
@@ -275,6 +313,16 @@
         {"type": "engagement_gap", "date": "2025-09-20", "content": "Zero engagement for 60+ days. QBR declined. Support tickets unanswered.", "sentiment": "very_negative"},
         {"type": "competitor_mention", "date": "2025-11-10", "content": "Successor Karen White mentioned evaluating AWS Direct Connect in ticket #4521.", "sentiment": "very_negative"},
         {"type": "contract_dispute", "date": "2026-01-05", "content": "Crest Computing sent formal notice of non-renewal. Cited reliability concerns.", "sentiment": "very_negative"}
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2025-11-01",
+          "closed_at": "2026-01-01",
+          "outcome": "timeout",
+          "triggered_by": "health_drop",
+          "notes": "Customer engagement playbook attempted but customer unresponsive. No champion, no exec sponsor. Lost to AWS Direct Connect."
+        }
       ]
     },
     {
