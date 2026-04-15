@@ -2654,7 +2654,13 @@ def get_team_capacity_api():
 
         accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
         total_arr = sum(float(a.revenue or 0) for a in accounts)
-        at_risk_count = sum(1 for a in accounts if float(a.health_score or 100) < ht.healthy_min())
+
+        # Pre-load health scores for at-risk count
+        _health_map = {}
+        for acct in accounts:
+            h, _, _ = get_precalculated_scores(acct.account_id)
+            _health_map[acct.account_id] = h or 100
+        at_risk_count = sum(1 for a in accounts if _health_map.get(a.account_id, 100) < ht.healthy_min())
 
         # Group accounts by CSM for real CSM count
         csm_set = set()
@@ -2706,7 +2712,7 @@ def get_team_capacity_api():
             csm_active_execs = [ex for aid in csm_acct_ids for ex in active_exec_by_acct.get(aid, [])]
             hours_committed = sum(float(e.csm_hours_planned or 0) for e in csm_active_execs)
             csm_arr = sum(float(a.revenue or 0) for a in csm_accts)
-            csm_at_risk = sum(1 for a in csm_accts if float(a.health_score or 100) < ht.healthy_min())
+            csm_at_risk = sum(1 for a in csm_accts if _health_map.get(a.account_id, 100) < ht.healthy_min())
             per_csm_breakdown.append({
                 'csm_name': csm_name,
                 'accounts_managed': len(csm_accts),
