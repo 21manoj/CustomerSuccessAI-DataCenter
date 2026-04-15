@@ -594,6 +594,10 @@ def get_dc2s_accounts():
             meta = account.profile_metadata or {}
             renewal_date = meta.get('renewal_date') or meta.get('contract_renewal_date')
             last_contact = meta.get('last_contact') or meta.get('last_engagement_date')
+            csm_name = meta.get('assigned_csm') or meta.get('csm_name')
+            champion_name = meta.get('primary_champion_name')
+            champion_title = meta.get('primary_champion_title')
+            products = meta.get('products', [])
 
             results.append({
                 'account_id': account.account_id,
@@ -605,6 +609,7 @@ def get_dc2s_accounts():
                 'overall_health': round(overall_health, 1),
                 'health_score': round(overall_health, 1),
                 'status': status,
+                'classification': status,
                 'pillar_scores': {k: round(v, 1) for k, v in pillar_scores.items()},
                 'enabled_pillars': enabled_pillar_codes,
                 'metadata': meta,
@@ -612,6 +617,11 @@ def get_dc2s_accounts():
                 'last_measured': latest_time.isoformat() if latest_time else None,
                 'renewal_date': renewal_date,
                 'last_contact': last_contact,
+                'csm_name': csm_name,
+                'champion_name': champion_name,
+                'champion_title': champion_title,
+                'products': products,
+                'arr': float(account.revenue) if account.revenue else 0,
             })
 
         # Apply user-level account filtering (contractors/restricted users)
@@ -2185,7 +2195,7 @@ def get_csm_daily_actions():
             filtered = []
             for acct in accounts:
                 meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-                csm = meta.get('assigned_csm', 'Unassigned')
+                csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
                 if csm_name_filter.lower() in csm.lower():
                     filtered.append(acct)
             accounts = filtered
@@ -2463,9 +2473,16 @@ def get_csm_daily_actions():
                     **roi_ctx,
                 })
 
-        # 5. Sort by priority_index DESC, take top 10
+        # 5. Sort by priority_index DESC, deduplicate per account (keep highest), take top 10
         all_actions.sort(key=lambda a: a['priority_index'], reverse=True)
-        top_actions = all_actions[:10]
+        seen_accounts = set()
+        deduped_actions = []
+        for a in all_actions:
+            aid = a.get('account_id')
+            if aid not in seen_accounts:
+                seen_accounts.add(aid)
+                deduped_actions.append(a)
+        top_actions = deduped_actions[:10]
 
         # Batch-load recent signals for trigger context ("Why this action?")
         _trigger_signal_map = {}
@@ -2561,7 +2578,7 @@ def get_csm_scorecard_api():
         csm_accounts = defaultdict(list)
         for acct in accounts:
             meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-            csm = meta.get('assigned_csm', 'Unassigned')
+            csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
             if csm_name_filter and csm_name_filter.lower() not in csm.lower():
                 continue
             csm_accounts[csm].append(acct)
@@ -2643,7 +2660,7 @@ def get_team_capacity_api():
         csm_set = set()
         for acct in accounts:
             meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-            csm = meta.get('assigned_csm')
+            csm = meta.get('assigned_csm') or meta.get('csm_name')
             if csm and csm != 'Unassigned':
                 csm_set.add(csm)
         csm_count = max(len(csm_set), 1)
@@ -2674,7 +2691,7 @@ def get_team_capacity_api():
         acct_by_csm = {}
         for acct in accounts:
             meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-            csm = meta.get('assigned_csm', 'Unassigned')
+            csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
             acct_by_csm.setdefault(csm, []).append(acct)
 
         # Map active playbook executions to accounts for per-CSM aggregation
