@@ -31,7 +31,7 @@ except Exception:
 
 from models import (
     Account, HealthScore, PillarScore, KPIScore,
-    ContextNode, ContextEdge, PlaybookExecution, ROISnapshot,
+    ContextNode, ContextEdge, PlaybookExecution, PlaybookExecutionV2, ROISnapshot,
 )
 import utils.health_thresholds as ht
 from utils.context_graph import aggregate_revenue_across_accounts
