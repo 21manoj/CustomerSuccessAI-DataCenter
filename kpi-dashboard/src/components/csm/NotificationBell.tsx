@@ -3,10 +3,11 @@
  *
  * Renders in CSM dashboard header (both Cockpit and FocusFlow).
  * Shows notifications sorted by priority (critical first).
+ * Filter tabs: All | Alerts | Playbooks | Signals
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, AlertTriangle, Zap, Sparkles, X, CheckCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Bell, AlertTriangle, Zap, Sparkles, X, CheckCheck, Filter } from 'lucide-react';
 import type { Notification } from '../../hooks/useNotifications';
 
 interface NotificationBellProps {
@@ -28,6 +29,15 @@ const PRIORITY_DOT: Record<string, string> = {
   normal: 'bg-gray-300',
 };
 
+type FilterTab = 'all' | 'urgent_alert' | 'playbook_triggered' | 'signal_insight';
+
+const FILTER_TABS: Array<{ id: FilterTab; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'urgent_alert', label: 'Alerts' },
+  { id: 'playbook_triggered', label: 'Playbooks' },
+  { id: 'signal_insight', label: 'Signals' },
+];
+
 function timeAgo(iso: string): string {
   const secs = Math.floor((Date.now() - new Date(iso + 'Z').getTime()) / 1000);
   if (secs < 60) return 'just now';
@@ -43,6 +53,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
   onMarkAllRead,
 }) => {
   const [open, setOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const ref = useRef<HTMLDivElement>(null);
 
   // Click-away to close
@@ -53,6 +64,20 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
     if (open) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  const filtered = useMemo(() => {
+    if (activeFilter === 'all') return notifications;
+    return notifications.filter((n) => n.type === activeFilter);
+  }, [notifications, activeFilter]);
+
+  // Count per type for badges
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const n of notifications) {
+      counts[n.type] = (counts[n.type] || 0) + 1;
+    }
+    return counts;
+  }, [notifications]);
 
   return (
     <div className="relative" ref={ref}>
@@ -92,14 +117,37 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
             </div>
           </div>
 
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-50 bg-gray-50/50">
+            <Filter className="w-3 h-3 text-gray-400 mr-1" />
+            {FILTER_TABS.map((tab) => {
+              const count = tab.id === 'all' ? notifications.length : (typeCounts[tab.id] || 0);
+              const isActive = activeFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFilter(tab.id)}
+                  className={`text-[10px] px-2 py-1 rounded-full font-medium transition ${
+                    isActive
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab.label}
+                  {count > 0 && <span className="ml-1 text-[9px] opacity-70">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Notification list */}
           <div className="max-h-72 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {filtered.length === 0 ? (
               <div className="py-8 text-center text-sm text-gray-400">
-                No notifications
+                {activeFilter === 'all' ? 'No notifications' : `No ${FILTER_TABS.find(t => t.id === activeFilter)?.label?.toLowerCase() || ''} notifications`}
               </div>
             ) : (
-              notifications.map((n) => (
+              filtered.map((n) => (
                 <button
                   key={n.id}
                   onClick={() => { onMarkRead(n.id); }}

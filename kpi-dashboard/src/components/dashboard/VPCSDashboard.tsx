@@ -143,6 +143,16 @@ interface VPCSDashboardData {
     accounts_per_csm: number;
     target_per_csm: number;
     csm_count: number;
+    per_csm_breakdown: Array<{
+      csm_name: string;
+      accounts_managed: number;
+      total_arr: number;
+      active_playbooks: number;
+      hours_committed: number;
+      hours_available: number;
+      utilization_pct: number;
+      at_risk_accounts: number;
+    }>;
   };
   quick_stats: {
     avg_resolution_days: number;
@@ -287,6 +297,7 @@ const FALLBACK_DATA: VPCSDashboardData = {
     accounts_per_csm: 5,
     target_per_csm: 6,
     csm_count: 3,
+    per_csm_breakdown: [],
   },
   quick_stats: {
     avg_resolution_days: 4.2,
@@ -1009,6 +1020,7 @@ const VPCSDashboard: React.FC = () => {
             accounts_per_csm: realAcctsPerCsm,
             target_per_csm: realTargetPerCsm,
             csm_count: realCsmCount,
+            per_csm_breakdown: capacityData?.per_csm_breakdown || [],
           },
           quick_stats: {
             avg_resolution_days: roiData?.avg_resolution_days || 4.2,
@@ -1520,6 +1532,58 @@ const VPCSDashboard: React.FC = () => {
                   csmCount={d.team_capacity.csm_count}
                 />
               </div>
+
+              {/* Per-CSM Capacity Breakdown */}
+              {d.team_capacity.per_csm_breakdown.length > 0 && (
+                <div className="mt-6 bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-gray-700/50 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-teal-400" />
+                    <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Per-CSM Capacity</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-700/50">
+                          <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">CSM</th>
+                          <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Accounts</th>
+                          <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">ARR</th>
+                          <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Active PBs</th>
+                          <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">At Risk</th>
+                          <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Utilization</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {d.team_capacity.per_csm_breakdown.map((csm) => {
+                          const utilColor = csm.utilization_pct > 100 ? 'text-red-400' : csm.utilization_pct > 80 ? 'text-yellow-400' : 'text-green-400';
+                          const barColor = csm.utilization_pct > 100 ? 'bg-red-500' : csm.utilization_pct > 80 ? 'bg-yellow-500' : 'bg-green-500';
+                          return (
+                            <tr key={csm.csm_name} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                              <td className="px-5 py-3 text-xs font-medium text-white">{csm.csm_name}</td>
+                              <td className="text-center px-3 py-3 text-xs text-gray-300">{csm.accounts_managed}</td>
+                              <td className="text-right px-3 py-3 text-xs text-gray-300 font-mono">{formatCompact(csm.total_arr)}</td>
+                              <td className="text-center px-3 py-3 text-xs text-gray-300">{csm.active_playbooks}</td>
+                              <td className="text-center px-3 py-3">
+                                <span className={`text-xs font-semibold ${csm.at_risk_accounts > 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                  {csm.at_risk_accounts}
+                                </span>
+                              </td>
+                              <td className="text-right px-5 py-3">
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(csm.utilization_pct, 100)}%` }} />
+                                  </div>
+                                  <span className={`text-xs font-semibold ${utilColor} w-10 text-right`}>{csm.utilization_pct}%</span>
+                                </div>
+                                <p className="text-[10px] text-gray-600 text-right mt-0.5">{csm.hours_committed}h / {csm.hours_available}h</p>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

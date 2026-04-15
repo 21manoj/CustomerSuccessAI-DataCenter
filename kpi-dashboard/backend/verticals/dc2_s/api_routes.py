@@ -2669,6 +2669,38 @@ def get_team_capacity_api():
         active_csm_hours = sum(float(e.csm_hours_planned or 0) for e in active_execs)
         target_per_csm = 6
 
+        # ── Per-CSM capacity breakdown ──
+        per_csm_breakdown = []
+        acct_by_csm = {}
+        for acct in accounts:
+            meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
+            csm = meta.get('assigned_csm', 'Unassigned')
+            acct_by_csm.setdefault(csm, []).append(acct)
+
+        # Map active playbook executions to accounts for per-CSM aggregation
+        active_exec_by_acct = {}
+        for ex in active_execs:
+            active_exec_by_acct.setdefault(ex.account_id, []).append(ex)
+
+        hours_per_week = 40  # Standard CSM work week
+        for csm_name in sorted(acct_by_csm.keys()):
+            csm_accts = acct_by_csm[csm_name]
+            csm_acct_ids = {a.account_id for a in csm_accts}
+            csm_active_execs = [ex for aid in csm_acct_ids for ex in active_exec_by_acct.get(aid, [])]
+            hours_committed = sum(float(e.csm_hours_planned or 0) for e in csm_active_execs)
+            csm_arr = sum(float(a.revenue or 0) for a in csm_accts)
+            csm_at_risk = sum(1 for a in csm_accts if float(a.health_score or 100) < ht.healthy_min())
+            per_csm_breakdown.append({
+                'csm_name': csm_name,
+                'accounts_managed': len(csm_accts),
+                'total_arr': csm_arr,
+                'active_playbooks': len(csm_active_execs),
+                'hours_committed': round(hours_committed, 1),
+                'hours_available': hours_per_week,
+                'utilization_pct': round(hours_committed / hours_per_week * 100, 1) if hours_per_week > 0 else 0,
+                'at_risk_accounts': csm_at_risk,
+            })
+
         return jsonify({
             'csm_count': csm_count,
             'csm_names': sorted(csm_set),
@@ -2681,6 +2713,7 @@ def get_team_capacity_api():
             'at_risk_accounts': at_risk_count,
             'total_arr': total_arr,
             'utilization_pct': round(accounts_per_csm / target_per_csm * 100, 1),
+            'per_csm_breakdown': per_csm_breakdown,
         })
 
     except Exception as e:
