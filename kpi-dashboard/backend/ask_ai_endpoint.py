@@ -95,8 +95,8 @@ INSTRUCTIONS:
 - End with 1-2 suggested follow-up questions when appropriate.
 - CRITICAL ROI CONSISTENCY: For any investment, ROI, or cost question, use get_portfolio_roi_summary.
   The numbers MUST match the CFO dashboard exactly. Key benchmarks for reference:
-  CS Investment scales at ~2.5% of ARR. ROI is typically 30-50% at 10 accounts.
-  Revenue per CS dollar is typically $1.3-$1.5. Payback is typically 7-9 months.
+  CS Investment scales at ~1-1.5% of ARR (industry benchmark). ROI is typically 5-15x.
+  Revenue per CS dollar is typically $5-$15. Payback is typically 3-6 months.
   Never use different calculation paths — all ROI answers come from one source of truth.
 - CRITICAL REVENUE CONSISTENCY: "Revenue at risk" is the context graph assessed risk from the
   PORTFOLIO CONTEXT above, NOT the total ARR of critical/at-risk accounts. These are different:

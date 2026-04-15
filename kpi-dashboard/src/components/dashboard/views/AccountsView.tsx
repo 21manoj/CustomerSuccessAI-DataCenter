@@ -64,17 +64,24 @@ const STATUS_LABELS: Record<string, string> = {
 
 const PILLAR_KEYS: PillarKey[] = ['P1', 'P2', 'P3', 'P4', 'P5'];
 
-const PILLAR_NAMES: Record<PillarKey, string> = {
-  P1: 'Deployment Velocity',
-  P2: 'Operational Stability',
-  P3: 'AI Workload Perf',
-  P4: 'Channel & Partner',
-  P5: 'Expansion Readiness',
+// Vertical-aware pillar names (resolved at render time from localStorage)
+const _PILLAR_NAMES_MAP: Record<string, Record<PillarKey, string>> = {
+  dc2_s: { P1: 'Deployment Velocity', P2: 'Operational Stability', P3: 'AI Workload Perf', P4: 'Channel & Partner', P5: 'Expansion Readiness' },
+  saas_premium: { P1: 'Product Adoption', P2: 'Customer Engagement', P3: 'Sentiment & Support', P4: 'Partner Health', P5: 'Revenue & Growth' },
+  saas: { P1: 'Product Adoption', P2: 'Customer Engagement', P3: 'Sentiment & Support', P4: 'Partner Health', P5: 'Revenue & Growth' },
 };
-
-const PILLAR_SHORT: Record<PillarKey, string> = {
-  P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand',
+const _PILLAR_SHORT_MAP: Record<string, Record<PillarKey, string>> = {
+  dc2_s: { P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand' },
+  saas_premium: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
+  saas: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
 };
+const _vert = () => (localStorage.getItem('vertical') || 'dc2_s').toLowerCase().replace(/-/g, '_');
+const PILLAR_NAMES: Record<PillarKey, string> = new Proxy({} as Record<PillarKey, string>, {
+  get: (_, key: string) => (_PILLAR_NAMES_MAP[_vert()] || _PILLAR_NAMES_MAP['dc2_s'])[key as PillarKey] || key,
+});
+const PILLAR_SHORT: Record<PillarKey, string> = new Proxy({} as Record<PillarKey, string>, {
+  get: (_, key: string) => (_PILLAR_SHORT_MAP[_vert()] || _PILLAR_SHORT_MAP['dc2_s'])[key as PillarKey] || key,
+});
 
 const PILLAR_PLAYBOOK: Record<PillarKey, string> = {
   P1: 'PB-01', P2: 'PB-02', P3: 'PB-03', P4: 'PB-06', P5: 'PB-04',

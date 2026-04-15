@@ -705,10 +705,11 @@ def calculate_forward_roi(
         cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
         plat_pct = 1 - cs_pct
 
-    # ── ARR-proportional investment cap (15% max) ──
-    # Safety net: CS investment never exceeds 15% of account ARR
+    # ── ARR-proportional investment cap (1.5% max) ──
+    # CS investment should be 1–2.5% of ARR per industry benchmarks.
+    # Cap at 1.5% to show realistic ROI (not inflated costs).
     if account_arr and account_arr > 0:
-        max_investment = account_arr * 0.15
+        max_investment = account_arr * 0.015
         if investment > max_investment:
             investment = max_investment
 

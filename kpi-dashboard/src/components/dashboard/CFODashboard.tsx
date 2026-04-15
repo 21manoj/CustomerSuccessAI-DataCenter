@@ -807,9 +807,16 @@ const CFODashboard: React.FC = () => {
             };
           });
 
-          const pillarDisplayNames: Record<string, string> = {
-            P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand',
+          // Vertical-aware pillar short names
+          // Vertical-aware pillar short names
+          const _PILLAR_SHORT: Record<string, Record<string, string>> = {
+            dc2_s: { P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand' },
+            saas_premium: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
+            saas: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
           };
+          const _vert = session?.vertical || localStorage.getItem('vertical') || 'dc2_s';
+          const pillarDisplayNames: Record<string, string> =
+            _PILLAR_SHORT[_vert] || _PILLAR_SHORT['dc2_s'];
 
           const pillarInvs: PillarInvestment[] = (json.pillar_investments || []).map((p: any) => ({
             pillar: pillarDisplayNames[p.pillar] || p.name || p.pillar,
