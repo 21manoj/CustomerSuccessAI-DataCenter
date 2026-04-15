@@ -104,11 +104,18 @@ interface CostOfInaction {
 interface ProofExecution {
   playbook_id: string;
   account_name: string;
+  arr: number;
   health_at_trigger: number | null;
   health_at_close: number | null;
   health_delta: number | null;
   cost: number;
+  cost_csm: number;
+  cost_platform: number;
+  cost_overhead: number;
+  csm_hours: number;
   revenue_protected: number;
+  revenue_expanded: number;
+  nrr_delta_pp: number;
   roi_x: number;
   outcome: string;
 }
@@ -1188,6 +1195,7 @@ const CFODashboard: React.FC = () => {
                 </div>
                 <span className="text-[10px] text-gray-500">{d.proof_executions.filter(e => e.revenue_protected > 0).length} interventions with measurable impact</span>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700/50">
@@ -1196,12 +1204,14 @@ const CFODashboard: React.FC = () => {
                     <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health &Delta;</th>
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Cost</th>
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Protected</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Expanded</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">NRR &Delta;</th>
                     <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">ROI</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {d.proof_executions.filter(e => e.revenue_protected > 0).map((e, i) => (
-                    <tr key={i} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                  {d.proof_executions.filter(e => e.revenue_protected > 0 || e.revenue_expanded > 0).map((e, i) => (
+                    <tr key={i} className="border-b border-gray-700/30 hover:bg-white/[0.02] group">
                       <td className="px-5 py-3 text-xs font-mono text-cyan-400">{e.playbook_id}</td>
                       <td className="px-3 py-3 text-xs text-white">{e.account_name}</td>
                       <td className="text-center px-3 py-3">
@@ -1211,13 +1221,23 @@ const CFODashboard: React.FC = () => {
                           </span>
                         ) : <span className="text-gray-500">—</span>}
                       </td>
-                      <td className="text-right px-3 py-3 text-xs text-gray-400 font-mono">{formatCompact(e.cost)}</td>
+                      <td className="text-right px-3 py-3">
+                        <span className="text-xs text-gray-400 font-mono">{formatCompact(e.cost)}</span>
+                        <div className="hidden group-hover:block text-[9px] text-gray-600 mt-0.5 leading-tight">
+                          CSM: {formatCompact(e.cost_csm || 0)}<br/>
+                          Platform: {formatCompact(e.cost_platform || 0)}<br/>
+                          Overhead: {formatCompact(e.cost_overhead || 0)}
+                        </div>
+                      </td>
                       <td className="text-right px-3 py-3 text-xs text-green-400 font-semibold font-mono">{formatCompact(e.revenue_protected)}</td>
+                      <td className="text-right px-3 py-3 text-xs text-teal-400 font-semibold font-mono">{e.revenue_expanded > 0 ? formatCompact(e.revenue_expanded) : '—'}</td>
+                      <td className="text-right px-3 py-3 text-xs text-cyan-400 font-semibold">+{e.nrr_delta_pp?.toFixed(2) || '0'}pp</td>
                       <td className="text-right px-5 py-3 text-xs text-cyan-400 font-bold">{e.roi_x}x</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 

@@ -1162,16 +1162,32 @@ def cfo_dashboard():
                 proof_data['csm_hours'] += float(ex.csm_hours_actual or ex.csm_hours_planned or 0)
                 if ex.outcome == 'resolved':
                     proof_data['executions_resolved'] += 1
-                if prot > 0 or cost > 0:
+                if prot > 0 or exp > 0 or cost > 0:
                     acct = next((a for a in accounts if a.account_id == ex.account_id), None)
+                    acct_arr = float(acct.revenue or 0) if acct else 0
+                    # NRR delta: this playbook's total value as % of portfolio ARR
+                    nrr_delta = ((prot + exp) / total_arr * 100) if total_arr > 0 else 0
+                    # Cost breakdown (from playbook cost bridge)
+                    csm_hours = float(ex.csm_hours_actual or ex.csm_hours_planned or 0)
+                    csm_rate = 150  # $/hr benchmark
+                    csm_cost = round(csm_hours * csm_rate, 0)
+                    platform_cost = round(cost * 0.33, 0) if cost > 0 else 0  # ~33% platform
+                    overhead_cost = round(cost - csm_cost - platform_cost, 0) if cost > csm_cost + platform_cost else 0
                     proof_data['executions'].append({
                         'playbook_id': ex.playbook_id,
                         'account_name': acct.account_name if acct else f'Account {ex.account_id}',
+                        'arr': round(acct_arr, 0),
                         'health_at_trigger': round(ex.health_at_trigger, 1) if ex.health_at_trigger else None,
                         'health_at_close': round(ex.health_at_close, 1) if ex.health_at_close else None,
                         'health_delta': round(ex.health_delta, 1) if ex.health_delta else None,
                         'cost': round(cost, 0),
+                        'cost_csm': csm_cost,
+                        'cost_platform': platform_cost,
+                        'cost_overhead': overhead_cost,
+                        'csm_hours': csm_hours,
                         'revenue_protected': round(prot, 0),
+                        'revenue_expanded': round(exp, 0),
+                        'nrr_delta_pp': round(nrr_delta, 2),
                         'roi_x': round(ex.realized_roi_pct, 1) if ex.realized_roi_pct else 0,
                         'outcome': ex.outcome,
                     })
