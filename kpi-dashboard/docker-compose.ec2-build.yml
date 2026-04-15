@@ -100,7 +100,7 @@ services:
       AWS_REGION: ${AWS_REGION:-us-east-1}
     volumes:
       - uploads:/app/backend/uploads
-      - verticals:/app/backend/verticals
+      - verticals:/app/backend/verticals/_customers
       - instance:/app/backend/instance
     depends_on:
       postgres:

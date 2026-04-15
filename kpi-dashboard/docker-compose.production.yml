@@ -90,7 +90,7 @@ services:
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}
     volumes:
       - uploads:/app/backend/uploads
-      - verticals:/app/backend/verticals
+      - verticals:/app/backend/verticals/_customers
       - instance:/app/backend/instance
     depends_on:
       postgres:

@@ -75,7 +75,7 @@ services:
       FEATURE_ASK_AI_V2: ${FEATURE_ASK_AI_V2:-true}
     volumes:
       - uploads:/app/backend/uploads
-      - verticals:/app/backend/verticals
+      - verticals:/app/backend/verticals/_customers
       - instance:/app/backend/instance
     depends_on:
       postgres:
