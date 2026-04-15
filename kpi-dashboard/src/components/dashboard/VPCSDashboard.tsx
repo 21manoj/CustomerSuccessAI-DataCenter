@@ -112,6 +112,25 @@ interface HealthHistoryAccount {
   monthly_scores: Array<{ month: string; health_score: number; status: string }>;
 }
 
+interface PlaybookMetric {
+  playbook_id: string;
+  total_executions: number;
+  resolved: number;
+  escalated: number;
+  timeout: number;
+  success_rate_pct: number;
+  avg_health_delta: number;
+  total_revenue_protected: number;
+  total_revenue_expanded: number;
+}
+
+interface RevenueSummary {
+  revenue_at_risk: number;
+  revenue_protected: number;
+  expansion_pipeline: number;
+  total_arr: number;
+}
+
 interface VPCSDashboardData {
   summary_cards: SummaryCard[];
   health_buckets: HealthBucket[];
@@ -140,6 +159,8 @@ interface VPCSDashboardData {
     improving_arr_pct: number;
     declining_arr_pct: number;
   };
+  playbook_metrics: PlaybookMetric[];
+  revenue_summary: RevenueSummary | null;
   period: string;
   last_updated: string;
   is_live_data: boolean;
@@ -276,6 +297,8 @@ const FALLBACK_DATA: VPCSDashboardData = {
   csm_scorecards: [],
   health_history_accounts: [],
   portfolio_trajectory: { improving_count: 0, declining_count: 0, stable_count: 0, improving_arr_pct: 0, declining_arr_pct: 0 },
+  playbook_metrics: [],
+  revenue_summary: null,
   period: 'Q1 2026',
   last_updated: '2m ago',
   is_live_data: false,
@@ -996,6 +1019,23 @@ const VPCSDashboard: React.FC = () => {
           csm_scorecards: csmScorecards,
           health_history_accounts: historyAccounts,
           portfolio_trajectory: portfolioTraj,
+          playbook_metrics: Object.entries(playbookMetrics?.playbooks || {}).map(([pid, pb]: [string, any]) => ({
+            playbook_id: pid,
+            total_executions: pb.total_executions || 0,
+            resolved: pb.resolved || 0,
+            escalated: pb.escalated || 0,
+            timeout: pb.timeout || 0,
+            success_rate_pct: pb.success_rate_pct || 0,
+            avg_health_delta: pb.avg_health_delta || 0,
+            total_revenue_protected: pb.total_revenue_protected || 0,
+            total_revenue_expanded: pb.total_revenue_expanded || 0,
+          })),
+          revenue_summary: roiData ? {
+            revenue_at_risk: roiData.revenue_at_risk || roiData.at_risk_amount || 0,
+            revenue_protected: roiData.revenue_protected || roiData.protected_amount || 0,
+            expansion_pipeline: roiData.expansion_pipeline || roiData.expansion_amount || 0,
+            total_arr: roiData.total_arr || totalArr || 0,
+          } : null,
           period: roiData?.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
           last_updated: 'just now',
           is_live_data: hasLiveData,
@@ -1120,7 +1160,38 @@ const VPCSDashboard: React.FC = () => {
                 ))}
               </div>
 
-              {/* Row 2: Health Distribution — click bucket to drill into filtered accounts */}
+              {/* Row 2: Revenue Intelligence Card */}
+              {d.revenue_summary && (
+                <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 mb-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <DollarSign className="w-4 h-4 text-teal-400" />
+                    <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Revenue Intelligence</h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase mb-1">At Risk</p>
+                      <p className="text-2xl font-bold text-red-400">{formatCompact(d.revenue_summary.revenue_at_risk)}</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">
+                        {d.revenue_summary.total_arr > 0
+                          ? `${((d.revenue_summary.revenue_at_risk / d.revenue_summary.total_arr) * 100).toFixed(1)}% of ARR`
+                          : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase mb-1">Protected</p>
+                      <p className="text-2xl font-bold text-green-400">{formatCompact(d.revenue_summary.revenue_protected)}</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">via interventions</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase mb-1">Expansion Pipeline</p>
+                      <p className="text-2xl font-bold text-teal-400">{formatCompact(d.revenue_summary.expansion_pipeline)}</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">upsell &amp; cross-sell</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Row 3: Health Distribution — click bucket to drill into filtered accounts */}
               <div className="mb-6">
                 <HealthDistribution
                   buckets={d.health_buckets}
@@ -1176,15 +1247,55 @@ const VPCSDashboard: React.FC = () => {
               <div className="mb-6">
                 <ActionsQueueTable actions={d.actions} />
               </div>
-              {/* Playbook Success Metrics — only if we have data */}
-              <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Target className="w-4 h-4 text-teal-400" />
-                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Playbook Success Rate</h3>
+              {/* Per-Playbook Effectiveness Table */}
+              <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-teal-400" />
+                    <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Playbook Effectiveness</h3>
+                  </div>
+                  <span className="text-xs text-teal-400 font-semibold">{d.quick_stats.playbook_success_rate}% overall</span>
                 </div>
-                <div className="text-center py-6">
-                  <p className="text-5xl font-bold text-teal-400 mb-1">{d.quick_stats.playbook_success_rate}%</p>
-                  <p className="text-xs text-gray-500">Resolved / Total Executions</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700/50">
+                        <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Playbook</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Runs</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Resolved</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Success %</th>
+                        <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health &Delta;</th>
+                        <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Rev Protected</th>
+                        <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Rev Expanded</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.playbook_metrics.map((pm) => {
+                        const successColor = pm.success_rate_pct >= 70 ? 'text-green-400' : pm.success_rate_pct >= 50 ? 'text-yellow-400' : 'text-red-400';
+                        const deltaColor = pm.avg_health_delta > 0 ? 'text-green-400' : pm.avg_health_delta < 0 ? 'text-red-400' : 'text-gray-400';
+                        return (
+                          <tr key={pm.playbook_id} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                            <td className="px-5 py-3 text-xs font-medium text-white">{pm.playbook_id}</td>
+                            <td className="text-center px-3 py-3 text-xs text-gray-300">{pm.total_executions}</td>
+                            <td className="text-center px-3 py-3 text-xs text-gray-300">{pm.resolved}</td>
+                            <td className="text-center px-3 py-3">
+                              <span className={`text-xs font-semibold ${successColor}`}>{pm.success_rate_pct}%</span>
+                            </td>
+                            <td className="text-center px-3 py-3">
+                              <span className={`text-xs font-semibold ${deltaColor}`}>
+                                {pm.avg_health_delta > 0 ? '+' : ''}{pm.avg_health_delta.toFixed(1)}
+                              </span>
+                            </td>
+                            <td className="text-right px-3 py-3 text-xs text-green-400 font-mono">{formatCompact(pm.total_revenue_protected)}</td>
+                            <td className="text-right px-5 py-3 text-xs text-teal-400 font-mono">{formatCompact(pm.total_revenue_expanded)}</td>
+                          </tr>
+                        );
+                      })}
+                      {d.playbook_metrics.length === 0 && (
+                        <tr><td colSpan={7} className="text-center py-8 text-gray-500 text-xs">No playbook execution data yet. Run playbooks to see effectiveness metrics.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </>
@@ -1358,7 +1469,8 @@ const VPCSDashboard: React.FC = () => {
                         <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health &Delta;</th>
                         <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Playbooks</th>
                         <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Success</th>
-                        <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Revenue Impact</th>
+                        <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Rev Protected</th>
+                        <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Rev Expanded</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1383,14 +1495,17 @@ const VPCSDashboard: React.FC = () => {
                                 {sc.success_rate_pct}%
                               </span>
                             </td>
+                            <td className="text-right px-3 py-3 text-xs text-green-400 font-semibold font-mono">
+                              {formatCompact(sc.revenue_protected)}
+                            </td>
                             <td className="text-right px-5 py-3 text-xs text-teal-400 font-semibold font-mono">
-                              {formatCompact(sc.total_revenue_impact)}
+                              {formatCompact(sc.revenue_expanded)}
                             </td>
                           </tr>
                         );
                       })}
                       {d.csm_scorecards.length === 0 && (
-                        <tr><td colSpan={7} className="text-center py-8 text-gray-500 text-xs">No CSM assignment data. Ensure accounts have assigned_csm in profiles.</td></tr>
+                        <tr><td colSpan={8} className="text-center py-8 text-gray-500 text-xs">No CSM assignment data. Ensure accounts have assigned_csm in profiles.</td></tr>
                       )}
                     </tbody>
                   </table>
