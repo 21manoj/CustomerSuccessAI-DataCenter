@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 # Model: Haiku for structured inference (fast, cheap, reliable JSON output)
 LLM_MODEL = 'claude-haiku-4-5-20251001'
 MAX_ACCOUNTS_PER_BATCH = 5
+MAX_ACCOUNTS_PER_BATCH_EDGES = 3  # Fewer per batch in edges_only (richer output)
 MAX_TOKENS = 4096
+MAX_TOKENS_EDGES = 8192  # Edge enrichment needs more tokens (decisions + outcomes + edges per account)
 
 
 def _check_prerequisites(customer_id: int, mode: str = 'auto') -> Tuple[bool, str, str]:
@@ -309,6 +311,33 @@ def _build_account_summaries(customer_id: int, mode: str = 'full') -> List[Dict]
     return summaries
 
 
+def _salvage_truncated_json(text: str) -> List[Dict]:
+    """Try to extract complete JSON objects from a truncated response.
+
+    When max_tokens cuts off mid-JSON, we try to find the last complete
+    account inference object by progressively truncating and re-parsing.
+    """
+    if not text or not text.strip():
+        return []
+
+    # If it starts with '[', try to find complete objects in the array
+    text = text.strip()
+    if text.startswith('['):
+        # Find positions of '}, {' or '}\n{' which separate array elements
+        # Try truncating at each one from the end
+        for i in range(len(text) - 1, 0, -1):
+            if text[i] == '}':
+                candidate = text[:i + 1] + ']'
+                try:
+                    result = json.loads(candidate)
+                    if isinstance(result, list) and result:
+                        return result
+                except json.JSONDecodeError:
+                    continue
+
+    return []
+
+
 def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') -> List[Dict]:
     """Call Claude API with account summaries, return inferred context.
 
@@ -343,9 +372,11 @@ def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') ->
 
     all_inferences = []
 
-    # Batch accounts
-    for batch_start in range(0, len(summaries), MAX_ACCOUNTS_PER_BATCH):
-        batch = summaries[batch_start:batch_start + MAX_ACCOUNTS_PER_BATCH]
+    # Batch accounts — fewer per batch in edges_only mode (richer output per account)
+    batch_size = MAX_ACCOUNTS_PER_BATCH_EDGES if mode == 'edges_only' else MAX_ACCOUNTS_PER_BATCH
+    max_tokens = MAX_TOKENS_EDGES if mode == 'edges_only' else MAX_TOKENS
+    for batch_start in range(0, len(summaries), batch_size):
+        batch = summaries[batch_start:batch_start + batch_size]
 
         # Build per-account blocks
         account_blocks = []
@@ -424,7 +455,7 @@ def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') ->
                 model=LLM_MODEL,
                 system=SYSTEM_PROMPT,
                 messages=[{'role': 'user', 'content': prompt}],
-                max_tokens=MAX_TOKENS,
+                max_tokens=max_tokens,
                 temperature=0.2,  # Low temp for structured output
             )
             duration = time.time() - t0
@@ -451,6 +482,11 @@ def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') ->
 
         except json.JSONDecodeError as e:
             logger.warning('LLM Tier 1: JSON parse error for batch %d: %s', batch_start, e)
+            # Try to salvage truncated JSON by finding last complete object
+            salvaged = _salvage_truncated_json(text)
+            if salvaged:
+                logger.info('LLM Tier 1: salvaged %d inferences from truncated JSON', len(salvaged))
+                all_inferences.extend(salvaged)
         except Exception as e:
             logger.warning('LLM Tier 1: API call failed for batch %d: %s', batch_start, e)
 
