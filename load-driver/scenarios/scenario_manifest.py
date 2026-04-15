@@ -4013,7 +4013,7 @@ class ScenarioManifest(BaseScenario):
                 logger.info('  Step 5a: Manifest-defined playbook executions')
                 # Need accounts list from server for name→id mapping
                 _accts_for_pb = self.client.get_accounts() or []
-                result['api_calls'] = result.get('api_calls', 0) + 1
+                api_calls += 1
                 mpb_result = self._execute_manifest_playbooks(
                     customer_id=int(customer_id),
                     manifest_accounts=gen.accounts,
