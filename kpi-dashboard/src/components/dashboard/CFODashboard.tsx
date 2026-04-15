@@ -1317,7 +1317,7 @@ const CFODashboard: React.FC = () => {
                     Account Investment Breakdown
                   </h3>
                 </div>
-                <span className="text-[10px] text-gray-500">{d.accounts[0]?.source === 'actual' ? 'From playbook data' : 'Estimated (ARR-weighted)'}</span>
+                <span className="text-[10px] text-gray-500">{d.has_proof ? 'From playbook executions' : 'Estimated (ARR-weighted)'}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -1326,30 +1326,51 @@ const CFODashboard: React.FC = () => {
                       <th className="text-left py-2 pr-3">Account</th>
                       <th className="text-right py-2 px-2">ARR</th>
                       <th className="text-right py-2 px-2">Health</th>
-                      <th className="text-right py-2 px-2">Investment</th>
-                      <th className="text-right py-2 px-2">Impact</th>
+                      <th className="text-right py-2 px-2">Cost</th>
+                      <th className="text-right py-2 px-2">Protected</th>
+                      <th className="text-right py-2 px-2">Expanded</th>
                       <th className="text-right py-2 px-2">ROI</th>
                       <th className="text-right py-2 pl-2">Runs</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {d.accounts.map((a) => {
-                      const healthColor = a.classification === 'critical' ? 'text-red-400'
-                        : a.classification === 'at_risk' ? 'text-yellow-400' : 'text-green-400';
-                      return (
-                        <tr key={a.account_id} className="border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors">
-                          <td className="py-2 pr-3">
-                            <div className="text-white font-medium truncate max-w-[180px]">{a.account_name}</div>
-                          </td>
-                          <td className="text-right py-2 px-2 text-gray-400">{formatCompact(a.arr)}</td>
-                          <td className={`text-right py-2 px-2 font-medium ${healthColor}`}>{a.health_score.toFixed(0)}</td>
-                          <td className="text-right py-2 px-2 text-gray-300">{formatCompact(a.investment)}</td>
-                          <td className="text-right py-2 px-2 text-cyan-400">{formatCompact(a.impact)}</td>
-                          <td className={`text-right py-2 px-2 font-medium ${a.roi_pct > 0 ? 'text-green-400' : 'text-gray-500'}`}>{a.roi_pct}%</td>
-                          <td className="text-right py-2 pl-2 text-gray-500">{a.playbook_runs || '—'}</td>
-                        </tr>
-                      );
-                    })}
+                    {(() => {
+                      // Aggregate proof_executions by account, overlay onto accounts list
+                      const proofByAccount: Record<string, { cost: number; prot: number; exp: number; runs: number }> = {};
+                      for (const e of d.proof_executions) {
+                        const key = e.account_name;
+                        if (!proofByAccount[key]) proofByAccount[key] = { cost: 0, prot: 0, exp: 0, runs: 0 };
+                        proofByAccount[key].cost += e.cost;
+                        proofByAccount[key].prot += e.revenue_protected;
+                        proofByAccount[key].exp += e.revenue_expanded || 0;
+                        proofByAccount[key].runs += 1;
+                      }
+                      return d.accounts.map((a) => {
+                        const proof = proofByAccount[a.account_name];
+                        const cost = proof?.cost || a.investment || 0;
+                        const prot = proof?.prot || 0;
+                        const exp = proof?.exp || 0;
+                        const total = prot + exp;
+                        const roi = cost > 0 && total > 0 ? Math.round(total / cost) : (a.roi_pct || 0);
+                        const runs = proof?.runs || a.playbook_runs || 0;
+                        const healthColor = a.classification === 'critical' ? 'text-red-400'
+                          : a.classification === 'at_risk' ? 'text-yellow-400' : 'text-green-400';
+                        return (
+                          <tr key={a.account_id} className="border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors">
+                            <td className="py-2 pr-3">
+                              <div className="text-white font-medium truncate max-w-[180px]">{a.account_name}</div>
+                            </td>
+                            <td className="text-right py-2 px-2 text-gray-400">{formatCompact(a.arr)}</td>
+                            <td className={`text-right py-2 px-2 font-medium ${healthColor}`}>{a.health_score.toFixed(0)}</td>
+                            <td className="text-right py-2 px-2 text-gray-300">{cost > 0 ? formatCompact(cost) : '—'}</td>
+                            <td className="text-right py-2 px-2 text-green-400">{prot > 0 ? formatCompact(prot) : '—'}</td>
+                            <td className="text-right py-2 px-2 text-teal-400">{exp > 0 ? formatCompact(exp) : '—'}</td>
+                            <td className={`text-right py-2 px-2 font-bold ${roi > 0 ? 'text-cyan-400' : 'text-gray-500'}`}>{roi > 0 ? `${roi}x` : '—'}</td>
+                            <td className="text-right py-2 pl-2 text-gray-500">{runs || '—'}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
