@@ -265,27 +265,34 @@ def run_wizard_a_step(
 # Stage 3a: LLM Tier 1 Inference (gated behind WITH_LLM flag)
 # ═══════════════════════════════════════════════════════════════
 
-def run_llm_tier1_inference(customer_id: int) -> Tuple[Optional[str], float]:
+def run_llm_tier1_inference(customer_id: int, mode: str = 'auto') -> Tuple[Optional[str], float]:
     """Infer context graph from KPI patterns using Claude.
 
     Gated behind WITH_LLM feature flag + API key availability.
     Runs after Wizard A (needs health scores + arc types) and before
     Wizard B (enriches context for pattern analysis).
 
+    Args:
+        customer_id: The customer (tenant) ID
+        mode: 'auto' (detect from data — uses 'edges_only' if CSV signals exist,
+              'full' if no signals), 'full' (infer everything), or
+              'edges_only' (enrich existing signals with causal edges)
+
     Returns (step_description, duration_seconds).
     """
     t0 = time.time()
     try:
         from llm.tier1_inference import infer_context_from_kpis
-        result = infer_context_from_kpis(customer_id)
+        result = infer_context_from_kpis(customer_id, mode=mode)
 
         duration = round(time.time() - t0, 2)
         status = result.get('status', 'error')
+        resolved_mode = result.get('mode', mode)
 
         if status == 'skipped':
             logger.info(
-                'LLM Tier 1 skipped: customer=%d reason=%s',
-                customer_id, result.get('reason', ''),
+                'LLM Tier 1 skipped: customer=%d mode=%s reason=%s',
+                customer_id, resolved_mode, result.get('reason', ''),
             )
             return None, duration
 
@@ -296,13 +303,14 @@ def run_llm_tier1_inference(customer_id: int) -> Tuple[Optional[str], float]:
             edges = result.get('edges', 0)
             analyzed = result.get('accounts_analyzed', 0)
             logger.info(
-                'LLM Tier 1 complete: customer=%d analyzed=%d '
+                'LLM Tier 1 (%s) complete: customer=%d analyzed=%d '
                 'signals=%d decisions=%d outcomes=%d edges=%d (%.1fs)',
-                customer_id, analyzed, sigs, decs, outs, edges, duration,
+                resolved_mode, customer_id, analyzed,
+                sigs, decs, outs, edges, duration,
             )
-            if sigs + decs + outs > 0:
+            if sigs + decs + outs + edges > 0:
                 return (
-                    f'llm_tier1_{analyzed}_accounts_{sigs}sig_{decs}dec_{outs}out_{edges}edges',
+                    f'llm_tier1_{resolved_mode}_{analyzed}accts_{sigs}sig_{decs}dec_{outs}out_{edges}edges',
                     duration,
                 )
 
