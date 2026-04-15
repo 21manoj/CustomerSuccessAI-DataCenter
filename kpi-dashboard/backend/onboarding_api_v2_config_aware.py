@@ -93,10 +93,17 @@ def _sync_onboarding_progress(customer_id: int, payload: dict) -> None:
 # ============================================================================
 
 def get_customer_directory(customer_id: int, vertical_slug: str = 'dc2_s') -> Path:
-    """Get path to customer directory"""
+    """Get path to customer data directory.
+
+    Customer data is stored under verticals/_customers/ to keep it separate
+    from Python source code (verticals/dc2_s/, verticals/saas_premium/, etc.).
+    This allows Docker to mount a persistent volume at _customers/ without
+    shadowing the code that ships with the image.
+    """
     backend_dir = Path(__file__).parent
-    verticals_dir = backend_dir / "verticals"
-    return verticals_dir / f"customer{customer_id}-{vertical_slug}"
+    customers_dir = backend_dir / "verticals" / "_customers"
+    customers_dir.mkdir(parents=True, exist_ok=True)
+    return customers_dir / f"customer{customer_id}-{vertical_slug}"
 
 
 def execute_script(script_path: Path, customer_id: int, timeout: int = 300, 
