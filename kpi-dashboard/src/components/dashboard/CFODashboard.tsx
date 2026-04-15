@@ -1347,12 +1347,13 @@ const CFODashboard: React.FC = () => {
                       }
                       return d.accounts.map((a) => {
                         const proof = proofByAccount[a.account_name];
-                        const cost = proof?.cost || a.investment || 0;
-                        const prot = proof?.prot || 0;
-                        const exp = proof?.exp || 0;
+                        const hasActual = !!proof;
+                        const cost = hasActual ? proof.cost : 0;
+                        const prot = hasActual ? proof.prot : 0;
+                        const exp = hasActual ? proof.exp : 0;
                         const total = prot + exp;
-                        const roi = cost > 0 && total > 0 ? Math.round(total / cost) : (a.roi_pct || 0);
-                        const runs = proof?.runs || a.playbook_runs || 0;
+                        const roi = cost > 0 && total > 0 ? Math.round(total / cost) : 0;
+                        const runs = hasActual ? proof.runs : 0;
                         const healthColor = a.classification === 'critical' ? 'text-red-400'
                           : a.classification === 'at_risk' ? 'text-yellow-400' : 'text-green-400';
                         return (
