@@ -21,7 +21,8 @@ import {
 import {
   DollarSign, TrendingUp, Shield, Target, BarChart3, Layers,
   FileText, ArrowUpRight, Sparkles, PieChart, Activity,
-  Users, Eye, Zap, GitBranch, Clock, AlertTriangle, Info
+  Users, Eye, Zap, GitBranch, Clock, AlertTriangle, Info,
+  ChevronDown
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import DashboardTopBar from './DashboardTopBar';
@@ -100,6 +101,29 @@ interface CostOfInaction {
   accounts: Array<{ account_name: string; arr: number; health: number; churn_pct: number; annual_loss: number }>;
 }
 
+interface ProofExecution {
+  playbook_id: string;
+  account_name: string;
+  health_at_trigger: number | null;
+  health_at_close: number | null;
+  health_delta: number | null;
+  cost: number;
+  revenue_protected: number;
+  roi_x: number;
+  outcome: string;
+}
+
+interface WizardBNRR {
+  without: number;
+  with_pulse: number;
+  delta: number;
+  arr_protected: number;
+  accounts_saved: number;
+  with_interventions: number;
+  grr_before: number | null;
+  grr_after: number | null;
+}
+
 interface CFODashboardData {
   summary_cards: FinancialSummaryCard[];
   power_of_1: PowerOf1Row[];
@@ -113,6 +137,10 @@ interface CFODashboardData {
   cost_per_protected_dollar: number;
   financial_ratios: FinancialRatio[];
   accounts: AccountROI[];
+  // Proof data: actual playbook execution economics
+  proof_executions: ProofExecution[];
+  has_proof: boolean;
+  wizard_b_nrr: WizardBNRR | null;
   // NRR/GRR + Cost of Inaction
   nrr_current: number;
   nrr_with_intervention: number;
@@ -766,6 +794,7 @@ const CFODashboard: React.FC = () => {
   const [data, setData] = useState<CFODashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFutureROI, setShowFutureROI] = useState(false);
 
   // Fetch main dashboard data
   useEffect(() => {
@@ -849,12 +878,31 @@ const CFODashboard: React.FC = () => {
           const paybackMonths = json.payback_months || (roiImpact > 0 ? Math.round((csInvestment / roiImpact) * 12) : 0);
 
           const revenueProtected = json.revenue_protected || 0;
+
+          // ── Proof data: actual playbook economics (bottom-up) ──
+          const proof = json.proof_data || {};
+          const proofCost = proof.total_cost || 0;
+          const proofProtected = proof.revenue_protected || 0;
+          const proofExpanded = proof.revenue_expanded || 0;
+          const proofRoi = proof.realized_roi || 0;
+          const proofExecutions = proof.executions || [];
+          const hasProof = proofCost > 0 || proofProtected > 0;
+
+          // ── Wizard B NRR (actual portfolio forecast) ──
+          const wb = json.wizard_b_nrr || {};
+          const hasWizardB = !!(wb.with_cs_pulse_nrr_pct && wb.with_cs_pulse_nrr_pct !== wb.without_cs_pulse_nrr_pct);
+
           const transformed: CFODashboardData = {
-            summary_cards: [
-              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.roi_scaling?.current_accounts || json.account_count || '—'} active accounts`, accent: 'white' },
-              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: isEstimatedInvestment ? 'Power-of-1 benchmark estimate' : 'Playbook execution cost', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: isEstimatedInvestment },
-              { label: isEstimatedInvestment ? 'Projected Impact' : 'Revenue Protected', value: formatCompact(isEstimatedInvestment ? roiImpact : revenueProtected), subtitle: isEstimatedInvestment && revenueProtected > 0 ? `${formatCompact(revenueProtected)} confirmed · GRR: ${grr}%` : `GRR: ${grr}%`, accent: 'green', estimated: isEstimatedInvestment },
-              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: isEstimatedInvestment },
+            summary_cards: hasProof ? [
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts`, accent: 'white' },
+              { label: 'Actual CS Spend', value: formatCompact(proofCost), subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.csm_hours || 0}h CSM time`, accent: 'emerald' },
+              { label: 'Revenue Protected', value: formatCompact(proofProtected + proofExpanded), subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`, accent: 'green' },
+              { label: 'Portfolio ROI', value: `${proofRoi}x`, subtitle: `${formatCompact(proofCost)} → ${formatCompact(proofProtected + proofExpanded)}`, accent: 'cyan' },
+            ] : [
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts`, accent: 'white' },
+              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Power-of-1 benchmark estimate', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: true },
+              { label: 'Projected Impact', value: formatCompact(roiImpact), subtitle: `GRR: ${grr}%`, accent: 'green', estimated: true },
+              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true },
             ],
             power_of_1: po1Metrics,
             power_of_1_total: po1Metrics.reduce((sum: number, m: PowerOf1Row) => sum + m.dollar_impact, 0),
@@ -868,12 +916,17 @@ const CFODashboard: React.FC = () => {
             cost_per_protected_dollar: csInvestment > 0 && roiImpact > 0
               ? parseFloat((csInvestment / roiImpact).toFixed(2))
               : 0.05,
-            financial_ratios: [
-              { label: 'CS % of ARR', value: `${csPercent}%${isEstimatedInvestment ? ' *' : ''}` },
-              { label: 'Rev per CS Dollar', value: `$${revPerDollar}${isEstimatedInvestment ? ' *' : ''}` },
-              { label: 'Payback Period', value: `${paybackMonths} months${isEstimatedInvestment ? ' *' : ''}` },
+            financial_ratios: hasProof ? [
+              { label: 'CS % of ARR', value: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}%` },
+              { label: 'Rev per CS Dollar', value: `$${proofCost > 0 ? ((proofProtected + proofExpanded) / proofCost).toFixed(1) : '0'}` },
+              { label: 'Payback Period', value: `${proofProtected > 0 ? Math.max(1, Math.round((proofCost / (proofProtected + proofExpanded)) * 12)) : '—'} months` },
+              { label: 'Playbook Success Rate', value: `${proof.executions_total > 0 ? Math.round((proof.executions_resolved / proof.executions_total) * 100) : 0}%`, accent: 'cyan' },
+            ] : [
+              { label: 'CS % of ARR', value: `${csPercent}% *` },
+              { label: 'Rev per CS Dollar', value: `$${revPerDollar} *` },
+              { label: 'Payback Period', value: `${paybackMonths} months *` },
               { label: 'NRR Impact / Playbook', value: `+${((nrr - 100) / Math.max(scalingProjs[0]?.accounts || 15, 1)).toFixed(2)}%`, accent: 'cyan' },
-              ...(isEstimatedInvestment ? [{ label: '* Benchmarks: Gainsight Pulse 2024, TSIA, KeyBanc SaaS, Bain NPS Economics', value: '', accent: 'gray' }] : []),
+              { label: '* Power-of-1 benchmark estimates', value: '', accent: 'gray' },
             ],
             accounts: (json.accounts || []).map((a: any) => ({
               account_id: a.account_id,
@@ -887,18 +940,31 @@ const CFODashboard: React.FC = () => {
               source: a.source || 'benchmark',
               playbook_runs: a.playbook_runs || 0,
             })),
-            // NRR/GRR + Cost of Inaction
-            nrr_current: json.nrr_current || nrr,
-            nrr_with_intervention: json.nrr_with_intervention || nrr,
-            grr: grr,
-            nrr_arr_protectable: json.nrr_arr_protectable || 0,
+            // Proof data + Wizard B NRR
+            proof_executions: proofExecutions,
+            has_proof: hasProof,
+            wizard_b_nrr: hasWizardB ? {
+              without: wb.without_cs_pulse_nrr_pct,
+              with_pulse: wb.with_cs_pulse_nrr_pct,
+              delta: wb.delta_pct,
+              arr_protected: wb.arr_protected,
+              accounts_saved: wb.accounts_saved,
+              with_interventions: wb.with_interventions_nrr_pct,
+              grr_before: wb.grr_before_pct,
+              grr_after: wb.grr_after_pct,
+            } : null,
+            // NRR/GRR + Cost of Inaction (fallback to Power-of-1 when no Wizard B)
+            nrr_current: hasWizardB ? wb.with_cs_pulse_nrr_pct : (json.nrr_current || nrr),
+            nrr_with_intervention: hasWizardB ? wb.with_interventions_nrr_pct : (json.nrr_with_intervention || nrr),
+            grr: hasWizardB && wb.grr_after_pct ? wb.grr_after_pct : grr,
+            nrr_arr_protectable: hasWizardB ? wb.arr_protected : (json.nrr_arr_protectable || 0),
             cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
             nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
             renewals_at_risk: json.renewals_at_risk || [],
             total_arr: totalArr,
-            cs_investment: csInvestment,
-            roi_impact: roiImpact,
-            is_estimated_investment: isEstimatedInvestment,
+            cs_investment: hasProof ? proofCost : csInvestment,
+            roi_impact: hasProof ? (proofProtected + proofExpanded) : roiImpact,
+            is_estimated_investment: hasProof ? false : isEstimatedInvestment,
             period: json.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
             last_updated: json.last_updated || new Date().toISOString(),
           };
@@ -1043,38 +1109,117 @@ const CFODashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* Row 1b: NRR/GRR + Cost of Inaction */}
+          {/* Row 1b: NRR Before/After + Cost of Inaction */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* Dual NRR/GRR — Power-of-1 investment model */}
-            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Net Revenue Retention</h3>
+            {d.wizard_b_nrr ? (
+              /* ── Wizard B NRR: actual portfolio forecast ── */
+              <div className="bg-[#1a1f2e] rounded-xl border border-cyan-700/30 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-cyan-400" />
+                    <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">CS Pulse NRR Impact</h3>
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-semibold">Actual</span>
+                </div>
+                <div className="flex items-end gap-4 mb-3">
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">Without CS Pulse</p>
+                    <p className={`text-3xl font-bold ${d.wizard_b_nrr.without >= 100 ? 'text-gray-400' : 'text-red-400'}`}>{d.wizard_b_nrr.without.toFixed(1)}%</p>
+                  </div>
+                  <div className="text-gray-600 text-xl pb-1">&rarr;</div>
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse</p>
+                    <p className="text-3xl font-bold text-green-400">{d.wizard_b_nrr.with_pulse.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5 mb-1">
+                    <p className="text-lg font-bold text-green-400">+{d.wizard_b_nrr.delta.toFixed(1)}pp</p>
+                  </div>
+                  {d.wizard_b_nrr.grr_after && (
+                    <div className="border-l border-gray-700/50 pl-4">
+                      <p className="text-[9px] text-gray-500 mb-0.5">GRR</p>
+                      <p className="text-2xl font-bold text-gray-300">{d.wizard_b_nrr.grr_after.toFixed(0)}%</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-[10px]">
+                  <span className="text-green-400">{formatCompact(d.wizard_b_nrr.arr_protected)} ARR protected</span>
+                  <span className="text-gray-500">&middot;</span>
+                  <span className="text-cyan-400">{d.wizard_b_nrr.accounts_saved} accounts saved from churn</span>
+                </div>
+                <p className="text-[9px] text-gray-600 mt-2">Based on actual health trajectories, playbook outcomes, and saved-account attribution.</p>
               </div>
-              <div className="flex items-end gap-6 mb-3">
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Current NRR (Power-of-1)</p>
-                  <p className={`text-3xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
+            ) : (
+              /* ── Fallback: Power-of-1 NRR estimate ── */
+              <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Net Revenue Retention</h3>
                 </div>
-                <div className="text-gray-600 text-xl pb-1">&rarr;</div>
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
-                  <p className="text-3xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+                <div className="flex items-end gap-6 mb-3">
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">Current NRR</p>
+                    <p className={`text-3xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
+                  </div>
+                  <div className="text-gray-600 text-xl pb-1">&rarr;</div>
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
+                    <p className="text-3xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+                  </div>
+                  <div className="border-l border-gray-700/50 pl-6">
+                    <p className="text-[9px] text-gray-500 mb-0.5">GRR</p>
+                    <p className="text-3xl font-bold text-gray-300">{d.grr}%</p>
+                  </div>
                 </div>
-                <div className="border-l border-gray-700/50 pl-6">
-                  <p className="text-[9px] text-gray-500 mb-0.5">GRR</p>
-                  <p className="text-3xl font-bold text-gray-300">{d.grr}%</p>
-                </div>
+                <p className="text-[9px] text-gray-600 mt-1">Power-of-1 estimate. Run playbooks to see actual NRR impact.</p>
               </div>
-              {d.nrr_arr_protectable > 0 && (
-                <p className="text-[10px] text-green-400/80">{formatCompact(d.nrr_arr_protectable)} ARR protectable with intervention</p>
-              )}
-              <p className="text-[9px] text-gray-600 mt-1">Power-of-1 model: 1% KPI improvement scaled by ARR. CRO view uses health-weighted baseline (may differ). Playbook projection: if interventions run on at-risk accounts.</p>
-            </div>
+            )}
 
-            {/* Cost of Inaction — with formula transparency */}
+            {/* Cost of Inaction */}
             <CostOfInactionPanel data={d.cost_of_inaction} />
           </div>
+
+          {/* Row 1c: Playbook ROI Proof Table (when proof data exists) */}
+          {d.proof_executions.length > 0 && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden mb-6">
+              <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-green-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Playbook ROI Proof</h3>
+                </div>
+                <span className="text-[10px] text-gray-500">{d.proof_executions.filter(e => e.revenue_protected > 0).length} interventions with measurable impact</span>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700/50">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">Playbook</th>
+                    <th className="text-left px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Account</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health &Delta;</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Cost</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Protected</th>
+                    <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">ROI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.proof_executions.filter(e => e.revenue_protected > 0).map((e, i) => (
+                    <tr key={i} className="border-b border-gray-700/30 hover:bg-white/[0.02]">
+                      <td className="px-5 py-3 text-xs font-mono text-cyan-400">{e.playbook_id}</td>
+                      <td className="px-3 py-3 text-xs text-white">{e.account_name}</td>
+                      <td className="text-center px-3 py-3">
+                        {e.health_at_trigger != null && e.health_at_close != null ? (
+                          <span className={`text-xs font-semibold ${(e.health_delta || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {e.health_at_trigger.toFixed(0)} &rarr; {e.health_at_close.toFixed(0)}
+                          </span>
+                        ) : <span className="text-gray-500">—</span>}
+                      </td>
+                      <td className="text-right px-3 py-3 text-xs text-gray-400 font-mono">{formatCompact(e.cost)}</td>
+                      <td className="text-right px-3 py-3 text-xs text-green-400 font-semibold font-mono">{formatCompact(e.revenue_protected)}</td>
+                      <td className="text-right px-5 py-3 text-xs text-cyan-400 font-bold">{e.roi_x}x</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Renewals at Risk Banner */}
           {d.renewals_at_risk.length > 0 && (
@@ -1112,19 +1257,35 @@ const CFODashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Row 2: Power of 1 Metrics Table */}
+          {/* ── Future ROI Modeling (Power-of-1) — collapsible ── */}
           <div className="mb-6">
-            <PowerOf1Table rows={d.power_of_1} total={d.power_of_1_total} />
-          </div>
+            <button
+              onClick={() => setShowFutureROI(!showFutureROI)}
+              className="w-full flex items-center justify-between bg-[#1a1f2e] rounded-xl border border-gray-700/50 px-5 py-4 hover:border-gray-600/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-purple-400" />
+                <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Future ROI Modeling</h3>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">Power-of-1 Framework</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showFutureROI ? 'rotate-180' : ''}`} />
+            </button>
+            {showFutureROI && (
+              <div className="mt-4 space-y-6">
+                {/* Power of 1 Metrics Table */}
+                <PowerOf1Table rows={d.power_of_1} total={d.power_of_1_total} />
 
-          {/* Row 3: Pillar Investment + Investment Timeline */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <PillarInvestmentChart data={d.pillar_investments} />
-            <InvestmentTimelineChart data={d.investment_timeline} />
-          </div>
+                {/* Pillar Investment + Investment Timeline */}
+                <div className="grid grid-cols-2 gap-4">
+                  <PillarInvestmentChart data={d.pillar_investments} />
+                  <InvestmentTimelineChart data={d.investment_timeline} />
+                </div>
 
-          {/* Row 4: ROI Scaling Analysis */}
-          <ROIScalingSection tiers={d.roi_scaling} />
+                {/* ROI Scaling Analysis */}
+                <ROIScalingSection tiers={d.roi_scaling} />
+              </div>
+            )}
+          </div>
 
           {/* Row 5: Account Investment Breakdown */}
           {d.accounts.length > 0 && (
@@ -1180,12 +1341,38 @@ const CFODashboard: React.FC = () => {
       {/* ---- Right Sidebar ---- */}
       <aside className="w-80 flex-shrink-0 bg-[#0d1117] border-l border-gray-700/50 py-6 px-4 overflow-y-auto flex flex-col gap-5">
         {/* Investment Allocation Intelligence */}
-        <InvestmentAllocationWidget
-          totalArr={d.total_arr}
-          csInvestment={d.cs_investment}
-          roiImpact={d.roi_impact}
-          isEstimated={d.is_estimated_investment}
-        />
+        {d.has_proof ? (
+          /* Actual investment breakdown from playbook data */
+          <div className="bg-[#1a1f2e] rounded-xl border border-green-700/30 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">CS Investment</h3>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Actual</span>
+            </div>
+            <div className="text-center mb-3">
+              <p className="text-3xl font-bold text-green-400">{d.total_arr > 0 ? (d.cs_investment / d.total_arr * 100).toFixed(2) : '0'}%</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">of ARR invested in CS</p>
+              <p className="text-[9px] text-green-400/70 mt-0.5">Well below industry range (1.5% - 2.5%)</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-3 text-center">
+              <div className="bg-gray-800/50 rounded-lg p-2">
+                <p className="text-lg font-bold text-white">{formatCompact(d.cs_investment)}</p>
+                <p className="text-[9px] text-gray-500">CS Spend</p>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-2">
+                <p className="text-lg font-bold text-cyan-400">{(d.roi_impact > 0 && d.cs_investment > 0) ? `${(d.roi_impact / d.cs_investment).toFixed(0)}x` : '—'}</p>
+                <p className="text-[9px] text-gray-500">ROI</p>
+              </div>
+            </div>
+            <p className="text-[9px] text-gray-600 italic">From {d.proof_executions.length} playbook executions</p>
+          </div>
+        ) : (
+          <InvestmentAllocationWidget
+            totalArr={d.total_arr}
+            csInvestment={d.cs_investment}
+            roiImpact={d.roi_impact}
+            isEstimated={d.is_estimated_investment}
+          />
+        )}
 
         {/* Revenue Waterfall */}
         {d.nrr_waterfall.expected_loss > 0 && (

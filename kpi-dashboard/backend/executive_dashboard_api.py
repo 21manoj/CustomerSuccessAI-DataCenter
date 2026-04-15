@@ -1145,10 +1145,77 @@ def cfo_dashboard():
         if total_arr > 0 and wf_attributed > 0:
             nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
 
+        # ── PROOF DATA: actual playbook execution economics (bottom-up) ──
+        proof_data = {'total_cost': 0, 'revenue_protected': 0, 'revenue_expanded': 0,
+                      'csm_hours': 0, 'executions_total': 0, 'executions_resolved': 0,
+                      'realized_roi': 0, 'executions': []}
+        try:
+            pb_execs = PlaybookExecutionV2.query.filter_by(customer_id=customer_id).all()
+            proof_data['executions_total'] = len(pb_execs)
+            for ex in pb_execs:
+                cost = float(ex.total_cost or 0)
+                prot = float(ex.revenue_protected or 0)
+                exp = float(ex.revenue_expanded or 0)
+                proof_data['total_cost'] += cost
+                proof_data['revenue_protected'] += prot
+                proof_data['revenue_expanded'] += exp
+                proof_data['csm_hours'] += float(ex.csm_hours_actual or ex.csm_hours_planned or 0)
+                if ex.outcome == 'resolved':
+                    proof_data['executions_resolved'] += 1
+                if prot > 0 or cost > 0:
+                    acct = next((a for a in accounts if a.account_id == ex.account_id), None)
+                    proof_data['executions'].append({
+                        'playbook_id': ex.playbook_id,
+                        'account_name': acct.account_name if acct else f'Account {ex.account_id}',
+                        'health_at_trigger': round(ex.health_at_trigger, 1) if ex.health_at_trigger else None,
+                        'health_at_close': round(ex.health_at_close, 1) if ex.health_at_close else None,
+                        'health_delta': round(ex.health_delta, 1) if ex.health_delta else None,
+                        'cost': round(cost, 0),
+                        'revenue_protected': round(prot, 0),
+                        'roi_x': round(ex.realized_roi_pct, 1) if ex.realized_roi_pct else 0,
+                        'outcome': ex.outcome,
+                    })
+            total_value = proof_data['revenue_protected'] + proof_data['revenue_expanded']
+            proof_data['realized_roi'] = round(total_value / proof_data['total_cost'], 1) if proof_data['total_cost'] > 0 else 0
+            proof_data['total_cost'] = round(proof_data['total_cost'], 0)
+            proof_data['revenue_protected'] = round(proof_data['revenue_protected'], 0)
+            proof_data['revenue_expanded'] = round(proof_data['revenue_expanded'], 0)
+            proof_data['csm_hours'] = round(proof_data['csm_hours'], 0)
+            # Sort by revenue_protected desc
+            proof_data['executions'].sort(key=lambda e: e['revenue_protected'], reverse=True)
+        except Exception as e:
+            logger.warning(f"CFO proof_data computation failed: {e}")
+
+        # ── WIZARD B NRR: actual portfolio forecast ──
+        wizard_b_nrr = None
+        try:
+            from wizards.wizard_b_pattern_db import run_wizard_b
+            wb_result = run_wizard_b(customer_id)
+            forecast = (wb_result.get('nrr_intelligence') or {}).get('forecast') or {}
+            if forecast.get('current_nrr_pct'):
+                grr_data = wb_result.get('grr_intelligence') or {}
+                wizard_b_nrr = {
+                    'without_cs_pulse_nrr_pct': forecast.get('without_cs_pulse_nrr_pct', 100),
+                    'with_cs_pulse_nrr_pct': forecast.get('current_nrr_pct', 100),
+                    'delta_pct': forecast.get('cs_pulse_delta_pct', 0),
+                    'arr_protected': forecast.get('cs_pulse_arr_protected', 0),
+                    'accounts_saved': forecast.get('cs_pulse_accounts_saved', 0),
+                    'with_interventions_nrr_pct': forecast.get('with_interventions_nrr_pct', 100),
+                    'intervention_delta_arr': forecast.get('delta_arr', 0),
+                    'grr_before_pct': grr_data.get('grr_before_pct'),
+                    'grr_after_pct': grr_data.get('grr_after_pct'),
+                }
+        except Exception as e:
+            logger.warning(f"CFO wizard_b_nrr computation failed: {e}")
+
         return jsonify({
             'status': 'success',
             'total_arr': round(total_arr, 2),
             'account_count': len(accounts),
+            # ── PROOF: actual playbook economics ──
+            'proof_data': proof_data,
+            # ── WIZARD B: actual NRR forecast ──
+            'wizard_b_nrr': wizard_b_nrr,
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
