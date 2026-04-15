@@ -2467,6 +2467,33 @@ def get_csm_daily_actions():
         all_actions.sort(key=lambda a: a['priority_index'], reverse=True)
         top_actions = all_actions[:10]
 
+        # Batch-load recent signals for trigger context ("Why this action?")
+        _trigger_signal_map = {}
+        try:
+            from models import ContextNode
+            action_account_ids = list({a.get('account_id') for a in top_actions if a.get('account_id')})
+            if action_account_ids:
+                recent_signals = (
+                    ContextNode.query
+                    .filter(
+                        ContextNode.customer_id == int(customer_id),
+                        ContextNode.account_id.in_(action_account_ids),
+                        ContextNode.node_type == 'SIGNAL',
+                    )
+                    .order_by(ContextNode.occurred_at.desc())
+                    .all()
+                )
+                for sig in recent_signals:
+                    if sig.account_id not in _trigger_signal_map:
+                        _trigger_signal_map[sig.account_id] = {
+                            'signal_type': sig.node_subtype or (sig.properties or {}).get('signal_type', 'unknown'),
+                            'signal_summary': (sig.title or '')[:200],
+                            'signal_date': str(sig.occurred_at)[:10] if sig.occurred_at else None,
+                            'sentiment': (sig.properties or {}).get('sentiment', 'neutral'),
+                        }
+        except Exception:
+            pass  # Context graph may not be enabled
+
         # Assign rank, id, and stakeholder context
         for i, action in enumerate(top_actions, 1):
             action['rank'] = i
@@ -2480,6 +2507,8 @@ def get_csm_daily_actions():
             if 'arc_type' not in action:
                 acct_obj = next((a for a in accounts if a.account_id == action.get('account_id')), None)
                 action['arc_type'] = getattr(acct_obj, 'arc_type', None) if acct_obj else None
+            # Inject trigger context ("Why this action?")
+            action['trigger_context'] = _trigger_signal_map.get(action.get('account_id'))
 
         # Summary
         urgency_counts = {'critical': 0, 'high': 0, 'opportunity': 0, 'medium': 0}
