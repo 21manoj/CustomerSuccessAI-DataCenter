@@ -328,45 +328,71 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                      Time-aware closures pass execution.closed_at for timeline coherence.
     """
     try:
-        # Determine revenue_impact_type
-        if revenue_protected > 0 and outcome == 'resolved':
-            ri_type = 'revenue_protected'
-        elif revenue_expanded > 0:
-            ri_type = 'expansion_closed'
-        elif outcome == 'timeout':
-            ri_type = 'revenue_at_risk'
-        else:
-            ri_type = 'intervention_outcome'
+        common_props = {
+            'execution_id': execution.execution_id,
+            'playbook_id': execution.playbook_id,
+            'outcome': outcome,
+            'health_at_trigger': execution.health_at_trigger,
+            'health_at_close': execution.health_at_close,
+            'health_delta': execution.health_delta,
+            'total_cost': round(full_cost, 2),
+            'roi_x': execution.realized_roi_pct,
+        }
+        ts = occurred_at or datetime.utcnow()
 
-        net_impact = revenue_protected + revenue_expanded
-        outcome_node = ContextNode(
-            account_id=execution.account_id,
-            customer_id=customer_id,
-            node_type='OUTCOME',
-            source='system',
-            node_subtype='playbook_outcome',
-            title=f'{outcome.title()}: {execution.playbook_id} — ${revenue_protected:,.0f} protected, ${revenue_expanded:,.0f} expanded',
-            revenue_impact=net_impact if net_impact > 0 else 0,  # No-impact interventions are $0, not negative
-            revenue_impact_type=ri_type,
-            properties={
-                'execution_id': execution.execution_id,
-                'playbook_id': execution.playbook_id,
-                'outcome': outcome,
-                'health_at_trigger': execution.health_at_trigger,
-                'health_at_close': execution.health_at_close,
-                'health_delta': execution.health_delta,
-                'revenue_protected': revenue_protected,
-                'revenue_expanded': revenue_expanded,
-                'total_cost': round(full_cost, 2),
-                'roi_x': execution.realized_roi_pct,
-            },
-            tier=1,
-            occurred_at=occurred_at or datetime.utcnow(),
-            source_platform='playbook_execution',
-            source_event_id=f'close:{execution.execution_id}',
-        )
-        db.session.add(outcome_node)
-        db.session.flush()
+        # ── Create separate OUTCOME nodes for protected and expanded ──
+        # This ensures the CG page shows correct buckets per account.
+        outcome_node = None  # Primary node for edge linking
+
+        if revenue_protected > 0:
+            node = ContextNode(
+                account_id=execution.account_id, customer_id=customer_id,
+                node_type='OUTCOME', source='system', node_subtype='playbook_outcome',
+                title=f'{outcome.title()}: {execution.playbook_id} — ${revenue_protected:,.0f} protected',
+                revenue_impact=revenue_protected,
+                revenue_impact_type='revenue_protected',
+                properties={**common_props, 'revenue_protected': revenue_protected},
+                tier=1, occurred_at=ts,
+                source_platform='playbook_execution',
+                source_event_id=f'close:{execution.execution_id}:protected',
+            )
+            db.session.add(node)
+            db.session.flush()
+            outcome_node = node
+
+        if revenue_expanded > 0:
+            node = ContextNode(
+                account_id=execution.account_id, customer_id=customer_id,
+                node_type='OUTCOME', source='system', node_subtype='playbook_outcome',
+                title=f'{outcome.title()}: {execution.playbook_id} — ${revenue_expanded:,.0f} expansion',
+                revenue_impact=revenue_expanded,
+                revenue_impact_type='expansion_closed',
+                properties={**common_props, 'revenue_expanded': revenue_expanded},
+                tier=1, occurred_at=ts,
+                source_platform='playbook_execution',
+                source_event_id=f'close:{execution.execution_id}:expanded',
+            )
+            db.session.add(node)
+            db.session.flush()
+            if not outcome_node:
+                outcome_node = node
+
+        if not outcome_node:
+            # No revenue — still create a node for tracking
+            ri_type = 'revenue_at_risk' if outcome == 'timeout' else 'intervention_outcome'
+            outcome_node = ContextNode(
+                account_id=execution.account_id, customer_id=customer_id,
+                node_type='OUTCOME', source='system', node_subtype='playbook_outcome',
+                title=f'{outcome.title()}: {execution.playbook_id}',
+                revenue_impact=0,
+                revenue_impact_type=ri_type,
+                properties=common_props,
+                tier=1, occurred_at=ts,
+                source_platform='playbook_execution',
+                source_event_id=f'close:{execution.execution_id}',
+            )
+            db.session.add(outcome_node)
+            db.session.flush()
 
         # Link DECISION → OUTCOME (most recent DECISION node for this account)
         decision_node = (
