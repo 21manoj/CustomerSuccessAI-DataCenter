@@ -1460,8 +1460,9 @@ const CFODashboard: React.FC = () => {
               Revenue Waterfall
             </h3>
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between"><span className="text-gray-400">Expected Loss</span><span className="text-red-400 font-semibold">{formatCompact(d.nrr_waterfall.expected_loss)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">Protectable</span><span className="text-green-400 font-semibold">{formatCompact(d.nrr_waterfall.attributed_save)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Churn Exposure</span><span className="text-red-400 font-semibold">{formatCompact(d.nrr_waterfall.expected_loss)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Protectable (churn)</span><span className="text-green-400 font-semibold">{formatCompact(d.nrr_waterfall.protectable || d.nrr_waterfall.attributed_save)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Expandable (growth)</span><span className="text-teal-400 font-semibold">{formatCompact(d.nrr_waterfall.expandable || 0)}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">Cost to Intervene</span><span className="text-gray-300">{formatCompact(d.nrr_waterfall.intervention_cost)}</span></div>
               {d.nrr_waterfall.roi_x > 0 && (
                 <div className="flex justify-between border-t border-gray-700/50 pt-2">

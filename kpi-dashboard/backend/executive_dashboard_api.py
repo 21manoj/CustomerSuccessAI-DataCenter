@@ -1089,41 +1089,67 @@ def cfo_dashboard():
         # Payback months
         payback_months = round((effective_investment / roi_impact) * 12) if roi_impact > 0 else 0
 
-        # ── Cost of Inaction: what we lose if we don't act on at-risk/critical ──
+        # ── Cost of Inaction + Revenue Waterfall ──
+        # Uses the same churn + expansion probability models as playbook close
+        from utils.playbook_lifecycle import (
+            health_to_annual_churn_prob,
+            health_to_annual_expansion_prob,
+            INTERVENTION_ATTRIBUTION,
+            EXPANSION_ATTRIBUTION,
+        )
         account_ids = [a.account_id for a in accounts]
         latest_scores = _get_latest_health_scores(customer_id, account_ids)
         at_risk_accounts_list = []
         total_arr_at_risk = 0
         total_churn_exposure = 0
+        total_expansion_missed = 0
         for acct in accounts:
             h = _safe_float(getattr(acct, 'health_score', None) or latest_scores.get(acct.account_id, 0))
             arr = _safe_float(acct.revenue)
             if h < ht.healthy_min() and arr > 0:
-                churn_pct = max(5, 50 - h * 0.5)
-                annual_loss = arr * churn_pct / 100
+                churn_prob = health_to_annual_churn_prob(h)
+                # What expansion this account is missing by being unhealthy
+                exp_current = health_to_annual_expansion_prob(h)
+                exp_if_healthy = health_to_annual_expansion_prob(75)  # target: healthy threshold
+                expansion_gap = max(0, exp_if_healthy - exp_current)
+                annual_loss = arr * churn_prob
+                annual_expansion_missed = arr * expansion_gap
                 total_arr_at_risk += arr
                 total_churn_exposure += annual_loss
+                total_expansion_missed += annual_expansion_missed
                 at_risk_accounts_list.append({
                     'account_name': acct.account_name,
                     'arr': round(arr, 0),
                     'health': round(h, 1),
-                    'churn_pct': round(churn_pct, 1),
+                    'churn_pct': round(churn_prob * 100, 1),
+                    'expansion_gap_pct': round(expansion_gap * 100, 1),
                     'annual_loss': round(annual_loss, 0),
+                    'expansion_missed': round(annual_expansion_missed, 0),
                 })
         at_risk_accounts_list.sort(key=lambda x: x['annual_loss'], reverse=True)
 
-        # ── NRR waterfall (same model as CRO) ──
-        ATTR_FACTOR = 0.5
-        wf_attributed = 0
-        wf_cost = 0
+        # ── NRR waterfall — consistent with playbook ROI model ──
         wf_expected_loss = 0
+        wf_protectable = 0
+        wf_expandable = 0
+        wf_cost = 0
         for entry in at_risk_accounts_list:
-            projected_churn = max(entry['churn_pct'] - 10, 3)  # assume playbook reduces churn by ~10pp
-            gross_saved = entry['arr'] * (entry['churn_pct'] - projected_churn) / 100
-            wf_attributed += gross_saved * ATTR_FACTOR
-            wf_cost += entry['arr'] * 0.003
-            wf_expected_loss += entry['annual_loss']
+            h = entry['health']
+            arr = entry['arr']
+            # If playbook moves health from current → healthy (75), what's the delta?
+            churn_before = health_to_annual_churn_prob(h)
+            churn_after = health_to_annual_churn_prob(75)
+            churn_reduction = max(0, churn_before - churn_after)
+            exp_before = health_to_annual_expansion_prob(h)
+            exp_after = health_to_annual_expansion_prob(75)
+            exp_increase = max(0, exp_after - exp_before)
 
+            wf_expected_loss += entry['annual_loss']
+            wf_protectable += arr * churn_reduction * INTERVENTION_ATTRIBUTION
+            wf_expandable += arr * exp_increase * EXPANSION_ATTRIBUTION
+            wf_cost += 4560  # avg playbook cost from cost bridge
+
+        wf_attributed = wf_protectable + wf_expandable
         nrr_with_intervention = nrr_projection
         if total_arr > 0 and wf_attributed > 0:
             nrr_with_intervention = round(nrr_projection + (wf_attributed / total_arr) * 100, 1)
@@ -1223,6 +1249,8 @@ def cfo_dashboard():
             'cost_of_inaction': {
                 'arr_at_risk': round(total_arr_at_risk, 0),
                 'annual_churn_exposure': round(total_churn_exposure, 0),
+                'annual_expansion_missed': round(total_expansion_missed, 0),
+                'total_cost_of_inaction': round(total_churn_exposure + total_expansion_missed, 0),
                 'accounts': at_risk_accounts_list[:5],
                 'account_count': len(at_risk_accounts_list),
             },
@@ -1232,10 +1260,13 @@ def cfo_dashboard():
             'nrr_arr_protectable': round(wf_attributed, 0),
             'nrr_waterfall': {
                 'expected_loss': round(wf_expected_loss, 0),
+                'protectable': round(wf_protectable, 0),
+                'expandable': round(wf_expandable, 0),
                 'attributed_save': round(wf_attributed, 0),
                 'intervention_cost': round(wf_cost, 0),
                 'roi_x': round(wf_attributed / wf_cost, 1) if wf_cost > 0 else 0,
             },
+            'expansion_missed': round(total_expansion_missed, 0),
             'cs_investment': cs_investment,
             'estimated_investment': estimated_investment,
             'is_estimated': is_estimated,
