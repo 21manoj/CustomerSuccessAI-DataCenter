@@ -345,8 +345,8 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
             node_type='OUTCOME',
             source='system',
             node_subtype='playbook_outcome',
-            title=f'{outcome.title()}: {execution.playbook_id} — ${net_impact:,.0f} protected',
-            revenue_impact=net_impact if net_impact > 0 else -(arr * 0.01),
+            title=f'{outcome.title()}: {execution.playbook_id} — ${revenue_protected:,.0f} protected, ${revenue_expanded:,.0f} expanded',
+            revenue_impact=net_impact if net_impact > 0 else 0,  # No-impact interventions are $0, not negative
             revenue_impact_type=ri_type,
             properties={
                 'execution_id': execution.execution_id,
