@@ -16,6 +16,7 @@
     "lucide-react": "^0.263.1",
     "mermaid": "^11.13.0",
     "postcss": "^8.4.24",
+    "pptxgenjs": "^4.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
