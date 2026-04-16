@@ -649,6 +649,77 @@ def graph_ingest():
             else:
                 edges_updated += 1
 
+        # ── Phase 3: Auto-link OUTCOME nodes to recent signals ──
+        # For any OUTCOME node created without explicit edges, connect to the
+        # most recent SIGNAL and DECISION nodes for that account. Enables
+        # "Why did this happen?" causal traversal for lifecycle outcomes
+        # (churn_lost, expansion_closed) and any other orphan outcomes.
+        for nd in nodes_data:
+            if nd.get('node_type') != 'OUTCOME':
+                continue
+            source_event_id = nd.get('source_event_id')
+            if not source_event_id:
+                continue
+            node_id = source_id_map.get(source_event_id)
+            if not node_id:
+                continue
+            account_id = nd.get('account_id')
+
+            # Check if this outcome already has incoming edges (from Phase 2 or prior)
+            existing_incoming = ContextEdge.query.filter_by(
+                customer_id=customer_id, to_node_id=node_id
+            ).count()
+            if existing_incoming > 0:
+                continue  # Already connected
+
+            # Find recent signals + decisions for this account
+            recent_signals = (
+                ContextNode.query
+                .filter(
+                    ContextNode.customer_id == customer_id,
+                    ContextNode.account_id == account_id,
+                    ContextNode.node_type == 'SIGNAL',
+                    ContextNode.node_id != node_id,
+                )
+                .order_by(ContextNode.occurred_at.desc())
+                .limit(3)
+                .all()
+            )
+            recent_decisions = (
+                ContextNode.query
+                .filter(
+                    ContextNode.customer_id == customer_id,
+                    ContextNode.account_id == account_id,
+                    ContextNode.node_type == 'DECISION',
+                    ContextNode.node_id != node_id,
+                )
+                .order_by(ContextNode.occurred_at.desc())
+                .limit(2)
+                .all()
+            )
+
+            subtype = nd.get('node_subtype', 'outcome')
+            for sig in recent_signals:
+                edge, created = upsert_edge(
+                    from_node_id=sig.node_id, to_node_id=node_id,
+                    edge_type='LED_TO', confidence=0.7,
+                    source_platform='auto_linker', created_by='outcome_auto_linker',
+                    customer_id=customer_id,
+                    properties={'label': f'{sig.node_subtype or "signal"} → {subtype}'},
+                )
+                if created:
+                    edges_created += 1
+            for dec in recent_decisions:
+                edge, created = upsert_edge(
+                    from_node_id=dec.node_id, to_node_id=node_id,
+                    edge_type='LED_TO', confidence=0.75,
+                    source_platform='auto_linker', created_by='outcome_auto_linker',
+                    customer_id=customer_id,
+                    properties={'label': f'{dec.node_subtype or "decision"} → {subtype}'},
+                )
+                if created:
+                    edges_created += 1
+
         # Single commit for all nodes + edges
         db.session.commit()
 
