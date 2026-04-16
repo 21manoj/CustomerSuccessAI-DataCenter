@@ -161,6 +161,12 @@ interface CFODashboardData {
   roi_impact: number;
   is_estimated_investment: boolean;
   renewals_at_risk: Array<{ account_name: string; arr: number; days_until: number; health_score: number }>;
+  layered_story: {
+    layers: Array<{ name: string; value: number; cost: number; roi: number; status: string; color: string }>;
+    total_value: number;
+    total_cost: number;
+    blended_roi: number;
+  } | null;
   period: string;
   last_updated: string;
 }
@@ -968,6 +974,7 @@ const CFODashboard: React.FC = () => {
             cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
             nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, protectable: 0, expandable: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
             renewals_at_risk: json.renewals_at_risk || [],
+            layered_story: json.layered_story || null,
             total_arr: totalArr,
             cs_investment: hasProof ? proofCost : csInvestment,
             roi_impact: hasProof ? (proofProtected + proofExpanded) : roiImpact,
@@ -1185,7 +1192,43 @@ const CFODashboard: React.FC = () => {
             <CostOfInactionPanel data={d.cost_of_inaction} />
           </div>
 
-          {/* Row 1c: Playbook ROI Proof Table (when proof data exists) */}
+          {/* Row 1c: Investment Allocation Story */}
+          {d.layered_story && d.layered_story.layers.length > 0 && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-400" />
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Investment Allocation Story</h3>
+                </div>
+                <span className="text-xs text-gray-500">Total addressable: {formatCompact(d.layered_story.total_value)} &middot; {d.layered_story.blended_roi}x blended ROI</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                {d.layered_story.layers.map((layer: any, i: number) => {
+                  const colors: Record<string, { border: string; text: string; bg: string; badge: string }> = {
+                    green: { border: 'border-green-500/30', text: 'text-green-400', bg: 'bg-green-500/10', badge: 'Done' },
+                    cyan: { border: 'border-cyan-500/30', text: 'text-cyan-400', bg: 'bg-cyan-500/10', badge: 'Act Now' },
+                    purple: { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/10', badge: 'Invest' },
+                  };
+                  const c = colors[layer.color] || colors.green;
+                  return (
+                    <div key={i} className={`rounded-xl border ${c.border} ${c.bg} p-4`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-semibold text-white uppercase">{layer.name}</span>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full ${c.bg} ${c.text} font-semibold`}>{c.badge}</span>
+                      </div>
+                      <p className={`text-2xl font-bold ${c.text} mb-1`}>{formatCompact(layer.value)}</p>
+                      <div className="flex items-center justify-between text-[10px] text-gray-500">
+                        <span>Cost: {formatCompact(layer.cost)}</span>
+                        <span className={`font-semibold ${c.text}`}>{layer.roi}x ROI</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Row 1d: Playbook ROI Proof Table (when proof data exists) */}
           {d.proof_executions.length > 0 && (
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden mb-6">
               <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">

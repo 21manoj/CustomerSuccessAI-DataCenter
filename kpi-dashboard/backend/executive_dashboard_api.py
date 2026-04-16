@@ -1291,6 +1291,11 @@ def cfo_dashboard():
             'nrr_projection': nrr_projection,
             'grr_projection': grr_projection,
             'power_of_1_metrics': power_of_1_metrics,
+            # ── Layered investment story ──
+            'layered_story': _build_layered_story(
+                proof_data, total_arr, wf_protectable, wf_expandable, wf_cost,
+                power_of_1_metrics,
+            ),
             'roi_scaling': roi_scaling,
             'pillar_investments': pillar_investments,
             'investment_timeline': investment_timeline,
@@ -1311,6 +1316,76 @@ def cfo_dashboard():
     except Exception as e:
         logger.error(f"Error in cfo_dashboard: {e}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
+
+
+def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, wf_cost,
+                         power_of_1_metrics):
+    """Build the 3-layer investment allocation story for the CFO dashboard.
+
+    Layer 1: Already delivered (from playbook executions)
+    Layer 2: Still protectable (from waterfall — at-risk accounts)
+    Layer 3: Growth upside (from Power-of-1 — 1% improvement across all metrics)
+    """
+    # Layer 1: Proof
+    prot = proof_data.get('revenue_protected', 0)
+    exp = proof_data.get('revenue_expanded', 0)
+    cost1 = proof_data.get('total_cost', 0)
+    value1 = prot + exp
+    roi1 = round(value1 / cost1, 1) if cost1 > 0 else 0
+
+    # Layer 2: Protectable
+    value2 = wf_protectable + wf_expandable
+    cost2 = wf_cost
+    roi2 = round(value2 / cost2, 1) if cost2 > 0 else 0
+
+    # Layer 3: Power-of-1 growth
+    # Impact scales linearly with ARR, cost scales sub-linearly (sqrt)
+    po1_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
+    # Compute Po1 cost from POWER_OF_1_METRICS benchmarks
+    po1_cost = 0
+    try:
+        from outcome_roi_engine import POWER_OF_1_METRICS as _PO1
+        inv_scale = (total_arr / 10_000_000) ** 0.5 if total_arr > 0 else 1.0
+        po1_cost = sum(m.total_investment * inv_scale for m in _PO1.values())
+    except Exception:
+        po1_cost = total_arr * 0.01  # fallback: 1% of ARR
+    roi3 = round(po1_impact / po1_cost, 1) if po1_cost > 0 else 0
+
+    total_value = value1 + value2 + po1_impact
+    total_cost = cost1 + cost2 + po1_cost
+    blended_roi = round(total_value / total_cost, 1) if total_cost > 0 else 0
+
+    return {
+        'layers': [
+            {
+                'name': 'Already Delivered',
+                'value': round(value1, 0),
+                'cost': round(cost1, 0),
+                'roi': roi1,
+                'status': 'done',
+                'color': 'green',
+            },
+            {
+                'name': 'Still Protectable',
+                'value': round(value2, 0),
+                'cost': round(cost2, 0),
+                'roi': roi2,
+                'status': 'intervene_now',
+                'color': 'cyan',
+            },
+            {
+                'name': 'Growth (Po1 1%)',
+                'value': round(po1_impact, 0),
+                'cost': round(po1_cost, 0),
+                'roi': roi3,
+                'status': 'invest_to_grow',
+                'color': 'purple',
+            },
+        ],
+        'total_value': round(total_value, 0),
+        'total_cost': round(total_cost, 0),
+        'blended_roi': blended_roi,
+    }
 
 
 def _build_cfo_account_details(customer_id, accounts, total_investment, total_impact):
