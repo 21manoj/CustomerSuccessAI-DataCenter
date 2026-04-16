@@ -512,7 +512,7 @@ def build_frontend_execution_dict(v2: PlaybookExecutionV2, account_name: str = N
     }
 
 
-def _get_current_step(action_log: list) -> str | None:
+def _get_current_step(action_log: list):
     """Get the step_id of the first pending or in-progress step."""
     for step in action_log:
         if step.get('status') in ('pending', 'in-progress'):
