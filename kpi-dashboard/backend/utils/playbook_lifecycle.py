@@ -328,6 +328,22 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                      Time-aware closures pass execution.closed_at for timeline coherence.
     """
     try:
+        # ── Delete old CG nodes for this execution (prevents duplicates on re-close) ──
+        eid = execution.execution_id
+        old_nodes = ContextNode.query.filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.node_subtype == 'playbook_outcome',
+            ContextNode.source_event_id.like(f'close:{eid}%'),
+        ).all()
+        for old in old_nodes:
+            ContextEdge.query.filter(
+                ContextEdge.customer_id == customer_id,
+                db.or_(ContextEdge.from_node_id == old.node_id, ContextEdge.to_node_id == old.node_id),
+            ).delete()
+            db.session.delete(old)
+        if old_nodes:
+            db.session.flush()
+
         common_props = {
             'execution_id': execution.execution_id,
             'playbook_id': execution.playbook_id,
