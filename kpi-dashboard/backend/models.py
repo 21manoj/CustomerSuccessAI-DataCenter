@@ -1171,9 +1171,10 @@ class DC2SKPI(db.Model):
 class QualitativeSignal(db.Model):
     """Qualitative Signals - Customer engagement signals (emails, meetings, tickets, etc.)"""
     __tablename__ = 'qualitative_signals'
-    
-    # Match existing table schema exactly
-    signal_id = db.Column(db.String(50), primary_key=True)  # VARCHAR(50) in existing table
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    signal_id = db.Column(db.String(50), nullable=False)  # tenant-scoped via composite unique
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
     signal_date = db.Column(db.Date, nullable=False, index=True)
     signal_type = db.Column(db.String(50), nullable=True, index=True)  # email, meeting, ticket, etc.
@@ -1208,10 +1209,17 @@ class QualitativeSignal(db.Model):
     structural_urgency = db.Column(db.String(20), nullable=True)    # critical/high/medium/low
     effective_urgency = db.Column(db.String(20), nullable=True)     # max(structural, llm)
     consent_verified = db.Column(db.Boolean, default=False)         # Transcript consent
-    
+
+    __table_args__ = (
+        db.UniqueConstraint('customer_id', 'signal_id', name='uq_customer_signal_id'),
+        db.Index('idx_signals_customer_account', 'customer_id', 'account_id'),
+    )
+
     def to_dict(self):
         return {
+            'id': self.id,
             'signal_id': self.signal_id,
+            'customer_id': self.customer_id,
             'account_id': self.account_id,
             'signal_date': self.signal_date.isoformat() if self.signal_date else None,
             'signal_type': self.signal_type,

@@ -299,6 +299,7 @@ def get_support_tickets(customer_id: int, account_id: int) -> dict:
 
         from datetime import date
         recent_signals = QualitativeSignal.query.filter(
+            QualitativeSignal.customer_id == int(customer_id),
             QualitativeSignal.account_id == int(account_id),
             QualitativeSignal.sentiment == 'negative',
             QualitativeSignal.signal_date <= date.today(),
@@ -380,6 +381,7 @@ def get_customer_feedback(customer_id: int, account_id: int) -> dict:
             health_status = ht.classify(health)
 
         signals = QualitativeSignal.query.filter(
+            QualitativeSignal.customer_id == int(customer_id),
             QualitativeSignal.account_id == int(account_id),
         ).order_by(QualitativeSignal.signal_date.desc()).limit(20).all()
 
@@ -574,6 +576,7 @@ def get_csm_daily_actions(customer_id: int, csm_name: str = None) -> dict:
 
         # ── Pre-load recent qualitative signals for signal-driven actions ──
         recent_signals = QualitativeSignal.query.filter(
+            QualitativeSignal.customer_id == int(customer_id),
             QualitativeSignal.account_id.in_(account_ids),
             QualitativeSignal.sentiment.in_(['negative', 'critical']),
         ).order_by(QualitativeSignal.signal_date.desc()).limit(30).all()

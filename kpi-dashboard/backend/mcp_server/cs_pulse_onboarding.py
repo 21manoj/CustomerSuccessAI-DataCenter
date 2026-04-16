@@ -1200,14 +1200,17 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                 # Truncate to 50 chars (PK column width)
                                 sig_id = sig_id[:50]
 
-                                # Dedup: skip if signal_id already exists
+                                # Dedup: skip if signal_id already exists for this customer
                                 if has_new_csvs:
-                                    exists = QualitativeSignal.query.filter_by(signal_id=sig_id).first()
+                                    exists = QualitativeSignal.query.filter_by(
+                                        customer_id=int(customer_id), signal_id=sig_id
+                                    ).first()
                                     if exists:
                                         continue
 
                                 sig = QualitativeSignal(
-                                    signal_id=sig_id, account_id=acct_id,
+                                    signal_id=sig_id, customer_id=int(customer_id),
+                                    account_id=acct_id,
                                     signal_type=row.get('signal_type', 'nps'),
                                     content=row.get('content', row.get('signal_text', '')),
                                     sentiment=row.get('sentiment', 'neutral'),
@@ -2505,6 +2508,7 @@ def clone_customer(
             for sig in signals:
                 new_sig = QualitativeSignal(
                     signal_id=f"clone_{_uuid_mod.uuid4().hex[:8]}_{sig.signal_id[-8:] if len(sig.signal_id) > 8 else sig.signal_id}",
+                    customer_id=new_cid,
                     account_id=new_aid, signal_date=sig.signal_date, signal_type=sig.signal_type,
                     content=sig.content, sentiment=sig.sentiment,
                     stakeholder_level=sig.stakeholder_level, stakeholder_title=sig.stakeholder_title,

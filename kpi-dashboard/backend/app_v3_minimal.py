@@ -81,6 +81,13 @@ with app.app_context():
     from models import JourneyData  # ensure journey_data table is created by create_all
     db.create_all()  # This will create the sessions table if it doesn't exist
 
+    # Idempotent migration: add customer_id to qualitative_signals (fixes PK collision)
+    try:
+        from migrations.add_customer_id_to_qualitative_signals import run_migration as _run_signal_migration
+        _run_signal_migration(db.session)
+    except Exception as _e:
+        print(f"   ⚠️  qualitative_signals migration skipped: {_e}")
+
 # Initialize Flask-Session (database-backed sessions)
 app.config['SESSION_TYPE'] = 'sqlalchemy'
 app.config['SESSION_SQLALCHEMY'] = db

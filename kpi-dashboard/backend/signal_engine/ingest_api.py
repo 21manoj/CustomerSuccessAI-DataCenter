@@ -117,9 +117,9 @@ def _ingest_signal(source_type: str):
             parsed_date = datetime.utcnow().date()
 
         # Create raw signal record
-        # QualitativeSignal uses signal_id (VARCHAR PK), no customer_id column
         signal = QualitativeSignal(
             signal_id=signal_id,
+            customer_id=int(customer_id),
             account_id=int(account_id),
             signal_type=source_type,
             content=raw_text[:2000],  # Truncate for safety
@@ -259,13 +259,8 @@ def get_review_queue():
     try:
         from models import QualitativeSignal, Account
 
-        # QualitativeSignal has no customer_id — filter via account join
-        account_ids = [a.account_id for a in
-                       Account.query.filter_by(customer_id=customer_id).with_entities(Account.account_id).all()]
-        if not account_ids:
-            return jsonify({'review_queue': [], 'total': 0, 'page': 1})
-
-        query = QualitativeSignal.query.filter(QualitativeSignal.account_id.in_(account_ids))
+        # Filter directly by customer_id (no account join needed)
+        query = QualitativeSignal.query.filter(QualitativeSignal.customer_id == customer_id)
 
         # Filter to signals needing review (if enrichment column exists)
         try:

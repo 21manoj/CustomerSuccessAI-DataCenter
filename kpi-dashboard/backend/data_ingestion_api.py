@@ -337,6 +337,7 @@ def ingest_signals():
 
         row = {
             'signal_id': str(signal_id),
+            'customer_id': customer_id,
             'account_id': int(rec['account_id']),
             'signal_date': signal_date,
             'signal_type': str(rec['signal_type']).strip(),
@@ -369,13 +370,14 @@ def ingest_signals():
             existing_ids = set()
             batch_ids = [r['signal_id'] for r in valid_rows]
             existing_rows = db.session.query(QualitativeSignal.signal_id).filter(
+                QualitativeSignal.customer_id == customer_id,
                 QualitativeSignal.signal_id.in_(batch_ids)
             ).all()
             existing_ids = {row[0] for row in existing_rows}
 
             stmt = insert(QualitativeSignal).values(valid_rows)
             stmt = stmt.on_conflict_do_update(
-                index_elements=['signal_id'],
+                constraint='uq_customer_signal_id',
                 set_={
                     'content': stmt.excluded.content,
                     'sentiment': stmt.excluded.sentiment,
