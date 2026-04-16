@@ -620,50 +620,64 @@ def cro_dashboard():
         recovered = _get_accounts_recovered(customer_id, account_ids)
         expansion_candidates = _get_expansion_candidates(customer_id, account_ids)
 
-        # ── ROI & NRR from snapshot (with Power-of-1 benchmark fallback) ──
-        roi_snap = _get_roi_snapshot(customer_id)
-        playbook_roi_pct = round(roi_snap.historical_roi_pct or roi_snap.combined_roi_pct or 0) if roi_snap else 0
-        is_estimated_roi = False
-        if playbook_roi_pct == 0 and total_revenue > 0:
-            # Fall back to Power-of-1 benchmark ROI (41% at $10M baseline)
-            po1_metrics = _get_po1_benchmark_metrics(total_revenue)
-            po1_inv = _get_po1_benchmark_investment(total_revenue)
-            if po1_inv > 0:
-                po1_impact = sum(m.get('dollar_impact', 0) for m in po1_metrics)
-                playbook_roi_pct = round((po1_impact / po1_inv - 1) * 100)
-                is_estimated_roi = True
-        # Derive NRR from health score when no snapshot exists
-        # Industry correlation: health 70+ → NRR ~110%, health 50 → NRR ~98%, health 30 → NRR ~90%
-        if avg_health >= 70:
-            nrr_projection = round(100 + (avg_health - 70) * 0.33)  # 70→100%, 100→110%
+        # ── PROOF DATA: actual playbook economics (same as CFO) ──
+        from utils.playbook_lifecycle import (
+            health_to_annual_churn_prob,
+            health_to_annual_expansion_prob,
+            INTERVENTION_ATTRIBUTION,
+            EXPANSION_ATTRIBUTION,
+        )
+        cro_proof = {'total_cost': 0, 'revenue_protected': 0, 'revenue_expanded': 0,
+                     'realized_roi': 0, 'executions_total': 0, 'executions_resolved': 0}
+        try:
+            pb_execs = PlaybookExecutionV2.query.filter_by(customer_id=customer_id).all()
+            cro_proof['executions_total'] = len(pb_execs)
+            for ex in pb_execs:
+                cro_proof['total_cost'] += float(ex.total_cost or 0)
+                cro_proof['revenue_protected'] += float(ex.revenue_protected or 0)
+                cro_proof['revenue_expanded'] += float(ex.revenue_expanded or 0)
+                if ex.outcome == 'resolved':
+                    cro_proof['executions_resolved'] += 1
+            total_value = cro_proof['revenue_protected'] + cro_proof['revenue_expanded']
+            cro_proof['realized_roi'] = round(total_value / cro_proof['total_cost'], 1) if cro_proof['total_cost'] > 0 else 0
+            for k in ['total_cost', 'revenue_protected', 'revenue_expanded']:
+                cro_proof[k] = round(cro_proof[k], 0)
+        except Exception:
+            pass
+        has_proof = cro_proof['total_cost'] > 0 or cro_proof['revenue_protected'] > 0
+
+        # ── WIZARD B NRR (actual portfolio forecast) ──
+        cro_wizard_b_nrr = None
+        try:
+            from wizards.wizard_b_pattern_db import run_wizard_b
+            wb_result = run_wizard_b(customer_id)
+            forecast = (wb_result.get('nrr_intelligence') or {}).get('forecast') or {}
+            if forecast.get('current_nrr_pct'):
+                cro_wizard_b_nrr = {
+                    'without_cs_pulse_nrr_pct': forecast.get('without_cs_pulse_nrr_pct', 100),
+                    'with_cs_pulse_nrr_pct': forecast.get('current_nrr_pct', 100),
+                    'delta_pct': forecast.get('cs_pulse_delta_pct', 0),
+                    'arr_protected': forecast.get('cs_pulse_arr_protected', 0),
+                    'accounts_saved': forecast.get('cs_pulse_accounts_saved', 0),
+                    'with_interventions_nrr_pct': forecast.get('with_interventions_nrr_pct', 100),
+                }
+        except Exception:
+            pass
+
+        # ── ROI from actual playbook data (no Power-of-1 fallback for CRO) ──
+        playbook_roi_pct = cro_proof['realized_roi'] if has_proof else 0
+        is_estimated_roi = not has_proof
+
+        # ── NRR: use Wizard B when available ──
+        if cro_wizard_b_nrr:
+            nrr_projection = round(cro_wizard_b_nrr['with_cs_pulse_nrr_pct'], 1)
+        elif avg_health >= 70:
+            nrr_projection = round(100 + (avg_health - 70) * 0.33)
         elif avg_health >= 40:
-            nrr_projection = round(90 + (avg_health - 40) * 0.33)   # 40→90%, 70→100%
+            nrr_projection = round(90 + (avg_health - 40) * 0.33)
         else:
-            nrr_projection = round(85 + avg_health * 0.125)          # 0→85%, 40→90%
+            nrr_projection = round(85 + avg_health * 0.125)
         nrr_change = round(nrr_projection - 100, 1)
-        if roi_snap and roi_snap.metric_details:
-            details = roi_snap.metric_details
-            # Format B: {forward_metrics: [{id, impact, pct}, ...]}
-            forward_metrics = details.get('forward_metrics', [])
-            if isinstance(forward_metrics, list) and forward_metrics:
-                default_baselines = {'NRR': 105, 'GRR': 85, 'TTFV': 30,
-                                     'ticket_resolution_time': 48, 'product_adoption': 65,
-                                     'expansion_rate': 20}
-                for fm in forward_metrics:
-                    mid = fm.get('id', '')
-                    if mid == 'NRR':
-                        pct = _safe_float(fm.get('pct', 0))
-                        baseline = default_baselines.get('NRR', 105)
-                        nrr_projection = round(baseline * (1 + pct / 100.0))
-                        nrr_change = round(nrr_projection - baseline)
-                        break
-            else:
-                # Format A: {NRR: {baseline, current, ...}}
-                nrr_detail = details.get('NRR', {})
-                if isinstance(nrr_detail, dict):
-                    nrr_projection = round(nrr_detail.get('current', 100), 0)
-                    nrr_baseline = nrr_detail.get('baseline', nrr_projection)
-                    nrr_change = round(nrr_projection - nrr_baseline, 0)
 
         # ── Highest risk accounts (only at-risk/critical, sorted by lowest health) ──
         pillar_scores_map = _get_latest_pillar_scores(account_ids)
@@ -721,12 +735,12 @@ def cro_dashboard():
                 else:
                     projected = health_now - 3
 
-                churn_now = max(5, 50 - health_now * 0.5)
-                churn_proj = max(5, 50 - max(projected, 0) * 0.5)
+                churn_now = health_to_annual_churn_prob(health_now) * 100
+                churn_proj = health_to_annual_churn_prob(max(projected, 0)) * 100
                 expected_loss = arr * churn_now / 100
                 gross_saved = max(0, expected_loss - arr * churn_proj / 100)
                 attributed = gross_saved * ATTRIBUTION_FACTOR
-                pb_cost = round(arr * 0.003, 0)
+                pb_cost = 4560  # avg playbook cost from cost bridge
 
                 total_exposure_wf += arr
                 total_expected_loss += expected_loss
@@ -835,15 +849,15 @@ def cro_dashboard():
             'early_warning_days': early_warning_days,
             'playbook_roi_pct': playbook_roi_pct,
             'playbook_roi_estimated': is_estimated_roi,
-            'playbook_roi_label': 'Estimated (Power-of-1 benchmark)' if is_estimated_roi else 'Actual (playbook executions)',
-            'cs_investment': 0,  # no playbook executions yet
-            'estimated_investment': _get_po1_benchmark_investment(total_revenue) if is_estimated_roi else 0,
-            'roi_impact': sum(m.get('dollar_impact', 0) for m in po1_metrics) if is_estimated_roi else 0,
+            'playbook_roi_label': 'Actual (playbook executions)' if has_proof else 'Estimated',
+            'cs_investment': cro_proof['total_cost'],
+            'proof_data': cro_proof,
+            'wizard_b_nrr': cro_wizard_b_nrr,
             'nrr_projection': nrr_projection,
             'nrr_change': nrr_change,
-            # Dual NRR: current (no intervention) vs projected (with playbooks)
-            'nrr_current': nrr_current,
-            'nrr_with_intervention': nrr_with_intervention,
+            # Dual NRR: use Wizard B when available
+            'nrr_current': cro_wizard_b_nrr['with_cs_pulse_nrr_pct'] if cro_wizard_b_nrr else nrr_current,
+            'nrr_with_intervention': cro_wizard_b_nrr['with_interventions_nrr_pct'] if cro_wizard_b_nrr else nrr_with_intervention,
             'nrr_arr_protected': nrr_arr_protected,
             'nrr_trajectory': nrr_trajectory,
             'nrr_waterfall_summary': nrr_waterfall_summary,
