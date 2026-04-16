@@ -1104,7 +1104,8 @@ def cfo_dashboard():
         total_churn_exposure = 0
         total_expansion_missed = 0
         for acct in accounts:
-            h = _safe_float(getattr(acct, 'health_score', None) or latest_scores.get(acct.account_id, 0))
+            hs_obj = latest_scores.get(acct.account_id)
+            h = _safe_float(hs_obj.health_score if hs_obj else 0)
             arr = _safe_float(acct.revenue)
             if h < ht.healthy_min() and arr > 0:
                 churn_prob = health_to_annual_churn_prob(h)
