@@ -154,7 +154,7 @@ interface CFODashboardData {
   grr: number;
   nrr_arr_protectable: number;
   cost_of_inaction: CostOfInaction;
-  nrr_waterfall: { expected_loss: number; attributed_save: number; intervention_cost: number; roi_x: number };
+  nrr_waterfall: { expected_loss: number; protectable: number; expandable: number; attributed_save: number; intervention_cost: number; roi_x: number };
   // Raw numeric values for Investment Allocation widget
   total_arr: number;
   cs_investment: number;
@@ -966,7 +966,7 @@ const CFODashboard: React.FC = () => {
             grr: hasWizardB && wb.grr_after_pct ? wb.grr_after_pct : grr,
             nrr_arr_protectable: hasWizardB ? wb.arr_protected : (json.nrr_arr_protectable || 0),
             cost_of_inaction: json.cost_of_inaction || { arr_at_risk: 0, annual_churn_exposure: 0, account_count: 0, accounts: [] },
-            nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
+            nrr_waterfall: json.nrr_waterfall || { expected_loss: 0, protectable: 0, expandable: 0, attributed_save: 0, intervention_cost: 0, roi_x: 0 },
             renewals_at_risk: json.renewals_at_risk || [],
             total_arr: totalArr,
             cs_investment: hasProof ? proofCost : csInvestment,
