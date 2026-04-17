@@ -39,6 +39,7 @@ import { SystemEventsAndLogManagement } from './SystemEventsAndLogManagement';
 import DataQualitySection from './DataQualitySection';
 import EntitlementsAdmin from './EntitlementsAdmin';
 import SecurityKeysPanel from './SecurityKeysPanel';
+import ApiKeysTab from '../../settings/ApiKeysTab';
 import ContextGraphSettings from './ContextGraphSettings';
 import WizardsTab from './WizardsTab';
 import HealthThresholdsCard from './HealthThresholdsCard';
@@ -314,7 +315,7 @@ const DCSettings: React.FC = () => {
             { id: 'general' as SubTab, label: 'General Config', icon: Settings, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'data' as SubTab, label: 'Data Management', icon: Database, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'entitlements' as SubTab, label: 'Entitlements', icon: Shield, requiredFeature: undefined as string | undefined, adminOnly: true },
-            { id: 'integrations' as SubTab, label: 'Integrations', icon: Key, requiredFeature: 'mcp_connectors' as string | undefined, adminOnly: false },
+            { id: 'integrations' as SubTab, label: 'API Keys', icon: Key, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'users' as SubTab, label: 'Users', icon: Users, requiredFeature: undefined as string | undefined, adminOnly: false },
             { id: 'security' as SubTab, label: 'Security & Keys', icon: Shield, requiredFeature: undefined as string | undefined, adminOnly: true },
           ]).map(tab => {
@@ -427,34 +428,10 @@ const DCSettings: React.FC = () => {
             <EntitlementsAdmin />
           )}
 
-          {/* Integrations */}
+          {/* Integrations — API Keys + External Connections */}
           {activeSubTab === 'integrations' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Integrations</h3>
-                <div className="space-y-4">
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      // TODO: Implement API key save functionality
-                    }}
-                    className="border border-gray-200 rounded-lg p-4"
-                  >
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      OpenAI API Key
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="sk-..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      autoComplete="off"
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                      Used for AI Insights and Signal Analyst
-                    </p>
-                  </form>
-                </div>
-              </div>
+            <div className="space-y-8">
+              <ApiKeysTab />
             </div>
           )}
 

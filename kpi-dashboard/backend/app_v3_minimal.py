@@ -990,6 +990,99 @@ def verify_magic_link():
     })
 
 
+# ============================================================
+# SELF-SERVICE API KEY MANAGEMENT
+# ============================================================
+# Customer-facing endpoints (session auth, not super_admin).
+# Reuses api_key_service functions — same logic as admin endpoints
+# but scoped to the logged-in user's customer_id.
+
+@app.route('/api/settings/api-keys', methods=['GET'])
+def list_my_api_keys():
+    """List API keys for the logged-in user's customer."""
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Login required'}), 401
+    cid = current_user.customer_id
+    try:
+        from models import CustomerApiKey
+        keys = CustomerApiKey.query.filter_by(customer_id=cid).order_by(CustomerApiKey.created_at.desc()).all()
+        return jsonify({
+            'api_keys': [
+                {
+                    'id': k.id,
+                    'key_prefix': k.key_prefix,
+                    'name': k.name,
+                    'scopes': k.scopes or [],
+                    'is_active': k.is_active,
+                    'last_used_at': k.last_used_at.isoformat() if k.last_used_at else None,
+                    'created_at': k.created_at.isoformat() if k.created_at else None,
+                    'expires_at': k.expires_at.isoformat() if k.expires_at else None,
+                }
+                for k in keys
+            ]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/api-keys', methods=['POST'])
+def create_my_api_key():
+    """Create a new API key for the logged-in user's customer.
+
+    Body: { "name": "My Integration Key", "scopes": ["read", "write"] }
+    Returns the full key ONCE — it cannot be retrieved again.
+    """
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Login required'}), 401
+    cid = current_user.customer_id
+    data = request.get_json(force=True)
+    name = (data.get('name') or '').strip()
+    scopes = data.get('scopes', ['read', 'write'])
+
+    if not name:
+        return jsonify({'error': 'Key name is required'}), 400
+
+    try:
+        from api_key_service import generate_api_key
+        full_key, key_record = generate_api_key(
+            customer_id=cid,
+            created_by=current_user.user_id,
+            name=name,
+            scopes=scopes,
+        )
+        return jsonify({
+            'api_key': full_key,
+            'api_key_note': 'Save this key — it is shown only once.',
+            'key_info': {
+                'id': key_record.id,
+                'key_prefix': key_record.key_prefix,
+                'name': key_record.name,
+                'scopes': key_record.scopes or [],
+                'created_at': key_record.created_at.isoformat() if key_record.created_at else None,
+            },
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/api-keys/<int:key_id>/revoke', methods=['POST'])
+def revoke_my_api_key(key_id):
+    """Revoke an API key (soft-delete). Only keys owned by the logged-in customer."""
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Login required'}), 401
+    cid = current_user.customer_id
+    try:
+        from models import CustomerApiKey
+        key = CustomerApiKey.query.filter_by(id=key_id, customer_id=cid).first()
+        if not key:
+            return jsonify({'error': 'Key not found'}), 404
+        key.is_active = False
+        db.session.commit()
+        return jsonify({'status': 'revoked', 'key_id': key_id})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/session/status', methods=['GET'])
 def session_status():
     """Check if user is authenticated — includes UUIDs for external identification"""
