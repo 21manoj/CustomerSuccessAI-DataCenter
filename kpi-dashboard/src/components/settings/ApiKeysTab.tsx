@@ -66,7 +66,7 @@ const ApiKeysTab: React.FC = () => {
   };
 
   const handleRevoke = async (keyId: number) => {
-    if (!confirm('Revoke this API key? Any integrations using it will stop working.')) return;
+    if (!window.confirm('Revoke this API key? Any integrations using it will stop working.')) return;
     setRevoking(keyId);
     try {
       const res = await fetch(`/api/settings/api-keys/${keyId}/revoke`, {
