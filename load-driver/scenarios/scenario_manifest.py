@@ -3305,19 +3305,22 @@ class ScenarioManifest(BaseScenario):
 
             # Step 1: Generate + upload CSVs (streamed per file)
             logger.info('  Step 1/2: Generate + upload CSVs')
-            # Month 1 onboarding: 3 customer CSVs only
+            # Month 1 onboarding: 4 customer CSVs
             # - products, stakeholders, profiles folded into enriched accounts.csv
-            # - engagement_events, outcomes, industry_benchmarks → month 2+
+            # - outcomes = CRM renewal/churn history (customer has this in Salesforce)
+            # - engagement_events, industry_benchmarks → month 2+
             # - signal_edges, decisions → platform generates (Wizard A, playbooks)
             filename_map = {
                 'accounts': 'accounts.csv',
                 'kpi_measurements': 'kpi_measurements.csv',
                 'enhanced_signals': 'qualitative_signals.csv',
+                'outcomes': 'outcomes.csv',
             }
             generators = {
                 'accounts': gen.generate_accounts_csv,
                 'kpi_measurements': gen.generate_kpi_measurements_csv,
                 'enhanced_signals': gen.generate_signals_csv,
+                'outcomes': gen.generate_outcomes_csv,
             }
             upload_results = {}
             endpoint_metrics = {

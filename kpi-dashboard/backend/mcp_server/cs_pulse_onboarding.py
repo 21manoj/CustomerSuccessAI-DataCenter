@@ -349,15 +349,15 @@ def create_customer(
     No authentication required — this is the entry point for new prospects.
 
     After creation, onboard in 2 stages:
-      Month 1 (minimum 3 CSVs):
+      Month 1 (4 CSVs):
         1. accounts.csv — enriched with products, champion, contract, firmographic data
         2. kpi_measurements.csv — KPI time-series from customer systems
         3. enhanced_qualitative_signals.csv — signal feed (NPS, escalations, champion changes)
+        4. outcomes.csv — CRM renewal/churn/expansion history (Salesforce export)
         Then call process_data() — Wizard A auto-generates context graph (rule-based, no hallucination).
 
-      Month 2+ (incremental, as CRM data becomes available):
+      Month 2+ (incremental, as CRM integrations come online):
         - engagement_events.csv — meeting/QBR/call logs
-        - outcomes.csv — CRM win/loss records
         - industry_benchmarks.csv — platform-supplied
 
     Args:
@@ -807,14 +807,14 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
     (required/optional columns, row count) but does NOT persist data.
     Use dry_run=True to check your CSV before committing an upload.
 
-    Month 1 (required — minimum for onboarding):
+    Month 1 (required — 4 CSVs for onboarding):
       'accounts.csv' — enriched with products, champion, contract, firmographic
       'kpi_measurements.csv' — KPI time-series
       'enhanced_qualitative_signals.csv' — signal feed
+      'outcomes.csv' — CRM renewal/churn/expansion history
 
     Month 2+ (optional — as CRM integrations come online):
       'engagement_events.csv' — meeting/QBR/call logs
-      'outcomes.csv' — CRM win/loss records
       'industry_benchmarks.csv' — platform-supplied benchmarks
 
     Args:
