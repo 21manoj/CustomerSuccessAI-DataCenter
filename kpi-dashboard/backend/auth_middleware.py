@@ -96,6 +96,34 @@ def init_auth_middleware(app):
                     logger.info(f"[auth] Integration API: using X-Customer-ID={cid}")
                     return None  # Allow — integration API handles its own tenant isolation
 
+            # Bearer token fallback — accept API keys on REST endpoints
+            # (same keys used by MCP server, validated via api_key_service)
+            if not is_auth:
+                auth_header = request.headers.get('Authorization', '')
+                if auth_header.startswith('Bearer '):
+                    raw_key = auth_header[7:].strip()
+                    if raw_key:
+                        try:
+                            from utils.api_token_auth import _authenticate_bearer_token
+                            key_record = _authenticate_bearer_token(raw_key)
+                            if key_record:
+                                # Store key info in request context for downstream use
+                                request._api_key_record = key_record
+                                request._api_key_customer_id = key_record.customer_id
+                                logger.debug(f"[auth] Bearer token accepted for customer {key_record.customer_id}")
+                                return None  # Allow — API key is valid
+
+                            # Also check server-level key (MCP_SERVER_API_KEY)
+                            import os
+                            server_key = os.environ.get('MCP_SERVER_API_KEY', '')
+                            if server_key and raw_key == server_key:
+                                request._api_key_record = None
+                                request._api_key_customer_id = None  # Server key = all customers
+                                logger.debug("[auth] Server-level API key accepted")
+                                return None  # Allow — server key
+                        except Exception as _bearer_err:
+                            logger.debug(f"[auth] Bearer token validation failed: {_bearer_err}")
+
             # Require authentication for all API endpoints
             if not is_auth:
                 logger.warning(f"Unauthorized API access attempt: {request.path} from {request.remote_addr}")
