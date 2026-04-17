@@ -622,6 +622,7 @@ def get_dc2s_accounts():
                 'champion_title': champion_title,
                 'products': products,
                 'arr': float(account.revenue) if account.revenue else 0,
+                'kanban_column': meta.get('kanban_column'),
             })
 
         # Apply user-level account filtering (contractors/restricted users)
@@ -2520,10 +2521,13 @@ def get_csm_daily_actions():
             action['primary_champion'] = stk.get('champion')
             action['champion_title'] = stk.get('champion_title')
             action['decision_makers'] = stk.get('decision_makers', [])[:3]
-            # Inject arc_type for frontend personalization
+            # Inject arc_type and kanban_column for frontend personalization
             if 'arc_type' not in action:
                 acct_obj = next((a for a in accounts if a.account_id == action.get('account_id')), None)
                 action['arc_type'] = getattr(acct_obj, 'arc_type', None) if acct_obj else None
+            if 'kanban_column' not in action:
+                acct_obj = acct_obj if 'acct_obj' in dir() else next((a for a in accounts if a.account_id == action.get('account_id')), None)
+                action['kanban_column'] = (getattr(acct_obj, 'profile_metadata', None) or {}).get('kanban_column') if acct_obj else None
             # Inject trigger context ("Why this action?")
             action['trigger_context'] = _trigger_signal_map.get(action.get('account_id'))
 

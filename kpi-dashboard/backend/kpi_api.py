@@ -275,6 +275,67 @@ def update_account(account_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to update account'}), 500
 
+@kpi_api.route('/api/accounts/<int:account_id>/kanban-column', methods=['PATCH'])
+def update_kanban_column(account_id):
+    """Set or clear the Kanban column override for an account.
+
+    PATCH body:
+      { "kanban_column": "fire" | "week" | "opportunity" | null }
+
+    null clears the override — account returns to auto-computed column.
+    """
+    VALID_COLUMNS = ('fire', 'week', 'opportunity')
+    try:
+        customer_id = get_current_customer_id()
+        account = db.session.get(Account, account_id)
+
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+        if account.customer_id != customer_id:
+            abort(403, 'Forbidden: Account does not belong to your customer')
+
+        data = request.json or {}
+        column = data.get('kanban_column')
+
+        if column is not None and column not in VALID_COLUMNS:
+            return jsonify({
+                'error': f'Invalid kanban_column: {column}',
+                'valid_values': list(VALID_COLUMNS) + [None],
+            }), 400
+
+        # Update profile_metadata (preserve existing fields)
+        meta = dict(account.profile_metadata or {})
+        if column:
+            meta['kanban_column'] = column
+            meta['kanban_pinned_at'] = datetime.utcnow().isoformat() + 'Z'
+            # Try to get current user name
+            try:
+                from flask_login import current_user
+                meta['kanban_pinned_by'] = getattr(current_user, 'user_name', None) or 'CSM'
+            except Exception:
+                meta['kanban_pinned_by'] = 'CSM'
+        else:
+            # Clear override
+            meta.pop('kanban_column', None)
+            meta.pop('kanban_pinned_at', None)
+            meta.pop('kanban_pinned_by', None)
+
+        account.profile_metadata = meta
+        db.session.commit()
+
+        return jsonify({
+            'status': 'updated',
+            'account_id': account_id,
+            'kanban_column': column,
+            'pinned': column is not None,
+        })
+
+    except Exception as e:
+        logger.error(f"Error updating kanban column for account {account_id}: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update kanban column'}), 500
+
+
 @kpi_api.route('/api/accounts/<int:account_id>/products', methods=['GET'])
 def get_account_products(account_id):
     """Get all products for a specific account"""

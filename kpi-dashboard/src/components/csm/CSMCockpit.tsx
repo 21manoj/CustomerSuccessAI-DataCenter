@@ -6,8 +6,9 @@ import {
   RefreshCw, Loader2, ChevronRight, Calendar,
   Mail, Sparkles, Phone, Shield, ExternalLink,
   MessageSquare, History, Ticket, Eye, Play,
-  ArrowUpRight, ArrowDownRight, CheckCircle2
+  ArrowUpRight, ArrowDownRight, CheckCircle2, Pin
 } from 'lucide-react';
+import { DndContext, DragOverlay, useDroppable, useDraggable, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { useSession } from '../../contexts/SessionContext';
 import { classify, classifyColor } from '../../utils/healthThresholds';
 import { trackPageView, trackAccountDrill } from '../../utils/activityTracker';
@@ -26,6 +27,8 @@ const _mockApprovals = MOCK_APPROVALS.map((a) => ({ ...a, id: Number(a.id) || 0,
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+type KanbanColumn = 'fire' | 'week' | 'opportunity';
+
 interface Account {
   id: number;
   name: string;
@@ -38,6 +41,7 @@ interface Account {
   expansion_probability?: number;
   champion?: string;
   pillar_scores?: Record<string, number>;
+  kanban_column?: KanbanColumn | null;
 }
 
 interface DailyAction {
@@ -138,13 +142,38 @@ function getGreeting(): string {
 interface KanbanCardProps {
   account: Account;
   action?: DailyAction;
-  column: 'fire' | 'week' | 'opportunity';
+  column: KanbanColumn;
   onClick: (account: Account) => void;
+  onUnpin?: (account: Account) => void;
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ account, action, column, onClick }) => {
+const DraggableCard: React.FC<{ id: number; children: React.ReactNode }> = ({ id, children }) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(id) });
+  const style = transform ? {
+    transform: `translate(${transform.x}px, ${transform.y}px)`,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : 'auto' as any,
+  } : undefined;
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      {children}
+    </div>
+  );
+};
+
+const DroppableColumn: React.FC<{ id: string; children: React.ReactNode; isOver?: boolean }> = ({ id, children }) => {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={`flex-1 overflow-y-auto space-y-2 p-2 border-x border-b border-gray-200 rounded-b-lg min-h-[200px] max-h-[calc(100vh-340px)] transition-colors ${isOver ? 'bg-blue-50 ring-2 ring-blue-300 ring-inset' : 'bg-gray-50/50'}`}>
+      {children}
+    </div>
+  );
+};
+
+const KanbanCard: React.FC<KanbanCardProps> = ({ account, action, column, onClick, onUnpin }) => {
   const dtr = daysUntil(account.renewal_date);
   const dsc = daysSince(account.last_contact);
+  const isPinned = !!account.kanban_column;
 
   const actionLabel = useMemo(() => {
     if (column === 'fire') return 'Escalate';
@@ -161,12 +190,23 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ account, action, column, onClic
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer p-3"
+      className={`bg-white rounded-lg border shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-grab active:cursor-grabbing p-3 ${isPinned ? 'border-blue-300 ring-1 ring-blue-200' : 'border-gray-200'}`}
       onClick={() => onClick(account)}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <span className="font-semibold text-sm text-gray-900 truncate mr-2">{account.name}</span>
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${healthBadgeClasses(account.health_score)}`}>
+        <div className="flex items-center gap-1 min-w-0">
+          {isPinned && (
+            <button
+              title="Unpin — return to auto-computed column"
+              className="text-blue-400 hover:text-blue-600 shrink-0"
+              onClick={(e) => { e.stopPropagation(); onUnpin?.(account); }}
+            >
+              <Pin className="w-3 h-3" />
+            </button>
+          )}
+          <span className="font-semibold text-sm text-gray-900 truncate">{account.name}</span>
+        </div>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${healthBadgeClasses(account.health_score)}`}>
           {account.health_score}
         </span>
       </div>
@@ -642,6 +682,70 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   const [drawerAccount, setDrawerAccount] = useState<Account | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Drag-drop
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const draggedAccount = useMemo(
+    () => activeId ? accounts.find((a) => String(a.id) === activeId) ?? null : null,
+    [activeId, accounts]
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const targetColumn = over.id as KanbanColumn;
+    const accountId = Number(active.id);
+    const acct = accounts.find((a) => a.id === accountId);
+    if (!acct) return;
+
+    // Skip if dropped on same column
+    const currentColumn = acct.kanban_column || computeColumn(acct);
+    if (currentColumn === targetColumn) return;
+
+    // Optimistic update
+    setAccounts((prev) => prev.map((a) =>
+      a.id === accountId ? { ...a, kanban_column: targetColumn } : a
+    ));
+
+    // Persist to backend
+    try {
+      await fetch(`/api/accounts/${accountId}/kanban-column`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kanban_column: targetColumn }),
+      });
+    } catch (err) {
+      console.error('Failed to persist kanban column:', err);
+      // Revert on failure
+      setAccounts((prev) => prev.map((a) =>
+        a.id === accountId ? { ...a, kanban_column: acct.kanban_column } : a
+      ));
+    }
+  }, [accounts, headers, computeColumn]);
+
+  const handleUnpin = useCallback(async (account: Account) => {
+    // Optimistic update
+    setAccounts((prev) => prev.map((a) =>
+      a.id === account.id ? { ...a, kanban_column: null } : a
+    ));
+    try {
+      await fetch(`/api/accounts/${account.id}/kanban-column`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kanban_column: null }),
+      });
+    } catch (err) {
+      console.error('Failed to unpin:', err);
+      setAccounts((prev) => prev.map((a) =>
+        a.id === account.id ? { ...a, kanban_column: account.kanban_column } : a
+      ));
+    }
+  }, [headers]);
+
   // Account table search
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -670,6 +774,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
           arr: a.arr ?? a.revenue ?? 0,
           status: a.status ?? a.account_status ?? '',
           pillar_scores: a.pillar_scores ?? {},
+          kanban_column: a.kanban_column ?? (a.metadata?.kanban_column) ?? null,
         }));
         if (mapped.length > 0) {
           setAccounts(mapped);
@@ -784,40 +889,28 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
     [sortBy, actionsByAccount]
   );
 
+  // Column assignment: kanban_column override takes priority over health-computed
+  const computeColumn = useCallback((a: Account): KanbanColumn => {
+    if (a.kanban_column) return a.kanban_column;
+    const act = actionsByAccount[a.id];
+    if (classify(a.health_score) === 'critical' || act?.urgency === 'critical') return 'fire';
+    if (classify(a.health_score) === 'at_risk' || act?.urgency === 'high') return 'week';
+    return 'opportunity';
+  }, [actionsByAccount]);
+
   const fireAccounts = useMemo(
-    () => filteredAccounts
-      .filter((a) => {
-        const act = actionsByAccount[a.id];
-        return classify(a.health_score) === 'critical' || act?.urgency === 'critical';
-      })
-      .sort(sortFn),
-    [filteredAccounts, actionsByAccount, sortFn]
+    () => filteredAccounts.filter((a) => computeColumn(a) === 'fire').sort(sortFn),
+    [filteredAccounts, computeColumn, sortFn]
   );
 
   const weekAccounts = useMemo(
-    () => filteredAccounts
-      .filter((a) => {
-        const act = actionsByAccount[a.id];
-        return (
-          classify(a.health_score) === 'at_risk' &&
-          !fireAccounts.some((f) => f.id === a.id)
-        ) || (act?.urgency === 'high' && !fireAccounts.some((f) => f.id === a.id));
-      })
-      .sort(sortFn),
-    [filteredAccounts, actionsByAccount, fireAccounts, sortFn]
+    () => filteredAccounts.filter((a) => computeColumn(a) === 'week').sort(sortFn),
+    [filteredAccounts, computeColumn, sortFn]
   );
 
   const opportunityAccounts = useMemo(
-    () => filteredAccounts
-      .filter((a) => {
-        return (
-          classify(a.health_score) === 'healthy' &&
-          !fireAccounts.some((f) => f.id === a.id) &&
-          !weekAccounts.some((w) => w.id === a.id)
-        );
-      })
-      .sort(sortFn),
-    [filteredAccounts, fireAccounts, weekAccounts, sortFn]
+    () => filteredAccounts.filter((a) => computeColumn(a) === 'opportunity').sort(sortFn),
+    [filteredAccounts, computeColumn, sortFn]
   );
 
   // Account table filtering
@@ -867,8 +960,8 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
 
   const renderColumn = (
     title: string,
-    accounts: Account[],
-    column: 'fire' | 'week' | 'opportunity',
+    columnAccounts: Account[],
+    column: KanbanColumn,
     accentColor: string,
     bgTint: string,
     icon: React.ReactNode
@@ -880,24 +973,26 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
           <span className="text-sm font-semibold text-gray-800">{title}</span>
         </div>
         <span className="text-xs font-medium text-gray-500 bg-white rounded-full px-2 py-0.5">
-          {accounts.length}
+          {columnAccounts.length}
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto space-y-2 p-2 bg-gray-50/50 border-x border-b border-gray-200 rounded-b-lg min-h-[200px] max-h-[calc(100vh-340px)]">
-        {accounts.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center py-8">No accounts</p>
+      <DroppableColumn id={column}>
+        {columnAccounts.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-8">Drop accounts here</p>
         ) : (
-          accounts.map((acct) => (
-            <KanbanCard
-              key={acct.id}
-              account={acct}
-              action={actionsByAccount[acct.id]}
-              column={column}
-              onClick={openDrawer}
-            />
+          columnAccounts.map((acct) => (
+            <DraggableCard key={acct.id} id={acct.id}>
+              <KanbanCard
+                account={acct}
+                action={actionsByAccount[acct.id]}
+                column={column}
+                onClick={openDrawer}
+                onUnpin={handleUnpin}
+              />
+            </DraggableCard>
           ))
         )}
-      </div>
+      </DroppableColumn>
     </div>
   );
 
@@ -1177,35 +1272,49 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
             {/* ── BOARD VIEW ─────────────────────────────────────────── */}
             {activeTab === 'board' && (
               <div className="flex flex-col h-full">
-                {/* Kanban columns */}
-                <div className="flex-1 overflow-hidden px-4 py-3">
-                  <div className="flex gap-4 h-full">
-                    {renderColumn(
-                      'FIRE',
-                      fireAccounts,
-                      'fire',
-                      'border-red-500',
-                      'bg-red-50/50',
-                      <Flame className="w-4 h-4 text-red-500" />
-                    )}
-                    {renderColumn(
-                      'THIS WEEK',
-                      weekAccounts,
-                      'week',
-                      'border-amber-500',
-                      'bg-amber-50/50',
-                      <Clock className="w-4 h-4 text-amber-500" />
-                    )}
-                    {renderColumn(
-                      'OPPORTUNITIES',
-                      opportunityAccounts,
-                      'opportunity',
-                      'border-emerald-500',
-                      'bg-emerald-50/50',
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    )}
+                {/* Kanban columns with drag-drop */}
+                <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                  <div className="flex-1 overflow-hidden px-4 py-3">
+                    <div className="flex gap-4 h-full">
+                      {renderColumn(
+                        'FIRE',
+                        fireAccounts,
+                        'fire',
+                        'border-red-500',
+                        'bg-red-50/50',
+                        <Flame className="w-4 h-4 text-red-500" />
+                      )}
+                      {renderColumn(
+                        'THIS WEEK',
+                        weekAccounts,
+                        'week',
+                        'border-amber-500',
+                        'bg-amber-50/50',
+                        <Clock className="w-4 h-4 text-amber-500" />
+                      )}
+                      {renderColumn(
+                        'OPPORTUNITIES',
+                        opportunityAccounts,
+                        'opportunity',
+                        'border-emerald-500',
+                        'bg-emerald-50/50',
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      )}
+                    </div>
                   </div>
-                </div>
+                  <DragOverlay>
+                    {draggedAccount ? (
+                      <div className="opacity-90 shadow-xl rounded-lg">
+                        <KanbanCard
+                          account={draggedAccount}
+                          action={actionsByAccount[draggedAccount.id]}
+                          column={computeColumn(draggedAccount)}
+                          onClick={() => {}}
+                        />
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
 
                 {/* Bottom bar */}
                 <div className="bg-white border-t border-gray-200 px-4 py-2.5 grid grid-cols-2 gap-4 shrink-0">
