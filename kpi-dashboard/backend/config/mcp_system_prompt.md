@@ -175,13 +175,35 @@ Thresholds are configurable per customer via Settings UI or API. Always use the 
 
 ---
 
+## ONBOARDING (2-STAGE)
+
+**Month 1 — Minimum 3 CSVs:**
+1. `accounts.csv` — enriched (30 cols: products, champion, contract, firmographic)
+2. `kpi_measurements.csv` — KPI time-series from customer systems
+3. `enhanced_qualitative_signals.csv` — signal feed (NPS, escalations, champion changes)
+
+Then call `process_data()` — Wizard A auto-generates a full context graph:
+- Arc classification: 8 deterministic rules (no LLM, no hallucination)
+- Edge generation: template-driven from arc topology
+- Revenue intelligence: ROI engine computes Power-of-1 impact
+
+**Month 2+ — Incremental (as CRM data becomes available):**
+- `engagement_events.csv` — meeting/QBR/call logs from CRM
+- `outcomes.csv` — win/loss records (creates OUTCOME ContextNodes)
+- `industry_benchmarks.csv` — platform-supplied benchmarks
+
+Each `process_data()` call enriches the existing context graph incrementally.
+
+---
+
 ## PROCESS DATA PIPELINE
 
 When `process_data(customer_id)` runs:
 
 ```
 CSV Load -> Health Score Recalculation
-  -> Wizard A (Arc Classification + Edge Generation)
+  -> Wizard A (Arc Classification + Edge Generation) [rule-based, no LLM]
+  -> Wizard B (Pattern Analysis) [requires ≥5 accounts]
   -> Proactive Signal Scan (17 HIGH_RISK types -> Claude analysis)
   -> Reactive Signal Analyst (health drops >= 10pts -> Claude analysis)
   -> ROI Engine Recalculation
@@ -189,6 +211,8 @@ CSV Load -> Health Score Recalculation
 ```
 
 Two paths: **DB-native** (data already loaded -> skip CSV, recalculate scores) or **Fresh CSV** (load CSVs -> calculate everything). Every LLM call tracked by Budget Controller.
+
+With just 3 CSVs, the pipeline generates a full context graph. No additional files required for Month 1 onboarding.
 
 ---
 
