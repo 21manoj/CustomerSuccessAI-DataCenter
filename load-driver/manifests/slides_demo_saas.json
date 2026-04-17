@@ -1,0 +1,794 @@
+{
+  "manifest_version": "2.0",
+  "customer": {
+    "name": "Slide Deck SaaS Demo",
+    "domain": "phoenix-saas.com",
+    "vertical": "saas_premium",
+    "admin_email": "admin@slidedeck-demo.com",
+    "admin_name": "Phoenix Admin",
+    "total_arr": 48600000,
+    "description": "4-phase lifecycle test for SaaS vertical: baseline (m1-3), decline (m4-5), intervention (m6-7), recovery (m8-9). 10 accounts with diverse arcs."
+  },
+  "time_range": {
+    "start": "2025-07-01",
+    "end": "2026-03-31",
+    "frequency": "weekly",
+    "data_points_per_kpi": 39
+  },
+  "kpis": {
+    "selection": "starter_9",
+    "count": 9,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI4",
+      "P2-KPI1",
+      "P2-KPI3",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P5-KPI1",
+      "P5-KPI5"
+    ]
+  },
+  "context_graph": {
+    "stakeholders_per_account": [
+      3,
+      5
+    ],
+    "events_per_account": [
+      8,
+      12
+    ],
+    "include_decisions": true,
+    "include_outcomes": true,
+    "include_signal_edges": true,
+    "include_benchmarks": true
+  },
+  "lifecycle_events": {
+    "Drift Analytics": {
+      "event": "churn",
+      "event_month": 6,
+      "delta_pct": -100
+    },
+    "Nexus Enterprise": {
+      "event": "expand",
+      "event_month": 8,
+      "delta_pct": 30
+    },
+    "Orbit Commerce": {
+      "event": "expand",
+      "event_month": 8,
+      "delta_pct": 20
+    },
+    "Fern Health": {
+      "event": "new",
+      "event_month": 3
+    }
+  },
+  "accounts": [
+    {
+      "name": "Horizon Fintech",
+      "arr": 7200000,
+      "target_health": 62,
+      "classification": "at_risk",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "Large fintech platform. Champion VP Product departed month 4, adoption freefall. DAU dropped 45%. Health drops from 75\u219242. Emergency engagement month 6. New champion identified. Recovery to 68 by month 9.",
+      "kpi_trajectory": "recovering",
+      "recovery_start_month": 6,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 3500000
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 2200000
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 1500000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Jessica Huang",
+          "role": "champion",
+          "title": "VP Product",
+          "department": "Product",
+          "influence_score": 9,
+          "sentiment": "departed",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "Raj Patel",
+          "role": "successor",
+          "title": "Senior PM",
+          "department": "Product",
+          "influence_score": 6,
+          "sentiment": "neutral",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Catherine Winters",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Engineering",
+          "influence_score": 10,
+          "sentiment": "concerned",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Mark Olsen",
+          "role": "technical_lead",
+          "title": "Lead Developer",
+          "department": "Engineering",
+          "influence_score": 7,
+          "sentiment": "negative",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_loss",
+          "date": "2025-10-15",
+          "content": "VP Product Jessica Huang left for competitor. Primary API integration advocate gone.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2025-11-01",
+          "content": "DAU dropped from 2,400 to 1,320. API call volume down 55%.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "escalation",
+          "date": "2025-12-05",
+          "content": "CTO Catherine Winters escalated \u2014 'we're paying for features nobody uses anymore.'",
+          "sentiment": "negative"
+        },
+        {
+          "type": "csm_intervention",
+          "date": "2026-01-15",
+          "content": "New CSM assigned. Product walkthrough with successor Raj Patel. Re-onboarding started.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "kpi_recovery",
+          "date": "2026-02-15",
+          "content": "DAU recovering to 1,900. Raj Patel completing advanced training modules.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Stratos Logistics",
+      "arr": 5800000,
+      "target_health": 76,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-01",
+      "narrative": "Supply chain SaaS customer. Workflow Automation rollout stalled in month 4 due to integration complexity. Budget pressure from CFO. Exec engagement in month 6. Partial recovery.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2800000
+        },
+        {
+          "name": "Workflow Automation",
+          "category": "automation",
+          "arr": 2000000
+        },
+        {
+          "name": "Mobile App",
+          "category": "mobile",
+          "arr": 1000000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "David Thornton",
+          "role": "champion",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 8,
+          "sentiment": "neutral",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Linda Chen",
+          "role": "economic_buyer",
+          "title": "CFO",
+          "department": "Finance",
+          "influence_score": 9,
+          "sentiment": "negative",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Omar Hassan",
+          "role": "technical_lead",
+          "title": "Integration Lead",
+          "department": "IT",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "budget_pressure",
+          "date": "2025-10-20",
+          "content": "CFO Linda Chen froze all new automation spend pending ROI review.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2025-11-10",
+          "content": "Workflow Automation module usage dropped 60%. Only 12 of 45 workflows active.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "executive_engagement",
+          "date": "2026-01-10",
+          "content": "Our VP CS hosted working session with CFO. Showed $1.2M efficiency gains from active workflows.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "kpi_recovery",
+          "date": "2026-02-20",
+          "content": "18 workflows reactivated. Training completion rate up from 30% to 65%.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Canopy EdTech",
+      "arr": 4200000,
+      "target_health": 74,
+      "classification": "at_risk",
+      "story_arc": "silent_churn",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-08-01",
+      "narrative": "EdTech customer showing steady disengagement. No intervention applied (control group). Champion went quiet. NPS dropped. Health declines from 74\u219251 and plateaus.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2200000
+        },
+        {
+          "name": "Admin Console",
+          "category": "admin",
+          "arr": 1200000
+        },
+        {
+          "name": "Data Export & BI",
+          "category": "reporting",
+          "arr": 800000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Patricia Moore",
+          "role": "champion",
+          "title": "Director of Curriculum Tech",
+          "department": "Technology",
+          "influence_score": 6,
+          "sentiment": "negative",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "George Wright",
+          "role": "executive_sponsor",
+          "title": "VP Academic Technology",
+          "department": "Academic Affairs",
+          "influence_score": 8,
+          "sentiment": "neutral",
+          "engagement_frequency": "none"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "engagement_gap",
+          "date": "2025-10-15",
+          "content": "Champion Patricia Moore declined QBR and two training invitations.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2025-11-15",
+          "content": "Login frequency down 50%. BI report generation dropped from 120/month to 40/month.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2026-01-05",
+          "content": "Procurement team requested data export for evaluation of Canvas integration.",
+          "sentiment": "very_negative"
+        }
+      ]
+    },
+    {
+      "name": "Relay Healthcare",
+      "arr": 3800000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-04-15",
+      "narrative": "Healthcare platform with escalating support issues. Health drops from 55\u219238. HIPAA compliance concerns. Dedicated support pod deployed month 5. Recovery to 62 by month 9.",
+      "kpi_trajectory": "recovering",
+      "recovery_start_month": 5,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2000000
+        },
+        {
+          "name": "SSO & Security",
+          "category": "security",
+          "arr": 1200000
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 600000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Dr. Aisha Patel",
+          "role": "champion",
+          "title": "Chief Medical Informatics Officer",
+          "department": "Clinical Informatics",
+          "influence_score": 9,
+          "sentiment": "negative",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Robert Kim",
+          "role": "technical_lead",
+          "title": "Security Architect",
+          "department": "IT Security",
+          "influence_score": 8,
+          "sentiment": "negative",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "support_escalation",
+          "date": "2025-09-15",
+          "content": "Ticket resolution time jumped from 4h to 14h. Three HIPAA-related tickets unresolved for 5+ days.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "escalation",
+          "date": "2025-10-01",
+          "content": "CMIO Dr. Aisha Patel escalated SSO failures to our CEO. Patient data access disrupted.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "csm_intervention",
+          "date": "2025-12-15",
+          "content": "Dedicated security support pod deployed. Weekly compliance reviews initiated.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Nexus Enterprise",
+      "arr": 6500000,
+      "target_health": 86,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-01",
+      "narrative": "Star enterprise customer. Healthy throughout. Strong champion driving adoption across business units. Expansion in month 8 \u2014 adding Workflow Automation + BI for 3 new departments. ARR grows 30%.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 99,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 3000000
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 2000000
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 1500000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Sarah Kim",
+          "role": "champion",
+          "title": "VP Digital Transformation",
+          "department": "Strategy",
+          "influence_score": 10,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "James Rodriguez",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Yuki Tanaka",
+          "role": "technical_lead",
+          "title": "Enterprise Architect",
+          "department": "IT",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "daily"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "executive_engagement",
+          "date": "2026-01-20",
+          "content": "CEO James Rodriguez approved expansion budget for 3 new departments.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "feature_adoption",
+          "date": "2026-02-10",
+          "content": "DAU hit company record: 4,200 users. Champion Sarah Kim presenting at our user conference.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Verdant Media",
+      "arr": 4800000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "Reliable media company. Health stable 73-76. Consistent feature usage. Renewal expected at current terms. No significant events.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 99,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2000000
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 1500000
+        },
+        {
+          "name": "Mobile App",
+          "category": "mobile",
+          "arr": 1300000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Emily Brooks",
+          "role": "champion",
+          "title": "Head of Product",
+          "department": "Product",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Nathan Cole",
+          "role": "economic_buyer",
+          "title": "VP Finance",
+          "department": "Finance",
+          "influence_score": 8,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Spark Retail",
+      "arr": 2600000,
+      "target_health": 71,
+      "classification": "healthy",
+      "story_arc": "proactive_growth",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-10-01",
+      "narrative": "Growing retail customer. Slight dip in month 4-5 (66) during seasonal peak \u2014 support overwhelmed. Quick recovery by month 6. Growth trajectory in months 8-9 as holiday platform proved its value.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": 3,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1400000
+        },
+        {
+          "name": "Workflow Automation",
+          "category": "automation",
+          "arr": 700000
+        },
+        {
+          "name": "Mobile App",
+          "category": "mobile",
+          "arr": 500000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Megan Price",
+          "role": "champion",
+          "title": "Director of E-Commerce",
+          "department": "Digital",
+          "influence_score": 7,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Carlos Reyes",
+          "role": "executive_sponsor",
+          "title": "CMO",
+          "department": "Marketing",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "support_escalation",
+          "date": "2025-10-10",
+          "content": "Holiday surge: ticket volume 3x normal. Resolution time spiked to 18 hours.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "kpi_recovery",
+          "date": "2026-01-05",
+          "content": "Post-holiday review: platform handled 2.3M transactions. Champion advocating for expansion.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Orbit Commerce",
+      "arr": 8200000,
+      "target_health": 87,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-01",
+      "narrative": "Largest SaaS customer. Healthy throughout with strong executive sponsorship. Expansion in month 8 \u2014 adding SSO & Security + Data Export for global rollout. ARR grows 20%.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 99,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 3500000
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 2200000
+        },
+        {
+          "name": "Workflow Automation",
+          "category": "automation",
+          "arr": 1500000
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 1000000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Victoria Chang",
+          "role": "champion",
+          "title": "Chief Digital Officer",
+          "department": "Digital Strategy",
+          "influence_score": 10,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Michael Torres",
+          "role": "executive_sponsor",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Liam O'Connor",
+          "role": "technical_lead",
+          "title": "VP Engineering",
+          "department": "Engineering",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "daily"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "executive_engagement",
+          "date": "2026-01-25",
+          "content": "CEO Michael Torres approved global rollout. Adding SSO for 12 new markets.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "feature_adoption",
+          "date": "2026-02-15",
+          "content": "Workflow Automation adoption at 94%. CDO Victoria Chang presenting ROI at board meeting.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Drift Analytics",
+      "arr": 1800000,
+      "target_health": 56,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "tier_2",
+      "renewal_date": "2026-03-01",
+      "narrative": "Small analytics-focused customer that churns in month 6. Champion left, successor never onboarded. NPS hit 8. Lost to Looker + internal BI build.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 1,
+      "products": [
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 1200000
+        },
+        {
+          "name": "Data Export & BI",
+          "category": "reporting",
+          "arr": 600000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Amanda Foster",
+          "role": "champion",
+          "title": "Head of Analytics",
+          "department": "Data",
+          "influence_score": 5,
+          "sentiment": "departed",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "Derek Lam",
+          "role": "successor",
+          "title": "Data Analyst",
+          "department": "Data",
+          "influence_score": 2,
+          "sentiment": "negative",
+          "engagement_frequency": "none"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "champion_loss",
+          "date": "2025-08-15",
+          "content": "Head of Analytics Amanda Foster resigned. Moved to competitor with Looker stack.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "engagement_gap",
+          "date": "2025-09-20",
+          "content": "Zero logins for 45+ days. No QBR attendance. Training abandoned at 15% completion.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "competitor_mention",
+          "date": "2025-11-10",
+          "content": "Successor Derek Lam asked for full data export. Building internal BI with Looker.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "contract_dispute",
+          "date": "2026-01-05",
+          "content": "Drift Analytics sent non-renewal notice. Cited 'lack of ROI' and 'better alternatives'.",
+          "sentiment": "very_negative"
+        }
+      ]
+    },
+    {
+      "name": "Fern Health",
+      "arr": 3600000,
+      "target_health": 62,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "tier_1",
+      "renewal_date": "2027-03-01",
+      "narrative": "New digital health customer onboarding in month 3. Starts at health 62 (onboarding phase). Stabilizes to 70 by month 7. Growth trajectory to 75 by month 9. Strong clinical champion engagement.",
+      "kpi_trajectory": "improving",
+      "decline_start_month": 99,
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1800000
+        },
+        {
+          "name": "SSO & Security",
+          "category": "security",
+          "arr": 1000000
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 800000
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Dr. Nina Patel",
+          "role": "champion",
+          "title": "Chief Health Informatics Officer",
+          "department": "Clinical Innovation",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Steven Park",
+          "role": "executive_sponsor",
+          "title": "COO",
+          "department": "Operations",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "onboarding_milestone",
+          "date": "2025-10-01",
+          "content": "SSO integration complete. 200 clinical users provisioned. HIPAA audit passed.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "feature_adoption",
+          "date": "2025-12-01",
+          "content": "API integration with Epic EHR complete. Champion Dr. Nina Patel highly engaged.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "executive_engagement",
+          "date": "2026-02-01",
+          "content": "COO Steven Park approved phase 2: mobile rollout + Analytics Suite.",
+          "sentiment": "positive"
+        }
+      ]
+    }
+  ],
+  "name": "Slide Deck SaaS Demo",
+  "admin_email": "admin@slidedeck-demo.com"
+}
