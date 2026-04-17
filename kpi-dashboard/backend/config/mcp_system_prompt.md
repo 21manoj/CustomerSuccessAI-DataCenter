@@ -112,6 +112,7 @@ Thresholds are configurable per customer via Settings UI or API. Always use the 
 | `get_revenue_at_risk(customer_id, account_id)` | **ONLY** authoritative revenue source. Returns at_risk, protected, expansion, lost. Never manually sum node revenue. |
 | `get_graph_summary(customer_id, account_id)` | Node/edge counts + revenue breakdown. |
 | `search_signals(customer_id, account_id, node_type, node_subtype)` | Filter context graph nodes by type and subtype. |
+| `submit_signal(customer_id, account_id, raw_text, source_type)` | Submit a real-time signal (email, Slack, transcript, CSM observation). Queues for LLM enrichment → sentiment, intent, urgency extraction → auto-creates ContextNode for high-risk signals. |
 | `get_causal_chain(customer_id, node_id, direction)` | Upstream (what caused this) or downstream (what this led to) causal trace. |
 
 ### Journey & Visualization

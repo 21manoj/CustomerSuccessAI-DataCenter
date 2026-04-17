@@ -71,6 +71,7 @@ services:
       # MCP Server — enable HTTP transport on port 8001
       FEATURE_MCP_SERVER: "true"
       FEATURE_CONTEXT_GRAPH: "true"
+      FEATURE_SIGNAL_ENGINE: "true"
       FEATURE_ASK_AI_V2: "true"
       # Claude.ai MCP clients cannot pass Bearer tokens, so auth must be
       # disabled for HTTP transport until session-based auth is implemented.

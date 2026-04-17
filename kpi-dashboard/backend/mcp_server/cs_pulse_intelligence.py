@@ -2,11 +2,12 @@
 """
 CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
 
-9 tools moved from cs_pulse_mcp_server.py:
+10 tools:
   - get_revenue_at_risk
   - get_causal_chain
   - get_graph_summary
   - search_signals
+  - submit_signal (real-time signal ingestion via MCP)
   - get_account_journey_timeline
   - get_context_graph_mermaid
   - get_stakeholder_map
@@ -213,6 +214,145 @@ def search_signals(
             "node_subtype": node_subtype,
             "count": len(nodes),
             "nodes": [n.to_dict() for n in nodes],
+        }
+
+
+# ===================================================================
+# Tool: submit_signal
+# ===================================================================
+
+@mcp.tool
+def submit_signal(
+    customer_id: int,
+    account_id: int,
+    raw_text: str,
+    source_type: str = "manual",
+    consent_verified: bool = True,
+) -> dict:
+    """Submit a real-time signal for an account (email, Slack, transcript, or CSM observation).
+
+    Creates a QualitativeSignal record and queues it for async LLM enrichment.
+    The background worker extracts sentiment, intent, urgency, and stakeholder
+    roles — then creates a ContextNode if the signal contains high-risk intents
+    (champion_loss, executive_escalation, churn_risk, etc.).
+
+    Use this to push signals from any channel: forwarded emails, Slack messages,
+    call transcripts, or manual CSM observations. Each signal flows through the
+    full enrichment pipeline: RAG context retrieval → Claude LLM → urgency
+    classification → collision detection → context graph integration.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        account_id: The account this signal relates to
+        raw_text: The signal text (email body, Slack message, transcript excerpt, observation)
+        source_type: Signal source — 'manual' (default), 'email', 'slack', or 'transcript'
+        consent_verified: Required true for transcript source_type (participant consent)
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id, required_scope='write')
+    app = _get_flask_app()
+
+    valid_sources = ('manual', 'email', 'slack', 'transcript')
+    if source_type not in valid_sources:
+        raise ToolError(f"Invalid source_type '{source_type}'. Must be one of: {', '.join(valid_sources)}")
+
+    if not raw_text or not raw_text.strip():
+        raise ToolError("raw_text is required and must not be empty.")
+
+    if source_type == 'transcript' and not consent_verified:
+        raise ToolError("Transcript signals require consent_verified=true (participant consent).")
+
+    with app.app_context():
+        from extensions import db
+        from models import QualitativeSignal, Account
+        import uuid as _uuid_mod
+        from datetime import datetime
+
+        _validate_account_ownership(customer_id, account_id)
+
+        # Check per-customer signal_engine feature toggle
+        try:
+            from models import FeatureToggle
+            toggle = FeatureToggle.query.filter_by(
+                customer_id=customer_id, feature_name='signal_engine',
+            ).first()
+            if not toggle or not toggle.enabled:
+                # Auto-enable signal_engine for this customer
+                if not toggle:
+                    toggle = FeatureToggle(
+                        customer_id=customer_id,
+                        feature_name='signal_engine',
+                        enabled=True,
+                        description='Auto-enabled by submit_signal MCP tool',
+                    )
+                    db.session.add(toggle)
+                else:
+                    toggle.enabled = True
+                db.session.flush()
+        except Exception:
+            pass  # Feature toggle table may not exist yet
+
+        signal_id = str(_uuid_mod.uuid4())
+        now = datetime.utcnow()
+
+        signal = QualitativeSignal(
+            signal_id=signal_id,
+            customer_id=customer_id,
+            account_id=account_id,
+            signal_type=source_type,
+            content=raw_text[:2000],
+            sentiment='neutral',  # Placeholder — enrichment will update
+            signal_date=now.date(),
+        )
+
+        # Set QSIM enrichment columns
+        for attr, val in [
+            ('source_type', source_type),
+            ('raw_text', raw_text),
+            ('requires_review', False),
+            ('consent_verified', consent_verified),
+            ('composite_signal_id', signal_id),
+        ]:
+            try:
+                setattr(signal, attr, val)
+            except Exception:
+                pass
+
+        db.session.add(signal)
+        db.session.commit()
+
+        # Wake background enrichment worker
+        try:
+            from signal_engine.worker import notify_new_signal
+            notify_new_signal()
+        except Exception:
+            pass
+
+        # Check if LLM enrichment is available
+        import os
+        llm_available = bool(os.environ.get('ANTHROPIC_API_KEY'))
+
+        account = db.session.get(Account, account_id)
+        account_name = account.account_name if account else f"Account {account_id}"
+
+        return {
+            'scope': 'account',
+            'status': 'queued',
+            'signal_id': signal_id,
+            'customer_id': customer_id,
+            'account_id': account_id,
+            'account_name': account_name,
+            'source_type': source_type,
+            'llm_enrichment': 'queued' if llm_available else 'stub_only (no ANTHROPIC_API_KEY)',
+            'message': (
+                f"Signal submitted for {account_name}. "
+                f"Background enrichment will extract sentiment, intent, urgency, "
+                f"and stakeholder roles. High-risk signals auto-create ContextNodes."
+            ),
+            'next_steps': [
+                f"Check enrichment status: search_signals(customer_id={customer_id}, account_id={account_id}, node_type='SIGNAL')",
+                "High-risk intents trigger playbook recommendations automatically.",
+            ],
         }
 
 

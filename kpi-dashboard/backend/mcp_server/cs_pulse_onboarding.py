@@ -2424,6 +2424,7 @@ def clone_customer(
             ContextNode, ContextEdge,
             QualitativeSignal, PlaybookExecution,
             ROISnapshot, JourneyData,
+            FeatureToggle, WeightCalibrationHistory,
         )
         from extensions import db
         import uuid as _uuid_mod
@@ -2498,6 +2499,9 @@ def clone_customer(
                 region=acct.region,
                 external_account_id=acct.external_account_id,
                 profile_metadata=acct.profile_metadata,
+                arc_type=acct.arc_type,
+                arc_phase=acct.arc_phase,
+                arc_confidence=acct.arc_confidence,
             )
             try:
                 new_acct.uuid = generate_id(uuid_vertical, 'account')
@@ -2678,6 +2682,47 @@ def clone_customer(
                 journey_count += 1
         summary['journey_data_cloned'] = journey_count
 
+        # 11b. Clone Feature Toggles
+        ft_count = 0
+        source_toggles = FeatureToggle.query.filter_by(customer_id=source_customer_id).all()
+        for ft in source_toggles:
+            new_ft = FeatureToggle(
+                customer_id=new_cid, feature_name=ft.feature_name,
+                enabled=ft.enabled, config=ft.config, description=ft.description,
+            )
+            db.session.add(new_ft)
+            ft_count += 1
+        summary['feature_toggles_cloned'] = ft_count
+
+        # 11c. Clone Weight Calibration History
+        wch_count = 0
+        source_wchs = WeightCalibrationHistory.query.filter_by(customer_id=source_customer_id).all()
+        for wch in source_wchs:
+            new_wch = WeightCalibrationHistory(
+                customer_id=new_cid, calibration_type=wch.calibration_type,
+                vertical=wch.vertical, previous_weights=wch.previous_weights,
+                new_weights=wch.new_weights, weight_deltas=wch.weight_deltas,
+                pillar_weights=wch.pillar_weights, kpi_weights=wch.kpi_weights,
+                previous_pillar_weights=wch.previous_pillar_weights,
+                previous_kpi_weights=wch.previous_kpi_weights,
+                sample_size=wch.sample_size,
+                prediction_error_before=wch.prediction_error_before,
+                prediction_error_after=wch.prediction_error_after,
+                error_reduction_pct=wch.error_reduction_pct,
+                triggered_by=wch.triggered_by, source=wch.source,
+                approved=wch.approved, notes=wch.notes,
+                successful_accounts=wch.successful_accounts,
+                unsuccessful_accounts=wch.unsuccessful_accounts,
+                correlation_scores=wch.correlation_scores,
+                health_accuracy=wch.health_accuracy,
+                significant_changes=wch.significant_changes,
+                is_cdi_eligible=wch.is_cdi_eligible,
+                calibrated_at=wch.calibrated_at,
+            )
+            db.session.add(new_wch)
+            wch_count += 1
+        summary['weight_calibration_history_cloned'] = wch_count
+
         # 12. Create admin user
         admin_user = None
         try:
@@ -2728,7 +2773,8 @@ def clone_customer(
             + summary.get('pillar_scores_cloned', 0) + summary.get('context_nodes_cloned', 0)
             + summary.get('context_edges_cloned', 0) + summary.get('qualitative_signals_cloned', 0)
             + summary.get('playbook_executions_cloned', 0) + summary.get('roi_snapshots_cloned', 0)
-            + summary.get('journey_data_cloned', 0)
+            + summary.get('journey_data_cloned', 0) + summary.get('feature_toggles_cloned', 0)
+            + summary.get('weight_calibration_history_cloned', 0)
         )
 
         result = {
@@ -2756,9 +2802,11 @@ def clone_customer(
 
         result['next_steps'] = (
             'OPTION 1 — Use as-is: Clone is ready immediately. '
-            'All data has been deep-copied with pre-calculated scores. '
+            'All data has been deep-copied with pre-calculated scores, '
+            'feature toggles, and weight calibration history. '
             'OPTION 2 — Customize: Use download_customer_csv() to get '
-            'the 8 CSVs, modify them, then upload_csv() + process_data() to recalculate.'
+            'CSVs, modify them, then upload_csv() + process_data() to recalculate. '
+            'Month 1 requires 4 CSVs: accounts, kpi_measurements, signals, outcomes.'
         )
 
         result['pillar_labels'] = _get_dc2s_pillar_labels()

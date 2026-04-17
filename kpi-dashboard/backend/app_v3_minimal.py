@@ -1402,6 +1402,14 @@ try:
         app.register_blueprint(signal_api)
         print("✅ Registered Signal Engine API: /api/signals/* (FEATURE_SIGNAL_ENGINE=true)")
 
+        from signal_engine.email_receiver import email_receiver_api
+        app.register_blueprint(email_receiver_api)
+        print("   ✅ Registered Email Receiver: /api/signals/ingest/email/parse")
+
+        from signal_engine.slack_events import slack_events_api
+        app.register_blueprint(slack_events_api)
+        print("   ✅ Registered Slack Events: /api/signals/ingest/slack/events")
+
         # Run idempotent schema migration for enrichment columns
         try:
             from signal_engine.models import ensure_enrichment_columns, ensure_alert_records_table

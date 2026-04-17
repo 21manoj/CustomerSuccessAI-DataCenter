@@ -226,6 +226,187 @@ def ingest_manual():
 
 
 # ============================================================
+# Transcript File Upload
+# ============================================================
+
+def _parse_vtt(content: str) -> str:
+    """Parse WebVTT (.vtt) format, stripping timestamps and headers."""
+    import re
+    lines = content.split('\n')
+    text_lines = []
+    for line in lines:
+        stripped = line.strip()
+        # Skip WEBVTT header, NOTE blocks, empty lines
+        if stripped.startswith('WEBVTT') or stripped.startswith('NOTE'):
+            continue
+        # Skip timestamp lines: 00:00:01.000 --> 00:00:04.000
+        if re.match(r'\d{2}:\d{2}:\d{2}', stripped):
+            continue
+        # Skip cue identifiers (pure numbers)
+        if stripped.isdigit():
+            continue
+        if stripped:
+            text_lines.append(stripped)
+    return ' '.join(text_lines)
+
+
+def _parse_srt(content: str) -> str:
+    """Parse SubRip (.srt) format, stripping timestamps and sequence numbers."""
+    import re
+    lines = content.split('\n')
+    text_lines = []
+    for line in lines:
+        stripped = line.strip()
+        # Skip sequence numbers
+        if stripped.isdigit():
+            continue
+        # Skip timestamp lines: 00:00:01,000 --> 00:00:04,000
+        if re.match(r'\d{2}:\d{2}:\d{2},\d{3}', stripped):
+            continue
+        if stripped:
+            text_lines.append(stripped)
+    return ' '.join(text_lines)
+
+
+@signal_api.route('/api/signals/ingest/transcript/upload', methods=['POST'])
+@_require_signal_engine
+def upload_transcript():
+    """Upload a meeting transcript file for signal extraction.
+
+    Accepts multipart file upload (.txt, .vtt, .srt) or JSON with raw_text.
+    Strips timestamps from VTT/SRT formats and extracts plain text.
+
+    Multipart form fields:
+      - file: The transcript file (.txt, .vtt, .srt)
+      - account_id: (required) Account ID
+      - customer_id: (required) Customer ID
+      - consent_verified: (required, must be 'true') Participant consent
+
+    JSON body alternative:
+      {
+          "raw_text": "...",
+          "account_id": 301,
+          "customer_id": 407,
+          "consent_verified": true
+      }
+    """
+    # Handle JSON body (existing behavior)
+    if request.is_json:
+        return _ingest_signal('transcript')
+
+    # Handle multipart file upload
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'No file uploaded. Send a .txt, .vtt, or .srt file.'}), 400
+
+    account_id = request.form.get('account_id', type=int)
+    customer_id = request.form.get('customer_id', type=int)
+    consent = request.form.get('consent_verified', '').lower()
+
+    if not account_id or not customer_id:
+        return jsonify({'error': 'account_id and customer_id are required'}), 400
+
+    if consent != 'true':
+        return jsonify({
+            'error': 'consent_verified must be "true"',
+            'hint': 'Verify participant consent before submitting transcript data',
+        }), 400
+
+    # Per-customer feature check
+    if not _check_customer_signal_engine(customer_id):
+        return jsonify({
+            'error': f'Signal Engine not enabled for customer {customer_id}',
+        }), 403
+
+    # Read and parse file
+    filename = file.filename or 'transcript.txt'
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'txt'
+
+    try:
+        content = file.read().decode('utf-8', errors='replace')
+    except Exception as e:
+        return jsonify({'error': f'Failed to read file: {str(e)}'}), 400
+
+    if not content.strip():
+        return jsonify({'error': 'File is empty'}), 400
+
+    # Parse based on format
+    if ext == 'vtt':
+        raw_text = _parse_vtt(content)
+    elif ext == 'srt':
+        raw_text = _parse_srt(content)
+    else:
+        raw_text = content.strip()
+
+    if not raw_text or len(raw_text) < 20:
+        return jsonify({'error': 'Parsed transcript too short (< 20 chars)'}), 400
+
+    # Cap at 10K chars for transcripts
+    raw_text = raw_text[:10000]
+
+    # Create signal
+    try:
+        from extensions import db
+        from models import QualitativeSignal
+
+        signal_id = str(uuid.uuid4())
+        parsed_date = datetime.utcnow().date()
+
+        signal = QualitativeSignal(
+            signal_id=signal_id,
+            customer_id=customer_id,
+            account_id=account_id,
+            signal_type='transcript',
+            content=raw_text[:2000],
+            sentiment='neutral',
+            signal_date=parsed_date,
+        )
+
+        for attr, val in [
+            ('source_type', 'transcript'),
+            ('raw_text', raw_text),
+            ('requires_review', False),
+            ('consent_verified', True),
+            ('composite_signal_id', signal_id),
+        ]:
+            try:
+                setattr(signal, attr, val)
+            except Exception:
+                pass
+
+        db.session.add(signal)
+        db.session.commit()
+
+        # Wake enrichment worker
+        try:
+            from signal_engine.worker import notify_new_signal
+            notify_new_signal()
+        except Exception:
+            pass
+
+        logger.info(
+            "Transcript signal ingested: id=%s file=%s account=%d customer=%d chars=%d",
+            signal_id, filename, account_id, customer_id, len(raw_text),
+        )
+
+        return jsonify({
+            'raw_signal_id': signal_id,
+            'status': 'queued',
+            'source_type': 'transcript',
+            'account_id': account_id,
+            'customer_id': customer_id,
+            'filename': filename,
+            'format': ext,
+            'text_length': len(raw_text),
+            'message': 'Transcript accepted. Enrichment will run asynchronously.',
+        }), 202
+
+    except Exception as e:
+        logger.exception("Transcript ingestion failed: %s", e)
+        return jsonify({'error': f'Ingestion failed: {str(e)}'}), 500
+
+
+# ============================================================
 # Review Queue
 # ============================================================
 
@@ -314,17 +495,24 @@ def signal_engine_status():
     """Check Signal Engine status and feature toggle state."""
     import os
     enabled = os.environ.get('FEATURE_SIGNAL_ENGINE', 'false').lower() in ('true', '1', 'yes')
+    llm_available = bool(os.environ.get('ANTHROPIC_API_KEY'))
     return jsonify({
         'signal_engine_enabled': enabled,
-        'version': '0.1.0',
-        'phase': 'Phase 1 — Foundation',
+        'version': '1.0.0',
+        'phase': 'Phase 1 — MVP',
         'capabilities': {
             'ingestion': enabled,
             'structural_urgency': enabled,
             'cg_collision_check': enabled,
             'composite_fusion': enabled,
-            'llm_enrichment': False,   # Phase 1 stub
+            'llm_enrichment': llm_available,
             'review_queue': enabled,
-            'alert_routing': False,    # Not yet wired
+            'alert_routing': False,    # Phase 2
+            'channels': {
+                'manual': enabled,
+                'email': enabled,
+                'slack': enabled,
+                'transcript': enabled,
+            },
         },
     })

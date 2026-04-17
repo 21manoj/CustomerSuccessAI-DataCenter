@@ -97,6 +97,11 @@
       "parameters": ["customer_id", "account_id", "node_type", "node_subtype", "limit"]
     },
 
+    "submit_signal": {
+      "description": "Submit a real-time signal for an account (email, Slack, transcript, or CSM observation). Creates a signal record and queues it for async LLM enrichment. The background worker extracts sentiment, intent, urgency, and stakeholder roles, then creates an evidence graph node for high-risk signals.\n\nArgs:\n    customer_id: The customer (tenant) ID\n    account_id: The account this signal relates to\n    raw_text: The signal text (email body, Slack message, transcript excerpt, observation)\n    source_type: Signal source — 'manual' (default), 'email', 'slack', or 'transcript'\n    consent_verified: Required true for transcript source_type (participant consent)",
+      "parameters": ["customer_id", "account_id", "raw_text", "source_type", "consent_verified"]
+    },
+
     "get_causal_chain": {
       "description": "Trace the causal chain from an event — upstream (what caused this) or downstream (what this led to).\n\nArgs:\n    customer_id: The customer (tenant) ID\n    node_id: Starting event ID\n    direction: 'upstream' or 'downstream' (default 'upstream')",
       "parameters": ["customer_id", "node_id", "direction"]

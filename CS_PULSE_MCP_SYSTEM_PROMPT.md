@@ -60,6 +60,7 @@ Use for revenue analysis, signal investigation, and causal analysis. **Requires 
 | `get_revenue_at_risk(customer_id, account_id)` | "How much revenue is at risk?", "Revenue breakdown for account X." Returns deduplicated revenue: at_risk, protected, expansion, lost, net_impact. **This is the ONLY correct source for revenue numbers — never manually sum from signals.** |
 | `get_graph_summary(customer_id, account_id)` | "Overview of the context graph", "How many signals/decisions?". Returns node/edge counts by type + revenue breakdown. Good starting point before deeper exploration. |
 | `search_signals(customer_id, account_id, node_type, node_subtype, limit)` | "Show me recent signals", "What decisions were made?", "Find champion_loss events." Filters: node_type (SIGNAL, DECISION, OUTCOME, STAKEHOLDER, EXTERNAL_CONTEXT), node_subtype (kpi_change, ticket, champion_loss, etc.). |
+| `submit_signal(customer_id, account_id, raw_text, source_type)` | "Submit a signal", "Log this email as a signal", "Record this observation." Accepts real-time signals from email, Slack, transcripts, or CSM observations. Queues for LLM enrichment (sentiment, intent, urgency, stakeholders). High-risk signals auto-create context graph nodes. |
 | `get_causal_chain(customer_id, node_id, direction)` | "What caused this outcome?", "What did this signal lead to?". Direction: "upstream" (what caused this) or "downstream" (what this led to). Requires a specific node_id — use search_signals first to find it. |
 
 ### Group 3: Financial / ROI (2 tools)
