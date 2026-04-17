@@ -682,6 +682,17 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   const [drawerAccount, setDrawerAccount] = useState<Account | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Build action-by-account map first (consumed by computeColumn, sortFn, etc.)
+  const actionsByAccount = useMemo(() => {
+    const map: Record<number, DailyAction> = {};
+    for (const a of actions) {
+      if (!map[a.account_id] || a.impact_score > map[a.account_id].impact_score) {
+        map[a.account_id] = a;
+      }
+    }
+    return map;
+  }, [actions]);
+
   // Column assignment: kanban_column override takes priority over health-computed
   const computeColumn = useCallback((a: Account): KanbanColumn => {
     if (a.kanban_column) return a.kanban_column;
@@ -859,17 +870,6 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   const criticalCount = useMemo(() => accounts.filter((a) => classify(a.health_score) === 'critical').length, [accounts]);
   const atRiskCount = useMemo(() => accounts.filter((a) => classify(a.health_score) === 'at_risk').length, [accounts]);
   const healthyCount = useMemo(() => accounts.filter((a) => classify(a.health_score) === 'healthy').length, [accounts]);
-
-  // Column bucketing
-  const actionsByAccount = useMemo(() => {
-    const map: Record<number, DailyAction> = {};
-    for (const a of actions) {
-      if (!map[a.account_id] || a.impact_score > map[a.account_id].impact_score) {
-        map[a.account_id] = a;
-      }
-    }
-    return map;
-  }, [actions]);
 
   const filteredAccounts = useMemo(() => {
     let list = [...accounts];
