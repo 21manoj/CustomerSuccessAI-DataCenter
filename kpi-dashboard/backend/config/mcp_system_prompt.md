@@ -177,19 +177,19 @@ Thresholds are configurable per customer via Settings UI or API. Always use the 
 
 ## ONBOARDING (2-STAGE)
 
-**Month 1 — Minimum 3 CSVs:**
+**Month 1 — 4 CSVs:**
 1. `accounts.csv` — enriched (30 cols: products, champion, contract, firmographic)
 2. `kpi_measurements.csv` — KPI time-series from customer systems
 3. `enhanced_qualitative_signals.csv` — signal feed (NPS, escalations, champion changes)
+4. `outcomes.csv` — CRM renewal/churn/expansion history (Salesforce export)
 
 Then call `process_data()` — Wizard A auto-generates a full context graph:
 - Arc classification: 8 deterministic rules (no LLM, no hallucination)
 - Edge generation: template-driven from arc topology
-- Revenue intelligence: ROI engine computes Power-of-1 impact
+- Revenue intelligence: ROI engine computes Power-of-1 impact from outcomes
 
-**Month 2+ — Incremental (as CRM data becomes available):**
+**Month 2+ — Incremental (as CRM integrations come online):**
 - `engagement_events.csv` — meeting/QBR/call logs from CRM
-- `outcomes.csv` — win/loss records (creates OUTCOME ContextNodes)
 - `industry_benchmarks.csv` — platform-supplied benchmarks
 
 Each `process_data()` call enriches the existing context graph incrementally.
