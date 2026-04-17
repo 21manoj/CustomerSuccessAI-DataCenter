@@ -873,6 +873,123 @@ def logout():
             'message': f'Logout failed: {str(e)}'
         }), 500
 
+# ============================================================
+# MAGIC LINK (Passwordless Login)
+# ============================================================
+
+@app.route('/api/auth/magic-link', methods=['POST'])
+def request_magic_link():
+    """Request a magic link for passwordless login.
+
+    Generates a one-time token, stores SHA-256 hash in DB,
+    and logs the magic link URL to console (dev mode).
+    Always returns success to prevent email enumeration.
+    """
+    import secrets
+    import hashlib
+
+    data = request.get_json(force=True)
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'status': 'error', 'message': 'Email is required'}), 400
+
+    # Always return success (don't leak whether email exists)
+    success_response = jsonify({
+        'status': 'success',
+        'message': 'If an account exists for this email, a magic link has been sent.'
+    })
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return success_response, 200
+
+    # Generate token
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    # Store hash + expiry (15 minutes)
+    user.magic_link_token = token_hash
+    user.magic_link_expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
+    db.session.commit()
+
+    # Build magic link URL
+    host = request.host_url.rstrip('/')
+    magic_url = f"{host}/auth/verify?token={raw_token}"
+
+    # Dev mode: log to console (replace with SendGrid/SES in production)
+    print(f"\n{'='*60}")
+    print(f"  MAGIC LINK for {email}")
+    print(f"  {magic_url}")
+    print(f"  Expires: {user.magic_link_expires_at.isoformat()}")
+    print(f"{'='*60}\n")
+
+    return success_response, 200
+
+
+@app.route('/api/auth/verify-magic-link', methods=['GET'])
+def verify_magic_link():
+    """Verify a magic link token and create a session.
+
+    Called when user clicks the magic link. Validates token,
+    creates Flask session, returns user data (same as /api/login).
+    """
+    import hashlib
+    from flask_login import login_user
+
+    raw_token = request.args.get('token', '').strip()
+    if not raw_token:
+        return jsonify({'status': 'error', 'message': 'Token is required'}), 400
+
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    user = User.query.filter_by(magic_link_token=token_hash).first()
+    if not user:
+        return jsonify({'status': 'error', 'message': 'Invalid or expired magic link'}), 401
+
+    # Check expiry
+    if user.magic_link_expires_at and user.magic_link_expires_at < datetime.datetime.utcnow():
+        # Clear expired token
+        user.magic_link_token = None
+        user.magic_link_expires_at = None
+        db.session.commit()
+        return jsonify({'status': 'error', 'message': 'Magic link has expired. Request a new one.'}), 401
+
+    # Clear token (single-use)
+    user.magic_link_token = None
+    user.magic_link_expires_at = None
+    user.last_login = datetime.datetime.utcnow()
+    db.session.commit()
+
+    # Create Flask session (same as password login)
+    login_user(user)
+    session['user_id'] = user.user_id
+    session['customer_id'] = user.customer_id
+    session['email'] = user.email
+
+    # Resolve vertical + dashboard routing
+    customer = db.session.get(Customer, user.customer_id)
+    vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+    dashboard_family = 'saas' if 'saas' in vertical.lower() else 'datacenter'
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Magic link verified. You are now logged in.',
+        'user': {
+            'user_id': user.user_id,
+            'email': user.email,
+            'user_name': user.user_name,
+            'customer_id': user.customer_id,
+            'customer_name': customer.customer_name if customer else 'Unknown',
+            'customer_uuid': getattr(customer, 'uuid', None) if customer else None,
+            'vertical': vertical,
+            'role': getattr(user, 'role', None),
+        },
+        'vertical': vertical,
+        'dashboard_family': dashboard_family,
+    })
+
+
 @app.route('/api/session/status', methods=['GET'])
 def session_status():
     """Check if user is authenticated — includes UUIDs for external identification"""

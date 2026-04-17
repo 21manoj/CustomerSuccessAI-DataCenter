@@ -20,6 +20,8 @@ PUBLIC_ENDPOINTS = [
     '/api/upload/health',           # Upload API health check (no data)
     '/api/forgot-password',
     '/api/reset-password',
+    '/api/auth/magic-link',         # Magic link request (passwordless login)
+    '/api/auth/verify-magic-link',  # Magic link verification
     # Discovery — no customer data, safe to expose
     '/api/onboarding/templates',    # CSV template download (schema only)
     '/api/onboarding/validate-csv', # CSV validation (no persist)

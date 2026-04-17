@@ -172,6 +172,9 @@ class User(db.Model):
     allowed_customer_ids = db.Column(db.JSON, nullable=True)   # NULL = own customer only; [9,12] = Test Runner multi-customer access
     expires_at = db.Column(db.DateTime, nullable=True)         # NULL = never expires; set for contractors/testers
     is_contractor = db.Column(db.Boolean, default=False)       # Flag for contractor vs regular user
+    # Magic link (passwordless login)
+    magic_link_token = db.Column(db.String(100), nullable=True, index=True)
+    magic_link_expires_at = db.Column(db.DateTime, nullable=True)
     # Ensure username is unique within each customer domain
     # Email must be unique globally
     __table_args__ = (

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useSession } from './contexts/SessionContext';
 import LoginComponent from './components/LoginComponent';
+import MagicLinkVerify from './components/MagicLinkVerify';
 import CSPlatform from './components/CSPlatform';
 import Dashboard_dc from './components/Dashboard_dc';
 import ExecutiveDashboard from './components/ExecutiveDashboard';
@@ -97,6 +98,24 @@ const LoginRoute: React.FC = () => {
   );
 };
 
+const MagicLinkVerifyRoute: React.FC = () => {
+  const { session, login } = useSession();
+  const navigate = useNavigate();
+
+  if (session && session.customer_id && session.user_id) {
+    return <Navigate to={getDashboardRoute(session)} replace />;
+  }
+
+  return (
+    <MagicLinkVerify
+      onLogin={(newSession) => {
+        login(newSession);
+        navigate(getDashboardRoute(newSession));
+      }}
+    />
+  );
+};
+
 const RegisterRoute: React.FC = () => {
   const { session } = useSession();
 
@@ -146,6 +165,7 @@ const AppRoutes: React.FC = () => {
     >
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
+        <Route path="/auth/verify" element={<MagicLinkVerifyRoute />} />
         <Route path="/register" element={<RegisterRoute />} />
         
         {/* Data Center Dashboard Routes with sub-paths - MUST come BEFORE /dc-dashboard */}
