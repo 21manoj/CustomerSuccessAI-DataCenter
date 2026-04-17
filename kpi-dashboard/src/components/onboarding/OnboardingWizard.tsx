@@ -2,10 +2,10 @@
  * Onboarding Wizard — Multi-CSV Upload Flow
  * ==========================================
  *
- * 4-step wizard aligned with the backend's multi-file CSV pipeline:
+ * 4-step wizard aligned with the 2-stage onboarding model:
  *   Step 1: Welcome — customer info, what to expect
- *   Step 2: Required CSVs — accounts.csv + kpi_measurements.csv
- *   Step 3: Optional CSVs — signals, stakeholders, products, engagement, profiles, outcomes
+ *   Step 2: Month 1 CSVs — accounts.csv (enriched), kpi_measurements.csv, signals, outcomes
+ *   Step 3: Month 2+ CSVs — engagement_events, industry_benchmarks (optional)
  *   Step 4: Process — trigger pipeline, poll for completion, link to dashboard
  *
  * Backend endpoints used:
@@ -35,17 +35,15 @@ interface FileDef {
 }
 
 const REQUIRED_FILES: FileDef[] = [
-  { key: 'accounts.csv', label: 'Accounts', desc: 'Customer accounts with ARR, industry, region, renewal date' },
+  { key: 'accounts.csv', label: 'Accounts (Enriched)', desc: 'Accounts with ARR, champion, products, contract dates, firmographic data (30 columns)' },
   { key: 'kpi_measurements.csv', label: 'KPI Measurements', desc: 'Monthly KPI data points per account per pillar' },
+  { key: 'enhanced_qualitative_signals.csv', label: 'Qualitative Signals', desc: 'NPS scores, support escalations, champion changes, sentiment signals' },
+  { key: 'outcomes.csv', label: 'Outcomes (CRM History)', desc: 'Renewal/churn/expansion history from Salesforce — provides revenue proof baseline' },
 ];
 
 const OPTIONAL_FILES: FileDef[] = [
-  { key: 'enhanced_qualitative_signals.csv', label: 'Qualitative Signals', desc: 'NPS comments, support escalations, sentiment data' },
-  { key: 'stakeholders.csv', label: 'Stakeholders', desc: 'Key contacts — champions, executive sponsors, technical leads' },
-  { key: 'products.csv', label: 'Products', desc: 'Product/service catalog per account' },
-  { key: 'engagement_events.csv', label: 'Engagement Events', desc: 'Meetings, QBRs, emails, calls with dates' },
-  { key: 'account_business_profiles.csv', label: 'Business Profiles', desc: 'Industry vertical, region, contract details per account' },
-  { key: 'outcomes.csv', label: 'Outcomes', desc: 'Revenue events — churn, expansion, renewal with $ impact' },
+  { key: 'engagement_events.csv', label: 'Engagement Events', desc: 'Meeting/QBR/call logs from CRM (available Month 2+)' },
+  { key: 'industry_benchmarks.csv', label: 'Industry Benchmarks', desc: 'Platform-supplied vertical benchmarks (optional)' },
 ];
 
 type Step = 1 | 2 | 3 | 4;
@@ -228,8 +226,8 @@ export const OnboardingWizard: React.FC = () => {
 
   const steps = [
     { n: 1, label: 'Welcome' },
-    { n: 2, label: 'Required Data' },
-    { n: 3, label: 'Optional Data' },
+    { n: 2, label: 'Month 1 Data' },
+    { n: 3, label: 'Month 2+ (Optional)' },
     { n: 4, label: 'Process' },
   ];
 
@@ -299,12 +297,15 @@ export const OnboardingWizard: React.FC = () => {
           </div>
         )}
 
-        {/* ── Step 2: Required CSVs ── */}
+        {/* ── Step 2: Month 1 CSVs ── */}
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Required Data</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Upload these two files to enable health scoring. Click "Template" to download a sample CSV.</p>
+              <h2 className="text-lg font-semibold">Month 1 Data</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Upload these 4 files for full onboarding — health scoring, context graph, and revenue proof.
+                Accounts.csv is enriched (30 columns: products, champion, contract, firmographic).
+              </p>
             </div>
             <div className="space-y-3">
               {REQUIRED_FILES.map(f => <FileCard key={f.key} def={f} required />)}
@@ -318,20 +319,20 @@ export const OnboardingWizard: React.FC = () => {
                   requiredDone ? 'bg-teal-600 hover:bg-teal-500 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                Next: Optional Data <ArrowRight className="h-4 w-4" />
+                Next: Month 2+ Data <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Step 3: Optional CSVs ── */}
+        {/* ── Step 3: Month 2+ CSVs ── */}
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Optional Data</h2>
+              <h2 className="text-lg font-semibold">Month 2+ Data (Optional)</h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                These files enrich your health scores with signals, stakeholder maps, and revenue outcomes.
-                Skip any you don't have — you can always upload them later from the admin panel.
+                These files enrich your context graph as CRM integrations come online.
+                Skip for now — you can upload them later from Settings.
               </p>
             </div>
             <div className="space-y-3">
