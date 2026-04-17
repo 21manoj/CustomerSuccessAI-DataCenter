@@ -358,6 +358,31 @@ def run_wizard_c(customer_id: int) -> dict:
         config.dc2s_pillar_weights = adjusted_l2
         config.dc2s_kpi_weights = dict(kpi_weights_by_pillar)
         config.customized_by = 'wizard_c_db'
+
+        # Record calibration history for CDI + rollback + drift detection
+        try:
+            from models import WeightCalibrationHistory
+            history = WeightCalibrationHistory(
+                customer_id=customer_id,
+                calibration_type='both',
+                vertical=vertical,
+                previous_weights={'pillar': _previous_l2, 'kpi': _previous_l1},
+                new_weights={'pillar': adjusted_l2, 'kpi': dict(kpi_weights_by_pillar)},
+                pillar_weights=adjusted_l2,
+                kpi_weights=dict(kpi_weights_by_pillar),
+                previous_pillar_weights=_previous_l2,
+                previous_kpi_weights=_previous_l1,
+                triggered_by='wizard_c',
+                source='wizard_c',
+                sample_size=len(successful) + len(unsuccessful),
+                successful_accounts=len(successful),
+                unsuccessful_accounts=len(unsuccessful),
+                correlation_scores={kpi: round(corr, 4) for kpi, corr in correlations.items()},
+                significant_changes=significant_changes,
+            )
+            db.session.add(history)
+        except Exception as _hist_err:
+            logger.warning(f"Wizard C: failed to save calibration history: {_hist_err}")
     else:
         # ── Approval queue (production mode) ──
         try:
@@ -444,6 +469,27 @@ def run_wizard_c(customer_id: int) -> dict:
             config.dc2s_pillar_weights = adjusted_l2
             config.dc2s_kpi_weights = dict(kpi_weights_by_pillar)
             config.customized_by = 'wizard_c_db_direct'
+
+            # Record calibration history (same as direct apply path)
+            try:
+                from models import WeightCalibrationHistory
+                history = WeightCalibrationHistory(
+                    customer_id=customer_id,
+                    pillar_weights=adjusted_l2,
+                    kpi_weights=dict(kpi_weights_by_pillar),
+                    previous_pillar_weights=_previous_l2,
+                    previous_kpi_weights=_previous_l1,
+                    source='wizard_c',
+                    sample_size=len(successful) + len(unsuccessful),
+                    successful_accounts=len(successful),
+                    unsuccessful_accounts=len(unsuccessful),
+                    correlation_scores={kpi: round(corr, 4) for kpi, corr in correlations.items()},
+                    significant_changes=significant_changes,
+                    vertical=vertical,
+                )
+                db.session.add(history)
+            except Exception as _hist_err:
+                logger.warning(f"Wizard C (fallback): failed to save calibration history: {_hist_err}")
 
     # ------------------------------------------------------------------
     # 8. Per-stage calibration (if lifecycle stages are enabled)

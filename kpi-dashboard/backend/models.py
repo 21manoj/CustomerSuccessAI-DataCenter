@@ -1571,28 +1571,47 @@ class WeightCalibrationHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
 
-    calibration_type = db.Column(db.String(50), nullable=False)
-    vertical = db.Column(db.String(50))
+    calibration_type = db.Column(db.String(50), nullable=False)  # 'pillar', 'kpi', 'both'
+    vertical = db.Column(db.String(50), index=True)
 
     previous_weights = db.Column(db.JSON, nullable=False)
     new_weights = db.Column(db.JSON, nullable=False)
     weight_deltas = db.Column(db.JSON)
+
+    # L2/L1 weight snapshots (structured — preferred over generic new_weights for CDI)
+    pillar_weights = db.Column(db.JSON)                        # L2 snapshot
+    kpi_weights = db.Column(db.JSON)                           # L1 snapshot (per-pillar)
+    previous_pillar_weights = db.Column(db.JSON)               # L2 before change
+    previous_kpi_weights = db.Column(db.JSON)                  # L1 before change
 
     sample_size = db.Column(db.Integer)
     prediction_error_before = db.Column(db.Numeric(8, 4))
     prediction_error_after = db.Column(db.Numeric(8, 4))
     error_reduction_pct = db.Column(db.Numeric(5, 2))
 
-    triggered_by = db.Column(db.String(50))
+    # Source tracking
+    triggered_by = db.Column(db.String(50))                    # 'wizard_c', 'manual', 'tier_upgrade', 'cdi_warm_start'
+    source = db.Column(db.String(50))                          # alias for triggered_by (CDI uses this)
     approved = db.Column(db.Boolean, default=True)
     notes = db.Column(db.Text)
 
-    calibrated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # Wizard C calibration metadata
+    successful_accounts = db.Column(db.Integer)                # health >= 70
+    unsuccessful_accounts = db.Column(db.Integer)              # health < 50
+    correlation_scores = db.Column(db.JSON)                    # per-KPI correlation with outcomes
+    health_accuracy = db.Column(db.Float)                      # prediction accuracy
+    significant_changes = db.Column(db.JSON)                   # KPIs with > 20% weight shift
+
+    # CDI metadata
+    is_cdi_eligible = db.Column(db.Boolean, default=True)      # opt-out for CDI contribution
+
+    calibrated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     __table_args__ = (
         db.Index('idx_calibration_customer_type', 'customer_id', 'calibration_type'),
-        db.Index('idx_calibration_date', 'calibrated_at'),
+        db.Index('idx_calibration_customer_date', 'customer_id', 'calibrated_at'),
+        db.Index('idx_calibration_vertical_date', 'vertical', 'calibrated_at'),
     )
 
     def to_dict(self):
@@ -1601,12 +1620,19 @@ class WeightCalibrationHistory(db.Model):
             'customer_id': self.customer_id,
             'calibration_type': self.calibration_type,
             'vertical': self.vertical,
+            'pillar_weights': self.pillar_weights,
+            'kpi_weights': self.kpi_weights,
+            'previous_pillar_weights': self.previous_pillar_weights,
+            'previous_kpi_weights': self.previous_kpi_weights,
             'previous_weights': self.previous_weights,
             'new_weights': self.new_weights,
-            'weight_deltas': self.weight_deltas,
             'sample_size': self.sample_size,
+            'successful_accounts': self.successful_accounts,
+            'unsuccessful_accounts': self.unsuccessful_accounts,
+            'correlation_scores': self.correlation_scores,
+            'significant_changes': self.significant_changes,
             'error_reduction_pct': float(self.error_reduction_pct) if self.error_reduction_pct else None,
-            'triggered_by': self.triggered_by,
+            'triggered_by': self.triggered_by or self.source,
             'approved': self.approved,
             'calibrated_at': self.calibrated_at.isoformat() if self.calibrated_at else None,
         }
@@ -1800,6 +1826,8 @@ class WizardLearning(db.Model):
             'total_accounts_tested': self.total_accounts_tested,
             'avg_accuracy': self.avg_accuracy,
         }
+
+
 
 
 class WizardFile(db.Model):
