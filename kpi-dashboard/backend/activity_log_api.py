@@ -5,9 +5,9 @@ Query and manage activity logs for governance
 """
 
 from flask import Blueprint, request, jsonify
-from auth_middleware import get_current_customer_id, get_current_user_id
+from auth_middleware import get_current_customer_id, get_current_user_id, _is_admin_user
 from extensions import db
-from models import ActivityLog, User
+from models import ActivityLog, User, Customer
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_, desc
 import logging
@@ -368,4 +368,234 @@ def track_ui_event():
         except Exception:
             pass
         return jsonify({'status': 'ok'})  # Never fail the UI for tracking errors
+
+
+# ============================================================================
+# S2.3: Cross-Tenant Activity Audit (Super Admin / Server Key)
+# ============================================================================
+
+def _require_super_admin():
+    """Check if caller is super admin (admin role or server API key).
+    Returns True if authorized, or a (response, status_code) tuple if not.
+    """
+    # Server API key → customer_id is None → super admin
+    api_key_cid = getattr(request, '_api_key_customer_id', 'NOT_SET')
+    if api_key_cid is None:
+        return True
+
+    # Admin role check
+    if _is_admin_user():
+        return True
+
+    return jsonify({'error': 'Super admin or server API key required'}), 403
+
+
+@activity_log_api.route('/api/admin/activity-logs', methods=['GET'])
+def get_cross_tenant_logs():
+    """Search activity logs across ALL customers.
+
+    Super admin only — requires admin role or server API key.
+
+    Query params:
+        customer_id: (optional) filter to specific customer
+        action_type: (optional) filter by action type
+        action_category: (optional) filter by category
+        resource_type: (optional) filter by resource type
+        user_id: (optional) filter by user
+        status: (optional) filter by status
+        search: (optional) free-text search in action_description
+        start_date: (optional) ISO date
+        end_date: (optional) ISO date
+        limit: (default 100, max 1000)
+        offset: (default 0)
+    """
+    auth = _require_super_admin()
+    if auth is not True:
+        return auth
+
+    try:
+        customer_id = request.args.get('customer_id', type=int)
+        action_type = request.args.get('action_type')
+        action_category = request.args.get('action_category')
+        resource_type = request.args.get('resource_type')
+        user_id = request.args.get('user_id', type=int)
+        status = request.args.get('status')
+        search = request.args.get('search', '').strip()
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        limit = min(request.args.get('limit', type=int, default=100), 1000)
+        offset = request.args.get('offset', type=int, default=0)
+
+        query = ActivityLog.query
+
+        if customer_id:
+            query = query.filter(ActivityLog.customer_id == customer_id)
+        if action_type:
+            query = query.filter(ActivityLog.action_type == action_type)
+        if action_category:
+            query = query.filter(ActivityLog.action_category == action_category)
+        if resource_type:
+            query = query.filter(ActivityLog.resource_type == resource_type)
+        if user_id:
+            query = query.filter(ActivityLog.user_id == user_id)
+        if status:
+            query = query.filter(ActivityLog.status == status)
+        if search:
+            query = query.filter(
+                or_(
+                    ActivityLog.action_description.ilike(f'%{search}%'),
+                    ActivityLog.resource_id.ilike(f'%{search}%'),
+                )
+            )
+        if start_date:
+            try:
+                query = query.filter(ActivityLog.created_at >= datetime.fromisoformat(start_date.replace('Z', '+00:00')))
+            except Exception:
+                pass
+        if end_date:
+            try:
+                query = query.filter(ActivityLog.created_at <= datetime.fromisoformat(end_date.replace('Z', '+00:00')))
+            except Exception:
+                pass
+
+        query = query.order_by(desc(ActivityLog.created_at))
+        total_count = query.count()
+        logs = query.limit(limit).offset(offset).all()
+
+        # Build customer name lookup
+        cust_ids = list({log.customer_id for log in logs if log.customer_id})
+        cust_names = {}
+        if cust_ids:
+            custs = Customer.query.filter(Customer.customer_id.in_(cust_ids)).all()
+            cust_names = {c.customer_id: c.customer_name for c in custs}
+
+        logs_data = []
+        for log in logs:
+            logs_data.append({
+                'id': log.id,
+                'customer_id': log.customer_id,
+                'customer_name': cust_names.get(log.customer_id, f'Customer {log.customer_id}'),
+                'user_id': log.user_id,
+                'user_name': log.user.user_name if log.user else 'System',
+                'action_type': log.action_type,
+                'action_category': log.action_category,
+                'resource_type': log.resource_type,
+                'resource_id': log.resource_id,
+                'action_description': log.action_description,
+                'details': log.details or {},
+                'status': log.status,
+                'ip_address': log.ip_address,
+                'created_at': log.created_at.isoformat() if log.created_at else None,
+            })
+
+        return jsonify({
+            'success': True,
+            'cross_tenant': True,
+            'logs': logs_data,
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+            'filters_applied': {
+                k: v for k, v in {
+                    'customer_id': customer_id, 'action_type': action_type,
+                    'action_category': action_category, 'search': search or None,
+                }.items() if v is not None
+            },
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Cross-tenant audit log error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@activity_log_api.route('/api/admin/activity-logs/summary', methods=['GET'])
+def get_cross_tenant_summary():
+    """Cross-tenant activity summary — aggregate stats across all customers.
+
+    Super admin only. Shows activity volume per customer, top action types,
+    error rates, and most active users across the platform.
+
+    Query params:
+        days: lookback period (default 30, max 90)
+    """
+    auth = _require_super_admin()
+    if auth is not True:
+        return auth
+
+    try:
+        days = min(request.args.get('days', type=int, default=30), 90)
+        cutoff = datetime.utcnow() - timedelta(days=days)
+
+        base = ActivityLog.query.filter(ActivityLog.created_at >= cutoff)
+
+        total = base.count()
+
+        # Per-customer breakdown
+        per_customer = db.session.query(
+            ActivityLog.customer_id,
+            db.func.count(ActivityLog.id).label('count'),
+        ).filter(ActivityLog.created_at >= cutoff).group_by(
+            ActivityLog.customer_id,
+        ).order_by(desc('count')).all()
+
+        cust_ids = [c[0] for c in per_customer if c[0]]
+        cust_names = {}
+        if cust_ids:
+            custs = Customer.query.filter(Customer.customer_id.in_(cust_ids)).all()
+            cust_names = {c.customer_id: c.customer_name for c in custs}
+
+        # Top action types
+        top_actions = db.session.query(
+            ActivityLog.action_type,
+            db.func.count(ActivityLog.id).label('count'),
+        ).filter(ActivityLog.created_at >= cutoff).group_by(
+            ActivityLog.action_type,
+        ).order_by(desc('count')).limit(15).all()
+
+        # Error rate
+        errors = base.filter(ActivityLog.status == 'error').count()
+
+        # Most active users (cross-tenant)
+        top_users = db.session.query(
+            ActivityLog.user_id,
+            ActivityLog.customer_id,
+            User.user_name,
+            db.func.count(ActivityLog.id).label('count'),
+        ).outerjoin(User, ActivityLog.user_id == User.user_id).filter(
+            ActivityLog.created_at >= cutoff,
+        ).group_by(
+            ActivityLog.user_id, ActivityLog.customer_id, User.user_name,
+        ).order_by(desc('count')).limit(20).all()
+
+        return jsonify({
+            'success': True,
+            'cross_tenant': True,
+            'period_days': days,
+            'total_activities': total,
+            'error_count': errors,
+            'error_rate_pct': round(errors / max(total, 1) * 100, 1),
+            'per_customer': [
+                {
+                    'customer_id': cid,
+                    'customer_name': cust_names.get(cid, f'Customer {cid}'),
+                    'activity_count': count,
+                }
+                for cid, count in per_customer
+            ],
+            'top_action_types': {atype: count for atype, count in top_actions},
+            'top_users': [
+                {
+                    'user_id': uid,
+                    'customer_id': cid,
+                    'customer_name': cust_names.get(cid, f'Customer {cid}'),
+                    'user_name': uname or 'System',
+                    'activity_count': count,
+                }
+                for uid, cid, uname, count in top_users
+            ],
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Cross-tenant summary error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
 

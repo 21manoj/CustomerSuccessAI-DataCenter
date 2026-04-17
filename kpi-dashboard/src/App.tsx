@@ -15,6 +15,7 @@ import PortcoCEODashboard from './components/dashboard/PortcoCEODashboard';
 import OutcomeROIDashboard from './components/dashboard/OutcomeROIDashboard';
 import CRODashboard from './components/dashboard/CRODashboard';
 import CFODashboard from './components/dashboard/CFODashboard';
+import NRRDashboard from './components/dashboard/NRRDashboard';
 import CSMDashboard from './components/csm/CSMDashboard';
 import CSOpsIntegrationDashboard from './components/ops/CSOpsIntegrationDashboard';
 import CEODashboard from './components/dashboard/CEODashboard';
@@ -337,6 +338,8 @@ const AppRoutes: React.FC = () => {
         {/* CRO/CFO require revenue_intelligence entitlement; others require base dashboards */}
         <Route path="/cro" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><CRODashboard /></EntitlementGuard></PrivateRoute>} />
         <Route path="/cfo" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><CFODashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/nrr" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><NRRDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/nrr-dashboard" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><NRRDashboard /></EntitlementGuard></PrivateRoute>} />
         <Route path="/ceo" element={<PrivateRoute><EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard></PrivateRoute>} />
         <Route path="/csm" element={<PrivateRoute><EntitlementGuard feature="dashboards"><CSMDashboard /></EntitlementGuard></PrivateRoute>} />
         <Route path="/vpcs" element={<PrivateRoute><EntitlementGuard feature="dashboards"><VPCSDashboard /></EntitlementGuard></PrivateRoute>} />
