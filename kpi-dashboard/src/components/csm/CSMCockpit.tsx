@@ -682,6 +682,15 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   const [drawerAccount, setDrawerAccount] = useState<Account | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Column assignment: kanban_column override takes priority over health-computed
+  const computeColumn = useCallback((a: Account): KanbanColumn => {
+    if (a.kanban_column) return a.kanban_column;
+    const act = actionsByAccount[a.id];
+    if (classify(a.health_score) === 'critical' || act?.urgency === 'critical') return 'fire';
+    if (classify(a.health_score) === 'at_risk' || act?.urgency === 'high') return 'week';
+    return 'opportunity';
+  }, [actionsByAccount]);
+
   // Drag-drop
   const [activeId, setActiveId] = useState<string | null>(null);
   const draggedAccount = useMemo(
@@ -888,15 +897,6 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
     },
     [sortBy, actionsByAccount]
   );
-
-  // Column assignment: kanban_column override takes priority over health-computed
-  const computeColumn = useCallback((a: Account): KanbanColumn => {
-    if (a.kanban_column) return a.kanban_column;
-    const act = actionsByAccount[a.id];
-    if (classify(a.health_score) === 'critical' || act?.urgency === 'critical') return 'fire';
-    if (classify(a.health_score) === 'at_risk' || act?.urgency === 'high') return 'week';
-    return 'opportunity';
-  }, [actionsByAccount]);
 
   const fireAccounts = useMemo(
     () => filteredAccounts.filter((a) => computeColumn(a) === 'fire').sort(sortFn),
