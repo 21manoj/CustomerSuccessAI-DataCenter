@@ -1341,13 +1341,11 @@ class ManifestCSVGenerator:
         output_path.mkdir(parents=True, exist_ok=True)
 
         # Registry-independent generators (order irrelevant)
+        # products, stakeholders, profiles folded into enriched accounts.csv
         independent = {
             'accounts.csv':                  self.generate_accounts_csv,
             'kpi_measurements.csv':          self.generate_kpi_measurements_csv,
-            'products.csv':                  self.generate_products_csv,
-            'stakeholders.csv':              self.generate_stakeholders_csv,
             'engagement_events.csv':         self.generate_engagement_events_csv,
-            'account_business_profiles.csv': self.generate_profiles_csv,
         }
         # Registry pipeline — order is fixed
         pipeline = [
@@ -1378,6 +1376,10 @@ class ManifestCSVGenerator:
             'csm_manager', 'executive_sponsor',
             'primary_champion_name', 'primary_champion_title',
             'primary_champion_email', 'primary_champion_engagement_score',
+            'products', 'product_count',
+            'stakeholder_count',
+            'employee_count', 'founded_year', 'headquarters', 'website',
+            'description',
         ])
 
         for idx, acct in enumerate(self.accounts):
@@ -1429,6 +1431,32 @@ class ManifestCSVGenerator:
             csm = csm_names[idx % len(csm_names)]
             csm_email = csm.lower().replace(' ', '.') + '@novastar-dc.com'
 
+            # Products: select 3-5 based on ARR tier (same logic as generate_products_csv)
+            acct_rng_prod = random.Random(self.seed + idx + 3000)
+            if arr >= 5_000_000:
+                n_products = acct_rng_prod.randint(4, 5)
+            elif arr >= 2_000_000:
+                n_products = acct_rng_prod.randint(3, 5)
+            else:
+                n_products = acct_rng_prod.randint(3, 4)
+            n_products = min(n_products, len(self.DC_PRODUCTS))
+            selected_products = acct_rng_prod.sample(self.DC_PRODUCTS, n_products)
+            products_str = ' | '.join(p['name'] for p in selected_products)
+
+            # Stakeholder count from manifest
+            stakeholder_count = len(acct.get('stakeholders', []))
+            if stakeholder_count < 5:
+                stakeholder_count = random.Random(self.seed + idx + 5000).randint(5, 6)
+
+            # Firmographic data (was in account_business_profiles.csv)
+            domain = acct['name'].lower().replace(' ', '') + '.com'
+            acct_rng_firm = random.Random(self.seed + idx + 7000)
+            emp_count = acct_rng_firm.randint(100, 5000)
+            founded = acct_rng_firm.randint(2005, 2022)
+            cities = ['San Francisco, CA', 'New York, NY', 'Austin, TX',
+                      'Seattle, WA', 'Boston, MA', 'Denver, CO', 'Chicago, IL']
+            hq = acct_rng_firm.choice(cities)
+
             w.writerow([
                 aid,
                 self.customer_id,
@@ -1452,6 +1480,14 @@ class ManifestCSVGenerator:
                 champion.get('title', '') if isinstance(champion, dict) else '',
                 (champion.get('name', '').lower().replace(' ', '.') + '@' + acct['name'].lower().replace(' ', '') + '.com') if isinstance(champion, dict) and champion.get('name') else '',
                 random.randint(40, 95) if isinstance(champion, dict) else 70,
+                products_str,
+                n_products,
+                stakeholder_count,
+                emp_count,
+                founded,
+                hq,
+                f'https://www.{domain}',
+                acct.get('narrative', f'{acct["name"]} is a customer account.'),
             ])
 
         return out.getvalue()
@@ -3269,31 +3305,19 @@ class ScenarioManifest(BaseScenario):
 
             # Step 1: Generate + upload CSVs (streamed per file)
             logger.info('  Step 1/2: Generate + upload CSVs')
+            # Month 1 onboarding: 3 customer CSVs only
+            # - products, stakeholders, profiles folded into enriched accounts.csv
+            # - engagement_events, outcomes, industry_benchmarks → month 2+
+            # - signal_edges, decisions → platform generates (Wizard A, playbooks)
             filename_map = {
                 'accounts': 'accounts.csv',
                 'kpi_measurements': 'kpi_measurements.csv',
                 'enhanced_signals': 'qualitative_signals.csv',
-                'products': 'products.csv',
-                'stakeholders': 'stakeholders.csv',
-                'engagement_events': 'engagement_events.csv',
-                'account_business_profiles': 'account_business_profiles.csv',
-                'outcomes': 'outcomes.csv',
-                'decisions': 'decisions.csv',
-                'signal_edges': 'signal_edges.csv',
-                'industry_benchmarks': 'industry_benchmarks.csv',
             }
             generators = {
                 'accounts': gen.generate_accounts_csv,
                 'kpi_measurements': gen.generate_kpi_measurements_csv,
                 'enhanced_signals': gen.generate_signals_csv,
-                'products': gen.generate_products_csv,
-                'stakeholders': gen.generate_stakeholders_csv,
-                'engagement_events': gen.generate_engagement_events_csv,
-                'account_business_profiles': gen.generate_profiles_csv,
-                'outcomes': gen.generate_outcomes_csv,
-                'decisions': gen.generate_decisions_csv,
-                'signal_edges': gen.generate_signal_edges_csv,
-                'industry_benchmarks': gen.generate_industry_benchmarks_csv,
             }
             upload_results = {}
             endpoint_metrics = {
@@ -3303,8 +3327,7 @@ class ScenarioManifest(BaseScenario):
                 'upload_status': {},
             }
             # In extend mode, skip static metadata CSVs (accounts already exist)
-            EXTEND_SKIP = {'accounts', 'products', 'stakeholders',
-                           'account_business_profiles', 'industry_benchmarks'}
+            EXTEND_SKIP = {'accounts', 'industry_benchmarks'}
 
             t_step12 = time.time()
             for file_type, gen_fn in generators.items():
