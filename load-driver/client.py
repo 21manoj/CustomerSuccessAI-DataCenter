@@ -40,6 +40,7 @@ class CSPulseClient:
         base_url: str = "http://localhost:5059",
         email: Optional[str] = None,
         password: Optional[str] = None,
+        api_key: Optional[str] = None,
         customer_id: Optional[int] = None,
         timeout: int = 30,
         max_retries: int = 3,
@@ -50,8 +51,9 @@ class CSPulseClient:
 
         Args:
             base_url: CS Pulse backend URL (e.g., http://localhost:5059)
-            email: Admin email for login
-            password: Admin password for login
+            email: Admin email for login (session auth)
+            password: Admin password for login (session auth)
+            api_key: API key for Bearer auth (alternative to email/password)
             customer_id: Customer ID for X-Customer-ID header (optional)
             timeout: Request timeout in seconds
             max_retries: Maximum retry attempts on 5xx errors
@@ -60,6 +62,7 @@ class CSPulseClient:
         self.base_url = base_url.rstrip('/')
         self.email = email
         self.password = password
+        self.api_key = api_key
         self.customer_id = customer_id
         self.customer_uuid = None  # Populated after login from response
         self.auth_customer_id = None  # Populated after login: authenticated user's actual customer
@@ -81,6 +84,12 @@ class CSPulseClient:
             'User-Agent': 'CS-Pulse-Load-Driver/3.0',
             'Content-Type': 'application/json'
         })
+
+        # API key auth — Bearer token on all requests (no login needed)
+        if self.api_key:
+            self.session.headers.update({
+                'Authorization': f'Bearer {self.api_key}'
+            })
 
         # If customer_id provided, add to all requests
         if self.customer_id:
@@ -113,19 +122,22 @@ class CSPulseClient:
 
     def login(self) -> bool:
         """
-        Authenticate user and establish session
+        Authenticate user and establish session.
+
+        If api_key was provided at init, skips login entirely (Bearer auth
+        is already set on all requests via session headers).
 
         Returns:
-            True if login successful, False otherwise
-
-        Note:
-            Uses direct request (not self.post) to access raw Set-Cookie header.
-            The Flask session cookie may have Secure flag which prevents
-            requests.Session from auto-sending it over HTTP. We extract the
-            cookie value manually and set it via the Cookie header.
+            True if login successful (or API key auth), False otherwise
         """
+        if self.api_key:
+            self._authenticated = True
+            self.auth_customer_id = self.customer_id
+            logger.info("✅ Using API key auth (Bearer token)")
+            return True
+
         if not self.email or not self.password:
-            logger.error("❌ Email and password required for login")
+            logger.error("❌ Email/password or API key required for login")
             return False
 
         try:

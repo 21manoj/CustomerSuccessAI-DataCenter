@@ -194,11 +194,13 @@ def run_manifest(args):
     if args.extend:
         logger.info(f"  Mode:      EXTEND (adding {args.months} months to customer {customer_id})")
 
-    # Authenticate
+    # Authenticate — API key takes precedence over email/password
+    api_key = getattr(args, 'api_key', None)
     client = CSPulseClient(
         base_url=base_url,
         email=email,
         password=password,
+        api_key=api_key,
         customer_id=int(customer_id),
         timeout=60,
     )
@@ -430,6 +432,11 @@ Examples:
     parser.add_argument(
         '--password',
         help='Admin password (default: $CS_PULSE_ADMIN_PASSWORD)',
+    )
+    parser.add_argument(
+        '--api-key',
+        help='API key for Bearer auth (alternative to email/password). '
+             'Use with --customer-id to skip login entirely.',
     )
     parser.add_argument(
         '--seed',
