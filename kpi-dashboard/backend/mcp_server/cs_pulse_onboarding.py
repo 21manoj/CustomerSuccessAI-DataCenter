@@ -619,6 +619,10 @@ def configure_customer_kpis(
         if not config:
             config = CustomerConfig(customer_id=customer_id, vertical=cust_vertical)
 
+        # Snapshot previous weights before any changes (for history tracking)
+        _prev_pw = dict(config.dc2s_pillar_weights) if config.dc2s_pillar_weights else None
+        _prev_kw = dict(config.dc2s_kpi_weights) if config.dc2s_kpi_weights else None
+
         # ── Tier upgrade: override enabled_kpis from tier definition ──
         tier_info = None
         if upgrade_tier:
@@ -686,6 +690,29 @@ def configure_customer_kpis(
 
             lifecycle_stage_weights = normalize_stage_weights(lifecycle_stage_weights)
             config.dc2s_lifecycle_stage_weights = lifecycle_stage_weights
+
+        # Record weight change history (for CDI aggregation + rollback + audit)
+        if pillar_weights or kpi_weights or upgrade_tier:
+            try:
+                from models import WeightCalibrationHistory
+                _source = 'tier_upgrade' if upgrade_tier else 'manual'
+                history = WeightCalibrationHistory(
+                    customer_id=int(customer_id),
+                    calibration_type='both',
+                    vertical=cust_vertical,
+                    previous_weights={'pillar': _prev_pw, 'kpi': _prev_kw},
+                    new_weights={'pillar': config.dc2s_pillar_weights, 'kpi': config.dc2s_kpi_weights},
+                    pillar_weights=config.dc2s_pillar_weights,
+                    kpi_weights=config.dc2s_kpi_weights,
+                    previous_pillar_weights=_prev_pw,
+                    previous_kpi_weights=_prev_kw,
+                    triggered_by=_source,
+                    source=_source,
+                    notes=f'Tier: {upgrade_tier}' if upgrade_tier else None,
+                )
+                db.session.add(history)
+            except Exception:
+                pass  # best-effort — don't block config save
 
         db.session.commit()
 
