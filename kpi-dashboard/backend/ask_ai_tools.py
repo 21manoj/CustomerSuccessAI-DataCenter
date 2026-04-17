@@ -233,6 +233,18 @@ TOOL_DEFINITIONS = [
             "required": ["customer_id", "account_id"]
         }
     },
+    {
+        "name": "get_calibration_history",
+        "description": "Get weight calibration history — how KPI and pillar weights evolved over time. Use for what-if analysis ('what if we weighted P3 higher?'), drift detection, or understanding how the health model changed. Shows Wizard C calibrations, manual overrides, and tier upgrades with before/after weights and correlation scores.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "limit": {"type": "integer", "default": 10, "description": "Max calibration records to return"}
+            },
+            "required": ["customer_id"]
+        }
+    },
 ]
 
 
@@ -328,6 +340,8 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
             account_id=tool_input['account_id'],
             horizon_days=tool_input.get('planning_horizon_days', 90),
         )
+    elif tool_name == 'get_calibration_history':
+        return _get_calibration_history(customer_id, tool_input.get('limit', 10))
     else:
         return {"error": f"Unknown tool: {tool_name}"}
 
@@ -876,6 +890,57 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
 
     else:
         return {"error": f"Unknown tool: {tool_name}"}
+
+
+# ─── Calibration History ─────────────────────────────────────────────────────
+
+def _get_calibration_history(customer_id: int, limit: int = 10) -> dict:
+    """Query weight calibration history for what-if analysis and drift detection."""
+    from models import WeightCalibrationHistory, db
+
+    records = (
+        WeightCalibrationHistory.query
+        .filter_by(customer_id=int(customer_id))
+        .order_by(WeightCalibrationHistory.calibrated_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    if not records:
+        return {
+            'customer_id': customer_id,
+            'calibrations': [],
+            'count': 0,
+            'message': 'No calibration history found. Run Wizard C or configure_customer_kpis to create weight records.',
+        }
+
+    calibrations = [r.to_dict() for r in records]
+
+    # Compute drift summary: compare latest vs earliest
+    latest = records[0]
+    earliest = records[-1]
+    drift = {}
+    if latest.pillar_weights and earliest.pillar_weights:
+        for pillar in latest.pillar_weights:
+            new_w = latest.pillar_weights.get(pillar, 0)
+            old_w = earliest.pillar_weights.get(pillar, 0)
+            if old_w > 0:
+                drift[pillar] = {
+                    'current': round(new_w, 4),
+                    'earliest': round(old_w, 4),
+                    'change_pct': round((new_w - old_w) / old_w * 100, 1),
+                }
+
+    return {
+        'customer_id': customer_id,
+        'calibrations': calibrations,
+        'count': len(calibrations),
+        'drift_summary': drift,
+        'latest_source': latest.triggered_by or latest.source,
+        'latest_date': latest.calibrated_at.isoformat() if latest.calibrated_at else None,
+        'note': 'Use pillar_weights and correlation_scores for what-if analysis. '
+                'drift_summary shows how weights evolved from earliest to latest calibration.',
+    }
 
 
 # ─── Artifact Extraction ─────────────────────────────────────────────────────
