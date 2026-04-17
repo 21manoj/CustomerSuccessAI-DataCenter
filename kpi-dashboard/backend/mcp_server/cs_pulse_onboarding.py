@@ -2521,7 +2521,7 @@ def clone_customer(
                 )
                 db.session.add(new_kpi)
                 kpi_count += 1
-        summary['dc2s_kpis_cloned'] = kpi_count
+        summary['kpis_cloned'] = kpi_count
 
         # 5. Clone Health Scores
         hs_count = 0
@@ -2723,7 +2723,7 @@ def clone_customer(
         db.session.commit()
 
         total_records = (
-            summary.get('accounts_cloned', 0) + summary.get('dc2s_kpis_cloned', 0)
+            summary.get('accounts_cloned', 0) + summary.get('kpis_cloned', 0)
             + summary.get('health_scores_cloned', 0) + summary.get('kpi_scores_cloned', 0)
             + summary.get('pillar_scores_cloned', 0) + summary.get('context_nodes_cloned', 0)
             + summary.get('context_edges_cloned', 0) + summary.get('qualitative_signals_cloned', 0)
@@ -2761,7 +2761,7 @@ def clone_customer(
             'the 8 CSVs, modify them, then upload_csv() + process_data() to recalculate.'
         )
 
-        result['dc2s_pillar_labels'] = _get_dc2s_pillar_labels()
+        result['pillar_labels'] = _get_dc2s_pillar_labels()
 
         return result
 
