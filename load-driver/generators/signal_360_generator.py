@@ -360,7 +360,8 @@ class Signal360Generator:
                 writer = csv.writer(f)
                 writer.writerow([
                     'customer_id', 'account_id', 'account_name', 'channel',
-                    'signal_date', 'raw_text', 'signal_type', 'expected_intent',
+                    'signal_date', 'from', 'to', 'raw_text',
+                    'signal_type', 'expected_intent',
                     'stakeholder_name', 'stakeholder_title',
                 ])
                 for s in submitted:
@@ -372,6 +373,8 @@ class Signal360Generator:
                         s.get('account_name', ''),
                         s.get('channel', ''),
                         signal_date,
+                        s.get('from', ''),
+                        s.get('to', ''),
                         s.get('raw_text', ''),
                         s.get('signal_type', ''),
                         s.get('expected_intent', ''),
@@ -521,7 +524,23 @@ class Signal360Generator:
         stakeholder = props.get('stakeholder_name', 'the champion')
         title = props.get('stakeholder_title', 'VP')
         content = sig.get('content', signal_type.replace('_', ' '))
-        csm = 'CSM'
+        csm = props.get('csm_name', 'CSM')
+
+        # Build from/to based on channel
+        def _name_to_email(name, domain='company.com'):
+            parts = name.lower().replace('.', '').split()
+            return f"{parts[0]}.{parts[-1]}@{domain}" if len(parts) >= 2 else f"{name.lower().replace(' ','')}@{domain}"
+
+        if channel == 'slack':
+            from_field = csm
+            to_field = '#customer-alerts'
+        elif channel == 'email':
+            from_field = _name_to_email(csm)
+            to_field = 'cs-team@company.com'
+        elif channel == 'transcript':
+            participants = [stakeholder, csm]
+            from_field = stakeholder
+            to_field = '; '.join(participants)
 
         try:
             raw_text = template.format(
@@ -568,11 +587,13 @@ class Signal360Generator:
                     'expected_intent': expected_intent,
                     'account_id': account_id,
                     'account_name': account_name,
+                    'from': from_field,
+                    'to': to_field,
                     'raw_text': raw_text,
                     'raw_text_preview': raw_text[:80],
                     'timestamp': payload.get('timestamp', ''),
-                    'stakeholder_name': props.get('stakeholder_name', ''),
-                    'stakeholder_title': props.get('stakeholder_title', ''),
+                    'stakeholder_name': stakeholder,
+                    'stakeholder_title': title,
                 }
             else:
                 if verbose:
