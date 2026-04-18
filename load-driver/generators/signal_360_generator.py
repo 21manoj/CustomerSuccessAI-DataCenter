@@ -262,13 +262,14 @@ class Signal360Generator:
 
     def __init__(self, customer_id: int, base_url: str, api_key: str,
                  seed: int = 42, max_signals: int = 30,
-                 enrichment_wait_s: int = 60):
+                 enrichment_wait_s: int = 60, output_csv: str = None):
         self.customer_id = customer_id
         self.base_url = base_url.rstrip('/')
         self.api_key = api_key
         self.rng = random.Random(seed)
         self.max_signals = max_signals
         self.enrichment_wait_s = enrichment_wait_s
+        self.output_csv = output_csv
         self.session = requests.Session()
         self.session.headers.update({
             'Authorization': f'Bearer {api_key}',
@@ -314,6 +315,11 @@ class Signal360Generator:
         if not submitted:
             return {'status': 'completed', 'submitted': 0}
 
+        # Step 3.5: Save generated payloads to CSV
+        csv_path = self._save_csv(submitted)
+        if csv_path:
+            print(f"  Saved: {csv_path}")
+
         # Step 4: Wait for enrichment
         print(f"  Waiting {self.enrichment_wait_s}s for enrichment worker...")
         time.sleep(self.enrichment_wait_s)
@@ -325,6 +331,51 @@ class Signal360Generator:
         self._print_scorecard(scorecard)
 
         return scorecard
+
+    def _save_csv(self, submitted: List[dict]) -> Optional[str]:
+        """Save generated signal payloads to CSV.
+
+        CSV schema (Google Sheets compatible):
+          account_id, account_name, channel, raw_text, timestamp,
+          signal_type, expected_intent
+
+        This is the format customers will use to plug in real signals
+        from their email/Slack/transcripts via Google Sheets.
+        """
+        import csv
+        import os
+
+        if self.output_csv:
+            path = self.output_csv
+        else:
+            results_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                'results', 'signal-360',
+            )
+            os.makedirs(results_dir, exist_ok=True)
+            path = os.path.join(results_dir, f'signal_payloads_customer_{self.customer_id}.csv')
+
+        try:
+            with open(path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    'account_id', 'account_name', 'channel', 'raw_text',
+                    'timestamp', 'signal_type', 'expected_intent',
+                ])
+                for s in submitted:
+                    writer.writerow([
+                        s.get('account_id', ''),
+                        s.get('account_name', ''),
+                        s.get('channel', ''),
+                        s.get('raw_text', ''),
+                        s.get('timestamp', ''),
+                        s.get('signal_type', ''),
+                        s.get('expected_intent', ''),
+                    ])
+            return path
+        except Exception as e:
+            logger.warning("Failed to save CSV: %s", e)
+            return None
 
     def _fetch_csv_signals(self) -> List[dict]:
         """Fetch CSV-uploaded signals.
@@ -511,7 +562,9 @@ class Signal360Generator:
                     'expected_intent': expected_intent,
                     'account_id': account_id,
                     'account_name': account_name,
+                    'raw_text': raw_text,
                     'raw_text_preview': raw_text[:80],
+                    'timestamp': payload.get('timestamp', ''),
                 }
             else:
                 if verbose:
@@ -674,7 +727,8 @@ class Signal360Generator:
 
 def run_signal_360(customer_id: int, base_url: str, api_key: str,
                    seed: int = 42, max_signals: int = 30,
-                   enrichment_wait_s: int = 60, verbose: bool = False) -> dict:
+                   enrichment_wait_s: int = 60, verbose: bool = False,
+                   output_csv: str = None) -> dict:
     """Convenience function for CLI/test harness integration."""
     gen = Signal360Generator(
         customer_id=customer_id,
@@ -683,6 +737,7 @@ def run_signal_360(customer_id: int, base_url: str, api_key: str,
         seed=seed,
         max_signals=max_signals,
         enrichment_wait_s=enrichment_wait_s,
+        output_csv=output_csv,
     )
     return gen.run(verbose=verbose)
 
@@ -697,6 +752,7 @@ if __name__ == '__main__':
     parser.add_argument('--max-signals', type=int, default=30)
     parser.add_argument('--wait', type=int, default=60, help='Seconds to wait for enrichment')
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--output-csv', default=None, help='Save generated payloads to CSV (Google Sheets compatible)')
     args = parser.parse_args()
 
     result = run_signal_360(
@@ -707,5 +763,6 @@ if __name__ == '__main__':
         max_signals=args.max_signals,
         enrichment_wait_s=args.wait,
         verbose=args.verbose,
+        output_csv=args.output_csv,
     )
     print(f"\n  Result: {json.dumps({k:v for k,v in result.items() if k != 'details'}, indent=2)}")
