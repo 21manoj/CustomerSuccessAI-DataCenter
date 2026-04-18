@@ -159,7 +159,7 @@ class SignalEnrichmentWorker:
         logger.info("Signal enrichment worker: processing %d un-enriched signals", len(signals))
 
         enriched_count = 0
-        for sig in signals:
+        for i, sig in enumerate(signals):
             try:
                 enriched_count += self._enrich_one(sig, db)
             except Exception as e:
@@ -171,6 +171,9 @@ class SignalEnrichmentWorker:
                     db.session.rollback()
                 except Exception:
                     pass
+            # Throttle: ~40 req/min to stay under Anthropic's 50 RPM limit
+            if i < len(signals) - 1:
+                time.sleep(1.5)
 
         if enriched_count:
             logger.info("Signal enrichment worker: enriched %d/%d signals", enriched_count, len(signals))

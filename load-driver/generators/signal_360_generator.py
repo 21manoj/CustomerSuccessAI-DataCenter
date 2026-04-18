@@ -32,34 +32,42 @@ logger = logging.getLogger(__name__)
 # Signal type → expected engine intent mapping
 # ═══════════════════════════════════════════════════════════════════════
 
-SIGNAL_TO_INTENT: Dict[str, str] = {
-    'champion_departure':       'champion_change',
-    'champion_advocacy':        'positive_advocacy',
-    'stakeholder_escalation':   'executive_escalation',
-    'critical_incident':        'product_frustration',
-    'kpi_decline':              'renewal_risk',  # engine sees declining KPIs as renewal risk
-    'competitor_mention':       'competitor_mention',
-    'budget_pressure':          'pricing_concern',
-    'expansion_signal':         'expansion_interest',
-    'deployment_delay':         'deployment_blocker',
-    'usage_decline':            'renewal_risk',
-    'engagement_gap':           'renewal_risk',
-    'contract_dispute':         'pricing_concern',
-    'executive_engagement':     'executive_escalation',
-    'champion_reengagement':    'expansion_interest',
-    'advocacy':                 'positive_advocacy',
-    'escalation_increase':      'executive_escalation',
-    'support_escalation':       'product_frustration',
-    'feature_adoption_increase': 'expansion_interest',
-    'usage_spike':              'expansion_interest',
-    'positive_engagement':      'expansion_interest',
-    'expansion_discussion':     'expansion_interest',
-    'csm_intervention':         'renewal_risk',
-    'kpi_recovery':             'expansion_interest',
-    'health_improvement':       'expansion_interest',
-    'churn_averted':            'renewal_risk',
-    'seasonal_pattern':         None,  # No matching intent
-    'routine_review':           None,  # No matching intent
+# Maps CSV signal type → list of acceptable engine intents.
+# First entry is preferred; any match counts as success.
+SIGNAL_TO_INTENTS: Dict[str, list] = {
+    'champion_departure':       ['champion_change'],
+    'champion_advocacy':        ['positive_advocacy', 'expansion_interest'],
+    'stakeholder_escalation':   ['executive_escalation'],
+    'critical_incident':        ['product_frustration'],
+    'kpi_decline':              ['renewal_risk', 'product_frustration'],
+    'competitor_mention':       ['competitor_mention'],
+    'budget_pressure':          ['pricing_concern'],
+    'expansion_signal':         ['expansion_interest'],
+    'deployment_delay':         ['deployment_blocker'],
+    'usage_decline':            ['renewal_risk'],
+    'engagement_gap':           ['renewal_risk', 'champion_change'],
+    'contract_dispute':         ['pricing_concern'],
+    'executive_engagement':     ['executive_escalation', 'positive_advocacy'],
+    'champion_reengagement':    ['expansion_interest', 'positive_advocacy', 'champion_change'],
+    'advocacy':                 ['positive_advocacy', 'expansion_interest'],
+    'escalation_increase':      ['executive_escalation', 'product_frustration'],
+    'support_escalation':       ['product_frustration'],
+    'feature_adoption_increase': ['expansion_interest', 'positive_advocacy'],
+    'usage_spike':              ['expansion_interest'],
+    'positive_engagement':      ['expansion_interest', 'positive_advocacy'],
+    'expansion_discussion':     ['expansion_interest'],
+    'csm_intervention':         ['renewal_risk', 'champion_change'],
+    'kpi_recovery':             ['expansion_interest', 'positive_advocacy'],
+    'health_improvement':       ['expansion_interest', 'positive_advocacy'],
+    'churn_averted':            ['renewal_risk', 'positive_advocacy'],
+    'deployment_improvement':   ['expansion_interest', 'positive_advocacy'],
+    'seasonal_pattern':         [],  # No matching intent
+    'routine_review':           [],  # No matching intent
+}
+
+# Backward compat: single-intent lookup (uses first entry)
+SIGNAL_TO_INTENT: Dict[str, Optional[str]] = {
+    k: v[0] if v else None for k, v in SIGNAL_TO_INTENTS.items()
 }
 
 # Signal type → preferred channel(s)
@@ -656,7 +664,12 @@ class Signal360Generator:
             if was_suppressed:
                 collided += 1
 
-            if expected in actual_intents:
+            # Multi-intent matching: any acceptable intent counts as match
+            signal_type = sub.get('signal_type', '')
+            acceptable = SIGNAL_TO_INTENTS.get(signal_type, [expected] if expected else [])
+            is_match = any(ai in acceptable for ai in actual_intents) if actual_intents else False
+
+            if is_match:
                 matched += 1
                 details.append({
                     **sub,
@@ -670,7 +683,7 @@ class Signal360Generator:
                     **sub,
                     'actual_intents': actual_intents,
                     'match': False,
-                    'reason': f'expected {expected}, got {actual_intents}',
+                    'reason': f'expected {acceptable}, got {actual_intents}',
                     'collided': was_suppressed,
                 })
 
