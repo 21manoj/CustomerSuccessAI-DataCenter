@@ -29,8 +29,9 @@ def _authenticate_bearer_token(token: str):
     """
     from models import CustomerApiKey
 
-    # key_prefix is the first 8 chars of the original token (stored on creation)
-    prefix = token[:8] if len(token) >= 8 else token
+    # key_prefix is the first 12 chars of the original token (stored on creation)
+    # Must match _KEY_PREFIX_LEN in api_key_service.py
+    prefix = token[:12] if len(token) >= 12 else token
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
     # Use prefix for index-aided lookup, then verify full hash
