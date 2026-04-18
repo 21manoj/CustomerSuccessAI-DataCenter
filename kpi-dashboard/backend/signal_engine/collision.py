@@ -34,7 +34,7 @@ INTENT_TO_CG_SUBTYPES: Dict[str, List[str]] = {
 }
 
 # Intents with no CG equivalent — always create new QUALITATIVE_SIGNAL node
-INTENTS_WITHOUT_CG = {'competitor_mention', 'pricing_concern', 'feature_request', 'nps_drop_indicator'}
+INTENTS_WITHOUT_CG = {'competitor_mention', 'pricing_concern', 'feature_request', 'nps_drop_indicator', 'positive_advocacy'}
 
 # Dedup windows per intent category
 DEDUP_WINDOWS: Dict[str, int] = {
@@ -48,6 +48,7 @@ DEDUP_WINDOWS: Dict[str, int] = {
     'pricing_concern': 168,
     'feature_request': 168,
     'nps_drop_indicator': 168,
+    'positive_advocacy': 168,
 }
 
 

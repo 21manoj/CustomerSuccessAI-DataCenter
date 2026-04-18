@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 SIGNAL_TO_INTENT: Dict[str, str] = {
     'champion_departure':       'champion_change',
-    'champion_advocacy':        'expansion_interest',
+    'champion_advocacy':        'positive_advocacy',
     'stakeholder_escalation':   'executive_escalation',
     'critical_incident':        'product_frustration',
     'kpi_decline':              'renewal_risk',  # engine sees declining KPIs as renewal risk
@@ -47,7 +47,7 @@ SIGNAL_TO_INTENT: Dict[str, str] = {
     'contract_dispute':         'pricing_concern',
     'executive_engagement':     'executive_escalation',
     'champion_reengagement':    'expansion_interest',
-    'advocacy':                 'expansion_interest',
+    'advocacy':                 'positive_advocacy',
     'escalation_increase':      'executive_escalation',
     'support_escalation':       'product_frustration',
     'feature_adoption_increase': 'expansion_interest',

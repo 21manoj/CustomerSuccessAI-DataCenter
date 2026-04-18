@@ -37,7 +37,7 @@ VALID_INTENTS = [
     'renewal_risk', 'expansion_interest', 'champion_change',
     'product_frustration', 'feature_request', 'executive_escalation',
     'pricing_concern', 'competitor_mention', 'deployment_blocker',
-    'nps_drop_indicator',
+    'nps_drop_indicator', 'positive_advocacy',
 ]
 
 # ============================================================
