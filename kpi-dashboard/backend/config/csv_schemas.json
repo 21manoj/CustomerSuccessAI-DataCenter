@@ -54,23 +54,25 @@
           "customer_id",
           "account_name",
           "industry",
-          "region"
+          "region",
+          "arr",
+          "renewal_date"
+        ],
+        "recommended_columns": [
+          "csm_name",
+          "contract_start",
+          "contract_end",
+          "account_status"
         ],
         "optional_columns": [
           "vertical",
           "tier",
-          "arr",
           "revenue",
-          "contract_start",
-          "contract_end",
-          "renewal_date",
-          "csm_name",
           "csm_email",
-          "account_status",
           "uuid"
         ],
         "db_table": "accounts",
-        "note": "DEPRECATED: Use account_details.csv instead. Accepted for backward compatibility — treated as account_details.csv with fewer columns."
+        "note": "arr and renewal_date are required — ROI engine, NRR forecast, and Power-of-1 depend on them."
       },
       "kpi_measurements.csv": {
         "required_columns": [
@@ -108,8 +110,83 @@
           "confidence",
           "source_platform"
         ],
+        "enums": {
+          "signal_type": {
+            "_description": "Comprehensive signal taxonomy. Grouped by category for onboarding guidance.",
+            "risk_negative": [
+              "kpi_decline",
+              "critical_incident",
+              "champion_departure",
+              "champion_loss",
+              "engagement_gap",
+              "engagement_decline",
+              "engagement_drop",
+              "usage_decline",
+              "competitor_mention",
+              "competitor_evaluation",
+              "budget_pressure",
+              "budget_review",
+              "budget_change",
+              "escalation",
+              "escalation_increase",
+              "support_escalation",
+              "support_spike",
+              "deployment_delay",
+              "onboarding_delay",
+              "contract_dispute",
+              "renewal_risk",
+              "csat_drop",
+              "nps_decline",
+              "login_decline",
+              "feature_adoption_drop",
+              "ttfv_exceeded",
+              "stakeholder_escalation",
+              "stakeholder_change",
+              "org_change",
+              "downsizing",
+              "expansion_cancelled",
+              "expansion_stall",
+              "kpi_breach",
+              "capacity_warning",
+              "incident"
+            ],
+            "positive_growth": [
+              "expansion_signal",
+              "expansion_discussion",
+              "expansion_completed",
+              "advocacy",
+              "champion_advocacy",
+              "executive_engagement",
+              "health_improvement",
+              "positive_engagement",
+              "champion_reengagement",
+              "kpi_recovery",
+              "deployment_improvement",
+              "churn_averted",
+              "feature_adoption",
+              "feature_adoption_increase",
+              "usage_spike",
+              "nps_increase",
+              "rapid_adoption",
+              "fast_onboarding",
+              "recovery_milestone",
+              "onboarding_milestone"
+            ],
+            "operational": [
+              "csm_intervention",
+              "csm_action",
+              "routine_review",
+              "seasonal_pattern",
+              "sla_started",
+              "playbook_executed",
+              "health_score_alert",
+              "support_ticket"
+            ]
+          },
+          "sentiment": ["positive", "negative", "neutral"]
+        },
         "db_table": "qualitative_signals + context_nodes (node_type=SIGNAL)",
-        "note": "Replaces old qualitative_signals.csv. Graph metadata columns are optional \u2014 ignored when context graph is OFF."
+        "note": "Comprehensive signal taxonomy (64 types in 3 categories). sentiment is required (positive/negative/neutral). Graph metadata columns (signal_ref, causal_chain_ref) are optional."
       },
       "products.csv": {
         "required_columns": [
@@ -210,7 +287,44 @@
           "related_decision_id",
           "source_platform"
         ],
-        "db_table": "context_nodes (node_type=OUTCOME)"
+        "enums": {
+          "outcome_type": {
+            "_description": "Comprehensive outcome taxonomy grouped by revenue direction.",
+            "protected": [
+              "renewal_secured",
+              "renewal_confirmed",
+              "churn_averted",
+              "revenue_protected",
+              "escalation_resolved"
+            ],
+            "growth": [
+              "expansion_closed",
+              "expansion_approved",
+              "expansion_opportunity",
+              "revenue_growth",
+              "new_logo"
+            ],
+            "at_risk": [
+              "revenue_at_risk",
+              "renewal_uncertainty",
+              "renewal_risk",
+              "engagement_decline",
+              "capacity_constraint",
+              "partner_friction"
+            ],
+            "lost": [
+              "churn_lost",
+              "contraction"
+            ],
+            "operational": [
+              "playbook_outcome",
+              "partial_recovery",
+              "recovery_milestone"
+            ]
+          }
+        },
+        "db_table": "context_nodes (node_type=OUTCOME)",
+        "note": "8 outcome_type values for Beta. revenue_value is the dollar impact (positive for growth, negative for loss)."
       }
     },
     "auto_generated": {
@@ -367,6 +481,42 @@
           "related_decision_id",
           "source_platform"
         ],
+        "enums": {
+          "outcome_type": {
+            "_description": "Comprehensive outcome taxonomy grouped by revenue direction.",
+            "protected": [
+              "renewal_secured",
+              "renewal_confirmed",
+              "churn_averted",
+              "revenue_protected",
+              "escalation_resolved"
+            ],
+            "growth": [
+              "expansion_closed",
+              "expansion_approved",
+              "expansion_opportunity",
+              "revenue_growth",
+              "new_logo"
+            ],
+            "at_risk": [
+              "revenue_at_risk",
+              "renewal_uncertainty",
+              "renewal_risk",
+              "engagement_decline",
+              "capacity_constraint",
+              "partner_friction"
+            ],
+            "lost": [
+              "churn_lost",
+              "contraction"
+            ],
+            "operational": [
+              "playbook_outcome",
+              "partial_recovery",
+              "recovery_milestone"
+            ]
+          }
+        },
         "db_table": "context_nodes (node_type=OUTCOME)"
       },
       "decisions.csv": {
