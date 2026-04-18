@@ -460,6 +460,17 @@ Examples:
     parser.add_argument('--improvement', type=float, default=2.5)
     parser.add_argument('--num-accounts', type=int, default=None)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument(
+        '--signal-360',
+        action='store_true',
+        help='Run Signal Engine 360 fidelity test after load. '
+             'Requires --api-key and --customer-id. Submits CSV signals '
+             'as realistic email/slack/transcript, validates enrichment matches.',
+    )
+    parser.add_argument(
+        '--signal-360-wait', type=int, default=60,
+        help='Seconds to wait for signal enrichment (default: 60)',
+    )
 
     args = parser.parse_args()
 
@@ -475,6 +486,27 @@ Examples:
         parser.print_help()
         print("\nError: specify --manifest or --scenarios")
         sys.exit(1)
+
+    # Signal 360 fidelity test (runs after load if requested)
+    if getattr(args, 'signal_360', False):
+        api_key = getattr(args, 'api_key', None)
+        customer_id = getattr(args, 'customer_id', None)
+        base_url = getattr(args, 'base_url', None)
+        if not all([api_key, customer_id, base_url]):
+            logger.error("--signal-360 requires --api-key, --customer-id, and --base-url")
+            sys.exit(1)
+        from generators.signal_360_generator import run_signal_360
+        result = run_signal_360(
+            customer_id=int(customer_id),
+            base_url=base_url,
+            api_key=api_key,
+            seed=getattr(args, 'seed', 42),
+            enrichment_wait_s=getattr(args, 'signal_360_wait', 60),
+            verbose=getattr(args, 'verbose', False),
+        )
+        if result.get('match_rate_pct', 0) < 50:
+            logger.warning("Signal 360: LOW match rate %.1f%%", result.get('match_rate_pct', 0))
+            sys.exit(1)
 
 
 if __name__ == '__main__':

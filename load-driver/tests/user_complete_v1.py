@@ -1306,7 +1306,8 @@ def phase1_5_post_onboarding_seeder(
 def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
                     verbose: bool, skip_delete: bool = False, mcp_host: str = None,
                     skip_seeder: bool = False, seeder_playbooks: int = 4,
-                    seeder_ask_ai: int = 5, log_dir: Optional[str] = None) -> dict:
+                    seeder_ask_ai: int = 5, log_dir: Optional[str] = None,
+                    with_signal_360: bool = False, signal_360_wait: int = 60) -> dict:
     """Run one complete cycle: create → seed → questions → extend → compare → delete."""
     cycle_result = {"cycle": cycle, "start_time": datetime.utcnow().isoformat()}
     t_cycle = time.time()
@@ -1352,6 +1353,24 @@ def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
     # Phase 2: Questions
     p2 = phase2_run_questions(mcp, customer_id, accounts, verbose)
     cycle_result["phase2"] = p2
+
+    # Phase 2.5: Signal 360 Fidelity Test (optional)
+    if with_signal_360 and p1.get("api_key"):
+        try:
+            from generators.signal_360_generator import run_signal_360
+            p2_5 = run_signal_360(
+                customer_id=customer_id,
+                base_url=base_url,
+                api_key=p1["api_key"],
+                seed=seed,
+                max_signals=20,
+                enrichment_wait_s=signal_360_wait,
+                verbose=verbose,
+            )
+            cycle_result["phase2_5_signal_360"] = p2_5
+        except Exception as e:
+            print(f"  Signal 360 failed: {e}")
+            cycle_result["phase2_5_signal_360"] = {"error": str(e)}
 
     # Phase 3: Extend & Compare
     p3 = phase3_extend_and_compare(base_url, manifest_path, customer_id, mcp, baseline, seed, verbose,
@@ -1476,6 +1495,8 @@ def main():
     parser.add_argument("--seeder-playbooks", type=int, default=4, help="Number of playbook executions per customer (default: 4, max: 10)")
     parser.add_argument("--seeder-ask-ai", type=int, default=5, help="Ask AI questions per persona (default: 5)")
     parser.add_argument("--log-dir", default=None, help="Seeder log output directory (default: results/seeder/)")
+    parser.add_argument("--with-signal-360", action="store_true", help="Run Signal Engine 360 fidelity test (Phase 2.5)")
+    parser.add_argument("--signal-360-wait", type=int, default=60, help="Seconds to wait for signal enrichment (default: 60)")
     args = parser.parse_args()
 
     if not Path(args.manifest).exists():
@@ -1521,6 +1542,8 @@ def main():
             seeder_playbooks=min(args.seeder_playbooks, 10),
             seeder_ask_ai=args.seeder_ask_ai,
             log_dir=args.log_dir,
+            with_signal_360=args.with_signal_360,
+            signal_360_wait=args.signal_360_wait,
         )
         all_results.append(result)
 
