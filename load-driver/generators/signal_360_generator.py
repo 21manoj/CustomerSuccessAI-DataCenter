@@ -631,7 +631,7 @@ class Signal360Generator:
                 })
                 continue
 
-            actual_intents = enriched.get('intent_signals', [])
+            actual_intents = enriched.get('intent_signals') or []
             was_suppressed = enriched.get('alert_suppressed', False)
             if was_suppressed:
                 collided += 1
