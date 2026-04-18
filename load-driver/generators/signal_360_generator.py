@@ -327,7 +327,12 @@ class Signal360Generator:
         # Step 5: Fetch enriched signals and score
         scorecard = self._score_results(submitted, verbose)
 
-        # Step 6: Print scorecard
+        # Step 6: Save enrichment results CSV
+        results_path = self._save_results_csv(scorecard)
+        if results_path:
+            print(f"  Results: {results_path}")
+
+        # Step 7: Print scorecard
         self._print_scorecard(scorecard)
 
         return scorecard
@@ -385,6 +390,65 @@ class Signal360Generator:
             return path
         except Exception as e:
             logger.warning("Failed to save CSV: %s", e)
+            return None
+
+    def _save_results_csv(self, scorecard: dict) -> Optional[str]:
+        """Save enrichment results — what the signal engine returned for each signal.
+
+        Output CSV: signal_id, account_id, account_name, channel, signal_date,
+                    signal_type, expected_intent, actual_intents, match,
+                    collided, urgency, raw_text_preview
+        """
+        import csv
+        import os
+
+        details = scorecard.get('details', [])
+        if not details:
+            return None
+
+        if self.output_csv:
+            # Put results next to input CSV with _results suffix
+            base, ext = os.path.splitext(self.output_csv)
+            path = f"{base}_results{ext}"
+        else:
+            results_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                'results', 'signal-360',
+            )
+            os.makedirs(results_dir, exist_ok=True)
+            path = os.path.join(results_dir, f'signal_results_customer_{self.customer_id}.csv')
+
+        try:
+            with open(path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    'signal_id', 'customer_id', 'account_id', 'account_name',
+                    'channel', 'signal_date', 'signal_type',
+                    'expected_intent', 'actual_intents', 'match', 'collided',
+                    'reason', 'raw_text_preview',
+                ])
+                for d in details:
+                    ts = d.get('timestamp', '')
+                    actual = d.get('actual_intents')
+                    actual_str = ', '.join(actual) if actual else ''
+                    writer.writerow([
+                        d.get('signal_id', ''),
+                        self.customer_id,
+                        d.get('account_id', ''),
+                        d.get('account_name', ''),
+                        d.get('channel', ''),
+                        ts[:10] if ts else '',
+                        d.get('signal_type', ''),
+                        d.get('expected_intent', ''),
+                        actual_str,
+                        d.get('match', ''),
+                        d.get('collided', ''),
+                        d.get('reason', ''),
+                        d.get('raw_text_preview', ''),
+                    ])
+            return path
+        except Exception as e:
+            logger.warning("Failed to save results CSV: %s", e)
             return None
 
     def _fetch_csv_signals(self) -> List[dict]:
