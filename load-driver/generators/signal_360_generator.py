@@ -359,18 +359,24 @@ class Signal360Generator:
             with open(path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    'account_id', 'account_name', 'channel', 'raw_text',
-                    'timestamp', 'signal_type', 'expected_intent',
+                    'customer_id', 'account_id', 'account_name', 'channel',
+                    'signal_date', 'raw_text', 'signal_type', 'expected_intent',
+                    'stakeholder_name', 'stakeholder_title',
                 ])
                 for s in submitted:
+                    ts = s.get('timestamp', '')
+                    signal_date = ts[:10] if ts else ''
                     writer.writerow([
+                        self.customer_id,
                         s.get('account_id', ''),
                         s.get('account_name', ''),
                         s.get('channel', ''),
+                        signal_date,
                         s.get('raw_text', ''),
-                        s.get('timestamp', ''),
                         s.get('signal_type', ''),
                         s.get('expected_intent', ''),
+                        s.get('stakeholder_name', ''),
+                        s.get('stakeholder_title', ''),
                     ])
             return path
         except Exception as e:
@@ -565,6 +571,8 @@ class Signal360Generator:
                     'raw_text': raw_text,
                     'raw_text_preview': raw_text[:80],
                     'timestamp': payload.get('timestamp', ''),
+                    'stakeholder_name': props.get('stakeholder_name', ''),
+                    'stakeholder_title': props.get('stakeholder_title', ''),
                 }
             else:
                 if verbose:
