@@ -452,114 +452,69 @@ class Signal360Generator:
             return None
 
     def _fetch_csv_signals(self) -> List[dict]:
-        """Fetch CSV-uploaded signals.
+        """Fetch CSV-uploaded signals from DB via SSH + account metadata via API."""
+        import subprocess
 
-        Strategy: get account list via /api/v1/accounts, then for each account
-        query qualitative_signals via the account journey timeline MCP tool
-        (which includes signals). Falls back to direct DB query via SSH if
-        API doesn't expose signals directly.
-        """
-        # Get accounts
+        # Step 1: Get account metadata via API (names, champions, CSMs)
+        acct_map = {}
         try:
             resp = self.session.get(
                 f"{self.base_url}/api/v1/accounts",
                 headers={'X-Customer-ID': str(self.customer_id)},
                 timeout=15,
             )
-            if resp.status_code != 200:
-                logger.warning("Failed to fetch accounts: %s", resp.status_code)
-                return []
-            data = resp.json()
-            accounts = data.get('accounts', data) if isinstance(data, dict) else data
+            if resp.status_code == 200:
+                data = resp.json()
+                accounts = data.get('accounts', data) if isinstance(data, dict) else data
+                for a in accounts:
+                    acct_map[str(a['account_id'])] = a
         except Exception as e:
             logger.warning("Failed to fetch accounts: %s", e)
-            return []
 
-        # Build account lookup
-        acct_map = {a['account_id']: a for a in accounts}
-
-        # For each account, get signals from the qualitative_signals table
-        # via the journey timeline which includes signal data
+        # Step 2: Pull all CSV signals from DB via SSH
         all_signals = []
-        for acct in accounts:
-            aid = acct.get('account_id')
-            aname = acct.get('account_name', '')
-            champion = acct.get('champion_name', '')
-            champion_title = acct.get('champion_title', '')
-            csm = acct.get('csm_name', '')
+        try:
+            # Extract EC2 host from base_url or use known host
+            from urllib.parse import urlparse
+            parsed = urlparse(self.base_url)
+            # For CloudFront URLs, use the known EC2 IP
+            ec2_host = '3.87.199.195'
 
-            # Try account journey timeline (includes signals)
-            try:
-                resp = self.session.get(
-                    f"{self.base_url}/api/dc2s/{self.customer_id}/accounts/{aid}/journey-timeline",
-                    timeout=15,
-                )
-                if resp.status_code == 200:
-                    timeline = resp.json()
-                    events = timeline.get('events', timeline.get('timeline', []))
-                    for ev in events:
-                        if ev.get('node_type') == 'SIGNAL' and ev.get('source_platform') == 'csv_import':
-                            all_signals.append({
-                                'account_id': aid,
-                                'account_name': aname,
-                                'signal_type': ev.get('node_subtype', ev.get('signal_type', '')),
-                                'content': ev.get('title', ev.get('content', '')),
-                                'signal_date': ev.get('occurred_at', ev.get('date', '')),
-                                'properties': {
-                                    'stakeholder_name': champion,
-                                    'stakeholder_title': champion_title,
-                                    'csm_name': csm,
-                                    **ev.get('properties', {}),
-                                },
-                            })
-                    continue
-            except Exception:
-                pass
+            ssh_cmd = (
+                f"ssh -i ~/.ssh/cspulse-v6-key.pem -o StrictHostKeyChecking=no "
+                f"-o ConnectTimeout=10 ec2-user@{ec2_host} "
+                f"\"sudo docker exec cspulse-postgres psql -U cspulse -d cs_pulse -t -A -F'|' -c \\\"SELECT "
+                f"account_id, signal_date, signal_type, "
+                f"REPLACE(REPLACE(LEFT(content, 500), E'\\\\n', ' '), '|', '/'), "
+                f"sentiment, COALESCE(sentiment_score::text, '0') "
+                f"FROM qualitative_signals "
+                f"WHERE customer_id = {self.customer_id} AND source_type IS NULL "
+                f"ORDER BY account_id, signal_date;\\\"\""
+            )
+            proc = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True, timeout=20)
+            if proc.returncode == 0:
+                for line in proc.stdout.strip().split('\n'):
+                    parts = line.split('|')
+                    if len(parts) >= 6:
+                        aid = parts[0].strip()
+                        acct = acct_map.get(aid, {})
+                        all_signals.append({
+                            'account_id': int(aid),
+                            'account_name': acct.get('account_name', ''),
+                            'signal_type': parts[2].strip(),
+                            'content': parts[3].strip(),
+                            'signal_date': parts[1].strip(),
+                            'properties': {
+                                'stakeholder_name': acct.get('champion_name', ''),
+                                'stakeholder_title': acct.get('champion_title', ''),
+                                'csm_name': acct.get('csm_name', ''),
+                            },
+                        })
+        except Exception as e:
+            logger.warning("SSH signal fetch failed: %s", e)
 
-            # Fallback: synthesize from account metadata
-            # Use the known signal types based on account health classification
-            classification = acct.get('classification', 'healthy')
-            health = acct.get('health_score', 70)
-
-            # Generate representative signals based on classification
-            if classification == 'critical' or health < 50:
-                signal_types = ['critical_incident', 'kpi_decline', 'escalation_increase']
-            elif classification == 'at_risk' or health < 70:
-                signal_types = ['kpi_decline', 'engagement_gap', 'usage_decline']
-            else:
-                signal_types = ['expansion_signal', 'positive_engagement', 'advocacy']
-
-            for st in signal_types:
-                # Use the CSV content templates (same as load driver)
-                content_map = {
-                    'kpi_decline': 'KPI metrics declining below threshold',
-                    'critical_incident': 'Critical service incident reported — impact on production workloads',
-                    'escalation_increase': f'3 P1 tickets opened in 2 weeks — team frustrated',
-                    'engagement_gap': f'{champion} missed last 2 scheduled check-ins',
-                    'usage_decline': 'API call volume dropped 35% in 4 weeks',
-                    'expansion_signal': f'Account expanding capacity by 40%. New PO in procurement',
-                    'positive_engagement': f'{champion} confirmed Phase 1 value delivered',
-                    'advocacy': f'{champion} actively advocating for platform at {aname}',
-                    'competitor_mention': 'Head of Digital mentioned evaluating Competitor X pricing',
-                    'budget_pressure': 'CEO questioning renewal — asked for competitive analysis',
-                    'deployment_delay': 'API integration blocked — SSO configuration incompatible',
-                    'champion_departure': f'{champion} resigned — moved to competitor',
-                }
-                all_signals.append({
-                    'account_id': aid,
-                    'account_name': aname,
-                    'signal_type': st,
-                    'content': content_map.get(st, f'{st.replace("_", " ").title()} detected'),
-                    'signal_date': datetime.utcnow().isoformat(),
-                    'properties': {
-                        'stakeholder_name': champion,
-                        'stakeholder_title': champion_title,
-                        'csm_name': csm,
-                    },
-                })
-
-        logger.info("Fetched %d signals for customer %d (%d accounts)",
-                     len(all_signals), self.customer_id, len(accounts))
+        logger.info("Fetched %d CSV signals for customer %d (%d accounts)",
+                     len(all_signals), self.customer_id, len(acct_map))
         return all_signals
 
     def _generate_and_submit(self, sig: dict, verbose: bool) -> Optional[dict]:
