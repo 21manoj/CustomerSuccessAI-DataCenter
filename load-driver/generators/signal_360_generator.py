@@ -360,7 +360,7 @@ class Signal360Generator:
                 writer = csv.writer(f)
                 writer.writerow([
                     'customer_id', 'account_id', 'account_name', 'channel',
-                    'signal_date', 'from', 'to', 'raw_text',
+                    'signal_date', 'timestamp', 'from', 'to', 'raw_text',
                     'signal_type', 'expected_intent',
                     'stakeholder_name', 'stakeholder_title',
                 ])
@@ -373,6 +373,7 @@ class Signal360Generator:
                         s.get('account_name', ''),
                         s.get('channel', ''),
                         signal_date,
+                        ts,
                         s.get('from', ''),
                         s.get('to', ''),
                         s.get('raw_text', ''),
