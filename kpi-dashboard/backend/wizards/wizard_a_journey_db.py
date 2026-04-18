@@ -49,6 +49,7 @@ def run_wizard_a(customer_id: int, account_ids: set = None) -> dict:
     from models import Account
     from extensions import db
     from utils.arc_classifier import classify_arc
+    from utils.arc_decision_generator import generate_decision_nodes
     from utils.arc_edge_generator import generate_edges
 
     accounts = Account.query.filter_by(customer_id=customer_id).all()
@@ -66,6 +67,7 @@ def run_wizard_a(customer_id: int, account_ids: set = None) -> dict:
     results: dict = {
         'status': 'completed',
         'processed': 0,
+        'decisions_created': 0,
         'edges_created': 0,
         'arcs': {},
     }
@@ -80,20 +82,33 @@ def run_wizard_a(customer_id: int, account_ids: set = None) -> dict:
             account.arc_confidence = confidence
             db.session.commit()
 
+            # Generate DECISION nodes from arc templates (4-CSV gap fix)
+            # Must run BEFORE generate_edges so edge generator can resolve decision:N refs
+            decisions_created = generate_decision_nodes(
+                customer_id=customer_id,
+                account_id=account.account_id,
+                arc_type=arc_type,
+                phase=phase,
+                account_name=account.account_name or '',
+            )
+
             # Generate causal edges
             edges = generate_edges(account.account_id, arc_type, phase)
 
             results['processed'] += 1
+            results['decisions_created'] += decisions_created
             results['edges_created'] += edges
             results['arcs'][account.account_id] = {
                 'arc_type':   arc_type,
                 'phase':      phase,
                 'confidence': confidence,
+                'decisions':  decisions_created,
                 'edges':      edges,
             }
             logger.info(
                 f"Wizard A: account={account.account_id} ({account.account_name}) "
-                f"arc={arc_type} phase={phase} confidence={confidence:.2f} edges={edges}"
+                f"arc={arc_type} phase={phase} confidence={confidence:.2f} "
+                f"decisions={decisions_created} edges={edges}"
             )
         except Exception as e:
             logger.error(
