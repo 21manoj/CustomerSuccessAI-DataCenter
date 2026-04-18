@@ -140,21 +140,32 @@ class MCPClient:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class RESTClient:
-    """Calls CS Pulse REST APIs with session auth — same as browser login."""
+    """Calls CS Pulse REST APIs with Bearer token or session auth."""
 
-    def __init__(self, base_url: str, email: str, password: str):
+    def __init__(self, base_url: str, email: str = None, password: str = None,
+                 api_key: str = None, customer_id: int = None):
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
         self.session.headers["Content-Type"] = "application/json"
-        # Login
-        resp = self.session.post(f"{self.base_url}/api/login", json={
-            "email": email, "password": password,
-        }, timeout=15)
-        if resp.status_code != 200 or resp.json().get("status") != "success":
-            raise RuntimeError(f"Login failed: {resp.text[:200]}")
-        user = resp.json().get("user", {})
-        self.customer_id = user.get("customer_id")
-        self.session.headers["X-Customer-ID"] = str(self.customer_id)
+
+        if api_key:
+            # Bearer token auth — no login needed
+            self.session.headers["Authorization"] = f"Bearer {api_key}"
+            self.customer_id = customer_id
+            if customer_id:
+                self.session.headers["X-Customer-ID"] = str(customer_id)
+        elif email:
+            # Session/cookie auth — login required
+            resp = self.session.post(f"{self.base_url}/api/login", json={
+                "email": email, "password": password,
+            }, timeout=15)
+            if resp.status_code != 200 or resp.json().get("status") != "success":
+                raise RuntimeError(f"Login failed: {resp.text[:200]}")
+            user = resp.json().get("user", {})
+            self.customer_id = user.get("customer_id")
+            self.session.headers["X-Customer-ID"] = str(self.customer_id)
+        else:
+            raise RuntimeError("RESTClient requires either api_key or email/password")
 
     def get(self, path: str, **kwargs) -> dict:
         resp = self.session.get(f"{self.base_url}{path}", timeout=30, **kwargs)
@@ -528,7 +539,8 @@ def phase2_run_questions(mcp: MCPClient, customer_id: int, accounts: list, verbo
 
 def phase3_extend_and_compare(base_url: str, manifest_path: str, customer_id: int,
                                mcp: MCPClient, baseline: dict, seed: int, verbose: bool,
-                               admin_email: str = None, admin_password: str = None) -> dict:
+                               admin_email: str = None, admin_password: str = None,
+                               api_key: str = None) -> dict:
     """Phase 3: Extend data months 7-12, compare predictions vs actuals."""
     print(f"\n{'='*60}")
     print(f"  PHASE 3: Extend Data & Compare")
@@ -558,10 +570,12 @@ def phase3_extend_and_compare(base_url: str, manifest_path: str, customer_id: in
         "--seed", str(seed),
         "--no-validate-strict",
     ]
-    if admin_email:
+    if api_key:
+        cmd += ["--api-key", api_key]
+    elif admin_email:
         cmd += ["--email", admin_email]
-    if admin_password:
-        cmd += ["--password", admin_password]
+        if admin_password:
+            cmd += ["--password", admin_password]
     print(f"  Extending data (months 7-12)...")
     t0 = time.time()
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -1341,23 +1355,27 @@ def run_full_cycle(base_url: str, manifest_path: str, cycle: int, seed: int,
 
     # Phase 3: Extend & Compare
     p3 = phase3_extend_and_compare(base_url, manifest_path, customer_id, mcp, baseline, seed, verbose,
-                                    admin_email=p1.get("admin_email"), admin_password=p1.get("admin_password"))
+                                    admin_email=p1.get("admin_email"), admin_password=p1.get("admin_password"),
+                                    api_key=p1.get("api_key"))
     cycle_result["phase3"] = p3
 
     # Phase 4: Delete
     if not skip_delete:
-        # Need admin REST client for delete — use credentials from Phase 1
+        # Need admin REST client for delete — prefer API key, fallback to login
         try:
-            p1_email = p1.get("admin_email")
-            p1_password = p1.get("admin_password", "test123")
-            if not p1_email:
-                # Fallback: read from original manifest
-                manifest_data = json.loads(Path(manifest_path).read_text())
-                p1_email = manifest_data.get("customer", {}).get("admin_email", f"admin@ucv1-{cycle}.test")
-            rest = RESTClient(base_url, p1_email, p1_password)
+            p1_api_key = p1.get("api_key")
+            if p1_api_key:
+                rest = RESTClient(base_url, api_key=p1_api_key, customer_id=customer_id)
+            else:
+                p1_email = p1.get("admin_email")
+                p1_password = p1.get("admin_password", "test123")
+                if not p1_email:
+                    manifest_data = json.loads(Path(manifest_path).read_text())
+                    p1_email = manifest_data.get("customer", {}).get("admin_email", f"admin@ucv1-{cycle}.test")
+                rest = RESTClient(base_url, email=p1_email, password=p1_password)
             p4 = phase4_delete_and_verify(base_url, customer_id, rest, mcp, verbose)
         except Exception as e:
-            print(f"  ⚠️  Delete failed (admin login issue): {e}")
+            print(f"  ⚠️  Delete failed: {e}")
             p4 = {"error": str(e)}
         cycle_result["phase4"] = p4
 
