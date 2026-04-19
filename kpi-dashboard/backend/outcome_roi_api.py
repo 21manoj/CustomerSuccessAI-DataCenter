@@ -1792,6 +1792,96 @@ def playbook_economics():
         return jsonify({'error': str(e)}), 500
 
 
+# ─── Playbook Success Metrics (actual execution outcomes) ─────────────────────
+
+@outcome_roi_api.route('/api/outcome-roi/playbook-success-metrics', methods=['GET'])
+@outcome_roi_api.route('/api/v1/playbook-success-metrics', methods=['GET'])
+def playbook_success_metrics():
+    """Actual playbook execution success rates and revenue impact from V2 records.
+
+    Unlike /playbook-economics (model-based projections), this returns ACTUAL
+    outcomes from PlaybookExecutionV2: resolved/escalated counts, health deltas,
+    revenue protected/expanded, ROI multiples.
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        from models import PlaybookExecutionV2
+        from collections import defaultdict
+
+        execs = PlaybookExecutionV2.query.filter_by(customer_id=customer_id).all()
+
+        if not execs:
+            return jsonify({
+                'scope': 'portfolio',
+                'customer_id': customer_id,
+                'total_executions': 0,
+                'playbooks': {},
+                'portfolio_summary': {'total_runs': 0, 'overall_success_rate_pct': 0},
+            })
+
+        by_pb = defaultdict(list)
+        for e in execs:
+            by_pb[e.playbook_id].append(e)
+
+        playbooks = {}
+        total_resolved = 0
+        total_runs = 0
+        total_revenue = 0
+        total_cost = 0
+
+        for pb_id, pb_execs in by_pb.items():
+            n = len(pb_execs)
+            resolved = sum(1 for e in pb_execs if e.outcome == 'resolved')
+            escalated = sum(1 for e in pb_execs if e.outcome == 'escalated')
+            timeout = sum(1 for e in pb_execs if e.outcome == 'timeout')
+
+            health_deltas = [float(e.health_delta or 0) for e in pb_execs if e.health_delta]
+            rev_protected = sum(float(e.revenue_protected or 0) for e in pb_execs)
+            rev_expanded = sum(float(e.revenue_expanded or 0) for e in pb_execs)
+            cost = sum(float(e.total_cost or 0) for e in pb_execs)
+
+            playbooks[pb_id] = {
+                'playbook_id': pb_id,
+                'total_executions': n,
+                'resolved': resolved,
+                'escalated': escalated,
+                'timeout': timeout,
+                'success_rate_pct': round(resolved / max(n, 1) * 100, 0),
+                'avg_health_delta': round(sum(health_deltas) / max(len(health_deltas), 1), 1),
+                'revenue_protected': rev_protected,
+                'revenue_expanded': rev_expanded,
+                'total_cost': cost,
+                'roi_x': round((rev_protected + rev_expanded) / max(cost, 1), 1),
+            }
+
+            total_resolved += resolved
+            total_runs += n
+            total_revenue += rev_protected + rev_expanded
+            total_cost += cost
+
+        return jsonify({
+            'scope': 'portfolio',
+            'customer_id': customer_id,
+            'total_executions': total_runs,
+            'playbooks': playbooks,
+            'portfolio_summary': {
+                'total_runs': total_runs,
+                'overall_success_rate_pct': round(total_resolved / max(total_runs, 1) * 100, 0),
+                'total_revenue_protected': total_revenue,
+                'total_cost': total_cost,
+                'portfolio_roi_x': round(total_revenue / max(total_cost, 1), 1),
+            },
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Playbook success metrics error: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ─── Per-Account ROI ──────────────────────────────────────────────────────────
 
 @outcome_roi_api.route('/api/outcome-roi/account/<int:account_id>', methods=['GET'])
