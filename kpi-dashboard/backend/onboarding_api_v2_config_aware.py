@@ -2468,6 +2468,29 @@ def onboarding_status(customer_id):
             resp["result"] = progress["result"]
         if progress.get("error"):
             resp["error"] = progress["error"]
+
+    # Enrichment status: check if LLM tier1 enrichment has run
+    # (context graph DECISION nodes from llm_enrichment indicate completion)
+    try:
+        from models import ContextNode
+        llm_node_count = ContextNode.query.filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.source_platform == 'llm_enrichment',
+        ).count()
+        wizard_a_count = ContextNode.query.filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.source_platform == 'wizard_a',
+        ).count()
+        total_nodes = ContextNode.query.filter_by(customer_id=customer_id).count()
+        resp["enrichment"] = {
+            "llm_enrichment_complete": llm_node_count > 0,
+            "llm_nodes": llm_node_count,
+            "wizard_a_nodes": wizard_a_count,
+            "total_context_nodes": total_nodes,
+        }
+    except Exception:
+        resp["enrichment"] = {"llm_enrichment_complete": False, "error": "could not check"}
+
     return jsonify(resp)
 
 
