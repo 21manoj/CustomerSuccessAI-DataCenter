@@ -192,7 +192,7 @@ def get_precalculated_scores(account_id):
         hs = HealthScore.query.filter_by(account_id=account_id) \
             .order_by(HealthScore.measurement_month.desc()).first()
         if not hs or hs.health_score is None:
-            return None, None, None
+            return None, None, None, None
 
         health = float(hs.health_score)
         status = hs.health_status or ht.classify(health)
@@ -211,10 +211,10 @@ def get_precalculated_scores(account_id):
                 if ps.pillar_score is not None:
                     pillars[ps.pillar_code] = float(ps.pillar_score)
 
-        return health, status, pillars
+        return health, status, pillars, hs.measurement_month
     except Exception as e:
         logger.debug(f"Could not fetch pre-calculated scores for account {account_id}: {e}")
-        return None, None, None
+        return None, None, None, None
 
 
 def _sync_journey_phase(account):
@@ -569,7 +569,7 @@ def get_dc2s_accounts():
             # Prefer pre-calculated scores from HealthScore/PillarScore tables
             # (single source of truth, populated by the score calculator).
             # Fall back to on-the-fly calculation only when no scores exist.
-            precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(account.account_id)
+            precalc_health, precalc_status, precalc_pillars, precalc_month = get_precalculated_scores(account.account_id)
 
             if precalc_health is not None and precalc_pillars:
                 overall_health = precalc_health
@@ -623,6 +623,7 @@ def get_dc2s_accounts():
                 'products': products,
                 'arr': float(account.revenue) if account.revenue else 0,
                 'kanban_column': meta.get('kanban_column'),
+                'health_as_of': precalc_month.strftime('%Y-%m') if precalc_month else None,
             })
 
         # Apply user-level account filtering (contractors/restricted users)
@@ -2662,7 +2663,7 @@ def get_team_capacity_api():
         # Pre-load health scores for at-risk count
         _health_map = {}
         for acct in accounts:
-            h, _, _ = get_precalculated_scores(acct.account_id)
+            h, _, _, _ = get_precalculated_scores(acct.account_id)
             _health_map[acct.account_id] = h or 100
         at_risk_count = sum(1 for a in accounts if _health_map.get(a.account_id, 100) < ht.healthy_min())
 
@@ -2785,7 +2786,7 @@ def get_renewals_api():
                 continue
 
             # Get health score
-            h, status, _ = get_precalculated_scores(acct.account_id)
+            h, status, _, _ = get_precalculated_scores(acct.account_id)
             health = h or 50
 
             # Risk level based on health + days
