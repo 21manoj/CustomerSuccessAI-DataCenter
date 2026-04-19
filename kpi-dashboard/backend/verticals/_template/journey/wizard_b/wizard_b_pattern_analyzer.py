@@ -507,33 +507,18 @@ class PatternAnalyzer:
         # Account.revenue is post-lifecycle (churned=$0, expanded=new ARR).
         # We reconstruct starting ARR by reversing definitive lifecycle outcomes.
         accounts = Account.query.filter_by(customer_id=self.customer_id).all()
-        _current_arr = {a.account_id: float(a.revenue or 0) for a in accounts}
-
-        # Reverse lifecycle events to get starting ARR
-        _lifecycle_deltas = {}  # account_id → net ARR change from lifecycle
-        _lc_outcomes = (
-            ContextNode.query
-            .filter(
-                ContextNode.customer_id == self.customer_id,
-                ContextNode.node_type == 'OUTCOME',
-                ContextNode.node_subtype.in_(['churn_lost', 'contraction', 'expansion_closed', 'new_logo']),
-                ContextNode.revenue_impact.isnot(None),
-            )
-            .all()
-        )
-        for n in _lc_outcomes:
-            _lifecycle_deltas.setdefault(n.account_id, 0.0)
-            _lifecycle_deltas[n.account_id] += float(n.revenue_impact or 0)
-
-        # starting_arr = current_arr - net_delta
-        # e.g., Eiger: current=$0, delta=-$12M → starting = $0 - (-$12M) = $12M
-        # e.g., Grindelwald: current=$12.76M, delta=+$3.3M → starting = $12.76M - $3.3M = $9.45M
-        arr_map = {}
-        for a in accounts:
-            current = float(a.revenue or 0)
-            delta = _lifecycle_deltas.get(a.account_id, 0.0)
-            arr_map[a.account_id] = current - delta  # starting ARR
-        # Save for use in forecast_portfolio_nrr (which needs same starting ARR basis)
+        # Account.revenue is the baseline/current contract ARR — the figure
+        # customers pay and the one shown across /api/v1/accounts. Lifecycle
+        # deltas (churn, expansion) are tracked independently via OUTCOME
+        # nodes and applied in revenue_by_account below.
+        #
+        # Prior code reverse-engineered a "starting ARR" via current - delta,
+        # which doubled the reported ARR for churn accounts when manifest
+        # lifecycle events hadn't actually decremented Account.revenue
+        # (Nimbus shown as $3M instead of $1.5M, Drift as $3.6M instead of
+        # $1.8M). Use Account.revenue directly and let the outcome nodes
+        # supply lifecycle impact.
+        arr_map = {a.account_id: float(a.revenue or 0) for a in accounts}
         self._starting_arr_map = arr_map
 
         # Load OUTCOME revenue per account for NRR calculation.
