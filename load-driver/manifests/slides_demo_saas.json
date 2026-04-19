@@ -163,6 +163,12 @@
           "content": "DAU recovering to 1,900. Raj Patel completing advanced training modules.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-02", "triggered_at": "2025-12-10", "closed_at": "2026-01-10", "outcome": "resolved", "triggered_by": "signal_analyst", "notes": "Emergency retention after champion departure. CTO escalation addressed."},
+        {"playbook_id": "PB-04", "triggered_at": "2026-01-15", "closed_at": "2026-02-01", "outcome": "resolved", "triggered_by": "health_drop", "notes": "Champion recovery: Raj Patel re-onboarded as successor."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-02-01", "closed_at": "2026-02-20", "outcome": "resolved", "triggered_by": "csm", "notes": "QBR engagement with CTO. Product roadmap aligned."},
+        {"playbook_id": "PB-01", "triggered_at": "2026-02-15", "closed_at": "2026-03-10", "outcome": "resolved", "triggered_by": "health_drop", "notes": "Deployment acceleration: API re-integration for Raj's team."}
       ]
     },
     {
@@ -247,6 +253,12 @@
           "content": "18 workflows reactivated. Training completion rate up from 30% to 65%.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-01", "triggered_at": "2025-11-15", "closed_at": "2026-01-10", "outcome": "resolved", "triggered_by": "health_drop", "notes": "Deployment acceleration: integration complexity addressed with dedicated SE."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-01-10", "closed_at": "2026-01-25", "outcome": "resolved", "triggered_by": "csm", "notes": "Executive QBR with CFO. $1.2M efficiency gains demonstrated."},
+        {"playbook_id": "PB-01", "triggered_at": "2026-02-01", "closed_at": "2026-02-20", "outcome": "resolved", "triggered_by": "health_drop", "notes": "Workflow reactivation program: 18 of 45 workflows restored."},
+        {"playbook_id": "PB-03", "triggered_at": "2026-02-20", "closed_at": "2026-03-15", "outcome": "escalated", "triggered_by": "signal_analyst", "notes": "Competitive displacement defense: CFO still evaluating alternatives."}
       ]
     },
     {
@@ -316,6 +328,11 @@
           "content": "Procurement team requested data export for evaluation of Canvas integration.",
           "sentiment": "very_negative"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-06", "triggered_at": "2025-11-20", "closed_at": "2025-12-15", "outcome": "resolved", "triggered_by": "signal_analyst", "notes": "Silent churn intervention: QBR scheduled with Patricia Moore."},
+        {"playbook_id": "PB-03", "triggered_at": "2026-01-10", "closed_at": "2026-02-05", "outcome": "escalated", "triggered_by": "signal_analyst", "notes": "Competitive displacement defense: Canvas evaluation detected."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-02-10", "closed_at": "2026-03-01", "outcome": "resolved", "triggered_by": "csm", "notes": "Re-engagement QBR with VP Academic Technology."}
       ]
     },
     {
@@ -385,6 +402,12 @@
           "content": "Dedicated security support pod deployed. Weekly compliance reviews initiated.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-05", "triggered_at": "2025-10-05", "closed_at": "2025-11-01", "outcome": "resolved", "triggered_by": "signal_analyst", "notes": "Infrastructure decay response: HIPAA escalation addressed with security pod."},
+        {"playbook_id": "PB-02", "triggered_at": "2025-11-01", "closed_at": "2025-12-15", "outcome": "resolved", "triggered_by": "health_drop", "notes": "Emergency retention: SSO failures resolved, compliance reviews initiated."},
+        {"playbook_id": "PB-05", "triggered_at": "2026-01-10", "closed_at": "2026-02-10", "outcome": "resolved", "triggered_by": "csm", "notes": "Infrastructure hardening: dedicated pod stabilized ticket resolution."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-02-10", "closed_at": "2026-03-05", "outcome": "resolved", "triggered_by": "csm", "notes": "QBR with CMIO: compliance roadmap aligned, recovery confirmed."}
       ]
     },
     {
@@ -457,6 +480,11 @@
           "content": "DAU hit company record: 4,200 users. Champion Sarah Kim presenting at our user conference.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-08", "triggered_at": "2026-01-20", "closed_at": "2026-02-15", "outcome": "resolved", "triggered_by": "signal_analyst", "notes": "Expansion opportunity: 3 new departments approved by CEO."},
+        {"playbook_id": "PB-08", "triggered_at": "2026-02-15", "closed_at": "2026-03-10", "outcome": "resolved", "triggered_by": "csm", "notes": "Expansion execution: Workflow Automation + BI onboarding for new departments."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-03-01", "closed_at": "2026-03-20", "outcome": "resolved", "triggered_by": "csm", "notes": "QBR: expansion ROI review with CEO and champion."}
       ]
     },
     {
@@ -570,6 +598,11 @@
           "content": "Post-holiday review: platform handled 2.3M transactions. Champion advocating for expansion.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-07", "triggered_at": "2025-10-15", "closed_at": "2025-11-10", "outcome": "resolved", "triggered_by": "signal_analyst", "notes": "Seasonal surge support: additional capacity and priority support during holiday."},
+        {"playbook_id": "PB-08", "triggered_at": "2026-01-10", "closed_at": "2026-02-05", "outcome": "resolved", "triggered_by": "csm", "notes": "Expansion opportunity: champion advocating post-holiday growth."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-02-10", "closed_at": "2026-03-01", "outcome": "resolved", "triggered_by": "csm", "notes": "QBR: holiday platform ROI review with CMO."}
       ]
     },
     {
@@ -647,6 +680,11 @@
           "content": "Workflow Automation adoption at 94%. CDO Victoria Chang presenting ROI at board meeting.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-08", "triggered_at": "2026-01-25", "closed_at": "2026-02-20", "outcome": "resolved", "triggered_by": "signal_analyst", "notes": "Expansion: SSO & Security for 12 global markets approved by CEO."},
+        {"playbook_id": "PB-08", "triggered_at": "2026-02-20", "closed_at": "2026-03-15", "outcome": "resolved", "triggered_by": "csm", "notes": "Expansion execution: Data Export + BI rollout for global teams."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-03-01", "closed_at": "2026-03-20", "outcome": "resolved", "triggered_by": "csm", "notes": "QBR: board-ready ROI presentation with CDO."}
       ]
     },
     {
@@ -786,6 +824,11 @@
           "content": "COO Steven Park approved phase 2: mobile rollout + Analytics Suite.",
           "sentiment": "positive"
         }
+      ],
+      "playbook_executions": [
+        {"playbook_id": "PB-01", "triggered_at": "2025-10-01", "closed_at": "2025-11-01", "outcome": "resolved", "triggered_by": "health_drop", "notes": "Onboarding acceleration: SSO integration and user provisioning completed."},
+        {"playbook_id": "PB-08", "triggered_at": "2026-02-01", "closed_at": "2026-03-01", "outcome": "resolved", "triggered_by": "csm", "notes": "Expansion: Phase 2 mobile + Analytics Suite approved by COO."},
+        {"playbook_id": "PB-06", "triggered_at": "2026-03-01", "closed_at": "2026-03-20", "outcome": "resolved", "triggered_by": "csm", "notes": "QBR: Phase 2 kickoff review with COO and champion."}
       ]
     }
   ],
