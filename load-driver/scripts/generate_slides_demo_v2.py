@@ -28,25 +28,30 @@ ACCOUNTS_SPEC = [
     #
     # Distribution targets (from deck): 7 healthy $22.4M / 5 at-risk $15.8M / 3 critical $9.8M = $48M
     #
-    # Tuning note: end_h (`target_health`) must be cranked ABOVE the intended final
-    # health — the KPI trajectory engine smooths curves and caps actual peaks ~8pts
-    # below spec. To get a 55→72 real curve, spec target 78. Similarly for declines,
-    # set deeper targets. Calibrated against v2-run-1 (customer 376) observed spreads.
+    # Approach 4 tuning (Apr 19): shift ARR toward recovery accounts — more
+    # dollars through the big-churn-delta zone. Cascade $3.8M→$5M, Relay
+    # $3.8M→$4.5M, Vertex $2.8M→$3.5M. Compensated by trimming expansion-zone
+    # accounts (Apex $6.1M→$5.3M, Summit $5.4M→$5.0M, etc.) to keep
+    # $48M/7-5-3 distribution approximately intact.
     ("Drift Analytics",     1_800_000, 58, 50, 30, "critical", "silent_churn",             "declining",  None, "2026-05-15"),
-    ("Cascade Health",      3_800_000, 42, 44, 82, "critical", "crisis_recovery",          "recovering", 2,    "2026-05-30"),
-    ("Nimbus Logistics",    4_200_000, 45, 40, 25, "critical", "silent_churn",             "declining",  None, "2026-05-10"),
-    ("Relay Healthcare",    3_800_000, 55, 48, 78, "at_risk",  "exec_sponsor_change",      "recovering", 3,    "2026-06-22"),
-    ("Canopy EdTech",       4_200_000, 60, 57, 78, "at_risk",  "competitive_displacement", "recovering", 4,    "2026-07-10"),
-    ("TechGrid Corp",       2_600_000, 71, 62, 45, "at_risk",  "stalled_deployment",       "declining",  None, "2026-06-30"),
-    ("Vertex Media",        2_800_000, 55, 48, 80, "at_risk",  "crisis_recovery",          "recovering", 3,    "2026-06-15"),
-    ("Granite Support",     2_400_000, 54, 50, 75, "at_risk",  "silent_churn",             "recovering", 4,    "2026-07-01"),
-    ("Apex Dynamics",       6_100_000, 72, 76, 92, "healthy",  "expansion_champion",       "improving",  1,    "2026-08-10"),
-    ("Summit Data",         5_400_000, 68, 71, 88, "healthy",  "seasonal_surge",           "improving",  1,    "2026-07-28"),
-    ("Meridian FinTech",    3_000_000, 72, 78, 94, "healthy",  "expansion_champion",       "improving",  1,    "2026-09-01"),
-    ("Atlas Marketing",     2_500_000, 73, 74, 88, "healthy",  "land_and_expand",          "improving",  2,    "2026-08-15"),
-    ("Catalyst Logistics",  2_500_000, 72, 76, 90, "healthy",  "expansion_champion",       "improving",  1,    "2026-09-10"),
-    ("Horizon Labs",        1_500_000, 70, 72, 85, "healthy",  "land_and_expand",          "recovering", 2,    "2026-07-20"),
-    ("Pinnacle Retail",     1_400_000, 71, 72, 84, "healthy",  "seasonal_surge",           "improving",  2,    "2026-09-30"),
+    ("Cascade Health",      6_500_000, 42, 44, 82, "critical", "crisis_recovery",          "recovering", 2,    "2026-05-30"),
+    ("Nimbus Logistics",    1_500_000, 45, 40, 25, "critical", "silent_churn",             "declining",  None, "2026-05-10"),
+    ("Relay Healthcare",    5_000_000, 55, 48, 78, "at_risk",  "exec_sponsor_change",      "recovering", 3,    "2026-06-22"),
+    ("Canopy EdTech",       4_800_000, 60, 57, 78, "at_risk",  "competitive_displacement", "recovering", 4,    "2026-07-10"),
+    ("TechGrid Corp",       1_000_000, 71, 62, 45, "at_risk",  "stalled_deployment",       "declining",  None, "2026-06-30"),
+    ("Vertex Media",        3_500_000, 55, 48, 80, "at_risk",  "crisis_recovery",          "recovering", 3,    "2026-06-15"),
+    ("Granite Support",     1_500_000, 54, 50, 75, "at_risk",  "silent_churn",             "recovering", 4,    "2026-07-01"),
+    # Healthy accts use "recovering" not "improving" — the KPI generator's
+    # improving curve caps at 87→92 (5pt delta → $0 expansion revenue). A
+    # recovering curve dips first then climbs 55→90 (35pt delta → big expansion).
+    # Narrative still holds: "account had a scare early, CSM engaged, now thriving."
+    ("Apex Dynamics",       5_300_000, 72, 76, 92, "healthy",  "expansion_champion",       "recovering", 2,    "2026-08-10"),
+    ("Summit Data",         5_000_000, 68, 71, 88, "healthy",  "seasonal_surge",           "recovering", 2,    "2026-07-28"),
+    ("Meridian FinTech",    3_000_000, 72, 78, 94, "healthy",  "expansion_champion",       "recovering", 2,    "2026-09-01"),
+    ("Atlas Marketing",     2_500_000, 73, 74, 88, "healthy",  "land_and_expand",          "recovering", 2,    "2026-08-15"),
+    ("Catalyst Logistics",  2_500_000, 72, 76, 90, "healthy",  "expansion_champion",       "recovering", 2,    "2026-09-10"),
+    ("Horizon Labs",        2_700_000, 70, 72, 85, "healthy",  "land_and_expand",          "recovering", 2,    "2026-07-20"),
+    ("Pinnacle Retail",     1_400_000, 71, 72, 84, "healthy",  "seasonal_surge",           "recovering", 2,    "2026-09-30"),
 ]
 
 
@@ -97,9 +102,11 @@ PLAYBOOK_EXECS = {
     "Canopy EdTech": [
         ("PB-06", D(2025, 10, 20), D(2025, 11, 20), "resolved",  "csm",
          "QBR engagement: early competitive defense, positioning review."),
-        ("PB-01", D(2025, 12, 15), D(2026,  1, 20), "resolved",  "signal_analyst",
+        ("PB-02", D(2025, 11, 25), D(2026,  1,  5),  "resolved", "signal_analyst",
+         "Emergency retention: Canvas evaluation neutralized with feature commitments."),
+        ("PB-01", D(2026,  1, 10), D(2026,  2, 10), "resolved",  "signal_analyst",
          "Deployment acceleration: competitive displacement defense, feature catch-up."),
-        ("PB-06", D(2026,  2,  5), D(2026,  3,  5), "resolved",  "csm",
+        ("PB-06", D(2026,  2, 15), D(2026,  3, 15), "resolved",  "csm",
          "QBR follow-up: roadmap alignment with VP Academic Technology."),
     ],
     "TechGrid Corp": [
@@ -185,6 +192,8 @@ PLAYBOOK_EXECS = {
          "Emergency retention continuation: infrastructure hardening."),
         ("PB-01",     D(2026,  2, 15), D(2026,  3, 15), "resolved", "csm",
          "Deployment acceleration: module re-onboarding post-recovery."),
+        ("PB-06",     D(2026,  3,  1), D(2026,  3, 28), "resolved", "csm",
+         "QBR engagement: recovery milestone review, renewal commitment."),
     ],
     "Nimbus Logistics": [
         ("PB-02", D(2025, 11, 15), D(2025, 12, 20), "escalated", "signal_analyst",

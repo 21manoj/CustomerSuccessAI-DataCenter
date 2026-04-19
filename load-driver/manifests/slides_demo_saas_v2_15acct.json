@@ -74,12 +74,12 @@
     {
       "name": "Drift Analytics",
       "arr": 1800000,
-      "target_health": 42,
+      "target_health": 30,
       "classification": "critical",
       "story_arc": "silent_churn",
       "partner_tier": "direct",
       "renewal_date": "2026-05-15",
-      "narrative": "Drift Analytics: health drops from 58\u219242 via silent churn; no recovery intervention succeeds.",
+      "narrative": "Drift Analytics: health drops from 58\u219230 via silent churn; no recovery intervention succeeds.",
       "kpi_trajectory": "declining",
       "products": [
         {
@@ -153,29 +153,29 @@
     },
     {
       "name": "Cascade Health",
-      "arr": 3800000,
-      "target_health": 64,
+      "arr": 6500000,
+      "target_health": 82,
       "classification": "critical",
       "story_arc": "crisis_recovery",
       "partner_tier": "tier_1",
       "renewal_date": "2026-05-30",
-      "narrative": "Cascade Health: crisis recovery \u2014 health dips then recovers from 42 low to 64 by March.",
+      "narrative": "Cascade Health: crisis recovery \u2014 health dips then recovers from 42 low to 82 by March.",
       "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 2280000.0
+          "arr": 3900000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 950000.0
+          "arr": 1620000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 570000.0
+          "arr": 980000.0
         }
       ],
       "stakeholders": [
@@ -244,35 +244,43 @@
           "outcome": "resolved",
           "triggered_by": "csm",
           "notes": "Deployment acceleration: module re-onboarding post-recovery."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-03-01",
+          "closed_at": "2026-03-28",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: recovery milestone review, renewal commitment."
         }
       ],
-      "recovery_start_month": 3
+      "recovery_start_month": 2
     },
     {
       "name": "Nimbus Logistics",
-      "arr": 4200000,
-      "target_health": 38,
+      "arr": 1500000,
+      "target_health": 25,
       "classification": "critical",
       "story_arc": "silent_churn",
-      "partner_tier": "tier_1",
+      "partner_tier": "direct",
       "renewal_date": "2026-05-10",
-      "narrative": "Nimbus Logistics: health drops from 45\u219238 via silent churn; no recovery intervention succeeds.",
+      "narrative": "Nimbus Logistics: health drops from 45\u219225 via silent churn; no recovery intervention succeeds.",
       "kpi_trajectory": "declining",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 2520000.0
+          "arr": 900000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 1050000.0
+          "arr": 380000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 630000.0
+          "arr": 220000.0
         }
       ],
       "stakeholders": [
@@ -330,29 +338,29 @@
     },
     {
       "name": "Relay Healthcare",
-      "arr": 3800000,
-      "target_health": 68,
+      "arr": 5000000,
+      "target_health": 78,
       "classification": "at_risk",
       "story_arc": "exec_sponsor_change",
       "partner_tier": "tier_1",
       "renewal_date": "2026-06-22",
-      "narrative": "Relay Healthcare: exec sponsor change \u2014 health dips then recovers from 55 low to 68 by March.",
+      "narrative": "Relay Healthcare: exec sponsor change \u2014 health dips then recovers from 55 low to 78 by March.",
       "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 2280000.0
+          "arr": 3000000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 950000.0
+          "arr": 1250000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 570000.0
+          "arr": 750000.0
         }
       ],
       "stakeholders": [
@@ -432,33 +440,33 @@
           "notes": "QBR engagement: recovery confirmed, compliance roadmap aligned."
         }
       ],
-      "recovery_start_month": 4
+      "recovery_start_month": 3
     },
     {
       "name": "Canopy EdTech",
-      "arr": 4200000,
-      "target_health": 60,
+      "arr": 4800000,
+      "target_health": 78,
       "classification": "at_risk",
       "story_arc": "competitive_displacement",
       "partner_tier": "tier_1",
       "renewal_date": "2026-07-10",
-      "narrative": "Canopy EdTech: competitive displacement \u2014 health dips then recovers from 60 low to 60 by March.",
+      "narrative": "Canopy EdTech: competitive displacement \u2014 health dips then recovers from 60 low to 78 by March.",
       "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 2520000.0
+          "arr": 2880000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 1050000.0
+          "arr": 1200000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 630000.0
+          "arr": 720000.0
         }
       ],
       "stakeholders": [
@@ -505,49 +513,57 @@
           "notes": "QBR engagement: early competitive defense, positioning review."
         },
         {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-11-25",
+          "closed_at": "2026-01-05",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention: Canvas evaluation neutralized with feature commitments."
+        },
+        {
           "playbook_id": "PB-01",
-          "triggered_at": "2025-12-15",
-          "closed_at": "2026-01-20",
+          "triggered_at": "2026-01-10",
+          "closed_at": "2026-02-10",
           "outcome": "resolved",
           "triggered_by": "signal_analyst",
           "notes": "Deployment acceleration: competitive displacement defense, feature catch-up."
         },
         {
           "playbook_id": "PB-06",
-          "triggered_at": "2026-02-05",
-          "closed_at": "2026-03-05",
+          "triggered_at": "2026-02-15",
+          "closed_at": "2026-03-15",
           "outcome": "resolved",
           "triggered_by": "csm",
           "notes": "QBR follow-up: roadmap alignment with VP Academic Technology."
         }
       ],
-      "recovery_start_month": 7
+      "recovery_start_month": 4
     },
     {
       "name": "TechGrid Corp",
-      "arr": 2600000,
-      "target_health": 58,
+      "arr": 1000000,
+      "target_health": 45,
       "classification": "at_risk",
       "story_arc": "stalled_deployment",
       "partner_tier": "direct",
       "renewal_date": "2026-06-30",
-      "narrative": "TechGrid Corp: health drops from 71\u219258 via stalled deployment; no recovery intervention succeeds.",
+      "narrative": "TechGrid Corp: health drops from 71\u219245 via stalled deployment; no recovery intervention succeeds.",
       "kpi_trajectory": "declining",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 1560000.0
+          "arr": 600000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 650000.0
+          "arr": 250000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 390000.0
+          "arr": 150000.0
         }
       ],
       "stakeholders": [
@@ -613,29 +629,29 @@
     },
     {
       "name": "Vertex Media",
-      "arr": 2800000,
-      "target_health": 70,
+      "arr": 3500000,
+      "target_health": 80,
       "classification": "at_risk",
       "story_arc": "crisis_recovery",
-      "partner_tier": "direct",
+      "partner_tier": "tier_1",
       "renewal_date": "2026-06-15",
-      "narrative": "Vertex Media: crisis recovery \u2014 health dips then recovers from 55 low to 70 by March.",
+      "narrative": "Vertex Media: crisis recovery \u2014 health dips then recovers from 55 low to 80 by March.",
       "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 1680000.0
+          "arr": 2100000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 700000.0
+          "arr": 880000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 420000.0
+          "arr": 520000.0
         }
       ],
       "stakeholders": [
@@ -706,33 +722,33 @@
           "notes": "QBR engagement: recovery milestones signed off, renewal committed."
         }
       ],
-      "recovery_start_month": 4
+      "recovery_start_month": 3
     },
     {
       "name": "Granite Support",
-      "arr": 2400000,
-      "target_health": 62,
+      "arr": 1500000,
+      "target_health": 75,
       "classification": "at_risk",
       "story_arc": "silent_churn",
       "partner_tier": "direct",
       "renewal_date": "2026-07-01",
-      "narrative": "Granite Support: silent churn \u2014 health dips then recovers from 54 low to 62 by March.",
+      "narrative": "Granite Support: silent churn \u2014 health dips then recovers from 54 low to 75 by March.",
       "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 1440000.0
+          "arr": 900000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 600000.0
+          "arr": 380000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 360000.0
+          "arr": 220000.0
         }
       ],
       "stakeholders": [
@@ -787,33 +803,33 @@
           "notes": "QBR engagement: support maturity plan, renewal secured."
         }
       ],
-      "recovery_start_month": 5
+      "recovery_start_month": 4
     },
     {
       "name": "Apex Dynamics",
-      "arr": 6100000,
-      "target_health": 80,
+      "arr": 5300000,
+      "target_health": 92,
       "classification": "healthy",
       "story_arc": "expansion_champion",
       "partner_tier": "tier_1",
       "renewal_date": "2026-08-10",
-      "narrative": "Apex Dynamics: strong growth trajectory 72\u219280, expansion champion pattern.",
-      "kpi_trajectory": "improving",
+      "narrative": "Apex Dynamics: expansion champion \u2014 health dips then recovers from 72 low to 92 by March.",
+      "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 3660000.0
+          "arr": 3180000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 1520000.0
+          "arr": 1320000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 920000.0
+          "arr": 800000.0
         }
       ],
       "stakeholders": [
@@ -880,29 +896,29 @@
     },
     {
       "name": "Summit Data",
-      "arr": 5400000,
-      "target_health": 75,
+      "arr": 5000000,
+      "target_health": 88,
       "classification": "healthy",
       "story_arc": "seasonal_surge",
       "partner_tier": "tier_1",
       "renewal_date": "2026-07-28",
-      "narrative": "Summit Data: strong growth trajectory 68\u219275, seasonal surge pattern.",
-      "kpi_trajectory": "improving",
+      "narrative": "Summit Data: seasonal surge \u2014 health dips then recovers from 68 low to 88 by March.",
+      "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 3240000.0
+          "arr": 3000000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 1350000.0
+          "arr": 1250000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 810000.0
+          "arr": 750000.0
         }
       ],
       "stakeholders": [
@@ -970,13 +986,13 @@
     {
       "name": "Meridian FinTech",
       "arr": 3000000,
-      "target_health": 82,
+      "target_health": 94,
       "classification": "healthy",
       "story_arc": "expansion_champion",
       "partner_tier": "tier_1",
       "renewal_date": "2026-09-01",
-      "narrative": "Meridian FinTech: strong growth trajectory 72\u219282, expansion champion pattern.",
-      "kpi_trajectory": "improving",
+      "narrative": "Meridian FinTech: expansion champion \u2014 health dips then recovers from 72 low to 94 by March.",
+      "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
@@ -1054,18 +1070,18 @@
           "notes": "Capacity planning: growth forecast 3x, tier upgrade to enterprise."
         }
       ],
-      "recovery_start_month": 1
+      "recovery_start_month": 2
     },
     {
       "name": "Atlas Marketing",
       "arr": 2500000,
-      "target_health": 76,
+      "target_health": 88,
       "classification": "healthy",
       "story_arc": "land_and_expand",
       "partner_tier": "direct",
       "renewal_date": "2026-08-15",
-      "narrative": "Atlas Marketing: strong growth trajectory 73\u219276, land and expand pattern.",
-      "kpi_trajectory": "improving",
+      "narrative": "Atlas Marketing: land and expand \u2014 health dips then recovers from 73 low to 88 by March.",
+      "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
@@ -1140,13 +1156,13 @@
     {
       "name": "Catalyst Logistics",
       "arr": 2500000,
-      "target_health": 79,
+      "target_health": 90,
       "classification": "healthy",
       "story_arc": "expansion_champion",
       "partner_tier": "direct",
       "renewal_date": "2026-09-10",
-      "narrative": "Catalyst Logistics: strong growth trajectory 72\u219279, expansion champion pattern.",
-      "kpi_trajectory": "improving",
+      "narrative": "Catalyst Logistics: expansion champion \u2014 health dips then recovers from 72 low to 90 by March.",
+      "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
@@ -1228,29 +1244,29 @@
     },
     {
       "name": "Horizon Labs",
-      "arr": 1500000,
-      "target_health": 75,
+      "arr": 2700000,
+      "target_health": 85,
       "classification": "healthy",
       "story_arc": "land_and_expand",
       "partner_tier": "direct",
       "renewal_date": "2026-07-20",
-      "narrative": "Horizon Labs: land and expand \u2014 health dips then recovers from 70 low to 75 by March.",
+      "narrative": "Horizon Labs: land and expand \u2014 health dips then recovers from 70 low to 85 by March.",
       "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
           "category": "core",
-          "arr": 900000.0
+          "arr": 1620000.0
         },
         {
           "name": "Analytics Suite",
           "category": "analytics",
-          "arr": 380000.0
+          "arr": 680000.0
         },
         {
           "name": "API Platform",
           "category": "integration",
-          "arr": 220000.0
+          "arr": 400000.0
         }
       ],
       "stakeholders": [
@@ -1305,18 +1321,18 @@
           "notes": "QBR engagement: goals alignment, expansion conversation opened."
         }
       ],
-      "recovery_start_month": 3
+      "recovery_start_month": 2
     },
     {
       "name": "Pinnacle Retail",
       "arr": 1400000,
-      "target_health": 74,
+      "target_health": 84,
       "classification": "healthy",
       "story_arc": "seasonal_surge",
       "partner_tier": "direct",
       "renewal_date": "2026-09-30",
-      "narrative": "Pinnacle Retail: strong growth trajectory 71\u219274, seasonal surge pattern.",
-      "kpi_trajectory": "improving",
+      "narrative": "Pinnacle Retail: seasonal surge \u2014 health dips then recovers from 71 low to 84 by March.",
+      "kpi_trajectory": "recovering",
       "products": [
         {
           "name": "Core Platform",
@@ -1386,7 +1402,7 @@
           "notes": "QBR engagement: post-peak retro + expansion roadmap."
         }
       ],
-      "recovery_start_month": 3
+      "recovery_start_month": 2
     }
   ]
 }

@@ -1252,19 +1252,21 @@ class ManifestCSVGenerator:
                 if effective_i >= start_idx:
                     decay = (effective_i - start_idx) / max(total_n - start_idx, 1)
                     if higher_is_better:
-                        modifier = 1.0 - 0.35 * decay
+                        modifier = 1.0 - 0.50 * decay
                     else:
-                        modifier = 1.0 + 0.5 * decay
+                        modifier = 1.0 + 0.75 * decay
                 else:
                     modifier = 1.0
             elif trajectory == 'slow_decline':
-                modifier = 1.0 - 0.15 * t if higher_is_better else 1.0 + 0.15 * t
+                modifier = 1.0 - 0.20 * t if higher_is_better else 1.0 + 0.20 * t
             elif trajectory == 'improving':
-                modifier = 1.0 + 0.15 * t if higher_is_better else 1.0 - 0.15 * t
+                modifier = 1.0 + 0.30 * t if higher_is_better else 1.0 - 0.30 * t
             elif trajectory == 'recovering':
                 # recovery_start_month controls where the V-shape inflects.
                 # Default 0.4 (40% through window) preserves legacy behaviour.
                 # E.g. recovery_start_month=4 in a 6-month range → inflect at 4/6.
+                # Amplitudes widened Apr 2026 so recovery arcs span ~25pt health
+                # deltas instead of ~16pt (demos used to under-deliver revenue).
                 total_months = max(
                     1,
                     (self.end_date - self.start_date).days / 30.0,
@@ -1274,12 +1276,12 @@ class ManifestCSVGenerator:
                 else:
                     split = 0.4
                 if t < split:
-                    m = 1.0 - 0.30 * (t / split)
+                    m = 1.0 - 0.45 * (t / split)
                 else:
-                    m = 0.70 + 0.35 * ((t - split) / max(1 - split, 0.01))
+                    m = 0.55 + 0.65 * ((t - split) / max(1 - split, 0.01))
                 modifier = m if higher_is_better else (2.0 - m)
             elif trajectory == 'ramping_up':
-                modifier = 0.7 + 0.35 * t if higher_is_better else 1.3 - 0.35 * t
+                modifier = 0.55 + 0.55 * t if higher_is_better else 1.45 - 0.55 * t
             elif trajectory == 'stable_high':
                 modifier = 1.0 + 0.02 * random.gauss(0, 1)
             elif trajectory == 'flat_high_risk':
@@ -1309,10 +1311,13 @@ class ManifestCSVGenerator:
                 else:
                     val -= boost_range
 
+            # Clamp widened Apr 2026 (1.2→1.4, 0.5→0.35) to allow recovering
+            # accounts to reach higher health (champion tier) and critical
+            # accounts to dip deeper. Prior clamp compressed recoveries to ~16pt.
             if higher_is_better:
-                val = max(0, min(target_val * 1.2, val))
+                val = max(0, min(target_val * 1.4, val))
             else:
-                val = max(target_val * 0.5, val)
+                val = max(target_val * 0.35, val)
 
             values.append(round(val, 2))
 
