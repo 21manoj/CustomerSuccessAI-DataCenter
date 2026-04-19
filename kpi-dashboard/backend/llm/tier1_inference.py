@@ -39,20 +39,49 @@ def _check_prerequisites(customer_id: int, mode: str = 'auto') -> Tuple[bool, st
 
     Returns (should_run, reason, resolved_mode).
     resolved_mode is 'full', 'edges_only', or '' if should_run is False.
+
+    Gate policy (Apr 2026): LLM Tier 1 is default-ON for 4-CSV onboarding
+    (where decisions.csv was NOT uploaded — the context graph needs
+    template+LLM enrichment to be useful) and default-OFF for 11-CSV
+    onboarding (customer provided their own decisions; extra LLM work
+    is redundant). Either default can be overridden by an explicit
+    per-customer `with_llm` toggle.
     """
-    # Check 1: WITH_LLM feature flag (per-customer DB toggle)
+    # Check 1: Detect CSV mode from customer-sourced DECISION nodes.
+    # 4-CSV mode: customer didn't upload decisions.csv → 0 customer DECISION nodes
+    # 11-CSV mode: customer uploaded decisions.csv → >0 customer DECISION nodes
     try:
-        from models import FeatureToggle as FTModel
+        from models import ContextNode, FeatureToggle as FTModel
+        customer_decisions = ContextNode.query.filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.node_type == 'DECISION',
+            ContextNode.source == 'customer',
+        ).count()
+        is_four_csv_mode = (customer_decisions == 0)
+
         toggle = FTModel.query.filter_by(
             customer_id=customer_id, feature_name='with_llm',
         ).first()
-        if not (toggle and toggle.enabled):
-            # Also check global feature flag
-            from feature_toggles import feature_toggles, FeatureToggle
-            if not feature_toggles.is_enabled(FeatureToggle.WITH_LLM):
-                return False, 'WITH_LLM feature flag disabled', ''
-    except Exception:
-        return False, 'Feature toggle check failed', ''
+
+        if toggle is not None:
+            # Explicit per-customer override wins.
+            if not toggle.enabled:
+                return False, 'with_llm toggle explicitly disabled for this customer', ''
+            # else: toggle says on → proceed
+        else:
+            # No explicit toggle → apply CSV-mode default.
+            if not is_four_csv_mode:
+                return False, '11-CSV mode (customer decisions uploaded); LLM default-off', ''
+            # 4-CSV mode with no explicit toggle → default-on. Fall through.
+
+        # Global kill switch (env var) always wins.
+        from feature_toggles import feature_toggles, FeatureToggle
+        if not feature_toggles.is_enabled(FeatureToggle.WITH_LLM):
+            # Global is off AND no explicit customer-on toggle → skip.
+            if not (toggle and toggle.enabled):
+                return False, 'Global WITH_LLM disabled and no customer override', ''
+    except Exception as e:
+        return False, f'Feature toggle check failed: {e}', ''
 
     # Check 2: Anthropic API key available
     try:
