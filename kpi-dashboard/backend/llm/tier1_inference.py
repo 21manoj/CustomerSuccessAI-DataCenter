@@ -74,12 +74,14 @@ def _check_prerequisites(customer_id: int, mode: str = 'auto') -> Tuple[bool, st
                 return False, '11-CSV mode (customer decisions uploaded); LLM default-off', ''
             # 4-CSV mode with no explicit toggle → default-on. Fall through.
 
-        # Global kill switch (env var) always wins.
-        from feature_toggles import feature_toggles, FeatureToggle
-        if not feature_toggles.is_enabled(FeatureToggle.WITH_LLM):
-            # Global is off AND no explicit customer-on toggle → skip.
-            if not (toggle and toggle.enabled):
-                return False, 'Global WITH_LLM disabled and no customer override', ''
+        # Global kill switch — only blocks if FEATURE_WITH_LLM is explicitly
+        # set to "false"/"0" (emergency cost control). Unset/default means
+        # let the customer/mode policy above decide. This lets 4-CSV auto-
+        # enable work out of the box without requiring an env var.
+        import os as _os
+        global_flag = (_os.environ.get('FEATURE_WITH_LLM') or '').strip().lower()
+        if global_flag in ('false', '0', 'off', 'no'):
+            return False, 'Global FEATURE_WITH_LLM=false kill switch active', ''
     except Exception as e:
         return False, f'Feature toggle check failed: {e}', ''
 
