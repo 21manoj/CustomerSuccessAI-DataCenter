@@ -147,16 +147,17 @@ def start_execution(
     if not account:
         raise ValueError(f"Account {account_id} not found for customer {customer_id}")
 
-    # Get health: use explicit value, or query latest from DB
+    # Get health: use explicit value, or point-in-time query by triggered_at
     if health_at_trigger is not None:
         health_now = health_at_trigger
     else:
-        latest_hs = (
-            HealthScore.query
-            .filter_by(account_id=account_id)
-            .order_by(HealthScore.measurement_month.desc())
-            .first()
-        )
+        hs_query = HealthScore.query.filter(HealthScore.account_id == account_id)
+        if triggered_at is not None:
+            # Point-in-time: latest HS on or before triggered_at
+            hs_query = hs_query.filter(
+                HealthScore.measurement_month <= triggered_at.date()
+            )
+        latest_hs = hs_query.order_by(HealthScore.measurement_month.desc()).first()
         health_now = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else None
     health_status = _classify_health(health_now)
 
@@ -247,22 +248,15 @@ def close_execution(
     if health_at_close is None:
         try:
             close_date = execution.closed_at or datetime.utcnow()
-            close_month = close_date.strftime('%Y-%m')
-            hs = HealthScore.query.filter_by(
-                account_id=execution.account_id,
-                measurement_month=close_month,
-            ).first()
-            if hs:
+            # Latest HS on or before close_date (HS.measurement_month is a Date,
+            # stored as the 1st of the month; <= comparison handles mid-month closes).
+            hs = (HealthScore.query
+                  .filter(HealthScore.account_id == execution.account_id,
+                          HealthScore.measurement_month <= close_date.date())
+                  .order_by(HealthScore.measurement_month.desc())
+                  .first())
+            if hs and hs.health_score:
                 health_at_close = float(hs.health_score)
-            else:
-                # Fallback: most recent health score before close date
-                hs = (HealthScore.query
-                      .filter(HealthScore.account_id == execution.account_id,
-                              HealthScore.measurement_month <= close_month)
-                      .order_by(HealthScore.measurement_month.desc())
-                      .first())
-                if hs:
-                    health_at_close = float(hs.health_score)
         except Exception:
             pass  # Continue without health_at_close
 

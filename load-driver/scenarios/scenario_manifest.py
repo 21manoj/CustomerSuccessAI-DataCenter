@@ -3453,6 +3453,7 @@ class ScenarioManifest(BaseScenario):
                             execution_id=execution_id,
                             outcome=outcome,
                             outcome_notes=notes,
+                            closed_at=closed_at,
                         )
                         result['api_calls'] += 1
 

@@ -317,6 +317,16 @@ def close_execution_endpoint(execution_id):
         if outcome not in ('resolved', 'escalated', 'timeout', 'manual_close'):
             return jsonify({'status': 'error', 'message': f'Invalid outcome: {outcome}'}), 400
 
+        # Time-aware: accept explicit closed_at for manifest-defined playbooks
+        _closed_at = None
+        _raw_closed_at = data.get('closed_at')
+        if _raw_closed_at:
+            try:
+                from datetime import datetime as _dt
+                _closed_at = _dt.fromisoformat(str(_raw_closed_at).replace('Z', '+00:00')).replace(tzinfo=None)
+            except Exception:
+                _closed_at = None
+
         from utils.playbook_lifecycle import close_execution
         try:
             v2 = close_execution(
@@ -328,6 +338,7 @@ def close_execution_endpoint(execution_id):
                 revenue_protected=data.get('revenue_protected'),
                 revenue_expanded=data.get('revenue_expanded', 0),
                 csm_hours_actual=data.get('csm_hours_actual'),
+                closed_at=_closed_at,
             )
         except ValueError as e:
             # "already closed" is not an error if the outcome matches —

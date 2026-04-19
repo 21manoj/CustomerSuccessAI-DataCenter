@@ -609,12 +609,18 @@ class CSPulseClient:
         revenue_protected: float = None,
         revenue_expanded: float = 0,
         csm_hours_actual: float = None,
+        closed_at: str = None,
     ) -> Optional[Dict[str, Any]]:
         """Close a playbook execution with full revenue attribution.
 
         Calls the lifecycle close endpoint which computes churn-model
         revenue_protected, writes OUTCOME context graph nodes, and
         calculates realized ROI.
+
+        Args:
+            closed_at: ISO-8601 date/datetime string. Required for historical
+                (manifest-defined) closures so the server looks up health AT
+                that date instead of defaulting to now.
         """
         payload = {'outcome': outcome, 'outcome_notes': outcome_notes}
         if health_at_close is not None:
@@ -625,6 +631,8 @@ class CSPulseClient:
             payload['revenue_expanded'] = revenue_expanded
         if csm_hours_actual is not None:
             payload['csm_hours_actual'] = csm_hours_actual
+        if closed_at:
+            payload['closed_at'] = closed_at
         return self.post(f'/api/playbooks/executions/{execution_id}/close', payload)
 
     def get_all_executions(self) -> Optional[Dict[str, Any]]:
