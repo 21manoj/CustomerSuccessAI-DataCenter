@@ -70,6 +70,7 @@ services:
       DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      MCP_SERVER_API_KEY: ${MCP_SERVER_API_KEY}
       FLASK_APP: app_v3_minimal.py
       FLASK_ENV: production
       SECRET_KEY: ${SECRET_KEY}
