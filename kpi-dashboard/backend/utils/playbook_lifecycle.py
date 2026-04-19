@@ -315,7 +315,16 @@ def close_execution(
     _write_context_graph_outcome(execution, customer_id, outcome, revenue_protected, revenue_expanded, arr, full_cost,
                                  occurred_at=execution.closed_at)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # Retry commit without context graph (CG write may have caused conflict)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
     return execution
 
 

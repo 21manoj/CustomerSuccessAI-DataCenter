@@ -330,7 +330,25 @@ def close_execution_endpoint(execution_id):
                 csm_hours_actual=data.get('csm_hours_actual'),
             )
         except ValueError as e:
-            return jsonify({'status': 'error', 'message': str(e)}), 404
+            # "already closed" is not an error if the outcome matches —
+            # the previous close succeeded but the response was lost (retry)
+            err_msg = str(e)
+            if 'already closed' in err_msg.lower():
+                v2 = PlaybookExecutionV2.query.filter_by(
+                    execution_id=execution_id, customer_id=int(customer_id),
+                ).first()
+                if v2:
+                    return jsonify({
+                        'status': 'success',
+                        'execution': _v2_to_camelcase(v2),
+                        'revenue_protected': float(v2.revenue_protected or 0),
+                        'revenue_expanded': float(v2.revenue_expanded or 0),
+                        'realized_roi_pct': float(v2.realized_roi_pct or 0),
+                        'health_delta': float(v2.health_delta or 0),
+                        'nrr_impact_pct': float(v2.nrr_impact_pct or 0),
+                        'note': 'Execution was already closed (idempotent)',
+                    })
+            return jsonify({'status': 'error', 'message': err_msg}), 404
 
         return jsonify({
             'status': 'success',
@@ -344,6 +362,7 @@ def close_execution_endpoint(execution_id):
 
     except Exception as e:
         logger.error(f"Error closing execution {execution_id}: {e}", exc_info=True)
+        db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
