@@ -1,0 +1,1392 @@
+{
+  "manifest_version": "2.0",
+  "customer": {
+    "name": "Slide Deck SaaS Demo v2",
+    "domain": "phoenix-saas-v2.com",
+    "vertical": "saas_premium",
+    "admin_email": "admin@slidedeck-demo-v2.com",
+    "admin_name": "Phoenix Admin v2",
+    "total_arr": 48000000,
+    "description": "15-account SaaS portfolio aligned to VP CS + CSM tutorial decks. 7 healthy / 5 at-risk / 3 critical. 40 playbook runs target $2.1M protected + $1.4M expanded."
+  },
+  "time_range": {
+    "start": "2025-07-01",
+    "end": "2026-03-31",
+    "frequency": "weekly",
+    "data_points_per_kpi": 39
+  },
+  "kpis": {
+    "selection": "starter_9",
+    "count": 9,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI4",
+      "P2-KPI1",
+      "P2-KPI3",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P5-KPI1",
+      "P5-KPI5"
+    ]
+  },
+  "context_graph": {
+    "stakeholders_per_account": 2,
+    "events_per_account": 3,
+    "include_decisions": true,
+    "include_outcomes": true,
+    "include_signal_edges": true,
+    "include_benchmarks": true
+  },
+  "lifecycle_events": {
+    "Drift Analytics": {
+      "event": "churn",
+      "event_month": 8,
+      "delta_pct": -100
+    },
+    "Nimbus Logistics": {
+      "event": "churn",
+      "event_month": 9,
+      "delta_pct": -100
+    },
+    "Meridian FinTech": {
+      "event": "expand",
+      "event_month": 6,
+      "delta_pct": 25
+    },
+    "Apex Dynamics": {
+      "event": "expand",
+      "event_month": 7,
+      "delta_pct": 20
+    },
+    "Catalyst Logistics": {
+      "event": "expand",
+      "event_month": 7,
+      "delta_pct": 15
+    },
+    "Summit Data": {
+      "event": "expand",
+      "event_month": 7,
+      "delta_pct": 15
+    }
+  },
+  "accounts": [
+    {
+      "name": "Drift Analytics",
+      "arr": 1800000,
+      "target_health": 42,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-15",
+      "narrative": "Drift Analytics: health drops from 58\u219242 via silent churn; no recovery intervention succeeds.",
+      "kpi_trajectory": "declining",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1080000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 450000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 270000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Unresponsive Champion",
+          "role": "champion",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 6,
+          "sentiment": "disengaged",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "IT Lead",
+          "role": "technical_lead",
+          "title": "IT Director",
+          "department": "IT",
+          "influence_score": 5,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "engagement_drop",
+          "date": "2025-10-15",
+          "content": "Primary champion stopped responding to emails for 45+ days.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-01-15",
+          "content": "Weekly active users dropped 40%; core features unused.",
+          "sentiment": "negative"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-11-01",
+          "closed_at": "2025-12-05",
+          "outcome": "escalated",
+          "triggered_by": "signal_analyst",
+          "notes": "Silent churn intervention: champion unresponsive, escalating."
+        },
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2026-01-15",
+          "closed_at": "2026-02-28",
+          "outcome": "escalated",
+          "triggered_by": "health_drop",
+          "notes": "Emergency retention: exec outreach failed, account deteriorating."
+        }
+      ]
+    },
+    {
+      "name": "Cascade Health",
+      "arr": 3800000,
+      "target_health": 64,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-05-30",
+      "narrative": "Cascade Health: crisis recovery \u2014 health dips then recovers from 42 low to 64 by March.",
+      "kpi_trajectory": "recovering",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2280000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 950000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 570000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "New Champion",
+          "role": "champion",
+          "title": "VP Engineering",
+          "department": "Engineering",
+          "influence_score": 9,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Exec Sponsor",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Engineering",
+          "influence_score": 10,
+          "sentiment": "cautious",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "crisis_event",
+          "date": "2025-10-15",
+          "content": "Platform outage triggered CTO escalation; 48h incident.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "recovery_milestone",
+          "date": "2026-01-15",
+          "content": "Post-incident review completed; trust metrics recovering.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-09-10",
+          "closed_at": "2025-10-20",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention: HIPAA concerns, immediate compliance sprint."
+        },
+        {
+          "playbook_id": "PB-SYS-04",
+          "triggered_at": "2025-11-15",
+          "closed_at": "2025-12-20",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Champion recovery: Chief Medical Officer re-engaged after exec change."
+        },
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2026-01-05",
+          "closed_at": "2026-02-10",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Emergency retention continuation: infrastructure hardening."
+        },
+        {
+          "playbook_id": "PB-01",
+          "triggered_at": "2026-02-15",
+          "closed_at": "2026-03-15",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Deployment acceleration: module re-onboarding post-recovery."
+        }
+      ],
+      "recovery_start_month": 3
+    },
+    {
+      "name": "Nimbus Logistics",
+      "arr": 4200000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-05-10",
+      "narrative": "Nimbus Logistics: health drops from 45\u219238 via silent churn; no recovery intervention succeeds.",
+      "kpi_trajectory": "declining",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2520000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 1050000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 630000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Unresponsive Champion",
+          "role": "champion",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 6,
+          "sentiment": "disengaged",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "IT Lead",
+          "role": "technical_lead",
+          "title": "IT Director",
+          "department": "IT",
+          "influence_score": 5,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "engagement_drop",
+          "date": "2025-10-15",
+          "content": "Primary champion stopped responding to emails for 45+ days.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-01-15",
+          "content": "Weekly active users dropped 40%; core features unused.",
+          "sentiment": "negative"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-11-15",
+          "closed_at": "2025-12-20",
+          "outcome": "escalated",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention attempted; champion unresponsive, decline continues."
+        },
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2026-01-20",
+          "closed_at": "2026-02-25",
+          "outcome": "escalated",
+          "triggered_by": "health_drop",
+          "notes": "Emergency retention round 2: terminal declining, pre-churn."
+        }
+      ]
+    },
+    {
+      "name": "Relay Healthcare",
+      "arr": 3800000,
+      "target_health": 68,
+      "classification": "at_risk",
+      "story_arc": "exec_sponsor_change",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-06-22",
+      "narrative": "Relay Healthcare: exec sponsor change \u2014 health dips then recovers from 55 low to 68 by March.",
+      "kpi_trajectory": "recovering",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2280000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 950000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 570000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Original Sponsor",
+          "role": "former_sponsor",
+          "title": "VP Clinical Ops",
+          "department": "Clinical",
+          "influence_score": 9,
+          "sentiment": "departed",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "New Sponsor",
+          "role": "executive_sponsor",
+          "title": "Chief Medical Officer",
+          "department": "Clinical",
+          "influence_score": 9,
+          "sentiment": "concerned",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Technical Lead",
+          "role": "technical_lead",
+          "title": "Security Architect",
+          "department": "IT Security",
+          "influence_score": 8,
+          "sentiment": "negative",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "escalation",
+          "date": "2025-10-15",
+          "content": "CMIO Dr. Patel escalated SSO failures to our CEO.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "csm_intervention",
+          "date": "2026-01-15",
+          "content": "Dedicated security support pod deployed; weekly reviews started.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-SYS-04",
+          "triggered_at": "2025-09-15",
+          "closed_at": "2025-10-15",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Champion recovery: new CMIO identified after original champion departed."
+        },
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-10-15",
+          "closed_at": "2025-12-10",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention: HIPAA escalation addressed with dedicated security pod."
+        },
+        {
+          "playbook_id": "PB-SYS-04",
+          "triggered_at": "2026-01-05",
+          "closed_at": "2026-02-05",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Champion recovery round 2: strengthened exec sponsor relationship."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-02-10",
+          "closed_at": "2026-03-10",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: recovery confirmed, compliance roadmap aligned."
+        }
+      ],
+      "recovery_start_month": 4
+    },
+    {
+      "name": "Canopy EdTech",
+      "arr": 4200000,
+      "target_health": 60,
+      "classification": "at_risk",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-07-10",
+      "narrative": "Canopy EdTech: competitive displacement \u2014 health dips then recovers from 60 low to 60 by March.",
+      "kpi_trajectory": "recovering",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 2520000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 1050000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 630000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "VP Academic Tech",
+          "role": "champion",
+          "title": "VP Academic Technology",
+          "department": "Academic",
+          "influence_score": 8,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Procurement",
+          "role": "influencer",
+          "title": "Director Procurement",
+          "department": "Finance",
+          "influence_score": 6,
+          "sentiment": "negative",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "competitive_eval",
+          "date": "2025-10-15",
+          "content": "Canvas evaluation detected in procurement review.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "qbr_positive",
+          "date": "2026-01-15",
+          "content": "Post-QBR feedback positive; roadmap alignment improved.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2025-10-20",
+          "closed_at": "2025-11-20",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: early competitive defense, positioning review."
+        },
+        {
+          "playbook_id": "PB-01",
+          "triggered_at": "2025-12-15",
+          "closed_at": "2026-01-20",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Deployment acceleration: competitive displacement defense, feature catch-up."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-02-05",
+          "closed_at": "2026-03-05",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR follow-up: roadmap alignment with VP Academic Technology."
+        }
+      ],
+      "recovery_start_month": 7
+    },
+    {
+      "name": "TechGrid Corp",
+      "arr": 2600000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-30",
+      "narrative": "TechGrid Corp: health drops from 71\u219258 via stalled deployment; no recovery intervention succeeds.",
+      "kpi_trajectory": "declining",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1560000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 650000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 390000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Deployment Lead",
+          "role": "technical_lead",
+          "title": "VP Engineering",
+          "department": "Engineering",
+          "influence_score": 8,
+          "sentiment": "concerned",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "CTO",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Engineering",
+          "influence_score": 9,
+          "sentiment": "neutral",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "integration_stall",
+          "date": "2025-10-15",
+          "content": "API integration blocked on platform gap; launch slipped 6 wks.",
+          "sentiment": "negative"
+        },
+        {
+          "type": "deployment_reset",
+          "date": "2026-01-15",
+          "content": "Dedicated SE assigned; workflow reactivation program launched.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-01",
+          "triggered_at": "2025-11-10",
+          "closed_at": "2026-01-10",
+          "outcome": "escalated",
+          "triggered_by": "health_drop",
+          "notes": "Deployment acceleration: stalled integration, engineering SE assigned."
+        },
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2026-01-15",
+          "closed_at": "2026-02-20",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention: workflow reactivation program, CSM high-touch."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-02-25",
+          "closed_at": "2026-03-20",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: CTO realignment, adoption plan reset."
+        }
+      ]
+    },
+    {
+      "name": "Vertex Media",
+      "arr": 2800000,
+      "target_health": 70,
+      "classification": "at_risk",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "narrative": "Vertex Media: crisis recovery \u2014 health dips then recovers from 55 low to 70 by March.",
+      "kpi_trajectory": "recovering",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1680000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 700000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 420000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "New Champion",
+          "role": "champion",
+          "title": "VP Engineering",
+          "department": "Engineering",
+          "influence_score": 9,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Exec Sponsor",
+          "role": "executive_sponsor",
+          "title": "CTO",
+          "department": "Engineering",
+          "influence_score": 10,
+          "sentiment": "cautious",
+          "engagement_frequency": "monthly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "crisis_event",
+          "date": "2025-10-15",
+          "content": "Platform outage triggered CTO escalation; 48h incident.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "recovery_milestone",
+          "date": "2026-01-15",
+          "content": "Post-incident review completed; trust metrics recovering.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-09-20",
+          "closed_at": "2025-10-30",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention: DAU freefall after platform bug, dedicated pod assigned."
+        },
+        {
+          "playbook_id": "PB-SYS-04",
+          "triggered_at": "2025-11-05",
+          "closed_at": "2025-12-10",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Champion recovery: new VP Marketing re-engaged, content strategy reset."
+        },
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2026-01-10",
+          "closed_at": "2026-02-15",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Emergency retention follow-up: stabilization confirmed."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-02-20",
+          "closed_at": "2026-03-20",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: recovery milestones signed off, renewal committed."
+        }
+      ],
+      "recovery_start_month": 4
+    },
+    {
+      "name": "Granite Support",
+      "arr": 2400000,
+      "target_health": 62,
+      "classification": "at_risk",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "Granite Support: silent churn \u2014 health dips then recovers from 54 low to 62 by March.",
+      "kpi_trajectory": "recovering",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1440000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 600000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 360000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Unresponsive Champion",
+          "role": "champion",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 6,
+          "sentiment": "disengaged",
+          "engagement_frequency": "none"
+        },
+        {
+          "name": "IT Lead",
+          "role": "technical_lead",
+          "title": "IT Director",
+          "department": "IT",
+          "influence_score": 5,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "engagement_drop",
+          "date": "2025-10-15",
+          "content": "Primary champion stopped responding to emails for 45+ days.",
+          "sentiment": "very_negative"
+        },
+        {
+          "type": "usage_decline",
+          "date": "2026-01-15",
+          "content": "Weekly active users dropped 40%; core features unused.",
+          "sentiment": "negative"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-02",
+          "triggered_at": "2025-12-01",
+          "closed_at": "2026-01-15",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Emergency retention: ticket backlog cleared, SLA recovered."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-02-15",
+          "closed_at": "2026-03-15",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: support maturity plan, renewal secured."
+        }
+      ],
+      "recovery_start_month": 5
+    },
+    {
+      "name": "Apex Dynamics",
+      "arr": 6100000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-08-10",
+      "narrative": "Apex Dynamics: strong growth trajectory 72\u219280, expansion champion pattern.",
+      "kpi_trajectory": "improving",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 3660000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 1520000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 920000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Executive Champion",
+          "role": "champion",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "enthusiastic",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Product Head",
+          "role": "product_lead",
+          "title": "Chief Product Officer",
+          "department": "Product",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "bi-weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_signal",
+          "date": "2025-10-15",
+          "content": "CEO approved 3 new departments onto the platform.",
+          "sentiment": "very_positive"
+        },
+        {
+          "type": "usage_spike",
+          "date": "2026-01-15",
+          "content": "DAU up 35% Q/Q; power-user cohort tripled.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-08",
+          "triggered_at": "2025-10-05",
+          "closed_at": "2025-11-10",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Expansion accelerator: identified 3 new departments with CEO approval."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-01-10",
+          "closed_at": "2026-02-10",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: expansion pipeline review, contract expansion scheduled."
+        },
+        {
+          "playbook_id": "PB-04",
+          "triggered_at": "2026-02-15",
+          "closed_at": "2026-03-15",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Capacity planning: forecast growth, provision upgrade signed."
+        }
+      ],
+      "recovery_start_month": 2
+    },
+    {
+      "name": "Summit Data",
+      "arr": 5400000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "seasonal_surge",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-07-28",
+      "narrative": "Summit Data: strong growth trajectory 68\u219275, seasonal surge pattern.",
+      "kpi_trajectory": "improving",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 3240000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 1350000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 810000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Ops Lead",
+          "role": "champion",
+          "title": "VP Customer Success",
+          "department": "Operations",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Finance Sponsor",
+          "role": "executive_sponsor",
+          "title": "CFO",
+          "department": "Finance",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "seasonal_peak",
+          "date": "2025-10-15",
+          "content": "Peak-season traffic served with 99.9% uptime.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "capacity_add",
+          "date": "2026-01-15",
+          "content": "Infrastructure capacity upgrade signed for next peak.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-04",
+          "triggered_at": "2025-11-01",
+          "closed_at": "2025-12-01",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Capacity planning: seasonal surge forecasting, infra headroom added."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-01-15",
+          "closed_at": "2026-02-15",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: usage review, upsell pipeline qualified."
+        },
+        {
+          "playbook_id": "PB-08",
+          "triggered_at": "2026-02-20",
+          "closed_at": "2026-03-20",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Expansion accelerator: multi-region add-on signed."
+        }
+      ],
+      "recovery_start_month": 2
+    },
+    {
+      "name": "Meridian FinTech",
+      "arr": 3000000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-09-01",
+      "narrative": "Meridian FinTech: strong growth trajectory 72\u219282, expansion champion pattern.",
+      "kpi_trajectory": "improving",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1800000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 750000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 450000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Executive Champion",
+          "role": "champion",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "enthusiastic",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Product Head",
+          "role": "product_lead",
+          "title": "Chief Product Officer",
+          "department": "Product",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "bi-weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_signal",
+          "date": "2025-10-15",
+          "content": "CEO approved 3 new departments onto the platform.",
+          "sentiment": "very_positive"
+        },
+        {
+          "type": "usage_spike",
+          "date": "2026-01-15",
+          "content": "DAU up 35% Q/Q; power-user cohort tripled.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-08",
+          "triggered_at": "2025-10-15",
+          "closed_at": "2025-11-15",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Expansion accelerator: enterprise tier upgrade, 2 new product lines."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-01-10",
+          "closed_at": "2026-02-05",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: executive alignment, strategic roadmap."
+        },
+        {
+          "playbook_id": "PB-04",
+          "triggered_at": "2026-02-15",
+          "closed_at": "2026-03-15",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Capacity planning: growth forecast 3x, tier upgrade to enterprise."
+        }
+      ],
+      "recovery_start_month": 1
+    },
+    {
+      "name": "Atlas Marketing",
+      "arr": 2500000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-15",
+      "narrative": "Atlas Marketing: strong growth trajectory 73\u219276, land and expand pattern.",
+      "kpi_trajectory": "improving",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1500000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 620000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 380000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Champion",
+          "role": "champion",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Stakeholder",
+          "role": "influencer",
+          "title": "Director Data",
+          "department": "Data",
+          "influence_score": 6,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "adoption_growth",
+          "date": "2025-10-15",
+          "content": "Feature adoption up 20% after stakeholder mapping refresh.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "qbr_alignment",
+          "date": "2026-01-15",
+          "content": "QBR confirmed expansion intent for next contract cycle.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-01",
+          "triggered_at": "2025-10-10",
+          "closed_at": "2025-11-10",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Deployment acceleration: marketing stack integrations, onboarding boost."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-01-25",
+          "closed_at": "2026-02-25",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: expansion opportunity mapping."
+        }
+      ],
+      "recovery_start_month": 2
+    },
+    {
+      "name": "Catalyst Logistics",
+      "arr": 2500000,
+      "target_health": 79,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-10",
+      "narrative": "Catalyst Logistics: strong growth trajectory 72\u219279, expansion champion pattern.",
+      "kpi_trajectory": "improving",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 1500000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 620000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 380000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Executive Champion",
+          "role": "champion",
+          "title": "CEO",
+          "department": "Executive",
+          "influence_score": 10,
+          "sentiment": "enthusiastic",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Product Head",
+          "role": "product_lead",
+          "title": "Chief Product Officer",
+          "department": "Product",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "bi-weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "expansion_signal",
+          "date": "2025-10-15",
+          "content": "CEO approved 3 new departments onto the platform.",
+          "sentiment": "very_positive"
+        },
+        {
+          "type": "usage_spike",
+          "date": "2026-01-15",
+          "content": "DAU up 35% Q/Q; power-user cohort tripled.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2025-11-05",
+          "closed_at": "2025-12-05",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: supply chain optimization workshop."
+        },
+        {
+          "playbook_id": "PB-04",
+          "triggered_at": "2026-01-10",
+          "closed_at": "2026-02-10",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Capacity planning: fleet expansion provisioning."
+        },
+        {
+          "playbook_id": "PB-08",
+          "triggered_at": "2026-02-20",
+          "closed_at": "2026-03-20",
+          "outcome": "resolved",
+          "triggered_by": "signal_analyst",
+          "notes": "Expansion accelerator: multi-warehouse add-on deal signed."
+        }
+      ],
+      "recovery_start_month": 2
+    },
+    {
+      "name": "Horizon Labs",
+      "arr": 1500000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-20",
+      "narrative": "Horizon Labs: land and expand \u2014 health dips then recovers from 70 low to 75 by March.",
+      "kpi_trajectory": "recovering",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 900000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 380000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 220000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Champion",
+          "role": "champion",
+          "title": "VP Operations",
+          "department": "Operations",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Stakeholder",
+          "role": "influencer",
+          "title": "Director Data",
+          "department": "Data",
+          "influence_score": 6,
+          "sentiment": "neutral",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "adoption_growth",
+          "date": "2025-10-15",
+          "content": "Feature adoption up 20% after stakeholder mapping refresh.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "qbr_alignment",
+          "date": "2026-01-15",
+          "content": "QBR confirmed expansion intent for next contract cycle.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-01",
+          "triggered_at": "2025-10-01",
+          "closed_at": "2025-11-05",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "Deployment acceleration: stakeholder mapping + onboarding push."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-01-20",
+          "closed_at": "2026-02-20",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: goals alignment, expansion conversation opened."
+        }
+      ],
+      "recovery_start_month": 3
+    },
+    {
+      "name": "Pinnacle Retail",
+      "arr": 1400000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "seasonal_surge",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Pinnacle Retail: strong growth trajectory 71\u219274, seasonal surge pattern.",
+      "kpi_trajectory": "improving",
+      "products": [
+        {
+          "name": "Core Platform",
+          "category": "core",
+          "arr": 840000.0
+        },
+        {
+          "name": "Analytics Suite",
+          "category": "analytics",
+          "arr": 350000.0
+        },
+        {
+          "name": "API Platform",
+          "category": "integration",
+          "arr": 210000.0
+        }
+      ],
+      "stakeholders": [
+        {
+          "name": "Ops Lead",
+          "role": "champion",
+          "title": "VP Customer Success",
+          "department": "Operations",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Finance Sponsor",
+          "role": "executive_sponsor",
+          "title": "CFO",
+          "department": "Finance",
+          "influence_score": 9,
+          "sentiment": "positive",
+          "engagement_frequency": "quarterly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "seasonal_peak",
+          "date": "2025-10-15",
+          "content": "Peak-season traffic served with 99.9% uptime.",
+          "sentiment": "positive"
+        },
+        {
+          "type": "capacity_add",
+          "date": "2026-01-15",
+          "content": "Infrastructure capacity upgrade signed for next peak.",
+          "sentiment": "positive"
+        }
+      ],
+      "playbook_executions": [
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2025-10-15",
+          "closed_at": "2025-11-15",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: peak season readiness review."
+        },
+        {
+          "playbook_id": "PB-06",
+          "triggered_at": "2026-02-01",
+          "closed_at": "2026-03-01",
+          "outcome": "resolved",
+          "triggered_by": "csm",
+          "notes": "QBR engagement: post-peak retro + expansion roadmap."
+        }
+      ],
+      "recovery_start_month": 3
+    }
+  ]
+}
