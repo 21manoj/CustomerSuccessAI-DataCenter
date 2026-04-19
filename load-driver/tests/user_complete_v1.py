@@ -6,6 +6,18 @@ Full lifecycle test: create → load → validate persona questions → extend �
 Uses ONLY user-scoped paths: REST APIs (load driver) + MCP HTTP calls. No direct DB access.
 
 Usage:
+  # Local macOS (Docker):
+  python3 tests/user_complete_v1.py --local --cycles 1
+
+  # Local macOS (Flask dev server):
+  python3 tests/user_complete_v1.py --base-url http://localhost:5059 --mcp-host localhost:8001 --cycles 1
+
+  # EC2 (via CloudFront):
+  python3 tests/user_complete_v1.py --base-url https://d2oqfugrb2ltg9.cloudfront.net --mcp-host 3.87.199.195:8001 --cycles 1
+
+  # EC2 (direct):
+  python3 tests/user_complete_v1.py --base-url http://3.87.199.195 --cycles 1
+
   # Sequential (3 cycles):
   python3 tests/user_complete_v1.py --base-url https://d2oqfugrb2ltg9.cloudfront.net --cycles 3
 
@@ -367,18 +379,23 @@ def phase1_create_and_load(base_url: str, manifest_path: str, seed: int, cycle: 
         return {"error": tail}
 
     # Parse customer_id and API key from output (driver logs mostly go to stderr)
+    import re
     combined_out = (result.stdout or "") + "\n" + (result.stderr or "")
     customer_id = None
     api_key = None
+
+    # Pattern: "Registered: customer_id=363"
+    match = re.search(r"Registered:\s*customer_id=(\d+)", combined_out)
+    if match:
+        customer_id = int(match.group(1))
+
+    # Pattern: "API Key: csp_admin_..." or "api_key: csp_..."
+    match = re.search(r"API [Kk]ey:\s*(csp_\S+)", combined_out)
+    if match:
+        api_key = match.group(1).strip().rstrip(",").rstrip("}").strip('"')
+
+    # Fallback: JSON parsing
     for line in combined_out.split("\n"):
-        if "customer_id" in line.lower() and ":" in line:
-            try:
-                customer_id = int(line.split(":")[-1].strip().rstrip(",").strip('"'))
-            except (ValueError, IndexError):
-                pass
-        if "api_key" in line.lower() and ":" in line:
-            api_key = line.split(":")[-1].strip().strip('"').rstrip(",").rstrip("}").strip().strip('"')
-        # Also try JSON parsing
         if "{" in line and "customer_id" in line:
             try:
                 d = json.loads(line[line.index("{"):])
@@ -387,14 +404,9 @@ def phase1_create_and_load(base_url: str, manifest_path: str, seed: int, cycle: 
             except (json.JSONDecodeError, ValueError):
                 pass
 
+    # Final fallback for customer_id
     if not customer_id:
-        # Try to find from the full output
-        import re
         match = re.search(r"customer_id[\"']?\s*[:=]\s*(\d+)", combined_out)
-        if match:
-            customer_id = int(match.group(1))
-    if not customer_id:
-        match = re.search(r"Registered:\s*customer_id=(\d+)", combined_out)
         if match:
             customer_id = int(match.group(1))
 
@@ -1473,7 +1485,9 @@ def run_concurrent(base_url: str, manifest_path: str, count: int, verbose: bool,
 
 def main():
     parser = argparse.ArgumentParser(description="User-Complete-V1 Test Harness")
-    parser.add_argument("--base-url", required=True, help="CS Pulse server URL")
+    parser.add_argument("--base-url", default=None, help="CS Pulse server URL (default: http://localhost for --local)")
+    parser.add_argument("--local", action="store_true",
+                        help="Run against local Docker (http://localhost:80, MCP on localhost:8001)")
     parser.add_argument("--manifest", default=MANIFEST_FILE, help="Manifest JSON path")
     parser.add_argument("--cycles", type=int, default=3, help="Sequential cycles (default 3)")
     parser.add_argument("--concurrent", type=int, default=0, help="Concurrent customers (0=skip)")
@@ -1498,6 +1512,14 @@ def main():
     parser.add_argument("--with-signal-360", action="store_true", help="Run Signal Engine 360 fidelity test (Phase 2.5)")
     parser.add_argument("--signal-360-wait", type=int, default=60, help="Seconds to wait for signal enrichment (default: 60)")
     args = parser.parse_args()
+
+    # ── Local mode defaults ──
+    if args.local:
+        args.base_url = args.base_url or "http://localhost"
+        args.mcp_host = args.mcp_host or "localhost:8001"
+        print(f"  Local mode: base_url={args.base_url}, mcp_host={args.mcp_host}")
+    elif not args.base_url:
+        parser.error("--base-url is required (or use --local for local Docker)")
 
     if not Path(args.manifest).exists():
         print(f"❌ Manifest not found: {args.manifest}")

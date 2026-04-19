@@ -100,12 +100,28 @@ def require_revenue_intelligence(f):
 # ============================================================
 
 @revenue_intelligence_api.route('/api/revenue-intelligence/power-of-1', methods=['GET'])
+@revenue_intelligence_api.route('/api/v1/power-of-1', methods=['GET'])
 @require_revenue_intelligence
 def get_power_of_1_table(customer_id):
-    """Return the full Power of 1 metric table with economic models."""
+    """Return the full Power of 1 metric table with ARR-scaled impact calculations.
+
+    This endpoint now returns the same ARR-scaled impact numbers as /impact,
+    plus the model definitions (work packages, cascades, scaling scenarios).
+    Previously returned static model definitions only ($0 impact).
+    """
     try:
+        improvement_pct = request.args.get('improvement_pct', 1.0, type=float)
+
+        # Sum ARR across all accounts for this customer (same as /impact)
+        accounts = Account.query.filter_by(customer_id=customer_id).all()
+        total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
+
+        # Calculate ARR-scaled impact for each metric
         metrics = {}
         for metric_id, metric in POWER_OF_1_METRICS.items():
+            # Get real impact calculation
+            impact = calculate_power_of_1_impact(metric_id, improvement_pct, total_arr)
+
             metrics[metric_id] = {
                 'metric_id': metric.metric_id,
                 'display_name': metric.display_name,
@@ -113,15 +129,22 @@ def get_power_of_1_table(customer_id):
                 'unit': metric.unit,
                 'direction': metric.direction,
                 'one_pct_move': metric.one_pct_move,
+                'category': metric.category.value,
+                'primary_pillar': metric.primary_pillar.value,
+                'linked_playbooks': metric.linked_playbooks,
+                # ARR-scaled impact (was missing before)
+                'direct_impact': impact.get('direct_impact', 0),
+                'compounding_impact': impact.get('compounding_impact', 0),
+                'total_impact': impact.get('total_impact', impact.get('direct_impact', 0)),
+                'investment': impact.get('investment', metric.total_investment),
+                'roi_pct': impact.get('roi_pct', 0),
+                # Model definitions
                 'annual_impact_per_pct': metric.annual_impact_per_pct,
                 'total_investment': metric.total_investment,
                 'roi_at_1pct': metric.roi_at_1pct,
                 'payback_months': metric.payback_months,
-                'category': metric.category.value,
-                'primary_pillar': metric.primary_pillar.value,
                 'total_hours': metric.total_hours,
                 'quarters': metric.quarters,
-                'linked_playbooks': metric.linked_playbooks,
                 'work_packages': [
                     {
                         'name': wp.name,
@@ -134,6 +157,10 @@ def get_power_of_1_table(customer_id):
             }
 
         return jsonify({
+            'customer_id': customer_id,
+            'total_arr': total_arr,
+            'improvement_pct': improvement_pct,
+            'arr_basis': 'explicit' if total_arr else 'default',
             'metrics': metrics,
             'investment_summary': INVESTMENT_SUMMARY,
             'scaling_scenarios': SCALING_SCENARIOS,
@@ -196,6 +223,7 @@ def get_power_of_1_metric(customer_id, metric_id):
 # ============================================================
 
 @revenue_intelligence_api.route('/api/revenue-intelligence/impact', methods=['GET'])
+@revenue_intelligence_api.route('/api/v1/impact', methods=['GET'])
 @require_revenue_intelligence
 def get_portfolio_impact(customer_id):
     """Calculate total Power of 1 impact across all 6 metrics."""
