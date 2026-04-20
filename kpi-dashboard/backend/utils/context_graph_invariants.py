@@ -618,18 +618,34 @@ def invariant_i10_no_averted_with_lost(customer_id: int) -> List[Violation]:
 
 
 def invariant_i11_revenue_bucket_consistency(customer_id: int) -> List[Violation]:
-    """I11: revenue_impact_type falls in the documented bucket for its subtype.
+    """I11: revenue_impact_type, when set, matches the node_subtype's
+    polarity bucket.
 
-    Catches cases like a capacity_constraint outcome being tagged as
-    revenue_impact_type='lost' — the bucket map says that subtype isn't lost.
+    This field is stored as a fine-grained tag (e.g. 'revenue_protected')
+    not as a bucket key ('protected'). A violation means the tag's polarity
+    disagrees with the subtype's polarity — e.g. a churn_lost subtype
+    tagged 'expansion_closed' or 'revenue_protected' (polarity flip).
+
+    Both the bucket keys and the subtype values are accepted as valid tags.
     """
     from models import ContextNode  # noqa: PLC0415
 
-    # Build reverse map: subtype → allowed impact_types
-    # (impact_type = the bucket name like 'lost', 'expansion', etc.)
-    known_subtypes = set()
-    for types in REVENUE_BUCKET_MAP.values():
-        known_subtypes.update(types)
+    # All recognised values (bucket keys + subtype names).
+    all_subtypes: set = set()
+    for subs in REVENUE_BUCKET_MAP.values():
+        all_subtypes.update(subs)
+    all_valid_tags = set(REVENUE_BUCKET_MAP.keys()) | all_subtypes
+
+    # Which bucket does each subtype belong to?
+    subtype_to_bucket: Dict[str, str] = {}
+    for bucket, subs in REVENUE_BUCKET_MAP.items():
+        for s in subs:
+            subtype_to_bucket[s] = bucket
+
+    # Which bucket does each tag map to? If the tag IS a bucket key, trivial.
+    tag_to_bucket = dict(subtype_to_bucket)
+    for b in REVENUE_BUCKET_MAP:
+        tag_to_bucket[b] = b
 
     nodes = (
         ContextNode.query
@@ -645,13 +661,12 @@ def invariant_i11_revenue_bucket_consistency(customer_id: int) -> List[Violation
     violations: List[Violation] = []
     for n in nodes:
         sub = n.node_subtype
-        bucket = n.revenue_impact_type  # e.g. 'lost', 'expansion', 'at_risk'
-        if sub not in known_subtypes:
-            continue  # unknown subtype — skip rather than false-positive
-        allowed = REVENUE_BUCKET_MAP.get(bucket, set())
-        if sub not in allowed:
-            # Find what bucket it SHOULD be in
-            expected = [b for b, subs in REVENUE_BUCKET_MAP.items() if sub in subs]
+        tag = n.revenue_impact_type
+        sub_bucket = subtype_to_bucket.get(sub)
+        tag_bucket = tag_to_bucket.get(tag)
+
+        # Unknown tag or unknown subtype — flag as "unrecognised"
+        if tag not in all_valid_tags:
             violations.append(Violation(
                 invariant_id='I11',
                 invariant_name='revenue_bucket_consistency',
@@ -660,13 +675,32 @@ def invariant_i11_revenue_bucket_consistency(customer_id: int) -> List[Violation
                 account_id=n.account_id,
                 node_ids=[n.node_id],
                 message=(
-                    f'Node {n.node_id} subtype={sub!r} is tagged revenue_impact_type='
-                    f'{bucket!r} but belongs in {expected!r}'
+                    f'Node {n.node_id} revenue_impact_type={tag!r} is not a '
+                    f'recognized bucket or subtype'
+                ),
+                details={'subtype': sub, 'tag': tag, 'known_tags': sorted(all_valid_tags)},
+            ))
+            continue
+
+        # Both known — check polarity bucket matches.
+        if sub_bucket and tag_bucket and sub_bucket != tag_bucket:
+            violations.append(Violation(
+                invariant_id='I11',
+                invariant_name='revenue_bucket_consistency',
+                severity='error',
+                customer_id=customer_id,
+                account_id=n.account_id,
+                node_ids=[n.node_id],
+                message=(
+                    f'Node {n.node_id} subtype={sub!r} (bucket={sub_bucket!r}) '
+                    f'tagged as revenue_impact_type={tag!r} (bucket={tag_bucket!r}) '
+                    f'— polarity mismatch'
                 ),
                 details={
                     'subtype': sub,
-                    'actual_bucket': bucket,
-                    'expected_buckets': expected,
+                    'tag': tag,
+                    'subtype_bucket': sub_bucket,
+                    'tag_bucket': tag_bucket,
                 },
             ))
     return violations

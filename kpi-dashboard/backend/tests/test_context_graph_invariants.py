@@ -395,13 +395,15 @@ def test_i11_clean(ctx):
 def test_i11_dirty(ctx):
     with app.app_context():
         _clear_graph(ctx['customer_id'])
-        # expansion_closed is in 'expansion' bucket, not 'lost'
+        # expansion_closed subtype (bucket=expansion) tagged as 'lost' (bucket=lost)
+        # is a polarity mismatch.
         _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_closed',
                    revenue_impact=200_000, revenue_impact_type='lost')
         db.session.commit()
         violations = run_invariant('I11', ctx['customer_id'])
         assert len(violations) == 1
-        assert 'expansion' in violations[0].details['expected_buckets']
+        assert violations[0].details['subtype_bucket'] == 'expansion'
+        assert violations[0].details['tag_bucket'] == 'lost'
 
 
 # ═════════════════════════════════════════════════════════════════════
