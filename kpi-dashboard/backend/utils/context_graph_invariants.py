@@ -984,17 +984,28 @@ def invariant_i15_no_duplicate_signal_outcome_pair(customer_id: int) -> List[Vio
     from models import ContextNode  # noqa: PLC0415
     from collections import defaultdict
 
-    # Bucket nodes by (account_id, occurred_at date, normalized title).
-    # Normalize by lowercasing + stripping common suffixes like " outcome"
-    # / " signal" that Wizard A appends when duplicating.
+    # Wizard A templates write the same causal event as a signal node and
+    # a narrative outcome node; the titles share a long prefix but differ
+    # in their tail (e.g. "Account health trending upward: +12 points" vs
+    # "Account health trending upward +12 points over 4 weeks; recovery...").
+    # Use prefix-overlap detection: if the shorter normalized title is a
+    # prefix of the longer (>= 30 chars), treat as match.
+    import re as _re
     def _normalize(t: Optional[str]) -> str:
         if not t:
             return ''
         s = t.strip().lower()
-        for suffix in (' outcome', ' signal', ':'):
-            if s.endswith(suffix):
-                s = s[:-len(suffix)].rstrip()
+        s = _re.sub(r'[^\w\s]+', ' ', s)
+        s = _re.sub(r'\s+', ' ', s).strip()
         return s
+
+    def _is_prefix_match(a: str, b: str, min_overlap: int = 30) -> bool:
+        if not a or not b:
+            return False
+        short, long_ = (a, b) if len(a) <= len(b) else (b, a)
+        if len(short) < min_overlap:
+            return short == long_  # exact-match fallback for short titles
+        return long_.startswith(short)
 
     rows = (
         ContextNode.query
@@ -1005,45 +1016,54 @@ def invariant_i15_no_duplicate_signal_outcome_pair(customer_id: int) -> List[Vio
         .all()
     )
 
-    buckets: Dict[tuple, Dict[str, List]] = defaultdict(lambda: {'SIGNAL': [], 'OUTCOME': []})
+    # Bucket first by (account_id, day) — O(N) — then pair-check within bucket.
+    day_buckets: Dict[tuple, Dict[str, List]] = defaultdict(lambda: {'SIGNAL': [], 'OUTCOME': []})
     for n in rows:
         if not n.occurred_at:
             continue
-        key = (n.account_id, n.occurred_at.date(), _normalize(n.title))
-        if not key[2]:
-            continue
-        buckets[key][n.node_type].append(n)
+        day_buckets[(n.account_id, n.occurred_at.date())][n.node_type].append(n)
 
     violations: List[Violation] = []
-    for (aid, day, norm_title), byt in buckets.items():
+    for (aid, day), byt in day_buckets.items():
         signals = byt['SIGNAL']
         outcomes = byt['OUTCOME']
-        if signals and outcomes:
-            # Exclude outcomes that carry revenue_impact — those are
-            # legitimate "this event mattered financially" bookings,
-            # not duplicate-noise. Only flag narrative-only outcome
-            # duplicating a signal.
-            narrative_outcomes = [o for o in outcomes if o.revenue_impact is None]
-            if not narrative_outcomes:
-                continue
-            violations.append(Violation(
-                invariant_id='I15',
-                invariant_name='no_duplicate_signal_outcome_pair',
-                severity='warning',
-                customer_id=customer_id,
-                account_id=aid,
-                node_ids=[n.node_id for n in signals + narrative_outcomes],
-                message=(
-                    f'Account {aid} day {day}: SIGNAL + narrative-OUTCOME pair '
-                    f'with same title "{norm_title[:60]}" — Wizard A template duplicate'
-                ),
-                details={
-                    'day': day.isoformat(),
-                    'normalized_title': norm_title[:100],
-                    'signal_count': len(signals),
-                    'narrative_outcome_count': len(narrative_outcomes),
-                },
-            ))
+        if not signals or not outcomes:
+            continue
+        # Only narrative-only outcomes trigger — revenue-bearing are exempt.
+        narrative_outcomes = [o for o in outcomes if o.revenue_impact is None]
+        if not narrative_outcomes:
+            continue
+        matched_pairs: List[tuple] = []
+        for s in signals:
+            s_norm = _normalize(s.title)
+            for o in narrative_outcomes:
+                o_norm = _normalize(o.title)
+                if _is_prefix_match(s_norm, o_norm):
+                    matched_pairs.append((s, o))
+        if not matched_pairs:
+            continue
+        node_ids = list({p[0].node_id for p in matched_pairs} | {p[1].node_id for p in matched_pairs})
+        example_signal, example_outcome = matched_pairs[0]
+        violations.append(Violation(
+            invariant_id='I15',
+            invariant_name='no_duplicate_signal_outcome_pair',
+            severity='warning',
+            customer_id=customer_id,
+            account_id=aid,
+            node_ids=node_ids,
+            message=(
+                f'Account {aid} day {day}: {len(matched_pairs)} SIGNAL+narrative-OUTCOME '
+                f'prefix-duplicate pair(s) — Wizard A template duplicate. '
+                f'Example: "{_normalize(example_signal.title)[:60]}" <-> '
+                f'"{_normalize(example_outcome.title)[:60]}"'
+            ),
+            details={
+                'day': day.isoformat(),
+                'pair_count': len(matched_pairs),
+                'signal_count': len(signals),
+                'narrative_outcome_count': len(narrative_outcomes),
+            },
+        ))
     return violations
 
 

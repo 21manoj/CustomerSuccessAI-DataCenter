@@ -549,15 +549,15 @@ def test_i15_clean(ctx):
 
 
 def test_i15_dirty(ctx):
-    """Wizard A duplicate pattern: signal + narrative-only outcome, same title, same day."""
+    """Wizard A pattern: signal + narrative outcome sharing prefix, same day."""
     with app.app_context():
         _clear_graph(ctx['customer_id'])
         day = datetime(2026, 7, 31, 10, 0, 0)
         _make_node(ctx, node_type='SIGNAL', node_subtype='kpi_decline',
-                   title='Jul 31: KPI metrics declining below threshold',
+                   title='KPI metrics declining below threshold',
                    occurred_at=day)
         _make_node(ctx, node_type='OUTCOME', node_subtype='kpi_decline',
-                   title='Jul 31: KPI metrics declining below threshold outcome',  # suffix
+                   title='KPI metrics declining below threshold creating revenue stall downstream',
                    revenue_impact=None,  # narrative-only
                    occurred_at=day)
         db.session.commit()
@@ -565,8 +565,7 @@ def test_i15_dirty(ctx):
         assert len(violations) == 1
         assert 'Wizard A template duplicate' in violations[0].message
         assert violations[0].severity == 'warning'
-        assert violations[0].details['signal_count'] == 1
-        assert violations[0].details['narrative_outcome_count'] == 1
+        assert violations[0].details['pair_count'] == 1
 
 
 # ═════════════════════════════════════════════════════════════════════
