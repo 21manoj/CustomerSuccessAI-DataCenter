@@ -1,9 +1,48 @@
 # CS Pulse Platform: RBAC & SSO Implementation Plan
 
-**Version**: 1.0
-**Date**: March 22, 2026
-**Status**: Planning
+**Version**: 1.1
+**Date**: April 20, 2026
+**Status**: Planning -- RBAC design extended with AI governance roles (April 2026)
 **Author**: Engineering Team
+
+---
+
+## What's Changed Since v1.0 (April 20, 2026)
+
+v1.0 (March 22, 2026) defined seven business roles (super_admin, customer_admin, manager, csm, cs_ops, read_only, partner). That set is still correct for **operational and viewership scopes** but is **insufficient for AI model governance**.
+
+The AI Governance Framework (drafted April 2026) introduces a **three-role separation-of-duties model** — author, validator, user — that must map onto RBAC. Two gaps in v1.0:
+
+1. **No Independent Validator role.** Today, the same person who trains/tunes a model (engineer or cs_ops) can also approve their own changes. This violates SOX separation-of-duties and SR 11-7 model risk management. [governance/AI_GOVERNANCE_FRAMEWORK.md](governance/AI_GOVERNANCE_FRAMEWORK.md) §2 makes this role mandatory for all Tier 1 models.
+2. **No Taxonomy Curator role.** Per the [policy_taxonomy_runtime_auto_fix.md](../../../.claude/projects/-Users-manojgupta-CustomerSuccessAI-DataCenter/memory/policy_taxonomy_runtime_auto_fix.md) policy, taxonomy decisions touching revenue buckets require a human curator — not a customer admin — to approve. Today no such role exists.
+
+### New governance roles (v1.1)
+
+Two roles added on top of the v1.0 set. Both are CS Pulse-side roles (not customer-side), mapped to the AI Governance Framework's three-role model.
+
+| Role | Code | Scope | Maps to Governance Framework Role | Description |
+|---|---|---|---|---|
+| Independent Validator | `model_validator` | Platform-wide (CS Pulse internal) | Validator | Independent sign-off on Tier 1 model changes (Wizard B/C, LLM Tier 1, ROI engine, revenue-at-risk logic). **May not be the same person as the change author.** |
+| Taxonomy Curator | `taxonomy_curator` | Platform-wide (CS Pulse internal) | Author (for taxonomy) | Approves additions to the canonical taxonomy JSON (polarity, revenue-bucket, lifecycle). Reviews quarantine queue from MOD-008. |
+
+**Separation-of-duties enforcement (new in v1.1):** the RBAC layer must reject a change approval where `approver_user_id == proposer_user_id` for any Tier 1 model change. This is implemented as an invariant on the approval-event table per [governance/AUDIT_TRAIL_REQUIREMENTS.md](governance/AUDIT_TRAIL_REQUIREMENTS.md) §2.3 and enforced at the change-management tooling layer per [governance/CHANGE_MANAGEMENT.md](governance/CHANGE_MANAGEMENT.md) §2.
+
+### Permissions affected
+
+Several Tier 1 actions in the v1.0 permission matrix require **dual approval** under the governance framework. They remain permitted for the same roles, but now gate through the change-management workflow:
+
+| Action | v1.0 permitted roles | v1.1 additional requirement |
+|---|---|---|
+| Trigger Wizards A/B/C | super_admin, customer_admin, cs_ops | Tier 1 (Wizard B, Wizard C): **dual approval** — proposer + `model_validator`. Preview-before-commit UI required for weight changes. |
+| Configure KPI weights | super_admin, customer_admin, cs_ops | Same as above when weight delta exceeds threshold (e.g. >20% shift on any pillar). |
+| Configure health thresholds | super_admin, customer_admin, cs_ops | Single approver acceptable (Tier 2 model MOD-011), but impact summary must be displayed pre-confirm. |
+| Manage feature toggles | super_admin | No change (already restricted). |
+| **Approve taxonomy entry** | (not in v1.0 matrix) | **New action**. Requires `taxonomy_curator` role. End-user roles cannot approve. |
+| **Approve Tier 1 model change** | (not in v1.0 matrix) | **New action**. Requires `model_validator` + one of {super_admin, engineering_lead}. |
+
+### SSO/SAML implications
+
+The SSO-side work in v1.0 is unchanged. Both new governance roles are assignable via the same SAML attribute-mapping path. Customers will not provision these roles; they are CS Pulse internal and managed through super_admin tooling.
 
 ---
 
@@ -135,6 +174,8 @@ Super Admin (CS Pulse internal, customer_id=1)
 | CS Ops | `cs_ops` | Own customer | Configuration persona. Manages KPI weights, thresholds, integrations. No executive dashboards. |
 | Read-Only | `read_only` | Own customer | View-only access. Can see dashboards but cannot trigger playbooks or modify anything. |
 | Partner | `partner` | Assigned accounts | External partner users. Limited to P4 pillar data and partner portal. |
+| Independent Validator (v1.1) | `model_validator` | Platform-wide (CS Pulse internal) | Independent sign-off on Tier 1 model changes per [governance/AI_GOVERNANCE_FRAMEWORK.md](governance/AI_GOVERNANCE_FRAMEWORK.md). Cannot be proposer of the change they approve. |
+| Taxonomy Curator (v1.1) | `taxonomy_curator` | Platform-wide (CS Pulse internal) | Approves taxonomy additions (polarity, revenue-bucket, lifecycle) per [policy_taxonomy_runtime_auto_fix.md](../../../.claude/projects/-Users-manojgupta-CustomerSuccessAI-DataCenter/memory/policy_taxonomy_runtime_auto_fix.md). Reviews MOD-008 quarantine queue. |
 
 ### 3.2 Permission Matrix
 

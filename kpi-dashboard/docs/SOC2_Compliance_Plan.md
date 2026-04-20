@@ -1,10 +1,33 @@
 # CS Pulse Platform -- SOC 2 Compliance Plan
 
-**Document Version:** 1.0
-**Date:** March 22, 2026
+**Document Version:** 1.1
+**Date:** April 20, 2026
 **Classification:** Internal -- Confidential
 **Owner:** Engineering / Security
-**Status:** Planning (Post-Demo Phase)
+**Status:** Planning -- AI governance layer drafted (April 2026); core gap remediation still pending
+
+---
+
+## What's Changed Since v1.0 (April 20, 2026)
+
+v1.0 (March 22, 2026) described SOC 2 controls for a platform without formal AI governance. Between v1.0 and v1.1 the team produced a dedicated governance layer that materially affects several SOC 2 sections — **especially CC3 (Risk Assessment), CC4 (Monitoring), CC7 (Operations), CC8 (Change Management), and §6 (LLM-Specific Considerations).**
+
+The new governance artifacts are referenced throughout this document. They live in `kpi-dashboard/docs/governance/`:
+
+| Governance Doc | Maps to SOC 2 |
+|---|---|
+| [governance/AI_GOVERNANCE_FRAMEWORK.md](governance/AI_GOVERNANCE_FRAMEWORK.md) | CC1 (control environment, three-role model), CC3 (risk tiering), §6 (LLM governance) |
+| [governance/MODEL_INVENTORY.md](governance/MODEL_INVENTORY.md) | CC3.4 (risk assessment of each model), §6 (per-model data-flow evidence) |
+| [governance/CHANGE_MANAGEMENT.md](governance/CHANGE_MANAGEMENT.md) | CC8 (change management workflow, dual approval for Tier 1) |
+| [governance/AUDIT_TRAIL_REQUIREMENTS.md](governance/AUDIT_TRAIL_REQUIREMENTS.md) | CC4.1/CC7.2 (monitoring), CC6.1 (access logging), §6.5 (LLM audit trail schema) |
+| [governance/DRIFT_MONITORING.md](governance/DRIFT_MONITORING.md) | CC7.2 (continuous monitoring), CC7.3 (security event detection extended to model-quality events) |
+
+Also new since v1.0 and relevant to SOC 2 evidence:
+
+- **Context Graph Invariants** (Layer A/B/C) — pre-commit validation gate + post-commit audit + pytest CI gate. Shipped in [backend/utils/context_graph_invariants.py](../backend/utils/context_graph_invariants.py). Usable as CC7.2 / CC7.3 evidence for data-quality monitoring.
+- **Taxonomy runtime auto-fix policy** — silent LLM classify for signal polarity; mandatory human review for anything touching revenue math. Policy affects §6.5 audit trail requirements.
+
+The **Type I target (October 2026)** and **Type II target (June 2027)** timelines from v1.0 remain; the governance layer accelerates evidence collection for the AI-specific criteria.
 
 ---
 
@@ -540,6 +563,8 @@ The following formal policy documents must be drafted, approved by leadership, a
 
 ## 6. LLM-Specific Considerations
 
+> **v1.1 update (April 20, 2026):** LLM-specific SOC 2 controls now split across this section (data-flow and Anthropic-side concerns) and the AI Governance Framework (model-lifecycle concerns). For per-model governance evidence — inputs, outputs, validators, drift metrics, change approval — see [governance/MODEL_INVENTORY.md](governance/MODEL_INVENTORY.md) Tier 1 model cards (MOD-007 LLM Tier 1 Edge Enrichment, MOD-008 Taxonomy Revenue-Bucket Classifier, MOD-015 Ask AI). LLM-specific drift detection lives in [governance/DRIFT_MONITORING.md](governance/DRIFT_MONITORING.md) §3 (MOD-007 fixture runner is the primary defense against silent LLM backend drift).
+
 ### 6.1 Data Sent to Claude API
 
 CS Pulse sends customer data to Anthropic's Claude API for several features. The following data categories are transmitted:
@@ -593,6 +618,8 @@ Implement comprehensive logging of all LLM interactions:
 - **Retention**: 90 days in database; archived to S3 for 1 year
 - **Access**: Queryable via admin API; exportable for audit evidence
 - **Do NOT log**: Full prompts or responses containing customer data (to avoid creating a secondary data store)
+
+> **v1.1 update:** This section's requirements are superseded and extended by [governance/AUDIT_TRAIL_REQUIREMENTS.md](governance/AUDIT_TRAIL_REQUIREMENTS.md), which defines the five audit-event categories (decision / change / approval / access / incident), per-tier retention (7 years for Tier 1 per SOX alignment, not 1 year), hash-chain immutability for Tier 1 tables, and the separation between hot/warm/cold storage. When the two conflict, the governance doc is authoritative. LLM request/response capture (PII-safe) is called out as a top-priority gap in that doc.
 
 ---
 
