@@ -224,29 +224,32 @@ def products_for(arr):
 ARC_TEMPLATES = {
     "silent_churn": {
         "stakeholders": [
-            ("Unresponsive Champion", "champion",           "VP Operations",         "Operations", 6, "disengaged", "none"),
-            ("IT Lead",               "technical_lead",     "IT Director",           "IT",         5, "neutral",    "quarterly"),
+            ("Amanda Foster",         "champion",           "VP Operations",         "Operations", 6, "disengaged", "none"),
+            ("Priya Natarajan",       "technical_lead",     "IT Director",           "IT",         5, "neutral",    "quarterly"),
+            ("Morgan Lee",            "csm",                "Customer Success Manager", "CS",       7, "concerned",  "weekly"),
         ],
         "signals": [
-            ("engagement_drop",   "Primary champion stopped responding to emails for 45+ days.",     "very_negative"),
-            ("usage_decline",     "Weekly active users dropped 40%; core features unused.",          "negative"),
+            ("engagement_drop",   "VP Operations Amanda Foster stopped responding to emails for 45+ days.",     "very_negative"),
+            ("usage_decline",     "Weekly active users dropped 40%; core features unused per Priya's team.",    "negative"),
         ],
     },
     "exec_sponsor_change": {
         "stakeholders": [
-            ("Original Sponsor",  "former_sponsor",     "VP Clinical Ops",           "Clinical",   9, "departed",  "none"),
-            ("New Sponsor",       "executive_sponsor",  "Chief Medical Officer",     "Clinical",   9, "concerned", "monthly"),
-            ("Technical Lead",    "technical_lead",     "Security Architect",        "IT Security", 8, "negative",  "weekly"),
+            ("Dr. Vanessa Chen",   "former_sponsor",     "VP Clinical Ops",           "Clinical",    9, "departed",  "none"),
+            ("Dr. Aisha Patel",    "executive_sponsor",  "Chief Medical Informatics Officer", "Clinical Informatics", 9, "concerned", "monthly"),
+            ("Robert Kim",         "technical_lead",     "Security Architect",        "IT Security", 8, "negative",  "weekly"),
+            ("Morgan Lee",         "csm",                "Customer Success Manager",  "CS",          7, "engaged",   "weekly"),
         ],
         "signals": [
-            ("escalation",        "CMIO Dr. Patel escalated SSO failures to our CEO.",               "very_negative"),
-            ("csm_intervention",  "Dedicated security support pod deployed; weekly reviews started.","positive"),
+            ("escalation",        "CMIO Dr. Aisha Patel escalated SSO failures to our CEO; HIPAA compliance concerns.", "very_negative"),
+            ("csm_intervention",  "Dedicated security support pod deployed; weekly reviews initiated by Morgan Lee.","positive"),
         ],
     },
     "competitive_displacement": {
         "stakeholders": [
-            ("VP Academic Tech",  "champion",           "VP Academic Technology",    "Academic",   8, "neutral",   "quarterly"),
-            ("Procurement",       "influencer",         "Director Procurement",      "Finance",    6, "negative",  "monthly"),
+            ("Patricia Moore",    "champion",           "VP Academic Technology",    "Academic",   8, "neutral",   "quarterly"),
+            ("Daniel Choi",       "influencer",         "Director Procurement",      "Finance",    6, "negative",  "monthly"),
+            ("Morgan Lee",        "csm",                "Customer Success Manager",  "CS",         7, "engaged",   "weekly"),
         ],
         "signals": [
             ("competitive_eval",  "Canvas evaluation detected in procurement review.",               "very_negative"),
@@ -255,8 +258,9 @@ ARC_TEMPLATES = {
     },
     "stalled_deployment": {
         "stakeholders": [
-            ("Deployment Lead",   "technical_lead",     "VP Engineering",            "Engineering", 8, "concerned", "weekly"),
-            ("CTO",               "executive_sponsor",  "CTO",                       "Engineering", 9, "neutral",   "monthly"),
+            ("Jason Wells",       "technical_lead",     "VP Engineering",            "Engineering", 8, "concerned", "weekly"),
+            ("Elena Martinez",    "executive_sponsor",  "CTO",                       "Engineering", 9, "neutral",   "monthly"),
+            ("Sam Rivera",        "csm",                "Senior CSM",                "CS",          7, "focused",   "weekly"),
         ],
         "signals": [
             ("integration_stall", "API integration blocked on platform gap; launch slipped 6 wks.",  "negative"),
@@ -265,8 +269,9 @@ ARC_TEMPLATES = {
     },
     "expansion_champion": {
         "stakeholders": [
-            ("Executive Champion","champion",           "CEO",                       "Executive",  10, "enthusiastic", "weekly"),
-            ("Product Head",      "product_lead",       "Chief Product Officer",     "Product",     9, "positive",     "bi-weekly"),
+            ("Marcus Hall",       "champion",           "CEO",                       "Executive",  10, "enthusiastic", "weekly"),
+            ("Linda Park",        "product_lead",       "Chief Product Officer",     "Product",     9, "positive",     "bi-weekly"),
+            ("Sarah Chen",        "csm",                "Senior CSM",                "CS",          7, "engaged",      "weekly"),
         ],
         "signals": [
             ("expansion_signal",  "CEO approved 3 new departments onto the platform.",               "very_positive"),
@@ -275,8 +280,9 @@ ARC_TEMPLATES = {
     },
     "land_and_expand": {
         "stakeholders": [
-            ("Champion",          "champion",           "VP Operations",             "Operations", 8, "positive",  "monthly"),
-            ("Stakeholder",       "influencer",         "Director Data",             "Data",       6, "neutral",   "quarterly"),
+            ("Michael Reyes",     "champion",           "VP Operations",             "Operations", 8, "positive",  "monthly"),
+            ("Lisa Tanaka",       "influencer",         "Director Data",             "Data",       6, "neutral",   "quarterly"),
+            ("Alex Johnson",      "csm",                "Senior CSM",                "CS",          7, "engaged",   "weekly"),
         ],
         "signals": [
             ("adoption_growth",   "Feature adoption up 20% after stakeholder mapping refresh.",      "positive"),
@@ -285,8 +291,9 @@ ARC_TEMPLATES = {
     },
     "seasonal_surge": {
         "stakeholders": [
-            ("Ops Lead",          "champion",           "VP Customer Success",       "Operations", 8, "positive",  "monthly"),
-            ("Finance Sponsor",   "executive_sponsor",  "CFO",                       "Finance",    9, "positive",  "quarterly"),
+            ("Rachel Greene",     "champion",           "VP Customer Success",       "Operations", 8, "positive",  "monthly"),
+            ("Thomas Wright",     "executive_sponsor",  "CFO",                       "Finance",    9, "positive",  "quarterly"),
+            ("Marcus Rivera",     "csm",                "Customer Success Manager",  "CS",          7, "engaged",   "weekly"),
         ],
         "signals": [
             ("seasonal_peak",     "Peak-season traffic served with 99.9% uptime.",                   "positive"),
@@ -295,12 +302,13 @@ ARC_TEMPLATES = {
     },
     "crisis_recovery": {
         "stakeholders": [
-            ("New Champion",      "champion",           "VP Engineering",            "Engineering", 9, "engaged",   "weekly"),
-            ("Exec Sponsor",      "executive_sponsor",  "CTO",                       "Engineering", 10, "cautious",  "monthly"),
+            ("Raj Patel",         "champion",           "VP Engineering",            "Engineering", 9, "engaged",   "weekly"),
+            ("Catherine Winters", "executive_sponsor",  "CTO",                       "Engineering", 10, "cautious", "monthly"),
+            ("Sam Rivera",        "csm",                "Senior CSM",                "CS",          7, "focused",   "weekly"),
         ],
         "signals": [
-            ("crisis_event",      "Platform outage triggered CTO escalation; 48h incident.",         "very_negative"),
-            ("recovery_milestone","Post-incident review completed; trust metrics recovering.",       "positive"),
+            ("crisis_event",      "Platform outage triggered CTO Catherine Winters escalation; 48h incident.", "very_negative"),
+            ("recovery_milestone","Post-incident review completed with Raj Patel; trust metrics recovering.",  "positive"),
         ],
     },
 }

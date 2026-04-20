@@ -100,7 +100,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Unresponsive Champion",
+          "name": "Amanda Foster",
           "role": "champion",
           "title": "VP Operations",
           "department": "Operations",
@@ -109,26 +109,35 @@
           "engagement_frequency": "none"
         },
         {
-          "name": "IT Lead",
+          "name": "Priya Natarajan",
           "role": "technical_lead",
           "title": "IT Director",
           "department": "IT",
           "influence_score": 5,
           "sentiment": "neutral",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Morgan Lee",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "concerned",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
         {
           "type": "engagement_drop",
           "date": "2025-10-15",
-          "content": "Primary champion stopped responding to emails for 45+ days.",
+          "content": "VP Operations Amanda Foster stopped responding to emails for 45+ days.",
           "sentiment": "very_negative"
         },
         {
           "type": "usage_decline",
           "date": "2026-01-15",
-          "content": "Weekly active users dropped 40%; core features unused.",
+          "content": "Weekly active users dropped 40%; core features unused per Priya's team.",
           "sentiment": "negative"
         }
       ],
@@ -180,7 +189,7 @@
       ],
       "stakeholders": [
         {
-          "name": "New Champion",
+          "name": "Raj Patel",
           "role": "champion",
           "title": "VP Engineering",
           "department": "Engineering",
@@ -189,26 +198,35 @@
           "engagement_frequency": "weekly"
         },
         {
-          "name": "Exec Sponsor",
+          "name": "Catherine Winters",
           "role": "executive_sponsor",
           "title": "CTO",
           "department": "Engineering",
           "influence_score": 10,
           "sentiment": "cautious",
           "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Sam Rivera",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "focused",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
         {
           "type": "crisis_event",
           "date": "2025-10-15",
-          "content": "Platform outage triggered CTO escalation; 48h incident.",
+          "content": "Platform outage triggered CTO Catherine Winters escalation; 48h incident.",
           "sentiment": "very_negative"
         },
         {
           "type": "recovery_milestone",
           "date": "2026-01-15",
-          "content": "Post-incident review completed; trust metrics recovering.",
+          "content": "Post-incident review completed with Raj Patel; trust metrics recovering.",
           "sentiment": "positive"
         }
       ],
@@ -285,7 +303,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Unresponsive Champion",
+          "name": "Amanda Foster",
           "role": "champion",
           "title": "VP Operations",
           "department": "Operations",
@@ -294,26 +312,35 @@
           "engagement_frequency": "none"
         },
         {
-          "name": "IT Lead",
+          "name": "Priya Natarajan",
           "role": "technical_lead",
           "title": "IT Director",
           "department": "IT",
           "influence_score": 5,
           "sentiment": "neutral",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Morgan Lee",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "concerned",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
         {
           "type": "engagement_drop",
           "date": "2025-10-15",
-          "content": "Primary champion stopped responding to emails for 45+ days.",
+          "content": "VP Operations Amanda Foster stopped responding to emails for 45+ days.",
           "sentiment": "very_negative"
         },
         {
           "type": "usage_decline",
           "date": "2026-01-15",
-          "content": "Weekly active users dropped 40%; core features unused.",
+          "content": "Weekly active users dropped 40%; core features unused per Priya's team.",
           "sentiment": "negative"
         }
       ],
@@ -365,7 +392,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Original Sponsor",
+          "name": "Dr. Vanessa Chen",
           "role": "former_sponsor",
           "title": "VP Clinical Ops",
           "department": "Clinical",
@@ -374,21 +401,30 @@
           "engagement_frequency": "none"
         },
         {
-          "name": "New Sponsor",
+          "name": "Dr. Aisha Patel",
           "role": "executive_sponsor",
-          "title": "Chief Medical Officer",
-          "department": "Clinical",
+          "title": "Chief Medical Informatics Officer",
+          "department": "Clinical Informatics",
           "influence_score": 9,
           "sentiment": "concerned",
           "engagement_frequency": "monthly"
         },
         {
-          "name": "Technical Lead",
+          "name": "Robert Kim",
           "role": "technical_lead",
           "title": "Security Architect",
           "department": "IT Security",
           "influence_score": 8,
           "sentiment": "negative",
+          "engagement_frequency": "weekly"
+        },
+        {
+          "name": "Morgan Lee",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
           "engagement_frequency": "weekly"
         }
       ],
@@ -396,13 +432,13 @@
         {
           "type": "escalation",
           "date": "2025-10-15",
-          "content": "CMIO Dr. Patel escalated SSO failures to our CEO.",
+          "content": "CMIO Dr. Aisha Patel escalated SSO failures to our CEO; HIPAA compliance concerns.",
           "sentiment": "very_negative"
         },
         {
           "type": "csm_intervention",
           "date": "2026-01-15",
-          "content": "Dedicated security support pod deployed; weekly reviews started.",
+          "content": "Dedicated security support pod deployed; weekly reviews initiated by Morgan Lee.",
           "sentiment": "positive"
         }
       ],
@@ -471,7 +507,7 @@
       ],
       "stakeholders": [
         {
-          "name": "VP Academic Tech",
+          "name": "Patricia Moore",
           "role": "champion",
           "title": "VP Academic Technology",
           "department": "Academic",
@@ -480,13 +516,22 @@
           "engagement_frequency": "quarterly"
         },
         {
-          "name": "Procurement",
+          "name": "Daniel Choi",
           "role": "influencer",
           "title": "Director Procurement",
           "department": "Finance",
           "influence_score": 6,
           "sentiment": "negative",
           "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Morgan Lee",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -568,7 +613,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Deployment Lead",
+          "name": "Jason Wells",
           "role": "technical_lead",
           "title": "VP Engineering",
           "department": "Engineering",
@@ -577,13 +622,22 @@
           "engagement_frequency": "weekly"
         },
         {
-          "name": "CTO",
+          "name": "Elena Martinez",
           "role": "executive_sponsor",
           "title": "CTO",
           "department": "Engineering",
           "influence_score": 9,
           "sentiment": "neutral",
           "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Sam Rivera",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "focused",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -656,7 +710,7 @@
       ],
       "stakeholders": [
         {
-          "name": "New Champion",
+          "name": "Raj Patel",
           "role": "champion",
           "title": "VP Engineering",
           "department": "Engineering",
@@ -665,26 +719,35 @@
           "engagement_frequency": "weekly"
         },
         {
-          "name": "Exec Sponsor",
+          "name": "Catherine Winters",
           "role": "executive_sponsor",
           "title": "CTO",
           "department": "Engineering",
           "influence_score": 10,
           "sentiment": "cautious",
           "engagement_frequency": "monthly"
+        },
+        {
+          "name": "Sam Rivera",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "focused",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
         {
           "type": "crisis_event",
           "date": "2025-10-15",
-          "content": "Platform outage triggered CTO escalation; 48h incident.",
+          "content": "Platform outage triggered CTO Catherine Winters escalation; 48h incident.",
           "sentiment": "very_negative"
         },
         {
           "type": "recovery_milestone",
           "date": "2026-01-15",
-          "content": "Post-incident review completed; trust metrics recovering.",
+          "content": "Post-incident review completed with Raj Patel; trust metrics recovering.",
           "sentiment": "positive"
         }
       ],
@@ -753,7 +816,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Unresponsive Champion",
+          "name": "Amanda Foster",
           "role": "champion",
           "title": "VP Operations",
           "department": "Operations",
@@ -762,26 +825,35 @@
           "engagement_frequency": "none"
         },
         {
-          "name": "IT Lead",
+          "name": "Priya Natarajan",
           "role": "technical_lead",
           "title": "IT Director",
           "department": "IT",
           "influence_score": 5,
           "sentiment": "neutral",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Morgan Lee",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "concerned",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
         {
           "type": "engagement_drop",
           "date": "2025-10-15",
-          "content": "Primary champion stopped responding to emails for 45+ days.",
+          "content": "VP Operations Amanda Foster stopped responding to emails for 45+ days.",
           "sentiment": "very_negative"
         },
         {
           "type": "usage_decline",
           "date": "2026-01-15",
-          "content": "Weekly active users dropped 40%; core features unused.",
+          "content": "Weekly active users dropped 40%; core features unused per Priya's team.",
           "sentiment": "negative"
         }
       ],
@@ -834,7 +906,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Executive Champion",
+          "name": "Marcus Hall",
           "role": "champion",
           "title": "CEO",
           "department": "Executive",
@@ -843,13 +915,22 @@
           "engagement_frequency": "weekly"
         },
         {
-          "name": "Product Head",
+          "name": "Linda Park",
           "role": "product_lead",
           "title": "Chief Product Officer",
           "department": "Product",
           "influence_score": 9,
           "sentiment": "positive",
           "engagement_frequency": "bi-weekly"
+        },
+        {
+          "name": "Sarah Chen",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -923,7 +1004,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Ops Lead",
+          "name": "Rachel Greene",
           "role": "champion",
           "title": "VP Customer Success",
           "department": "Operations",
@@ -932,13 +1013,22 @@
           "engagement_frequency": "monthly"
         },
         {
-          "name": "Finance Sponsor",
+          "name": "Thomas Wright",
           "role": "executive_sponsor",
           "title": "CFO",
           "department": "Finance",
           "influence_score": 9,
           "sentiment": "positive",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Marcus Rivera",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -1012,7 +1102,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Executive Champion",
+          "name": "Marcus Hall",
           "role": "champion",
           "title": "CEO",
           "department": "Executive",
@@ -1021,13 +1111,22 @@
           "engagement_frequency": "weekly"
         },
         {
-          "name": "Product Head",
+          "name": "Linda Park",
           "role": "product_lead",
           "title": "Chief Product Officer",
           "department": "Product",
           "influence_score": 9,
           "sentiment": "positive",
           "engagement_frequency": "bi-weekly"
+        },
+        {
+          "name": "Sarah Chen",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -1101,7 +1200,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Champion",
+          "name": "Michael Reyes",
           "role": "champion",
           "title": "VP Operations",
           "department": "Operations",
@@ -1110,13 +1209,22 @@
           "engagement_frequency": "monthly"
         },
         {
-          "name": "Stakeholder",
+          "name": "Lisa Tanaka",
           "role": "influencer",
           "title": "Director Data",
           "department": "Data",
           "influence_score": 6,
           "sentiment": "neutral",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Alex Johnson",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -1182,7 +1290,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Executive Champion",
+          "name": "Marcus Hall",
           "role": "champion",
           "title": "CEO",
           "department": "Executive",
@@ -1191,13 +1299,22 @@
           "engagement_frequency": "weekly"
         },
         {
-          "name": "Product Head",
+          "name": "Linda Park",
           "role": "product_lead",
           "title": "Chief Product Officer",
           "department": "Product",
           "influence_score": 9,
           "sentiment": "positive",
           "engagement_frequency": "bi-weekly"
+        },
+        {
+          "name": "Sarah Chen",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -1271,7 +1388,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Champion",
+          "name": "Michael Reyes",
           "role": "champion",
           "title": "VP Operations",
           "department": "Operations",
@@ -1280,13 +1397,22 @@
           "engagement_frequency": "monthly"
         },
         {
-          "name": "Stakeholder",
+          "name": "Lisa Tanaka",
           "role": "influencer",
           "title": "Director Data",
           "department": "Data",
           "influence_score": 6,
           "sentiment": "neutral",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Alex Johnson",
+          "role": "csm",
+          "title": "Senior CSM",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
@@ -1352,7 +1478,7 @@
       ],
       "stakeholders": [
         {
-          "name": "Ops Lead",
+          "name": "Rachel Greene",
           "role": "champion",
           "title": "VP Customer Success",
           "department": "Operations",
@@ -1361,13 +1487,22 @@
           "engagement_frequency": "monthly"
         },
         {
-          "name": "Finance Sponsor",
+          "name": "Thomas Wright",
           "role": "executive_sponsor",
           "title": "CFO",
           "department": "Finance",
           "influence_score": 9,
           "sentiment": "positive",
           "engagement_frequency": "quarterly"
+        },
+        {
+          "name": "Marcus Rivera",
+          "role": "csm",
+          "title": "Customer Success Manager",
+          "department": "CS",
+          "influence_score": 7,
+          "sentiment": "engaged",
+          "engagement_frequency": "weekly"
         }
       ],
       "key_signals": [
