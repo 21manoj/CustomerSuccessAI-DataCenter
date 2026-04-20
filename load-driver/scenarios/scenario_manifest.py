@@ -2759,15 +2759,20 @@ class ManifestCSVGenerator:
         )
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
-            # The first auto_recovery signal (counter=1) is the parent.
-            # generate_signals_csv registers signals with ref key
-            # 'auto_recovery_{aid}_{counter}'.
-            sig_resolved = self._registry.resolve(
-                aid, f'signal:auto_recovery_{aid}_1'
-            )
-            if not sig_resolved:
+            # RefRegistry.resolve understands `signal:N` (ordinal) but not
+            # name-based refs. Scan the signals directly and pick the first
+            # whose ref string starts with 'auto_recovery_' — that's the
+            # parent signal for this account's intervention pass. (Internal
+            # attr access is acceptable here; adding a public helper would
+            # be more invasive than the payoff.)
+            parent = None
+            for sig_ref, sig_date in self._registry._signals.get(aid, []):
+                if 'auto_recovery_' in sig_ref:
+                    parent = (sig_ref, sig_date)
+                    break
+            if not parent:
                 continue
-            from_ref, from_date = sig_resolved
+            from_ref, from_date = parent
             for outcome_sub in _AUTO_RECOVERY_OUTCOME_SUBTYPES:
                 out_resolved = self._registry.resolve(aid, f'outcome:{outcome_sub}')
                 if not out_resolved:

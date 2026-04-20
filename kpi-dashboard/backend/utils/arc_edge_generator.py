@@ -408,23 +408,30 @@ def generate_edges(account_id: int, arc_type: str, phase: str = 'baseline') -> i
             )
             continue
 
-        edge = ContextEdge(
-            customer_id  = customer_id,
-            from_node_id = from_id,
-            to_node_id   = to_id,
-            edge_type    = edge_type,
-            confidence   = edge_def.get('confidence', 0.7),
-            lag_days     = edge_def.get('lag_days', 0),
-            properties   = {
+        # Route through upsert_edge so the pre-commit invariant gate
+        # (I1 OUTCOME→OUTCOME reject + I2 polarity mismatch reject +
+        # I4 confidence clamp) fires on arc_edge_generator's output too.
+        # Prior direct ContextEdge constructor bypassed the gate and was
+        # the source of ~5-8 I1 violations per tenant that slipped past
+        # the ingest-level pre-commit check.
+        from utils.context_graph import upsert_edge  # noqa: PLC0415
+        edge, new = upsert_edge(
+            from_node_id=from_id,
+            to_node_id=to_id,
+            edge_type=edge_type,
+            confidence=edge_def.get('confidence', 0.7),
+            lag_days=edge_def.get('lag_days', 0),
+            properties={
                 'label': edge_def.get('label', ''),
                 'arc_type': resolved_type,
                 'arc_phase': edge_def.get('phase', 'baseline'),
             },
-            source_platform = 'wizard_a',
-            created_by   = 'arc_edge_generator',
+            source_platform='wizard_a',
+            created_by='arc_edge_generator',
+            customer_id=customer_id,
         )
-        db.session.add(edge)
-        created += 1
+        if new:
+            created += 1
 
     db.session.commit()
     logger.info(
