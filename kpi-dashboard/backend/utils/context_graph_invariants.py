@@ -98,41 +98,45 @@ CANONICAL_ARC_TYPES = {
     'crisis', 'improving', 'recovery', 'declining', 'stable',
 }
 
-# Revenue buckets — which outcome subtypes belong in which bucket.
-# Used by I11 to catch mis-classifications like 'capacity_constraint' tagged
-# as 'expansion_closed' (polarity flip). Generic wrapper subtypes like
-# `playbook_outcome` aren't pinned to a bucket — they take polarity from
-# their revenue_impact_type tag, so I11 skips them in the bucket-cross-check.
-REVENUE_BUCKET_MAP = {
-    'at_risk': {
-        'renewal_at_risk', 'revenue_at_risk', 'renewal_uncertainty',
-        'churn_risk', 'engagement_decline', 'partial_recovery',
-        'capacity_constraint', 'partner_friction',
-    },
-    'lost': {'churn_lost', 'contraction'},
-    'expansion': {
-        'expansion_closed', 'new_logo', 'revenue_expanded',
-        'expansion_opportunity', 'expansion_approved', 'revenue_growth',
-    },
-    'protected': {
-        'revenue_protected', 'churn_averted',
-        'renewal_secured', 'escalation_resolved',
-    },
-}
-
-# Generic wrapper subtypes — polarity is determined by revenue_impact_type,
-# not by subtype. I11 and I2 skip the cross-check for these.
-POLARITY_AMBIGUOUS_SUBTYPES = {
-    'playbook_outcome', 'intervention_outcome',
-}
-
-# Signal subtypes whose polarity depends on context (can be either direction).
-# I2 skips edges where one of these is the signal side.
-POLARITY_AMBIGUOUS_SIGNAL_SUBTYPES = {
-    # arc_detection fires on BOTH problem accounts (arc=crisis) and
-    # healthy accounts (arc=improving). Can't classify without arc context.
-    'arc_detection',
-}
+# Revenue buckets + polarity-ambiguous sets are loaded from config/taxonomy_base.json
+# (+ optional per-vertical overlays) via utils.taxonomy_loader. The JSON is the
+# source of truth; edits there do not require a Python change.
+# See docs/governance/AI_GOVERNANCE_FRAMEWORK.md and policy_taxonomy_runtime_auto_fix.md.
+#
+# These module-level constants preserve the prior public API surface — downstream
+# call sites (including tests) continue to reference them directly.
+try:
+    from utils.taxonomy_loader import get_taxonomy as _get_taxonomy
+    _TAX = _get_taxonomy()
+    REVENUE_BUCKET_MAP = {bk: set(subs) for bk, subs in _TAX.revenue_bucket_map.items()}
+    POLARITY_AMBIGUOUS_SUBTYPES = set(_TAX.polarity_ambiguous_outcome_subtypes)
+    POLARITY_AMBIGUOUS_SIGNAL_SUBTYPES = set(_TAX.polarity_ambiguous_signal_subtypes)
+except Exception as _tax_err:
+    # Fail-safe fallback for boot paths where config/ is not yet available.
+    # validate_all_at_boot() in the loader will have surfaced any real error;
+    # this fallback exists only to keep import-time failures from cascading.
+    import logging as _boot_logging
+    _boot_logging.getLogger(__name__).error(
+        '[taxonomy] falling back to hardcoded taxonomy — loader raised: %s', _tax_err,
+    )
+    REVENUE_BUCKET_MAP = {
+        'at_risk': {
+            'renewal_at_risk', 'revenue_at_risk', 'renewal_uncertainty',
+            'churn_risk', 'engagement_decline', 'partial_recovery',
+            'capacity_constraint', 'partner_friction',
+        },
+        'lost': {'churn_lost', 'contraction'},
+        'expansion': {
+            'expansion_closed', 'new_logo', 'revenue_expanded',
+            'expansion_opportunity', 'expansion_approved', 'revenue_growth',
+        },
+        'protected': {
+            'revenue_protected', 'churn_averted',
+            'renewal_secured', 'escalation_resolved',
+        },
+    }
+    POLARITY_AMBIGUOUS_SUBTYPES = {'playbook_outcome', 'intervention_outcome'}
+    POLARITY_AMBIGUOUS_SIGNAL_SUBTYPES = {'arc_detection'}
 
 
 # ═════════════════════════════════════════════════════════════════════

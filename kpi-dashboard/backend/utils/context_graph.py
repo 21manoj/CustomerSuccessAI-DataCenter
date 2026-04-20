@@ -17,6 +17,13 @@ from models import ContextNode, ContextEdge
 
 logger = logging.getLogger(__name__)
 
+# Dedicated logger for pre-commit rejection events. Ops tooling / SIEM can
+# filter on this logger name to route alerts when an unknown subtype hits the
+# invariant gate. Deduped per-process on (from_subtype, to_subtype, reason_key)
+# to avoid alert spam when the same bad edge is retried many times.
+_precommit_rejection_logger = logging.getLogger('cs_pulse.pre_commit_rejection')
+_seen_rejections: set = set()
+
 
 # ─── Node Queries ────────────────────────────────────────────────────────────
 
@@ -710,11 +717,26 @@ def upsert_edge(
                 source_platform=source_platform,
             )
             if not ok:
-                import logging as _logging
-                _logging.getLogger('utils.context_graph').warning(
-                    '[invariants] edge rejected: %s (from_node=%s to_node=%s)',
-                    reason, from_node_id, to_node_id,
+                reason_key = (reason or '').split(':', 1)[0]
+                dedup_key = (
+                    from_node.node_subtype, to_node.node_subtype, reason_key, source_platform,
                 )
+                if dedup_key not in _seen_rejections:
+                    _seen_rejections.add(dedup_key)
+                    # First-occurrence structured event — ops/SIEM alert target.
+                    _precommit_rejection_logger.warning(
+                        'event=pre_commit_rejection first_seen=true '
+                        'from_subtype=%s to_subtype=%s edge_type=%s '
+                        'source_platform=%s customer_id=%s reason=%s',
+                        from_node.node_subtype, to_node.node_subtype, edge_type,
+                        source_platform, customer_id, reason,
+                    )
+                else:
+                    # Subsequent occurrences — standard WARN (not alerted).
+                    logger.warning(
+                        '[invariants] edge rejected: %s (from_node=%s to_node=%s)',
+                        reason, from_node_id, to_node_id,
+                    )
                 return (None, False)
     except Exception:
         # Never fail ingest on invariant module errors — log and proceed.

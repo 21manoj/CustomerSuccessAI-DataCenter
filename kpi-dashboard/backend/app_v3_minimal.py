@@ -1557,6 +1557,18 @@ if __name__ == '__main__':
         print(f"⚠️  WARNING: verticals directory not found at {_verticals_dir}")
         print(f"   Server may not find customer data. Check your CWD.")
 
+    # Fail-fast: validate taxonomy JSON files at boot. An invalid taxonomy
+    # means the invariant validator cannot trust its polarity/revenue-bucket
+    # decisions — refuse to serve traffic in that state.
+    try:
+        from utils.taxonomy_loader import validate_all_at_boot
+        verified = validate_all_at_boot()
+        print(f"  Taxonomy: {len(verified)} files validated ({', '.join(verified)})")
+    except Exception as _tax_err:
+        print(f"\n❌ FATAL: taxonomy validation failed at boot: {_tax_err}")
+        print(f"   See kpi-dashboard/backend/config/taxonomy_*.json")
+        raise SystemExit(1)
+
     with app.app_context():
         db.create_all()
     app.run(host='0.0.0.0', port=args.port, debug=False)

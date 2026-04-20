@@ -38,6 +38,39 @@ from .base import BaseScenario
 
 logger = logging.getLogger(__name__)
 
+
+_TAXONOMY_FALLBACK_AUTO_RECOVERY = (
+    'churn_averted', 'revenue_protected', 'engagement_recovery',
+    'renewal_secured',
+    'expansion_approved', 'revenue_growth',
+    'partial_recovery', 'capacity_constraint',
+)
+
+
+def _load_auto_recovery_subtypes() -> tuple:
+    """Load auto_recovery_outcome_subtypes from load-driver/taxonomy_base.json.
+
+    Falls back to the hardcoded tuple if the file is missing or invalid.
+    Adding a new template subtype to RECOVERY_OUTCOME_TEMPLATES now requires
+    adding it to taxonomy_base.json — no Python edit needed.
+    """
+    try:
+        # scenario_manifest.py lives in load-driver/scenarios/; taxonomy file
+        # lives one dir up.
+        path = Path(__file__).resolve().parent.parent / 'taxonomy_base.json'
+        with path.open('r') as f:
+            data = json.load(f)
+        subs = data.get('auto_recovery_outcome_subtypes')
+        if not isinstance(subs, list) or not subs:
+            raise ValueError('auto_recovery_outcome_subtypes missing or empty')
+        return tuple(subs)
+    except Exception as e:
+        logger.warning(
+            '[taxonomy] load-driver taxonomy load failed (%s) — falling back '
+            'to hardcoded auto_recovery list', e,
+        )
+        return _TAXONOMY_FALLBACK_AUTO_RECOVERY
+
 # ── Catalog loader (for KPI metadata) ──
 try:
     import sys
@@ -2753,20 +2786,11 @@ class ManifestCSVGenerator:
         # edge (I3 invariant). This pass creates the missing LED_TO edges
         # from the first auto_recovery signal to every auto_recovery outcome
         # on the same account.
-        # All outcome subtypes emitted by RECOVERY_OUTCOME_TEMPLATES across
-        # classifications (critical + at_risk + healthy). Keep in sync with
-        # the templates dict — any new template subtype added there must
-        # also appear here or its outcomes land as I3 orphans.
-        _AUTO_RECOVERY_OUTCOME_SUBTYPES = (
-            # critical pool
-            'churn_averted', 'revenue_protected', 'engagement_recovery',
-            # at_risk pool
-            'renewal_secured',
-            # healthy pool
-            'expansion_approved', 'revenue_growth',
-            # auto-included negatives seen in generator output
-            'partial_recovery', 'capacity_constraint',
-        )
+        # Auto-recovery subtype list now lives in load-driver/taxonomy_base.json
+        # (synced from backend/config/taxonomy_base.json). Adding a new template
+        # subtype to RECOVERY_OUTCOME_TEMPLATES requires adding it to the JSON —
+        # no Python edit, no rebuild. See docs/governance/GOVERNANCE_ROADMAP.md G1.7.
+        _AUTO_RECOVERY_OUTCOME_SUBTYPES = tuple(_load_auto_recovery_subtypes())
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
             # RefRegistry.resolve understands `signal:N` (ordinal) but not
