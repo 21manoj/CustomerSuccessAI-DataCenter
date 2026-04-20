@@ -3535,9 +3535,10 @@ class ScenarioManifest(BaseScenario):
                     except Exception as e:
                         result['errors'].append(f'Close error for {acct_name}/{playbook_id}: {e}')
 
-        # Create lifecycle OUTCOME nodes (churn_lost, expansion_closed) for NRR
-        if lifecycle_events and accounts_resp:
-            self._create_lifecycle_outcomes(customer_id, accounts_resp, lifecycle_events, result)
+        # Lifecycle OUTCOME nodes are emitted via outcomes.csv (csv_import
+        # path). This POST duplicated them as source_platform='load_driver'
+        # which Wizard B's NRR math double-counts. Removed Apr 20 2026 —
+        # outcomes.csv is the single source of truth. See I13 invariant.
 
         # Trigger Wizard B if any playbooks were closed or lifecycle events exist
         if result['closed'] > 0 or lifecycle_events:
@@ -3704,8 +3705,8 @@ class ScenarioManifest(BaseScenario):
                 except Exception as e:
                     result['errors'].append(f'Close error for {acct_name_raw}: {e}')
 
-            # Create lifecycle OUTCOME nodes + Wizard B (always, even if no playbooks closed)
-            self._create_lifecycle_outcomes(customer_id, accounts_resp, lifecycle_events, result)
+            # Lifecycle OUTCOMEs come from outcomes.csv now (single source
+            # of truth). Only trigger Wizard B to recompute NRR.
             self._trigger_wizard_b(customer_id, result)
             return result
 
@@ -3821,7 +3822,7 @@ class ScenarioManifest(BaseScenario):
                         logger.info(f'    ✅ {acct["account_name"]}: closed as {outcome} (health {acct["health"]:.0f}→{health_at_close:.0f}, protected=${rev_prot:,.0f}, ROI={roi}x)')
                 except Exception as e:
                     result['errors'].append(f'Close error for {acct["account_name"]}: {e}')
-            self._create_lifecycle_outcomes(customer_id, accounts_resp, lifecycle_events, result)
+            # Lifecycle OUTCOMEs come from outcomes.csv only. See I13.
             self._trigger_wizard_b(customer_id, result)
         else:
             logger.info(f'    Trigger-only mode: {result["executed"]} playbooks open. Run --extend --playbooks to close.')

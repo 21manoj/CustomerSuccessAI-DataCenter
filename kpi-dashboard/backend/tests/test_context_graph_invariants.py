@@ -442,6 +442,80 @@ def test_i12_dirty(ctx):
 
 
 # ═════════════════════════════════════════════════════════════════════
+# I13 — No duplicate definitive lifecycle OUTCOMEs (catches W-B double count)
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_i13_clean(ctx):
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_closed',
+                   revenue_impact=500_000, revenue_impact_type='expansion',
+                   source_platform='load_driver', source_event_id='lc:expand:1')
+        db.session.commit()
+        violations = run_invariant('I13', ctx['customer_id'])
+        assert violations == []
+
+
+def test_i13_dirty(ctx):
+    """The actual W-B double-count bug: csv_import + load_driver both
+    create expansion_closed for the same account."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_closed',
+                   revenue_impact=500_000, revenue_impact_type='expansion',
+                   source_platform='csv_import', source_event_id='csv:exp:1')
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_closed',
+                   revenue_impact=375_000, revenue_impact_type='expansion',
+                   source_platform='load_driver', source_event_id='lc:exp:1')
+        db.session.commit()
+        violations = run_invariant('I13', ctx['customer_id'])
+        assert len(violations) == 1
+        assert violations[0].details['subtype'] == 'expansion_closed'
+        assert set(violations[0].details['sources']) == {'csv_import', 'load_driver'}
+        assert violations[0].details['combined_revenue_impact'] == 875_000
+
+
+# ═════════════════════════════════════════════════════════════════════
+# I14 — revenue_impact sign matches polarity
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_i14_clean(ctx):
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='churn_lost',
+                   revenue_impact=-100_000, revenue_impact_type='lost')
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_closed',
+                   revenue_impact=200_000, revenue_impact_type='expansion')
+        db.session.commit()
+        violations = run_invariant('I14', ctx['customer_id'])
+        assert violations == []
+
+
+def test_i14_dirty_positive_churn(ctx):
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='churn_lost',
+                   revenue_impact=+1_000_000, revenue_impact_type='lost')  # sign flipped
+        db.session.commit()
+        violations = run_invariant('I14', ctx['customer_id'])
+        assert len(violations) == 1
+        assert 'positive revenue_impact' in violations[0].message
+
+
+def test_i14_dirty_negative_expansion(ctx):
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_closed',
+                   revenue_impact=-500_000, revenue_impact_type='expansion')  # sign flipped
+        db.session.commit()
+        violations = run_invariant('I14', ctx['customer_id'])
+        assert len(violations) == 1
+        assert 'negative revenue_impact' in violations[0].message
+
+
+# ═════════════════════════════════════════════════════════════════════
 # Registry coverage — every registered invariant has at least one test
 # ═════════════════════════════════════════════════════════════════════
 

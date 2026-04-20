@@ -813,6 +813,144 @@ def invariant_i12_account_status_health_consistency(customer_id: int) -> List[Vi
 # ═════════════════════════════════════════════════════════════════════
 
 
+# ── Definitive lifecycle subtypes that Wizard B's NRR math summs. ──
+# Any duplication here double-counts revenue in NRR / CFO dashboards.
+DEFINITIVE_LIFECYCLE_SUBTYPES = {
+    'churn_lost', 'contraction', 'expansion_closed', 'new_logo',
+}
+
+
+def invariant_i13_no_duplicate_definitive_lifecycle(customer_id: int) -> List[Violation]:
+    """I13: At most one OUTCOME per (account, definitive lifecycle subtype).
+
+    Wizard B's NRR math iterates ContextNode where node_type='OUTCOME' and
+    node_subtype in {churn_lost, contraction, expansion_closed, new_logo},
+    summing revenue_impact. If two paths create the same logical event
+    (e.g., scenario_manifest.generate_outcomes_csv AND
+    _create_lifecycle_outcomes BOTH fire for one expansion event, or
+    LLM enrichment adds a third copy), the account contributes 2× or 3×
+    its actual ARR change to the portfolio NRR.
+
+    This invariant catches cross-source duplicates by ignoring
+    source_platform — it's specifically a Wizard-B correctness guard.
+    Related to I9 but broader: I9 handles only churn_lost.
+    """
+    from sqlalchemy import func  # noqa: PLC0415
+
+    from models import Account, ContextNode, db  # noqa: PLC0415
+
+    rows = (
+        db.session.query(
+            ContextNode.account_id,
+            ContextNode.node_subtype,
+            func.count(ContextNode.node_id).label('cnt'),
+            func.array_agg(ContextNode.node_id).label('nids'),
+            func.array_agg(ContextNode.source_platform).label('sources'),
+            func.sum(ContextNode.revenue_impact).label('total_impact'),
+        )
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.node_type == 'OUTCOME',
+            ContextNode.node_subtype.in_(DEFINITIVE_LIFECYCLE_SUBTYPES),
+        )
+        .group_by(ContextNode.account_id, ContextNode.node_subtype)
+        .having(func.count(ContextNode.node_id) > 1)
+        .all()
+    )
+
+    violations: List[Violation] = []
+    for account_id, subtype, cnt, nids, sources, total_impact in rows:
+        acct = Account.query.filter_by(account_id=account_id).first()
+        violations.append(Violation(
+            invariant_id='I13',
+            invariant_name='no_duplicate_definitive_lifecycle',
+            severity='error',
+            customer_id=customer_id,
+            account_id=account_id,
+            node_ids=list(nids or []),
+            message=(
+                f'Account {acct.account_name if acct else account_id!r} has {cnt} '
+                f'{subtype!r} OUTCOME nodes from sources {list(sources or [])} — '
+                f'Wizard B will double-count ${float(total_impact or 0):,.0f}'
+            ),
+            details={
+                'account_name': acct.account_name if acct else None,
+                'subtype': subtype,
+                'count': cnt,
+                'sources': list(sources or []),
+                'combined_revenue_impact': float(total_impact or 0),
+            },
+        ))
+    return violations
+
+
+def invariant_i14_revenue_sign_matches_polarity(customer_id: int) -> List[Violation]:
+    """I14: revenue_impact sign must match subtype polarity.
+
+    churn_lost / contraction must be negative (or zero).
+    expansion_closed / new_logo / revenue_protected / churn_averted /
+    revenue_growth / expansion_approved must be positive (or zero).
+
+    Catches LLM / ingest errors where "lost $1M" gets stored as +1,000,000
+    flipping the sign in NRR math.
+    """
+    from models import ContextNode  # noqa: PLC0415
+
+    MUST_BE_NEGATIVE = {'churn_lost', 'contraction'}
+    MUST_BE_POSITIVE = {
+        'expansion_closed', 'new_logo', 'revenue_protected', 'churn_averted',
+        'revenue_growth', 'expansion_approved', 'revenue_expanded',
+        'renewal_secured',
+    }
+
+    nodes = (
+        ContextNode.query
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.node_type == 'OUTCOME',
+            ContextNode.node_subtype.in_(MUST_BE_NEGATIVE | MUST_BE_POSITIVE),
+            ContextNode.revenue_impact.isnot(None),
+        )
+        .all()
+    )
+
+    violations: List[Violation] = []
+    for n in nodes:
+        impact = float(n.revenue_impact or 0)
+        sub = n.node_subtype
+        if sub in MUST_BE_NEGATIVE and impact > 0:
+            violations.append(Violation(
+                invariant_id='I14',
+                invariant_name='revenue_sign_matches_polarity',
+                severity='error',
+                customer_id=customer_id,
+                account_id=n.account_id,
+                node_ids=[n.node_id],
+                message=(
+                    f'Node {n.node_id} subtype={sub!r} has positive revenue_impact '
+                    f'${impact:,.0f} — should be negative (loss)'
+                ),
+                details={'subtype': sub, 'revenue_impact': impact,
+                         'expected': 'negative'},
+            ))
+        elif sub in MUST_BE_POSITIVE and impact < 0:
+            violations.append(Violation(
+                invariant_id='I14',
+                invariant_name='revenue_sign_matches_polarity',
+                severity='error',
+                customer_id=customer_id,
+                account_id=n.account_id,
+                node_ids=[n.node_id],
+                message=(
+                    f'Node {n.node_id} subtype={sub!r} has negative revenue_impact '
+                    f'${impact:,.0f} — should be positive (gain)'
+                ),
+                details={'subtype': sub, 'revenue_impact': impact,
+                         'expected': 'positive'},
+            ))
+    return violations
+
+
 INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I1': invariant_i1_no_outcome_to_outcome,
     'I2': invariant_i2_polarity_consistency,
@@ -825,6 +963,8 @@ INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I10': invariant_i10_no_averted_with_lost,
     'I11': invariant_i11_revenue_bucket_consistency,
     'I12': invariant_i12_account_status_health_consistency,
+    'I13': invariant_i13_no_duplicate_definitive_lifecycle,
+    'I14': invariant_i14_revenue_sign_matches_polarity,
     # I7 (MCP param contract) is a pure code check — lives in tests, not here.
 }
 
