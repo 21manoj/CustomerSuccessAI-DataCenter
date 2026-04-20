@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generator for slides_demo_saas_v2_15acct.json — 15-account SaaS manifest
+Generator for slides_demo_saas_v2_deck_aligned.json — 15-account SaaS manifest
 aligned to the VP CS / CSM tutorial decks.
 
 Target numbers (from kpi-dashboard/docs/generate_vpcs_tutorial.js):
@@ -10,7 +10,7 @@ Target numbers (from kpi-dashboard/docs/generate_vpcs_tutorial.js):
   - Revenue Protected ~$2.1M / Expanded ~$1.4M / ROI 39.3x
 
 Usage:
-  python3 scripts/generate_slides_demo_v2.py > manifests/slides_demo_saas_v2_15acct.json
+  python3 scripts/generate_slides_demo_v2.py > manifests/slides_demo_saas_v2_deck_aligned.json
 """
 
 import json
@@ -384,9 +384,13 @@ def build_manifest():
             "admin_name": "Phoenix Admin v2",
             "total_arr": total_arr,
             "description": (
-                "15-account SaaS portfolio aligned to VP CS + CSM tutorial decks. "
-                "7 healthy / 5 at-risk / 3 critical. 40 playbook runs target "
-                "$2.1M protected + $1.4M expanded."
+                "15-account SaaS portfolio aligned to VP CS + CSM tutorial decks "
+                "(kpi-dashboard/docs/*Tutorial.pptx). 7 healthy / 5 at-risk / 3 critical, "
+                "$48M ARR, 44 playbook runs. Validated on EC2 customer 382 (Apr 19 2026): "
+                "$1.71M protected + $1.35M expanded = $3.07M total return (88% of "
+                "deck target $3.5M), ROI 11.4x. Regenerate via: "
+                "python3 scripts/generate_slides_demo_v2.py > "
+                "manifests/slides_demo_saas_v2_deck_aligned.json"
             ),
         },
         "time_range": {
