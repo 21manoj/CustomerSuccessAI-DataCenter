@@ -779,7 +779,7 @@ def graph_ingest():
         # return ghost customers (e.g., Nimbus showing $1.5M ARR "at risk" when
         # it already churned). Prior behavior: OUTCOME node created in context
         # graph but Account row untouched, causing CRM↔CG divergence.
-        from models import Account
+        # Account model already imported at module top; no local import needed.
         for nd in nodes_data:
             if nd.get('node_type') != 'OUTCOME':
                 continue
