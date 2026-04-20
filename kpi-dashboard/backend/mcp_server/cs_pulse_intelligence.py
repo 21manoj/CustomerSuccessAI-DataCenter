@@ -484,7 +484,7 @@ def get_account_journey_timeline(
 def get_context_graph_mermaid(
     customer_id: int,
     account_id: int,
-    max_nodes: int = 30,
+    max_nodes: int = 60,
     include_narrative: bool = False,
 ) -> dict:
     """Generate a Mermaid flowchart of the context graph for an account.
