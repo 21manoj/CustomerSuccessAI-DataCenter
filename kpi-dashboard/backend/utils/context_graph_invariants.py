@@ -99,12 +99,31 @@ CANONICAL_ARC_TYPES = {
 }
 
 # Revenue buckets — which outcome subtypes belong in which bucket.
-# Used by I11 to catch mis-classifications like 'capacity_constraint' in 'lost'.
+# Used by I11 to catch mis-classifications like 'capacity_constraint' tagged
+# as 'expansion_closed' (polarity flip). Generic wrapper subtypes like
+# `playbook_outcome` aren't pinned to a bucket — they take polarity from
+# their revenue_impact_type tag, so I11 skips them in the bucket-cross-check.
 REVENUE_BUCKET_MAP = {
-    'at_risk': {'renewal_at_risk', 'revenue_at_risk'},
+    'at_risk': {
+        'renewal_at_risk', 'revenue_at_risk', 'renewal_uncertainty',
+        'churn_risk', 'engagement_decline', 'partial_recovery',
+        'capacity_constraint', 'partner_friction',
+    },
     'lost': {'churn_lost', 'contraction'},
-    'expansion': {'expansion_closed', 'new_logo', 'revenue_expanded'},
-    'protected': {'revenue_protected', 'churn_averted', 'playbook_outcome'},
+    'expansion': {
+        'expansion_closed', 'new_logo', 'revenue_expanded',
+        'expansion_opportunity', 'expansion_approved', 'revenue_growth',
+    },
+    'protected': {
+        'revenue_protected', 'churn_averted',
+        'renewal_secured', 'escalation_resolved',
+    },
+}
+
+# Generic wrapper subtypes — polarity is determined by revenue_impact_type,
+# not by subtype. I11 skips the cross-check for these.
+POLARITY_AMBIGUOUS_SUBTYPES = {
+    'playbook_outcome', 'intervention_outcome',
 }
 
 
@@ -662,6 +681,12 @@ def invariant_i11_revenue_bucket_consistency(customer_id: int) -> List[Violation
     for n in nodes:
         sub = n.node_subtype
         tag = n.revenue_impact_type
+
+        # Generic wrapper subtypes don't have an intrinsic polarity bucket —
+        # skip the cross-check. Their polarity comes from the tag.
+        if sub in POLARITY_AMBIGUOUS_SUBTYPES:
+            continue
+
         sub_bucket = subtype_to_bucket.get(sub)
         tag_bucket = tag_to_bucket.get(tag)
 
