@@ -24,6 +24,13 @@ logger = logging.getLogger(__name__)
 _precommit_rejection_logger = logging.getLogger('cs_pulse.pre_commit_rejection')
 _seen_rejections: set = set()
 
+# Dedicated logger for unearned-confidence clamp events (I3' — OUTCOME written
+# without evidence → confidence capped at 0.3, tier forced to 2). Ops tooling
+# filters on this logger name to surface "producers emitting unearned OUTCOMEs"
+# for investigation. Deduped per-process on (source_platform, subtype, impact).
+_unearned_clamp_logger = logging.getLogger('cs_pulse.unearned_confidence_clamp')
+_seen_unearned_clamps: set = set()
+
 
 # ─── Node Queries ────────────────────────────────────────────────────────────
 
@@ -391,6 +398,11 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     at_risk = _calculate_at_risk_from_health(account_id)
 
     # ── protected / expansion / lost: OUTCOME nodes only ──
+    # I3' filter: exclude unearned nodes (confidence < 0.5). Nodes that were
+    # written without evidence got clamped to 0.3 by the pre-commit hook; we
+    # don't want those contributing to CFO/CRO revenue claims. Nodes with
+    # NULL confidence are treated as earned (legacy data, pre-clamp) —
+    # the clamp only fires prospectively.
     outcome_nodes = ContextNode.query.filter(
         ContextNode.account_id == account_id,
         ContextNode.node_type == 'OUTCOME',
@@ -398,7 +410,11 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         db.or_(
             ContextNode.expires_at.is_(None),
             ContextNode.expires_at > now,
-        )
+        ),
+        db.or_(
+            ContextNode.confidence.is_(None),
+            ContextNode.confidence >= 0.5,
+        ),
     ).all()
 
     outcome_buckets: Dict[str, List[float]] = {
@@ -589,8 +605,10 @@ def upsert_node(
     """
     Insert or update a context node. Deduplicates by source_platform + source_event_id.
 
-    Pre-commit validation (I4): confidence and properties.confidence are
-    clamped to [0, 1]. Writes continue; only invalid values are fixed.
+    Pre-commit validation:
+      I4  — confidence and properties.confidence clamped to [0, 1]
+      I3' — OUTCOME without evidence (properties.evidence OR source_ref)
+            gets confidence capped at 0.3 and tier forced to 2
     """
     # I4 pre-commit clamp (top-level + JSONB). Clamps only; doesn't reject.
     try:
@@ -603,6 +621,44 @@ def upsert_node(
         properties = sanitize_properties_confidence(properties)
     except Exception:
         pass  # invariants module optional — fall through
+
+    # I3' pre-commit clamp (OUTCOME without evidence → unearned).
+    try:
+        from utils.context_graph_invariants import clamp_unearned_confidence
+        new_conf, new_props, new_tier, was_clamped = clamp_unearned_confidence(
+            node_type=node_type,
+            source_platform=source_platform,
+            source_ref=kwargs.get('source_ref'),
+            confidence=kwargs.get('confidence'),
+            properties=properties,
+            tier=kwargs.get('tier'),
+        )
+        if was_clamped:
+            kwargs['confidence'] = new_conf
+            kwargs['tier'] = new_tier
+            properties = new_props
+            # Structured WARN on first occurrence per (source_platform, subtype)
+            # so ops tooling can alert on "unearned OUTCOMEs in the wild".
+            _unearned_key = (source_platform, kwargs.get('node_subtype'), kwargs.get('revenue_impact_type'))
+            if _unearned_key not in _seen_unearned_clamps:
+                _seen_unearned_clamps.add(_unearned_key)
+                _unearned_clamp_logger.warning(
+                    'event=unearned_confidence_clamp first_seen=true '
+                    'node_type=OUTCOME source_platform=%s subtype=%s '
+                    'revenue_impact_type=%s customer_id=%s account_id=%s '
+                    'clamped_to=%s tier_forced=%s',
+                    source_platform, kwargs.get('node_subtype'),
+                    kwargs.get('revenue_impact_type'),
+                    customer_id, account_id, new_conf, new_tier,
+                )
+            else:
+                logger.debug(
+                    '[invariants] I3\' unearned-confidence clamp: OUTCOME %s '
+                    'confidence→%s tier→%s',
+                    kwargs.get('node_subtype'), new_conf, new_tier,
+                )
+    except Exception as _e:
+        logger.debug(f'[invariants] unearned-clamp pass-through (error): {_e}')
 
     existing = None
     if source_event_id:

@@ -577,3 +577,198 @@ def test_i7_mcp_tool_signatures_match_underlying_functions():
             f'MCP wrapper passes {sorted(missing)} to {fn.__name__} '
             f'but function signature only accepts {sorted(accepted)}'
         )
+
+
+# ═════════════════════════════════════════════════════════════════════
+# I3' — Unearned-confidence clamp (pre-commit OUTCOME write-time)
+# Not an invariant in INVARIANTS_REGISTRY (it's a mutation hook, not a
+# post-hoc detector). Tested here because it's the write-time counterpart
+# to I3 and shares the same provenance-verification semantic.
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_unearned_clamp_outcome_no_evidence_is_clamped():
+    """OUTCOME with no evidence and no source_ref → confidence 0.3, tier 2."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    conf, props, tier, clamped = clamp_unearned_confidence(
+        node_type='OUTCOME',
+        source_platform='csv_import',
+        source_ref=None,
+        confidence=1.0,
+        properties={},
+        tier=1,
+    )
+    assert clamped is True
+    assert conf == 0.3
+    assert tier == 2
+    assert props.get('evidence_clamped') is True
+
+
+def test_unearned_clamp_outcome_with_evidence_passes_through():
+    """OUTCOME with non-empty properties.evidence → unchanged."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    conf, props, tier, clamped = clamp_unearned_confidence(
+        node_type='OUTCOME',
+        source_platform='llm_enrichment',
+        source_ref=None,
+        confidence=0.87,
+        properties={'evidence': 'support ticket ST-4891 cites champion departure 2026-03-14'},
+        tier=1,
+    )
+    assert clamped is False
+    assert conf == 0.87
+    assert tier == 1
+    assert 'evidence_clamped' not in props
+
+
+def test_unearned_clamp_outcome_with_source_ref_passes_through():
+    """OUTCOME with specific source_ref (e.g. SFDC Opp ID) → unchanged."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    conf, props, tier, clamped = clamp_unearned_confidence(
+        node_type='OUTCOME',
+        source_platform='csv_import',
+        source_ref='sfdc_opp:006x000000ABC',
+        confidence=1.0,
+        properties={},
+        tier=1,
+    )
+    assert clamped is False
+    assert conf == 1.0
+    assert tier == 1
+
+
+def test_unearned_clamp_signal_not_clamped():
+    """Non-OUTCOME nodes pass through regardless of evidence."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    conf, props, tier, clamped = clamp_unearned_confidence(
+        node_type='SIGNAL',
+        source_platform='csv_import',
+        source_ref=None,
+        confidence=1.0,
+        properties={},
+        tier=1,
+    )
+    assert clamped is False
+    assert conf == 1.0
+    assert tier == 1
+
+
+def test_unearned_clamp_empty_evidence_string_still_clamps():
+    """Empty/whitespace-only evidence string is treated as no evidence."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    for ev in ('', '   ', None):
+        _, _, _, clamped = clamp_unearned_confidence(
+            node_type='OUTCOME',
+            source_platform='csv_import',
+            source_ref=None,
+            confidence=1.0,
+            properties={'evidence': ev} if ev is not None else {},
+            tier=1,
+        )
+        assert clamped is True, f'Expected clamp for evidence={ev!r}'
+
+
+def test_unearned_clamp_evidence_list_recognised():
+    """evidence_list (plural) with content is also recognised as evidence."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    _, _, _, clamped = clamp_unearned_confidence(
+        node_type='OUTCOME',
+        source_platform='csv_import',
+        source_ref=None,
+        confidence=1.0,
+        properties={'evidence_list': ['ticket ST-4891', 'email thread 2026-03-14']},
+        tier=1,
+    )
+    assert clamped is False
+
+
+def test_unearned_clamp_caps_existing_low_confidence():
+    """If caller passes confidence below the floor, the clamp does not raise it."""
+    from utils.context_graph_invariants import clamp_unearned_confidence
+    conf, _, _, clamped = clamp_unearned_confidence(
+        node_type='OUTCOME',
+        source_platform='csv_import',
+        source_ref=None,
+        confidence=0.15,  # already below the 0.3 floor
+        properties={},
+        tier=1,
+    )
+    assert clamped is True
+    assert conf == 0.15  # capped at min(0.15, 0.3) = 0.15, not raised to 0.3
+
+
+def test_upsert_node_applies_unearned_clamp_on_outcome(ctx):
+    """Integration: upsert_node with OUTCOME + no evidence → DB row shows clamp."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        from utils.context_graph import upsert_node
+        node = upsert_node(
+            customer_id=ctx['customer_id'],
+            account_id=ctx['account_id'],
+            node_type='OUTCOME',
+            title='Renewal Secured — $50K',
+            occurred_at=datetime(2026, 3, 22, 10, 0, 0),
+            properties={},  # empty evidence
+            source_platform='csv_import',
+            source_event_id='outcome:renewal_secured',
+            node_subtype='renewal_secured',
+            revenue_impact=50000,
+            revenue_impact_type='protected',
+            confidence=1.0,
+            tier=1,
+        )
+        db.session.commit()
+        assert float(node.confidence) == 0.3
+        assert node.tier == 2
+        assert node.properties.get('evidence_clamped') is True
+
+
+def test_mod004_revenue_filter_excludes_unearned_outcomes(ctx):
+    """get_revenue_at_risk confidence>=0.5 filter: unearned clamped nodes (0.3) are excluded."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        from utils.context_graph import upsert_node, get_revenue_at_risk
+
+        # Earned outcome — has evidence, confidence=0.87, should count
+        upsert_node(
+            customer_id=ctx['customer_id'],
+            account_id=ctx['account_id'],
+            node_type='OUTCOME',
+            title='Churn Averted — $200K (earned)',
+            occurred_at=datetime(2026, 3, 15, 10, 0, 0),
+            properties={'evidence': 'ticket ST-12 + exec meeting 2026-03-14'},
+            source_platform='llm_enrichment',
+            source_event_id='earned_001',
+            node_subtype='churn_averted',
+            revenue_impact=200000,
+            revenue_impact_type='protected',
+            confidence=0.87,
+            tier=1,
+        )
+        # Unearned outcome — no evidence, will be clamped to 0.3
+        upsert_node(
+            customer_id=ctx['customer_id'],
+            account_id=ctx['account_id'],
+            node_type='OUTCOME',
+            title='Renewal Secured — $50K (unearned)',
+            occurred_at=datetime(2026, 3, 22, 10, 0, 0),
+            properties={},
+            source_platform='csv_import',
+            source_event_id='outcome:renewal_secured',
+            node_subtype='renewal_secured',
+            revenue_impact=50000,
+            revenue_impact_type='protected',
+            confidence=1.0,
+            tier=1,
+        )
+        db.session.commit()
+
+        result = get_revenue_at_risk(ctx['account_id'])
+        # Protected should include only the earned $200K, NOT the clamped $50K
+        # (87% confidence applied in existing logic: 200000 * 0.87 = 174000)
+        assert result['protected'] > 0, 'Earned outcome should contribute'
+        assert result['protected'] < 250000, 'Unearned $50K must not contribute'
+        # Specifically: with de-duplication on, exactly 1 amount in bucket.
+        assert round(result['protected']) == round(200000 * 0.87), (
+            f"Expected protected = 200K*0.87 (earned only), got {result['protected']}"
+        )

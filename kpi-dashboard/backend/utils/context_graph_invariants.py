@@ -1105,6 +1105,103 @@ def sanitize_properties_confidence(
     return new
 
 
+# ─────────────────────────────────────────────────────────────────────
+# I3' — Unearned-confidence clamp (April 2026)
+# ─────────────────────────────────────────────────────────────────────
+# Complements I3 (post-hoc orphan detection) with a *write-time* clamp.
+# An OUTCOME node that arrives without any of (a) properties.evidence,
+# (b) source_ref pointing at a specific external record, has no basis
+# to claim Tier-1 status or high confidence. Rather than rejecting the
+# write (scope 2, two-pass transactional — not yet), we DOWNGRADE:
+#   - confidence capped at 0.3 (below every user-facing threshold:
+#     node-storage 0.55, human-review 0.70, auto-execute 0.85, and
+#     MOD-004 aggregation filter 0.50 — see get_revenue_at_risk)
+#   - tier forced to 2 (Tier-1 status is earned via evidence, not asserted)
+#   - properties.evidence_clamped = True (marker for audit + UI)
+#
+# The node still lands (same ID, same subtype, same revenue_impact) so
+# no producer breaks. Only its *claim strength* is honestly downgraded.
+# The MOD-004 read-side filter then excludes it from CFO/CRO aggregates.
+#
+# Why 0.3: every decision threshold in the codebase is >= 0.4. Picking
+# 0.3 puts unearned claims demonstrably below every filter. Picking 0.5
+# would sit on the MOD-004 filter boundary (fragile to >= vs > drift).
+
+_UNEARNED_CLAMP_FLOOR = 0.3
+_UNEARNED_CLAMP_TIER = 2
+
+
+def _has_evidence(properties: Optional[Dict[str, Any]]) -> bool:
+    """True iff properties carries a non-empty evidence field or list."""
+    if not isinstance(properties, dict):
+        return False
+    ev = properties.get('evidence')
+    if isinstance(ev, str) and ev.strip():
+        return True
+    if isinstance(ev, (list, tuple)) and any(
+        isinstance(x, str) and x.strip() for x in ev
+    ):
+        return True
+    ev_list = properties.get('evidence_list')
+    if isinstance(ev_list, (list, tuple)) and any(
+        isinstance(x, str) and x.strip() for x in ev_list
+    ):
+        return True
+    return False
+
+
+def _has_specific_source_ref(source_ref: Optional[str]) -> bool:
+    """True iff source_ref points at a specific external record (non-empty)."""
+    if not source_ref or not isinstance(source_ref, str):
+        return False
+    return bool(source_ref.strip())
+
+
+def clamp_unearned_confidence(
+    node_type: Optional[str],
+    source_platform: Optional[str],
+    source_ref: Optional[str],
+    confidence: Optional[float],
+    properties: Optional[Dict[str, Any]],
+    tier: Optional[int],
+) -> tuple:
+    """Apply the unearned-confidence clamp to an OUTCOME write.
+
+    An OUTCOME without evidence (neither properties.evidence nor a specific
+    source_ref) is downgraded:
+      - confidence capped at 0.3
+      - tier forced to 2
+      - properties['evidence_clamped'] = True
+
+    Only clamps OUTCOME nodes. SIGNAL / DECISION / STAKEHOLDER pass through.
+
+    Returns (confidence, properties, tier, was_clamped) — caller applies.
+    """
+    if node_type != 'OUTCOME':
+        return confidence, properties, tier, False
+
+    if _has_evidence(properties) or _has_specific_source_ref(source_ref):
+        # Earned claim — pass through untouched.
+        return confidence, properties, tier, False
+
+    # Unearned — clamp.
+    try:
+        cur_conf = float(confidence) if confidence is not None else 1.0
+    except (TypeError, ValueError):
+        cur_conf = 1.0
+    new_conf = min(cur_conf, _UNEARNED_CLAMP_FLOOR)
+
+    new_props = dict(properties) if isinstance(properties, dict) else {}
+    new_props['evidence_clamped'] = True
+    new_props['evidence_clamped_reason'] = (
+        f'OUTCOME written via {source_platform or "unknown"} with no '
+        f'properties.evidence and no source_ref — confidence clamped '
+        f'from {cur_conf} to {new_conf}, tier forced to {_UNEARNED_CLAMP_TIER}'
+    )
+
+    return new_conf, new_props, _UNEARNED_CLAMP_TIER, True
+
+
 def log_violations_summary(violations: List[Violation], customer_id: int) -> Dict[str, Any]:
     """Log a one-line WARN summary + per-invariant counts. Return the summary dict."""
     if not violations:
