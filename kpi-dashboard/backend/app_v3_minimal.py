@@ -28,6 +28,38 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Fail-fast: validate taxonomy JSON files at import time. Runs under gunicorn
+# (which imports the `app` object) AND when app_v3_minimal.py is run directly.
+# An invalid taxonomy means the invariant validator cannot trust its
+# polarity/revenue-bucket decisions — refuse to serve traffic in that state.
+# Only skipped when the loader module itself cannot be imported (e.g. scripts
+# run from a path without config/); in that case the hardcoded-fallback inside
+# context_graph_invariants.py keeps behavior working.
+try:
+    from utils.taxonomy_loader import validate_all_at_boot as _validate_taxonomy_at_boot
+except Exception as _tax_import_err:
+    import logging as _tax_logging
+    _tax_logging.getLogger(__name__).warning(
+        '[taxonomy] loader not importable at app boot (%s) — continuing with '
+        'hardcoded fallbacks', _tax_import_err,
+    )
+else:
+    try:
+        _tax_verified = _validate_taxonomy_at_boot()
+        import logging as _tax_logging
+        _tax_logging.getLogger(__name__).info(
+            '[taxonomy] validated %d files at boot: %s',
+            len(_tax_verified), _tax_verified,
+        )
+    except Exception as _tax_err:
+        import sys as _sys, logging as _tax_logging
+        _tax_logging.getLogger(__name__).error(
+            '[taxonomy] FATAL: validation failed at boot: %s', _tax_err,
+        )
+        print(f'\n❌ FATAL: taxonomy validation failed at boot: {_tax_err}', file=_sys.stderr)
+        print('   See kpi-dashboard/backend/config/taxonomy_*.json', file=_sys.stderr)
+        _sys.exit(1)
+
 # Load configuration
 import os
 env = os.getenv('FLASK_ENV', 'development')
@@ -1557,17 +1589,8 @@ if __name__ == '__main__':
         print(f"⚠️  WARNING: verticals directory not found at {_verticals_dir}")
         print(f"   Server may not find customer data. Check your CWD.")
 
-    # Fail-fast: validate taxonomy JSON files at boot. An invalid taxonomy
-    # means the invariant validator cannot trust its polarity/revenue-bucket
-    # decisions — refuse to serve traffic in that state.
-    try:
-        from utils.taxonomy_loader import validate_all_at_boot
-        verified = validate_all_at_boot()
-        print(f"  Taxonomy: {len(verified)} files validated ({', '.join(verified)})")
-    except Exception as _tax_err:
-        print(f"\n❌ FATAL: taxonomy validation failed at boot: {_tax_err}")
-        print(f"   See kpi-dashboard/backend/config/taxonomy_*.json")
-        raise SystemExit(1)
+    # Taxonomy validation ran at module import time (top of this file).
+    # If we got here, it passed.
 
     with app.app_context():
         db.create_all()
