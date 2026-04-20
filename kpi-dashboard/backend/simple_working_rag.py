@@ -160,9 +160,24 @@ class SimpleWorkingRAG:
                     max_tokens=1000,
                     temperature=0.3
                 )
-                
+
+                # Cost tracking — canonical path via llm_budget_controller.
+                try:
+                    from utils.llm_budget_controller import record_usage as _record_usage
+                    _usage = getattr(response, 'usage', None)
+                    _record_usage(
+                        customer_id=self.customer_id,
+                        module='simple_working_rag',
+                        tokens_in=getattr(_usage, 'prompt_tokens', 0) if _usage else 0,
+                        tokens_out=getattr(_usage, 'completion_tokens', 0) if _usage else 0,
+                        model='gpt-4',
+                        success=True,
+                    )
+                except Exception:
+                    pass
+
                 ai_response = response.choices[0].message.content
-                
+
             except Exception as e:
                 ai_response = f"Error generating AI response: {str(e)}"
         else:

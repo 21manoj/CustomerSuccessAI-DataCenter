@@ -209,6 +209,20 @@ def call_claude(system_prompt: str, user_prompt: str, customer_id: int,
         )
         duration = round(time.time() - t0, 2)
 
+        # Cost tracking — canonical path via llm_budget_controller.
+        try:
+            from utils.llm_budget_controller import record_usage as _record_usage
+            _record_usage(
+                customer_id=customer_id,
+                module='llm_context_helpers',
+                tokens_in=response.usage.input_tokens,
+                tokens_out=response.usage.output_tokens,
+                model=model,
+                success=True,
+            )
+        except Exception as _cost_err:
+            logger.debug('context_helpers: cost tracking failed: %s', _cost_err)
+
         text = response.content[0].text if response.content else ''
         if text.strip().startswith('```'):
             text = text.strip().split('\n', 1)[1]
@@ -224,4 +238,17 @@ def call_claude(system_prompt: str, user_prompt: str, customer_id: int,
         return None, {}, round(time.time() - t0, 2)
     except Exception as e:
         logger.warning('Claude API error: %s', e)
+        # Record failure — tokens unknown on API errors.
+        try:
+            from utils.llm_budget_controller import record_usage as _record_usage
+            _record_usage(
+                customer_id=customer_id,
+                module='llm_context_helpers',
+                tokens_in=0, tokens_out=0,
+                model=model,
+                success=False,
+                error_message=str(e)[:500],
+            )
+        except Exception:
+            pass
         return None, {}, round(time.time() - t0, 2)

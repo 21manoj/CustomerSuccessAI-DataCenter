@@ -316,6 +316,20 @@ def enrich_signal(
             messages=[{"role": "user", "content": prompt}],
         )
 
+        # Cost tracking — canonical path via llm_budget_controller.
+        try:
+            from utils.llm_budget_controller import record_usage as _record_usage
+            _record_usage(
+                customer_id=customer_id,
+                module='signal_engine_enrichment',
+                tokens_in=response.usage.input_tokens,
+                tokens_out=response.usage.output_tokens,
+                model=DEFAULT_MODEL,
+                success=True,
+            )
+        except Exception as _cost_err:
+            logger.debug('signal_engine_enrichment: cost tracking failed: %s', _cost_err)
+
         _record_call(customer_id, account_id)
 
         # Parse response

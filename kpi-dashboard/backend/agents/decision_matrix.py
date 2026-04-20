@@ -581,6 +581,22 @@ Analyze the correlation between the quantitative KPI trends and qualitative cust
             response_format={"type": "json_object"}
         )
 
+        # Cost tracking — canonical path via llm_budget_controller.
+        # customer_id flows through SignalAnalystInput.customer_id.
+        try:
+            from utils.llm_budget_controller import record_usage as _record_usage
+            _usage = getattr(response, 'usage', None)
+            _record_usage(
+                customer_id=input_data.customer_id,
+                module='decision_matrix',
+                tokens_in=getattr(_usage, 'prompt_tokens', 0) if _usage else 0,
+                tokens_out=getattr(_usage, 'completion_tokens', 0) if _usage else 0,
+                model='gpt-4o-mini',
+                success=True,
+            )
+        except Exception:
+            pass  # non-fatal
+
         result_data = json.loads(response.choices[0].message.content)
 
         # Map alignment string to enum

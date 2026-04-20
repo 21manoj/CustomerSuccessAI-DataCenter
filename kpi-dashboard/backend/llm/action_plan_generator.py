@@ -253,6 +253,20 @@ def generate_action_plan(
             temperature=0.3,
         )
 
+        # Cost tracking — canonical path via llm_budget_controller.
+        try:
+            from utils.llm_budget_controller import record_usage as _record_usage
+            _record_usage(
+                customer_id=customer_id,
+                module='action_plan_generator',
+                tokens_in=response.usage.input_tokens,
+                tokens_out=response.usage.output_tokens,
+                model=LLM_MODEL,
+                success=True,
+            )
+        except Exception as _cost_err:
+            logger.debug('action_plan: cost tracking failed: %s', _cost_err)
+
         text = response.content[0].text if response.content else ''
         # Strip markdown fences
         if text.strip().startswith('```'):
@@ -317,4 +331,17 @@ def generate_action_plan(
         return {'status': 'error', 'reason': f'JSON parse error: {e}', 'duration_s': round(time.time() - t0, 2)}
     except Exception as e:
         logger.warning('Action plan generation failed: %s', e)
+        # Record failure — tokens unknown on API errors.
+        try:
+            from utils.llm_budget_controller import record_usage as _record_usage
+            _record_usage(
+                customer_id=customer_id,
+                module='action_plan_generator',
+                tokens_in=0, tokens_out=0,
+                model=LLM_MODEL,
+                success=False,
+                error_message=str(e)[:500],
+            )
+        except Exception:
+            pass
         return {'status': 'error', 'reason': str(e), 'duration_s': round(time.time() - t0, 2)}

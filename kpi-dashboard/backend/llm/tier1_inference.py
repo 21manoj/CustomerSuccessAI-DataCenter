@@ -491,6 +491,20 @@ def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') ->
             )
             duration = time.time() - t0
 
+            # Cost tracking — canonical path via llm_budget_controller (MOD-007).
+            try:
+                from utils.llm_budget_controller import record_usage as _record_usage
+                _record_usage(
+                    customer_id=customer_id,
+                    module='llm_tier1_enrichment',
+                    tokens_in=response.usage.input_tokens,
+                    tokens_out=response.usage.output_tokens,
+                    model=LLM_MODEL,
+                    success=True,
+                )
+            except Exception as _cost_err:
+                logger.debug('LLM Tier 1: cost tracking failed: %s', _cost_err)
+
             # Parse response
             text = response.content[0].text if response.content else ''
             # Strip markdown code fences if present
@@ -520,6 +534,19 @@ def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') ->
                 all_inferences.extend(salvaged)
         except Exception as e:
             logger.warning('LLM Tier 1: API call failed for batch %d: %s', batch_start, e)
+            # Record failure — tokens unknown on API errors; log with 0.
+            try:
+                from utils.llm_budget_controller import record_usage as _record_usage
+                _record_usage(
+                    customer_id=customer_id,
+                    module='llm_tier1_enrichment',
+                    tokens_in=0, tokens_out=0,
+                    model=LLM_MODEL,
+                    success=False,
+                    error_message=str(e)[:500],
+                )
+            except Exception:
+                pass
 
     return all_inferences
 
