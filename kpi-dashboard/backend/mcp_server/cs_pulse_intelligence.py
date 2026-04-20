@@ -655,8 +655,25 @@ def get_context_graph_mermaid(
 
         lines.append("")
 
+        # Build node_id → occurred_at lookup for temporal-edge filtering.
+        # Wizard A's arc-detection signal fires at customer-creation time (today)
+        # and emits LED_TO edges to pre-existing outcomes — mechanically backward
+        # in time. A "cause" cannot occur after its "effect." Filter these from
+        # the rendered diagram so a buyer drill-down doesn't see arrows pointing
+        # from today's date to months ago.
+        _causal_edge_types = {'CAUSED_BY', 'LED_TO', 'TRIGGERED', 'RESULTED_IN', 'INDICATES'}
+        _node_dates = {n.node_id: n.occurred_at for n in nodes if n.occurred_at}
+        _causal_edges_removed = 0
+
         for e in edges:
             if e.from_node_id in node_ids and e.to_node_id in node_ids:
+                # Temporal check for causal edges.
+                if e.edge_type in _causal_edge_types:
+                    from_dt = _node_dates.get(e.from_node_id)
+                    to_dt = _node_dates.get(e.to_node_id)
+                    if from_dt and to_dt and from_dt > to_dt:
+                        _causal_edges_removed += 1
+                        continue
                 label = e.edge_type or ""
                 lines.append(
                     f"    n{e.from_node_id} -->|{label}| n{e.to_node_id}"
@@ -669,7 +686,7 @@ def get_context_graph_mermaid(
             "account_id": account_id,
             "mermaid": mermaid_str,
             "node_count": len(nodes),
-            "edge_count": len(edges),
+            "edge_count": len(edges) - _causal_edges_removed,
             "legend": {
                 "signal": "orange (#FFA500)",
                 "decision": "blue (#4169E1)",

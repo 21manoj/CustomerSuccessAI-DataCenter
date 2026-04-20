@@ -594,12 +594,30 @@ def get_account_graph_summary(account_id: int, include_narrative: bool = False) 
 
     # Count edges — only those connecting two VISIBLE nodes (both endpoints
     # must pass the filter). Mirrors how mermaid renders.
+    # Additionally exclude causal edges that violate temporal ordering
+    # (cause.occurred_at > effect.occurred_at) — Wizard A's arc-detection
+    # signal fires at customer-creation and back-emits LED_TO edges to
+    # pre-existing outcomes. Mechanically backward; also filtered by mermaid.
     visible_node_ids_subq = db.session.query(ContextNode.node_id).filter(base_filter).subquery()
 
-    edge_count = ContextEdge.query.filter(
-        ContextEdge.from_node_id.in_(visible_node_ids_subq),
-        ContextEdge.to_node_id.in_(visible_node_ids_subq),
-    ).count()
+    from_alias = db.aliased(ContextNode)
+    to_alias = db.aliased(ContextNode)
+    _causal_types = ['CAUSED_BY', 'LED_TO', 'TRIGGERED', 'RESULTED_IN', 'INDICATES']
+
+    edge_count = (
+        db.session.query(ContextEdge.edge_id)
+        .join(from_alias, ContextEdge.from_node_id == from_alias.node_id)
+        .join(to_alias, ContextEdge.to_node_id == to_alias.node_id)
+        .filter(
+            ContextEdge.from_node_id.in_(visible_node_ids_subq),
+            ContextEdge.to_node_id.in_(visible_node_ids_subq),
+        )
+        .filter(db.not_(db.and_(
+            ContextEdge.edge_type.in_(_causal_types),
+            from_alias.occurred_at > to_alias.occurred_at,
+        )))
+        .count()
+    )
 
     revenue = get_revenue_at_risk(account_id)
 
