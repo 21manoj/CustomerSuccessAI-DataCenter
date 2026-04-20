@@ -33,6 +33,12 @@ def main() -> int:
         help='Comma-separated invariant IDs to run (e.g. I1,I4,I9). Default: all.',
     )
     parser.add_argument('--json', action='store_true', help='Emit JSON to stdout')
+    parser.add_argument(
+        '--clean',
+        action='store_true',
+        help='Delete edges/nodes that violate I1 (OUTCOME→OUTCOME) or '
+             'I2 (polarity mismatch). Use with caution — destructive.',
+    )
     args = parser.parse_args()
 
     # Flask app + DB context
@@ -55,6 +61,26 @@ def main() -> int:
             for inv_id in wanted:
                 violations.extend(run_invariant(inv_id, args.customer_id))
         else:
+            violations = run_all_invariants(args.customer_id)
+
+        if args.clean:
+            # Destructive cleanup — delete edges that violate I1 / I2.
+            from models import ContextEdge, db  # noqa: PLC0415
+            deleted_i1 = deleted_i2 = 0
+            for v in violations:
+                if v.invariant_id not in ('I1', 'I2'):
+                    continue
+                for edge_id in v.edge_ids:
+                    edge = db.session.get(ContextEdge, edge_id)
+                    if edge:
+                        db.session.delete(edge)
+                        if v.invariant_id == 'I1':
+                            deleted_i1 += 1
+                        else:
+                            deleted_i2 += 1
+            db.session.commit()
+            print(f'\n--clean deleted {deleted_i1} I1 edges + {deleted_i2} I2 edges\n')
+            # Re-run audit after cleanup.
             violations = run_all_invariants(args.customer_id)
 
     summary = {
