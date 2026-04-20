@@ -545,10 +545,15 @@ def aggregate_revenue_across_accounts(
     }
 
 
-def get_account_graph_summary(account_id: int) -> Dict[str, Any]:
+def get_account_graph_summary(account_id: int, include_narrative: bool = False) -> Dict[str, Any]:
     """
     Quick summary of graph density for an account.
     Useful for dashboard widgets and health overview.
+
+    Mirrors the narrative filter in get_context_graph_mermaid: by default
+    excludes narrative-only OUTCOMEs (no revenue_impact, no source_ref, no
+    properties.evidence) so both tools report the same counts on the same
+    account. Set include_narrative=True to see the unfiltered count.
     """
     now = datetime.utcnow()
     base_filter = db.and_(
@@ -559,6 +564,25 @@ def get_account_graph_summary(account_id: int) -> Dict[str, Any]:
         )
     )
 
+    # Narrative filter: narrative-only OUTCOMEs are those with no
+    # revenue_impact, no source_ref, and no properties.evidence. Applied via
+    # SQL NOT predicate so the count is correct at the DB layer (not
+    # post-filtered in Python).
+    if not include_narrative:
+        narrative_only = db.and_(
+            ContextNode.node_type == 'OUTCOME',
+            ContextNode.revenue_impact.is_(None),
+            db.or_(
+                ContextNode.source_ref.is_(None),
+                ContextNode.source_ref == '',
+            ),
+            db.or_(
+                ContextNode.properties['evidence'].astext.is_(None),
+                ContextNode.properties['evidence'].astext == '',
+            ),
+        )
+        base_filter = db.and_(base_filter, db.not_(narrative_only))
+
     node_counts = db.session.query(
         ContextNode.node_type,
         db.func.count(ContextNode.node_id)
@@ -566,16 +590,13 @@ def get_account_graph_summary(account_id: int) -> Dict[str, Any]:
 
     total_nodes = sum(c for _, c in node_counts)
 
-    # Count edges connected to this account's nodes
-    account_node_ids = db.session.query(ContextNode.node_id).filter(
-        ContextNode.account_id == account_id
-    ).subquery()
+    # Count edges — only those connecting two VISIBLE nodes (both endpoints
+    # must pass the filter). Mirrors how mermaid renders.
+    visible_node_ids_subq = db.session.query(ContextNode.node_id).filter(base_filter).subquery()
 
     edge_count = ContextEdge.query.filter(
-        db.or_(
-            ContextEdge.from_node_id.in_(account_node_ids),
-            ContextEdge.to_node_id.in_(account_node_ids),
-        )
+        ContextEdge.from_node_id.in_(visible_node_ids_subq),
+        ContextEdge.to_node_id.in_(visible_node_ids_subq),
     ).count()
 
     revenue = get_revenue_at_risk(account_id)

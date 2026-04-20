@@ -149,12 +149,20 @@ def get_causal_chain(customer_id: int, node_id: int, direction: str = "upstream"
 # ===================================================================
 
 @mcp.tool
-def get_graph_summary(customer_id: int, account_id: int) -> dict:
+def get_graph_summary(customer_id: int, account_id: int, include_narrative: bool = False) -> dict:
     """Get context graph summary: node/edge counts and revenue breakdown.
+
+    By default excludes narrative-only OUTCOME nodes from counts — these
+    are manifest/arc-template scaffolding with no revenue_impact, no
+    source_ref, and no properties.evidence. Matches the default filter
+    used by get_context_graph_mermaid so both tools report consistent
+    counts for the same account. Set include_narrative=True to include
+    all nodes (useful for internal audit/debug drill-downs).
 
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to analyze
+        include_narrative: Include narrative-only OUTCOMEs in counts (default False)
     """
     _check_mcp_enabled()
     _require_account_auth(customer_id, account_id)
@@ -165,7 +173,7 @@ def get_graph_summary(customer_id: int, account_id: int) -> dict:
         from utils.context_graph import get_account_graph_summary
 
         _validate_account_ownership(customer_id, account_id)
-        result = get_account_graph_summary(account_id)
+        result = get_account_graph_summary(account_id, include_narrative=include_narrative)
         result["scope"] = "account"
         return result
 
