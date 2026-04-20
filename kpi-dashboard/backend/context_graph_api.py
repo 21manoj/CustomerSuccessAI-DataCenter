@@ -654,6 +654,46 @@ def graph_ingest():
         # most recent SIGNAL and DECISION nodes for that account. Enables
         # "Why did this happen?" causal traversal for lifecycle outcomes
         # (churn_lost, expansion_closed) and any other orphan outcomes.
+        #
+        # Polarity gate (Apr 2026): the prior implementation linked the 3 most
+        # recent signals regardless of sentiment polarity, producing nonsense
+        # edges like `kpi_recovery → churn_lost` (positive signal causing
+        # negative outcome). Now we only cross-link same-polarity signals.
+        NEGATIVE_OUTCOME_SUBTYPES = {
+            'churn_lost', 'contraction', 'renewal_at_risk', 'revenue_at_risk',
+            'escalation', 'intervention_outcome',
+        }
+        POSITIVE_OUTCOME_SUBTYPES = {
+            'expansion_closed', 'new_logo', 'revenue_protected',
+            'playbook_outcome', 'recovery_milestone',
+        }
+        NEGATIVE_SIGNAL_SUBTYPES = {
+            'champion_loss', 'engagement_drop', 'usage_decline', 'kpi_decline',
+            'escalation', 'support_escalation', 'executive_escalation',
+            'critical_incident', 'competitive_eval', 'silent_churn',
+            'budget_cut', 'contract_dispute', 'downgrade_request',
+            'arc_detection',  # often triggered by negative state
+            'crisis_event', 'integration_stall', 'churn_signal',
+        }
+        POSITIVE_SIGNAL_SUBTYPES = {
+            'kpi_recovery', 'usage_spike', 'champion_reengagement',
+            'executive_engagement', 'expansion_signal', 'csm_intervention',
+            'feature_adoption_push', 'deployment_improvement',
+            'recovery_milestone', 'qbr_positive', 'qbr_alignment',
+            'adoption_growth', 'seasonal_peak', 'capacity_add',
+            'health_improvement',
+        }
+
+        def _signal_polarity_matches(sig_subtype, out_subtype):
+            """Return True if signal polarity is compatible with outcome polarity."""
+            if not sig_subtype or not out_subtype:
+                return True  # unknown = permissive
+            if out_subtype in NEGATIVE_OUTCOME_SUBTYPES:
+                return sig_subtype not in POSITIVE_SIGNAL_SUBTYPES
+            if out_subtype in POSITIVE_OUTCOME_SUBTYPES:
+                return sig_subtype not in NEGATIVE_SIGNAL_SUBTYPES
+            return True
+
         for nd in nodes_data:
             if nd.get('node_type') != 'OUTCOME':
                 continue
@@ -672,7 +712,9 @@ def graph_ingest():
             if existing_incoming > 0:
                 continue  # Already connected
 
-            # Find recent signals + decisions for this account
+            # Pull more candidates and then polarity-filter — prevents the case
+            # where the top-3 most recent signals all have wrong polarity and
+            # we produce zero edges. We check ~10 candidates and keep up to 3.
             recent_signals = (
                 ContextNode.query
                 .filter(
@@ -682,7 +724,7 @@ def graph_ingest():
                     ContextNode.node_id != node_id,
                 )
                 .order_by(ContextNode.occurred_at.desc())
-                .limit(3)
+                .limit(10)
                 .all()
             )
             recent_decisions = (
@@ -694,12 +736,17 @@ def graph_ingest():
                     ContextNode.node_id != node_id,
                 )
                 .order_by(ContextNode.occurred_at.desc())
-                .limit(2)
+                .limit(5)
                 .all()
             )
 
             subtype = nd.get('node_subtype', 'outcome')
+            signal_count = 0
             for sig in recent_signals:
+                if signal_count >= 3:
+                    break
+                if not _signal_polarity_matches(sig.node_subtype, subtype):
+                    continue  # skip polarity-mismatched signals
                 edge, created = upsert_edge(
                     from_node_id=sig.node_id, to_node_id=node_id,
                     edge_type='LED_TO', confidence=0.7,
@@ -709,7 +756,12 @@ def graph_ingest():
                 )
                 if created:
                     edges_created += 1
+                signal_count += 1
+            decision_count = 0
             for dec in recent_decisions:
+                if decision_count >= 2:
+                    break
+                # DECISION nodes are neutral — link freely (for now).
                 edge, created = upsert_edge(
                     from_node_id=dec.node_id, to_node_id=node_id,
                     edge_type='LED_TO', confidence=0.75,
@@ -719,6 +771,37 @@ def graph_ingest():
                 )
                 if created:
                     edges_created += 1
+                decision_count += 1
+
+        # ── Phase 4: Account-state reconciliation ──
+        # When a lifecycle outcome (churn_lost or expansion_closed) is ingested,
+        # the Account row must reflect the new state or list_accounts will
+        # return ghost customers (e.g., Nimbus showing $1.5M ARR "at risk" when
+        # it already churned). Prior behavior: OUTCOME node created in context
+        # graph but Account row untouched, causing CRM↔CG divergence.
+        from models import Account
+        for nd in nodes_data:
+            if nd.get('node_type') != 'OUTCOME':
+                continue
+            subtype = nd.get('node_subtype') or ''
+            aid = nd.get('account_id')
+            if not aid:
+                continue
+            acct = Account.query.filter_by(
+                account_id=aid, customer_id=customer_id
+            ).first()
+            if not acct:
+                continue
+            if subtype == 'churn_lost':
+                if acct.account_status != 'churned':
+                    acct.account_status = 'churned'
+                    # Preserve original ARR on the Account row for historical
+                    # reporting; dashboards should filter on account_status.
+            elif subtype == 'expansion_closed':
+                # Grow the account's ARR by the realized expansion.
+                expansion_arr = float(nd.get('revenue_impact') or 0)
+                if expansion_arr > 0:
+                    acct.revenue = float(acct.revenue or 0) + expansion_arr
 
         # Single commit for all nodes + edges
         db.session.commit()

@@ -666,18 +666,29 @@ def list_accounts(customer_id: int) -> dict:
             arr = _get_account_arr(acct)
             last_data_at = last_data_map.get(acct.account_id)
 
+            # Churned accounts — reflect lifecycle state regardless of cached
+            # health. Prior behavior surfaced Nimbus as "$1.5M at_risk" when
+            # it had already churned; downstream CSMs planned interventions
+            # on ghost customers.
+            is_churned = (acct.account_status or '').lower() == 'churned'
+            if is_churned:
+                status = 'churned'
+
             results.append({
                 "account_id": acct.account_id,
                 "account_name": acct.account_name,
                 "health_score": round(health, 1),
                 "status": status,
+                "account_status": acct.account_status,
+                "is_churned": is_churned,
                 "arr": arr,
                 "pillar_scores": {k: round(v, 1) for k, v in pillars.items()},
                 "updated_at": acct.updated_at.isoformat() if acct.updated_at else None,
                 "last_data_at": last_data_at.isoformat() if last_data_at else None,
             })
 
-        results.sort(key=lambda x: x["health_score"])
+        # Sort churned accounts to the bottom so CSMs see active work first.
+        results.sort(key=lambda x: (x["is_churned"], x["health_score"]))
 
         total_arr = sum(r["arr"] for r in results)
         avg_health = round(

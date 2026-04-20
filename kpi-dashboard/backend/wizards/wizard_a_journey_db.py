@@ -408,17 +408,25 @@ def _classify_trajectory_with_confidence(scores: list[float]) -> tuple[str, floa
 
     has_crisis = any(s < ht.at_risk_min() for s in scores)
 
-    # Scale confidence by how large the delta is (capped at 1.0)
-    delta_confidence = min(delta / 20.0, 0.45)
+    # Scale confidence by how large the delta is. Prior comment claimed
+    # "capped at 1.0" but the sum base+delta exceeded 1.0 in practice
+    # (crisis: 0.65 + 0.45 = 1.10, declining: 0.60 + 0.45 = 1.05). A
+    # confidence > 1.0 is mathematically invalid and leaks downstream into
+    # ROI/NRR math as garbage. Clamp both the delta term AND the final
+    # returned value.
+    delta_confidence = min(delta / 20.0, 0.35)  # max 0.35 so all bases stay ≤ 1.0
+
+    def _c(base: float) -> float:
+        return min(base + delta_confidence, 1.0)
 
     if has_crisis:
         if last_avg > first_avg + 5:
-            return 'recovery', 0.55 + delta_confidence
-        return 'crisis', 0.65 + delta_confidence
+            return 'recovery', _c(0.55)
+        return 'crisis', _c(0.65)
     if last_avg > first_avg + 5:
-        return 'improving', 0.55 + delta_confidence
+        return 'improving', _c(0.55)
     if last_avg < first_avg - 5:
-        return 'declining', 0.60 + delta_confidence
+        return 'declining', _c(0.60)
     return 'stable', 0.55
 
 
