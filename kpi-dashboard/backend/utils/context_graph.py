@@ -581,7 +581,22 @@ def upsert_node(
 ) -> ContextNode:
     """
     Insert or update a context node. Deduplicates by source_platform + source_event_id.
+
+    Pre-commit validation (I4): confidence and properties.confidence are
+    clamped to [0, 1]. Writes continue; only invalid values are fixed.
     """
+    # I4 pre-commit clamp (top-level + JSONB). Clamps only; doesn't reject.
+    try:
+        from utils.context_graph_invariants import (
+            clamp_confidence,
+            sanitize_properties_confidence,
+        )
+        if 'confidence' in kwargs:
+            kwargs['confidence'] = clamp_confidence(kwargs.get('confidence'))
+        properties = sanitize_properties_confidence(properties)
+    except Exception:
+        pass  # invariants module optional — fall through
+
     existing = None
     if source_event_id:
         existing = get_node_by_source(account_id, source_platform, source_event_id)
@@ -657,9 +672,54 @@ def upsert_edge(
     """
     Insert or update an edge. Deduplicates by (from_node_id, to_node_id, edge_type, source_platform).
 
+    Pre-commit validation (Apr 2026):
+      I1 — OUTCOME→OUTCOME causal edges are REJECTED (returns (None, False))
+      I2 — polarity-mismatched signal→outcome edges are REJECTED
+      I4 — confidence is clamped to [0, 1]
+
+    Rejection logs a WARN with the offending subtypes so the producer
+    (wizard_a, auto_linker, llm_enrichment, playbook_execution) can be
+    identified from logs. Callers that iterate and check `created` will
+    naturally skip rejected edges (created=False + edge=None).
+
     Returns:
-        (ContextEdge, created: bool) — True if new, False if updated existing
+        (ContextEdge, created: bool) — True if new, False if updated OR rejected.
+        When rejected, the first element is None.
     """
+    # I4 clamp
+    try:
+        from utils.context_graph_invariants import clamp_confidence
+        confidence = clamp_confidence(confidence) if confidence is not None else 1.0
+        if confidence is None:
+            confidence = 1.0
+    except Exception:
+        pass
+
+    # I1 / I2 pre-commit gate: look up node types to validate polarity/direction.
+    try:
+        from utils.context_graph_invariants import validate_edge_pre_commit
+        from_node = db.session.get(ContextNode, from_node_id)
+        to_node = db.session.get(ContextNode, to_node_id)
+        if from_node and to_node:
+            ok, reason = validate_edge_pre_commit(
+                from_node_type=from_node.node_type,
+                from_node_subtype=from_node.node_subtype,
+                to_node_type=to_node.node_type,
+                to_node_subtype=to_node.node_subtype,
+                edge_type=edge_type,
+                source_platform=source_platform,
+            )
+            if not ok:
+                import logging as _logging
+                _logging.getLogger('utils.context_graph').warning(
+                    '[invariants] edge rejected: %s (from_node=%s to_node=%s)',
+                    reason, from_node_id, to_node_id,
+                )
+                return (None, False)
+    except Exception:
+        # Never fail ingest on invariant module errors — log and proceed.
+        pass
+
     existing = ContextEdge.query.filter_by(
         from_node_id=from_node_id,
         to_node_id=to_node_id,

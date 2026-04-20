@@ -793,6 +793,94 @@ def run_invariant(invariant_id: str, customer_id: int) -> List[Violation]:
     return fn(customer_id)
 
 
+# ═════════════════════════════════════════════════════════════════════
+# Pre-commit validators — called from upsert_node/upsert_edge to reject
+# invariant-violating rows BEFORE they land in the DB. Post-commit audit
+# (run_all_invariants) is the backstop; these are the gate.
+# ═════════════════════════════════════════════════════════════════════
+
+
+def validate_edge_pre_commit(
+    from_node_type: Optional[str],
+    from_node_subtype: Optional[str],
+    to_node_type: Optional[str],
+    to_node_subtype: Optional[str],
+    edge_type: str,
+    source_platform: str,
+) -> tuple:
+    """Return (is_valid, reject_reason). Reject reason is None when valid.
+
+    Enforces:
+      I1 — no OUTCOME→OUTCOME causal edges
+      I2 — no polarity-mismatched signal→outcome edges
+
+    Non-causal edge types (INVOLVES, RELATED_TO, etc.) pass through.
+    """
+    if edge_type not in CAUSAL_EDGE_TYPES:
+        return True, None
+
+    # I1: Block OUTCOME→OUTCOME causal edges.
+    if from_node_type == 'OUTCOME' and to_node_type == 'OUTCOME':
+        return False, (
+            f'I1: OUTCOME→OUTCOME edge rejected '
+            f'({from_node_subtype} --{edge_type}--> {to_node_subtype} '
+            f'via {source_platform})'
+        )
+
+    # I2: Polarity mismatch on signal→outcome.
+    if from_node_type == 'SIGNAL' and to_node_type == 'OUTCOME':
+        fs = from_node_subtype or ''
+        ts = to_node_subtype or ''
+        if ts in NEGATIVE_OUTCOME_SUBTYPES and fs in POSITIVE_SIGNAL_SUBTYPES:
+            return False, (
+                f'I2: positive-signal→negative-outcome rejected '
+                f'({fs} --{edge_type}--> {ts} via {source_platform})'
+            )
+        if ts in POSITIVE_OUTCOME_SUBTYPES and fs in NEGATIVE_SIGNAL_SUBTYPES:
+            return False, (
+                f'I2: negative-signal→positive-outcome rejected '
+                f'({fs} --{edge_type}--> {ts} via {source_platform})'
+            )
+
+    return True, None
+
+
+def clamp_confidence(value: Optional[float]) -> Optional[float]:
+    """I4: Clamp confidence to [0, 1]. Returns None unchanged (field nullable)."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, min(1.0, v))
+
+
+def sanitize_properties_confidence(
+    properties: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """I4: If properties.confidence exists and is out of [0,1], clamp it."""
+    if not isinstance(properties, dict):
+        return properties
+    v = properties.get('confidence')
+    if v is None:
+        return properties
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return properties
+    if 0.0 <= f <= 1.0:
+        return properties
+    # Clamp without mutating the caller's dict.
+    new = dict(properties)
+    new['confidence'] = max(0.0, min(1.0, f))
+    logger.warning(
+        '[invariants] I4 clamp: properties.confidence %s → %s',
+        f, new['confidence'],
+    )
+    return new
+
+
 def log_violations_summary(violations: List[Violation], customer_id: int) -> Dict[str, Any]:
     """Log a one-line WARN summary + per-invariant counts. Return the summary dict."""
     if not violations:
