@@ -42,8 +42,7 @@ from utils.logging_config import (
     log_with_context,
     log_exception
 )
-from utils.cost_tracker import CostTracker
-from sqlalchemy import create_engine
+from utils.llm_budget_controller import record_usage as _llm_record_usage
 
 # Replace basic logger with structured logger
 structured_logger = initialize_logging()
@@ -89,33 +88,22 @@ class SignalAnalystAgent:
         self.customer_id = customer_id
         self.account_id = account_id
         
-        # Initialize cost tracker
-        try:
-            db_url = os.getenv("DATABASE_URL")
-            if db_url:
-                engine = create_engine(db_url)
-                self.cost_tracker = CostTracker(engine)
-                logger.info("Cost tracker initialized successfully")
-            else:
-                logger.warning("DATABASE_URL not set, cost tracking disabled")
-                self.cost_tracker = None
-        except Exception as e:
-            logger.warning(f"Failed to initialize cost tracker: {e}", exc_info=True)
-            self.cost_tracker = None
-        
+        # Cost tracking is centralized via utils.llm_budget_controller.record_usage
+        # (writes to llm_usage_log table; uses Flask db.session). No per-agent
+        # tracker instance needed — record_usage is a module-level function.
+
         # Initialize circuit breaker for OpenAI
         self.openai_breaker = CircuitBreaker(
             failure_threshold=3,  # Open after 3 failures
             timeout=120  # Wait 2 minutes before retry
         )
-        
+
         logger.info(
             f"SignalAnalystAgent initialized with model={model}",
             extra={
                 'model': model,
                 'temperature': temperature,
                 'max_tokens': max_tokens,
-                'cost_tracking_enabled': self.cost_tracker is not None,
                 'customer_id': customer_id
             }
         )
@@ -346,50 +334,33 @@ class SignalAnalystAgent:
                 }
             )
             
-            # Track cost to database
-            if self.cost_tracker:
-                try:
-                    self.cost_tracker.log_api_call(
-                        provider='openai',
-                        model=self.model,
-                        call_type='chat_completion',
-                        tokens_input=input_tokens,
-                        tokens_output=output_tokens,
-                        cost=total_cost,
-                        customer_id=customer_id,
-                        account_id=int(account_id) if account_id else None,
-                        success=True,
-                        error_message=None,
-                        execution_time_ms=execution_time_ms
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to log cost to database: {e}")
-            
+            # Track cost to llm_usage_log (canonical; account_id + exec_ms
+            # dropped — llm_usage_log schema groups by module, not account).
+            _llm_record_usage(
+                customer_id=customer_id,
+                module='signal_analyst',
+                tokens_in=input_tokens,
+                tokens_out=output_tokens,
+                model=self.model,
+                cost_estimate=total_cost,
+                success=True,
+            )
+
             return response
-            
+
         except Exception as e:
-            # Calculate execution time even on failure
-            execution_time_ms = int((time.time() - start_time) * 1000)
-            
-            # Log failure to database
-            if self.cost_tracker:
-                try:
-                    self.cost_tracker.log_api_call(
-                        provider='openai',
-                        model=self.model,
-                        call_type='chat_completion',
-                        tokens_input=0,
-                        tokens_output=0,
-                        cost=0.0,
-                        customer_id=customer_id,
-                        account_id=int(account_id) if account_id else None,
-                        success=False,
-                        error_message=str(e)[:500],  # Truncate error message
-                        execution_time_ms=execution_time_ms
-                    )
-                except Exception as log_error:
-                    logger.warning(f"Failed to log error to database: {log_error}")
-            
+            # Log failure
+            _llm_record_usage(
+                customer_id=customer_id,
+                module='signal_analyst',
+                tokens_in=0,
+                tokens_out=0,
+                model=self.model,
+                cost_estimate=0.0,
+                success=False,
+                error_message=str(e)[:500],
+            )
+
             # Re-raise to trigger retry
             raise
     

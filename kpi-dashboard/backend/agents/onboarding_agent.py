@@ -16,7 +16,7 @@ Reuses:
   - AgentToolRegistry  (power_of_1_calc, health_score_calc, memory_remember, …)
   - AgentMemoryManager (MemoryScope.SHARED for cross-agent intelligence)
   - create_signal_analyst_agent() factory for LLM provider selection
-  - CircuitBreaker / CostTracker from utils/
+  - CircuitBreaker from utils/; cost tracking via utils.llm_budget_controller.record_usage
 """
 
 import json
@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from utils.error_handling import CircuitBreaker
 from utils.logging_config import initialize_logging
-from utils.cost_tracker import CostTracker
+from utils.llm_budget_controller import record_usage as _llm_record_usage
 from sqlalchemy import create_engine, text
 
 logger = initialize_logging()
@@ -182,15 +182,10 @@ class OnboardingAgent:
         # Circuit breaker
         self.breaker = CircuitBreaker(failure_threshold=3, timeout=120)
 
-        # Cost tracker
-        self.cost_tracker = None
-        try:
-            db_url = os.getenv("DATABASE_URL")
-            if db_url:
-                engine = create_engine(db_url)
-                self.cost_tracker = CostTracker(engine)
-        except Exception:
-            pass
+        # Cost tracking centralized via utils.llm_budget_controller.record_usage.
+        # Previous code called self.cost_tracker.track_usage() which does not
+        # exist on CostTracker — the cost log was silently never written.
+        # Migration to record_usage both consolidates AND fixes that bug.
 
         logger.info(
             f"OnboardingAgent initialised for customer {customer_id}",
@@ -327,17 +322,14 @@ class OnboardingAgent:
                 raw = response.content[0].text
 
                 # Cost tracking
-                if self.cost_tracker:
-                    try:
-                        self.cost_tracker.track_usage(
-                            customer_id=self.customer_id,
-                            model=self.model,
-                            input_tokens=response.usage.input_tokens,
-                            output_tokens=response.usage.output_tokens,
-                            operation="onboarding_agent",
-                        )
-                    except Exception:
-                        pass
+                _llm_record_usage(
+                    customer_id=self.customer_id,
+                    module='onboarding_agent',
+                    tokens_in=response.usage.input_tokens,
+                    tokens_out=response.usage.output_tokens,
+                    model=self.model,
+                    success=True,
+                )
 
             else:
                 # OpenAI
@@ -354,17 +346,14 @@ class OnboardingAgent:
                 raw = response.choices[0].message.content
 
                 # Cost tracking
-                if self.cost_tracker:
-                    try:
-                        self.cost_tracker.track_usage(
-                            customer_id=self.customer_id,
-                            model=self.model,
-                            input_tokens=response.usage.prompt_tokens,
-                            output_tokens=response.usage.completion_tokens,
-                            operation="onboarding_agent",
-                        )
-                    except Exception:
-                        pass
+                _llm_record_usage(
+                    customer_id=self.customer_id,
+                    module='onboarding_agent',
+                    tokens_in=response.usage.prompt_tokens,
+                    tokens_out=response.usage.completion_tokens,
+                    model=self.model,
+                    success=True,
+                )
 
             self.breaker.record_success()
             return raw

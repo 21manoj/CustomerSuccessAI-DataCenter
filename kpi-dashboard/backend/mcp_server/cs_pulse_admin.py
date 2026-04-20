@@ -1264,3 +1264,67 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
             'csm_count': len(scorecards),
             'scorecards': scorecards,
         }
+
+
+# ===================================================================
+# Tool: get_llm_cost_summary
+# ===================================================================
+
+@mcp.tool
+def get_llm_cost_summary(customer_id: int, period: str = 'daily') -> dict:
+    """Get LLM cost and budget status for a customer — daily or monthly total spend, call count, per-module breakdown, remaining budget, and circuit-breaker state.
+
+    Backed by the canonical llm_budget_controller (llm_usage_log table).
+    Use this to answer: "how much have we spent on LLM calls today/this month",
+    "which module is driving cost", "are we close to the budget cap".
+
+    Args:
+        customer_id: The customer (tenant) ID
+        period: 'daily' (default) or 'monthly'
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        if period not in ('daily', 'monthly'):
+            raise ToolError("period must be 'daily' or 'monthly'")
+
+        from utils.llm_budget_controller import get_usage_summary, get_budget_status
+
+        usage = get_usage_summary(customer_id, period=period)
+        budget = get_budget_status(customer_id)
+
+        circuit_statuses = {
+            status for status in (
+                budget.get('circuit_breaker', {}).get('daily_calls_status'),
+                budget.get('circuit_breaker', {}).get('daily_spend_status'),
+                budget.get('circuit_breaker', {}).get('monthly_spend_status'),
+            ) if status
+        }
+        if 'blocked' in circuit_statuses:
+            overall_state = 'blocked'
+        elif 'warning' in circuit_statuses:
+            overall_state = 'warning'
+        else:
+            overall_state = 'ok'
+
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'period': period,
+            'totals': {
+                'call_count': usage.get('call_count', 0),
+                'cost_usd': round(usage.get('total_cost_usd', 0.0), 4),
+                'tokens_in': usage.get('total_tokens_in', 0),
+                'tokens_out': usage.get('total_tokens_out', 0),
+            },
+            'by_module': usage.get('by_module', {}),
+            'budget': {
+                'daily': budget.get('daily', {}),
+                'monthly': budget.get('monthly', {}),
+                'limits': budget.get('limits', {}),
+            },
+            'circuit_breaker_state': overall_state,
+            'circuit_breaker_detail': budget.get('circuit_breaker', {}),
+        }

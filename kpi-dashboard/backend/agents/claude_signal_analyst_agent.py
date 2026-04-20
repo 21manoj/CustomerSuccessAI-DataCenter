@@ -30,8 +30,7 @@ from .decision_matrix import calculate_decision_matrix
 
 from utils.error_handling import CircuitBreaker, log_performance
 from utils.logging_config import initialize_logging, log_with_context, log_exception
-from utils.cost_tracker import CostTracker
-from sqlalchemy import create_engine
+from utils.llm_budget_controller import record_usage as _llm_record_usage
 
 logger = initialize_logging()
 
@@ -70,16 +69,8 @@ class ClaudeSignalAnalystAgent:
         self.customer_id = customer_id
         self.account_id = account_id
 
-        # Cost tracker
-        try:
-            db_url = os.getenv("DATABASE_URL")
-            if db_url:
-                engine = create_engine(db_url)
-                self.cost_tracker = CostTracker(engine)
-            else:
-                self.cost_tracker = None
-        except Exception:
-            self.cost_tracker = None
+        # Cost tracking centralized via utils.llm_budget_controller.record_usage
+        # (writes to llm_usage_log). No per-agent tracker instance needed.
 
         # Circuit breaker
         self.breaker = CircuitBreaker(failure_threshold=3, timeout=120)
@@ -244,45 +235,29 @@ class ClaudeSignalAnalystAgent:
                 },
             )
 
-            if self.cost_tracker:
-                try:
-                    self.cost_tracker.log_api_call(
-                        provider="anthropic",
-                        model=self.model,
-                        call_type="messages_create",
-                        tokens_input=input_tokens,
-                        tokens_output=output_tokens,
-                        cost=total_cost,
-                        customer_id=customer_id,
-                        account_id=int(account_id) if account_id else None,
-                        success=True,
-                        error_message=None,
-                        execution_time_ms=exec_ms,
-                    )
-                except Exception as e:
-                    logger.warning(f"Cost tracking failed: {e}")
+            _llm_record_usage(
+                customer_id=customer_id,
+                module='claude_signal_analyst',
+                tokens_in=input_tokens,
+                tokens_out=output_tokens,
+                model=self.model,
+                cost_estimate=total_cost,
+                success=True,
+            )
 
             return response
 
         except (anthropic.RateLimitError, anthropic.APIConnectionError, anthropic.InternalServerError) as e:
-            exec_ms = int((time.time() - start) * 1000)
-            if self.cost_tracker:
-                try:
-                    self.cost_tracker.log_api_call(
-                        provider="anthropic",
-                        model=self.model,
-                        call_type="messages_create",
-                        tokens_input=0,
-                        tokens_output=0,
-                        cost=0.0,
-                        customer_id=customer_id,
-                        account_id=int(account_id) if account_id else None,
-                        success=False,
-                        error_message=str(e)[:500],
-                        execution_time_ms=exec_ms,
-                    )
-                except Exception:
-                    pass
+            _llm_record_usage(
+                customer_id=customer_id,
+                module='claude_signal_analyst',
+                tokens_in=0,
+                tokens_out=0,
+                model=self.model,
+                cost_estimate=0.0,
+                success=False,
+                error_message=str(e)[:500],
+            )
 
             if _attempt < max_attempts - 1:
                 wait = 2 ** (_attempt + 1)

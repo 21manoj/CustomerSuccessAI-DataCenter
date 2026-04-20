@@ -21,7 +21,7 @@ Architecture:
     - cs_pulse_intelligence.py  (7 tools: context graph / revenue intel)
     - cs_pulse_revenue.py       (7 tools: ROI / portfolio / playbooks)
     - cs_pulse_onboarding.py    (11 tools: onboarding / clone / CSV)
-    - cs_pulse_admin.py         (5 tools: CRM / tickets / feedback / CSM actions / partner)
+    - cs_pulse_admin.py         (6 tools: CRM / tickets / feedback / CSM actions / partner / llm_cost)
   This file keeps 7 core tools: platform_instructions, list_customers,
   get_kpi_catalog, list_accounts, get_account_health, get_at_risk_accounts,
   plus the system prompt resource.
@@ -853,7 +853,7 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
 # AFTER sys.modules aliasing fixes the dual-instance bug.
 # ===================================================================
 if __name__ != "__main__":
-    _module_tools = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 5}
+    _module_tools = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 6}
     for _mod_name, _expected in _module_tools.items():
         try:
             __import__(f'cs_pulse_{_mod_name}')
@@ -875,7 +875,7 @@ if __name__ == "__main__":
     sys.modules['cs_pulse_mcp_server'] = sys.modules['__main__']
 
     # Now import submodules — they'll get our mcp instance
-    _module_tools_main = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 5}
+    _module_tools_main = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 6}
     for _mod, _exp in _module_tools_main.items():
         try:
             __import__(f'cs_pulse_{_mod}')
