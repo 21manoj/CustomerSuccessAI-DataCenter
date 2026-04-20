@@ -121,9 +121,17 @@ REVENUE_BUCKET_MAP = {
 }
 
 # Generic wrapper subtypes — polarity is determined by revenue_impact_type,
-# not by subtype. I11 skips the cross-check for these.
+# not by subtype. I11 and I2 skip the cross-check for these.
 POLARITY_AMBIGUOUS_SUBTYPES = {
     'playbook_outcome', 'intervention_outcome',
+}
+
+# Signal subtypes whose polarity depends on context (can be either direction).
+# I2 skips edges where one of these is the signal side.
+POLARITY_AMBIGUOUS_SIGNAL_SUBTYPES = {
+    # arc_detection fires on BOTH problem accounts (arc=crisis) and
+    # healthy accounts (arc=improving). Can't classify without arc context.
+    'arc_detection',
 }
 
 
@@ -209,6 +217,13 @@ def invariant_i2_polarity_consistency(customer_id: int) -> List[Violation]:
     for edge, fn, tn in rows:
         fs = fn.node_subtype or ''
         ts = tn.node_subtype or ''
+        # Skip edges where either end is polarity-ambiguous — those take
+        # polarity from revenue_impact_type (outcome side) or arc_type
+        # (signal side), not from the subtype alone.
+        if ts in POLARITY_AMBIGUOUS_SUBTYPES:
+            continue
+        if fs in POLARITY_AMBIGUOUS_SIGNAL_SUBTYPES:
+            continue
         mismatch = None
         if ts in NEGATIVE_OUTCOME_SUBTYPES and fs in POSITIVE_SIGNAL_SUBTYPES:
             mismatch = 'positive_signal_to_negative_outcome'
@@ -1026,10 +1041,16 @@ def validate_edge_pre_commit(
             f'via {source_platform})'
         )
 
-    # I2: Polarity mismatch on signal→outcome.
+    # I2: Polarity mismatch on signal→outcome. Skip when either end is
+    # polarity-ambiguous (polarity comes from arc_type or revenue_impact_type
+    # tag, not the subtype alone).
     if from_node_type == 'SIGNAL' and to_node_type == 'OUTCOME':
         fs = from_node_subtype or ''
         ts = to_node_subtype or ''
+        if ts in POLARITY_AMBIGUOUS_SUBTYPES:
+            return True, None
+        if fs in POLARITY_AMBIGUOUS_SIGNAL_SUBTYPES:
+            return True, None
         if ts in NEGATIVE_OUTCOME_SUBTYPES and fs in POSITIVE_SIGNAL_SUBTYPES:
             return False, (
                 f'I2: positive-signal→negative-outcome rejected '

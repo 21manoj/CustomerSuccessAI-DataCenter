@@ -2753,9 +2753,19 @@ class ManifestCSVGenerator:
         # edge (I3 invariant). This pass creates the missing LED_TO edges
         # from the first auto_recovery signal to every auto_recovery outcome
         # on the same account.
+        # All outcome subtypes emitted by RECOVERY_OUTCOME_TEMPLATES across
+        # classifications (critical + at_risk + healthy). Keep in sync with
+        # the templates dict — any new template subtype added there must
+        # also appear here or its outcomes land as I3 orphans.
         _AUTO_RECOVERY_OUTCOME_SUBTYPES = (
-            'churn_averted', 'revenue_protected', 'partial_recovery',
-            'capacity_constraint', 'engagement_recovery',
+            # critical pool
+            'churn_averted', 'revenue_protected', 'engagement_recovery',
+            # at_risk pool
+            'renewal_secured',
+            # healthy pool
+            'expansion_approved', 'revenue_growth',
+            # auto-included negatives seen in generator output
+            'partial_recovery', 'capacity_constraint',
         )
         for idx, acct in enumerate(self.accounts):
             aid = self._account_id(idx)
