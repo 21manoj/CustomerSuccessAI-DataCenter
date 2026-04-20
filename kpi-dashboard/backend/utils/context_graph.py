@@ -567,8 +567,10 @@ def get_account_graph_summary(account_id: int, include_narrative: bool = False) 
     # Narrative filter: narrative-only OUTCOMEs are those with no
     # revenue_impact, no source_ref, and no properties.evidence. Applied via
     # SQL NOT predicate so the count is correct at the DB layer (not
-    # post-filtered in Python).
+    # post-filtered in Python). Uses postgres `->>` operator to extract
+    # evidence as text regardless of whether `properties` is JSON or JSONB.
     if not include_narrative:
+        _evidence_text = ContextNode.properties.op('->>')('evidence')
         narrative_only = db.and_(
             ContextNode.node_type == 'OUTCOME',
             ContextNode.revenue_impact.is_(None),
@@ -577,8 +579,8 @@ def get_account_graph_summary(account_id: int, include_narrative: bool = False) 
                 ContextNode.source_ref == '',
             ),
             db.or_(
-                ContextNode.properties['evidence'].astext.is_(None),
-                ContextNode.properties['evidence'].astext == '',
+                _evidence_text.is_(None),
+                _evidence_text == '',
             ),
         )
         base_filter = db.and_(base_filter, db.not_(narrative_only))
