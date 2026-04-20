@@ -2742,6 +2742,51 @@ class ManifestCSVGenerator:
                     14,
                 ])
 
+        # ── Auto-recovery signal → auto-recovery outcome wiring ──
+        # generate_outcomes_csv() emits intervention-phase "auto recovery"
+        # outcomes (churn_averted, revenue_protected, partial_recovery,
+        # capacity_constraint, engagement_recovery) and stamps their origin
+        # signal into the outcomes.csv `linked_signal_id` column. The backend
+        # ingest path ignores that column, so without this block every one
+        # of those outcomes lands in the context graph as an orphan — an
+        # audit-indefensible node with revenue impact and no inbound causal
+        # edge (I3 invariant). This pass creates the missing LED_TO edges
+        # from the first auto_recovery signal to every auto_recovery outcome
+        # on the same account.
+        _AUTO_RECOVERY_OUTCOME_SUBTYPES = (
+            'churn_averted', 'revenue_protected', 'partial_recovery',
+            'capacity_constraint', 'engagement_recovery',
+        )
+        for idx, acct in enumerate(self.accounts):
+            aid = self._account_id(idx)
+            # The first auto_recovery signal (counter=1) is the parent.
+            # generate_signals_csv registers signals with ref key
+            # 'auto_recovery_{aid}_{counter}'.
+            sig_resolved = self._registry.resolve(
+                aid, f'signal:auto_recovery_{aid}_1'
+            )
+            if not sig_resolved:
+                continue
+            from_ref, from_date = sig_resolved
+            for outcome_sub in _AUTO_RECOVERY_OUTCOME_SUBTYPES:
+                out_resolved = self._registry.resolve(aid, f'outcome:{outcome_sub}')
+                if not out_resolved:
+                    continue
+                to_ref, to_date = out_resolved
+                # Temporal guard — don't emit backward-flowing edges.
+                if from_date > to_date:
+                    continue
+                w.writerow([
+                    aid,
+                    from_ref,
+                    to_ref,
+                    'LED_TO',
+                    0.85,
+                    f'Auto-recovery signal led to {outcome_sub}',
+                    0.80,
+                    14,
+                ])
+
         # ── Tier 1 key_signal → nearest decision wiring ──
         # key_signals from the manifest are the causally significant events
         # (champion_departure, usage_decline, etc.). The arc edge_topology
