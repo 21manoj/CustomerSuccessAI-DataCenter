@@ -806,12 +806,31 @@ def graph_ingest():
         # Single commit for all nodes + edges
         db.session.commit()
 
+        # ── Phase 5: Non-blocking invariant audit ──
+        # Runs the 11 context-graph invariants and emits WARN logs for any
+        # violations. Does NOT fail the ingest — violations surface in
+        # platform logs + /api/admin/audit for triage. Pipeline completes
+        # regardless so the fix-forward story still works.
+        invariants_summary = None
+        try:
+            from utils.context_graph_invariants import (
+                run_all_invariants,
+                log_violations_summary,
+            )
+            violations = run_all_invariants(customer_id)
+            invariants_summary = log_violations_summary(violations, customer_id)
+        except Exception as _inv_err:
+            logger.warning(
+                "context_graph_invariants audit failed (non-fatal): %s", _inv_err
+            )
+
         result = {
             'status': 'success',
             'nodes_upserted': nodes_created + nodes_updated,
             'nodes_created': nodes_created,
             'nodes_updated': nodes_updated,
             'edges_upserted': edges_created + edges_updated,
+            'invariants_audit': invariants_summary,
             'edges_created': edges_created,
             'edges_updated': edges_updated,
         }

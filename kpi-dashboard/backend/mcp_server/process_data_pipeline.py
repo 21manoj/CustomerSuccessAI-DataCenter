@@ -239,7 +239,7 @@ def run_wizard_a_step(
     changed_account_ids: Set[int],
     mode: str = 'auto',
 ) -> Tuple[Optional[str], float]:
-    """Run Wizard A arc classification for changed accounts.
+    """Run Wizard A arc classification for changed accounts, then audit.
 
     Returns (step_description, duration_seconds).
     """
@@ -255,6 +255,21 @@ def run_wizard_a_step(
             f"Wizard A complete: {result.get('processed', 0)} accounts, "
             f"{result.get('edges_created', 0)} edges created"
         )
+
+        # Non-blocking invariant audit — violations surface in logs but
+        # don't fail the pipeline. Same registry as the ingest-endpoint
+        # audit; run here so arc-classifier bugs are visible even when
+        # process_data happens without a direct ingest call.
+        try:
+            from utils.context_graph_invariants import (
+                run_all_invariants,
+                log_violations_summary,
+            )
+            violations = run_all_invariants(customer_id)
+            log_violations_summary(violations, customer_id)
+        except Exception as _inv_err:
+            logger.warning("Invariant audit after Wizard A failed (non-fatal): %s", _inv_err)
+
         return f"wizard_a_{result.get('processed', 0)}_accounts", duration
     except Exception as e:
         logger.warning(f"Wizard A failed (non-fatal): {e}", exc_info=True)
