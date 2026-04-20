@@ -477,6 +477,7 @@ def get_context_graph_mermaid(
     customer_id: int,
     account_id: int,
     max_nodes: int = 30,
+    include_narrative: bool = False,
 ) -> dict:
     """Generate a Mermaid flowchart of the context graph for an account.
 
@@ -484,10 +485,20 @@ def get_context_graph_mermaid(
     (signal=orange, decision=blue, outcome=green, stakeholder=purple) and
     causal edges labeled. Revenue annotations appear only on OUTCOME nodes.
 
+    By default (include_narrative=False) the diagram hides OUTCOME nodes that
+    are pure narrative scaffolding — i.e. have no revenue_impact AND no
+    source_ref AND no properties.evidence. These are manifest/arc-template
+    outcomes like "Account health trending upward +12" that describe the
+    story but carry no verifiable data behind them — showing them on a
+    buyer-facing surface invites "narrative vs data" contradictions.
+    Set include_narrative=True to see the full graph (useful for internal
+    debugging / audit drill-downs).
+
     Args:
         customer_id: The customer (tenant) ID
         account_id: The account to visualize
         max_nodes: Maximum nodes in diagram (default 30, max 60)
+        include_narrative: Show narrative-only OUTCOME nodes (default False)
     """
     _check_mcp_enabled()
     _require_account_auth(customer_id, account_id)
@@ -496,7 +507,7 @@ def get_context_graph_mermaid(
     with app.app_context():
         _check_context_graph(customer_id)
         from models import ContextNode, ContextEdge, db
-        from datetime import datetime
+        from datetime import datetime, timedelta
 
         _validate_account_ownership(customer_id, account_id)
 
@@ -516,6 +527,46 @@ def get_context_graph_mermaid(
             .limit(max_nodes)
             .all()
         )
+
+        # Filter: hide narrative-only OUTCOMEs unless explicitly requested.
+        # An OUTCOME is "narrative-only" when it has none of:
+        #   - revenue_impact (the $ story)
+        #   - source_ref (external record reference)
+        #   - properties.evidence (provable evidence text)
+        # These are typically arc-template scaffolding like "health trending
+        # upward" that contradict the dashboard when the dashboard shows
+        # health=28 critical. Signals/decisions/stakeholders always shown.
+        if not include_narrative:
+            def _is_narrative_only(n) -> bool:
+                if n.node_type != 'OUTCOME':
+                    return False
+                if n.revenue_impact is not None:
+                    return False
+                if n.source_ref and str(n.source_ref).strip():
+                    return False
+                props = n.properties if isinstance(n.properties, dict) else {}
+                ev = props.get('evidence')
+                if isinstance(ev, str) and ev.strip():
+                    return False
+                if isinstance(ev, (list, tuple)) and any(
+                    isinstance(x, str) and x.strip() for x in ev
+                ):
+                    return False
+                return True
+
+            nodes = [n for n in nodes if not _is_narrative_only(n)]
+
+        # Suppress stakeholder timestamps when they equal customer-creation
+        # time (manifests emit stakeholders at customer-creation moment, not
+        # at actual engagement moments — showing today's date on every
+        # stakeholder breaks a demo immediately). Look up customer.created_at
+        # once for the comparison window.
+        try:
+            from models import Customer as _Customer
+            _cust = _Customer.query.filter_by(customer_id=customer_id).first()
+            _customer_created_at = _cust.created_at if _cust else None
+        except Exception:
+            _customer_created_at = None
 
         if not nodes:
             return {
@@ -567,7 +618,17 @@ def get_context_graph_mermaid(
             nid = f"n{n.node_id}"
             date_prefix = ""
             if n.occurred_at:
-                date_prefix = n.occurred_at.strftime("%b %d") + ": "
+                # Suppress stakeholder timestamps that collapse to customer
+                # creation day (see docstring — snapshot-only, not history).
+                suppress_date = False
+                if (
+                    n.node_type == 'STAKEHOLDER'
+                    and _customer_created_at is not None
+                    and abs((n.occurred_at - _customer_created_at).total_seconds()) < 24 * 3600
+                ):
+                    suppress_date = True
+                if not suppress_date:
+                    date_prefix = n.occurred_at.strftime("%b %d") + ": "
 
             label = _mermaid_safe(n.title, max_len=35)
 

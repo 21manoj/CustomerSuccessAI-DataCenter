@@ -516,6 +516,60 @@ def test_i14_dirty_negative_expansion(ctx):
 
 
 # ═════════════════════════════════════════════════════════════════════
+# I15 — no duplicate signal+outcome pair with same title on same day
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_i15_clean(ctx):
+    """Signal alone, or outcome alone, or outcome carrying revenue — no violation."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        occurred = datetime(2026, 3, 14, 10, 0, 0)
+        # Signal alone
+        _make_node(ctx, node_type='SIGNAL', node_subtype='kpi_decline',
+                   title='Jul 31: KPI metrics declining', occurred_at=occurred)
+        # Outcome with different title on same day — not a dup
+        _make_node(ctx, node_type='OUTCOME', node_subtype='renewal_secured',
+                   title='Jul 31: Completely different event',
+                   revenue_impact=50_000, revenue_impact_type='protected',
+                   occurred_at=occurred)
+        # Signal + OUTCOME same title but outcome carries revenue → exempt
+        _make_node(ctx, node_type='SIGNAL', node_subtype='champion_loss',
+                   title='Feb 08: Champion departed',
+                   occurred_at=datetime(2026, 2, 8, 10, 0, 0))
+        _make_node(ctx, node_type='OUTCOME', node_subtype='churn_averted',
+                   title='Feb 08: Champion departed',
+                   revenue_impact=200_000, revenue_impact_type='protected',
+                   occurred_at=datetime(2026, 2, 8, 10, 0, 0))
+        db.session.commit()
+        violations = run_invariant('I15', ctx['customer_id'])
+        assert violations == [], (
+            f'Expected 0 violations (no narrative-only dup), got {len(violations)}'
+        )
+
+
+def test_i15_dirty(ctx):
+    """Wizard A duplicate pattern: signal + narrative-only outcome, same title, same day."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        day = datetime(2026, 7, 31, 10, 0, 0)
+        _make_node(ctx, node_type='SIGNAL', node_subtype='kpi_decline',
+                   title='Jul 31: KPI metrics declining below threshold',
+                   occurred_at=day)
+        _make_node(ctx, node_type='OUTCOME', node_subtype='kpi_decline',
+                   title='Jul 31: KPI metrics declining below threshold outcome',  # suffix
+                   revenue_impact=None,  # narrative-only
+                   occurred_at=day)
+        db.session.commit()
+        violations = run_invariant('I15', ctx['customer_id'])
+        assert len(violations) == 1
+        assert 'Wizard A template duplicate' in violations[0].message
+        assert violations[0].severity == 'warning'
+        assert violations[0].details['signal_count'] == 1
+        assert violations[0].details['narrative_outcome_count'] == 1
+
+
+# ═════════════════════════════════════════════════════════════════════
 # Registry coverage — every registered invariant has at least one test
 # ═════════════════════════════════════════════════════════════════════
 

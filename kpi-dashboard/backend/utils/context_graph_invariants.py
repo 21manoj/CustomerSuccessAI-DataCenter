@@ -970,6 +970,83 @@ def invariant_i14_revenue_sign_matches_polarity(customer_id: int) -> List[Violat
     return violations
 
 
+def invariant_i15_no_duplicate_signal_outcome_pair(customer_id: int) -> List[Violation]:
+    """I15: no same-title SIGNAL+OUTCOME pair on the same account on the same day.
+
+    Catches the Wizard A template pattern where a single causal event
+    (e.g. "Jul 31: KPI metrics declining") is written both as a SIGNAL
+    node and as an OUTCOME node with identical/near-identical title.
+    Inflates node counts, confuses buyers drilling into the graph, and
+    causes double-counting in "evidence count" metrics downstream.
+
+    Severity: warning (structural pattern, no revenue-math impact).
+    """
+    from models import ContextNode  # noqa: PLC0415
+    from collections import defaultdict
+
+    # Bucket nodes by (account_id, occurred_at date, normalized title).
+    # Normalize by lowercasing + stripping common suffixes like " outcome"
+    # / " signal" that Wizard A appends when duplicating.
+    def _normalize(t: Optional[str]) -> str:
+        if not t:
+            return ''
+        s = t.strip().lower()
+        for suffix in (' outcome', ' signal', ':'):
+            if s.endswith(suffix):
+                s = s[:-len(suffix)].rstrip()
+        return s
+
+    rows = (
+        ContextNode.query
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.node_type.in_(('SIGNAL', 'OUTCOME')),
+        )
+        .all()
+    )
+
+    buckets: Dict[tuple, Dict[str, List]] = defaultdict(lambda: {'SIGNAL': [], 'OUTCOME': []})
+    for n in rows:
+        if not n.occurred_at:
+            continue
+        key = (n.account_id, n.occurred_at.date(), _normalize(n.title))
+        if not key[2]:
+            continue
+        buckets[key][n.node_type].append(n)
+
+    violations: List[Violation] = []
+    for (aid, day, norm_title), byt in buckets.items():
+        signals = byt['SIGNAL']
+        outcomes = byt['OUTCOME']
+        if signals and outcomes:
+            # Exclude outcomes that carry revenue_impact — those are
+            # legitimate "this event mattered financially" bookings,
+            # not duplicate-noise. Only flag narrative-only outcome
+            # duplicating a signal.
+            narrative_outcomes = [o for o in outcomes if o.revenue_impact is None]
+            if not narrative_outcomes:
+                continue
+            violations.append(Violation(
+                invariant_id='I15',
+                invariant_name='no_duplicate_signal_outcome_pair',
+                severity='warning',
+                customer_id=customer_id,
+                account_id=aid,
+                node_ids=[n.node_id for n in signals + narrative_outcomes],
+                message=(
+                    f'Account {aid} day {day}: SIGNAL + narrative-OUTCOME pair '
+                    f'with same title "{norm_title[:60]}" — Wizard A template duplicate'
+                ),
+                details={
+                    'day': day.isoformat(),
+                    'normalized_title': norm_title[:100],
+                    'signal_count': len(signals),
+                    'narrative_outcome_count': len(narrative_outcomes),
+                },
+            ))
+    return violations
+
+
 INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I1': invariant_i1_no_outcome_to_outcome,
     'I2': invariant_i2_polarity_consistency,
@@ -984,6 +1061,7 @@ INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I12': invariant_i12_account_status_health_consistency,
     'I13': invariant_i13_no_duplicate_definitive_lifecycle,
     'I14': invariant_i14_revenue_sign_matches_polarity,
+    'I15': invariant_i15_no_duplicate_signal_outcome_pair,
     # I7 (MCP param contract) is a pure code check — lives in tests, not here.
 }
 
