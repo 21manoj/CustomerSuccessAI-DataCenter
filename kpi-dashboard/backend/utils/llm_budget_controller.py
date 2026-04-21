@@ -405,3 +405,130 @@ def get_max_proactive_calls(customer_id: int) -> int:
     """Get the max proactive calls per run for a customer."""
     limits = _get_budget_limits(customer_id)
     return limits['max_proactive']
+
+
+# ════════════════════════════════════════════════════════════════════
+# llm_call() — the one-call-site wrapper that forces cost tracking
+# ════════════════════════════════════════════════════════════════════
+# Background: Apr 20, 2026 — 6 production files were making raw
+# `client.messages.create(...)` / `chat.completions.create(...)` calls
+# without invoking record_usage(). $0.45 of real Anthropic spend was
+# invisible to the budget dashboard. A per-call-site memory warning
+# ("remember to call record_usage") failed — the next engineer
+# forgets and the leak recurs.
+#
+# llm_call() makes the contract unbypassable at the language level:
+# every success path emits record_usage on the way out; every exception
+# path emits record_usage with success=False. Caller passes the client,
+# module name, customer_id, model, and API kwargs — gets back the raw
+# response object to handle like a normal SDK call.
+#
+# A grep-based pre-commit hook (scripts/check_llm_wrapper.sh) bans
+# direct .messages.create / .chat.completions.create calls outside
+# this function + the approved list of existing sites.
+
+
+def llm_call(
+    client,
+    customer_id: int,
+    module: str,
+    model: str,
+    **api_kwargs,
+):
+    """Wrapper around LLM SDK calls that forces record_usage on every exit.
+
+    Supports both Anthropic (`client.messages.create`) and OpenAI
+    (`client.chat.completions.create`). Auto-detects by client type.
+
+    Args:
+        client:       anthropic.Anthropic or OpenAI client instance
+        customer_id:  tenant ID — passed to record_usage
+        module:       caller name (e.g. 'signal_analyst', 'tier1_enrichment')
+        model:        model identifier (e.g. 'claude-sonnet-4-20250514')
+        **api_kwargs: passed through to the underlying SDK method
+                      (messages, system, max_tokens, temperature, etc.)
+
+    Returns:
+        The raw SDK response object (caller parses .content / .choices).
+
+    Raises:
+        Whatever the SDK raises — but record_usage(success=False) is emitted
+        before the exception propagates.
+    """
+    # Detect SDK flavor.
+    is_anthropic = hasattr(client, 'messages') and hasattr(client.messages, 'create')
+    is_openai = (
+        hasattr(client, 'chat')
+        and hasattr(client.chat, 'completions')
+        and hasattr(client.chat.completions, 'create')
+    )
+
+    if not is_anthropic and not is_openai:
+        raise TypeError(
+            f'llm_call(): unrecognized client type {type(client).__name__}. '
+            f'Expected anthropic.Anthropic or openai.OpenAI.'
+        )
+
+    try:
+        if is_anthropic:
+            response = client.messages.create(model=model, **api_kwargs)
+            usage = getattr(response, 'usage', None)
+            tokens_in = getattr(usage, 'input_tokens', 0) if usage else 0
+            tokens_out = getattr(usage, 'output_tokens', 0) if usage else 0
+        else:  # openai
+            response = client.chat.completions.create(model=model, **api_kwargs)
+            usage = getattr(response, 'usage', None)
+            tokens_in = getattr(usage, 'prompt_tokens', 0) if usage else 0
+            tokens_out = getattr(usage, 'completion_tokens', 0) if usage else 0
+
+        # Success path — always record.
+        try:
+            record_usage(
+                customer_id=customer_id,
+                module=module,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                model=model,
+                success=True,
+            )
+        except Exception as _rec_err:
+            logger.debug(f'llm_call: record_usage failed (success path): {_rec_err}')
+
+        return response
+
+    except Exception as e:
+        # Failure path — record with success=False, re-raise.
+        try:
+            record_usage(
+                customer_id=customer_id,
+                module=module,
+                tokens_in=0,
+                tokens_out=0,
+                model=model,
+                success=False,
+                error_message=str(e)[:500],
+            )
+        except Exception as _rec_err:
+            logger.debug(f'llm_call: record_usage failed (failure path): {_rec_err}')
+        raise
+
+
+def can_call_and_run(
+    client,
+    customer_id: int,
+    module: str,
+    model: str,
+    estimated_tokens: int = 1000,
+    **api_kwargs,
+):
+    """llm_call() + budget gate. Raises PermissionError if budget exceeded.
+
+    Convenience helper for callers that want both the record_usage
+    enforcement AND the circuit-breaker budget check in one call.
+    """
+    if not can_call(customer_id, module, estimated_tokens=estimated_tokens):
+        raise PermissionError(
+            f'LLM budget exceeded for customer {customer_id} module={module}. '
+            f'Circuit breaker is tripped — see get_budget_status.'
+        )
+    return llm_call(client, customer_id, module, model, **api_kwargs)
