@@ -620,6 +620,49 @@ def test_i16_dirty(ctx):
 
 
 # ═════════════════════════════════════════════════════════════════════
+# I17 — no reverse-time causal edges (cause must precede effect)
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_i17_clean(ctx):
+    """Causal edge where cause precedes effect — no violation."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        earlier = _make_node(ctx, node_type='SIGNAL', node_subtype='champion_loss',
+                             title='Champion departed',
+                             occurred_at=datetime(2026, 1, 10, 10, 0, 0))
+        later = _make_node(ctx, node_type='OUTCOME', node_subtype='churn_lost',
+                           title='Churn lost',
+                           occurred_at=datetime(2026, 3, 15, 10, 0, 0))
+        _make_edge(ctx, earlier, later, edge_type='LED_TO')
+        db.session.commit()
+        violations = run_invariant('I17', ctx['customer_id'])
+        assert violations == [], f'Expected 0, got {len(violations)}'
+
+
+def test_i17_dirty(ctx):
+    """Causal edge where cause occurs AFTER effect — reverse-time."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        # Arc-detection signal fires today (typical Wizard A pattern)
+        future_signal = _make_node(ctx, node_type='SIGNAL', node_subtype='arc_detection',
+                                   title='Arc Detected: crisis',
+                                   occurred_at=datetime(2026, 4, 20, 10, 0, 0))
+        # Outcome that happened months earlier
+        past_outcome = _make_node(ctx, node_type='OUTCOME', node_subtype='partial_recovery',
+                                  title='Velocity improved 30%',
+                                  occurred_at=datetime(2026, 2, 8, 10, 0, 0))
+        _make_edge(ctx, future_signal, past_outcome, edge_type='LED_TO')
+        db.session.commit()
+        violations = run_invariant('I17', ctx['customer_id'])
+        assert len(violations) == 1
+        assert violations[0].severity == 'warning'
+        assert violations[0].details['edge_type'] == 'LED_TO'
+        assert violations[0].details['delta_days'] > 60
+        assert 'after effect' in violations[0].message.lower()
+
+
+# ═════════════════════════════════════════════════════════════════════
 # Registry coverage — every registered invariant has at least one test
 # ═════════════════════════════════════════════════════════════════════
 

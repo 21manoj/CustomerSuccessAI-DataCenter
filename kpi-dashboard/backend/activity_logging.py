@@ -33,6 +33,7 @@ class ActivityLogger:
         'export': ['export_excel', 'export_csv', 'export_pdf'],
         'upload': ['kpi_upload', 'file_upload'],
         'playbook': ['playbook_execute', 'playbook_start', 'playbook_complete', 'playbook_cancel'],
+        'signal': ['signal_submit', 'signal_enrich', 'signal_review', 'signal_escalate'],
         'system': ['rag_rebuild', 'data_migration', 'backup', 'restore',
                    'health_recalculation', 'wizard_execution', 'playbook_auto_trigger', 'urgent_alert'],
         'query': ['rag_query', 'direct_query', 'ai_query'],

@@ -343,6 +343,34 @@ def submit_signal(
         account = db.session.get(Account, account_id)
         account_name = account.account_name if account else f"Account {account_id}"
 
+        # Audit: user-action trail for CSM attribution (item B2 Part 1 extension, L2).
+        # A CSM forwarding a qualitative signal (email, Slack, transcript note)
+        # is one of the most common "what did this CSM do" events. Captured here
+        # for rescue-attribution queries and response-time metrics downstream.
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='signal_submit',
+                action_description=(
+                    f'Signal submitted for {account_name} — source_type={source_type}, '
+                    f'length={len(raw_text)} chars'
+                ),
+                resource_type='account',
+                resource_id=str(account_id),
+                details={
+                    'signal_id': signal_id,
+                    'source_type': source_type,
+                    'consent_verified': consent_verified,
+                    'llm_enrichment_queued': llm_available,
+                    'raw_text_length': len(raw_text),
+                    # Don't log raw_text content — PII per AUDIT_TRAIL_REQUIREMENTS §5.3
+                },
+            )
+        except Exception as _audit_err:
+            import logging as _log
+            _log.getLogger(__name__).debug(f'submit_signal audit log failed: {_audit_err}')
+
         return {
             'scope': 'account',
             'status': 'queued',

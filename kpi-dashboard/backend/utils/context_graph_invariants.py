@@ -1067,6 +1067,74 @@ def invariant_i15_no_duplicate_signal_outcome_pair(customer_id: int) -> List[Vio
     return violations
 
 
+def invariant_i17_no_reverse_time_causal_edges(customer_id: int) -> List[Violation]:
+    """I17: causal edges must respect temporal ordering.
+
+    For edge types in CAUSAL_EDGE_TYPES (CAUSED_BY, LED_TO, TRIGGERED,
+    RESULTED_IN, INDICATES), the from_node's occurred_at MUST be <=
+    to_node's occurred_at. A cause cannot occur AFTER its effect.
+
+    The canonical violator is Wizard A's arc_detection signal: it fires
+    at customer-creation time (today) and back-emits LED_TO edges to
+    pre-existing outcomes from weeks/months earlier. Mechanically
+    backward in time.
+
+    Apr 20 demo fix shipped a display-layer filter in
+    get_context_graph_mermaid + get_account_graph_summary to hide these
+    edges from buyer-facing surfaces. This invariant adds Layer C audit
+    detection so the underlying data-quality issue surfaces in audits
+    even if display filters hide it from dashboards.
+
+    Severity: warning (structural, not revenue-math-breaking).
+    """
+    from models import ContextEdge, ContextNode, db  # noqa: PLC0415
+
+    from_alias = db.aliased(ContextNode)
+    to_alias = db.aliased(ContextNode)
+
+    rows = (
+        db.session.query(ContextEdge, from_alias, to_alias)
+        .join(from_alias, ContextEdge.from_node_id == from_alias.node_id)
+        .join(to_alias, ContextEdge.to_node_id == to_alias.node_id)
+        .filter(
+            ContextEdge.customer_id == customer_id,
+            ContextEdge.edge_type.in_(CAUSAL_EDGE_TYPES),
+            from_alias.occurred_at.isnot(None),
+            to_alias.occurred_at.isnot(None),
+            from_alias.occurred_at > to_alias.occurred_at,
+        )
+        .all()
+    )
+
+    violations: List[Violation] = []
+    for edge, fn, tn in rows:
+        time_delta = (fn.occurred_at - tn.occurred_at).days
+        violations.append(Violation(
+            invariant_id='I17',
+            invariant_name='no_reverse_time_causal_edges',
+            severity='warning',
+            customer_id=customer_id,
+            account_id=tn.account_id,
+            node_ids=[fn.node_id, tn.node_id],
+            edge_ids=[edge.edge_id],
+            message=(
+                f'Reverse-time causal edge: "{(fn.title or "")[:40]}" ({fn.occurred_at.date()}) '
+                f'--{edge.edge_type}--> "{(tn.title or "")[:40]}" ({tn.occurred_at.date()}) — '
+                f'cause occurs {time_delta} days AFTER effect (producer: {edge.source_platform})'
+            ),
+            details={
+                'from_subtype': fn.node_subtype,
+                'to_subtype': tn.node_subtype,
+                'edge_type': edge.edge_type,
+                'from_date': fn.occurred_at.date().isoformat(),
+                'to_date': tn.occurred_at.date().isoformat(),
+                'delta_days': time_delta,
+                'source_platform': edge.source_platform,
+            },
+        ))
+    return violations
+
+
 def invariant_i16_churned_not_in_at_risk(customer_id: int) -> List[Violation]:
     """I16: no account should appear as both churned AND at-risk.
 
@@ -1149,6 +1217,7 @@ INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I14': invariant_i14_revenue_sign_matches_polarity,
     'I15': invariant_i15_no_duplicate_signal_outcome_pair,
     'I16': invariant_i16_churned_not_in_at_risk,
+    'I17': invariant_i17_no_reverse_time_causal_edges,
     # I7 (MCP param contract) is a pure code check — lives in tests, not here.
 }
 

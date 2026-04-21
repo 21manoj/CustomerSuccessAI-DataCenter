@@ -1263,9 +1263,9 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
             rev_expanded = sum(float(e.revenue_expanded or 0) for e in execs)
 
             # v2: audit-trail-derived actions_taken count.
-            # ActivityLog.resource_type='account' + action_category='playbook'
-            # covers the playbook_execute / playbook_complete events wired
-            # Apr 21 via item B2 Part 1 hooks. Bounded by resource_id match.
+            # Spans 'playbook' (playbook_execute/complete) + 'signal'
+            # (signal_submit/enrich/review/escalate) categories — i.e. every
+            # CSM-initiated event that's scoped to an account.
             actions_taken = 0
             try:
                 str_acct_ids = [str(aid) for aid in acct_ids]
@@ -1273,7 +1273,7 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
                     ActivityLog.customer_id == customer_id,
                     ActivityLog.resource_type == 'account',
                     ActivityLog.resource_id.in_(str_acct_ids),
-                    ActivityLog.action_category == 'playbook',
+                    ActivityLog.action_category.in_(['playbook', 'signal']),
                 ).count()
             except Exception:
                 actions_taken = 0  # ActivityLog table may not exist on older tenants
