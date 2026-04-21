@@ -550,6 +550,34 @@ class ScoreCalculator:
             if health_score:
                 db.session.add(HealthScore(**health_score))
 
+                # Sync account_status to match computed health_status.
+                # Prevents the "stale at_risk flag on a healthy account"
+                # drift that required a one-shot SQL fix Apr 20. Rules:
+                #   health_status='healthy'  → account_status='active'
+                #   health_status='at_risk'  → account_status='at_risk'
+                #   health_status='critical' → account_status='at_risk' (crit rolls up to at_risk)
+                #   account_status='churned' → LEAVE AS-IS (terminal state)
+                try:
+                    new_hs = health_score.get('health_status')
+                    aid = health_score.get('account_id')
+                    if new_hs and aid:
+                        from models import Account
+                        acct = db.session.get(Account, aid)
+                        if acct and (acct.account_status or '').lower() != 'churned':
+                            target_status = (
+                                'active' if new_hs == 'healthy'
+                                else 'at_risk' if new_hs in ('at_risk', 'critical')
+                                else acct.account_status
+                            )
+                            if target_status != acct.account_status:
+                                log.info(
+                                    "account_status sync: acct=%s %s → %s (health_status=%s)",
+                                    aid, acct.account_status, target_status, new_hs,
+                                )
+                                acct.account_status = target_status
+                except Exception as e:
+                    log.warning("account_status sync failed (non-fatal): %s", e)
+
             db.session.commit()
             print("  ✅ Scores saved successfully")
 
