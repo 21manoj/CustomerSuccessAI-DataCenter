@@ -1186,11 +1186,21 @@ def partner_portal(
 
 @mcp.tool
 def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
-    """Get CSM performance scorecard — accounts managed, health improvements, revenue impact.
+    """Get CSM performance scorecard — accounts managed, health improvements, revenue impact, rescue attribution.
 
-    Builds attribution by cross-referencing account CSM assignment with
-    playbook executions and health score changes on those accounts.
-    If csm_name is None, returns scorecard for ALL CSMs in the portfolio.
+    v2 (Apr 21, 2026) — added metrics:
+    - `actions_taken`: count of user-action audit events on the CSM's book
+      (playbook_execute + playbook_complete + other write-path events). Derived
+      from the ActivityLog table populated by MCP tool wrappers.
+    - `accounts_rescued`: count of accounts that moved from critical (<50)
+      to healthy (>=70) during the available trajectory — the canonical
+      CSM impact metric.
+    - `accounts_lost`: count that moved from healthy to critical on the CSM's
+      watch. Honest counterweight to rescued count.
+
+    Buyer-requested (Apr 21 demo feedback). Attribution today goes via
+    `Account.profile_metadata.assigned_csm` name string — full user-FK
+    propagation is Phase 1 item B2 Part 2.
 
     Args:
         customer_id: The customer (tenant) ID
@@ -1202,7 +1212,7 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
     with app.app_context():
         _require_auth(customer_id)
 
-        from models import Account, HealthScore, PlaybookExecutionV2
+        from models import Account, HealthScore, PlaybookExecutionV2, ActivityLog
         from sqlalchemy import func, desc
         from collections import defaultdict
 
@@ -1222,16 +1232,25 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
             acct_ids = [a.account_id for a in accts]
             total_arr = sum(float(a.revenue or 0) for a in accts)
 
-            # Health deltas: latest score - earliest score per account
+            # Health deltas + rescue/lost classification per account
             health_deltas = []
+            accounts_rescued = 0
+            accounts_lost = 0
             for aid in acct_ids:
                 scores = (HealthScore.query
                     .filter_by(account_id=aid)
                     .order_by(HealthScore.measurement_month.asc())
                     .all())
                 if len(scores) >= 2:
-                    delta = float(scores[-1].health_score or 0) - float(scores[0].health_score or 0)
-                    health_deltas.append(delta)
+                    earliest = float(scores[0].health_score or 0)
+                    latest = float(scores[-1].health_score or 0)
+                    health_deltas.append(latest - earliest)
+                    # Rescue: started critical (<50), ended healthy (>=70)
+                    if earliest < 50 and latest >= 70:
+                        accounts_rescued += 1
+                    # Lost: started healthy (>=70), ended critical (<50)
+                    if earliest >= 70 and latest < 50:
+                        accounts_lost += 1
 
             # Playbook executions on this CSM's accounts
             execs = PlaybookExecutionV2.query.filter(
@@ -1243,6 +1262,22 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
             rev_protected = sum(float(e.revenue_protected or 0) for e in execs)
             rev_expanded = sum(float(e.revenue_expanded or 0) for e in execs)
 
+            # v2: audit-trail-derived actions_taken count.
+            # ActivityLog.resource_type='account' + action_category='playbook'
+            # covers the playbook_execute / playbook_complete events wired
+            # Apr 21 via item B2 Part 1 hooks. Bounded by resource_id match.
+            actions_taken = 0
+            try:
+                str_acct_ids = [str(aid) for aid in acct_ids]
+                actions_taken = ActivityLog.query.filter(
+                    ActivityLog.customer_id == customer_id,
+                    ActivityLog.resource_type == 'account',
+                    ActivityLog.resource_id.in_(str_acct_ids),
+                    ActivityLog.action_category == 'playbook',
+                ).count()
+            except Exception:
+                actions_taken = 0  # ActivityLog table may not exist on older tenants
+
             scorecards[csm] = {
                 'csm_name': csm,
                 'accounts_managed': len(accts),
@@ -1250,9 +1285,14 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
                 'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
                 'accounts_improving': sum(1 for d in health_deltas if d > 5),
                 'accounts_declining': sum(1 for d in health_deltas if d < -5),
+                # v2: rescue attribution (started-critical → ended-healthy)
+                'accounts_rescued': accounts_rescued,
+                'accounts_lost': accounts_lost,
                 'playbooks_executed': len(execs),
                 'playbooks_resolved': resolved,
                 'success_rate_pct': round(resolved / len(execs) * 100, 1) if execs else 0,
+                # v2: audit-derived activity count
+                'actions_taken': actions_taken,
                 'revenue_protected': rev_protected,
                 'revenue_expanded': rev_expanded,
                 'total_revenue_impact': rev_protected + rev_expanded,
@@ -1263,6 +1303,94 @@ def get_csm_scorecard(customer_id: int, csm_name: str = None) -> dict:
             'customer_id': customer_id,
             'csm_count': len(scorecards),
             'scorecards': scorecards,
+        }
+
+
+# ===================================================================
+# Tool: get_csm_ranking (v2 — Apr 21 addition per buyer feedback)
+# ===================================================================
+
+@mcp.tool
+def get_csm_ranking(customer_id: int, metric: str = 'composite') -> dict:
+    """Rank CSMs by performance metric across the portfolio.
+
+    Consumes get_csm_scorecard output and sorts CSMs by a chosen metric.
+    Answers the buyer question "how do I grade people perf on the CS team."
+
+    Metrics available:
+    - 'composite' (default): weighted combination of rescue count (40%),
+      revenue impact (30%), playbook success rate (20%), activity level (10%).
+      Normalized by book size so larger books don't automatically win.
+    - 'rescue_count': accounts_rescued sorted high-to-low
+    - 'revenue_impact': total revenue_protected + revenue_expanded
+    - 'success_rate': playbook success_rate_pct
+    - 'activity': actions_taken normalized by accounts_managed
+
+    Args:
+        customer_id: The customer (tenant) ID
+        metric: Sort metric (default 'composite')
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        # Delegate to get_csm_scorecard for the raw data, then rank.
+        scorecard_result = get_csm_scorecard.fn(customer_id=customer_id)
+        scorecards = scorecard_result.get('scorecards', {})
+
+        def _score(sc: dict) -> float:
+            accts = max(sc.get('accounts_managed', 1), 1)
+            if metric == 'rescue_count':
+                return sc.get('accounts_rescued', 0)
+            if metric == 'revenue_impact':
+                return sc.get('total_revenue_impact', 0)
+            if metric == 'success_rate':
+                return sc.get('success_rate_pct', 0)
+            if metric == 'activity':
+                return sc.get('actions_taken', 0) / accts
+            # composite (default): weighted normalized score
+            rescue_norm = sc.get('accounts_rescued', 0) / accts  # 0..1
+            # Revenue scaled to per-account-managed then log-ish via sqrt
+            rev_per_acct = (sc.get('total_revenue_impact', 0) / accts) / 1_000_000  # $M per account
+            success = sc.get('success_rate_pct', 0) / 100  # 0..1
+            activity = min((sc.get('actions_taken', 0) / accts) / 3, 1.0)  # 0..1 capped
+            return round(
+                (0.40 * rescue_norm)
+                + (0.30 * rev_per_acct)
+                + (0.20 * success)
+                + (0.10 * activity),
+                4,
+            )
+
+        ranked = sorted(
+            [
+                {**sc, 'composite_score': _score(sc)}
+                for sc in scorecards.values()
+            ],
+            key=lambda r: r['composite_score'] if metric == 'composite' else _score(r),
+            reverse=True,
+        )
+
+        return {
+            'scope': 'portfolio',
+            'customer_id': customer_id,
+            'metric': metric,
+            'csm_count': len(ranked),
+            'ranking': [
+                {
+                    'rank': i + 1,
+                    'csm_name': r['csm_name'],
+                    'accounts_managed': r['accounts_managed'],
+                    'accounts_rescued': r['accounts_rescued'],
+                    'accounts_lost': r['accounts_lost'],
+                    'total_revenue_impact': r['total_revenue_impact'],
+                    'success_rate_pct': r['success_rate_pct'],
+                    'actions_taken': r['actions_taken'],
+                    'composite_score': r['composite_score'],
+                }
+                for i, r in enumerate(ranked)
+            ],
         }
 
 

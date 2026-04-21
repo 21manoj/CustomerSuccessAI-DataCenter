@@ -15,6 +15,8 @@ Tools registered on the shared `mcp` instance from cs_pulse_mcp_server:
   - get_portfolio_cross_customer_comparison
 """
 
+import logging
+
 from cs_pulse_mcp_server import (
     mcp,
     _check_mcp_enabled,
@@ -273,6 +275,34 @@ def execute_playbook(
 
         account = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
 
+        # Audit: user-action trail for CSM attribution (item B2 Part 1).
+        # Enables "who did what to rescue this account" queries later.
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='playbook_execute',
+                action_description=(
+                    f'Playbook {playbook_id} ({execution.playbook_name}) started on '
+                    f'{account.account_name if account else f"account {account_id}"} — '
+                    f'triggered_by={triggered_by}, health={execution.health_at_trigger}'
+                ),
+                resource_type='account',
+                resource_id=str(account_id),
+                details={
+                    'execution_id': execution.execution_id,
+                    'playbook_id': playbook_id,
+                    'playbook_name': execution.playbook_name,
+                    'triggered_by': triggered_by,
+                    'health_at_trigger': execution.health_at_trigger,
+                    'arr_at_trigger': float(execution.arr_at_trigger or 0),
+                },
+            )
+        except Exception as _audit_err:
+            # Non-fatal: audit failure must not break the core write.
+            logger = logging.getLogger(__name__)
+            logger.debug(f'playbook_execute audit log failed: {_audit_err}')
+
         return {
             'scope': 'execution',
             'execution_id': execution.execution_id,
@@ -344,6 +374,41 @@ def close_playbook(
             )
         except ValueError as e:
             raise ToolError(str(e))
+
+        # Audit: user-action trail for CSM attribution (item B2 Part 1).
+        # This is the "who closed this playbook with what outcome" row
+        # that feeds rescue attribution in get_csm_scorecard.
+        try:
+            from activity_logging import ActivityLogger
+            ActivityLogger.log_activity(
+                customer_id=customer_id,
+                action_type='playbook_complete',
+                action_description=(
+                    f'Playbook {execution.playbook_id} closed on account '
+                    f'{execution.account_id} — outcome={outcome}, '
+                    f'health_delta={execution.health_delta}, '
+                    f'revenue_protected=${float(execution.revenue_protected or 0):,.0f}, '
+                    f'revenue_expanded=${float(execution.revenue_expanded or 0):,.0f}'
+                ),
+                resource_type='account',
+                resource_id=str(execution.account_id),
+                details={
+                    'execution_id': execution_id,
+                    'playbook_id': execution.playbook_id,
+                    'outcome': outcome,
+                    'outcome_notes': outcome_notes or '',
+                    'health_at_trigger': execution.health_at_trigger,
+                    'health_at_close': health_at_close,
+                    'health_delta': execution.health_delta,
+                    'revenue_protected': float(execution.revenue_protected or 0),
+                    'revenue_expanded': float(execution.revenue_expanded or 0),
+                    'realized_roi_x': execution.realized_roi_pct,
+                    'csm_hours_actual': csm_hours_actual,
+                },
+            )
+        except Exception as _audit_err:
+            logger = logging.getLogger(__name__)
+            logger.debug(f'close_playbook audit log failed: {_audit_err}')
 
         return {
             'scope': 'execution_closed',
