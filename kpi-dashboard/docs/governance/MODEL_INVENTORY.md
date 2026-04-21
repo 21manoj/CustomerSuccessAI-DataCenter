@@ -1,11 +1,19 @@
 # CS Pulse — AI/ML Model Inventory Register
 
-**Document Version:** 0.1 (Initial Draft)
-**Date:** April 20, 2026
+**Document Version:** 2.0
+**Date:** April 21, 2026
 **Classification:** Internal — Confidential
 **Owner:** Engineering / Compliance
 **Status:** Living Register — Update on every model change
 **Parent Document:** [AI_GOVERNANCE_FRAMEWORK.md](AI_GOVERNANCE_FRAMEWORK.md)
+**Addendum:** [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md) (introduces `signal_type` classification)
+
+## Changes in v2.0 (Apr 21, 2026)
+
+- **Added `signal_type` column** to summary table: Quant / Qual-source / Qual-processing / Cross-cutting. 7 of 15 models are qualitative or cross-cutting.
+- **Validation-control implications** per signal_type: Quant models use backtest-vs-actual; Qual-source models require inter-rater reliability + provenance completeness; Qual-processing models require fixture-run stability + hallucination sampling + prompt version tracking; Cross-cutting models need both sets + causal chain integrity.
+- **Full controls specification** lives in [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md). This register carries the classification; that doc carries the controls.
+- **Rationale:** the original v0.1 (Apr 20) implicitly assumed quant-first validation. The two-layer indicator model (qualitative leading + quantitative trailing) is CS Pulse's core differentiator and requires qual-specific controls that were missing.
 
 ---
 
@@ -19,23 +27,27 @@ This register is the **single source of truth** for every AI/ML/statistical mode
 
 ## 2. Register Summary
 
-| ID | Name | Tier | Status | Method | Owner | Independent Validator | Last Validated | Drift Monitor |
-|---|---|---|---|---|---|---|---|---|
-| MOD-001 | Wizard B — NRR Forecast | 1 | Production | Pattern + correlation | Eng | **Missing** | Never | **Missing** |
-| MOD-002 | Wizard C — Weight Calibration | 1 | Production | Correlation-based | Eng | **Missing** | Never | **Missing** |
-| MOD-003 | Renewal Probability Model | 1 | **Spec'd, not shipped** | Sigmoid + 8 features | — | — | — | — |
-| MOD-004 | Revenue-at-Risk Calculation | 1 | Production | Rule-based aggregation | Eng | Layer C audit (partial) | 2026-04-20 | **Missing** |
-| MOD-005 | Playbook ROI Attribution | 1 | Production | Causal heuristic | Eng | **Missing** | Never | **Missing** |
-| MOD-006 | Power-of-1 Scaling / Investment Allocation | 1 | Production | Heuristic projection | Product | **Missing** | Never | **Missing** |
-| MOD-007 | LLM Tier 1 Edge Enrichment | 1 | Production | LLM (Claude) with prompt | Eng | Pre-commit gate (Layer A) | 2026-04-20 | **Missing** |
-| MOD-008 | Taxonomy Revenue-Bucket Classifier | 1 | Production | LLM + human review queue | Curator | Dev review (policy) | 2026-04-20 | **Missing** |
-| MOD-009 | Wizard A — Arc Classification | 2 | Production | Statistical (KPI + trajectory) | Eng | Layer C audit (partial) | 2026-04-20 | **Missing** |
-| MOD-010 | Playbook Recommendation Engine | 2 | Production | Rule-based matching | Product | **Missing** | Never | **Missing** |
-| MOD-011 | Health Score Rollup (L1→L4) | 2 | Production | Weighted average | Product | CustomerConfig | 2026-04-20 | **Missing** |
-| MOD-012 | Signal Processing Pipeline | 2 | **Spec'd, not shipped** | Multi-channel ingest + LLM classify | — | — | — | — |
-| MOD-013 | Stakeholder Mapping / Champion Detection | 2 | Production | Engagement scoring | Eng | **Missing** | Never | **Missing** |
-| MOD-014 | Taxonomy Polarity Classifier (signal subtypes) | 2 | Production | LLM auto-classify + admin queue | Curator | Admin queue (policy) | 2026-04-20 | **Missing** |
-| MOD-015 | Ask AI / RAG Chatbot | 3 | Production | Retrieval-augmented LLM | Eng | Output sampling | Ad hoc | **Missing** |
+`Signal Type` legend: **Q** = Quant · **QS** = Qual-source · **QP** = Qual-processing · **X** = Cross-cutting. See [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md) §2 for definitions and required controls per type.
+
+| ID | Name | Tier | Signal Type | Status | Method | Owner | Independent Validator | Last Validated | Drift Monitor |
+|---|---|---|---|---|---|---|---|---|---|
+| MOD-001 | Wizard B — NRR Forecast | 1 | **X** | Production | Pattern + correlation | Eng | **Missing** | Never | **Missing** |
+| MOD-002 | Wizard C — Weight Calibration | 1 | **Q** | Production | Correlation-based | Eng | **Missing** | Never | **Missing** |
+| MOD-003 | Renewal Probability Model | 1 | **X** | **Spec'd, not shipped** | Sigmoid + 8 features | — | — | — | — |
+| MOD-004 | Revenue-at-Risk Calculation | 1 | **X** | Production | Rule-based aggregation | Eng | Layer C audit (partial) | 2026-04-20 | **Missing** |
+| MOD-005 | Playbook ROI Attribution | 1 | **X** | Production | Causal heuristic | Eng | **Missing** | Never | **Missing** |
+| MOD-006 | Power-of-1 Scaling / Investment Allocation | 1 | **Q** | Production | Heuristic projection | Product | **Missing** | Never | **Missing** |
+| MOD-007 | LLM Tier 1 Edge Enrichment | 1 | **QP** | Production | LLM (Claude) with prompt | Eng | Pre-commit gate (Layer A) | 2026-04-20 | **Missing** |
+| MOD-008 | Taxonomy Revenue-Bucket Classifier | 1 | **QP** | Production | LLM + human review queue | Curator | Dev review (policy) | 2026-04-20 | **Missing** |
+| MOD-009 | Wizard A — Arc Classification | 2 | **X** | Production | Statistical (KPI + trajectory) | Eng | Layer C audit (partial) | 2026-04-20 | **Missing** |
+| MOD-010 | Playbook Recommendation Engine | 2 | **X** | Production | Rule-based matching | Product | **Missing** | Never | **Missing** |
+| MOD-011 | Health Score Rollup (L1→L4) | 2 | **Q** | Production | Weighted average | Product | CustomerConfig | 2026-04-20 | **Missing** |
+| MOD-012 | Signal Processing Pipeline | 2 | **QS** | **Spec'd, not shipped** | Multi-channel ingest + LLM classify | — | — | — | — |
+| MOD-013 | Stakeholder Mapping / Champion Detection | 2 | **QS** | Production | Engagement scoring | Eng | **Missing** | Never | **Missing** |
+| MOD-014 | Taxonomy Polarity Classifier (signal subtypes) | 2 | **QP** | Production | LLM auto-classify + admin queue | Curator | Admin queue (policy) | 2026-04-20 | **Missing** |
+| MOD-015 | Ask AI / RAG Chatbot | 3 | **QP** | Production | Retrieval-augmented LLM | Eng | Output sampling | Ad hoc | **Missing** |
+
+**Signal-type distribution:** 3 Quant · 2 Qual-source · 4 Qual-processing · 6 Cross-cutting. Qualitative + cross-cutting together = **12 of 15 models**, which is the scope the Qualitative Signal Governance addendum addresses.
 
 **Bold "Missing"** = compliance gap requiring remediation before SR 11-7 / SOC 2 Type II audit.
 

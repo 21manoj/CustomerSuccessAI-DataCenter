@@ -1,11 +1,19 @@
 # CS Pulse — Governance Roadmap & Beta Customer Disclosure
 
-**Document Version:** 0.1 (Initial Draft)
-**Date:** April 20, 2026
+**Document Version:** 2.0
+**Date:** April 21, 2026
 **Classification:** Shareable with beta customers under NDA
 **Owner:** Product / Engineering / Compliance
 **Status:** Living Document
 **Parent:** [AI_GOVERNANCE_FRAMEWORK.md](AI_GOVERNANCE_FRAMEWORK.md)
+**Addendum:** [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md)
+
+## Changes in v2.0 (Apr 21, 2026)
+
+- **MOD-012 Signal Processing Pipeline unblock-criteria now specified** (Phase 1). Previously said "must ship with full governance" without defining what that meant. Now specifies: fixture runs, inter-rater reliability sampling at 10%, provenance completeness ≥95%, PII handling ruleset applied.
+- **New Phase 1 item: Manifest qualitative-signal provenance backfill.** Manifests currently seed narrative OUTCOMEs with empty evidence fields. To make demos behave like production, manifests must also seed `qualitative_signals.csv` entries that narrative OUTCOMEs reference via `source_event_id`.
+- **Revised narrative-filter strategy.** The `include_narrative=False` defaults shipped Apr 20 are demo-safe (manifest outputs lack provenance) but NOT the right long-term production default. Once qualitative ingestion pipeline lands with provenance, filters come off and confidence markers (via existing `tier` + `confidence` fields) differentiate earned vs scripted narrative.
+- **New Phase 1 item: CSM-facing leading-vs-trailing dual-view.** Dashboard widget that shows qualitative signals + quantitative health side-by-side so CSMs can act on leading signals before trailing catches up. This is the product's differentiator; currently invisible in UI.
 
 ---
 
@@ -76,8 +84,12 @@ Minimum viable governance to responsibly operate with paying customers. Anything
 | G1.8 | **Quarantine queue** for Tier 1 taxonomy classifications (revenue-bucket) | 1 week | Policy commitment to "review-first for $$" is unenforceable without the queue |
 | G1.9 | **Independent Validator role** live in RBAC + separation-of-duties invariant on approval-event table | 1 week | SOX / SR 11-7 separation-of-duties violated on every Tier 1 change today |
 | G1.10 | **Incident Response plan in use** (drill run, runbook exercised) | 1 day + ongoing | First incident with a paying customer has no process to follow |
+| G1.11 (v2) | **MOD-012 Signal Processing Pipeline unblock-criteria** — ship with fixture runs (50-150 pairs), inter-rater reliability sampling at 10%, provenance completeness ≥95%, PII handling ruleset v1 applied. Per [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md) §3 + §7 item 1. | 2 weeks | Qual-source model without these controls cannot produce defensible leading-indicator outputs |
+| G1.12 (v2) | **Manifest qualitative-signal provenance backfill** — manifests seed `qualitative_signals.csv` entries; narrative OUTCOMEs reference them via `source_event_id`. Demo tenants behave like production tenants on provenance shape. | 1 week | Demo narrative OUTCOMEs currently have empty evidence; buyer AI-DD drill-down surfaces the gap |
+| G1.13 (v2) | **Qualitative-decision audit fields live in DB** — prompt_version, base_model_version, reasoning_trace (sampled), evidence_provenance, pii_handling_version, inter_rater_sample_flag. Per [AUDIT_TRAIL_REQUIREMENTS.md](AUDIT_TRAIL_REQUIREMENTS.md) §2.1.1. | 1 week | Without these, qualitative decisions are not reconstructible for regulator replay |
+| G1.14 (v2) | **CSM leading-vs-trailing dual-view** — dashboard widget showing qualitative signals + quantitative health side-by-side so CSMs can act on leading signals in the 30-60 day lead window. Surfaces the product's core differentiator; currently invisible in UI. | 1-2 weeks | Product USP (two-layer indicator model) has no dedicated UI surface |
 
-**Phase 1 total eng estimate:** ~6 weeks with one engineer focused; ~3 weeks parallelized across two.
+**Phase 1 total eng estimate (v2):** ~9-10 weeks with one engineer focused; ~5 weeks parallelized across two. v1 estimate was ~6 weeks; v2 adds ~3-4 weeks for the qualitative-specific controls that were under-specified in v1.
 
 ### Phase 2 — Beta to GA (~3–4 months post-Phase 1)
 
@@ -196,3 +208,4 @@ Criteria that signal "ready to move from Phase N to Phase N+1":
 | Date | Version | Change | Author |
 |---|---|---|---|
 | 2026-04-20 | 0.1 | Initial roadmap + beta disclosure | Product / Engineering |
+| 2026-04-21 | 2.0 | Added Phase 1 items G1.11-G1.14 covering qualitative-specific controls (MOD-012 unblock-criteria, manifest provenance backfill, qualitative audit fields, CSM dual-view). Phase 1 estimate bumped from ~6 to ~9-10 weeks. Prompted by the two-layer indicator model being named as the core product differentiator. | Product / Engineering |

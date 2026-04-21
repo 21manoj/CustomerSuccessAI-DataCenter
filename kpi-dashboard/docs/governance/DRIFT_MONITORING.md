@@ -1,12 +1,19 @@
 # CS Pulse — Drift Monitoring
 
-**Document Version:** 0.1 (Initial Draft)
-**Date:** April 20, 2026
+**Document Version:** 2.0
+**Date:** April 21, 2026
 **Classification:** Internal — Confidential
 **Owner:** Engineering / Compliance
 **Status:** Living Document
 **Parent:** [AI_GOVERNANCE_FRAMEWORK.md](AI_GOVERNANCE_FRAMEWORK.md)
 **Companions:** [MODEL_INVENTORY.md](MODEL_INVENTORY.md), [CHANGE_MANAGEMENT.md](CHANGE_MANAGEMENT.md), [AUDIT_TRAIL_REQUIREMENTS.md](AUDIT_TRAIL_REQUIREMENTS.md)
+**Addendum:** [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md)
+
+## Changes in v2.0 (Apr 21, 2026)
+
+- **Added §6: Qualitative-model-specific drift controls** — fixture-run stability, inter-rater reliability sampling, provenance completeness, hallucination rate, prompt version tracking. These apply to Qual-source and Qual-processing models (per signal_type classification in MODEL_INVENTORY v2.0).
+- **Revised §7: Cross-cutting model drift** — dual validation requirement (both quant backtest-vs-actual AND qual causal-chain-integrity). Explicit anti-pattern: do NOT invalidate a qualitative leading signal by diffing against a quantitative trailing measurement taken within 30 days of the signal (Apr 21 TechGrid lesson).
+- **Validation-approach matrix** in the new §2 maps signal_type → appropriate drift metric family. Prevents future sessions from applying the wrong validation to the wrong model.
 
 ---
 
@@ -239,8 +246,38 @@ Sequenced by "what fails first if unaddressed."
 
 ---
 
+## 11. Qualitative-signal drift controls (v2.0 addition)
+
+Qualitative and cross-cutting models require validation approaches that don't apply to pure-quant models. Full specification in [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md) §3. Summary of what must be monitored in addition to the standard §3-5 controls above:
+
+### Validation-approach matrix (by signal_type)
+
+| Signal Type | Primary drift metric | Cadence | Alert threshold |
+|---|---|---|---|
+| **Quant** | Backtest vs actuals (MAPE, calibration plot, forecast error) | Monthly | model-specific (e.g. MAPE > 15% on MOD-001) |
+| **Qual-source** | Inter-rater reliability sampling; provenance completeness | Weekly sample (10%) | Agreement < 80% OR provenance < 95% |
+| **Qual-processing** | Fixture-run stability; hallucination rate; prompt version regression | Weekly fixture + 5% hallucination sampling | Any fixture miss; hallucination > 5% |
+| **Cross-cutting** | Both sets + causal chain integrity (no orphan OUTCOMEs, no reverse-time edges, evidence provenance chain) | Both cadences | Union of both |
+
+### Qual-specific metrics to implement
+
+- **Fixture-run stability (MOD-007, 008, 014, 015):** 50-150 curated input/expected-output pairs per model; weekly run; diff against known-good outputs. Primary defense against silent LLM backend drift.
+- **Inter-rater reliability (MOD-012, 013):** sample 10% of automated classifications weekly; human reviewer tags; compute agreement rate. Alert if <80%.
+- **Provenance completeness (all qual outputs):** `% of outputs where source_event_id points at a specific signal AND evidence field populated`. Alert if <95% on Tier 1.
+- **Hallucination rate (Qual-processing LLM):** 5% sample weekly; reviewer tags invented details or contradictions. Alert if >5% on any cohort.
+- **Prompt version regression:** on every prompt change, run full fixture suite before promotion. Rollback plan = revert prompt version.
+
+### Anti-pattern (Apr 21 TechGrid lesson)
+
+**Do NOT validate qualitative leading signals by diffing adjacent monthly quantitative measurements.** Qualitative signals fire on decision points; quantitative health rollups reflect 30-90 day measurement lag. A Feb 26 qualitative signal (champion re-engaged) will not show in a Mar 15 quantitative measurement (numeric delta +0.4). The correct validation is **causal chain integrity** — follow the signal → decision → outcome graph — not numeric delta comparison.
+
+Cross-validating layers with incompatible lag characteristics produces false-positive "drift" alerts that are actually the two-layer model working as designed.
+
+---
+
 ## Change Log
 
 | Date | Version | Change | Author |
 |---|---|---|---|
 | 2026-04-20 | 0.1 | Initial draft — three drift types, per-model metrics, fixture strategy, change-management coupling, prioritized roadmap | Engineering |
+| 2026-04-21 | 2.0 | Added §11 qualitative-signal drift controls + validation-approach matrix. Codified Apr 21 anti-pattern: do not diff adjacent monthly quant measurements to invalidate qual leading signals. | Engineering / Product |

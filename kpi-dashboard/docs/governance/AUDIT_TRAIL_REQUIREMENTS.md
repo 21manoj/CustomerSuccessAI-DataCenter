@@ -1,12 +1,19 @@
 # CS Pulse — Audit Trail Requirements
 
-**Document Version:** 0.1 (Initial Draft)
-**Date:** April 20, 2026
+**Document Version:** 2.0
+**Date:** April 21, 2026
 **Classification:** Internal — Confidential
 **Owner:** Engineering / Compliance
 **Status:** Living Document
 **Parent:** [AI_GOVERNANCE_FRAMEWORK.md](AI_GOVERNANCE_FRAMEWORK.md)
 **Companions:** [MODEL_INVENTORY.md](MODEL_INVENTORY.md), [CHANGE_MANAGEMENT.md](CHANGE_MANAGEMENT.md)
+**Addendum:** [QUALITATIVE_SIGNAL_GOVERNANCE.md](QUALITATIVE_SIGNAL_GOVERNANCE.md)
+
+## Changes in v2.0 (Apr 21, 2026)
+
+- **Added §2.1.1: Qualitative-decision-specific audit fields.** Decisions produced by Qual-source or Qual-processing models (MOD-007, 008, 012, 013, 014, 015) require additional fields beyond the generic §2.1 schema — prompt version, reasoning trace (sampled), evidence provenance, PII handling version, inter-rater sample flag.
+- **PII retention policy** for qualitative inputs (email content, Slack transcripts, stakeholder notes): 30 days raw, then hashed. Audit trail stores redacted representation + PII-handling-version, not raw.
+- **Rationale:** qualitative decisions are reconstructible only if the prompt, model version, and evidence are captured. Generic inputs_hash is insufficient for regulator replay requests on LLM outputs.
 
 ---
 
@@ -50,6 +57,21 @@ Per model output that a human or downstream system acts on.
 | `polarity` + `bucket` | MOD-007, MOD-008, MOD-014 | If classification output |
 | `source_platform` | Graph decisions | Already captured in ContextEdge |
 | `invariant_violations` | All graph writes | JSON array of invariant IDs violated |
+
+### 2.1.1 Qualitative-decision-specific fields (v2.0 addition)
+
+Decisions produced by Qual-source or Qual-processing models (per signal_type classification in [MODEL_INVENTORY.md](MODEL_INVENTORY.md) v2.0) require these fields **in addition to** §2.1 above. Without them, qualitative decisions are not reconstructible for regulator replay requests or inter-rater review.
+
+| Field | Required for | Notes |
+|---|---|---|
+| `prompt_version` | MOD-007, 008, 014, 015 (all Qual-processing LLM outputs) | Enables reproducibility across prompt changes. Every LLM call logs the active prompt version; rollback to prior version = rollback data path. |
+| `base_model_version` | MOD-007, 008, 014, 015 | Captures backend LLM model changes (e.g. claude-opus-4 → claude-opus-4.1). Silent backend drift detectable only if logged. |
+| `reasoning_trace` (sampled) | Tier 1 Qual-processing — 5% sample OR all outputs flagged for inter-rater review | LLM chain-of-thought / explanation. Not required on every call (cost + retention), but required on the sample cohort. |
+| `evidence_provenance` | MOD-012, 013 (Qual-source) + all qualitative-derived OUTCOMEs | Raw-input reference: `email_id` / `slack_ts` / `transcript_segment_id` / `stakeholder_event_id`. NOT a generic subtype label. Enables regulator replay: "show me the email that led to this churn_averted outcome." |
+| `inter_rater_sample_flag` | Outputs selected for weekly inter-rater review cohort | Boolean flag that routes the output to the human-review queue. Review result (agreement or disagreement) back-links to this event. |
+| `pii_handling_version` | All Qual-source inputs (MOD-012, 013) | If PII was redacted/hashed, which version of the redaction ruleset was applied. Required for regulatory inquiries about how sensitive data was processed. |
+| `raw_input_hash` | All Qual-source inputs | Hash of the raw qualitative input (before redaction). Enables detection of replay attacks or log tampering without exposing PII. |
+| `hallucination_review_status` | Sampled Qual-processing outputs | One of `unreviewed` / `verified` / `hallucination_detected`. Links to human review record. |
 
 ### 2.2 Change Events
 
@@ -285,3 +307,4 @@ Sequenced by enablement: later items depend on earlier ones.
 | Date | Version | Change | Author |
 |---|---|---|---|
 | 2026-04-20 | 0.1 | Initial draft — 5 event categories, per-tier requirements, honest gap list, implementation sequence | Engineering |
+| 2026-04-21 | 2.0 | Added §2.1.1 qualitative-decision-specific fields (prompt version, reasoning trace, evidence provenance, PII handling version). Addresses gap surfaced when the two-layer indicator model was named as CS Pulse's core differentiator — qualitative outputs need different audit fields than quantitative outputs. | Engineering / Product |
