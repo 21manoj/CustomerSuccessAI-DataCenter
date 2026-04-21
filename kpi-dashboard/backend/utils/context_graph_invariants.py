@@ -1067,6 +1067,72 @@ def invariant_i15_no_duplicate_signal_outcome_pair(customer_id: int) -> List[Vio
     return violations
 
 
+def invariant_i16_churned_not_in_at_risk(customer_id: int) -> List[Violation]:
+    """I16: no account should appear as both churned AND at-risk.
+
+    Churned is a terminal state; at-risk is a live-intervention state.
+    A tool returning an account in both outputs for the same query is a
+    contract bug that inflates at-risk ARR rollups by the churned amount
+    (the `get_at_risk_accounts` Apr 20 regression that prompted this
+    invariant).
+
+    Detection: any Account where `account_status='churned'` AND current
+    health_score < at_risk threshold (which would trigger at-risk inclusion
+    under any tool that doesn't explicitly filter churned).
+    """
+    from models import Account, HealthScore, db  # noqa: PLC0415
+    import utils.health_thresholds as ht  # noqa: PLC0415
+
+    violations: List[Violation] = []
+    at_risk_threshold = ht.healthy_min()
+
+    churned_accounts = (
+        Account.query
+        .filter(
+            Account.customer_id == customer_id,
+            db.func.lower(Account.account_status) == 'churned',
+        )
+        .all()
+    )
+
+    for acct in churned_accounts:
+        latest = (
+            HealthScore.query
+            .filter_by(account_id=acct.account_id)
+            .order_by(
+                HealthScore.measurement_month.desc(),
+                HealthScore.calculated_at.desc(),
+            )
+            .first()
+        )
+        if latest is None or latest.health_score is None:
+            continue
+        score = float(latest.health_score)
+        if score < at_risk_threshold:
+            violations.append(Violation(
+                invariant_id='I16',
+                invariant_name='churned_not_in_at_risk',
+                severity='warning',
+                customer_id=customer_id,
+                account_id=acct.account_id,
+                node_ids=[],
+                message=(
+                    f'Account {acct.account_name!r} is churned AND health '
+                    f'{score:.1f} < {at_risk_threshold} — any tool that '
+                    f'returns at-risk-by-health without filtering '
+                    f'account_status=churned will double-count this ARR '
+                    f'(${float(acct.revenue or 0):,.0f}) across both buckets.'
+                ),
+                details={
+                    'account_name': acct.account_name,
+                    'health_score': score,
+                    'arr': float(acct.revenue or 0),
+                    'account_status': acct.account_status,
+                },
+            ))
+    return violations
+
+
 INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I1': invariant_i1_no_outcome_to_outcome,
     'I2': invariant_i2_polarity_consistency,
@@ -1082,6 +1148,7 @@ INVARIANTS_REGISTRY: Dict[str, Callable[[int], List[Violation]]] = {
     'I13': invariant_i13_no_duplicate_definitive_lifecycle,
     'I14': invariant_i14_revenue_sign_matches_polarity,
     'I15': invariant_i15_no_duplicate_signal_outcome_pair,
+    'I16': invariant_i16_churned_not_in_at_risk,
     # I7 (MCP param contract) is a pure code check — lives in tests, not here.
 }
 

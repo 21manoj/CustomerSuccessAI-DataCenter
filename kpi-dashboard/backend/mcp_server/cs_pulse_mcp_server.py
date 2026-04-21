@@ -782,6 +782,12 @@ def get_account_health(customer_id: int, account_id: int) -> dict:
 def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
     """List accounts with health scores below a threshold.
 
+    Churned accounts (account_status='churned') are EXCLUDED from the at-risk
+    list — churn is a terminal state, not a risk state. They are reported
+    separately as `churned_count` / `churned_arr` / `churned_accounts` so
+    dashboards can distinguish "savable" from "already lost" without double-
+    counting the same ARR in both buckets.
+
     Args:
         customer_id: The customer (tenant) ID
         threshold: Health score threshold (default 70 = at-risk boundary)
@@ -802,7 +808,9 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
         ).all()
 
         at_risk = []
+        churned_accounts = []
         total_arr_at_risk = 0.0
+        total_arr_churned = 0.0
 
         for acct in accounts:
             precalc_health, precalc_status, precalc_pillars = get_precalculated_scores(acct.account_id)
@@ -814,8 +822,20 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
                 kpi_values = _get_trailing_kpi_values(acct.account_id)
                 health, pillars = calculate_kpi_health(kpi_values, customer_id)
 
-            if health < threshold:
-                arr = _get_account_arr(acct)
+            arr = _get_account_arr(acct)
+            is_churned = (acct.account_status or '').lower() == 'churned'
+
+            if is_churned:
+                # Churned accounts are surfaced separately — NOT in at-risk.
+                total_arr_churned += arr
+                churned_accounts.append({
+                    "account_id": acct.account_id,
+                    "account_name": acct.account_name,
+                    "health_score": round(health, 1),
+                    "status": "churned",
+                    "arr": arr,
+                })
+            elif health < threshold:
                 total_arr_at_risk += arr
                 at_risk.append({
                     "account_id": acct.account_id,
@@ -827,6 +847,7 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
                 })
 
         at_risk.sort(key=lambda x: x["health_score"])
+        churned_accounts.sort(key=lambda x: -x["arr"])
 
         total_portfolio_arr = sum(_get_account_arr(a) for a in accounts)
         pct_arr_at_risk = round(
@@ -843,6 +864,10 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
             "pct_arr_at_risk": pct_arr_at_risk,
             "total_portfolio_arr": round(total_portfolio_arr, 2),
             "accounts": at_risk,
+            # Churned (terminal state — separate from at-risk to avoid double-count)
+            "churned_count": len(churned_accounts),
+            "total_arr_churned": round(total_arr_churned, 2),
+            "churned_accounts": churned_accounts,
         }
 
 

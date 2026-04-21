@@ -569,6 +569,57 @@ def test_i15_dirty(ctx):
 
 
 # ═════════════════════════════════════════════════════════════════════
+# I16 — churned accounts must not appear in at-risk tool outputs
+# ═════════════════════════════════════════════════════════════════════
+
+
+def _clear_health_scores(account_id):
+    HealthScore.query.filter_by(account_id=account_id).delete()
+    db.session.commit()
+
+
+def test_i16_clean(ctx):
+    """Account either churned OR at-risk, not both."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _clear_health_scores(ctx['account_id'])
+        acct = Account.query.get(ctx['account_id'])
+        acct.account_status = 'active'
+        acct.revenue = 1_500_000
+        db.session.add(HealthScore(
+            account_id=ctx['account_id'],
+            measurement_month=date(2026, 3, 1),
+            health_score=45.0,
+            health_status='critical',
+        ))
+        db.session.commit()
+        violations = run_invariant('I16', ctx['customer_id'])
+        assert violations == [], f'Expected 0 violations, got {len(violations)}'
+
+
+def test_i16_dirty(ctx):
+    """Churned account with low health (< 70) flags — would be double-counted by any unfiltered at-risk tool."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _clear_health_scores(ctx['account_id'])
+        acct = Account.query.get(ctx['account_id'])
+        acct.account_status = 'churned'
+        acct.revenue = 1_500_000
+        db.session.add(HealthScore(
+            account_id=ctx['account_id'],
+            measurement_month=date(2026, 3, 1),
+            health_score=16.5,
+            health_status='critical',
+        ))
+        db.session.commit()
+        violations = run_invariant('I16', ctx['customer_id'])
+        assert len(violations) == 1
+        assert violations[0].details['account_status'] == 'churned'
+        assert violations[0].details['health_score'] == 16.5
+        assert violations[0].details['arr'] == 1_500_000
+
+
+# ═════════════════════════════════════════════════════════════════════
 # Registry coverage — every registered invariant has at least one test
 # ═════════════════════════════════════════════════════════════════════
 
