@@ -27,9 +27,11 @@
       "expansion_closed",
       "new_logo",
       "revenue_expanded",
-      "expansion_opportunity",
-      "expansion_approved",
       "revenue_growth"
+    ],
+    "pipeline": [
+      "expansion_approved",
+      "expansion_opportunity"
     ],
     "protected": [
       "revenue_protected",

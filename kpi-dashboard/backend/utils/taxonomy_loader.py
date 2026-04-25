@@ -44,7 +44,7 @@ _ALLOWED_TOP_KEYS = {
     'revenue_buckets',
     'auto_recovery_outcome_subtypes',
 }
-_BUCKET_KEYS = {'at_risk', 'lost', 'expansion', 'protected'}
+_BUCKET_KEYS = {'at_risk', 'lost', 'expansion', 'pipeline', 'protected'}
 
 # Module-level cache keyed by (vertical or None)
 _taxonomy_cache: Dict[Optional[str], 'Taxonomy'] = {}

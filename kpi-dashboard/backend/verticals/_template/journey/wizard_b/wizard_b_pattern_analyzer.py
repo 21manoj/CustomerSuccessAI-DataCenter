@@ -529,11 +529,33 @@ class PatternAnalyzer:
         # revenue_at_risk) are story annotations, NOT actual ARR changes.
         # Including them double-counts and inflates NRR.
         #
-        # Definitive events:  churn_lost, contraction → lost bucket
-        #                     expansion_closed, new_logo → expansion bucket
-        # Narrative events:   everything else → tracked separately for drill-down
-        _DEFINITIVE_LOST = {'churn_lost', 'contraction'}
-        _DEFINITIVE_EXPANSION = {'expansion_closed', 'new_logo'}
+        # Source of truth: backend/config/taxonomy_base.json `revenue_buckets`.
+        # Migrated from inline literals to JSON-loaded Apr 25 2026 to prevent
+        # taxonomy drift between Wizard B and the production bucket-map. The
+        # classifier handles two upstream conventions:
+        #   1. raw_type == bucket name ('expansion', 'lost', 'pipeline', ...)
+        #      — production rev_type_map in onboarding_api_v2_config_aware.py
+        #        collapses subtypes to their bucket name when writing OUTCOMEs.
+        #   2. raw_type == original subtype ('expansion_closed', 'churn_lost')
+        #      — direct ingest path keeps the subtype intact.
+        # Pipeline-bucket subtypes ('expansion_approved', 'expansion_opportunity')
+        # are NOT counted in NRR — they're mid-lifecycle, not realized ARR.
+        from utils.taxonomy_loader import get_taxonomy
+        _tax = get_taxonomy()  # base taxonomy; vertical overlay not needed for NRR
+        _KNOWN_BUCKET_NAMES = set(_tax.revenue_bucket_map.keys())
+
+        def _classify_outcome_bucket(raw_type: str) -> Optional[str]:
+            """raw_type → bucket name ('lost'|'expansion'|'pipeline'|... |None)."""
+            if not raw_type:
+                return None
+            # Production rev_type_map collapse: raw_type is the bucket name itself
+            if raw_type in _KNOWN_BUCKET_NAMES:
+                return raw_type
+            # Direct subtype: find which bucket owns it
+            for bucket, subtypes in _tax.revenue_bucket_map.items():
+                if raw_type in subtypes:
+                    return bucket
+            return None  # unknown — narrative only
 
         outcome_nodes = (
             ContextNode.query
@@ -552,16 +574,18 @@ class PatternAnalyzer:
         for n in outcome_nodes:
             impact = abs(float(n.revenue_impact or 0))
             raw_type = n.revenue_impact_type or n.node_subtype or ''
-            if raw_type in _DEFINITIVE_LOST:
-                revenue_by_account[n.account_id]['lost'] += impact
-            elif raw_type == 'new_logo':
-                # New logos contribute expansion but are NOT in NRR denominator
+            # new_logo: contributes expansion AND excluded from NRR denominator
+            if raw_type == 'new_logo':
                 revenue_by_account[n.account_id]['expansion'] += impact
                 _new_logo_account_ids.add(n.account_id)
-            elif raw_type in _DEFINITIVE_EXPANSION:
+                continue
+            bucket = _classify_outcome_bucket(raw_type)
+            if bucket == 'lost':
+                revenue_by_account[n.account_id]['lost'] += impact
+            elif bucket == 'expansion':
                 revenue_by_account[n.account_id]['expansion'] += impact
-            # Narrative outcomes (churn_averted, revenue_protected, etc.)
-            # are NOT counted in NRR — they're drill-down context only
+            # 'pipeline', 'at_risk', 'protected', or None → narrative only,
+            # not counted in NRR per spec §1a.
 
         # Save for forecast_portfolio_nrr (per-account lifecycle revenue)
         self._nrr_revenue_by_account = dict(revenue_by_account)
@@ -909,19 +933,169 @@ class PatternAnalyzer:
                               if aid not in _new_logos)
         current_nrr = (total_arr - _total_lost + _total_expansion) / total_arr if total_arr > 0 else 1.0
 
-        # Without CS Pulse: saved accounts would have churned entirely.
+        # Without CS Pulse: saved accounts would have partially retained.
         # Other accounts keep their actual lifecycle outcomes.
-        without_nrr_numerator = 0.0
-        for j in self.journeys:
-            aid = j.get('account_id', 0)
-            if aid in _new_logos:
-                continue
-            arr = arr_map.get(aid, 0)
-            if aid in saved_account_ids:
-                without_nrr_numerator += 0  # full churn — $0 retained
+        #
+        # v1.5 Fix 1 (health_end retention bands): v1 assumed every saved
+        # account = 100% ARR loss without intervention. Validated Apr 24
+        # 2026 on phoenix-saas-demo backtest: v1 over-pessimistic by
+        # ~18pp MAPE (forecast 77.4% vs sidecar 95.9%). Partial-retention
+        # by health band is the structural correction. Constants here are
+        # placeholders; LOOCV calibration on 20-tenant run pending.
+        #
+        # v1.5 Fix 3 (recovery-magnitude attribution): strong self-recovery
+        # (ending_health ≥ lowest + 15pp) implies the account was partly
+        # self-healing. Raise organic retention by +0.15 to downgrade the
+        # "CS Pulse full-save" attribution.
+        def _organic_retention(h_end: float, recovery_pp: float) -> float:
+            # Fix 1: retention band by ending health
+            if h_end < 50:
+                r = 0.40        # still critical even post-save
+            elif h_end < 70:
+                r = 0.70        # at-risk; partial contraction
+            elif h_end < 85:
+                r = 0.85        # recovered to healthy
             else:
-                rev = _rev_by_account.get(aid, {})
-                without_nrr_numerator += arr - rev.get('lost', 0) + rev.get('expansion', 0)
+                r = 0.95        # strong recovery
+            # Fix 3: self-recovery modifier
+            if recovery_pp >= 15:
+                r = min(1.0, r + 0.15)
+            elif recovery_pp <= -5:
+                r = max(0.0, r - 0.10)
+            return r
+
+        # ─────────────────────────────────────────────────────────────
+        # Wizard B v2.0 — Continuous renewal projection (Apr 25 2026)
+        # ─────────────────────────────────────────────────────────────
+        # Feature-flagged. Enable via FEATURE_WIZARD_B_V2_FORECAST=true.
+        # Default OFF: preserves v1.5 behavior. Rollback = unset env var.
+        #
+        # WHY: v1.5 retention bands only apply to accounts in
+        #   saved_account_ids (≥10pp recovery from crisis). For cold-start
+        #   tenants without rich OUTCOME enrichment, the non-saved branch
+        #   returns `arr - 0 + 0 = arr` (100% NRR) regardless of health
+        #   trajectory. 6-tenant probe (Apr 25 2026) showed portfolio
+        #   MAPE 23.16pp because crisis_heavy/expansion_heavy tenants
+        #   never entered the saved branch.
+        #
+        # WHAT: Apply a continuous renewal-percentage projection to ALL
+        #   accounts based on (current health, 12mo trend, recovery
+        #   magnitude, arc_type). Output range: 0% to 130% NRR.
+        #
+        # NOT ML. Deterministic, auditable, feature-flagged.
+        import os as _os
+        _USE_V2_FORECAST = (
+            _os.environ.get('FEATURE_WIZARD_B_V2_FORECAST', 'false').lower()
+            == 'true'
+        )
+
+        def _continuous_renewal_projection(
+            h_end: float,
+            h_start: float,
+            h_lowest: float,
+            arc_type: str = None,
+        ) -> float:
+            """v2 forward projection: continuous NRR fraction in [0.0, 1.30].
+
+            Replaces v1.5's binary saved/non-saved split with a single
+            health-driven projection applied to all accounts.
+            """
+            # Base retention from current health (continuous, not banded).
+            # Calibration v2.1 (Apr 25 2026, post-6-tenant probe):
+            # - Lifted 30-50 band: most "at-risk" accounts still renew flat
+            # - Lifted 50-70 band: 0.85→0.98 — reality says mid-health renews
+            # - Raised 85+ ceiling to 1.20 so expansion-heavy tenants reach 124%
+            if h_end < 30:
+                base = 0.30
+            elif h_end < 50:
+                base = 0.30 + (h_end - 30) / 20.0 * 0.55   # 0.30→0.85
+            elif h_end < 70:
+                base = 0.85 + (h_end - 50) / 20.0 * 0.13   # 0.85→0.98
+            elif h_end < 85:
+                base = 0.98 + (h_end - 70) / 15.0 * 0.07   # 0.98→1.05
+            else:
+                base = 1.05 + min(15.0, h_end - 85) / 15.0 * 0.15  # 1.05→1.20
+
+            # 12-month trend modifier
+            trend = h_end - h_start
+            if trend >= 15:
+                base *= 1.05
+            elif trend >= 5:
+                base *= 1.02
+            elif trend <= -15:
+                base *= 0.85
+            elif trend <= -5:
+                base *= 0.93
+
+            # Recovery vs continuing-decline modifier (orthogonal to trend)
+            recovery = h_end - h_lowest
+            if recovery >= 15 and h_end > h_start:
+                base *= 1.03    # genuine recovery
+            elif recovery <= 0 and h_end < h_start:
+                base *= 0.95    # still at lowest, declining
+
+            # Arc-type modifier (Wizard A classification, when available).
+            # Unknown arcs → no modifier (default 1.0). Don't penalize for
+            # arc taxonomy gaps.
+            if arc_type:
+                arc_modifiers = {
+                    # Expansion arcs — boost ceiling
+                    'expansion_champion':       1.12,
+                    'land_and_expand':          1.08,
+                    'expansion_ready':          1.12,
+                    'usage_plateau_breakout':   1.10,
+                    # Healthy / stable — neutral or mild boost
+                    'capacity_healthy':         1.02,
+                    'steady_healthy':           1.00,
+                    'slow_improve':             1.02,
+                    # Recovery arcs — neutral (trend modifier already captures direction)
+                    'crisis_recovery':          1.00,
+                    'exec_sponsor_recovery':    1.00,
+                    'competitive_recovery':     1.00,
+                    # Decline / risk arcs — pull retention down
+                    'silent_churn':             0.65,
+                    'silent_churn_champion_loss': 0.55,
+                    'champion_loss':            0.78,
+                    'competitive_displacement': 0.72,
+                    'deployment_stall':         0.85,
+                    'qbr_overdue_drift':        0.92,
+                    'budget_pressure':          0.88,
+                }
+                base *= arc_modifiers.get(arc_type, 1.0)
+
+            return max(0.0, min(1.30, base))
+
+        without_nrr_numerator = 0.0
+        if _USE_V2_FORECAST:
+            # v2: continuous projection for ALL accounts (no saved/not-saved split)
+            for j in self.journeys:
+                aid = j.get('account_id', 0)
+                if aid in _new_logos:
+                    continue
+                arr = arr_map.get(aid, 0)
+                h_end = j.get('ending_health') or 0
+                h_start = j.get('starting_health') or h_end
+                h_lowest = j.get('lowest_health') or h_end
+                arc_type = arc_map.get(aid)
+                projected = _continuous_renewal_projection(
+                    h_end, h_start, h_lowest, arc_type
+                )
+                without_nrr_numerator += arr * projected
+        else:
+            # v1.5 (default): saved-account retention + lifecycle outcomes for others
+            for j in self.journeys:
+                aid = j.get('account_id', 0)
+                if aid in _new_logos:
+                    continue
+                arr = arr_map.get(aid, 0)
+                if aid in saved_account_ids:
+                    h_end = j.get('ending_health') or 0
+                    h_lowest = j.get('lowest_health') or h_end
+                    retention = _organic_retention(h_end, h_end - h_lowest)
+                    without_nrr_numerator += arr * retention
+                else:
+                    rev = _rev_by_account.get(aid, {})
+                    without_nrr_numerator += arr - rev.get('lost', 0) + rev.get('expansion', 0)
         without_cs_pulse_nrr = without_nrr_numerator / total_arr if total_arr > 0 else 1.0
 
         # ── Trajectory: portfolio NRR at T+30/60/90 ────────────────────
