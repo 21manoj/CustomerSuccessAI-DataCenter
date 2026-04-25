@@ -196,6 +196,258 @@ def _compute_composite(
     return result
 
 
+# ── Optional layers (Apr 25 2026) ─────────────────────────────────────
+# Toggle layers selectable via ?include=arcs,forecast,outcomes,decisions
+# on the GET /api/journey-intelligence/<account_id> endpoint. Each
+# layer is computed only when requested — keeping default response
+# size & latency unchanged for existing callers.
+INCLUDE_OPTIONS = frozenset({'arcs', 'forecast', 'outcomes', 'decisions'})
+
+
+def _compute_arc_layer(account, kpi_series):
+    """Return arc_type + detected phase-band time-segments.
+
+    Phases inferred from health trajectory inflections:
+      baseline:      pre-decline period (high relative to nadir)
+      deterioration: decline period leading to nadir
+      intervention:  recovery period from nadir
+      Note: "resolution" is collapsed into intervention for v1 simplicity.
+
+    For accounts where Wizard A already classified a phase, the explicit
+    `arc_phase` field is also returned. Frontend can render either.
+    """
+    base = {
+        'arc_type': account.arc_type,
+        'arc_phase': account.arc_phase,
+        'arc_confidence': (
+            float(account.arc_confidence) if account.arc_confidence is not None else None
+        ),
+        'nadir_health': None,
+        'nadir_month': None,
+        'phase_bands': [],
+    }
+    if not kpi_series or len(kpi_series) < 3:
+        return base
+
+    # Find nadir
+    nadir_idx = min(range(len(kpi_series)), key=lambda i: kpi_series[i][1])
+    nadir_score = kpi_series[nadir_idx][1]
+    nadir_date = kpi_series[nadir_idx][0]
+    starting_score = kpi_series[0][1]
+    ending_score = kpi_series[-1][1]
+    n = len(kpi_series)
+
+    bands = []
+
+    # Heuristic phase detection — see docstring
+    if nadir_idx == 0:
+        # Worst at start → entire window is recovery if ending higher,
+        # else continuing decline
+        phase = 'intervention' if ending_score > nadir_score + 10 else 'deterioration'
+        bands.append({
+            'phase': phase,
+            'start': kpi_series[0][0].isoformat(),
+            'end': kpi_series[-1][0].isoformat(),
+        })
+    elif nadir_idx == n - 1:
+        # Worst at end → baseline → deterioration
+        # Baseline = first quarter; deterioration = rest
+        split = max(1, n // 4)
+        if starting_score > nadir_score + 10:
+            bands.append({
+                'phase': 'baseline',
+                'start': kpi_series[0][0].isoformat(),
+                'end': kpi_series[split][0].isoformat(),
+            })
+            bands.append({
+                'phase': 'deterioration',
+                'start': kpi_series[split][0].isoformat(),
+                'end': kpi_series[-1][0].isoformat(),
+            })
+        else:
+            bands.append({
+                'phase': 'deterioration',
+                'start': kpi_series[0][0].isoformat(),
+                'end': kpi_series[-1][0].isoformat(),
+            })
+    else:
+        # Nadir in middle
+        # If health was meaningfully higher at start → there was a baseline
+        if starting_score > nadir_score + 10 and nadir_idx > 1:
+            split = max(1, nadir_idx // 2)
+            bands.append({
+                'phase': 'baseline',
+                'start': kpi_series[0][0].isoformat(),
+                'end': kpi_series[split][0].isoformat(),
+            })
+            bands.append({
+                'phase': 'deterioration',
+                'start': kpi_series[split][0].isoformat(),
+                'end': kpi_series[nadir_idx][0].isoformat(),
+            })
+        else:
+            bands.append({
+                'phase': 'deterioration',
+                'start': kpi_series[0][0].isoformat(),
+                'end': kpi_series[nadir_idx][0].isoformat(),
+            })
+        # Recovery half
+        recovery_phase = 'intervention' if ending_score > nadir_score + 10 else 'deterioration'
+        bands.append({
+            'phase': recovery_phase,
+            'start': kpi_series[nadir_idx][0].isoformat(),
+            'end': kpi_series[-1][0].isoformat(),
+        })
+
+    base['nadir_health'] = round(nadir_score, 1)
+    base['nadir_month'] = nadir_date.isoformat()
+    base['phase_bands'] = bands
+    return base
+
+
+def _fetch_forecast_layer(customer_id, account_id, kpi_series):
+    """Pull customer-level Wizard B forecast + per-account waterfall +
+    a simple linear health projection at T+30/60/90 (extrapolated from
+    the last 3 months of slope on this account)."""
+    from models import WizardRun
+
+    # Get latest successful Wizard B run for this customer
+    wb_run = (
+        WizardRun.query
+        .filter_by(customer_id=customer_id)
+        .filter(WizardRun.results.isnot(None))
+        .order_by(WizardRun.completed_at.desc())
+        .first()
+    )
+
+    portfolio = None
+    waterfall_account = None
+    if wb_run and isinstance(wb_run.results, dict):
+        nrr = wb_run.results.get('nrr_intelligence') or {}
+        forecast = nrr.get('forecast') or {}
+        portfolio = {
+            'without_cs_pulse_nrr_pct': forecast.get('without_cs_pulse_nrr_pct'),
+            'current_nrr_pct': forecast.get('current_nrr_pct'),
+            'with_interventions_nrr_pct': forecast.get('with_interventions_nrr_pct'),
+            'cs_pulse_arr_protected': forecast.get('cs_pulse_arr_protected'),
+            'cs_pulse_delta_pct': forecast.get('cs_pulse_delta_pct'),
+            'trajectory': forecast.get('trajectory'),
+            'as_of': wb_run.completed_at.isoformat() if wb_run.completed_at else None,
+        }
+        # Per-account waterfall slice
+        wf = forecast.get('revenue_waterfall') or {}
+        for acct in wf.get('accounts', []):
+            if acct.get('account_id') == account_id:
+                waterfall_account = acct
+                break
+
+    # Per-account simple linear projection at T+30 / +60 / +90
+    projection = []
+    if len(kpi_series) >= 3:
+        recent = kpi_series[-3:]
+        # Slope = (last - first of recent 3) / 2 month-deltas
+        try:
+            slope_per_month = (recent[-1][1] - recent[0][1]) / 2.0
+        except (TypeError, ZeroDivisionError):
+            slope_per_month = 0.0
+        last_score = kpi_series[-1][1]
+        last_date = kpi_series[-1][0]
+        for offset_days in (30, 60, 90):
+            future_date = last_date + timedelta(days=offset_days)
+            projected = max(0.0, min(100.0, last_score + slope_per_month * (offset_days / 30)))
+            projection.append({
+                'month': future_date.isoformat(),
+                'projected_health': round(projected, 1),
+                'horizon_days': offset_days,
+            })
+
+    return {
+        'portfolio': portfolio,
+        'account_waterfall': waterfall_account,
+        'health_projection': projection,
+    }
+
+
+def _fetch_outcome_layer(customer_id, account_id):
+    """OUTCOME ContextNodes for the account, classified into the canonical
+    revenue bucket (lost / expansion / pipeline / at_risk / protected) so
+    the frontend can color-code."""
+    from models import ContextNode
+    from utils.taxonomy_loader import get_taxonomy
+
+    tax = get_taxonomy()
+    bucket_names = set(tax.revenue_bucket_map.keys())
+
+    def _classify(raw_type):
+        if not raw_type:
+            return None
+        if raw_type in bucket_names:
+            return raw_type
+        for bucket, subtypes in tax.revenue_bucket_map.items():
+            if raw_type in subtypes:
+                return bucket
+        return None
+
+    nodes = (
+        ContextNode.query
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.account_id == account_id,
+            ContextNode.node_type == 'OUTCOME',
+        )
+        .order_by(ContextNode.occurred_at)
+        .all()
+    )
+
+    out = []
+    for n in nodes:
+        if not n.occurred_at:
+            continue
+        raw_type = (n.revenue_impact_type or n.node_subtype or '')
+        bucket = _classify(raw_type)
+        out.append({
+            'node_id': n.node_id,
+            'occurred_at': n.occurred_at.isoformat(),
+            'subtype': n.node_subtype,
+            'title': (n.title[:80] if n.title else None),
+            'revenue_impact': (
+                float(n.revenue_impact) if n.revenue_impact is not None else 0.0
+            ),
+            'revenue_impact_type': n.revenue_impact_type,
+            'bucket': bucket,
+            'confidence': (float(n.confidence) if n.confidence is not None else None),
+            'tier': n.tier,
+        })
+    return out
+
+
+def _fetch_decision_layer(customer_id, account_id):
+    """DECISION ContextNodes for the account (Wizard A's arc-decision generator)."""
+    from models import ContextNode
+    nodes = (
+        ContextNode.query
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.account_id == account_id,
+            ContextNode.node_type == 'DECISION',
+        )
+        .order_by(ContextNode.occurred_at)
+        .all()
+    )
+    out = []
+    for n in nodes:
+        if not n.occurred_at:
+            continue
+        out.append({
+            'node_id': n.node_id,
+            'occurred_at': n.occurred_at.isoformat(),
+            'subtype': n.node_subtype,
+            'title': (n.title[:80] if n.title else None),
+            'confidence': (float(n.confidence) if n.confidence is not None else None),
+        })
+    return out
+
+
 @journey_intelligence_api.route('/api/journey-intelligence/<int:account_id>', methods=['GET'])
 def get_journey_intelligence(account_id):
     """Return three graph lines + signals + playbook executions for an account.
@@ -206,10 +458,23 @@ def get_journey_intelligence(account_id):
 
     Query params:
         months (int, default 12): how many months of history
+        include (csv, optional): subset of {arcs, forecast, outcomes, decisions}
+            arcs:      Wizard A arc_type + detected phase bands
+            forecast:  Wizard B latest portfolio forecast + per-account waterfall +
+                       linear health projection at T+30/60/90
+            outcomes:  OUTCOME ContextNodes (with revenue bucket classification)
+            decisions: DECISION ContextNodes (from Wizard A arc-decision generator)
+        Each requested layer adds a top-level field to the response with the
+        same name. Default callers (no `include`) get the existing payload
+        unchanged.
     """
     try:
         customer_id = get_current_customer_id()
         months = int(request.args.get('months', 12))
+        include_raw = request.args.get('include', '')
+        include = {
+            tok.strip() for tok in include_raw.split(',') if tok.strip()
+        } & INCLUDE_OPTIONS
 
         from models import Account, HealthScore, ContextNode, PlaybookExecutionV2
         import utils.health_thresholds as ht
@@ -327,7 +592,7 @@ def get_journey_intelligence(account_id):
         first_month = kpi_series[0][0].isoformat()
         last_month = kpi_series[-1][0].isoformat()
 
-        return jsonify({
+        response = {
             'account_id': account_id,
             'account_name': account.account_name,
             'arr': float(account.revenue or 0),
@@ -345,7 +610,20 @@ def get_journey_intelligence(account_id):
                 'healthy': ht.healthy_min(),
                 'at_risk': ht.at_risk_min(),
             },
-        })
+        }
+
+        # Optional toggle-layer payloads (Apr 25 2026)
+        if 'arcs' in include:
+            response['arcs'] = _compute_arc_layer(account, kpi_series)
+        if 'forecast' in include:
+            response['forecast'] = _fetch_forecast_layer(
+                customer_id, account_id, kpi_series)
+        if 'outcomes' in include:
+            response['outcomes'] = _fetch_outcome_layer(customer_id, account_id)
+        if 'decisions' in include:
+            response['decisions'] = _fetch_decision_layer(customer_id, account_id)
+
+        return jsonify(response)
 
     except Exception as e:
         logger.error(f"journey-intelligence error: {e}", exc_info=True)
