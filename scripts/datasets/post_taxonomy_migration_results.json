@@ -1,0 +1,38 @@
+{
+  "test_run_at": "2026-04-25T19:37:55.032717Z",
+  "dataset_version": "v1",
+  "wizard_b_version": "v1.5+taxonomy_json_loaded",
+  "migration_note": "Apr 25 2026: replaced inline _DEFINITIVE_LOST/_DEFINITIVE_EXPANSION literals with taxonomy_loader.get_taxonomy().revenue_bucket_map[...]. Bucket-aware classifier handles both subtype literals (CSV ingest) and bucket-name strings (production rev_type_map collapse). Verified byte-identical to Apr 25 patch baseline on the 8-tenant probe.",
+  "synthetic_customer_ids": [
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    70,
+    71
+  ],
+  "metrics": {
+    "nrr_portfolio_mape_pp": 19.45,
+    "nrr_portfolio_median_abs_err_pp": 7.37
+  },
+  "per_tenant": {
+    "nrr": {
+      "57": {"forecast": 103.89, "actual": 67.73,  "abs_err_pp": 36.16},
+      "58": {"forecast": 125.66, "actual": 96.36,  "abs_err_pp": 29.30},
+      "59": {"forecast": 103.17, "actual": 104.13, "abs_err_pp":  0.96},
+      "60": {"forecast": 134.10, "actual": 124.76, "abs_err_pp":  9.34},
+      "61": {"forecast": 103.71, "actual": 33.28,  "abs_err_pp": 70.43},
+      "62": {"forecast":  95.56, "actual": 95.86,  "abs_err_pp":  0.30},
+      "70": {"forecast": 104.64, "actual": 99.24,  "abs_err_pp":  5.40},
+      "71": {"forecast":  99.98, "actual": 103.69, "abs_err_pp":  3.71}
+    }
+  },
+  "meta_test": {
+    "test_file": "kpi-dashboard/backend/tests/test_no_hardcoded_outcome_subtypes.py",
+    "tests_passed": 499,
+    "tests_failed": 0,
+    "purpose": "Prevents future _DEFINITIVE_* drift; fails CI if a Python file under backend/ redefines outcome-subtype sets that should live in taxonomy_base.json"
+  }
+}

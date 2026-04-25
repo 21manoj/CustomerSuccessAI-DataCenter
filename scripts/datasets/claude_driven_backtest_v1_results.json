@@ -1,0 +1,28 @@
+{
+  "test_run_at": "2026-04-24T22:09:54.992860Z",
+  "dataset_version": "v1",
+  "synthetic_customer_ids": [
+    56
+  ],
+  "metrics": {
+    "nrr_portfolio_mape_pp": 18.45,
+    "nrr_portfolio_median_abs_err_pp": 18.45,
+    "roi_portfolio_mape_pct": null,
+    "roi_no_comparable": true,
+    "mean_uplift_pp": 22.61,
+    "i17_violations_total": 8
+  },
+  "per_tenant": {
+    "nrr": {
+      "56": {
+        "forecast": 77.41,
+        "actual": 95.86,
+        "abs_err_pp": 18.45
+      }
+    },
+    "i17": {
+      "56": 8
+    }
+  },
+  "per_difficulty": {}
+}

@@ -1,0 +1,21 @@
+{
+  "test_run_at": "2026-04-25T06:26:57.543037Z",
+  "dataset_version": "v1",
+  "synthetic_customer_ids": [
+    63
+  ],
+  "metrics": {
+    "nrr_portfolio_mape_pp": 14.35,
+    "nrr_portfolio_median_abs_err_pp": 14.35
+  },
+  "per_tenant": {
+    "nrr": {
+      "63": {
+        "forecast": 113.59,
+        "actual": 99.24,
+        "abs_err_pp": 14.35
+      }
+    }
+  },
+  "per_difficulty": {}
+}

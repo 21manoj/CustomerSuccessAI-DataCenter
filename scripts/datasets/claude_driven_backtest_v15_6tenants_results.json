@@ -1,0 +1,63 @@
+{
+  "test_run_at": "2026-04-25T03:34:18.094651Z",
+  "dataset_version": "v1",
+  "synthetic_customer_ids": [
+    57,
+    58,
+    59,
+    60,
+    61,
+    62
+  ],
+  "metrics": {
+    "nrr_portfolio_mape_pp": 23.16,
+    "nrr_portfolio_median_abs_err_pp": 17.8,
+    "roi_portfolio_mape_pct": null,
+    "roi_no_comparable": true,
+    "mean_uplift_pp": 1.69,
+    "i17_violations_total": 38
+  },
+  "per_tenant": {
+    "nrr": {
+      "57": {
+        "forecast": 100.0,
+        "actual": 67.73,
+        "abs_err_pp": 32.27
+      },
+      "58": {
+        "forecast": 100.0,
+        "actual": 96.36,
+        "abs_err_pp": 3.64
+      },
+      "59": {
+        "forecast": 93.27,
+        "actual": 104.13,
+        "abs_err_pp": 10.86
+      },
+      "60": {
+        "forecast": 100.02,
+        "actual": 124.76,
+        "abs_err_pp": 24.74
+      },
+      "61": {
+        "forecast": 100.0,
+        "actual": 33.28,
+        "abs_err_pp": 66.72
+      },
+      "62": {
+        "forecast": 96.61,
+        "actual": 95.86,
+        "abs_err_pp": 0.75
+      }
+    },
+    "i17": {
+      "57": 8,
+      "58": 6,
+      "59": 0,
+      "60": 10,
+      "61": 6,
+      "62": 8
+    }
+  },
+  "per_difficulty": {}
+}

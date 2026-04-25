@@ -72,6 +72,19 @@ This register is the **single source of truth** for every AI/ML/statistical mode
 - **SR 11-7 Risk Class:** High (directly forecasts revenue)
 - **EU AI Act Risk:** Limited Risk (not decision-making on natural persons)
 - **Open Gaps:** Independent validator; monthly backtest vs. actuals; uncertainty bounds
+- **Backtest Results (Apr 24-25 2026, 6-tenant probe):**
+  - **Dataset:** [scripts/datasets/claude_driven_backtest_v1.json](../../../scripts/datasets/claude_driven_backtest_v1.json) (35 accounts across 6 tenants: phoenix-saas-demo + T01-T05 spanning balanced/crisis/stable/expansion archetypes)
+  - **Results:** [scripts/datasets/claude_driven_backtest_v15_6tenants_results.json](../../../scripts/datasets/claude_driven_backtest_v15_6tenants_results.json)
+  - **Portfolio NRR MAPE: 23.16 pp** (median 17.8 pp) — exceeds 5pp ship target
+  - **Per-tenant MAPE range:** 0.75 pp (phoenix, calibrated) → 66.72 pp (T05 crisis_heavy)
+  - **Mean with-CS-Pulse uplift: +1.69pp** (collapsed from +22.6pp v1 forecast — confirming v1's uplift was largely forecast-error artifact)
+  - **v1.5 Fix 1+3 status:** **Does not generalize.** Phoenix MAPE improved 18.45→0.75 pp because phoenix had rich LLM-Tier-1 OUTCOME enrichment putting accounts in `saved_account_ids`. Cold-start tenants (T01/T02/T04/T05) without outcome density fall through to the 100%-NRR fallback path, producing 24-67pp errors. The improvement was data-shape-driven, not model-driven.
+  - **Root cause identified:** Wizard B's `without_cs_pulse_nrr_pct` is computed as `sum(arr - existing_lost + existing_expansion)` for non-saved accounts. Without OUTCOME nodes signaling churn/expansion, every account contributes 100% — forecast becomes structurally unable to predict future state from health trajectory alone. **This is a v2.0 structural gap, not a calibration gap.**
+  - **I17 invariant violations:** 38 across 6 tenants (Wizard A / LLM Tier 1 producing reverse-time `CAUSED_BY` edges — separate platform bug, logged as backlog).
+  - **Test harness:** [tests/e2e/test_claude_driven_backtest.py](../../backend/tests/e2e/test_claude_driven_backtest.py)
+  - **What ships in v1.5:** Fix 1+3 retention bands at line 921 (strict improvement for outcome-rich tenants; no-op for cold-start). Slide-deck "+22.6pp uplift" claim is **NOT defensible at portfolio level** until v2.0 generalizes the forecast.
+  - **v2.0 prototype (Apr 25 2026, feature-flagged OFF):** Continuous renewal projection applied to all accounts, gated on `FEATURE_WIZARD_B_V2_FORECAST` env var. 6-tenant Claude probe portfolio MAPE = 27.77pp (worse than v1.5's 23.16pp). **Production default: toggle OFF (v1.5 behavior).** Code in tree for research; rollback = unset env var.
+  - **Load-driver shape A/B test (Apr 25 2026, decisive finding):** Generated 15-account slides_demo_saas_v2 tenant via load-driver (proper Wizard A arc taxonomy, full 7-CSV shape). Same Wizard B code, same DB, same pytest. **v1.5 MAPE: 0.90pp** (vs 23.16pp on Claude-shaped data) — 25× improvement attributable to data shape alone. v2.1 on load-driver: 14.35pp (worse than v1.5 on this shape). **Conclusion:** the 18-23pp Claude MAPE was largely an artifact of synthetic-harness vocabulary mismatch, not Wizard B algorithmic failure. v2 was solving a problem that mostly didn't exist on real-customer-shape data. v1.5 + load-driver-shape input is shippable as Beta default. Result file: `scripts/datasets/loaddriver_v15_v21_results.json`.
 
 ---
 
