@@ -267,8 +267,19 @@ def close_execution(
             execution.health_delta = health_at_close - execution.health_at_trigger
 
     # ── Revenue attribution (churn probability model) ──
+    # Uses execution.health_at_trigger — the health SNAPSHOT taken at
+    # start_execution time. This is the canonical anchor: without it we'd
+    # be computing attribution against either (a) today's health, which
+    # disadvantages retroactive seeding, or (b) a stale field, which can
+    # silently shift as KPI ingest changes history.
+    #
+    # `is not None` (not truthy) — a legitimate 0.0 trigger health must
+    # still allow attribution (an account that started at literal zero
+    # and reached 50 is the MAXIMUM-impact rescue).
     arr = float(execution.arr_at_trigger or 0)
-    if revenue_protected is None and health_at_close is not None and execution.health_at_trigger:
+    if (revenue_protected is None
+            and health_at_close is not None
+            and execution.health_at_trigger is not None):
         churn_before = health_to_annual_churn_prob(execution.health_at_trigger)
         churn_after = health_to_annual_churn_prob(health_at_close)
         churn_reduction = max(0, churn_before - churn_after)
@@ -277,7 +288,9 @@ def close_execution(
         revenue_protected = 0
 
     # ── Expansion attribution (expansion probability model) ──
-    if revenue_expanded == 0 and health_at_close is not None and execution.health_at_trigger:
+    if (revenue_expanded == 0
+            and health_at_close is not None
+            and execution.health_at_trigger is not None):
         exp_before = health_to_annual_expansion_prob(execution.health_at_trigger)
         exp_after = health_to_annual_expansion_prob(health_at_close)
         exp_increase = max(0, exp_after - exp_before)
@@ -437,13 +450,19 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
 
         # ── Link recent SIGNAL nodes → OUTCOME for causal traversal ──
         # Enables "Why did this happen?" queries via get_causal_chain.
-        # Connect up to 3 most recent signals for this account.
+        # Connect up to 3 most recent signals that occurred BEFORE the
+        # outcome. The "occurred_at <= outcome_ts" filter was added Apr 21
+        # 2026 to eliminate I17 (reverse-time) violations — historical /
+        # back-dated playbook closes were previously linked to signals that
+        # post-dated the outcome, producing mechanically backward causal
+        # edges visible to buyer audits.
         recent_signals = (
             ContextNode.query
             .filter(
                 ContextNode.account_id == execution.account_id,
                 ContextNode.customer_id == customer_id,
                 ContextNode.node_type == 'SIGNAL',
+                ContextNode.occurred_at <= outcome_node.occurred_at,
             )
             .order_by(ContextNode.occurred_at.desc())
             .limit(3)

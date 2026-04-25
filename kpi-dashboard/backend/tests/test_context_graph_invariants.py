@@ -406,6 +406,36 @@ def test_i11_dirty(ctx):
         assert violations[0].details['tag_bucket'] == 'lost'
 
 
+def test_i11_pipeline_clean(ctx):
+    """expansion_approved (bucket=pipeline) tagged with matching 'expansion_approved'
+    (or bare 'pipeline' bucket key) is clean. Added when pipeline bucket split
+    from expansion on Apr 21 2026 to prevent closed+approved double-count."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_approved',
+                   revenue_impact=1_060_000, revenue_impact_type='expansion_approved')
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_opportunity',
+                   revenue_impact=500_000, revenue_impact_type='pipeline')
+        db.session.commit()
+        violations = run_invariant('I11', ctx['customer_id'])
+        assert violations == []
+
+
+def test_i11_pipeline_dirty(ctx):
+    """expansion_approved subtype (bucket=pipeline) tagged as 'expansion_closed'
+    (bucket=expansion) is a bucket mismatch — catches the exact bug the Apr 21
+    split fixes: a pipeline deal getting bucketed as realized revenue."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        _make_node(ctx, node_type='OUTCOME', node_subtype='expansion_approved',
+                   revenue_impact=1_060_000, revenue_impact_type='expansion_closed')
+        db.session.commit()
+        violations = run_invariant('I11', ctx['customer_id'])
+        assert len(violations) == 1
+        assert violations[0].details['subtype_bucket'] == 'pipeline'
+        assert violations[0].details['tag_bucket'] == 'expansion'
+
+
 # ═════════════════════════════════════════════════════════════════════
 # I12 — account_status vs health consistency
 # ═════════════════════════════════════════════════════════════════════
@@ -919,3 +949,112 @@ def test_mod004_revenue_filter_excludes_unearned_outcomes(ctx):
         assert round(result['protected']) == round(200000 * 0.87), (
             f"Expected protected = 200K*0.87 (earned only), got {result['protected']}"
         )
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Must-have-before-Beta tests (added Apr 22 2026)
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_validate_edge_pre_commit_temporal():
+    """Pre-commit gate (I17 extension) accepts past→present causal edges
+    and rejects present→past. Exercises the new from_occurred_at /
+    to_occurred_at params on validate_edge_pre_commit."""
+    from utils.context_graph_invariants import validate_edge_pre_commit
+
+    past = datetime(2026, 1, 1)
+    present = datetime(2026, 4, 1)
+
+    ok, reason = validate_edge_pre_commit(
+        from_node_type='SIGNAL', from_node_subtype='champion_loss',
+        to_node_type='OUTCOME', to_node_subtype='churn_lost',
+        edge_type='LED_TO', source_platform='test',
+        from_occurred_at=past, to_occurred_at=present,
+    )
+    assert ok is True and reason is None, f'past→present should pass: {reason}'
+
+    ok, reason = validate_edge_pre_commit(
+        from_node_type='SIGNAL', from_node_subtype='champion_loss',
+        to_node_type='OUTCOME', to_node_subtype='churn_lost',
+        edge_type='LED_TO', source_platform='test',
+        from_occurred_at=present, to_occurred_at=past,
+    )
+    assert ok is False, 'present→past must be rejected'
+    assert reason and reason.startswith('I17:'), f'reason should tag I17, got: {reason}'
+
+    # Timestamps unknown → gate skips temporal check (legacy data path)
+    ok, reason = validate_edge_pre_commit(
+        from_node_type='SIGNAL', from_node_subtype='x',
+        to_node_type='OUTCOME', to_node_subtype='revenue_protected',
+        edge_type='LED_TO', source_platform='test',
+        from_occurred_at=None, to_occurred_at=None,
+    )
+    assert ok is True, 'missing timestamps should fall through (polarity OK)'
+
+
+def test_playbook_close_filters_future_signals(ctx):
+    """_close_execution_write_outcome must skip SIGNALs that occurred AFTER
+    the OUTCOME timestamp. Before Apr 21 2026 fix, signals newer than a
+    retroactively-closed playbook produced reverse-time LED_TO edges.
+    This test proves the filter now blocks that pattern."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        from utils.playbook_lifecycle import _write_context_graph_outcome
+        from models import PlaybookExecutionV2
+        import uuid
+
+        # Create 3 SIGNALs at different times: one before, one at, one after
+        # the playbook outcome. Only the first two should be linked.
+        outcome_ts = datetime(2026, 2, 15)
+        sig_before = _make_node(ctx, node_type='SIGNAL', node_subtype='champion_loss',
+                                occurred_at=datetime(2026, 1, 10), source='customer')
+        sig_at = _make_node(ctx, node_type='SIGNAL', node_subtype='engagement_decline',
+                            occurred_at=outcome_ts, source='customer')
+        sig_after = _make_node(ctx, node_type='SIGNAL', node_subtype='ticket_spike',
+                               occurred_at=datetime(2026, 3, 20), source='customer')
+        db.session.commit()
+
+        # Synthesize a closed V2 execution ROW (without going through the full
+        # start → close flow — the outcome-writer is what we're testing).
+        execution = PlaybookExecutionV2(
+            execution_id=f'test-{uuid.uuid4().hex[:8]}',
+            customer_id=ctx['customer_id'],
+            account_id=ctx['account_id'],
+            playbook_id='PB-TEST-01',
+            status='closed',
+            closed_at=outcome_ts,
+            health_at_trigger=42, arr_at_trigger=1_000_000,
+            revenue_protected=100_000,
+        )
+        db.session.add(execution)
+        db.session.commit()
+
+        # Directly invoke the OUTCOME writer with the backdated timestamp
+        _write_context_graph_outcome(
+            execution=execution,
+            customer_id=ctx['customer_id'],
+            outcome='resolved',
+            revenue_protected=100_000,
+            revenue_expanded=0,
+            arr=1_000_000,
+            full_cost=3000,
+            occurred_at=outcome_ts,
+        )
+        db.session.commit()
+
+        # Find the OUTCOME node + all LED_TO edges into it
+        outcome_node = (ContextNode.query
+            .filter_by(account_id=ctx['account_id'], node_type='OUTCOME')
+            .order_by(ContextNode.node_id.desc()).first())
+        assert outcome_node is not None, 'OUTCOME node should have been written'
+
+        led_to_edges = (ContextEdge.query
+            .filter_by(to_node_id=outcome_node.node_id, edge_type='LED_TO').all())
+
+        linked_signal_ids = {e.from_node_id for e in led_to_edges}
+        assert sig_before.node_id in linked_signal_ids, (
+            f'past signal {sig_before.node_id} should be linked')
+        # sig_at same-timestamp is acceptable (filter is <=)
+        assert sig_after.node_id not in linked_signal_ids, (
+            f'FUTURE signal {sig_after.node_id} must NOT be linked — this is '
+            f'the bug the Apr 21 filter fixes')

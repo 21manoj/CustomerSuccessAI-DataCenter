@@ -127,8 +127,10 @@ except Exception as _tax_err:
         },
         'lost': {'churn_lost', 'contraction'},
         'expansion': {
-            'expansion_closed', 'new_logo', 'revenue_expanded',
-            'expansion_opportunity', 'expansion_approved', 'revenue_growth',
+            'expansion_closed', 'new_logo', 'revenue_expanded', 'revenue_growth',
+        },
+        'pipeline': {
+            'expansion_approved', 'expansion_opportunity',
         },
         'protected': {
             'revenue_protected', 'churn_averted',
@@ -1259,17 +1261,34 @@ def validate_edge_pre_commit(
     to_node_subtype: Optional[str],
     edge_type: str,
     source_platform: str,
+    from_occurred_at=None,
+    to_occurred_at=None,
 ) -> tuple:
     """Return (is_valid, reject_reason). Reject reason is None when valid.
 
     Enforces:
       I1 — no OUTCOME→OUTCOME causal edges
       I2 — no polarity-mismatched signal→outcome edges
+      I17 — no reverse-time causal edges (cause.occurred_at > effect.occurred_at).
+            Added Apr 21 2026 to reduce accumulation of mechanically-backward
+            edges that surface in buyer-visible causal chains.
 
     Non-causal edge types (INVOLVES, RELATED_TO, etc.) pass through.
+    Temporal check is skipped when either occurred_at is None (legacy data /
+    unknown timestamp — validator can't prove direction).
     """
     if edge_type not in CAUSAL_EDGE_TYPES:
         return True, None
+
+    # I17: reverse-time causal edge.
+    if from_occurred_at is not None and to_occurred_at is not None:
+        if from_occurred_at > to_occurred_at:
+            return False, (
+                f'I17: reverse-time causal edge rejected '
+                f'({from_node_subtype} at {from_occurred_at} '
+                f'--{edge_type}--> {to_node_subtype} at {to_occurred_at} '
+                f'via {source_platform})'
+            )
 
     # I1: Block OUTCOME→OUTCOME causal edges.
     if from_node_type == 'OUTCOME' and to_node_type == 'OUTCOME':
