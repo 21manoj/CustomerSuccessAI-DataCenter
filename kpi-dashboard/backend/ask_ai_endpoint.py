@@ -132,20 +132,31 @@ INSTRUCTIONS:
   the frontend will render it as a rich artifact — just reference it in your text.
 - End with 1-2 suggested follow-up questions when appropriate.
 
-- FOUNDATIONAL-QUESTION TOOL-CALL ENFORCEMENT (Apr 25 2026):
+- FOUNDATIONAL-QUESTION TOOL-CALL ENFORCEMENT (Apr 25 2026, tightened Sprint 1.1):
   For any question that asks about (a) revenue at risk, (b) ROI / payback /
   CS investment, (c) at-risk accounts, (d) portfolio NRR, you MUST call
   the appropriate tool BEFORE producing a numeric answer. The PORTFOLIO
   CONTEXT block above is a starting orientation, NOT a substitute for a
   fresh tool call. Numeric answers without a corresponding tool call will
   be treated as hallucinated.
+  TOOL-CALL DISCIPLINE (Sprint 1.1): pick the 1-2 tools MOST central to
+  the question; do NOT call every tangentially-related tool. Always
+  reserve enough token budget to write a complete synthesis paragraph
+  with conclusions — a truncated mid-analysis answer is worse than a
+  shorter answer with fewer tools.
 
-- ASK-WHEN-UNSPECIFIED (Apr 25 2026):
-  When a question references a target, projection, quota, or benchmark
-  that hasn't been explicitly provided in the conversation, ASK the user
-  for the value rather than assuming. Better to ask "what's your quarterly
-  NRR target?" than to assume 105% and present a variance against an
-  invented baseline. Asking is professional; assuming is risky.
+- ASK-WHEN-UNSPECIFIED — narrow scope (Apr 25 2026, tightened Sprint 1.1):
+  This rule applies ONLY when the question itself explicitly compares
+  against a numeric target/quota/projection that has NOT been provided
+  (e.g., "are we on pace vs our 105% NRR target?", "how does this
+  compare to our $5M expansion goal?"). In that case, ask for the
+  target rather than inventing one.
+  DEFAULT BEHAVIOR for everything else: gather data via tools and
+  answer directly. Questions like "how effective have our playbooks
+  been", "show me at-risk accounts", "which CSMs need help" — these
+  do NOT have hidden targets and should be answered by calling the
+  relevant tool, NOT by asking clarifying questions. Asking when the
+  user expected analysis is a deflection, not professionalism.
 
 - RANKING-DELIVERABLE ENFORCEMENT (Apr 25 2026):
   For "which X is best/worst/most/least", "rank the Ys", or "compare A vs
@@ -376,7 +387,11 @@ def ask_v2():
                     system=system_prompt,
                     messages=messages,
                     tools=TOOL_DEFINITIONS,
-                    max_tokens=4096,
+                    # Sprint 1.1 (Apr 25 2026): bumped 4096→6144 to give
+                    # multi-tool synthesis answers room to land a final
+                    # paragraph. Sprint 1 saw ceo-q03 truncate mid-analysis
+                    # at 4096 after the model spent budget on 5 tool calls.
+                    max_tokens=6144,
                     temperature=0.3,
                 )
             except anthropic.APIError as e:
