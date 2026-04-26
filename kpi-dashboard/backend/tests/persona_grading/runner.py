@@ -62,7 +62,10 @@ def _run_ask_ai_for_question(
                 system=system_prompt,
                 messages=messages,
                 tools=TOOL_DEFINITIONS,
-                max_tokens=4096,
+                # Sprint 1.1 (Apr 25 2026): bumped 4096→6144 to match the
+                # production ask_ai_v2 token budget. Sprint 1 saw multi-tool
+                # synthesis questions truncate mid-final-paragraph at 4096.
+                max_tokens=6144,
                 temperature=0.3,
             )
         except Exception as e:
