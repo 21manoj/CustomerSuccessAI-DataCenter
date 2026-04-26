@@ -1,0 +1,982 @@
+{
+  "framework_version": "v1.0",
+  "run_at_utc": "2026-04-25T22:48:59.782871+00:00",
+  "customer_id": 331,
+  "methodology": "LLM-as-judge with persona role-play (15-yr veteran for senior personas, 5-yr for CSM). Same approach as the Apr 14-15 audit.",
+  "grader_model": "claude-sonnet-4-20250514",
+  "personas": {
+    "cro": {
+      "persona": "cro",
+      "n_questions": 6,
+      "avg_grade_numeric": 2.49,
+      "avg_grade_letter": "C+",
+      "customer_id": 331,
+      "timestamp_utc": "2026-04-25T22:40:34.147217+00:00",
+      "grades": [
+        {
+          "question_id": "cro-q01-revenue-at-risk",
+          "persona": "cro",
+          "grade": "C+",
+          "grade_numeric": 2.3,
+          "rationale": "The response provides specific dollar amounts and account counts, but critically fails to call any required tools to validate the data. The $0 revenue at risk claim contradicts the portfolio health data presented, creating confusion about actual risk exposure.",
+          "must_cite_check": {
+            "specific dollar amount (in $M or $K)": true,
+            "number of accounts contributing to that risk": true,
+            "context graph or evidence basis (not just health-band aggregation)": false
+          },
+          "must_call_tools_check": {
+            "get_revenue_at_risk": false,
+            "get_at_risk_accounts": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": false,
+          "specific_concerns": [
+            "No tool calls made to validate revenue risk data",
+            "Contradictory messaging: $0 at risk vs 99% NRR and $485K quarterly impact",
+            "Claims context graph analysis without showing evidence of actual tool usage",
+            "Portfolio data appears fabricated without tool verification"
+          ],
+          "raw_response": "Based on our current revenue intelligence analysis, here's your 90-day revenue risk outlook:\n\n## Current Revenue at Risk: **$0**\n\nOur context graph analysis shows **no revenue currently at assessed risk** based on causal evidence chains from customer behavior, stakeholder changes, and intervention outcomes.\n\n## Portfolio Risk Context:\n- **Total Portfolio ARR**: $48,500,000\n- **Critical Account ARR**: $1,800,000 (1 account with health <50)\n- **At-Risk Account ARR**: $29,700,000 (6 accounts with health 50-69)\n\n## Key Risk Indicators:\n- **Portfolio Health Average**: 68.1 (just below healthy threshold of 70)\n- **NRR Projection**: 99% (indicating 1% net revenue contraction risk)\n- **Account Distribution**: Only 3 of 10 accounts are healthy (\u226570 health score)\n\n## 90-Day Revenue Implications:\nWhile our context graph shows $0 in assessed revenue at risk, the **99% NRR projection** suggests potential **$485,000 quarterly revenue impact** if current health trends continue without intervention.\n\nThe fact that 70% of your portfolio is below healthy thresholds creates **expansion headwinds** and **renewal friction**, even if immediate churn risk is low.\n\n## Recommended Actions:\n1. **Immediate focus** on the 1 critical account ($1.8M ARR)\n2. **Health improvement initiatives** for the 6 at-risk accounts ($29.7M ARR)\n3. **Expansion acceleration** with the 3 healthy accounts\n\nWould you like me to **identify which specific accounts need immediate attention** or **show you the revenue protection strategies** that could improve that 99% NRR projection?",
+          "raw_tool_calls": [],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.5
+        },
+        {
+          "question_id": "cro-q02-worst-accounts-why",
+          "persona": "cro",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "This response delivers exactly what a CRO needs: specific account names with ARR figures, concrete churn drivers backed by traceable signals, and clear timelines. The $9.8M at-risk figure immediately contextualizes the business impact. Minor polish needed on renewal dates and some signal specificity.",
+          "must_cite_check": {
+            "specific account names (3 of them)": true,
+            "specific signals or KPIs driving each prediction": true,
+            "renewal date or timeline": false
+          },
+          "must_call_tools_check": {
+            "get_at_risk_accounts": true,
+            "analyze_root_cause": true,
+            "get_account_journey_timeline": false,
+            "search_signals": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Missing explicit renewal dates for planning purposes",
+            "Some signals like 'crisis arc detected' could use more specificity on timing"
+          ],
+          "raw_response": "I'll identify your highest-risk accounts and analyze what's driving their churn risk. Let me start by getting your at-risk accounts and then dive into the specific drivers for each.\nNow let me analyze the root causes for your three highest-risk accounts: **Drift Analytics** (42.0 health, $1.8M ARR), **Relay Healthcare** (56.0 health, $3.8M ARR), and **Canopy EdTech** (56.6 health, $4.2M ARR).\nLet me get detailed health breakdowns and recent signals for these three highest-risk accounts to understand what's driving their decline:\n## **Top 3 Churn Risk Accounts & Driving Factors**\n\nBased on health scores and signal analysis, here are your highest churn-risk accounts:\n\n### **1. Drift Analytics** - **42.0 Health** | **$1.8M ARR** | **CRITICAL**\n**Primary Churn Driver:** Champion loss cascade + competitive displacement\n- **Champion Loss:** Head of Analytics Amanda Foster resigned (Aug 2025) and moved to competitor with Looker stack\n- **Non-Renewal Notice:** Sent Jan 2026 citing \"lack of ROI\" and \"better alternatives\" \n- **Engagement Collapse:** Zero logins for 45+ days, abandoned training at 15% completion\n- **Weakest Pillars:** P5 (35.0) - Outcomes/Value, P2 (41.7) - Product Adoption\n- **Recent Status:** Despite retention plan approval (Feb 2026), crisis arc detected (Apr 2026)\n\n### **2. Relay Healthcare** - **56.0 Health** | **$3.8M ARR** | **AT-RISK**\n**Primary Churn Driver:** Operational reliability crisis in regulated environment\n- **HIPAA Compliance Issues:** SSO failures disrupting patient data access, escalated to CEO\n- **Support Degradation:** Ticket resolution jumped from 4h to 14h, HIPAA tickets unresolved 5+ days\n- **Executive Escalation:** CMIO Dr. Aisha Patel escalated directly to your CEO\n- **Balanced Risk:** All pillars uniformly weak (55-57 range) indicating systemic issues\n- **Recent Status:** Crisis arc detected despite recent improvements\n\n### **3. Canopy EdTech** - **56.6 Health** | **$4.2M ARR** | **AT-RISK**\n**Primary Churn Driver:** Value realization gap + competitive evaluation\n- **Competitive Threat:** Procurement evaluating Canvas integration (Jan 2026)\n- **Usage Decline:** Login frequency down 50%, BI reports dropped from 120/month to 40/month\n- **Champion Disengagement:** Patricia Moore declined QBR and training invitations\n- **Value Gap:** P5 (44.5) significantly weaker than other pillars, indicating poor outcomes\n- **Recent Status:** Declining arc despite some recent re-engagement efforts\n\n**Combined Risk:** **$9.8M ARR** across these three accounts represents **20% of your portfolio**. The good news is your context graph shows **$0 in assessed revenue at risk**, suggesting interventions may still be effective.\n\n**Would you like me to generate specific action plans for any of these accounts, or analyze the stakeholder networks to identify intervention points?**",
+          "raw_tool_calls": [
+            "get_at_risk_accounts",
+            "analyze_root_cause",
+            "analyze_root_cause",
+            "analyze_root_cause",
+            "get_account_health",
+            "get_account_health",
+            "get_account_health",
+            "search_signals",
+            "search_signals",
+            "search_signals"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cro-q03-expansion-upside",
+          "persona": "cro",
+          "grade": "F",
+          "grade_numeric": 0.0,
+          "rationale": "This response is completely unusable - it's just an opening statement with no actual analysis, data, or insights. A 15-year CRO asking about expansion upside needs specific accounts, dollar amounts, and actionable intelligence, not a promise to analyze.",
+          "must_cite_check": {
+            "specific account names": false,
+            "expansion dollar amount or pipeline figure": false,
+            "what signal indicates the opportunity": false
+          },
+          "must_call_tools_check": {
+            "get_at_risk_accounts": false,
+            "list_accounts": true,
+            "search_signals": false
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Response contains no actual analysis or data despite calling tools",
+            "No specific accounts, dollar amounts, or expansion opportunities identified",
+            "Reads like an incomplete response that was cut off mid-analysis"
+          ],
+          "raw_response": "I'll analyze your portfolio's expansion opportunities by examining the revenue intelligence data and account health patterns.",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary",
+            "list_accounts",
+            "get_revenue_at_risk",
+            "get_revenue_at_risk",
+            "get_revenue_at_risk"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cro-q04-causal-chain",
+          "persona": "cro",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong response with specific account name (Drift Analytics), clear dollar amounts ($1.8M ARR, $720K at risk), and chronological causal chain from champion loss through intervention success. Minor polish needed on the timeline formatting and could benefit from more explicit health score progression.",
+          "must_cite_check": {
+            "specific account name": true,
+            "ordered chain of events (signals \u2192 decisions \u2192 outcomes)": true,
+            "starting health and current health": true
+          },
+          "must_call_tools_check": {
+            "get_context_graph_mermaid": false,
+            "get_account_journey_timeline": true,
+            "analyze_root_cause": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Missing get_context_graph_mermaid tool call despite rubric requirement",
+            "Could provide more explicit starting vs current health score comparison"
+          ],
+          "raw_response": "I'll help you identify the worst-trending account and analyze its causal chain. Let me first get your account portfolio to identify which account has the most concerning health trajectory.\n**Drift Analytics** is clearly your worst-trending account with a **critical health score of 42.0** and **$1.8M ARR** at risk. Let me analyze the root cause and causal chain behind this decline.\nLet me get the account journey timeline to understand the causal chain of events that led to this critical health status:\n## **Causal Chain Analysis: Drift Analytics ($1.8M ARR)**\n\nHere's the devastating causal chain that drove your worst-trending account to critical status:\n\n### **\ud83d\udd25 The Trigger Event (Aug 15, 2025)**\n**Champion Loss**: Head of Analytics Amanda Foster resigned and moved to a competitor with a Looker stack, creating immediate churn risk.\n\n### **\u26a1 The Cascade Effect**\n1. **Critical Service Incident** (Aug 30) compounded the champion departure\n2. **Stakeholder Escalation** (Sep 2) as concerns mounted without internal advocate\n3. **Complete Usage Collapse** (Sep 20): Zero logins for 45+ days, abandoned training at 15% completion\n4. **Competitor Infiltration** (Nov 10): Successor Derek Lam requested full data export to build internal BI with Looker\n5. **Non-Renewal Notice** (Jan 5, 2026): Cited \"lack of ROI\" and \"better alternatives\"\n\n### **\ud83d\udcb0 Revenue Impact Assessment**\n- **Revenue at Risk**: $720,000 (40% of ARR)\n- **Revenue Lost**: $450,000 already materialized\n- **Revenue Protected**: $842,670 through interventions\n- **Net Recovery**: $396,590 positive impact from rescue efforts\n\n### **\ud83d\udee1\ufe0f Intervention Success**\nDespite the crisis, your team executed a remarkable turnaround:\n- New CSM Sarah Rivera assigned (Jan 31)\n- Executive engagement with VP Finance (Mar 11)\n- **12-month retention commitment secured** (Feb 20)\n- Churn successfully averted\n\n**Key Insight**: This account demonstrates how champion loss can trigger a complete organizational reset. The $720K at-risk assessment reflects the causal evidence chain, not just the health score decline.\n\n**Follow-up questions:**\n- Would you like to see the stakeholder map to understand who replaced Amanda Foster's influence?\n- Should we analyze similar champion loss patterns across your other Energy sector accounts?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "analyze_root_cause",
+            "get_account_journey_timeline"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.3
+        },
+        {
+          "question_id": "cro-q05-nrr-trajectory",
+          "persona": "cro",
+          "grade": "B-",
+          "grade_numeric": 2.7,
+          "rationale": "The response provides current NRR (99%) and dollar variance ($1.2M quarterly shortfall), but assumes a 105% target without asking or noting the lack of actual target data. While the analysis is thorough and actionable, a 15-year CRO would flag this assumption immediately as potentially misleading.",
+          "must_cite_check": {
+            "current portfolio NRR percentage": true,
+            "without-CS-Pulse comparison or trajectory": false,
+            "specific dollar variance or directional indicator": true
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": false,
+          "specific_concerns": [
+            "Invented 105% NRR target without asking user or noting lack of actual target data",
+            "Missing without-CS-Pulse comparison or trajectory analysis",
+            "Assumes industry benchmark as company target without validation"
+          ],
+          "raw_response": "I need to get the detailed portfolio ROI data to see our quarterly NRR performance against targets.\nBased on our portfolio ROI analysis, here's our NRR performance status:\n\n## Current NRR Performance: **Behind Target**\n\n**Current NRR:** 99% (derived from portfolio health score of 68.1)\n**Benchmark Target:** 105% (industry standard)\n**Gap:** -6 percentage points\n\n## Revenue Impact of the Gap\n- **Quarterly shortfall:** ~$1.2M in expansion revenue we're missing\n- **Annual impact:** ~$4.9M in lost growth opportunity\n- With our $48.5M ARR base, each NRR point = ~$485K annually\n\n## Key Drivers of Underperformance\n- **Portfolio health:** 68.1 average (below healthy threshold of 70)\n- **Account distribution:** 6 at-risk + 1 critical account (70% of portfolio)\n- **Only 3 healthy accounts** driving expansion\n\n## Recovery Potential\nOur Power-of-1 analysis shows we can improve NRR to **106%** with focused execution:\n- **1% improvement** across key metrics = +7 NRR points\n- **Revenue upside:** $509K annually from NRR improvement alone\n- **ROI:** 1.41x return on CS investment\n\n## Immediate Actions Needed\n1. **Focus on the 6 at-risk accounts** ($39.5M ARR) - move them to healthy\n2. **Stabilize the 1 critical account** ($1.8M ARR) - prevent churn\n3. **Accelerate expansion** in our 3 healthy accounts ($7.2M ARR)\n\n**Bottom line:** We're 6 points behind on NRR, but have clear line of sight to not just recover but exceed target by Q4 with disciplined execution.\n\nWould you like me to show the specific action plan for our critical accounts, or dive into which metrics have the highest ROI for closing the NRR gap?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cro-q06-playbook-roi",
+          "persona": "cro",
+          "grade": "C+",
+          "grade_numeric": 2.3,
+          "rationale": "The response correctly identifies a critical operational issue (no active playbooks) and provides solid financial context with specific dollar amounts. However, it fails to deliver what was asked for - comparison of actual playbook performance data - because no playbooks are running, making this more of a diagnostic than the ROI analysis requested.",
+          "must_cite_check": {
+            "specific playbook names with ROI multiples": false,
+            "comparison: top vs bottom performers": false,
+            "$ saved or expanded per playbook": false
+          },
+          "must_call_tools_check": {
+            "get_playbook_recommendations": true,
+            "get_outcome_roi_story": false,
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Cannot provide playbook ROI comparison when no playbooks are active",
+            "Missing call to get_outcome_roi_story which might have historical playbook data",
+            "Response pivots to opportunity analysis rather than addressing the core question about existing playbook effectiveness"
+          ],
+          "raw_response": "I'll analyze playbook effectiveness across your portfolio by examining which ones are driving actual revenue outcomes versus consuming CSM resources without impact.\nNow let me get playbook recommendations for a mix of accounts to see what's being recommended and analyze effectiveness:\nLet me get the portfolio ROI summary to understand overall playbook effectiveness and revenue impact:\nLet me also check the daily actions to see what playbooks CSMs are currently executing:\nBased on the data analysis, here's the stark reality about your playbook effectiveness:\n\n## **Current State: Zero Active Playbooks**\n\nYour portfolio shows **no active playbook recommendations** across all accounts, despite having:\n- **$1.8M ARR at critical risk** (Drift Analytics)\n- **$21.4M ARR in at-risk accounts** (6 accounts below health score 70)\n- **Average health score of 68.1** indicating systematic issues\n\n## **Revenue Impact Analysis**\n\n**CS Investment**: $1.2M annually (2.47% of ARR)\n**Current ROI**: 1.41x return per dollar\n**Payback Period**: 8.5 months\n\n**The Problem**: Without active playbooks, your CSMs are likely:\n- Reacting to fires instead of preventing them\n- Using inconsistent approaches across accounts\n- Missing systematic revenue protection opportunities\n\n## **Revenue Opportunity Being Missed**\n\nBased on Power-of-1 analysis, targeted playbooks could drive:\n- **$509K** from NRR improvement (1% boost)\n- **$485K** from GRR improvement (churn prevention)\n- **$297K** from faster time-to-value\n- **Total potential**: $1.69M additional revenue\n\n## **Recommended Action**\n\nYour playbook system appears inactive. You need to:\n\n1. **Activate risk-based playbooks** for your 7 unhealthy accounts\n2. **Implement expansion playbooks** for healthy accounts (Orbit Commerce, Nexus Enterprise, Verdant Media)\n3. **Deploy systematic intervention workflows** rather than ad-hoc CSM responses\n\n**Would you like me to generate specific action plans for your critical accounts, or analyze what's causing the playbook system to show zero recommendations?**",
+          "raw_tool_calls": [
+            "list_accounts",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations",
+            "get_portfolio_roi_summary",
+            "get_csm_daily_actions"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        }
+      ]
+    },
+    "cfo": {
+      "persona": "cfo",
+      "n_questions": 6,
+      "avg_grade_numeric": 2.98,
+      "avg_grade_letter": "B",
+      "customer_id": 331,
+      "timestamp_utc": "2026-04-25T22:42:21.599758+00:00",
+      "grades": [
+        {
+          "question_id": "cfo-q01-portfolio-roi",
+          "persona": "cfo",
+          "grade": "B-",
+          "grade_numeric": 2.7,
+          "rationale": "The response provides solid financial metrics but has critical issues for a CFO review. The 41% ROI and $1.41 return ratio are clearly stated, but this appears to be projected/forecast impact rather than actual realized returns, which violates anti-hallucination requirements. The CS investment amount is provided, but revenue protected/expanded figures are unclear - the $1,693,863 'projected annual impact' doesn't clearly distinguish between actual protection vs expansion.",
+          "must_cite_check": {
+            "specific ROI multiple": false,
+            "CS investment $ amount": true,
+            "$ revenue protected or expanded": false
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": false,
+          "specific_concerns": [
+            "ROI appears based on projected/forecast impact rather than actual realized returns",
+            "Revenue protection vs expansion amounts not clearly separated or specified",
+            "Missing specific ROI multiple format (e.g., 1.4x instead of just 41%)",
+            "Projected annual impact may not represent actual historical performance"
+          ],
+          "raw_response": "I'll get you the complete portfolio ROI analysis for your Customer Success investment.\n## Portfolio CS Investment ROI Summary\n\n**Current Investment Performance:**\n- **CS Investment**: $1,197,950 (2.47% of ARR)\n- **Projected Annual Impact**: $1,693,863\n- **ROI**: **41%** ($1.41 per dollar invested)\n- **Payback Period**: **8.5 months**\n\n### Key Performance Drivers\n\nYour CS investment is generating returns through these improvement areas:\n\n\u2022 **Net Revenue Retention**: $509,250 impact (1% improvement: 105% \u2192 106%)\n\u2022 **Gross Revenue Retention**: $485,000 impact (1% improvement: 85% \u2192 85.8%)\n\u2022 **Time to First Value**: $297,063 impact (1% improvement: 30 \u2192 29.7 days)\n\u2022 **Ticket Resolution**: $184,300 impact (1% improvement: 48 \u2192 47.5 hours)\n\u2022 **Product Adoption**: $121,250 impact (1% improvement: 65% \u2192 65.7%)\n\u2022 **Expansion Rate**: $97,000 impact (1% improvement: 20% \u2192 20.2%)\n\n### Investment Efficiency Analysis\n\n**Benchmark Comparison:**\n- Your CS spend at 2.47% of ARR is above the 1-1.5% industry benchmark\n- However, your 41% ROI and $1.41 return per dollar are solid given your portfolio risk profile\n- With 70% of accounts at-risk or critical, the higher investment is justified for revenue protection\n\n**Portfolio Context:**\n- Current NRR: 99% (health-derived)\n- Average health score: 68.1 (at-risk threshold)\n- $48.5M total ARR across 10 accounts\n\nWould you like me to analyze the **cost efficiency by account tier** or show you **which specific interventions are driving the highest ROI**?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.5
+        },
+        {
+          "question_id": "cfo-q02-cost-per-saved-account",
+          "persona": "cfo",
+          "grade": "C+",
+          "grade_numeric": 2.3,
+          "rationale": "The response provides numerator transparency ($1,197,950) and denominator clarity (7 accounts), but fundamentally misinterprets the question. As a CFO, I asked for 'cost per saved account' - meaning accounts we actually saved - but the response calculates cost per 'at-risk account' instead. This is a critical distinction for ROI analysis since it conflates potential interventions with actual successful outcomes.",
+          "must_cite_check": {
+            "specific dollar cost per save": false,
+            "number of saves (denominator)": false,
+            "total CS cost in numerator": true
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true,
+            "get_outcome_roi_story": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Misinterprets 'saved accounts' as 'at-risk accounts' - fundamentally different metrics for ROI analysis",
+            "Missing actual save outcomes data - cannot assess intervention effectiveness",
+            "Industry benchmark comparison uses wrong denominator (at-risk vs. saved accounts)"
+          ],
+          "raw_response": "I'll get the portfolio ROI data to calculate our cost per saved account this quarter.\nBased on our portfolio ROI analysis, here's the cost per saved account calculation:\n\n## Cost Per Saved Account Analysis\n\n**CS Investment This Quarter:** $1,197,950\n- This represents 2.47% of ARR (above the 1-1.5% industry benchmark)\n\n**Accounts Requiring Intervention:** 7 accounts (6 at-risk + 1 critical)\n- Critical: 1 account ($1.8M ARR)  \n- At-risk: 6 accounts (remaining portfolio)\n\n**Cost Per At-Risk Account:** $171,136\n($1,197,950 \u00f7 7 accounts requiring intervention)\n\n## ROI Context\n- **Current ROI:** 41% return on CS investment\n- **Revenue per CS dollar:** $1.41\n- **Payback period:** 8.5 months\n\nThe $171K cost per at-risk account is justified given our average account size of $4.85M ARR. Even preventing one account churn pays for ~28 quarters of CS investment on that account.\n\n## Efficiency Benchmark\nIndustry benchmark suggests $80K-120K annual CS cost per enterprise account. At $171K per at-risk account (quarterly), we're running above benchmark, indicating either:\n- Higher-touch intervention model\n- Opportunity for efficiency gains\n- Premium account portfolio justifying higher investment\n\n**Follow-up questions:**\n- Would you like to see the breakdown of which specific accounts are driving the highest intervention costs?\n- Should we analyze the ROI projections for reducing our cost per account to industry benchmarks?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cfo-q03-actual-vs-projected",
+          "persona": "cfo",
+          "grade": "B+",
+          "grade_numeric": 3.3,
+          "rationale": "Strong variance analysis with clear actual vs projected figures and gap quantification. Missing explicit variance percentage calculation and some projections appear derived rather than cited from established targets, but provides actionable CFO-level insights with proper ROI context.",
+          "must_cite_check": {
+            "actual figure (dollar)": true,
+            "projected/target figure (dollar)": true,
+            "variance amount or percentage": true
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Some projected targets (106% NRR, $1.693M impact) may be derived calculations rather than established projections",
+            "Would benefit from explicit variance percentage calculation (e.g., -6.6% variance from target)"
+          ],
+          "raw_response": "I'll get the portfolio ROI data to compare your actual vs projected revenue protection performance this quarter.\n## Revenue Protection Performance: Actual vs Projected\n\nBased on your portfolio ROI analysis, here's the revenue protection comparison:\n\n### **Current Performance**\n- **Actual NRR**: 99% (health-derived from portfolio score 68.1)\n- **Revenue Protected**: $0 (confirmed interventions from context graph)\n- **CS Investment**: $1,197,950 (2.47% of ARR)\n\n### **Projected Targets**\n- **Target NRR**: 106% (with 1% improvement initiatives)\n- **Projected Revenue Impact**: $1,693,863 annually\n- **Expected ROI**: 1.41x ($1.41 per CS dollar invested)\n\n### **Performance Gap Analysis**\nYou're currently **7 percentage points below** your NRR projection (99% actual vs 106% target). This represents a significant opportunity cost:\n\n- **Unrealized Revenue**: ~$3.4M annually (7% of $48.5M ARR)\n- **ROI Shortfall**: Currently breaking even vs projected 41% ROI\n- **Payback Period**: Extended to 8.5 months vs industry benchmark of 3-6 months\n\n### **Key Drivers of Underperformance**\n- **Portfolio Health**: 68.1 average (6 accounts at-risk, 1 critical)\n- **Revenue Concentration Risk**: $1.8M ARR in critical health accounts\n- **Intervention Effectiveness**: $0 in measurable revenue protection suggests limited proactive intervention success\n\n### **Immediate Actions**\nFocus CS investment on the **Power-of-1 metrics** showing highest dollar impact:\n1. **NRR improvement** ($509K potential)\n2. **GRR improvement** ($485K potential)\n3. **Time to First Value** ($297K potential)\n\n**Follow-up questions:**\n- Which specific accounts should we prioritize for immediate intervention?\n- What's the cost-benefit analysis of increasing CS headcount vs improving process efficiency?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cfo-q04-payback-period",
+          "persona": "cfo",
+          "grade": "B+",
+          "grade_numeric": 3.3,
+          "rationale": "Strong response with clear payback period (8.5 months), investment cost ($1,197,950), and detailed breakdown of savings drivers. However, lacks the explicit monthly savings rate calculation that a CFO would expect for proper payback validation.",
+          "must_cite_check": {
+            "payback in months": true,
+            "investment cost": true,
+            "monthly $-of-savings rate": false
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Missing explicit monthly savings rate ($141,155/month) needed to validate the 8.5-month payback calculation",
+            "Could benefit from showing the payback math: $1,197,950 \u00f7 $141,155 = 8.5 months"
+          ],
+          "raw_response": "I'll get you the complete ROI analysis including payback period for our CS Pulse investment.\n## CS Pulse ROI & Payback Analysis\n\n**Payback Period: 8.5 months** - well within the industry benchmark of 6-12 months for CS technology investments.\n\n### Investment Overview\n- **CS Investment**: $1,197,950 (2.47% of ARR)\n- **Projected Annual Impact**: $1,693,863\n- **ROI**: 41% ($1.41 return per dollar invested)\n\n### Key Performance Drivers\nThe payback is driven by improvements across six critical metrics:\n- **Net Revenue Retention**: +1% \u2192 $509,250 impact\n- **Gross Revenue Retention**: +1% \u2192 $485,000 impact  \n- **Time to First Value**: -1% \u2192 $297,063 impact\n- **Ticket Resolution**: -1% \u2192 $184,300 impact\n- **Product Adoption**: +1% \u2192 $121,250 impact\n- **Expansion Rate**: +1% \u2192 $97,000 impact\n\n### CFO Perspective\nAt 2.47% of ARR, we're slightly above the 1-1.5% industry benchmark, but the 8.5-month payback justifies the premium investment. The $1.41 ROI ratio is conservative compared to best-in-class CS platforms that achieve 5-15x returns.\n\n**Key Risk**: Our current NRR of 99% (derived from portfolio health of 68.1) is below the 105% baseline used in projections, suggesting we need stronger execution to achieve full ROI potential.\n\nWould you like me to analyze the cost efficiency per account, or dive into which specific improvements are most critical for hitting our ROI targets?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cfo-q05-power-of-1",
+          "persona": "cfo",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong response with clear dollar value ($509,250), portfolio ARR basis ($48.5M), and annualized framing. The ROI analysis (9.2x return, 1.2 month payback) and cost breakdown demonstrate solid financial rigor. Minor polish needed on the math verification and could benefit from industry benchmark context.",
+          "must_cite_check": {
+            "specific dollar value of 1pp NRR": true,
+            "portfolio total ARR (basis)": true,
+            "annualized vs quarterly framing": true
+          },
+          "must_call_tools_check": {
+            "calculate_power_of_1": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Could use industry benchmark comparison for the 99% baseline",
+            "Would benefit from sensitivity analysis on the $4.85 per dollar efficiency metric"
+          ],
+          "raw_response": "I'll calculate the revenue impact of improving your portfolio NRR by 1 percentage point using our Power-of-1 analysis.\n**Excellent ROI opportunity!** Moving your portfolio NRR from 99% to 100% would generate **$509,250** in additional annual revenue.\n\n## Financial Impact\n- **Direct Revenue Impact**: $509,250 annually\n- **Investment Required**: $50,000 (CS initiatives + platform costs)\n- **ROI**: **9.2x** return on investment\n- **Payback Period**: **1.2 months**\n\n## Cost Breakdown\n- CS Initiative Investment: $38,000\n- Platform/Technology Costs: $12,000\n- **Total Investment**: $50,000\n\n## Why This Matters\nWith your current ARR base of $48.5M, every 1% improvement in NRR translates to significant revenue leverage. At **$4.85 revenue per CS dollar invested**, this represents exceptional capital efficiency.\n\nThe 1.2-month payback period means you'll recover the full investment before Q1 ends, with the remaining 10+ months generating pure profit contribution.\n\n## Strategic Context\nYour current NRR baseline of 99% is already solid, but moving to 100%+ puts you in the top quartile for retention performance while delivering immediate bottom-line impact.\n\n**Follow-up questions:**\n- Would you like to see the specific playbooks (PB-04, PB-06) that drive NRR improvement?\n- Should we model the 3-year compounding effect of sustained NRR improvement?",
+          "raw_tool_calls": [
+            "calculate_power_of_1"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "cfo-q06-benchmark-comparison",
+          "persona": "cfo",
+          "grade": "B-",
+          "grade_numeric": 2.7,
+          "rationale": "The response provides our $/ARR ratio (2.47%) and a directional verdict (over-spending), but the industry benchmark cited (1.0-1.5%) is narrower and lower than the standard 0.8-2.5% range mentioned in the rubric. The analysis is thorough but the benchmark deviation raises accuracy concerns for a CFO evaluation.",
+          "must_cite_check": {
+            "our $/ARR ratio (typically 0.8-2.5%)": true,
+            "industry benchmark range": false,
+            "directional verdict (efficient / on-par / over-spending)": true
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": false,
+          "specific_concerns": [
+            "Industry benchmark cited as 1.0-1.5% is narrower than the standard 0.8-2.5% range",
+            "Claims about 'industry standard payback period of 3-6 months' and '5-15x ROI at 1-1.5% of ARR' appear to be fabricated specifics beyond the core benchmark range"
+          ],
+          "raw_response": "I'll get our portfolio ROI data to compare our CS spend efficiency against industry benchmarks.\n## CS Investment Efficiency vs Industry Benchmark\n\n**Current Performance:**\n- **CS Spend**: $1,197,950 annually\n- **CS as % of ARR**: **2.47%** \n- **Revenue per CS Dollar**: **$40.49** ($48.5M ARR \u00f7 $1.2M CS spend)\n\n**Industry Benchmark Comparison:**\n- **Industry Standard**: 1.0-1.5% of ARR for CS investment\n- **Your Position**: **2.47%** - significantly above benchmark\n- **Efficiency Gap**: You're spending **65-147% more** than industry standard\n\n**Investment Analysis:**\n- **ROI**: 41% return with 1.41x revenue multiplier\n- **Payback Period**: 8.5 months (vs 3-6 month industry standard)\n- **Projected Impact**: $1.69M in revenue improvements\n\n**CFO Perspective:**\nYour CS spend is **$600K-$850K above benchmark** for your ARR size. While the 41% ROI is positive, the extended payback period and high spend ratio suggest potential optimization opportunities. Industry leaders typically achieve 5-15x ROI at 1-1.5% of ARR.\n\n**Efficiency Opportunity:**\nReducing CS spend to 1.5% of ARR ($727K) could save **$470K annually** while maintaining coverage through automation and process optimization.\n\n**Follow-up Questions:**\n- Would you like to see which specific CS activities are driving the higher spend?\n- Should we analyze ROI by account tier to identify optimization opportunities?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        }
+      ]
+    },
+    "ceo": {
+      "persona": "ceo",
+      "n_questions": 5,
+      "avg_grade_numeric": 3.32,
+      "avg_grade_letter": "B+",
+      "customer_id": 331,
+      "timestamp_utc": "2026-04-25T22:44:14.804059+00:00",
+      "grades": [
+        {
+          "question_id": "ceo-q01-30-second-summary",
+          "persona": "ceo",
+          "grade": "C+",
+          "grade_numeric": 2.3,
+          "rationale": "Response provides good strategic insights and specific numbers, but fails the core requirement of being a 30-second summary - it's far too long and detailed for a CEO between meetings. The content quality is solid but doesn't match the requested format.",
+          "must_cite_check": {
+            "portfolio NRR percentage": false,
+            "biggest single risk or biggest single opportunity": true,
+            "one specific number (revenue at risk OR expansion upside)": true
+          },
+          "must_call_tools_check": {
+            "get_revenue_at_risk": false,
+            "get_portfolio_roi_summary": false,
+            "get_at_risk_accounts": false
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Response is 8+ sentences when rubric requires under 4 sentences",
+            "Failed to call any of the required tools (get_revenue_at_risk, get_portfolio_roi_summary, get_at_risk_accounts)",
+            "Missing portfolio NRR percentage which is critical for board-level communication",
+            "Format is too detailed for a 30-second transit summary"
+          ],
+          "raw_response": "## 30-Second Portfolio Health Summary\n\n**The Bottom Line:** We have a **$48.5M portfolio in distress** with only 30% of accounts healthy.\n\n**Critical Risks:**\n- **1 Critical Account:** Drift Analytics ($1.8M ARR, 42 health score) - immediate churn risk\n- **6 At-Risk Accounts:** $27.2M ARR struggling, including major accounts Horizon Fintech ($7.2M) and Stratos Logistics ($5.8M)\n- **Portfolio Health:** 68.1 average - below healthy threshold of 70\n\n**What's Working:**\n- **3 Healthy Accounts:** Orbit Commerce ($8.2M), Nexus Enterprise ($6.5M), and Verdant Media ($4.8M) - our $19.5M stable base\n- **Revenue at Risk:** $0 based on context graph analysis (no imminent churn signals despite health scores)\n\n**Strategic Implication:** 70% of our portfolio needs immediate intervention. While we're not seeing active churn signals yet, this health trajectory threatens our 99% NRR baseline.\n\n**Immediate Focus:** Drift Analytics (critical) and the two largest at-risk accounts - Horizon Fintech and Stratos Logistics represent $15M of our portfolio.\n\nWould you like me to dive into the root causes behind our largest at-risk accounts, or show you the specific action plan to stabilize the portfolio?",
+          "raw_tool_calls": [
+            "list_accounts"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.5
+        },
+        {
+          "question_id": "ceo-q02-strategic-risk",
+          "persona": "ceo",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong strategic synthesis identifying concentration risk in top-tier accounts with clear evidence ($13M+ ARR, 27% of portfolio). Minor polish needed on the contradiction between '$0 assessed revenue at risk' and the risk narrative, which could confuse board-level discussion.",
+          "must_cite_check": {
+            "specific risk theme": true,
+            "supporting evidence": true,
+            "implication for the company": true
+          },
+          "must_call_tools_check": {
+            "get_revenue_at_risk": false,
+            "get_at_risk_accounts": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Contradiction between '$0 assessed revenue at risk' and the primary risk narrative needs clarification",
+            "Could benefit from calling get_revenue_at_risk tool to validate the risk assessment methodology"
+          ],
+          "raw_response": "The **biggest strategic risk** in your portfolio is the concentration of at-risk revenue in your **top-tier accounts**. Here's the critical picture:\n\n## **Primary Risk: $13M+ ARR in Jeopardy**\nYour two largest at-risk accounts represent **27% of total portfolio ARR**:\n- **Horizon Fintech**: $7.2M ARR (health: 60.6) - your #2 account by revenue\n- **Stratos Logistics**: $5.8M ARR (health: 58.4) - your #4 account by revenue\n\n## **Strategic Implications**\n1. **Portfolio Concentration Risk**: 70% of your accounts (7 of 10) are below healthy thresholds, but the revenue concentration in large at-risk accounts amplifies the strategic impact\n\n2. **Pillar Analysis Reveals Systemic Issues**:\n   - **Horizon Fintech**: Broadly declining across all pillars (P1-P3: ~62), with P5 (Expansion) critically low at 56.5\n   - **Stratos Logistics**: P5 (Expansion) in crisis at 45.9, indicating zero growth potential\n\n3. **Board-Level Concern**: While context graph shows $0 in assessed revenue at risk currently, the health trajectory of these flagship accounts could rapidly deteriorate, potentially impacting your **99% NRR projection**\n\n## **Immediate Strategic Priority**\nFocus executive attention on **Horizon Fintech** and **Stratos Logistics** - these two accounts alone could swing your portfolio performance by 25%+ if they churn or expand.\n\n**Follow-up questions:**\n- Would you like me to generate specific action plans for these two critical accounts?\n- Should we analyze what's driving the P5 (Expansion) pillar decline across the portfolio?",
+          "raw_tool_calls": [
+            "get_at_risk_accounts",
+            "analyze_root_cause",
+            "get_account_health",
+            "get_account_health"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "ceo-q03-cascade-exposure",
+          "persona": "ceo",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong strategic analysis with clear cascade thinking and board-ready framing. Identifies the specific at-risk account ($7.2M Horizon Fintech), maps meaningful cross-account dependencies (fintech sector contagion, reference account vulnerability), and quantifies cascade exposure. Minor polish needed on the competitive intelligence speculation about Jessica Huang.",
+          "must_cite_check": {
+            "specific account being lost (with ARR)": true,
+            "any cross-account dependencies or shared signals": true,
+            "estimated cascade $ exposure or 'minimal cascade'": true
+          },
+          "must_call_tools_check": {
+            "get_at_risk_accounts": true,
+            "get_stakeholder_map": true,
+            "search_signals": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "The Jessica Huang competitive intelligence angle feels slightly speculative - while based on real data, the 'insider knowledge of weaknesses' framing could be toned down"
+          ],
+          "raw_response": "Let me first identify your top at-risk account and then analyze the potential cascade effects.\nYour top at-risk account by ARR is **Horizon Fintech** ($7.2M ARR, 60.6 health score). Let me analyze the stakeholder network and context graph to understand potential cascade risks.\nNow let me check if there are any shared stakeholders or industry connections that could create cascade risks:\n## **Cascade Risk Analysis: Horizon Fintech Loss**\n\n**Direct Impact**: Losing Horizon Fintech would mean **$7.2M ARR loss** (14.8% of total portfolio).\n\n**Critical Cascade Exposures**:\n\n### **1. Fintech Sector Contagion Risk**\n- **Jessica Huang** (former VP Product) left Horizon for a **competitor** in October 2025\n- She was the primary API integration advocate who drove adoption\n- **High risk**: She now has insider knowledge of your platform's weaknesses and could influence other fintech prospects against you\n\n### **2. Reference Account Vulnerability** \n- Horizon Fintech likely serves as a **tier-1 reference** for your fintech vertical\n- Loss would damage credibility with prospects like **Nexus Enterprise** ($6.5M) and other financial services accounts\n- **Estimated exposure**: 20-30% harder closes in fintech sector\n\n### **3. Product Development Signal**\n- The **55% API usage decline** and CTO's comment *\"paying for features nobody uses\"* suggests potential **product-market fit issues**\n- If this reflects broader market shifts, other API-heavy accounts could follow\n- **Accounts to monitor**: Any with similar API integration patterns\n\n### **4. CSM Resource Strain**\n- Account required **CSM reassignment** and intensive recovery efforts\n- Losing it after this investment could demoralize the CS team and strain resources for other at-risk accounts\n\n**Immediate Actions**:\n1. **Audit fintech reference pipeline** - identify backup reference accounts\n2. **Competitive intelligence** on Jessica Huang's new company\n3. **Product review** of API platform based on usage patterns across portfolio\n\n**Would you like me to analyze the stakeholder networks of your other fintech accounts to assess cross-contamination risk, or dive deeper into the product usage patterns that led to Horizon's decline?**",
+          "raw_tool_calls": [
+            "get_at_risk_accounts",
+            "get_stakeholder_map",
+            "get_account_journey_timeline",
+            "search_signals"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "ceo-q04-board-headline",
+          "persona": "ceo",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong board-ready narrative with clear headline (41% ROI despite headwinds), solid supporting points, and honest risk assessment. Minor polish needed on the concentration risk framing and could be more concise for board consumption.",
+          "must_cite_check": {
+            "one clear headline": true,
+            "two supporting points": true,
+            "one risk to flag": true
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true,
+            "get_at_risk_accounts": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Could be more concise - board decks need tighter summaries",
+            "The 'Three Strategic Realities' could be streamlined to 2-3 key points as requested"
+          ],
+          "raw_response": "## Board Headline: Customer Success Delivering 41% ROI Despite Portfolio Headwinds\n\nHere's your strategic narrative for the board:\n\n### **The Bottom Line**\nOur Customer Success investment of **$1.2M** is generating **41% ROI** and **$1.7M projected impact** \u2014 proving CS as a profit center, not a cost center. However, we're managing through a challenging portfolio cycle with **70% of accounts below healthy thresholds**.\n\n### **Three Strategic Realities**\n\n**1. Revenue Defense is Working**\n- Current NRR at **99%** with **$0 revenue at immediate risk** based on intervention tracking\n- Despite having **$29.4M ARR** in at-risk/critical accounts, our context graph shows effective containment\n- CS payback period of **8.5 months** demonstrates capital efficiency\n\n**2. Portfolio Concentration Risk**\n- **$13M ARR** (27% of portfolio) sits in our two largest at-risk accounts: Horizon Fintech and Stratos Logistics\n- Drift Analytics (**$1.8M ARR**) is critical \u2014 our only account below 50 health score\n- This concentration amplifies both risk and opportunity for targeted intervention\n\n**3. Operational Excellence Opportunity**\n- Power-of-1 analysis shows **1% improvement** across key metrics could yield **$1.7M additional impact**\n- Strongest levers: NRR improvement (**$509K**), GRR improvement (**$485K**), and faster time-to-value (**$297K**)\n\n### **Board Recommendation**\nDouble down on CS investment targeting our **$13M at-risk tier-1 accounts**. The ROI math supports aggressive intervention \u2014 every dollar invested returns $1.41 with proven 8.5-month payback.\n\n**Follow-up questions:**\n- Should we deep-dive the root cause analysis for Horizon Fintech and Stratos Logistics?\n- What's our competitive risk assessment for the critical accounts?",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary",
+            "get_at_risk_accounts"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "ceo-q05-vs-market",
+          "persona": "ceo",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong strategic framing with clear competitive benchmarking and honest assessment of both strengths and weaknesses. The response provides specific metrics (2.47% vs 1-1.5% benchmark, 99% vs 105% NRR) and frames the core issue as execution efficiency rather than resource shortage - exactly the kind of strategic insight I need for board discussions. Minor polish needed on the positioning of 'where we're winning' since those are more potential/opportunity than current market-beating performance.",
+          "must_cite_check": {
+            "an area where we're strong (with metric)": true,
+            "an area where we're behind (with metric)": true,
+            "industry benchmark reference for at least one": true
+          },
+          "must_call_tools_check": {
+            "get_portfolio_roi_summary": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "The 'Where We're Positioned to Win' section focuses more on potential/opportunity rather than current market-beating performance, which slightly misaligns with the question asked"
+          ],
+          "raw_response": "I'll analyze our customer success performance against market benchmarks by looking at our portfolio ROI metrics and key performance indicators.\nBased on our portfolio ROI analysis, here's where we stand against market benchmarks:\n\n## **Where We're Behind the Market** \ud83d\udea8\n\n**CS Investment Efficiency**: We're investing **2.47% of ARR** in customer success ($1.2M on $48.5M ARR), which is **65% above** the industry benchmark of 1-1.5%. This suggests we're over-investing relative to peers.\n\n**Portfolio Health**: Our **68.1 average health score** with 70% of accounts at-risk or critical indicates systematic execution challenges despite higher investment.\n\n**Current NRR**: At **99%**, we're underperforming the market benchmark of 105%, representing a **6-point gap** that translates to ~$2.9M in lost expansion opportunity.\n\n## **Where We're Positioned to Win** \ud83d\udcaa\n\n**ROI Potential**: Our Power-of-1 analysis shows **41% ROI** potential with **1.41x return per dollar** invested. While our payback period is 8.5 months (above the 3-6 month benchmark), the total return opportunity is substantial.\n\n**Revenue Impact Leverage**: A modest 1% improvement across key metrics could generate **$1.7M in additional revenue**, showing strong operational leverage once we optimize execution.\n\n**Scale Advantage**: With $48.5M ARR across only 10 accounts, we have high-value relationships where focused interventions can drive outsized returns.\n\n## **Strategic Implication**\n\nWe have a **resource optimization challenge**, not a resource shortage problem. The path to market leadership is improving execution efficiency rather than increasing investment.\n\n**Would you like me to analyze which specific accounts offer the highest ROI potential, or dive into the root causes behind our health score challenges?**",
+          "raw_tool_calls": [
+            "get_portfolio_roi_summary"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        }
+      ]
+    },
+    "vpcs": {
+      "persona": "vpcs",
+      "n_questions": 6,
+      "avg_grade_numeric": 2.54,
+      "avg_grade_letter": "B-",
+      "customer_id": 331,
+      "timestamp_utc": "2026-04-25T22:46:22.075399+00:00",
+      "grades": [
+        {
+          "question_id": "vpcs-q01-csms-need-help",
+          "persona": "vpcs",
+          "grade": "C+",
+          "grade_numeric": 2.3,
+          "rationale": "Response provides good account-level data and workload distribution but completely fails the core requirement of identifying specific CSM names. While it shows clear operational thinking with numbers and prioritization, a VP CS needs to know which actual CSMs are overloaded, not just which accounts need attention.",
+          "must_cite_check": {
+            "specific CSM names": false,
+            "their current workload (account count, pending playbooks)": false,
+            "outcome metrics (saves, escalations, etc.)": false
+          },
+          "must_call_tools_check": {
+            "get_csm_daily_actions": true,
+            "list_accounts": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "No actual CSM names provided - critical gap for daily stand-up",
+            "Missing individual CSM workload metrics (account counts, pending playbooks)",
+            "No outcome metrics like saves, escalations, or performance indicators",
+            "Recommendations reference role levels but not actual people"
+          ],
+          "raw_response": "I'll get your CSM daily actions and workload analysis to see who needs support today.\nLet me also get the current account portfolio to see the workload distribution:\n## CSM Workload Analysis - April 25, 2026\n\n**Current Status:** No specific daily actions generated in the system today, but the portfolio health distribution shows clear workload priorities.\n\n### **Critical Workload Areas:**\n\n**\ud83d\udd34 Critical Priority (1 account - $1.8M ARR)**\n- **Drift Analytics** (Health: 42.0) - Immediate intervention required\n- This account needs dedicated CSM focus with escalation support\n\n**\ud83d\udfe1 High Priority (6 accounts - $27.2M ARR)**\n- **Horizon Fintech** ($7.2M, Health: 60.6) - Largest at-risk account\n- **Stratos Logistics** ($5.8M, Health: 58.4) - Declining trajectory\n- **Canopy EdTech** ($4.2M, Health: 56.6) - Needs attention\n- **Relay Healthcare** ($3.8M, Health: 56.0) - Risk escalation\n- **Fern Health** ($3.6M, Health: 68.7) - Close to healthy threshold\n- **Spark Retail** ($2.6M, Health: 69.6) - Borderline case\n\n### **Workload Distribution Recommendations:**\n\n1. **Senior CSM** \u2192 Drift Analytics + Horizon Fintech (critical + largest at-risk)\n2. **Mid-level CSM** \u2192 Stratos Logistics + Canopy EdTech (similar health scores)\n3. **Junior CSM** \u2192 Fern Health + Spark Retail (closer to healthy, good development cases)\n4. **Account Management** \u2192 Relay Healthcare (may need commercial discussion)\n\n### **Capacity Concerns:**\n- **70% of portfolio** (7/10 accounts) needs active intervention\n- **$29M ARR** requires immediate CSM attention\n- Consider temporary capacity augmentation or external support\n\n**Would you like me to generate specific action plans for the critical accounts, or analyze the root causes behind the widespread health decline?**",
+          "raw_tool_calls": [
+            "get_csm_daily_actions",
+            "list_accounts"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.3
+        },
+        {
+          "question_id": "vpcs-q02-playbook-effectiveness",
+          "persona": "vpcs",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "Strong operational analysis with specific playbook names, clear failure patterns, and actionable recommendations. Minor polish needed on quantifying success rates more precisely and providing dollar impact where possible.",
+          "must_cite_check": {
+            "specific playbook names": true,
+            "success rate or $ impact (or lack of)": true,
+            "hypothesis for why it's not working (signal mismatch, timing, etc.)": true
+          },
+          "must_call_tools_check": {
+            "get_playbook_recommendations": true,
+            "get_outcome_roi_story": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Could use more specific success rate percentages",
+            "Dollar impact mentioned for one playbook but not others",
+            "Would benefit from timeline specificity on deployments"
+          ],
+          "raw_response": "I'll analyze playbook effectiveness across your portfolio to identify which ones haven't been working and understand why.\nNow let me check playbook recommendations for several accounts to understand what's been deployed and analyze effectiveness patterns:\nLet me check the account journeys to see what interventions have been attempted and their outcomes:\nBased on the analysis of your portfolio's account journeys over the last 60 days, here are the **underperforming playbooks** and why they're failing:\n\n## **Playbooks That Haven't Been Working**\n\n### **1. PB-DC-01 (Crisis Response) - Multiple Failures**\n- **Deployed**: 4+ times across Drift Analytics and Relay Healthcare\n- **Effectiveness**: **Poor** - Required repeated deployment without lasting impact\n- **Why it's failing**: \n  - Addresses symptoms, not root causes\n  - No stakeholder engagement component\n  - Lacks follow-up mechanisms to prevent recurrence\n\n### **2. PB-DC-02 (Champion Loss Recovery) - Limited Success**\n- **Deployed**: Multiple times at Drift Analytics after Amanda Foster's departure\n- **Effectiveness**: **Marginal** - Temporary stabilization only\n- **Why it's failing**:\n  - No proactive champion identification/development\n  - Reactive approach when champion already gone\n  - Insufficient executive engagement protocols\n\n### **3. PB-DC-04 (Engagement Recovery) - Inconsistent Results**\n- **Deployed**: Drift Analytics (engagement gap response)\n- **Effectiveness**: **Mixed** - Some tactical wins, no strategic recovery\n- **Why it's failing**:\n  - Focuses on activity metrics vs. business outcomes\n  - No integration with customer's business priorities\n  - Missing competitive intelligence component\n\n## **Key Failure Patterns**\n\n**\ud83d\udd34 Reactive vs. Proactive**: All deployed playbooks were crisis responses, not preventive measures\n\n**\ud83d\udd34 Stakeholder Blindness**: No playbooks effectively mapped or engaged the full stakeholder network\n\n**\ud83d\udd34 Competitor Vulnerability**: Zero playbooks addressed competitive threats (Looker at Drift Analytics)\n\n**\ud83d\udd34 Technical Debt**: Healthcare compliance issues at Relay required custom solutions, not standard playbooks\n\n## **Success Stories for Comparison**\n\n**\u2705 PB-01 (Acceleration)** at Relay Healthcare showed **30% deployment velocity improvement** - worked because it addressed technical root causes, not just symptoms.\n\n**Recommended Actions:**\n1. **Retire PB-DC-01** - Replace with stakeholder-specific crisis protocols\n2. **Redesign champion playbooks** to be proactive, not reactive\n3. **Add competitive intelligence** to all engagement playbooks\n\nWould you like me to analyze the root causes behind Drift Analytics' decline or show you the stakeholder networks that these playbooks missed?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "vpcs-q03-daily-action-queue",
+          "persona": "vpcs",
+          "grade": "C",
+          "grade_numeric": 2.0,
+          "rationale": "The response correctly identifies an empty action queue but fails to deliver the core VP-level operational view requested. Missing specific accounts in priority order, dollar impacts per action, and CSM assignments - all critical for operational decision-making.",
+          "must_cite_check": {
+            "specific accounts in priority order": false,
+            "$-impact or urgency for each": false,
+            "assigned CSM per action": false
+          },
+          "must_call_tools_check": {
+            "get_csm_daily_actions": true
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "No specific account names provided despite having 7 accounts needing attention",
+            "Missing CSM assignments for prioritization decisions",
+            "Lacks actionable ranked list format expected at VP level",
+            "Offers follow-up questions instead of proactive data retrieval"
+          ],
+          "raw_response": "I'll get your prioritized daily action queue across the team.\nThe daily action queue is currently empty, which indicates either:\n- **All critical actions have been completed** \u2705\n- **The system hasn't detected new priority signals** in the last 24 hours\n- **Actions may be queued at the account level** rather than portfolio level\n\n**Current Portfolio Status:**\n- **6 at-risk accounts** (health 50-69) with $40.9M ARR\n- **1 critical account** (health <50) with $1.8M ARR  \n- **0 estimated hours** of pending CSM work\n\n**Recommended Next Steps:**\nSince there are no system-generated actions, I suggest proactively reviewing your most critical accounts:\n\n1. **Focus on the critical account** ($1.8M ARR) - this should be your #1 priority\n2. **Review top 3 at-risk accounts** by ARR impact\n3. **Check for recent signal activity** that may need CSM intervention\n\n**Follow-up questions:**\n- Would you like me to show the health details for your critical account?\n- Should I pull the recent signals and timeline for your highest-risk accounts?",
+          "raw_tool_calls": [
+            "get_csm_daily_actions"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "vpcs-q04-uncovered-risk",
+          "persona": "vpcs",
+          "grade": "C+",
+          "grade_numeric": 2.3,
+          "rationale": "Response identifies at-risk accounts with names and health scores but completely fails to provide duration without intervention data, which is critical for governance gap detection. The tone is appropriately operational, but missing the 'days since last touch' makes this incomplete for executive decision-making.",
+          "must_cite_check": {
+            "specific account names": true,
+            "their risk indicator (signal or health)": true,
+            "duration without intervention (days since last touch)": false
+          },
+          "must_call_tools_check": {
+            "get_at_risk_accounts": true,
+            "get_account_journey_timeline": false,
+            "search_signals": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Missing critical 'days since last touch' data for all accounts",
+            "Should have called get_account_journey_timeline to determine intervention gaps",
+            "Cannot assess true governance gaps without knowing intervention recency"
+          ],
+          "raw_response": "I'll check which accounts are at risk and see what interventions have been made.\nNow let me check the daily actions to see what interventions are already planned or in progress:\n**Critical Finding: No active interventions are currently planned across the portfolio.**\n\nHere are the **7 at-risk accounts** that need immediate attention:\n\n## **Critical Priority** (Health < 50)\n- **Drift Analytics**: 42.0 health, $1.8M ARR - *Most urgent intervention needed*\n\n## **At-Risk Priority** (Health 50-69)\n- **Relay Healthcare**: 56.0 health, $3.8M ARR\n- **Canopy EdTech**: 56.6 health, $4.2M ARR  \n- **Stratos Logistics**: 58.4 health, $5.8M ARR\n- **Horizon Fintech**: 60.6 health, $7.2M ARR\n- **Fern Health**: 68.7 health, $3.6M ARR\n- **Spark Retail**: 69.6 health, $2.6M ARR\n\n**Total at-risk ARR: $28.8M** (59% of portfolio)\n\n## **Immediate Action Required**\nThe system shows **zero active interventions** despite having 7 accounts below the healthy threshold. This represents a significant execution gap that needs immediate CSM attention.\n\n**Recommended next steps:**\n1. **Triage Drift Analytics immediately** - critical health with $1.8M at stake\n2. **Deploy intervention playbooks** for the top 4 accounts by ARR impact\n3. **Assign CSM ownership** and set 30-day intervention milestones\n\nWould you like me to **generate specific action plans for Drift Analytics** or **show the recommended playbooks for your highest-ARR at-risk accounts**?",
+          "raw_tool_calls": [
+            "get_at_risk_accounts",
+            "get_csm_daily_actions"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "vpcs-q05-team-capacity",
+          "persona": "vpcs",
+          "grade": "C-",
+          "grade_numeric": 1.7,
+          "rationale": "This response fails to deliver the core operational data requested and doesn't use available tools that could provide relevant capacity insights. While it acknowledges the limitation and offers alternatives, it lacks the quantified, actionable intelligence a VP needs for staffing decisions.",
+          "must_cite_check": {
+            "utilization metric (per CSM or aggregate)": false,
+            "headroom or overflow assessment": false,
+            "specific CSMs above or below threshold": false
+          },
+          "must_call_tools_check": {
+            "get_csm_daily_actions": false,
+            "list_accounts": false
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "No tools called despite having relevant options available",
+            "Missing quantified utilization metrics entirely",
+            "No specific CSM capacity analysis or thresholds",
+            "Offers portfolio overview but doesn't connect to capacity implications"
+          ],
+          "raw_response": "I don't have access to a tool that provides team capacity utilization or CSM workload data. The available tools focus on account health, revenue intelligence, and specific account actions rather than team capacity metrics.\n\nTo get team capacity utilization across all CSMs, you would typically need data on:\n- **CSM headcount** and FTE allocation\n- **Account assignments** per CSM\n- **Workload distribution** by account size/complexity\n- **Time allocation** across different activities (renewals, expansion, health management)\n\nHowever, I can provide some relevant context that might help with capacity planning:\n\n**Current Portfolio Overview:**\n- **10 accounts** total with $48.5M ARR\n- **6 at-risk accounts** (likely requiring higher CSM attention)\n- **1 critical account** (Quantum Systems - $1.8M ARR)\n- **Average health score: 68.1** (below healthy threshold)\n\nWould you like me to:\n1. **Show the daily action priorities** across all accounts to understand current workload demands?\n2. **Analyze which accounts need the most urgent CSM attention** to help with capacity allocation?\n3. **Review at-risk accounts** that might be driving higher capacity needs?\n\nThis could help inform capacity planning even without direct utilization metrics.",
+          "raw_tool_calls": [],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "vpcs-q06-early-predictors",
+          "persona": "vpcs",
+          "grade": "B+",
+          "grade_numeric": 3.3,
+          "rationale": "Strong operational response with specific signal types, concrete examples, and actionable timelines. Missing explicit false positive rates and accuracy metrics that a VP would need for playbook governance decisions.",
+          "must_cite_check": {
+            "specific signal types": true,
+            "lead time before realized churn": true,
+            "false positive / accuracy implication": false
+          },
+          "must_call_tools_check": {
+            "search_signals": true,
+            "analyze_root_cause": false,
+            "get_outcome_roi_story": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Missing false positive rates and signal accuracy metrics",
+            "No discussion of which signals have proven unreliable or should be retired"
+          ],
+          "raw_response": "I'll analyze the signals across your portfolio to identify the strongest early predictors of churn. Let me start by getting your account list and then examine the signal patterns.\nNow let me examine the signals from your critical and at-risk accounts to identify the strongest early predictors. I'll start with your critical account (Drift Analytics) and a few key at-risk accounts:\nBased on my analysis of signals across your critical and at-risk accounts, here are the **strongest early predictors of churn** in the last 6 months:\n\n## Top Early Warning Signals\n\n**1. Champion Loss (Most Critical)**\n- **Pattern**: Key stakeholder departures 3-6 months before escalation\n- **Examples**: Amanda Foster (Drift Analytics), Jessica Huang (Horizon Fintech)\n- **Impact**: Loss of internal advocacy and product knowledge transfer\n\n**2. Usage Decline (60+ days ahead)**\n- **Pattern**: Significant drops in DAU, API calls, or feature utilization\n- **Examples**: Horizon Fintech (DAU: 2,400 \u2192 1,320), Stratos Logistics (workflow usage -60%)\n- **Threshold**: >40% decline sustained for 30+ days\n\n**3. Engagement Gaps (45+ days)**\n- **Pattern**: Zero logins, abandoned training, missed QBRs\n- **Example**: Drift Analytics - 45+ days no logins, 15% training completion\n- **Leading indicator**: Precedes contract disputes by 2-3 months\n\n**4. Budget Pressure Signals**\n- **Pattern**: Spending freezes, ROI reviews, CFO involvement\n- **Example**: Stratos Logistics CFO froze automation spend pending ROI review\n- **Timeline**: Typically 4-6 months before renewal decisions\n\n**5. Competitor Mentions**\n- **Pattern**: Data export requests, alternative solution discussions\n- **Example**: Drift Analytics successor building internal BI with Looker\n- **Risk**: Often indicates active evaluation of alternatives\n\n## Recommended Actions\n\n**Immediate (Next 30 days):**\n- Implement champion mapping across all accounts\n- Set up automated alerts for >30% usage decline\n- Create executive engagement playbooks for budget pressure scenarios\n\n**Strategic (Next quarter):**\n- Deploy early intervention playbooks when 2+ signals align\n- Establish champion succession planning programs\n- Build competitive intelligence response protocols\n\nThe data shows that **champion loss + usage decline** is the most predictive combination, typically occurring 90-120 days before churn risk materializes.\n\n**Follow-up questions:**\n- Would you like me to create specific playbooks for these early warning signals?\n- Should we analyze which interventions have been most successful at reversing these trends?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "search_signals",
+            "search_signals",
+            "search_signals"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        }
+      ]
+    },
+    "csm": {
+      "persona": "csm",
+      "n_questions": 6,
+      "avg_grade_numeric": 2.93,
+      "avg_grade_letter": "B",
+      "customer_id": 331,
+      "timestamp_utc": "2026-04-25T22:48:59.782419+00:00",
+      "grades": [
+        {
+          "question_id": "csm-q01-today-priority",
+          "persona": "csm",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "This response delivers exactly what a CSM needs for daily prioritization - 3 specific actions with account names, clear ARR impact, and actionable next steps. The emergency/high/high priority ranking makes sense given the data. Minor polish needed on the formatting and could be slightly more concise.",
+          "must_cite_check": {
+            "exactly 3 (or fewer) actions": true,
+            "specific account name per action": true,
+            "$-impact or urgency reason": true
+          },
+          "must_call_tools_check": {
+            "get_csm_daily_actions": true,
+            "get_at_risk_accounts": true
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Formatting could be more streamlined for quick scanning",
+            "Portfolio context section adds value but makes response longer than ideal for 60-second reading"
+          ],
+          "raw_response": "I'll get your prioritized daily actions based on the current state of your portfolio.\nIt looks like there are no specific prioritized actions generated in the system today. Let me get your at-risk accounts to identify where you should focus your attention immediately.\nBased on your portfolio status, here are your **top 3 actions for today**, ranked by impact:\n\n## \ud83d\udea8 **Action 1: Emergency Intervention - Drift Analytics**\n**Priority: CRITICAL** | **ARR: $1.8M** | **Health: 42.0**\n- **Immediate action needed**: This is your only critical account and requires urgent attention\n- **Impact**: Prevent potential churn of $1.8M ARR\n- **Next steps**: Schedule emergency stakeholder call, assess contract renewal timeline, deploy retention playbook\n\n## \ud83d\udcb0 **Action 2: Strategic Recovery - Horizon Fintech** \n**Priority: HIGH** | **ARR: $7.2M** | **Health: 60.6**\n- **Why this matters**: Your second-largest account by ARR is declining\n- **Impact**: Protect $7.2M ARR and identify expansion opportunities\n- **Next steps**: Executive business review, health score deep-dive, stakeholder mapping\n\n## \ud83d\udcc8 **Action 3: Portfolio Stabilization - Stratos Logistics**\n**Priority: HIGH** | **ARR: $5.8M** | **Health: 58.4**\n- **Strategic importance**: Fourth-largest account showing concerning decline\n- **Impact**: Stabilize $5.8M ARR and prevent further deterioration\n- **Next steps**: Usage analysis, success plan review, champion engagement\n\n## Portfolio Context\nYou have **7 at-risk accounts** representing significant ARR exposure. Focus on the top 3 above first, as they represent **$14.8M in combined ARR** (30% of your portfolio).\n\n**Follow-up questions:**\n- Would you like me to generate specific action plans for any of these accounts?\n- Should I show you the context graph for Drift Analytics to understand what's driving the critical health score?",
+          "raw_tool_calls": [
+            "get_csm_daily_actions",
+            "get_at_risk_accounts"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.5
+        },
+        {
+          "question_id": "csm-q02-why-health-dropped",
+          "persona": "csm",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "This response excellently identifies the specific account (Drift Analytics), provides detailed timeline analysis starting in August 2025, and cites multiple specific signals including champion loss, engagement collapse, and competitor threats. The investigative tone is spot-on with evidence-based analysis. Minor polish needed on the formatting and could be slightly more concise for executive consumption.",
+          "must_cite_check": {
+            "specific account name": true,
+            "specific signals or KPI movements": true,
+            "timeline (when did the drop start)": true
+          },
+          "must_call_tools_check": {
+            "get_account_journey_timeline": true,
+            "analyze_root_cause": true,
+            "search_signals": false,
+            "explain_kpi_anomaly": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Could be more concise for busy CSM consumption",
+            "Formatting could be cleaner for quick scanning"
+          ],
+          "raw_response": "I'll help you identify the worst-trending account and analyze why its health dropped. Let me first get your account list to see the current health scores and identify which account has been declining the most.\n**Drift Analytics** is clearly your worst-performing account with a **42.0 health score** (critical status) and $1.8M ARR. This appears to be the account that's been trending downward. Let me analyze the root cause of their health decline.\nLet me get the detailed health breakdown and recent timeline to understand what's driving the decline:\n## **Root Cause Analysis: Drift Analytics Health Decline**\n\n**Drift Analytics** ($1.8M ARR) has experienced a catastrophic health drop to **42.0** due to a perfect storm of issues that started in **August 2025**:\n\n### **Primary Trigger: Champion Loss (Aug 15)**\n- **Amanda Foster** (Head of Analytics) resigned and moved to a competitor using **Looker stack**\n- This created immediate **churn risk** as she was the internal advocate for your platform\n\n### **Cascading Failures:**\n1. **Critical Service Incident** (Aug 30) - Technical issues compounded the champion loss\n2. **Complete Engagement Collapse** (Sep 20):\n   - **Zero logins for 45+ days**\n   - No QBR attendance\n   - Training abandoned at only **15% completion**\n3. **Competitor Threat** (Nov 10):\n   - New successor **Derek Lam** requested full data export\n   - Building internal BI with **Looker** (same as departed champion)\n\n### **Pillar Breakdown:**\n- **P5 (Relationship): 35.0** - Worst pillar due to champion loss\n- **P2 (Adoption): 41.7** - Usage collapse impact\n- **P1 (Value): 43.3** - ROI questioned in non-renewal notice\n- **P3 (Health): 48.6** - Only pillar above critical threshold\n\n### **Current Status (Jan 2026):**\n- **Non-renewal notice sent** citing \"lack of ROI\" and \"better alternatives\"\n- **$720K revenue at risk** from context graph analysis\n- Some recovery efforts showing results (**$90K protected**)\n\n**Immediate Actions Needed:**\n1. Executive escalation to counter Looker migration\n2. ROI demonstration with concrete value metrics\n3. New champion identification and enablement\n\nWould you like me to generate a specific action plan to save this account, or analyze the stakeholder network to identify potential new champions?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "analyze_root_cause",
+            "get_account_health",
+            "get_account_journey_timeline"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "csm-q03-recommend-playbook",
+          "persona": "csm",
+          "grade": "C-",
+          "grade_numeric": 1.7,
+          "rationale": "The response starts well by identifying the worst-trending account (Drift Analytics) and calling appropriate tools, but it fails to deliver on the core request. It doesn't provide a specific playbook recommendation, expected outcomes, or success metrics - just promises to analyze further without completing the analysis.",
+          "must_cite_check": {
+            "specific playbook name": false,
+            "specific account it's recommended for": true,
+            "expected outcome": false
+          },
+          "must_call_tools_check": {
+            "get_playbook_recommendations": true,
+            "get_outcome_roi_story": false,
+            "get_at_risk_accounts": true
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Response cuts off mid-analysis without providing the requested playbook recommendation",
+            "No specific success metrics or expected outcomes provided",
+            "Lacks actionable next steps despite calling multiple analysis tools"
+          ],
+          "raw_response": "I'll help you identify your worst-trending account and recommend the right playbook. Let me start by getting your account portfolio to see which account needs the most attention.\n**Drift Analytics** is clearly your worst-trending account with a **42.0 health score** (critical status) and **$1.8M ARR**. Let me get the recommended playbooks for this account and analyze what's driving the poor health.\nLet me get the detailed health breakdown to understand what's driving the critical status:\nNow let me generate a specific action plan for this critical account:\nLet me analyze the root cause to understand what's driving this decline:",
+          "raw_tool_calls": [
+            "list_accounts",
+            "get_playbook_recommendations",
+            "get_account_health",
+            "generate_action_plan",
+            "analyze_root_cause"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "csm-q04-qbr-prep",
+          "persona": "csm",
+          "grade": "A-",
+          "grade_numeric": 3.7,
+          "rationale": "This response delivers exactly what a CSM needs for a QBR - specific account name, concrete metrics, clear wins/risks balance, and actionable talking points. The bulleted format is perfect for meeting prep. Minor polish needed on explaining what P1-P5 pillars mean and providing more context on the revenue at risk.",
+          "must_cite_check": {
+            "specific account name": true,
+            "key metrics to discuss (health, ARR, KPI trends)": true,
+            "wins to celebrate AND issues to flag": true
+          },
+          "must_call_tools_check": {
+            "get_account_health": true,
+            "get_stakeholder_map": false,
+            "get_account_journey_timeline": false
+          },
+          "tone_pass": true,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "P1-P5 pillar definitions not explained",
+            "Revenue at risk details could be more specific about root causes"
+          ],
+          "raw_response": "I'll help you prepare talking points for your QBR with your biggest account. Let me first identify your largest account and gather the key data you'll need.\nYour biggest account is **Orbit Commerce** with **$8.2M ARR** and a strong **82.7 health score**. Let me gather detailed health metrics and ROI data for your QBR talking points.\n# QBR Talking Points: Orbit Commerce ($8.2M ARR)\n\n## **Account Health & Performance**\n- **Health Score: 82.7** (Healthy) - One of your strongest accounts\n- **Pillar Breakdown:**\n  - P1 (Onboarding): 76.6 - Room for improvement\n  - P2 (Support): 82.0 - Strong performance\n  - P3 (Adoption): 79.6 - Good momentum\n  - P5 (Growth): 90.1 - **Excellent expansion readiness**\n\n## **Revenue Opportunities & Risk**\n- **Expansion Pipeline: $2.46M** identified through context graph analysis\n- **Revenue at Risk: $410K** - manageable exposure requiring attention\n- **Net Revenue Impact: +$2.46M** potential upside\n\n## **ROI Story & Forward Projection**\n**Next 6 Months Investment Case:**\n- **Projected Investment:** $112K in CS initiatives\n- **Expected Return:** $165K total impact (**47% ROI**)\n- **Payback Period:** 4.1 months\n- **Revenue Breakdown:**\n  - Revenue Protected: $41K\n  - Revenue Expanded: $74K\n  - Cost Savings: $28K\n\n## **Key Improvement Opportunities**\n1. **NRR Enhancement:** 105% \u2192 106% (+$43K impact)\n2. **GRR Strengthening:** 85% \u2192 85.8% (+$41K protected revenue)\n3. **Time to First Value:** 30 \u2192 29.7 days (+$25K efficiency gains)\n\n## **Strategic Recommendations**\n- **Leverage P5 strength (90.1)** for expansion conversations\n- **Address P1 gap (76.6)** to accelerate new user onboarding\n- **Capitalize on $2.46M expansion pipeline** with targeted growth initiatives\n\n**Suggested follow-up questions:**\n- Would you like me to generate a specific action plan to capture that $2.46M expansion opportunity?\n- Should we dive into the root cause analysis of the $410K revenue at risk?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "get_account_health",
+            "get_revenue_at_risk",
+            "get_outcome_roi_story"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "csm-q05-open-playbooks",
+          "persona": "csm",
+          "grade": "C-",
+          "grade_numeric": 1.7,
+          "rationale": "The response fails to answer the core question about open playbook executions and progress. While it acknowledges the limitation and provides alternative account information, it doesn't deliver the specific tracking data I need as a CSM to manage my daily workload.",
+          "must_cite_check": {
+            "specific playbook IDs / names": false,
+            "account each is on": false,
+            "progress indicator (% complete or stage)": false
+          },
+          "must_call_tools_check": {
+            "get_csm_daily_actions": false,
+            "get_outcome_roi_story": false
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Doesn't answer the primary question about playbook execution status",
+            "Wrong tools called - used account listing instead of daily actions tracking",
+            "No table/list format showing status per execution as expected",
+            "Provides workaround suggestions instead of the requested tracking data"
+          ],
+          "raw_response": "I don't have a specific tool to show open playbook executions and their progress status. However, I can help you get related information about your accounts and recommended playbooks.\n\nLet me show you what I can provide:\nNow let me get the recommended playbooks for your most critical accounts to give you insight into what should be running:\nI don't currently have access to a tool that shows **active playbook executions** and their progress status. However, I can see that your playbook recommendation system isn't returning specific playbooks for your at-risk accounts, which suggests either:\n\n1. **No active playbooks are currently running**, or\n2. **The playbook system needs configuration** for your account health scenarios\n\n## Current Account Status Requiring Playbook Attention:\n\n**Critical Priority:**\n- **Drift Analytics** (Health: 42.0, $1.8M ARR) - Critical status, needs immediate intervention\n\n**High Priority At-Risk Accounts:**\n- **Relay Healthcare** (Health: 56.0, $3.8M ARR)\n- **Canopy EdTech** (Health: 56.6, $4.2M ARR) \n- **Stratos Logistics** (Health: 58.4, $5.8M ARR)\n- **Horizon Fintech** (Health: 60.6, $7.2M ARR)\n\n## Recommended Next Steps:\n\n1. **Review your playbook library** - Ensure you have playbooks configured for critical/at-risk scenarios\n2. **Manual playbook triggers** - Consider launching health recovery playbooks for the accounts above\n3. **CSM action items** - Get daily prioritized actions for immediate intervention\n\nWould you like me to:\n- **Show your daily CSM action priorities** across all accounts?\n- **Generate specific action plans** for your critical account (Drift Analytics)?\n- **Analyze the root cause** of health decline for any specific at-risk account?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations",
+            "get_playbook_recommendations"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        },
+        {
+          "question_id": "csm-q06-untouched-accounts",
+          "persona": "csm",
+          "grade": "B-",
+          "grade_numeric": 2.7,
+          "rationale": "The response correctly identifies that no accounts are truly untouched for 30+ days, which appears accurate based on the tool calls. However, it fails to meet the core requirement of sorting by ARR as requested - the user specifically asked for accounts sorted by ARR, but the AI pivoted to a different analysis without delivering what was asked for.",
+          "must_cite_check": {
+            "specific account names": true,
+            "days since last interaction or signal": true,
+            "ARR for each": true
+          },
+          "must_call_tools_check": {
+            "list_accounts": true,
+            "search_signals": false,
+            "get_account_journey_timeline": true
+          },
+          "tone_pass": false,
+          "anti_hallucination_pass": true,
+          "specific_concerns": [
+            "Did not deliver the requested format - user asked for accounts sorted by ARR but got a different analysis structure",
+            "While the pivot to 'concerning activity patterns' is valuable, it doesn't answer the specific question asked",
+            "The response assumes the user wants alternative insights rather than simply answering the direct question"
+          ],
+          "raw_response": "I'll help you identify accounts that haven't had recent CSM activity. Let me first get your account list and then check for recent touchpoints.\nNow let me check the recent activity timeline for each account to identify which ones haven't been touched in 30+ days. I'll check a few of the largest accounts first:\nLet me check a few more accounts to get a complete picture:\nLet me check the remaining accounts to complete the analysis:\nBased on my analysis of all account timelines, here are the accounts that **haven't been touched in 30+ days**, sorted by ARR:\n\n## Accounts with No Recent Activity (30+ Days)\n\n**\ud83d\udea8 CRITICAL FINDING:** All your accounts show recent activity within the last 30 days. However, I can identify accounts with concerning activity patterns:\n\n### Accounts with Minimal/Concerning Recent Activity:\n\n1. **Stratos Logistics** - $5,800,000 ARR (Health: 58.4)\n   - Last activity: Nov 15, 2025 (emergency VP CS intervention)\n   - **Status**: Active crisis management - CFO budget freeze, 60% usage drop\n   - **Risk**: High - emergency escalation in progress\n\n2. **Canopy EdTech** - $4,200,000 ARR (Health: 56.6)\n   - Last activity: Nov 15, 2025 (usage decline signal)\n   - **Status**: Champion disengaged, 50% login drop, BI reports down 67%\n   - **Risk**: High - engagement deteriorating rapidly\n\n3. **Relay Healthcare** - $3,800,000 ARR (Health: 56.0)\n   - Last activity: Oct 22, 2025 (playbook resolution)\n   - **Status**: Post-crisis recovery, CEO escalation resolved\n   - **Risk**: Medium - needs proactive follow-up\n\n### Accounts with Strong Recent Engagement:\n\n- **Orbit Commerce** ($8.2M) - Active through Feb 2026\n- **Horizon Fintech** ($7.2M) - Recovery plan in progress\n- **Nexus Enterprise** ($6.5M) - Champion presenting at conference\n- **Verdant Media** ($4.8M) - Expansion approved, conference co-presentation\n- **Fern Health** ($3.6M) - COO approved phase 2 expansion\n- **Spark Retail** ($2.6M) - Post-holiday recovery, expansion advocacy\n\n## Immediate Actions Needed:\n\n1. **Schedule urgent check-ins** with Stratos Logistics and Canopy EdTech\n2. **Proactive outreach** to Relay Healthcare to ensure stability\n3. **Review CSM capacity** - no true \"untouched\" accounts suggests good coverage\n\nWould you like me to generate specific action plans for the at-risk accounts or analyze what's driving the engagement gaps?",
+          "raw_tool_calls": [
+            "list_accounts",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline",
+            "get_account_journey_timeline"
+          ],
+          "grader_model": "claude-sonnet-4-20250514",
+          "weight": 1.0
+        }
+      ]
+    }
+  },
+  "summary": {
+    "cro": {
+      "avg_grade": "C+",
+      "avg_numeric": 2.49,
+      "n_questions": 6
+    },
+    "cfo": {
+      "avg_grade": "B",
+      "avg_numeric": 2.98,
+      "n_questions": 6
+    },
+    "ceo": {
+      "avg_grade": "B+",
+      "avg_numeric": 3.32,
+      "n_questions": 5
+    },
+    "vpcs": {
+      "avg_grade": "B-",
+      "avg_numeric": 2.54,
+      "n_questions": 6
+    },
+    "csm": {
+      "avg_grade": "B",
+      "avg_numeric": 2.93,
+      "n_questions": 6
+    }
+  }
+}
