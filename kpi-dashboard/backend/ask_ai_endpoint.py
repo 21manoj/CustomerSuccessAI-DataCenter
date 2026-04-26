@@ -50,9 +50,14 @@ PERSONA_PROMPTS = {
     'cfo': {
         'role': 'Chief Financial Officer',
         'focus': 'CS investment ROI, cost efficiency, payback periods, budget allocation',
+        # Apr 25 2026 (Sprint 1): tone enriched with explicit benchmark anchors
+        # so CFO benchmark-comparison questions cite a defensible range.
         'tone': 'Think like a CFO — every insight should connect to investment returns. '
                 'Show ROI ratios, cost-per-account, payback periods. '
-                'Compare actual vs projected. Flag inefficient spend.',
+                'Compare actual vs projected. Flag inefficient spend. '
+                'When citing industry benchmarks: CS spend 0.8–2.5% of ARR, '
+                'ROI typically 5–15×, payback 3–6 months. Use the wider range '
+                'unless the customer has a defined target.',
     },
     'ceo': {
         'role': 'Chief Executive Officer',
@@ -68,12 +73,45 @@ PERSONA_PROMPTS = {
                 'Prioritize by impact and urgency. '
                 'Recommend specific playbooks and CSM actions.',
     },
+    # Apr 25 2026 (Sprint 1): added 'csm' persona that was previously falling
+    # back to 'vpcs' at runtime. Frontline operator tone — narrower scope
+    # (own accounts only), action-oriented, comms-prep ready.
+    'csm': {
+        'role': 'Customer Success Manager',
+        'focus': 'my own assigned accounts, what to do today on each, comms prep, '
+                 'investigation of recent health movements',
+        'tone': 'Think like a frontline CSM — specific, action-oriented, tied to MY '
+                'assigned accounts only. Surface what to do today with $-impact '
+                'reasoning per action. Draft comms when asked. Investigate by '
+                'tracing to specific signals or KPI movements, not narratives.',
+    },
 }
 
 
 def _build_system_prompt(persona: str, portfolio_summary: str) -> str:
-    """Build the system prompt for Claude with persona + portfolio context."""
+    """Build the system prompt for Claude with persona + persona-specific
+    rules + portfolio context.
+
+    Apr 25 2026 (Sprint 1) additions:
+      - Foundational-question tool-call enforcement (Item 2)
+      - CEO length budget for summary-style questions (Item 3)
+      - Ask-when-unspecified rule (Item 4)
+      - Ranking deliverable enforcement (Item 6)
+    All additions are persona-conditional where it makes sense to avoid
+    cross-persona tone bleed.
+    """
     config = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS['cro'])
+
+    # ── Persona-conditional rule blocks (Apr 25 2026 Sprint 1) ─────────
+    persona_specific_rules = ""
+    if persona == 'ceo':
+        # Item 3: length budget for CEO summary/headline questions
+        persona_specific_rules += (
+            "\n- LENGTH BUDGET: For questions explicitly asking for a "
+            "'summary', 'headline', '30-second', or 'TL;DR' view, the "
+            "response MUST be ≤ 4 sentences. Resist elaboration. CEO "
+            "wants the synthesized top 2-3, not the laundry list."
+        )
 
     return f"""You are the AI assistant for CS Pulse, a Customer Success Revenue Intelligence platform.
 You are speaking to a {config['role']} who cares about: {config['focus']}.
@@ -93,6 +131,29 @@ INSTRUCTIONS:
 - When you call a tool that returns visual data (context graph, pillar breakdown),
   the frontend will render it as a rich artifact — just reference it in your text.
 - End with 1-2 suggested follow-up questions when appropriate.
+
+- FOUNDATIONAL-QUESTION TOOL-CALL ENFORCEMENT (Apr 25 2026):
+  For any question that asks about (a) revenue at risk, (b) ROI / payback /
+  CS investment, (c) at-risk accounts, (d) portfolio NRR, you MUST call
+  the appropriate tool BEFORE producing a numeric answer. The PORTFOLIO
+  CONTEXT block above is a starting orientation, NOT a substitute for a
+  fresh tool call. Numeric answers without a corresponding tool call will
+  be treated as hallucinated.
+
+- ASK-WHEN-UNSPECIFIED (Apr 25 2026):
+  When a question references a target, projection, quota, or benchmark
+  that hasn't been explicitly provided in the conversation, ASK the user
+  for the value rather than assuming. Better to ask "what's your quarterly
+  NRR target?" than to assume 105% and present a variance against an
+  invented baseline. Asking is professional; assuming is risky.
+
+- RANKING-DELIVERABLE ENFORCEMENT (Apr 25 2026):
+  For "which X is best/worst/most/least", "rank the Ys", or "compare A vs
+  B" questions, you MUST deliver a ranked list of at least 3 items (or
+  fewer only if the underlying data has fewer items, in which case state
+  that explicitly). A vague answer or "no data available" is acceptable
+  ONLY if the relevant tool was actually called and confirmed empty.
+
 - CRITICAL ROI CONSISTENCY: For any investment, ROI, or cost question, use get_portfolio_roi_summary.
   The numbers MUST match the CFO dashboard exactly. Key benchmarks for reference:
   CS Investment scales at ~1-1.5% of ARR (industry benchmark). ROI is typically 5-15x.
@@ -105,6 +166,7 @@ INSTRUCTIONS:
   Always use the Revenue Intelligence numbers from PORTFOLIO CONTEXT for revenue questions.
   When asked "how much revenue is at risk", cite the context graph number, then optionally
   mention the critical account ARR as additional context.
+{persona_specific_rules}
 """
 
 
@@ -301,9 +363,15 @@ def ask_v2():
         max_rounds = 5  # Safety limit on tool_use rounds
         final_text = ""
 
+        # llm_call() wraps messages.create + record_usage on every exit
+        # path. Migrated Apr 21 2026 from the dual-call pattern.
+        from utils.llm_budget_controller import llm_call
         for round_num in range(max_rounds):
             try:
-                response = client.messages.create(
+                response = llm_call(
+                    client,
+                    customer_id=customer_id,
+                    module='ask_ai_v2',
                     model="claude-sonnet-4-20250514",
                     system=system_prompt,
                     messages=messages,
@@ -313,28 +381,13 @@ def ask_v2():
                 )
             except anthropic.APIError as e:
                 logger.error(f"Anthropic API error: {e}")
-                try:
-                    if _budget_record:
-                        _budget_record(customer_id, 'ask_ai_v2', 0, 0,
-                                       model='claude-sonnet-4-20250514',
-                                       success=False, error_message=str(e))
-                except Exception:
-                    pass
+                # llm_call() already emitted record_usage(success=False) before
+                # re-raising, so no need to repeat it here.
                 return jsonify({
                     'error': 'AI service error',
                     'message': str(e),
                     'fallback': True,
                 }), 502
-
-            # Record usage for this round
-            try:
-                if _budget_record:
-                    _budget_record(customer_id, 'ask_ai_v2',
-                                   tokens_in=response.usage.input_tokens,
-                                   tokens_out=response.usage.output_tokens,
-                                   model='claude-sonnet-4-20250514')
-            except Exception:
-                pass
 
             # Collect text from this response
             text_parts = []
@@ -390,7 +443,10 @@ def ask_v2():
                     "provide a concise answer to the original question. "
                     "Be specific with numbers, account names, and actionable recommendations."
                 )})
-                summary_resp = client.messages.create(
+                summary_resp = llm_call(
+                    client,
+                    customer_id=customer_id,
+                    module='ask_ai_v2',
                     model="claude-sonnet-4-20250514",
                     system=system_prompt,
                     messages=messages,
@@ -401,14 +457,6 @@ def ask_v2():
                     if block.type == "text":
                         final_text = block.text
                         break
-                try:
-                    if _budget_record:
-                        _budget_record(customer_id, 'ask_ai_v2',
-                                       tokens_in=summary_resp.usage.input_tokens,
-                                       tokens_out=summary_resp.usage.output_tokens,
-                                       model='claude-sonnet-4-20250514')
-                except Exception:
-                    pass
             except Exception as e:
                 logger.warning(f"Ask AI v2: summary fallback failed: {e}")
 
