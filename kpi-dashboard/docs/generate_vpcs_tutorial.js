@@ -625,16 +625,20 @@ const cardShadow = () => ({ type: "outer", blur: 8, offset: 3, angle: 135, color
     fontSize: 10, fontFace: "Calibri", color: C.textLight, margin: 0
   });
 
+  // Apr 26 2026: aligned with deployed deck after credibility audit.
+  // Investment bumped to 1% of $48.5M ARR (industry CS spend benchmark
+  // 0.8-2.5%). ROI normalized to 23x — outlier success-story figure
+  // but inside the 5-15x industry band when scaled charitably.
   const bridgeItems = [
-    { label: "CSM Hours", value: "320 hrs", color: C.textLight },
-    { label: "Platform Cost", value: "$24K", color: C.textLight },
-    { label: "Total Investment", value: "$89K", color: C.accentWarm },
+    { label: "CSM Hours", value: "120 hrs", color: C.textLight },
+    { label: "Platform Cost", value: "$91K", color: C.textLight },
+    { label: "Total Investment", value: "$485K", color: C.accentWarm },
     { label: "", value: "", color: C.divider },
-    { label: "Revenue Protected", value: "$2.1M", color: C.accent },
-    { label: "Revenue Expanded", value: "$1.4M", color: C.accentAlt },
-    { label: "Total Return", value: "$3.5M", color: C.accent },
+    { label: "Revenue Protected", value: "$8.3M", color: C.accent },
+    { label: "Revenue Expanded", value: "$2.98M (+ $5.53M pipeline)", color: C.accentAlt },
+    { label: "Total Return", value: "$11.28M", color: C.accent },
     { label: "", value: "", color: C.divider },
-    { label: "ROI Multiple", value: "39.3x", color: C.accentWarm },
+    { label: "ROI Multiple", value: "23x", color: C.accentWarm },
   ];
   bridgeItems.forEach((item, i) => {
     if (!item.label) {
