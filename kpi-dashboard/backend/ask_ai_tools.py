@@ -157,6 +157,41 @@ TOOL_DEFINITIONS = [
         }
     },
     {
+        "name": "get_csm_scorecard",
+        "description": "Per-CSM performance scorecard across the portfolio: accounts managed, total ARR exposure, health Δ (improvement/decline), accounts rescued (critical → healthy), accounts lost (healthy → critical), playbooks run, actions taken, revenue impact. Use for 'which CSMs need help', 'show me Sarah's scorecard', 'compare CSM performance', or any per-CSM aggregation question. Filter to one CSM with csm_name (case-insensitive substring). Without csm_name, returns all CSMs.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "csm_name": {"type": "string", "description": "Optional CSM name filter (substring match)"}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "get_csm_ranking",
+        "description": "Rank CSMs comparatively across the portfolio by a chosen metric. Use for 'which CSM is performing best/worst', 'rank my team', 'who needs coaching'. Built on get_csm_scorecard but pre-sorted with rank #s. metric options: 'composite' (default), 'health_delta', 'revenue_impact', 'accounts_rescued', 'success_rate'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "metric": {"type": "string", "default": "composite", "description": "Metric to rank by: composite | health_delta | revenue_impact | accounts_rescued | success_rate"}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "get_team_capacity",
+        "description": "CS team capacity utilization: hours used vs available, role-by-role bottleneck detection (CSM, CS Ops, Product, Platform, Leadership). Use for 'are we over capacity', 'team capacity review', 'where's the bottleneck', 'do we have headroom'. Returns active playbook hours by role + utilization % + over-capacity flags.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
         "name": "calculate_power_of_1",
         "description": "Calculate the revenue impact of a 1% improvement in a business metric (Power-of-1). Use for ROI or 'what if' questions.",
         "input_schema": {
@@ -329,6 +364,19 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
     elif tool_name == 'get_csm_daily_actions':
         from mcp_server.cs_pulse_admin import get_csm_daily_actions
         return get_csm_daily_actions(customer_id=customer_id)
+    elif tool_name == 'get_csm_scorecard':
+        # Apr 26 2026 (Phase 1): per-CSM aggregation tool exposed from
+        # MCP server into Ask AI's TOOL_DEFINITIONS. Closes the VP CS
+        # structural gap (vpcs-q01/q03 require per-CSM names + metrics
+        # which previously had no tool surface).
+        from mcp_server.cs_pulse_admin import get_csm_scorecard
+        return get_csm_scorecard(customer_id=customer_id, csm_name=tool_input.get('csm_name'))
+    elif tool_name == 'get_csm_ranking':
+        from mcp_server.cs_pulse_admin import get_csm_ranking
+        return get_csm_ranking(customer_id=customer_id, metric=tool_input.get('metric', 'composite'))
+    elif tool_name == 'get_team_capacity':
+        from mcp_server.cs_pulse_revenue import get_team_capacity
+        return get_team_capacity(customer_id=customer_id)
     elif tool_name == 'calculate_power_of_1':
         from mcp_server.cs_pulse_revenue import calculate_power_of_1
         return calculate_power_of_1(customer_id=customer_id, metric_id=tool_input['metric_id'], improvement_pct=tool_input.get('improvement_pct', 1.0))
@@ -735,6 +783,20 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
                 'total_roi_projected_impact': sum(a.get('projected_dollar_impact', 0) for a in top),
             },
         }
+
+    elif tool_name == 'get_csm_scorecard':
+        # Apr 26 2026 (Phase 1): direct path delegates to MCP impl since
+        # the underlying logic (Account.profile_metadata.assigned_csm
+        # grouping + HealthScore deltas + PlaybookExecutionV2 attribution)
+        # is already implemented there with the right field knowledge.
+        from mcp_server.cs_pulse_admin import get_csm_scorecard
+        return get_csm_scorecard(customer_id=customer_id, csm_name=tool_input.get('csm_name'))
+    elif tool_name == 'get_csm_ranking':
+        from mcp_server.cs_pulse_admin import get_csm_ranking
+        return get_csm_ranking(customer_id=customer_id, metric=tool_input.get('metric', 'composite'))
+    elif tool_name == 'get_team_capacity':
+        from mcp_server.cs_pulse_revenue import get_team_capacity
+        return get_team_capacity(customer_id=customer_id)
 
     elif tool_name == 'calculate_power_of_1':
         # REAL: calls power_of_1_model.calculate_power_of_1_impact()

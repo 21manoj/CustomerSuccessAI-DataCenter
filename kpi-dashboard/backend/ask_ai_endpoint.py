@@ -43,9 +43,20 @@ PERSONA_PROMPTS = {
     'cro': {
         'role': 'Chief Revenue Officer',
         'focus': 'revenue protection, pipeline growth, churn prevention, expansion acceleration',
+        # Sprint 1.4 (Apr 26 2026): evidence-citing nudge for expansion / pipeline
+        # questions. cro-q03 with the Item 7 fix returned numbers (e.g. "$9.6M
+        # pipeline") but the grader flagged "appears without supporting evidence
+        # or methodology, raising concerns about fabrication." Adding explicit
+        # signal-citation requirement so account-level claims are anchored.
         'tone': 'Think like a CRO — every insight should connect to revenue impact. '
                 'Lead with dollar amounts. Quantify risk in ARR terms. '
-                'Recommend actions that protect or grow revenue.',
+                'Recommend actions that protect or grow revenue. '
+                'When reporting expansion or at-risk DOLLAR figures per account, '
+                'cite the specific signal/decision/outcome evidence: usage spike, '
+                'exec engagement uptick, NPS shift, budget cycle alignment, '
+                'champion departure, etc. Top-3 accounts in any ranking MUST have '
+                'at least one signal cited each — \"$X expansion\" without a "why" '
+                'reads as fabricated to a 15-yr CRO.',
     },
     'cfo': {
         'role': 'Chief Financial Officer',
