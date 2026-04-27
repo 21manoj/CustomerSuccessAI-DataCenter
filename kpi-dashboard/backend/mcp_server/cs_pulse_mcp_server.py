@@ -965,6 +965,23 @@ if __name__ == "__main__":
                             # Fallback: retrieve from session cache
                             token = _session_api_keys[session_id]
 
+                        # Apr 27 2026: query-param fallback (?api_key=...)
+                        # Convenience for Claude.ai-style connectors that take a
+                        # single URL string. URL-embedded auth is less secure
+                        # (browser history, logs, screen shares) — use only for
+                        # demo/dev keys; rotate post-demo.
+                        if not token:
+                            from urllib.parse import parse_qs
+                            qs = scope.get("query_string", b"").decode()
+                            if qs:
+                                params = parse_qs(qs)
+                                qkey = (params.get("api_key", [""])[0]
+                                        or params.get("token", [""])[0]).strip()
+                                if qkey:
+                                    token = qkey
+                                    if session_id:
+                                        _session_api_keys[session_id] = token
+
                         if token:
                             tok = _current_api_key_var.set(token)
                             sid = _current_session_id_var.set(session_id) if session_id else None
