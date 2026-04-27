@@ -71,7 +71,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_revenue_at_risk",
-        "description": "Get revenue breakdown from context graph: at-risk, protected, expansion, lost. The ONLY authoritative source for revenue figures.",
+        "description": "Get revenue breakdown from context graph for ONE account: at-risk, protected, expansion, lost. Use this for per-account drill-down. For portfolio-wide breakdowns (\"biggest expansion upside in the portfolio\", \"total revenue at risk across the book\"), use get_portfolio_revenue_breakdown instead — it aggregates across all accounts in one call.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -79,6 +79,17 @@ TOOL_DEFINITIONS = [
                 "account_id": {"type": "integer"}
             },
             "required": ["customer_id", "account_id"]
+        }
+    },
+    {
+        "name": "get_portfolio_revenue_breakdown",
+        "description": "Get portfolio-wide revenue breakdown across ALL accounts in one call: at-risk, protected, expansion (realized + approved/pipeline), lost. Use for any portfolio-level revenue/expansion question instead of looping get_revenue_at_risk per account. Returns: revenue_at_risk, revenue_protected, expansion_realized, expansion_approved (pipeline), expansion_pipeline (realized+approved), node_count.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"}
+            },
+            "required": ["customer_id"]
         }
     },
     {
@@ -293,6 +304,16 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
     elif tool_name == 'get_revenue_at_risk':
         from mcp_server.cs_pulse_intelligence import get_revenue_at_risk
         return get_revenue_at_risk(customer_id=customer_id, account_id=tool_input['account_id'])
+    elif tool_name == 'get_portfolio_revenue_breakdown':
+        # Apr 26 2026 (Sprint 1.3 — Item 7 fix for cro-q03 expansion-upside).
+        # Portfolio-wide aggregation that previously required N round-trips
+        # of get_revenue_at_risk(account_id) — N=10 for cust 331, exceeded
+        # max_rounds=5, truncated synthesis. Now one call returns the
+        # whole-book breakdown including expansion_realized + expansion_approved.
+        from utils.context_graph import aggregate_revenue_across_accounts
+        from models import Account
+        account_ids = [a.account_id for a in Account.query.filter_by(customer_id=customer_id).all()]
+        return aggregate_revenue_across_accounts(customer_id=customer_id, account_ids=account_ids)
     elif tool_name == 'get_context_graph_mermaid':
         from mcp_server.cs_pulse_intelligence import get_context_graph_mermaid
         return get_context_graph_mermaid(customer_id=customer_id, account_id=tool_input['account_id'], max_nodes=tool_input.get('max_nodes', 30))
@@ -438,6 +459,13 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
                 'expansion_pipeline': expansion,
                 'lost': lost,
             }
+
+    elif tool_name == 'get_portfolio_revenue_breakdown':
+        # Apr 26 2026 (Sprint 1.3 — Item 7 fix). Same as the MCP path:
+        # one-shot portfolio aggregation instead of looping per-account.
+        from utils.context_graph import aggregate_revenue_across_accounts
+        account_ids = [a.account_id for a in Account.query.filter_by(customer_id=customer_id).all()]
+        return aggregate_revenue_across_accounts(customer_id=customer_id, account_ids=account_ids)
 
     elif tool_name == 'get_context_graph_mermaid':
         # Mermaid generation with subgraph grouping for proper vertical layout
