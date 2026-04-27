@@ -69,7 +69,26 @@ def _run_ask_ai_for_question(
                 temperature=0.3,
             )
         except Exception as e:
+            err_str = str(e)
             logger.error("ask-ai API call failed for %s: %s", question.id, e)
+            # Sprint 1.3 (Apr 26 2026): fail-fast on credit-balance / auth
+            # errors. The 3-shot run on Apr 26 burned through 27 questions
+            # producing F's after credit ran dry — wasting wall-clock and
+            # contaminating the result file. Re-raise so run_one_persona /
+            # run_all_personas surface the real error and abort the run.
+            fatal_markers = (
+                'credit balance is too low',
+                'invalid_request_error',
+                'authentication_error',
+                'invalid x-api-key',
+                'rate_limit_exceeded',
+            )
+            if any(m in err_str.lower() for m in fatal_markers):
+                logger.error(
+                    "FATAL: account-level error detected — aborting run "
+                    "instead of producing junk grades. Resolve and re-run."
+                )
+                raise RuntimeError(f"Aborting persona-grading run: {err_str[:200]}") from e
             return f"[runner error: {e}]", tools_called
 
         text_parts: list[str] = []
@@ -299,6 +318,13 @@ def run_all_personas(
             logger.info("[%s] avg %s (%.2f) over %d questions (n_shots=%d)",
                         p, report.avg_grade_letter, report.avg_grade_numeric,
                         report.n_questions, n_shots)
+        except RuntimeError as e:
+            # Sprint 1.3 (Apr 26 2026): _run_ask_ai_for_question raises
+            # RuntimeError for fatal account-level errors (credit balance,
+            # auth, rate limit). Don't continue to other personas — surface
+            # the real error and abort cleanly.
+            logger.error("ABORTING RUN: fatal error on persona %s — %s", p, e)
+            raise
         except Exception as e:
             logger.error("Failed to grade persona %s: %s", p, e)
             reports[p] = {"error": str(e)}
