@@ -83,7 +83,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_portfolio_revenue_breakdown",
-        "description": "Get portfolio-wide revenue breakdown across ALL accounts in one call: at-risk, protected, expansion (realized + approved/pipeline), lost. Use for any portfolio-level revenue/expansion question instead of looping get_revenue_at_risk per account. Returns: revenue_at_risk, revenue_protected, expansion_realized, expansion_approved (pipeline), expansion_pipeline (realized+approved), node_count.",
+        "description": "Get portfolio-wide revenue breakdown across ALL accounts in ONE call. Returns BOTH portfolio totals AND top-3 accounts per bucket. Use for any portfolio-level revenue/expansion/at-risk question — this single call gives you everything needed for synthesis without further per-account drilling. Returns: revenue_at_risk, revenue_protected, expansion_realized, expansion_approved (pipeline), expansion_pipeline (realized+approved), AND top_at_risk_accounts, top_expansion_accounts, top_protected_accounts (each with account_id, account_name, arr, amount, health_score). After calling this, do NOT loop get_revenue_at_risk per-account — top_*_accounts already contains the highest-impact accounts.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -294,6 +294,128 @@ TOOL_DEFINITIONS = [
 ]
 
 
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def _portfolio_revenue_breakdown_enriched(customer_id: int) -> dict:
+    """Portfolio revenue breakdown + top-3 accounts per bucket.
+
+    Apr 27 2026 (Fix A). The vanilla portfolio aggregation
+    (utils.context_graph.aggregate_revenue_across_accounts) returns dollar
+    totals only — at-risk, protected, expansion_realized, expansion_approved.
+    On cust 331 the AI synthesized from the totals immediately. On cust 387
+    the AI drilled per-account "to verify" and hit max_rounds=5 truncation.
+
+    This wrapper returns the same totals PLUS:
+      - top_at_risk_accounts: [{account_id, account_name, arr, at_risk_amount,
+                               health_score}, ...] (up to 3, sorted desc)
+      - top_expansion_accounts: same shape, expansion (realized + approved)
+      - top_protected_accounts: same shape
+
+    With this enrichment the AI has account-level context in one call and
+    doesn't need to loop get_revenue_at_risk per-account.
+    """
+    from utils.context_graph import aggregate_revenue_across_accounts
+    from models import Account, ContextNode, HealthScore
+    from collections import defaultdict
+
+    account_rows = Account.query.filter_by(customer_id=customer_id).all()
+    account_ids = [a.account_id for a in account_rows]
+    accounts_by_id = {a.account_id: a for a in account_rows}
+
+    # 1. Portfolio totals (existing logic)
+    totals = aggregate_revenue_across_accounts(
+        customer_id=customer_id, account_ids=account_ids,
+    )
+
+    # 2. Per-account totals — same classification logic, but grouped per account
+    RISK_TYPES = {'at_risk', 'lost', 'revenue_at_risk', 'churn_lost', 'churn_risk',
+                  'engagement_decline', 'renewal_uncertainty', 'capacity_constraint',
+                  'partner_friction', 'partial_recovery'}
+    PROTECTED_TYPES = {'protected', 'revenue_protected', 'churn_averted',
+                       'renewal_secured', 'revenue_saved', 'engagement_recovery',
+                       'escalation_resolved', 'intervention_outcome'}
+    EXPANSION_TYPES = {'expansion', 'expansion_closed', 'expansion_realized',
+                       'revenue_expanded', 'revenue_growth', 'new_logo',
+                       'upsell', 'cross_sell'}
+    PIPELINE_TYPES = {'expansion_approved', 'expansion_opportunity', 'pipeline'}
+
+    per_acct_at_risk = defaultdict(float)
+    per_acct_protected = defaultdict(float)
+    per_acct_expansion = defaultdict(float)  # realized + approved combined
+
+    outcome_nodes = (
+        ContextNode.query.filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.account_id.in_(account_ids),
+            ContextNode.node_type == 'OUTCOME',
+            ContextNode.revenue_impact.isnot(None),
+        ).all()
+    )
+    for node in outcome_nodes:
+        try:
+            raw = float(node.revenue_impact)
+        except (TypeError, ValueError):
+            continue
+        impact_type = (node.revenue_impact_type or '').lower()
+        subtype = (node.node_subtype or '').lower()
+        amt = abs(raw)
+        if impact_type in RISK_TYPES or subtype in RISK_TYPES:
+            per_acct_at_risk[node.account_id] += amt
+        elif impact_type in PIPELINE_TYPES or subtype in PIPELINE_TYPES:
+            per_acct_expansion[node.account_id] += amt
+        elif impact_type in EXPANSION_TYPES or subtype in EXPANSION_TYPES:
+            per_acct_expansion[node.account_id] += amt
+        elif impact_type in PROTECTED_TYPES or subtype in PROTECTED_TYPES:
+            per_acct_protected[node.account_id] += amt
+        elif raw < 0:
+            per_acct_at_risk[node.account_id] += amt
+        elif raw > 0:
+            per_acct_protected[node.account_id] += raw
+
+    # 3. Latest health per account (one query, joined in Python)
+    latest_health = {}
+    for aid in account_ids:
+        hs = (HealthScore.query
+              .filter_by(account_id=aid)
+              .order_by(HealthScore.measurement_month.desc())
+              .first())
+        if hs and hs.health_score is not None:
+            latest_health[aid] = round(float(hs.health_score), 1)
+
+    def _format_top(per_acct_dict, top_n=3):
+        sorted_accts = sorted(per_acct_dict.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
+        out = []
+        for aid, amount in sorted_accts:
+            if amount <= 0:
+                continue
+            acct = accounts_by_id.get(aid)
+            if not acct:
+                continue
+            out.append({
+                'account_id': aid,
+                'account_name': acct.account_name,
+                'arr': float(acct.revenue or 0),
+                'amount': round(amount, 2),
+                'health_score': latest_health.get(aid),
+            })
+        return out
+
+    return {
+        # Original fields — back-compat with downstream callers
+        **totals,
+        # New enrichment — top-3 per bucket so AI doesn't need per-account drill
+        'top_at_risk_accounts':   _format_top(per_acct_at_risk),
+        'top_expansion_accounts': _format_top(per_acct_expansion),
+        'top_protected_accounts': _format_top(per_acct_protected),
+        # Synthesis hint to discourage per-account looping after this call
+        '_synthesis_hint': (
+            'Use top_*_accounts for per-account narrative. Do NOT call '
+            'get_revenue_at_risk per-account — top_*_accounts already '
+            'contains the highest-impact per-account dollar amounts.'
+        ),
+    }
+
+
 # ─── Tool Dispatcher ─────────────────────────────────────────────────────────
 
 def execute_tool(tool_name: str, tool_input: dict, customer_id: int) -> dict:
@@ -340,15 +462,14 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
         from mcp_server.cs_pulse_intelligence import get_revenue_at_risk
         return get_revenue_at_risk(customer_id=customer_id, account_id=tool_input['account_id'])
     elif tool_name == 'get_portfolio_revenue_breakdown':
-        # Apr 26 2026 (Sprint 1.3 — Item 7 fix for cro-q03 expansion-upside).
-        # Portfolio-wide aggregation that previously required N round-trips
-        # of get_revenue_at_risk(account_id) — N=10 for cust 331, exceeded
-        # max_rounds=5, truncated synthesis. Now one call returns the
-        # whole-book breakdown including expansion_realized + expansion_approved.
-        from utils.context_graph import aggregate_revenue_across_accounts
-        from models import Account
-        account_ids = [a.account_id for a in Account.query.filter_by(customer_id=customer_id).all()]
-        return aggregate_revenue_across_accounts(customer_id=customer_id, account_ids=account_ids)
+        # Apr 26-27 2026 (Sprint 1.3 + Fix A).
+        # Sprint 1.3 (Item 7): one-shot portfolio aggregation instead of N
+        # per-account get_revenue_at_risk loops.
+        # Fix A (Apr 27): enriched with top-3 accounts per bucket. The portfolio
+        # totals alone caused the AI on cust 387 to drill per-account anyway,
+        # hitting max_rounds=5 truncation. Returning top-3-with-detail in one
+        # call gives the AI everything it needs for synthesis without drilling.
+        return _portfolio_revenue_breakdown_enriched(customer_id)
     elif tool_name == 'get_context_graph_mermaid':
         from mcp_server.cs_pulse_intelligence import get_context_graph_mermaid
         return get_context_graph_mermaid(customer_id=customer_id, account_id=tool_input['account_id'], max_nodes=tool_input.get('max_nodes', 30))
@@ -509,11 +630,8 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
             }
 
     elif tool_name == 'get_portfolio_revenue_breakdown':
-        # Apr 26 2026 (Sprint 1.3 — Item 7 fix). Same as the MCP path:
-        # one-shot portfolio aggregation instead of looping per-account.
-        from utils.context_graph import aggregate_revenue_across_accounts
-        account_ids = [a.account_id for a in Account.query.filter_by(customer_id=customer_id).all()]
-        return aggregate_revenue_across_accounts(customer_id=customer_id, account_ids=account_ids)
+        # Apr 26-27 2026 (Sprint 1.3 + Fix A — same enriched path as _execute_via_mcp).
+        return _portfolio_revenue_breakdown_enriched(customer_id)
 
     elif tool_name == 'get_context_graph_mermaid':
         # Mermaid generation with subgraph grouping for proper vertical layout
