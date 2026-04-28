@@ -32,7 +32,8 @@ from cs_pulse_mcp_server import (
     _get_account_arr,
     _get_health_functions,
     _get_kpi_definitions,
-    _get_dc2s_pillar_labels,
+    _get_dc2s_pillar_labels,  # DEPRECATED — kept for back-compat; use _get_pillar_labels(vertical)
+    _get_pillar_labels,        # Apr 28 2026: vertical-aware pillar labels (saas_premium / dc2_s / etc.)
     _resolve_customer_vertical,
     _backend_dir,
     ToolError,
@@ -2812,7 +2813,14 @@ def clone_customer(
             'Month 1 requires 4 CSVs: accounts, kpi_measurements, signals, outcomes.'
         )
 
-        result['pillar_labels'] = _get_dc2s_pillar_labels()
+        # Apr 28 2026: was hardcoded to _get_dc2s_pillar_labels() — caused
+        # saas_premium clones (e.g. 331→388 vinayak321) to return the
+        # ImportError fallback DC2_S labels in the response message.
+        # Cust data was always correct; only this display string was wrong.
+        # Now uses the vertical-aware helper with the new customer's actual
+        # vertical, so saas_premium clones return SaaS pillar names.
+        new_vertical = _resolve_customer_vertical(new_cid) or 'dc2_s'
+        result['pillar_labels'] = _get_pillar_labels(new_vertical)
 
         return result
 
