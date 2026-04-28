@@ -25,6 +25,9 @@ import os
 from cs_pulse_mcp_server import (
     mcp,
     _check_mcp_enabled,
+    _require_auth,  # Apr 28 2026: was missing — caused NameError at runtime
+                    # in clone_customer (line 2397) and download_customer_csv.
+                    # Surfaced via Claude.ai MCP error trace.
     _get_flask_app,
     _get_account_arr,
     _get_health_functions,
