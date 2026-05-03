@@ -3,6 +3,19 @@ set -e
 
 echo "=== CS Pulse Platform Starting ==="
 
+# Seed base verticals/ files into the named volume. The runtime compose
+# mounts a named volume on /app/backend/verticals for customer-specific
+# subdirs (customer{id}-{vertical}/) that must persist across restarts.
+# That mount hides the image's base files (dc2_s/, saas_premium/,
+# _template/, __init__.py) on first boot of an empty volume, which breaks
+# blueprint imports. `cp -rn` copies only files that don't already exist —
+# idempotent across restarts; never overwrites customer-modified files.
+if [ -d /app/backend/.verticals_base ] && [ -d /app/backend/verticals ]; then
+    echo "Seeding base verticals/ files into volume (idempotent)..."
+    cp -rn /app/backend/.verticals_base/. /app/backend/verticals/ 2>&1 || \
+        echo "Note: verticals seed completed with warnings (non-fatal)"
+fi
+
 # Run database migrations if DATABASE_URL is set
 if [ -n "$DATABASE_URL" ]; then
     echo "Running database schema sync..."
@@ -12,6 +25,15 @@ if [ -n "$DATABASE_URL" ]; then
     # Named migrations (idempotent, safe to re-run)
     echo "Running named migrations..."
     python3 migrations/add_customer_id_to_wizard_learnings.py 2>&1 || echo "Note: wizard_learnings migration skipped (non-fatal)"
+
+    # Provenance migration (May 2026) — refines context_nodes.source from
+    # {customer, system} to {observed, inferred, synthetic} and adds the
+    # source column to context_edges. Idempotent — only updates rows still
+    # on legacy values.
+    if [ -f migrations/refine_provenance_source_values.py ]; then
+        python3 -m migrations.refine_provenance_source_values 2>&1 | tail -10 || \
+            echo "Note: provenance migration completed with warnings (non-fatal)"
+    fi
 
     # Legacy: flask db upgrade for Alembic migrations (if any)
     flask db upgrade 2>/dev/null || true

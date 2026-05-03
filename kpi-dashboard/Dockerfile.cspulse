@@ -66,7 +66,7 @@ RUN python setup_cython.py build_ext --inplace 2>&1 | tail -5
 # KEEP: scripts/sqs_onboarding_worker.py — SQS consumer for async onboarding / export / rehydrate jobs
 # KEEP: migrations/add_customer_id_to_wizard_learnings.py, add_arc_fields_to_accounts.py — runnable in container
 RUN find ./templates -name "*.py" -delete 2>/dev/null || true && \
-    find ./migrations -name "*.py" ! -name "add_customer_id_to_wizard_learnings.py" ! -name "add_arc_fields_to_accounts.py" -delete 2>/dev/null || true && \
+    find ./migrations -name "*.py" ! -name "add_customer_id_to_wizard_learnings.py" ! -name "add_arc_fields_to_accounts.py" ! -name "refine_provenance_source_values.py" -delete 2>/dev/null || true && \
     find ./scripts -name "*.py" ! -name "generate_synthetic_*.py" ! -name "migrate_schema_sync.py" ! -name "sqs_onboarding_worker.py" -delete 2>/dev/null || true
 
 # Clean up build artifacts
@@ -113,6 +113,15 @@ COPY --from=backend-builder /usr/local/bin/flask /usr/local/bin/flask
 
 # Copy compiled backend (.so files + essential .py)
 COPY --from=backend-builder /app /app/backend
+
+# Stash a copy of base verticals/ files (dc2_s/, saas_premium/, _template/,
+# __init__.py, provision_dc_customer.py) at a shadow path. The runtime mounts
+# a named volume on /app/backend/verticals for customer-specific persistence
+# (customer{id}-{vertical}/ subdirs). That mount overlays the image's base
+# verticals/ files, which are static + image-baked. The entrypoint seeds them
+# back via `cp -rn .verticals_base/* verticals/` on each start (idempotent).
+RUN cp -r /app/backend/verticals /app/backend/.verticals_base \
+    && find /app/backend/.verticals_base -name "customer*-*" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Copy load-driver (for Test Runner UI)
 COPY --from=loaddriver-prep /app/load-driver /app/load-driver
