@@ -733,8 +733,15 @@ class ContextNode(db.Model):
     node_subtype = db.Column(db.String(50), index=True)
     # e.g. SIGNAL→kpi_change|ticket|nps; DECISION→playbook|escalation|exec_engagement
 
-    # Node origin: 'customer' = CSV upload; 'system' = Wizard A / signal_analyst / urgent_scanner
-    source = db.Column(db.String(20), nullable=False, default='customer')
+    # Node provenance — see utils/provenance.py for canonical vocabulary.
+    #   'observed'  = CSV upload / SoR sync (asserted by customer)
+    #   'inferred'  = runtime detection over real signals (signal_analyst,
+    #                 urgent_scanner, LLM Tier-1, push_intelligence)
+    #   'synthetic' = arc-template fabrication (Wizard A, demo seeders)
+    # Wizard B/C correlation reads default-filter to ('observed','inferred').
+    # Legacy values 'customer' and 'system' are migrated by
+    # migrations/refine_provenance_source_values.py.
+    source = db.Column(db.String(20), nullable=False, default='observed')
 
     # Storage tier: 1=permanent, 2=decaying, 3=ephemeral
     tier = db.Column(db.SmallInteger, nullable=False, default=2)
@@ -831,6 +838,11 @@ class ContextEdge(db.Model):
     source_platform = db.Column(db.String(50))
     created_by = db.Column(db.String(50))                 # "cs_pulse_engine", "csv_import", "mcp_sfdc"
 
+    # Edge provenance — same vocabulary as ContextNode.source. See
+    # utils/provenance.py. Wizard A arc-generated edges are 'synthetic'
+    # and excluded from Wizard B correlation fitting by default.
+    source = db.Column(db.String(20), nullable=False, default='observed')
+
     # Temporal
     occurred_at = db.Column(db.DateTime)
     expires_at = db.Column(db.DateTime)
@@ -860,6 +872,7 @@ class ContextEdge(db.Model):
             'revenue_impact': float(self.revenue_impact) if self.revenue_impact else None,
             'revenue_impact_type': self.revenue_impact_type,
             'properties': self.properties,
+            'source': self.source,
             'source_platform': self.source_platform,
             'created_by': self.created_by,
             'occurred_at': self.occurred_at.isoformat() if self.occurred_at else None,

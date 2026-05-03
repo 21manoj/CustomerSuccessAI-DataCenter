@@ -293,7 +293,9 @@ class SignalEnrichmentWorker:
                 account_id=sig.account_id,
                 customer_id=customer_id,
                 node_type='SIGNAL',
-                source='system',
+                # QSIM signal materialised from a real external event (email,
+                # Slack, transcript) with LLM enrichment — inferred.
+                source='inferred',
                 node_subtype='qualitative_signal',
                 title=f'QSIM: {intents_str}',
                 properties={

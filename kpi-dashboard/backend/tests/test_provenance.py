@@ -1,0 +1,233 @@
+"""
+Unit tests for utils/provenance.py — pure helpers, no DB.
+
+Run:
+    pytest kpi-dashboard/backend/tests/test_provenance.py -v
+"""
+
+import pytest
+
+from utils.provenance import (
+    OBSERVED,
+    INFERRED,
+    SYNTHETIC,
+    ALL_SOURCES,
+    TRUSTWORTHY_SOURCES,
+    DEFAULT_EDGE_CONFIDENCE_THRESHOLD,
+    normalize,
+    is_trustworthy,
+    trustworthy_sources,
+    is_trustworthy_edge,
+)
+
+
+class TestVocabulary:
+    def test_canonical_values(self):
+        assert OBSERVED == 'observed'
+        assert INFERRED == 'inferred'
+        assert SYNTHETIC == 'synthetic'
+
+    def test_all_sources_complete(self):
+        assert set(ALL_SOURCES) == {OBSERVED, INFERRED, SYNTHETIC}
+
+    def test_synthetic_excluded_from_trustworthy(self):
+        # The whole point of the refactor: synthetic must be excluded by default.
+        assert SYNTHETIC not in TRUSTWORTHY_SOURCES
+        assert OBSERVED in TRUSTWORTHY_SOURCES
+        assert INFERRED in TRUSTWORTHY_SOURCES
+
+
+class TestNormalize:
+    def test_legacy_customer_to_observed(self):
+        assert normalize('customer') == OBSERVED
+
+    def test_legacy_system_to_inferred(self):
+        # Conservative: 'system' is ambiguous so it maps to 'inferred'.
+        # Synthetic must be opted into explicitly by the writer.
+        assert normalize('system') == INFERRED
+
+    def test_canonical_values_pass_through(self):
+        assert normalize(OBSERVED) == OBSERVED
+        assert normalize(INFERRED) == INFERRED
+        assert normalize(SYNTHETIC) == SYNTHETIC
+
+    def test_none_defaults_to_observed(self):
+        assert normalize(None) == OBSERVED
+
+    def test_unknown_passes_through(self):
+        # So readers can detect drift / new values appearing.
+        assert normalize('weird_value') == 'weird_value'
+
+
+class TestIsTrustworthy:
+    def test_observed_is_trustworthy(self):
+        assert is_trustworthy('observed') is True
+
+    def test_inferred_is_trustworthy(self):
+        assert is_trustworthy('inferred') is True
+
+    def test_synthetic_is_not_trustworthy(self):
+        assert is_trustworthy('synthetic') is False
+
+    def test_legacy_customer_is_trustworthy(self):
+        # Backward compat during rolling deploy.
+        assert is_trustworthy('customer') is True
+
+    def test_legacy_system_is_trustworthy(self):
+        # 'system' normalizes to 'inferred' which is trustworthy.
+        # Pre-migration rows are admitted; migration upgrades them.
+        assert is_trustworthy('system') is True
+
+    def test_none_is_trustworthy(self):
+        # None defaults to 'observed' which is trustworthy.
+        assert is_trustworthy(None) is True
+
+
+class TestTrustworthySources:
+    def test_default_excludes_synthetic(self):
+        sources = trustworthy_sources()
+        assert SYNTHETIC not in sources
+        assert OBSERVED in sources
+        assert INFERRED in sources
+
+    def test_extra_synthetic_includes_synthetic(self):
+        sources = trustworthy_sources(extra=(SYNTHETIC,))
+        assert SYNTHETIC in sources
+        assert OBSERVED in sources
+        assert INFERRED in sources
+
+    def test_default_is_immutable_tuple(self):
+        # Caller must not be able to mutate the constant.
+        assert isinstance(trustworthy_sources(), tuple)
+
+
+class _FakeEdge:
+    """Stand-in for ContextEdge — only the attrs we read."""
+    def __init__(self, confidence=None):
+        self.confidence = confidence
+
+
+class TestIsTrustworthyEdge:
+    def test_high_confidence_passes(self):
+        assert is_trustworthy_edge(_FakeEdge(confidence=0.85)) is True
+
+    def test_at_threshold_passes(self):
+        assert is_trustworthy_edge(
+            _FakeEdge(confidence=DEFAULT_EDGE_CONFIDENCE_THRESHOLD)
+        ) is True
+
+    def test_below_threshold_fails(self):
+        assert is_trustworthy_edge(_FakeEdge(confidence=0.5)) is False
+
+    def test_just_below_threshold_fails(self):
+        assert is_trustworthy_edge(
+            _FakeEdge(confidence=DEFAULT_EDGE_CONFIDENCE_THRESHOLD - 0.01)
+        ) is False
+
+    def test_null_confidence_passes(self):
+        # Backward compat: rows pre-dating per-edge confidence.
+        assert is_trustworthy_edge(_FakeEdge(confidence=None)) is True
+
+    def test_custom_threshold(self):
+        edge = _FakeEdge(confidence=0.75)
+        assert is_trustworthy_edge(edge, min_confidence=0.7) is True
+        assert is_trustworthy_edge(edge, min_confidence=0.8) is False
+
+    def test_zero_threshold_admits_everything(self):
+        assert is_trustworthy_edge(_FakeEdge(confidence=0.01), min_confidence=0.0) is True
+
+    def test_invalid_confidence_passes(self):
+        # Robust to bad data — don't crash on malformed rows.
+        edge = type('E', (), {'confidence': 'not_a_number'})()
+        assert is_trustworthy_edge(edge) is True
+
+
+class TestCountTrustworthyCausalEdges:
+    """Pure-function tests on the dual-gate counting logic.
+
+    The DB query path is exercised in integration tests; here we only
+    verify that the gate logic correctly counts each bucket.
+    """
+
+    def test_requires_scope(self):
+        from utils.provenance import count_trustworthy_causal_edges
+        with pytest.raises(ValueError):
+            count_trustworthy_causal_edges()
+
+    def test_synthetic_dominates_confidence(self):
+        # Mirror the gate logic in pure Python — the function combines
+        # provenance + confidence; here we re-derive each bucket label
+        # against a synthetic fixture set.
+        from utils.provenance import is_trustworthy, is_trustworthy_edge
+
+        edges = [
+            type('E', (), {'source': 'observed', 'confidence': 0.9})(),  # trust
+            type('E', (), {'source': 'inferred', 'confidence': 0.8})(),  # trust
+            type('E', (), {'source': 'inferred', 'confidence': 0.5})(),  # low_conf
+            type('E', (), {'source': 'synthetic', 'confidence': 0.95})(),  # synth
+            type('E', (), {'source': 'synthetic', 'confidence': 0.5})(),  # synth
+            type('E', (), {'source': None, 'confidence': None})(),  # null → trust
+        ]
+        trustworthy = sum(
+            1 for e in edges
+            if is_trustworthy(e.source) and is_trustworthy_edge(e)
+        )
+        dropped_synth = sum(
+            1 for e in edges if not is_trustworthy(e.source)
+        )
+        dropped_low = sum(
+            1 for e in edges
+            if is_trustworthy(e.source) and not is_trustworthy_edge(e)
+        )
+        assert trustworthy == 3   # observed/0.9, inferred/0.8, null/null
+        assert dropped_synth == 2
+        assert dropped_low == 1
+        assert trustworthy + dropped_synth + dropped_low == len(edges)
+
+
+class TestApplyNodeSourceFilter:
+    """Smoke test for the SQL-side filter helper using a mock query."""
+
+    def test_default_filter_excludes_synthetic(self):
+        from utils.provenance import apply_node_source_filter
+
+        captured = {}
+
+        class _MockQuery:
+            def filter(self, predicate):
+                captured['predicate'] = predicate
+                return self
+
+        class _MockColumn:
+            def in_(self, allowlist):
+                captured['allowlist'] = tuple(allowlist)
+                return ('IN_PREDICATE', tuple(allowlist))
+
+        class _MockModel:
+            source = _MockColumn()
+
+        apply_node_source_filter(_MockQuery(), _MockModel)
+        assert SYNTHETIC not in captured['allowlist']
+        assert OBSERVED in captured['allowlist']
+        assert INFERRED in captured['allowlist']
+
+    def test_allow_synthetic_includes_synthetic(self):
+        from utils.provenance import apply_node_source_filter
+
+        captured = {}
+
+        class _MockQuery:
+            def filter(self, predicate):
+                captured['predicate'] = predicate
+                return self
+
+        class _MockColumn:
+            def in_(self, allowlist):
+                captured['allowlist'] = tuple(allowlist)
+                return ('IN_PREDICATE', tuple(allowlist))
+
+        class _MockModel:
+            source = _MockColumn()
+
+        apply_node_source_filter(_MockQuery(), _MockModel, allow_synthetic=True)
+        assert SYNTHETIC in captured['allowlist']

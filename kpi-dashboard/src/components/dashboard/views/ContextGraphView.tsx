@@ -8,6 +8,7 @@ import { apiCall, getCustomerIdentifier } from '../../../utils/api';
 import { useSession } from '../../../contexts/SessionContext';
 import { fetchGraphNodes, fetchAccountEdges, fetchGraphSummary } from '../../../utils/contextGraphApi';
 import type { ContextNodeDTO, ContextEdgeDTO } from '../../../types/contextGraph';
+import ProvenanceBadge from '../../shared/ProvenanceBadge';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -1453,8 +1454,11 @@ const ContextGraphView: React.FC = () => {
                               {displayType}
                             </span>
                           </td>
-                          <td className="px-2 py-1.5 text-gray-300 max-w-[120px] truncate" title={node.title}>
-                            {node.title || '--'}
+                          <td className="px-2 py-1.5 text-gray-300 max-w-[180px]" title={node.title}>
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate flex-1 min-w-0">{node.title || '--'}</span>
+                              <ProvenanceBadge source={(node as any).source} compact />
+                            </div>
                           </td>
                           <td className="px-2 py-1.5">
                             {node.revenue_impact != null ? (

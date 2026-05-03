@@ -202,7 +202,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                         account_id=account_id,
                         customer_id=customer_id,
                         node_type='SIGNAL',
-                        source='system',
+                        source='inferred',
                         node_subtype='urgent_alert',
                         title=f'Urgent Alert: ${abs(revenue_impact):,.0f} revenue at risk',
                         properties={

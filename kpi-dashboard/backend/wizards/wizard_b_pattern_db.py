@@ -63,6 +63,19 @@ def run_wizard_b(customer_id: int) -> dict:
         # Pass through full forecast — includes before/after CS Pulse fields
         nrr_summary['forecast'] = analyzer.portfolio_nrr_forecast
 
+    # ── Causal evidence stat — answers "how much trustworthy causal
+    # evidence backs the NRR forecast?". Combines the provenance filter
+    # (excludes Wizard A synthetic edges) with the per-edge confidence
+    # threshold (excludes noisy LLM-inferred edges). Surfaces alongside
+    # the forecast for AI-DD reviewers asking about evidence weight.
+    try:
+        from utils.provenance import count_trustworthy_causal_edges
+        nrr_summary['causal_evidence'] = count_trustworthy_causal_edges(
+            customer_id=customer_id,
+        )
+    except Exception:
+        pass  # non-fatal — stat is informational
+
     return {
         'status': 'completed',
         'total_patterns': len(analyzer.pattern_profiles),

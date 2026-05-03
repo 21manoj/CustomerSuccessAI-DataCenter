@@ -509,7 +509,11 @@ class PatternAnalyzer:
         accounts = Account.query.filter_by(customer_id=self.customer_id).all()
         _current_arr = {a.account_id: float(a.revenue or 0) for a in accounts}
 
-        # Reverse lifecycle events to get starting ARR
+        # Reverse lifecycle events to get starting ARR.
+        # Filter to trustworthy provenance — Wizard A synthetic OUTCOMEs
+        # (arc-template fabrications) must NOT count as real ARR movements.
+        # See utils/provenance.py.
+        from utils.provenance import TRUSTWORTHY_SOURCES
         _lifecycle_deltas = {}  # account_id → net ARR change from lifecycle
         _lc_outcomes = (
             ContextNode.query
@@ -518,6 +522,7 @@ class PatternAnalyzer:
                 ContextNode.node_type == 'OUTCOME',
                 ContextNode.node_subtype.in_(['churn_lost', 'contraction', 'expansion_closed', 'new_logo']),
                 ContextNode.revenue_impact.isnot(None),
+                ContextNode.source.in_(TRUSTWORTHY_SOURCES),
             )
             .all()
         )
@@ -550,12 +555,15 @@ class PatternAnalyzer:
         _DEFINITIVE_LOST = {'churn_lost', 'contraction'}
         _DEFINITIVE_EXPANSION = {'expansion_closed', 'new_logo'}
 
+        # Same provenance filter — synthetic OUTCOMEs are story annotations,
+        # not real ARR. TRUSTWORTHY_SOURCES imported above.
         outcome_nodes = (
             ContextNode.query
             .filter(
                 ContextNode.customer_id == self.customer_id,
                 ContextNode.node_type == 'OUTCOME',
                 ContextNode.revenue_impact.isnot(None),
+                ContextNode.source.in_(TRUSTWORTHY_SOURCES),
             )
             .all()
         )

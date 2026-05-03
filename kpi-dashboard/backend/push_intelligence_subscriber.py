@@ -163,7 +163,8 @@ def _link_stakeholders_to_decision(
                         account_id=account_id,
                         customer_id=customer_id,
                         node_type='STAKEHOLDER',
-                        source='system',
+                        # Stakeholder names come from profile_metadata (CRM/CSV) — observed.
+                        source='observed',
                         node_subtype=role.lower().replace(' ', '_'),
                         title=f'{name} ({role})',
                         properties={
@@ -423,7 +424,8 @@ def evaluate_playbook_trigger_for_account(
                 account_id=account_id,
                 customer_id=customer_id,
                 node_type='DECISION',
-                source='system',
+                # Auto-approved playbook decision based on real arc + health — inferred.
+                source='inferred',
                 node_subtype=f'playbook_{arc_type}',
                 title=f'Playbook {playbook_id} Auto-Approved — {account_name}',
                 properties={
@@ -458,7 +460,8 @@ def evaluate_playbook_trigger_for_account(
                     account_id=account_id,
                     customer_id=customer_id,
                     node_type='SIGNAL',
-                    source='system',
+                    # Fallback arc_detection — same template-driven origin as Wizard A.
+                    source='synthetic',
                     node_subtype='arc_detection',
                     title=f'Arc detected: {arc_type} (health={health_score:.0f})',
                     properties={

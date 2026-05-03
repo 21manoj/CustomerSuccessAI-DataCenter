@@ -307,18 +307,19 @@ def _run_journey_generation(customer_id: int) -> dict:
                     nested = db.session.begin_nested()
                     try:
                         # Cleanup old arc_detection nodes for this account
+                        # (covers both pre-migration 'system' and post-migration 'synthetic')
                         ContextNode.query.filter(
                             ContextNode.account_id == aid,
                             ContextNode.customer_id == customer_id,
                             ContextNode.node_subtype == 'arc_detection',
-                            ContextNode.source == 'system',
+                            ContextNode.source.in_(['system', 'synthetic']),
                         ).delete(synchronize_session='fetch')
 
                         arc_node = ContextNode(
                             account_id=aid,
                             customer_id=customer_id,
                             node_type='SIGNAL',
-                            source='system',
+                            source='synthetic',
                             node_subtype='arc_detection',
                             title=f'Arc Detected: {pattern}',
                             properties={
@@ -333,10 +334,10 @@ def _run_journey_generation(customer_id: int) -> dict:
                         db.session.add(arc_node)
                         db.session.flush()
 
-                        # Connect arc detection node to most recent customer signal
+                        # Connect arc detection node to most recent observed customer signal
                         recent_signal = (ContextNode.query
                                          .filter_by(account_id=aid, node_type='SIGNAL',
-                                                    source='customer')
+                                                    source='observed')
                                          .order_by(ContextNode.occurred_at.desc())
                                          .first())
                         if recent_signal:

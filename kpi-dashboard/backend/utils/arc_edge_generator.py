@@ -420,6 +420,10 @@ def generate_edges(account_id: int, arc_type: str, phase: str = 'baseline') -> i
                 'arc_type': resolved_type,
                 'arc_phase': edge_def.get('phase', 'baseline'),
             },
+            # Provenance: arc-template causal interpretation, fabricated
+            # independent of customer signals. Excluded from Wizard B/C
+            # correlation by default. See utils/provenance.py.
+            source          = 'synthetic',
             source_platform = 'wizard_a',
             created_by   = 'arc_edge_generator',
         )

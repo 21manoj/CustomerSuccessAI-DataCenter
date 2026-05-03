@@ -258,7 +258,9 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
             account_id=execution.account_id,
             customer_id=customer_id,
             node_type='OUTCOME',
-            source='system',
+            # Records a real playbook execution outcome (PlaybookExecutionV2
+            # row) — observed customer event, eligible for Wizard B/C reads.
+            source='observed',
             node_subtype='playbook_outcome',
             title=f'{outcome.title()}: {execution.playbook_id} — ${net_impact:,.0f} protected',
             revenue_impact=net_impact if net_impact > 0 else -(arr * 0.01),

@@ -11,7 +11,7 @@ Flow:
     2. If triggered, collect last-N SIGNAL ContextNodes + pillar deltas.
     3. Build a concise prompt and call LLM (Anthropic Claude first, OpenAI fallback).
     4. Store result as Notification(type='signal_insight').
-    5. Write system ContextNode (source='system') and edge to most recent customer signal.
+    5. Write inferred ContextNode (source='inferred') and edge to most recent observed customer signal.
     6. Return payload dict — or None if analysis was not triggered.
 
 Errors are caught at every layer; this function must NEVER crash process_data.
@@ -181,7 +181,7 @@ Be specific and action-oriented. Avoid generic advice."""
                 account_id=account_id,
                 customer_id=customer_id,
                 node_type='SIGNAL',
-                source='system',          # distinguishes from customer CSV signals
+                source='inferred',        # runtime LLM analysis over real customer signals
                 node_subtype='ai_insight',
                 title=f'AI Insight: health {health_before:.0f}→{health_after:.0f}',
                 properties={
@@ -200,7 +200,7 @@ Be specific and action-oriented. Avoid generic advice."""
             # Connect customer signals → AI insight (LED_TO — causal chain)
             recent_signals = (
                 ContextNode.query
-                .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
+                .filter_by(account_id=account_id, node_type='SIGNAL', source='observed')
                 .order_by(ContextNode.occurred_at.desc())
                 .limit(3)
                 .all()
@@ -442,14 +442,14 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
             f"priority={risk_info['priority']})"
         )
 
-        # ── 8. Write system signal to context graph ──
+        # ── 8. Write inferred signal to context graph ──
         try:
             from models import ContextEdge
             insight_node = ContextNode(
                 account_id=account_id,
                 customer_id=customer_id,
                 node_type='SIGNAL',
-                source='system',
+                source='inferred',
                 node_subtype='proactive_insight',
                 title=f'Proactive Alert: {risk_info["label"]}',
                 properties={
@@ -469,7 +469,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
             # Link triggering customer signal → proactive insight (causal)
             trigger_signal = (
                 ContextNode.query
-                .filter_by(account_id=account_id, node_type='SIGNAL', source='customer')
+                .filter_by(account_id=account_id, node_type='SIGNAL', source='observed')
                 .order_by(ContextNode.occurred_at.desc())
                 .first()
             )
@@ -495,7 +495,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     account_id=account_id,
                     customer_id=customer_id,
                     node_type='DECISION',
-                    source='system',
+                    source='inferred',
                     node_subtype=f'respond_to_{signal_type}',
                     title=f'Action needed: {risk_info["label"]}',
                     properties={

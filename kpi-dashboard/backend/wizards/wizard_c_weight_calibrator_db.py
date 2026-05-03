@@ -590,15 +590,20 @@ def run_wizard_c(customer_id: int) -> dict:
                     })
 
         if nrr_warnings:
-            # Check if there's actual revenue at risk in context graph
+            # Check if there's actual revenue at risk in context graph.
+            # Filter to trustworthy provenance (observed CSV / inferred runtime
+            # detection) — exclude synthetic arc-template OUTCOMEs so Wizard A's
+            # narrative annotations don't trigger Wizard C's NRR warning.
             revenue_at_risk = 0.0
             try:
                 from models import ContextNode
+                from utils.provenance import TRUSTWORTHY_SOURCES
                 outcome_nodes = ContextNode.query.filter(
                     ContextNode.customer_id == customer_id,
                     ContextNode.node_type == 'OUTCOME',
                     ContextNode.revenue_impact_type.in_(['at_risk', 'lost']),
                     ContextNode.revenue_impact.isnot(None),
+                    ContextNode.source.in_(TRUSTWORTHY_SOURCES),
                 ).all()
                 revenue_at_risk = sum(
                     abs(n.revenue_impact) for n in outcome_nodes

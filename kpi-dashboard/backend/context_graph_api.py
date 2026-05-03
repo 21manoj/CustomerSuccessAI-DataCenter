@@ -746,6 +746,11 @@ def graph_journey_timeline():
                 'node_subtype': n.node_subtype,
                 'title': n.title,
                 'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
+                # Provenance — frontend uses this to render the
+                # "model-generated" badge for synthetic nodes and an
+                # "AI-inferred" badge for inferred nodes. See
+                # utils/provenance.py for the canonical vocabulary.
+                'source': n.source,
             }
             sentiment = props.get('sentiment') or props.get('sentiment_score')
             if sentiment is not None:

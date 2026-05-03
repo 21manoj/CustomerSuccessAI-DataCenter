@@ -15,6 +15,19 @@ export type EdgeType =
 
 export type RevenueImpactType = 'at_risk' | 'protected' | 'expansion' | 'lost';
 
+/**
+ * Provenance vocabulary — see backend utils/provenance.py.
+ *   observed  — CSV upload / SoR sync (asserted by customer)
+ *   inferred  — runtime detection over real signals (signal_analyst,
+ *               urgent_scanner, LLM Tier-1, push_intelligence)
+ *   synthetic — arc-template fabrication (Wizard A, demo seeders)
+ *
+ * UI uses this to render trust badges. `synthetic` rows should carry a
+ * "model-generated" badge so users don't mistake narrative scaffolding
+ * for asserted facts.
+ */
+export type ProvenanceSource = 'observed' | 'inferred' | 'synthetic';
+
 // ── Node & Edge DTOs ──
 
 export interface ContextNodeDTO {
@@ -31,6 +44,8 @@ export interface ContextNodeDTO {
   revenue_impact: number | null;
   revenue_impact_type: RevenueImpactType | null;
   confidence: number | null;
+  /** Provenance — see ProvenanceSource. Optional for backwards-compat with pre-migration responses. */
+  source?: ProvenanceSource;
   source_platform: string | null;
   source_event_id: string | null;
   occurred_at: string | null;      // ISO-8601
@@ -47,6 +62,8 @@ export interface ContextEdgeDTO {
   revenue_impact: number | null;
   revenue_impact_type: RevenueImpactType | null;
   properties: Record<string, any>;
+  /** Provenance — see ProvenanceSource. */
+  source?: ProvenanceSource;
   source_platform: string | null;
   created_by: string | null;
   occurred_at: string | null;

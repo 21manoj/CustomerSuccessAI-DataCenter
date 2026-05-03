@@ -1166,7 +1166,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     sig_node = CN_(
                                         customer_id=customer_id, account_id=acct_id,
                                         node_type='SIGNAL',
-                                        source='customer',
+                                        source='observed',
                                         node_subtype=_sig_type,
                                         title=str(row.get('content') if str(row.get('content', '')).lower() not in ('nan', '', 'none') else row.get('signal_type', 'Signal'))[:200],
                                         properties={'signal_ref': str(sig_ref),
@@ -1227,7 +1227,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='STAKEHOLDER',
-                            source='customer',
+                            source='observed',
                             node_subtype=str(row.get('role', 'contact')),
                             title=str(row.get('stakeholder_name', row.get('name', ''))),
                             properties={
@@ -1323,7 +1323,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
-                            source='customer',
+                            source='observed',
                             node_subtype=outcome_type,
                             title=str(row.get('title', row.get('outcome_name', ''))),
                             revenue_impact=rev_impact,
@@ -1362,7 +1362,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='DECISION',
-                            source='customer',
+                            source='observed',
                             node_subtype=str(row.get('decision_maker_role', 'action')),
                             title=dec_title,
                             properties={'chosen_option': str(row.get('chosen_option', '')),
@@ -1395,7 +1395,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='SIGNAL', node_subtype='engagement',
-                            source='customer',
+                            source='observed',
                             title=ee_title[:200],
                             properties={
                                 'event_type': str(row.get('event_type', '')),
@@ -1426,7 +1426,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                 if not _eqs_already_processed:
                     try:
                         _existing = ContextNode.query.filter_by(
-                            customer_id=customer_id, node_type='SIGNAL', source='customer'
+                            customer_id=customer_id, node_type='SIGNAL', source='observed'
                         ).with_entities(ContextNode.source_event_id).all()
                         _existing_sig_refs = {r[0] for r in _existing if r[0]}
                     except Exception:
@@ -1458,7 +1458,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='SIGNAL',
-                            source='customer',
+                            source='observed',
                             node_subtype=str(row.get('signal_type', 'signal') or 'signal'),
                             title=str(row.get('content', ''))[:200],
                             properties={
@@ -1540,7 +1540,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=first_acct_id,
                             node_type='EXTERNAL_CONTEXT', node_subtype='industry_benchmark',
-                            source='customer',
+                            source='observed',
                             title=f'Benchmark: {kpi_code}',
                             properties={
                                 'kpi_code': str(kpi_code),
