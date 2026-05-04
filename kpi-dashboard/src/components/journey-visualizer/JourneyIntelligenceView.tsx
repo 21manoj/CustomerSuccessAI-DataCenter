@@ -129,7 +129,11 @@ function saveToggles(t: LayerToggles) {
 
 const CHART_W = 900;
 const CHART_H = 400;
-const PAD = { top: 30, right: 30, bottom: 60, left: 55 };
+// PAD.left widened from 55 → 105 to fit Healthy/At-Risk/Critical band labels
+// in the left margin (instead of overlaying them on the chart where graph
+// lines obscure the text). Labels render in 50px reserved on the left edge
+// while preserving the 0-100 axis numbers at their right edge.
+const PAD = { top: 30, right: 30, bottom: 60, left: 105 };
 const INNER_W = CHART_W - PAD.left - PAD.right;
 const INNER_H = CHART_H - PAD.top - PAD.bottom;
 
@@ -417,8 +421,15 @@ const JourneyIntelligenceView: React.FC = () => {
               {/* Threshold lines */}
               <line x1={PAD.left} x2={PAD.left + INNER_W} y1={scaleY(data.thresholds.healthy)} y2={scaleY(data.thresholds.healthy)} stroke="rgba(16,185,129,0.3)" strokeDasharray="4 4" />
               <line x1={PAD.left} x2={PAD.left + INNER_W} y1={scaleY(data.thresholds.at_risk)} y2={scaleY(data.thresholds.at_risk)} stroke="rgba(239,68,68,0.3)" strokeDasharray="4 4" />
-              <text x={PAD.left + 4} y={scaleY(data.thresholds.healthy) - 4} fill="rgba(16,185,129,0.5)" fontSize="9">Healthy ({data.thresholds.healthy})</text>
-              <text x={PAD.left + 4} y={scaleY(data.thresholds.at_risk) - 4} fill="rgba(239,68,68,0.5)" fontSize="9">At-Risk ({data.thresholds.at_risk})</text>
+              {/* Threshold band labels — placed in the widened left margin
+                  (right-aligned at PAD.left - 30, leaving room for axis numbers).
+                  Each label is centered vertically within its band. */}
+              <text x={PAD.left - 30} y={(scaleY(100) + scaleY(data.thresholds.healthy)) / 2 + 3} fill="rgba(16,185,129,0.7)" fontSize="10" fontWeight="600" textAnchor="end">Healthy</text>
+              <text x={PAD.left - 30} y={(scaleY(100) + scaleY(data.thresholds.healthy)) / 2 + 15} fill="rgba(16,185,129,0.45)" fontSize="9" textAnchor="end">≥ {data.thresholds.healthy}</text>
+              <text x={PAD.left - 30} y={(scaleY(data.thresholds.healthy) + scaleY(data.thresholds.at_risk)) / 2 + 3} fill="rgba(245,158,11,0.7)" fontSize="10" fontWeight="600" textAnchor="end">At-Risk</text>
+              <text x={PAD.left - 30} y={(scaleY(data.thresholds.healthy) + scaleY(data.thresholds.at_risk)) / 2 + 15} fill="rgba(245,158,11,0.45)" fontSize="9" textAnchor="end">{data.thresholds.at_risk}–{data.thresholds.healthy}</text>
+              <text x={PAD.left - 30} y={(scaleY(data.thresholds.at_risk) + scaleY(0)) / 2 + 3} fill="rgba(239,68,68,0.7)" fontSize="10" fontWeight="600" textAnchor="end">Critical</text>
+              <text x={PAD.left - 30} y={(scaleY(data.thresholds.at_risk) + scaleY(0)) / 2 + 15} fill="rgba(239,68,68,0.45)" fontSize="9" textAnchor="end">&lt; {data.thresholds.at_risk}</text>
 
               {/* Y-axis labels */}
               {[0, 20, 40, 60, 80, 100].map(v => (
