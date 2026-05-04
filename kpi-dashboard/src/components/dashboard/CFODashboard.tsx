@@ -1141,7 +1141,45 @@ const CFODashboard: React.FC = () => {
 
           {/* Row 1b: NRR Before/After + Cost of Inaction */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {d.wizard_b_nrr ? (
+            {/* Issue #11 fix (May 4 2026): "no lifecycle history" empty state.
+                When Wizard B has no closed lifecycle outcomes (delta = 0 + zero
+                ARR protected + zero accounts saved), showing "100% → 100% / +0pp"
+                looks like a bug. Detect that case explicitly and render a
+                pending-state banner with a clear next-action. */}
+            {d.wizard_b_nrr && (
+              d.wizard_b_nrr.delta === 0
+              && d.wizard_b_nrr.arr_protected === 0
+              && d.wizard_b_nrr.accounts_saved === 0
+            ) ? (
+              <div className="bg-[#1a1f2e] rounded-xl border border-amber-700/40 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">
+                      Realized NRR &middot; TTM
+                      <span className="text-gray-500 normal-case font-normal ml-1">(pending)</span>
+                    </h3>
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold">No history</span>
+                </div>
+                <div className="flex items-end gap-4 mb-3">
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">Realized NRR</p>
+                    <p className="text-3xl font-bold text-gray-500">—</p>
+                  </div>
+                  <div className="text-[10px] text-gray-400 pb-1 max-w-xs">
+                    No closed lifecycle outcomes yet (no churn, contraction, expansion, or new logos
+                    in the trailing 12 months). The realized-NRR comparison will populate once the
+                    first playbook executions close. For forward-looking risk on at-risk accounts,
+                    see <span className="text-cyan-400">CRO &middot; Forward NRR</span>.
+                  </div>
+                </div>
+                <p className="text-[9px] text-gray-600">
+                  Trigger first playbooks from CSM Cockpit · Today&apos;s Queue to start building NRR
+                  attribution history.
+                </p>
+              </div>
+            ) : d.wizard_b_nrr ? (
               /* ── Wizard B NRR: actual portfolio forecast ── */
               <div className="bg-[#1a1f2e] rounded-xl border border-cyan-700/30 p-5">
                 <div className="flex items-center justify-between mb-3">

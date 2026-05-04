@@ -36,7 +36,7 @@ const ContextGraphView = React.lazy(() => import('./views/ContextGraphView'));
 const ROIEngineView = React.lazy(() => import('./views/ROIEngineView'));
 const AccountsView = React.lazy(() => import('./views/AccountsView'));
 
-type ViewId = 'cro-overview' | 'signal-timeline' | 'context-graph' | 'roi-engine' | 'accounts' | 'playbooks' | 'approvals';
+type ViewId = 'cro-overview' | 'signal-timeline' | 'context-graph' | 'journey-intelligence' | 'roi-engine' | 'accounts' | 'playbooks' | 'approvals';
 
 // ============================================================================
 // TYPES
@@ -198,6 +198,13 @@ const NAV_ITEMS = {
     { id: 'cro-overview' as ViewId, label: 'CRO Overview', badge: null, icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'signal-timeline' as ViewId, label: 'Signal Timeline', badge: null, icon: <Activity className="w-4 h-4" /> },
     { id: 'context-graph' as ViewId, label: 'Context Graph', badge: null, icon: <GitBranch className="w-4 h-4" /> },
+    // Issue #8 fix (May 4 2026): surface the Journey Intelligence dashboard
+    // (3-line health graph + Signal-DNA composite + toggle layers for arcs,
+    // forecast, outcomes, decisions) in the CRO sidebar at the same level
+    // as Context Graph. Component lives at /dc-dashboard/journey-intelligence;
+    // we link out via <a> rather than handleViewChange because the view has
+    // its own page chrome.
+    { id: 'journey-intelligence' as ViewId, label: 'Journey Intelligence', badge: null, icon: <TrendingUp className="w-4 h-4" />, href: '/dc-dashboard/journey-intelligence' },
     // ROI Engine hidden — redundant with CFO Power-of-1 and sidebar widget
   ],
   operations: [
@@ -247,16 +254,14 @@ const SidebarNav: React.FC<{ activeId: ViewId; onViewChange: (view: ViewId) => v
           {NAV_ITEMS.intelligence.map((item) => {
             const isActive = item.id === activeId;
             const badge = getBadge(item.id);
-            return (
-              <button
-                key={item.id}
-                onClick={() => onViewChange(item.id)}
-                className={`flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-all group w-full text-left ${
-                  isActive
-                    ? 'bg-cyan-500/10 text-cyan-400'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
+            const hasHref = 'href' in item && (item as any).href;
+            const className = `flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-all group w-full text-left ${
+              isActive
+                ? 'bg-cyan-500/10 text-cyan-400'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`;
+            const inner = (
+              <>
                 <span className={isActive ? 'text-cyan-400' : 'text-gray-500 group-hover:text-gray-300'}>
                   {item.icon}
                 </span>
@@ -268,6 +273,17 @@ const SidebarNav: React.FC<{ activeId: ViewId; onViewChange: (view: ViewId) => v
                     {badge}
                   </span>
                 )}
+              </>
+            );
+            // Items with `href` link out to a dedicated route; others trigger
+            // the in-place view change. Same visual treatment for both.
+            return hasHref ? (
+              <a key={item.id} href={(item as any).href} className={className}>
+                {inner}
+              </a>
+            ) : (
+              <button key={item.id} onClick={() => onViewChange(item.id)} className={className}>
+                {inner}
               </button>
             );
           })}
