@@ -768,15 +768,31 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
       )}
       <div className="flex items-end gap-6 mb-4">
         <div>
-          <p className="text-[9px] text-gray-500 mb-0.5">ARR at Risk</p>
+          {/* Issue #9 fix (May 4 2026): clarify scope — at-risk subset, not full portfolio. */}
+          <p
+            className="text-[9px] text-gray-500 mb-0.5 cursor-help"
+            title="ARR of accounts with health < 70 (at-risk + critical). Excludes healthy accounts. For full portfolio ARR, see Total ARR tile above."
+          >
+            ARR at Risk <span className="text-gray-600">(health &lt; 70)</span>
+          </p>
           <p className="text-2xl font-bold text-red-400">{formatCompact(coi.arr_at_risk)}</p>
         </div>
         <div>
-          <p className="text-[9px] text-gray-500 mb-0.5">Annual Churn Exposure</p>
+          <p
+            className="text-[9px] text-gray-500 mb-0.5 cursor-help"
+            title="Annual revenue loss expected if no intervention — sum of (ARR × churn_probability) across at-risk + critical accounts."
+          >
+            Annual Churn Exposure
+          </p>
           <p className="text-2xl font-bold text-orange-400">{formatCompact(coi.annual_churn_exposure)}</p>
         </div>
         <div>
-          <p className="text-[9px] text-gray-500 mb-0.5">Accounts</p>
+          <p
+            className="text-[9px] text-gray-500 mb-0.5 cursor-help"
+            title="Count of at-risk + critical accounts (health < 70). Healthy accounts excluded from this view."
+          >
+            At-risk Accounts
+          </p>
           <p className="text-2xl font-bold text-gray-300">{coi.account_count}</p>
         </div>
       </div>
@@ -907,12 +923,12 @@ const CFODashboard: React.FC = () => {
 
           const transformed: CFODashboardData = {
             summary_cards: hasProof ? [
-              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts`, accent: 'white' },
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white' },
               { label: 'Actual CS Spend', value: formatCompact(proofCost), subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.csm_hours || 0}h CSM time`, accent: 'emerald' },
               { label: 'Revenue Protected', value: formatCompact(proofProtected + proofExpanded), subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`, accent: 'green' },
               { label: 'Portfolio ROI', value: `${proofRoi}x`, subtitle: `${formatCompact(proofCost)} → ${formatCompact(proofProtected + proofExpanded)}`, accent: 'cyan' },
             ] : [
-              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts`, accent: 'white' },
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white' },
               { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Power-of-1 benchmark estimate', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: true },
               { label: 'Projected Impact', value: formatCompact(roiImpact), subtitle: `GRR: ${grr}%`, accent: 'green', estimated: true },
               { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true },
@@ -1131,7 +1147,16 @@ const CFODashboard: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-cyan-400" />
-                    <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">CS Pulse NRR Impact</h3>
+                    {/* Issue #5 fix (May 4 2026): explicit "Realized NRR · TTM" label
+                        to disambiguate from CRO Forward NRR · 90d horizon. Same
+                        Without/With dichotomy, different attribution window. */}
+                    <h3
+                      className="text-[10px] font-semibold text-white uppercase tracking-wide cursor-help"
+                      title="Realized NRR over the trailing 12 months — derived from definitive lifecycle outcomes (churn, contraction, expansion, new logo). For forward 90d projection on at-risk accounts, see CRO Overview · Forward NRR."
+                    >
+                      Realized NRR · TTM
+                      <span className="text-gray-500 normal-case font-normal ml-1">(CS Pulse impact)</span>
+                    </h3>
                   </div>
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-semibold">Actual</span>
                 </div>

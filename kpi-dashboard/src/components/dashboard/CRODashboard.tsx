@@ -463,7 +463,14 @@ const StoryArcRow: React.FC<{ arc: StoryArc; onClick: () => void }> = ({ arc, on
   );
 };
 
-/** NRR per-account attribution — expandable below waterfall */
+/** NRR per-account attribution — expandable below waterfall.
+ *  Issue #2 + #7 fix (May 4 2026): clarify what each column means.
+ *    ARR        = account ARR (real)
+ *    Churn %    = churn probability under current health (max(5, 50 - health × 0.5))
+ *    +90d Save  = (expected_loss − projected_loss) × 0.5 attribution. Forward-only,
+ *                 trend-continuation, attributed at 50% per industry default.
+ *  Distinct from Wizard B's backward-looking dip-recovery `attributed_save` — same
+ *  underlying data, different counterfactual window. */
 const NRRAccountAttribution: React.FC<{ accounts: NRRWaterfallAccount[] }> = ({ accounts }) => {
   const [expanded, setExpanded] = React.useState(false);
   const sorted = [...accounts].sort((a, b) => a.expected_loss - b.expected_loss); // worst first (most negative)
@@ -478,6 +485,15 @@ const NRRAccountAttribution: React.FC<{ accounts: NRRWaterfallAccount[] }> = ({ 
       </button>
       {expanded && (
         <div className="space-y-1">
+          {/* Column header row — explicit labels (issue #2) */}
+          <div className="flex items-center justify-between text-[9px] uppercase tracking-wide text-gray-500 pb-1 border-b border-gray-800/60">
+            <span className="flex-1">Account</span>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+              <span className="w-14 text-right">ARR</span>
+              <span className="w-10 text-right" title="Annual churn probability projected from health score (max(5, 50 − health × 0.5))">Churn %</span>
+              <span className="w-16 text-right" title="90d projected save, attributed at 50% — (expected_loss − projected_loss) × 0.5. Forward-only, distinct from CFO realized save.">+90d Save (att)</span>
+            </div>
+          </div>
           {sorted.map((a, i) => {
             const isDetractor = a.expected_loss < 0;
             const isSaver = a.attributed_save > 0;
@@ -498,7 +514,9 @@ const NRRAccountAttribution: React.FC<{ accounts: NRRWaterfallAccount[] }> = ({ 
             );
           })}
           <div className="text-[9px] text-gray-600 pt-1 border-t border-gray-800">
-            Churn % derived from health score. Expected loss = ARR × churn probability.
+            Churn % = max(5, 50 − health × 0.5). +90d Save = (expected_loss − projected_loss) × 0.5
+            attribution, where projected health = today + 90d trend continuation. For trailing-12-month
+            realized save (different methodology), see CFO Overview · NRR tile.
           </div>
         </div>
       )}
@@ -1098,9 +1116,21 @@ const CRODashboard: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 divide-x divide-gray-700/50">
-                {/* Left: T+30/60/90 trajectory */}
+                {/* Left: T+30/60/90 trajectory.
+                    Issue #3 + #10 fix (May 4 2026): clarify methodology vs Forward NRR card.
+                    This trajectory uses ALL accounts with a 5% churn floor (every account
+                    contributes some loss); Forward NRR card uses at-risk-only without floor.
+                    Same data, different attribution windows — different numbers. */}
                 <div className="p-4">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-3">Trajectory</p>
+                  <div className="flex items-baseline justify-between mb-3">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wide">Trajectory · all accounts</p>
+                    <span
+                      className="text-[8px] text-gray-600 italic cursor-help"
+                      title="Portfolio NRR projected at T+30/60/90 days using linear health trend continuation, with a 5% churn-probability floor on every account (no account is treated as risk-free). Differs from Forward NRR tile, which scopes to at-risk only with no floor — same data, two attribution windows."
+                    >
+                      with 5% floor
+                    </span>
+                  </div>
                   <div className="flex items-end gap-6">
                     {['t30', 't60', 't90'].map((k, i) => {
                       const pt = d.nrr_trajectory[k];
@@ -1111,7 +1141,12 @@ const CRODashboard: React.FC = () => {
                           <p className={`text-xl font-bold ${color}`}>{pt.nrr_pct}%</p>
                           <p className="text-[9px] text-gray-500">T+{(i + 1) * 30}d</p>
                           {pt.crossings.length > 0 && (
-                            <p className="text-[8px] text-orange-400 mt-1">{pt.crossings.length} crossing{pt.crossings.length > 1 ? 's' : ''}</p>
+                            <p
+                              className="text-[8px] text-orange-400 mt-1 cursor-help"
+                              title="Accounts whose projected health crosses below the at-risk threshold (health < 70) by this horizon — these are the next playbook candidates."
+                            >
+                              {pt.crossings.length} cross{pt.crossings.length > 1 ? 'ings' : 'ing'} into at-risk
+                            </p>
                           )}
                         </div>
                       );
