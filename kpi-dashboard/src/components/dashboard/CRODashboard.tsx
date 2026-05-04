@@ -1053,10 +1053,18 @@ const CRODashboard: React.FC = () => {
             {d.metrics.slice(0, 3).map((m, i) => (
               <MetricCardComponent key={i} metric={m} />
             ))}
-            {/* Dual NRR Card — health-weighted baseline */}
+            {/* Forward NRR Card — health-weighted projection at 90d horizon.
+                Distinct from CFO Overview's NRR tile, which shows realized
+                NRR from definitive lifecycle outcomes. This card projects
+                NRR forward by attributing residual at-risk ARR through the
+                health-to-churn-prob curve. Same Without/With dichotomy,
+                different time horizon. */}
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Net Revenue Retention</p>
+              <div className="flex items-baseline justify-between mb-2">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Forward NRR</p>
+                <span className="text-[9px] text-gray-600">90d horizon</span>
+              </div>
               <div className="flex items-end gap-3 mb-2">
                 <div>
                   <p className="text-[9px] text-gray-500 mb-0.5">Without CS Pulse</p>
@@ -1064,16 +1072,19 @@ const CRODashboard: React.FC = () => {
                 </div>
                 <div className="text-gray-600 text-lg pb-1">&rarr;</div>
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse (projected)</p>
                   <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
                 </div>
               </div>
               {d.nrr_arr_protected > 0 && (
                 <p className="text-[10px] text-green-400/80">
-                  {formatCompact(d.nrr_arr_protected)} ARR protected
+                  {formatCompact(d.nrr_arr_protected)} ARR protectable (attributed)
                 </p>
               )}
-              <p className="text-[9px] text-gray-600 mt-1">NRR from lifecycle outcomes. Without CS Pulse = counterfactual if saved accounts had churned.</p>
+              <p className="text-[9px] text-gray-600 mt-1">
+                Forward projection — health-weighted churn risk over the next 90 days. For
+                realized NRR (lifecycle outcomes), see CFO Overview · NRR tile.
+              </p>
             </div>
           </div>
 
