@@ -531,19 +531,30 @@ const JourneyIntelligenceView: React.FC = () => {
                   data.forecast!.health_projection.map(p =>
                     `L ${scaleX(p.month)} ${scaleY(p.projected_health)}`
                   ).join(' ');
-                // Customer-level forecast deltas applied as a uniform shift
-                // (since per-account NRR forecast isn't computed today, we use
-                // the portfolio shift as a directional signal only)
+                // Customer-level forecast deltas applied with health-aware
+                // amplification so the with/without lines visually diverge for
+                // at-risk accounts (where the CS Pulse impact is largest) and
+                // stay close together for healthy accounts (where there's
+                // little to save). Uniform-shift approach was previously too
+                // small to read on the chart (~3pp ≈ 3px on a 0-100 axis).
                 const portfolio = data.forecast!.portfolio;
-                let withoutShift = 0;
-                let withShift = 0;
+                let withoutShiftPp = 0;  // raw NRR-pp gap
+                let withShiftPp = 0;
                 if (portfolio?.without_cs_pulse_nrr_pct != null && portfolio?.current_nrr_pct != null) {
-                  // Treat the (current - without) gap as the projected shift
-                  withoutShift = (portfolio.without_cs_pulse_nrr_pct - portfolio.current_nrr_pct);
+                  withoutShiftPp = (portfolio.without_cs_pulse_nrr_pct - portfolio.current_nrr_pct);
                 }
                 if (portfolio?.with_interventions_nrr_pct != null && portfolio?.current_nrr_pct != null) {
-                  withShift = (portfolio.with_interventions_nrr_pct - portfolio.current_nrr_pct);
+                  withShiftPp = (portfolio.with_interventions_nrr_pct - portfolio.current_nrr_pct);
                 }
+                // Health-aware amplifier: maps NRR-pp shift onto the health
+                // axis with stronger weight for at-risk accounts.
+                //   healthy (h ≥ 70):     1× — minimal divergence (low risk)
+                //   at-risk (50 ≤ h < 70): 3× — moderate divergence
+                //   critical (h < 50):    5× — pronounced V-shape
+                const lastHealth = last.score;
+                const amplifier = lastHealth >= 70 ? 1.0 : lastHealth >= 50 ? 3.0 : 5.0;
+                const withoutShift = withoutShiftPp * amplifier;
+                const withShift = withShiftPp * amplifier;
                 const buildShifted = (shift: number) => {
                   return `M ${startX} ${startY} ` +
                     data.forecast!.health_projection.map(p => {
@@ -616,11 +627,15 @@ const JourneyIntelligenceView: React.FC = () => {
                 />
               ))}
 
-              {/* Signal event markers — toggleable */}
+              {/* Signal event markers — toggleable. Tooltip shows date,
+                  signal type, sentiment + score. */}
               {toggles.signalMarkers && data.signals.map((sig, i) => {
                 const x = scaleX(sig.date);
                 const y = scaleY(sig.signal_score);
                 const isPositive = sig.signal_score >= 50;
+                const dateStr = new Date(sig.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const sentTag = sig.sentiment ? ` (${sig.sentiment})` : '';
+                const tooltip = `Signal · ${dateStr}\n${sig.type || 'signal'}${sentTag}\nscore: ${sig.signal_score?.toFixed(0)}  weight: ${sig.weight ?? '1.0'}x`;
                 return (
                   <g key={`sig-marker-${i}`}>
                     <polygon
@@ -630,17 +645,29 @@ const JourneyIntelligenceView: React.FC = () => {
                       }
                       fill={isPositive ? '#10b981' : '#ef4444'}
                       opacity={0.8}
-                    />
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <title>{tooltip}</title>
+                    </polygon>
                   </g>
                 );
               })}
 
-              {/* Playbook execution markers (⚡ diamond at trigger date) — toggleable */}
+              {/* Playbook execution markers (⚡ diamond at trigger date).
+                  Tooltip shows playbook id, triggered_at, health-at-trigger,
+                  outcome, and revenue protected. */}
               {toggles.playbookMarkers && data.playbook_executions.map((pb, i) => {
                 if (!pb.triggered_at) return null;
                 const x = scaleX(pb.triggered_at);
                 const trigHealth = pb.health_at_trigger || 70;
                 const y = scaleY(trigHealth);
+                const dateStr = new Date(pb.triggered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const outcome = (pb as any).outcome ? ` · ${(pb as any).outcome}` : '';
+                const closeHealth = (pb as any).health_at_close;
+                const delta = closeHealth ? ` (${trigHealth.toFixed(0)} → ${closeHealth.toFixed(0)})` : '';
+                const rev = (pb as any).revenue_protected;
+                const revStr = rev ? `\n$${(rev / 1000).toFixed(0)}K protected` : '';
+                const tooltip = `Playbook ${pb.playbook_id || ''} · ${dateStr}${outcome}\nhealth at trigger: ${trigHealth.toFixed(0)}${delta}${revStr}`;
                 return (
                   <g key={`pb-marker-${i}`}>
                     {/* Diamond shape */}
@@ -650,9 +677,13 @@ const JourneyIntelligenceView: React.FC = () => {
                       stroke="#0d9488"
                       strokeWidth={1.5}
                       opacity={0.9}
-                    />
-                    {/* ⚡ inside diamond */}
-                    <text x={x} y={y + 3} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">⚡</text>
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <title>{tooltip}</title>
+                    </polygon>
+                    {/* ⚡ inside diamond — pointer-events:none so tooltip on
+                        the polygon below still triggers on hover */}
+                    <text x={x} y={y + 3} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold" style={{ pointerEvents: 'none' }}>⚡</text>
                   </g>
                 );
               })}
@@ -670,8 +701,8 @@ const JourneyIntelligenceView: React.FC = () => {
                 const fill = OUTCOME_BUCKET_COLOR[o.bucket || ''] || COLOR_OUTCOME_OTHER;
                 return (
                   <g key={`outcome-${i}`}>
-                    <circle cx={x} cy={y} r={4} fill={fill} stroke="#0a0a0a" strokeWidth={1.2} opacity={0.95}>
-                      <title>{`${o.subtype || 'outcome'}: $${(o.revenue_impact/1000).toFixed(0)}K (${o.bucket || 'unknown'})`}</title>
+                    <circle cx={x} cy={y} r={4} fill={fill} stroke="#0a0a0a" strokeWidth={1.2} opacity={0.95} style={{ cursor: 'pointer' }}>
+                      <title>{`Outcome · ${new Date(o.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n${o.subtype || 'outcome'} (${o.bucket || 'unknown'})\n${o.revenue_impact >= 0 ? '+' : ''}$${(o.revenue_impact/1000).toFixed(0)}K`}</title>
                     </circle>
                   </g>
                 );
@@ -687,8 +718,8 @@ const JourneyIntelligenceView: React.FC = () => {
                       stroke={COLOR_DECISION} strokeWidth={1} strokeDasharray="2 4" opacity={0.4} />
                     <polygon
                       points={`${x},${yTop} ${x + 8},${yTop + 4} ${x + 8},${yTop + 10} ${x},${yTop + 6}`}
-                      fill={COLOR_DECISION} opacity={0.9}>
-                      <title>{`Decision: ${d.subtype || 'unknown'} — ${d.title || ''}`}</title>
+                      fill={COLOR_DECISION} opacity={0.9} style={{ cursor: 'pointer' }}>
+                      <title>{`Decision · ${new Date(d.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n${d.subtype || 'unknown'}\n${d.title || ''}`}</title>
                     </polygon>
                   </g>
                 );
