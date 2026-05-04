@@ -1187,6 +1187,10 @@ class QualitativeSignal(db.Model):
     
     # Match existing table schema exactly
     signal_id = db.Column(db.String(50), primary_key=True)  # VARCHAR(50) in existing table
+    # customer_id was on the table (NOT NULL) but missing from the model class
+    # — caused silent ingest rollbacks on every fresh-tenant onboarding. See
+    # cust-391 May 4 2026 incident.
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'), nullable=False, index=True)
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False, index=True)
     signal_date = db.Column(db.Date, nullable=False, index=True)
     signal_type = db.Column(db.String(50), nullable=True, index=True)  # email, meeting, ticket, etc.

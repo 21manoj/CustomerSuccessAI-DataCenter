@@ -1135,7 +1135,12 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                         continue
 
                                 sig = QualitativeSignal(
-                                    signal_id=sig_id, account_id=acct_id,
+                                    signal_id=sig_id,
+                                    customer_id=customer_id,  # required NOT NULL — without
+                                    # this, the entire signals batch rolls back silently and
+                                    # Wizard A's arc_edge_generator can't resolve signal:N
+                                    # refs. See QA report May 4 2026 (customer 391 onboarding).
+                                    account_id=acct_id,
                                     signal_type=row.get('signal_type', 'nps'),
                                     content=row.get('content', row.get('signal_text', '')),
                                     sentiment=row.get('sentiment', 'neutral'),
@@ -1188,6 +1193,19 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             except Exception as e:
                 _step_timings_csv = round(_time.time() - _csv_load_t0, 2)
                 errors.append(f"csv_loading: {str(e)}")
+                # Loud log — May 4 2026: cust-391 onboarding hit a silent
+                # NotNullViolation on QualitativeSignal that rolled back the
+                # signals batch and broke Wizard A edge generation downstream.
+                # `errors` accumulates but the whole pipeline reports
+                # `process_data complete` regardless, so a stack trace at WARN
+                # level is the only way operators see it.
+                import logging as _log_csv_err
+                _log_csv_err.getLogger(__name__).warning(
+                    f"process_data: CSV load step failed for customer {customer_id}: "
+                    f"{e!r} — accumulated rows rolled back; pipeline continues with "
+                    f"partial data",
+                    exc_info=True,
+                )
                 try:
                     _db.session.rollback()
                 except Exception:
