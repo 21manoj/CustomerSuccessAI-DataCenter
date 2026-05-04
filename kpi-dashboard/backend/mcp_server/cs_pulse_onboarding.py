@@ -1715,6 +1715,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             run_proactive_signal_scan,
             calculate_health_scores,
             run_wizard_a_step,
+            run_tier1_step,
             run_wizard_b_step,
             run_signal_analyst,
             run_urgent_scanner,
@@ -1760,6 +1761,21 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         if _wa_step:
             steps_completed.append(_wa_step)
         _step_timings['wizard_a'] = _wa_duration
+
+        # Stage 3a.5: LLM Tier 1 — DECISION + OUTCOME + edge enrichment
+        # (between Wizard A and Wizard B). No-op if FEATURE_WITH_LLM=false or
+        # the customer is in 11-CSV mode (decisions/edges already on disk).
+        # Per provenance refactor: writes source='inferred',
+        # source_platform='llm_enrichment'; per-edge confidence threshold
+        # gates persistence.
+        _t1_step, _t1_duration = run_tier1_step(
+            customer_id,
+            with_llm=True,
+            changed_account_ids=_changed_account_ids if mode != 'full_recalc' else None,
+        )
+        if _t1_step:
+            steps_completed.append(_t1_step)
+        _step_timings['llm_tier1'] = _t1_duration
 
         # Stage 3b: Wizard B — pattern analysis (auto after Wizard A, needs ≥5 journeys)
         _wb_step, _wb_duration = run_wizard_b_step(customer_id)

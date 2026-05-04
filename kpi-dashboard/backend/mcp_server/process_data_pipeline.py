@@ -262,6 +262,66 @@ def run_wizard_a_step(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Stage 3a.5: LLM Tier 1 — DECISION + OUTCOME + edge enrichment
+# ═══════════════════════════════════════════════════════════════
+#
+# Runs between Wizard A (arc classification) and Wizard B (pattern
+# analysis). Auto-detects mode per account:
+#   - full        2-CSV mode (no signals on disk) → infer signals,
+#                 decisions, outcomes, and edges from KPI trajectories
+#   - edges_only  3/4-CSV mode (CSV signals exist) → infer only
+#                 decisions, outcomes, and causal edges; reuse signals
+# Writes nodes/edges with source='inferred', source_platform='llm_enrichment'.
+# Per-edge confidence threshold (utils.provenance.is_trustworthy_edge,
+# default 0.6) gates which LLM-returned edges get persisted.
+#
+# Skipped when:
+#   - FEATURE_WITH_LLM=false (kill switch)
+#   - 11-CSV mode (decisions + edges already provided as CSV input)
+#   - explicit caller passes with_llm=False
+
+def run_tier1_step(
+    customer_id: int,
+    *,
+    with_llm: bool = True,
+    changed_account_ids: Optional[Set[int]] = None,
+) -> Tuple[Optional[str], float]:
+    """Run LLM Tier 1 enrichment between Wizard A and Wizard B.
+
+    Returns (step_description, duration_seconds). None step => skipped.
+    """
+    import os
+    t0 = time.time()
+    if not with_llm:
+        return None, 0.0
+    if os.environ.get('FEATURE_WITH_LLM', 'true').lower() in ('false', '0', 'no'):
+        return None, 0.0
+    try:
+        from llm.tier1_inference import run_tier1
+        result = run_tier1(
+            customer_id,
+            mode='auto',
+            account_ids=(list(changed_account_ids)
+                         if changed_account_ids else None),
+        )
+        duration = round(time.time() - t0, 2)
+        nw = result.get('nodes_written', 0)
+        ew = result.get('edges_written', 0)
+        ed = result.get('edges_dropped_low_confidence', 0)
+        cost = result.get('cost_usd', 0.0)
+        logger.info(
+            f"LLM Tier 1 complete: customer={customer_id} "
+            f"nodes={nw} edges={ew} dropped_lowconf={ed} cost=${cost:.4f}"
+        )
+        if nw + ew == 0:
+            return None, duration
+        return f"llm_tier1_{nw}_nodes_{ew}_edges", duration
+    except Exception as e:
+        logger.warning(f"LLM Tier 1 failed (non-fatal): {e}", exc_info=True)
+        return None, round(time.time() - t0, 2)
+
+
+# ═══════════════════════════════════════════════════════════════
 # Stage 3b: Wizard B — Pattern analysis (auto after Wizard A)
 # ═══════════════════════════════════════════════════════════════
 
