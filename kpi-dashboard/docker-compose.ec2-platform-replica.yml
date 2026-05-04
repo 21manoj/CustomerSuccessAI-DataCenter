@@ -10,12 +10,25 @@
 # External: BASE_URL=http://<EC2_PUBLIC_IP>:9080
 # Same host / cspulse-net: http://cspulse-platform-b:5059
 # Security group: inbound TCP 9080 (9443/8002 if used).
-# ================================================================
+#
+# ──────────────────────────────────────────────────────────────────
+# OFF BY DEFAULT — `cs-pulse-b` is gated behind the "replica" Compose
+# profile because a second full platform process is too resource-heavy
+# on the current t3.* instance. Plain `docker compose up -d` will NOT
+# start it. Re-enable with either:
+#   docker compose -f docker-compose.ec2-registry.yml \
+#                  -f docker-compose.ec2-platform-replica.yml \
+#                  --profile replica up -d
+# or the on-demand helper:
+#   ~/cspulse/start-replica.sh
+# Remove the `profiles:` line below when you want it back on by default.
+# ──────────────────────────────────────────────────────────────────
 
 services:
   cs-pulse-b:
     image: ${REGISTRY}/cspulse-platform:${PLATFORM_TAG:-latest}
     container_name: cspulse-platform-b
+    profiles: ["replica"]
     ports:
       - "9080:80"
       - "9443:443"
