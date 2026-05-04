@@ -80,9 +80,16 @@ ESCALATION_SCENARIOS = [
 
 
 def _call_mcp_execute(app, customer_id, account_id, playbook_id, triggered_by):
-    """Call execute_playbook MCP function inside Flask context."""
+    """Call execute_playbook MCP function inside Flask context.
+
+    `execute_playbook` is wrapped by `@mcp.tool` (fastmcp), which makes the
+    name a FunctionTool object instead of a plain callable. fastmcp exposes
+    the underlying callable as `.fn` — same fix used elsewhere in the
+    codebase (see _process_data_impl / FunctionTool unwrap pattern).
+    """
     from mcp_server.cs_pulse_revenue import execute_playbook
-    return execute_playbook(
+    impl = getattr(execute_playbook, 'fn', execute_playbook)
+    return impl(
         customer_id=customer_id,
         account_id=account_id,
         playbook_id=playbook_id,
@@ -91,9 +98,13 @@ def _call_mcp_execute(app, customer_id, account_id, playbook_id, triggered_by):
 
 
 def _call_mcp_close(app, customer_id, execution_id, outcome, notes, health_at_close, csm_hours):
-    """Call close_playbook MCP function inside Flask context."""
+    """Call close_playbook MCP function inside Flask context.
+
+    Same FunctionTool unwrap as _call_mcp_execute — see comment above.
+    """
     from mcp_server.cs_pulse_revenue import close_playbook
-    return close_playbook(
+    impl = getattr(close_playbook, 'fn', close_playbook)
+    return impl(
         customer_id=customer_id,
         execution_id=execution_id,
         outcome=outcome,

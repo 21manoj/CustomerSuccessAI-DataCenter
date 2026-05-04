@@ -1,0 +1,461 @@
+{
+  "customer": {
+    "name": "Cascade SaaS 20",
+    "vertical": "saas_premium",
+    "admin_email": "admin@cascadesaas.com",
+    "admin_name": "Elena Rodriguez",
+    "domain": "cascadesaas.com",
+    "tier": "saas_starter_9"
+  },
+  "accounts": [
+    {
+      "name": "Redwood Analytics",
+      "arr": 22000000,
+      "target_health": 32,
+      "classification": "critical",
+      "story_arc": "champion_loss",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-15",
+      "narrative": "VP Customer Success departed. DAU crashed 65% in 3 weeks. NPS dropped from 52 to 18. Competitor demo scheduled.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Analytics",
+      "region": "North America",
+      "lifecycle": {
+        "event": "churn",
+        "event_month": 10,
+        "reason": "Champion departure + competitor won evaluation. Infrastructure dependency too deep to recover."
+      },
+      "stakeholders": [
+        { "name": "David Chen", "role": "champion", "title": "VP Customer Success", "department": "CS", "engagement_frequency": 9, "status": "departed" },
+        { "name": "Maria Santos", "role": "successor", "title": "Director of Ops", "department": "Operations", "engagement_frequency": 2, "status": "new_contact" },
+        { "name": "James Wilson", "role": "executive_sponsor", "title": "CRO", "department": "Revenue", "engagement_frequency": 4, "status": "passive" }
+      ],
+      "key_signals": [
+        { "type": "champion_departure", "date": "2026-01-20", "content": "VP CS David Chen departed to competitor" },
+        { "type": "usage_decline", "date": "2026-02-05", "content": "DAU dropped from 78% to 27% in 3 weeks" },
+        { "type": "nps_decline", "date": "2026-02-20", "content": "NPS collapsed from 52 to 18" },
+        { "type": "competitor_mention", "date": "2026-03-01", "content": "Director of Ops scheduling competitor demos" }
+      ]
+    },
+    {
+      "name": "Sequoia Health Systems",
+      "arr": 18500000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-01",
+      "narrative": "Support ticket volume 4x normal. CSAT dropped to 2.8/5. Feature adoption collapsed after platform migration.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "industry": "Healthcare",
+      "region": "North America",
+      "lifecycle": {
+        "event": "renew",
+        "event_month": 8,
+        "reason": "Intervention saved account. Dedicated support pod + executive QBR secured renewal with 12-month commitment."
+      },
+      "stakeholders": [
+        { "name": "Sarah Kim", "role": "champion", "title": "VP Product", "department": "Product", "engagement_frequency": 7, "status": "active" },
+        { "name": "Robert Park", "role": "executive_sponsor", "title": "CEO", "department": "Executive", "engagement_frequency": 3, "status": "passive" }
+      ],
+      "key_signals": [
+        { "type": "support_spike", "date": "2026-02-10", "content": "Support tickets 4x normal after platform migration" },
+        { "type": "csat_drop", "date": "2026-02-25", "content": "CSAT dropped from 4.2 to 2.8" },
+        { "type": "feature_adoption_drop", "date": "2026-03-05", "content": "Feature adoption breadth dropped from 68% to 25%" }
+      ],
+      "intervention": {
+        "playbook": "PB-02",
+        "actions": [
+          { "date": "2026-03-15", "action": "Dedicated support pod assigned", "outcome": "Ticket backlog reduced 60% in 2 weeks" },
+          { "date": "2026-03-25", "action": "Executive QBR with CEO", "outcome": "Secured 12-month commitment" }
+        ]
+      }
+    },
+    {
+      "name": "Aspen Financial",
+      "arr": 15200000,
+      "target_health": 42,
+      "classification": "critical",
+      "story_arc": "budget_pressure",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-30",
+      "narrative": "CFO initiated SaaS spend audit. Login frequency dropped 45%. Renewal flagged for competitive bid.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "industry": "Financial Services",
+      "region": "North America",
+      "lifecycle": {
+        "event": "contract",
+        "delta_pct": -25,
+        "event_month": 7,
+        "reason": "Budget pressure led to seat reduction. Kept core platform but dropped analytics module."
+      },
+      "stakeholders": [
+        { "name": "Lisa Wang", "role": "economic_buyer", "title": "CFO", "department": "Finance", "engagement_frequency": 3, "status": "evaluating" },
+        { "name": "Kevin Wright", "role": "champion", "title": "VP Analytics", "department": "Analytics", "engagement_frequency": 5, "status": "active" }
+      ],
+      "key_signals": [
+        { "type": "budget_review", "date": "2026-02-01", "content": "CFO initiated SaaS spend audit across all platforms" },
+        { "type": "login_decline", "date": "2026-02-15", "content": "Login frequency dropped 45% in 3 weeks" },
+        { "type": "renewal_risk", "date": "2026-03-01", "content": "Procurement flagged renewal for competitive bid" }
+      ]
+    },
+    {
+      "name": "Birch Consulting",
+      "arr": 12800000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "competitor_evaluation",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-15",
+      "narrative": "Key stakeholder evaluating competitor. QBR attendance dropped. Engagement declining.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 4,
+      "industry": "Consulting",
+      "region": "EMEA",
+      "lifecycle": {
+        "event": "contract",
+        "delta_pct": -20,
+        "event_month": 8,
+        "reason": "Reduced scope after competitor evaluation. Retained core but dropped 2 modules."
+      },
+      "stakeholders": [
+        { "name": "Thomas Anderson", "role": "decision_maker", "title": "VP Engineering", "department": "Engineering", "engagement_frequency": 4, "status": "evaluating" },
+        { "name": "Nina Kowalski", "role": "champion", "title": "Platform Lead", "department": "DevOps", "engagement_frequency": 6, "status": "active" }
+      ],
+      "key_signals": [
+        { "type": "competitor_evaluation", "date": "2026-02-20", "content": "VP Engineering evaluating competitor platform" },
+        { "type": "engagement_drop", "date": "2026-03-10", "content": "QBR attendance dropped, 2 meetings rescheduled" }
+      ]
+    },
+    {
+      "name": "Cedar Logistics",
+      "arr": 11000000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "channel",
+      "renewal_date": "2026-10-01",
+      "narrative": "Onboarding stalled at 45% after 90 days. TTFV at 72 days vs 21-day target.",
+      "kpi_trajectory": "stable",
+      "industry": "Logistics",
+      "region": "APAC",
+      "stakeholders": [
+        { "name": "Raj Patel", "role": "technical_lead", "title": "CTO", "department": "Technology", "engagement_frequency": 5, "status": "frustrated" }
+      ],
+      "key_signals": [
+        { "type": "onboarding_delay", "date": "2026-01-25", "content": "Onboarding at 45% after 90 days (target: 100%)" },
+        { "type": "ttfv_exceeded", "date": "2026-02-15", "content": "TTFV at 72 days vs 21-day target" }
+      ]
+    },
+    {
+      "name": "Dogwood Media",
+      "arr": 9500000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "engagement_decline",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-15",
+      "narrative": "Executive sponsor disengaged. No QBR in 90 days. Feature usage declining.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 3,
+      "industry": "Media & Entertainment",
+      "region": "North America",
+      "stakeholders": [
+        { "name": "Jennifer Brooks", "role": "executive_sponsor", "title": "CMO", "department": "Marketing", "engagement_frequency": 2, "status": "disengaged" },
+        { "name": "Chris Davis", "role": "champion", "title": "Director of Growth", "department": "Growth", "engagement_frequency": 6, "status": "active" }
+      ],
+      "key_signals": [
+        { "type": "engagement_decline", "date": "2026-02-28", "content": "No executive QBR in 90+ days" },
+        { "type": "kpi_decline", "date": "2026-03-15", "content": "Feature usage declining 15% month-over-month" }
+      ]
+    },
+    {
+      "name": "Elm Enterprise Solutions",
+      "arr": 14500000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-01",
+      "narrative": "Champion driving platform expansion across 3 new departments. NPS at 72.",
+      "kpi_trajectory": "improving",
+      "industry": "Enterprise Software",
+      "region": "North America",
+      "lifecycle": {
+        "event": "expand",
+        "delta_pct": 35,
+        "event_month": 5,
+        "reason": "Champion secured budget for enterprise-wide rollout after successful Q1 pilot."
+      },
+      "stakeholders": [
+        { "name": "Amanda Foster", "role": "champion", "title": "VP Operations", "department": "Operations", "engagement_frequency": 8, "status": "advocate" }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Fern Cloud Services",
+      "arr": 8200000,
+      "target_health": 75,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-01",
+      "narrative": "Stable, high-engagement account. Regular QBRs, NPS at 65.",
+      "kpi_trajectory": "stable",
+      "industry": "Cloud Infrastructure",
+      "region": "EMEA"
+    },
+    {
+      "name": "Granite Data Corp",
+      "arr": 7800000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "channel",
+      "renewal_date": "2026-10-15",
+      "narrative": "Consistent performer. Product adoption at 82%. Strong champion engagement.",
+      "kpi_trajectory": "stable",
+      "industry": "Data Services",
+      "region": "North America"
+    },
+    {
+      "name": "Hazel Biotech",
+      "arr": 10500000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "narrative": "Research team driving adoption across 5 labs. Expansion opportunity in pipeline.",
+      "kpi_trajectory": "improving",
+      "industry": "Biotech",
+      "region": "North America",
+      "lifecycle": {
+        "event": "expand",
+        "delta_pct": 45,
+        "event_month": 6,
+        "reason": "Added 5 research lab licenses after successful pilot. Enterprise agreement signed."
+      },
+      "stakeholders": [
+        { "name": "Diana Walsh", "role": "champion", "title": "VP Research", "department": "R&D", "engagement_frequency": 9, "status": "advocate" }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Ivy Insurance Group",
+      "arr": 6500000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-15",
+      "narrative": "Reliable mid-market account. Stable usage, regular engagement.",
+      "kpi_trajectory": "stable",
+      "industry": "Insurance",
+      "region": "North America"
+    },
+    {
+      "name": "Juniper Retail",
+      "arr": 5800000,
+      "target_health": 79,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "channel",
+      "renewal_date": "2026-11-01",
+      "narrative": "Omnichannel retail platform. Strong product adoption.",
+      "kpi_trajectory": "stable",
+      "industry": "Retail",
+      "region": "APAC"
+    },
+    {
+      "name": "Kale EdTech",
+      "arr": 4200000,
+      "target_health": 81,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-15",
+      "narrative": "Education platform with high daily engagement. NPS at 68.",
+      "kpi_trajectory": "stable",
+      "industry": "Education",
+      "region": "EMEA"
+    },
+    {
+      "name": "Laurel Legal Tech",
+      "arr": 7200000,
+      "target_health": 77,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Compliance automation suite. Steady growth trajectory.",
+      "kpi_trajectory": "stable",
+      "industry": "Legal Technology",
+      "region": "North America",
+      "lifecycle": {
+        "event": "expand",
+        "delta_pct": 25,
+        "event_month": 4,
+        "reason": "Added EU compliance module for GDPR requirements."
+      },
+      "stakeholders": [
+        { "name": "Marcus Chen", "role": "champion", "title": "GC", "department": "Legal", "engagement_frequency": 7, "status": "active" }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Maple Manufacturing",
+      "arr": 9800000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "channel",
+      "renewal_date": "2026-10-01",
+      "narrative": "Factory automation platform. Good adoption, occasional support spikes.",
+      "kpi_trajectory": "stable",
+      "industry": "Manufacturing",
+      "region": "APAC"
+    },
+    {
+      "name": "Nutmeg Fintech",
+      "arr": 13500000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-01",
+      "narrative": "Top performer. Champion driving cross-sell into wealth management division.",
+      "kpi_trajectory": "improving",
+      "industry": "Financial Technology",
+      "region": "EMEA"
+    },
+    {
+      "name": "Oak Telecom",
+      "arr": 8700000,
+      "target_health": 73,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-15",
+      "narrative": "Network operations platform. Stable with minor expansion potential.",
+      "kpi_trajectory": "stable",
+      "industry": "Telecommunications",
+      "region": "North America"
+    },
+    {
+      "name": "Pine Pharma",
+      "arr": 16000000,
+      "target_health": 68,
+      "classification": "at_risk",
+      "story_arc": "budget_pressure",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-15",
+      "narrative": "Clinical trial platform. Budget review triggered by M&A activity. Key stakeholder distracted.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 4,
+      "industry": "Pharmaceuticals",
+      "region": "EMEA",
+      "stakeholders": [
+        { "name": "Elena Rossi", "role": "economic_buyer", "title": "VP Clinical Ops", "department": "Clinical", "engagement_frequency": 4, "status": "distracted" }
+      ],
+      "key_signals": [
+        { "type": "budget_review", "date": "2026-03-01", "content": "M&A triggered SaaS spend audit across all clinical platforms" }
+      ]
+    },
+    {
+      "name": "Rosemary Aerospace",
+      "arr": 11500000,
+      "target_health": 71,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-01",
+      "narrative": "Defense contractor. Compliance-heavy, stable usage, long contract cycles.",
+      "kpi_trajectory": "stable",
+      "industry": "Aerospace & Defense",
+      "region": "North America"
+    },
+    {
+      "name": "Sage Energy",
+      "arr": 6200000,
+      "target_health": 83,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "channel",
+      "renewal_date": "2026-08-01",
+      "narrative": "Sustainability platform. Rapid adoption driven by regulatory requirements.",
+      "kpi_trajectory": "improving",
+      "industry": "Energy & Utilities",
+      "region": "EMEA",
+      "lifecycle": {
+        "event": "expand",
+        "delta_pct": 30,
+        "event_month": 5,
+        "reason": "Added carbon tracking module across 3 business units for regulatory compliance."
+      },
+      "stakeholders": [
+        { "name": "Priya Sharma", "role": "champion", "title": "Chief Sustainability Officer", "department": "ESG", "engagement_frequency": 8, "status": "advocate" }
+      ],
+      "key_signals": []
+    }
+  ],
+  "new_accounts": [
+    {
+      "name": "Thyme Health AI",
+      "arr": 5500000,
+      "onboard_month": 4,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "industry": "Health AI",
+      "region": "North America",
+      "reason": "New logo from Q1 pipeline. AI health analytics startup, 90-day POC converted."
+    },
+    {
+      "name": "Willow CleanTech",
+      "arr": 8000000,
+      "onboard_month": 7,
+      "target_health": 70,
+      "classification": "healthy",
+      "story_arc": "steady_performer",
+      "industry": "Clean Technology",
+      "region": "EMEA",
+      "reason": "Enterprise deal closed Q2. Migrating from legacy monitoring platform."
+    }
+  ],
+  "portfolio_dynamics": {
+    "cycle_months": 12,
+    "target_nrr_pct": 108,
+    "logo_churn_pct": 5,
+    "new_logo_pct": 10,
+    "expansion_pct": 30,
+    "contraction_pct": 10
+  },
+  "kpis": {
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI3",
+      "P2-KPI1",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3"
+    ],
+    "pillars": [
+      "P1",
+      "P2",
+      "P3",
+      "P5"
+    ]
+  },
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "data_points_per_kpi": 26
+  }
+}

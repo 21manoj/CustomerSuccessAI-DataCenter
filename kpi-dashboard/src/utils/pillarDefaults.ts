@@ -1,10 +1,15 @@
 /**
- * DC2_S Pillar Defaults — Single Source of Truth (Frontend)
+ * Pillar Defaults — Vertical-Aware (Frontend)
  *
- * Canonical weights live in backend: verticals/dc2_s/kpi_definitions.py
- * Frontend loads from API at runtime; these are offline fallbacks only.
+ * Provides pillar names based on the customer's vertical.
+ * SaaS customers see "Product Adoption", DC2_S customers see "Deployment Velocity".
  *
- * P1(DV)=0.15  P2(OS)=0.20  P3(AI)=0.25  P4(CH)=0.15  P5(EX)=0.25
+ * Usage:
+ *   import { PILLAR_META, getPillarMeta } from 'utils/pillarDefaults';
+ *   // Default (DC2_S fallback):
+ *   PILLAR_META.P1.name → "Deployment Velocity"
+ *   // Vertical-aware:
+ *   getPillarMeta('saas_premium').P1.name → "Product Adoption & Usage"
  */
 
 export interface PillarWeights {
@@ -24,11 +29,77 @@ export const DEFAULT_PILLAR_WEIGHTS: PillarWeights = {
   OS: 0.20,  // P2 — Operational Stability
 };
 
-/** Pillar display metadata */
-export const PILLAR_META: Record<string, { name: string; code: string }> = {
-  P1: { name: 'Deployment Velocity', code: 'DV' },
-  P2: { name: 'Operational Stability', code: 'OS' },
-  P3: { name: 'AI Workload Performance', code: 'AI' },
-  P4: { name: 'Channel & Partner Health', code: 'CH' },
-  P5: { name: 'Expansion Readiness', code: 'EX' },
+/** Pillar display metadata per vertical */
+const VERTICAL_PILLAR_META: Record<string, Record<string, { name: string; code: string }>> = {
+  dc2_s: {
+    P1: { name: 'Deployment Velocity', code: 'DV' },
+    P2: { name: 'Operational Stability', code: 'OS' },
+    P3: { name: 'AI Workload Performance', code: 'AI' },
+    P4: { name: 'Channel & Partner Health', code: 'CH' },
+    P5: { name: 'Expansion Readiness', code: 'EX' },
+  },
+  saas_premium: {
+    P1: { name: 'Product Adoption & Usage', code: 'PA' },
+    P2: { name: 'Customer Engagement', code: 'CE' },
+    P3: { name: 'Customer Sentiment & Support', code: 'CS' },
+    P4: { name: 'Partner & Ecosystem Health', code: 'PH' },
+    P5: { name: 'Revenue & Growth', code: 'RG' },
+  },
+  saas: {
+    P1: { name: 'Product Adoption & Usage', code: 'PA' },
+    P2: { name: 'Customer Engagement', code: 'CE' },
+    P3: { name: 'Customer Sentiment & Support', code: 'CS' },
+    P4: { name: 'Partner & Ecosystem Health', code: 'PH' },
+    P5: { name: 'Revenue & Growth', code: 'RG' },
+  },
 };
+
+/** Default fallback (DC2_S) */
+export const PILLAR_META = VERTICAL_PILLAR_META.dc2_s;
+
+/**
+ * Get vertical-aware pillar metadata.
+ * Falls back to DC2_S if vertical is unknown.
+ *
+ * Can also accept pillar_labels from API response (overrides everything).
+ */
+export function getPillarMeta(
+  vertical?: string | null,
+  apiPillarLabels?: Record<string, string> | null,
+): Record<string, { name: string; code: string }> {
+  // If API provided pillar_labels, use those (highest priority)
+  if (apiPillarLabels && Object.keys(apiPillarLabels).length > 0) {
+    const meta: Record<string, { name: string; code: string }> = {};
+    for (const [key, name] of Object.entries(apiPillarLabels)) {
+      meta[key] = { name, code: key };
+    }
+    return meta;
+  }
+
+  // Vertical-based lookup
+  const v = (vertical || '').toLowerCase().replace(/-/g, '_');
+  if (v in VERTICAL_PILLAR_META) {
+    return VERTICAL_PILLAR_META[v];
+  }
+  // Alias matching
+  if (['saas', 'saas_premium', 'saas_starter'].some(s => v.includes(s))) {
+    return VERTICAL_PILLAR_META.saas_premium;
+  }
+  if (['dc2_s', 'dc2s', 'dc', 'datacenter'].some(s => v.includes(s))) {
+    return VERTICAL_PILLAR_META.dc2_s;
+  }
+
+  return VERTICAL_PILLAR_META.dc2_s; // fallback
+}
+
+/**
+ * Get pillar name by code, vertical-aware.
+ */
+export function getPillarName(
+  pillarCode: string,
+  vertical?: string | null,
+  apiPillarLabels?: Record<string, string> | null,
+): string {
+  const meta = getPillarMeta(vertical, apiPillarLabels);
+  return meta[pillarCode]?.name || pillarCode;
+}

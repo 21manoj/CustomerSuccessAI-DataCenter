@@ -47,7 +47,7 @@ const getDashboardFamily = (session: any): 'datacenter' | 'saas' => {
   return 'saas';
 };
 const getDashboardRoute = (session: any): string => {
-  return getDashboardFamily(session) === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard';
+  return getDashboardFamily(session) === 'datacenter' ? '/cro-dashboard' : '/saas-dashboard/csm';
 };
 
 // Component to redirect legacy /dashboard to appropriate vertical dashboard

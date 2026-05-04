@@ -107,7 +107,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_account_journey_timeline",
-        "description": "Get chronological timeline of ALL context graph events for an account. Signals, decisions, outcomes in date order with revenue summary.",
+        "description": "Get chronological timeline of ALL context graph events for an account. Returns signals (including CS Pulse automation signals like playbook_triggered, health_score_alert, sla_started), decisions (with playbook code, action taken, outcome achieved), outcomes, and stakeholders — in date order with revenue summary. Use this to answer: what happened with this account, what signals did CS Pulse detect, which playbooks were run, what actions were taken, what was the outcome.",
         "input_schema": {
             "type": "object",
             "properties": {

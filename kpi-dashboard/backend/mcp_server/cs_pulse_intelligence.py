@@ -462,6 +462,11 @@ def get_account_journey_timeline(
             counts[n.node_type] = counts.get(n.node_type, 0) + 1
 
         # Build compact timeline entries
+        _AUTOMATION_SUBTYPES = {
+            'playbook_triggered', 'health_score_alert',
+            'sla_started', 'support_pod_alert', 'risk_alert',
+        }
+
         timeline = []
         for n in nodes:
             props = n.properties or {}
@@ -472,12 +477,50 @@ def get_account_journey_timeline(
                 "title": n.title,
                 "occurred_at": n.occurred_at.isoformat() if n.occurred_at else None,
             }
+
+            # DECISION: surface outcome, action taken, playbook code, risk level
+            if n.node_type == 'DECISION':
+                outcome_desc = props.get("outcome_description", "")
+                if outcome_desc and outcome_desc not in ('nan', ''):
+                    entry["content"] = outcome_desc
+                chosen = props.get("chosen_option", "")
+                if chosen and chosen not in ('nan', ''):
+                    entry["action"] = chosen
+                pb = props.get("playbook", "")
+                if pb and pb not in ('nan', ''):
+                    entry["playbook"] = pb
+                risk = props.get("risk_level", "")
+                if risk and risk not in ('nan', ''):
+                    entry["risk_level"] = risk
+                rev_raw = props.get("revenue_impact", "")
+                if rev_raw and rev_raw not in ('nan', ''):
+                    try:
+                        entry["revenue_impact"] = float(rev_raw)
+                    except (ValueError, TypeError):
+                        pass
+
+            # SIGNAL: surface signal_type, automation flag, phase
+            if n.node_type == 'SIGNAL':
+                sig_type = props.get("signal_type") or n.node_subtype or ""
+                if sig_type:
+                    entry["signal_type"] = sig_type
+                is_automation = (
+                    props.get("automation") == "true"
+                    or sig_type in _AUTOMATION_SUBTYPES
+                    or (props.get("phase") or "") == "automation"
+                )
+                if is_automation:
+                    entry["automation"] = True
+                phase = props.get("phase", "")
+                if phase and phase not in ('nan', ''):
+                    entry["phase"] = phase
+
             sentiment = props.get("sentiment") or props.get("sentiment_score")
             if sentiment is not None:
                 entry["sentiment"] = sentiment
 
             sname = props.get("stakeholder_name") or props.get("stakeholder_title")
-            if sname:
+            if sname and sname != 'nan':
                 entry["stakeholder"] = sname
 
             if n.revenue_impact is not None:

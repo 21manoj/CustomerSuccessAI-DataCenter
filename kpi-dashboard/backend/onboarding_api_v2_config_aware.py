@@ -970,7 +970,7 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                      label, properties, tier=1, source_platform='csv_import',
                      source_event_id=None, event_time=None,
                      revenue_impact=None, revenue_impact_type=None,
-                     source='customer'):
+                     source='observed'):
         # occurred_at is NOT NULL — always provide a value
         resolved_etime = _clean_val(event_time) or datetime.utcnow().strftime('%Y-%m-%d')
         row = conn.execute(text("""

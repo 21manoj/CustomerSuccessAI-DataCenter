@@ -566,7 +566,7 @@ const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void; onD
                 const isWorst = idx === 0 && score < 50;
                 return (
                   <div key={pillar} className="flex items-center gap-2">
-                    <span className={`text-[10px] w-8 font-mono ${isWorst ? 'text-red-400 font-bold' : 'text-gray-500'}`}>{pillar}</span>
+                    <span className={`text-[10px] w-20 truncate font-mono ${isWorst ? 'text-red-400 font-bold' : 'text-gray-500'}`} title={(() => { try { const pl = JSON.parse(localStorage.getItem('pillar_labels') || '{}'); return pl[pillar] || pillar; } catch { return pillar; } })()}>{(() => { try { const pl = JSON.parse(localStorage.getItem('pillar_labels') || '{}'); return pl[pillar] || pillar; } catch { return pillar; } })()}</span>
                     <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${pWidth}%`, backgroundColor: pColor }} />
                     </div>
@@ -765,6 +765,13 @@ const CRODashboard: React.FC = () => {
         });
         if (!resp.ok) throw new Error(`API returned ${resp.status}`);
         const json = await resp.json();
+        // Store vertical context for pillar label resolution across components
+        if (json.pillar_labels) {
+          try { localStorage.setItem('pillar_labels', JSON.stringify(json.pillar_labels)); } catch {}
+        }
+        if (json.vertical) {
+          try { localStorage.setItem('vertical', json.vertical); } catch {}
+        }
         if (!cancelled) {
           // Transform flat API response into CRODashboardData shape
           const isEstimatedRoi = json.playbook_roi_estimated === true;
@@ -1046,27 +1053,38 @@ const CRODashboard: React.FC = () => {
             {d.metrics.slice(0, 3).map((m, i) => (
               <MetricCardComponent key={i} metric={m} />
             ))}
-            {/* Dual NRR Card — health-weighted baseline */}
+            {/* Forward NRR Card — health-weighted projection at 90d horizon.
+                Distinct from CFO Overview's NRR tile, which shows realized
+                NRR from definitive lifecycle outcomes. This card projects
+                NRR forward by attributing residual at-risk ARR through the
+                health-to-churn-prob curve. Same Without/With dichotomy,
+                different time horizon. */}
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Net Revenue Retention</p>
+              <div className="flex items-baseline justify-between mb-2">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Forward NRR</p>
+                <span className="text-[9px] text-gray-600">90d horizon</span>
+              </div>
               <div className="flex items-end gap-3 mb-2">
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Current (health-weighted)</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Without CS Pulse</p>
                   <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
                 </div>
                 <div className="text-gray-600 text-lg pb-1">&rarr;</div>
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">With Playbooks</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse (projected)</p>
                   <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
                 </div>
               </div>
               {d.nrr_arr_protected > 0 && (
                 <p className="text-[10px] text-green-400/80">
-                  {formatCompact(d.nrr_arr_protected)} ARR protectable
+                  {formatCompact(d.nrr_arr_protected)} ARR protectable (attributed)
                 </p>
               )}
-              <p className="text-[9px] text-gray-600 mt-1">Health-weighted: derived from account health scores &times; ARR. Playbook projection: if interventions run on at-risk accounts.</p>
+              <p className="text-[9px] text-gray-600 mt-1">
+                Forward projection — health-weighted churn risk over the next 90 days. For
+                realized NRR (lifecycle outcomes), see CFO Overview · NRR tile.
+              </p>
             </div>
           </div>
 

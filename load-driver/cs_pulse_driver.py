@@ -93,7 +93,7 @@ def run_manifest(args):
     logger.info(f"  Customer:  {customer_info['name']}")
     logger.info(f"  Vertical:  {customer_info.get('vertical', 'dc2_s')}")
     logger.info(f"  Accounts:  {len(manifest['accounts'])}")
-    logger.info(f"  KPIs:      {manifest['kpis']['count']}")
+    logger.info(f"  KPIs:      {manifest['kpis'].get('count', len(manifest['kpis'].get('codes', [])))}")
     logger.info(f"  Time:      {manifest['time_range']['start']} -> {manifest['time_range']['end']}")
     if args.phase:
         logger.info(f"  Phase:     {args.phase}")
