@@ -260,10 +260,14 @@ const JourneyIntelligenceView: React.FC = () => {
     let minT = Math.min(...histTimes);
     let maxT = Math.max(...histTimes);
 
-    // If forecast is on AND we have forward projection data, extend maxT
-    // to the latest projected month so the dashed forecast lines fit.
-    const forecastOn = toggles.forecastWithoutCS || toggles.forecastWithCS;
-    const hasForecastWindow = !!(forecastOn && data.forecast?.health_projection?.length);
+    // ALWAYS reserve forecast window space if projection data is available,
+    // independent of toggle state. Previous behavior: maxT extended only
+    // when toggle was on, so toggling caused the historical KPI Health
+    // curve to visually compress leftward (the X-axis range changed).
+    // Fix: reserve the space regardless. Toggles now only control whether
+    // the dashed forecast lines RENDER, not the X-axis domain — so KPI
+    // Health and other historical series stay anchored.
+    const hasForecastWindow = !!(data.forecast?.health_projection?.length);
     if (hasForecastWindow && data.forecast) {
       for (const fp of data.forecast.health_projection) {
         const t = new Date(fp.month).getTime();
@@ -284,7 +288,8 @@ const JourneyIntelligenceView: React.FC = () => {
       todayX,
       hasForecastWindow,
     };
-  }, [data, toggles.forecastWithoutCS, toggles.forecastWithCS]);
+    // Removed forecast toggles from deps — X-axis is no longer toggle-dependent.
+  }, [data]);
 
   const buildPath = useCallback((points: ScorePoint[]) => {
     if (!points.length) return '';
