@@ -681,7 +681,7 @@ def scan_signals_for_proactive_triggers(customer_id: int) -> list:
                 ContextNode.customer_id == customer_id,
                 ContextNode.account_id.in_(acct_ids),
                 ContextNode.node_type == 'SIGNAL',
-                ContextNode.source == 'customer',
+                ContextNode.source.in_(['observed','customer']),
             )
         )
         if cutoff is not None:

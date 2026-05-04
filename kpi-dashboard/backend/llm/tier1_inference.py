@@ -55,7 +55,7 @@ def _check_prerequisites(customer_id: int, mode: str = 'auto') -> Tuple[bool, st
         customer_decisions = ContextNode.query.filter(
             ContextNode.customer_id == customer_id,
             ContextNode.node_type == 'DECISION',
-            ContextNode.source == 'customer',
+            ContextNode.source.in_(['observed','customer']),
         ).count()
         is_four_csv_mode = (customer_decisions == 0)
 

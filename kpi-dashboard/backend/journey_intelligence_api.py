@@ -518,7 +518,7 @@ def get_journey_intelligence(account_id):
                 ContextNode.customer_id == customer_id,
                 ContextNode.account_id == account_id,
                 ContextNode.node_type == 'SIGNAL',
-                ContextNode.source == 'customer',
+                ContextNode.source.in_(['observed','customer']),
             )
             .order_by(ContextNode.occurred_at)
             .all()
@@ -645,7 +645,7 @@ def list_accounts_for_journey():
             .filter(
                 ContextNode.customer_id == customer_id,
                 ContextNode.node_type == 'SIGNAL',
-                ContextNode.source == 'customer',
+                ContextNode.source.in_(['observed','customer']),
             )
             .with_entities(ContextNode.account_id, func.count())
             .group_by(ContextNode.account_id)
