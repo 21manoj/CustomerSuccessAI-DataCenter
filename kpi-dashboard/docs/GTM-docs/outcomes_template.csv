@@ -1,0 +1,12 @@
+source_account_id,outcome_date,outcome_type,title,description,revenue_value,status,linked_signal_id
+1001,2026-05-01,renewal_secured,FY27 renewal closed with 18% uplift,"Champion confirmed FY27 renewal at $720K (up from $610K). 3-year term locked. Procurement signed 2026-04-30, contract effective 2026-05-01.",720000,closed,sfdc_a002
+1001,2026-06-15,expansion_closed,Q3 capacity expansion ($240K),"Expansion order for 2× capacity tier confirmed by champion. Aligned with QBR commit. Adds $240K ARR.",240000,closed,sfdc_a001
+1002,2026-04-22,churn_averted,Critical-corp retention save after P1 incident,"Post-incident RCA + quarterly reliability review commitment retained the account. Renewal moved from at-risk to committed. ARR preserved.",480000,closed,sfdc_a004
+1002,2026-07-01,renewal_confirmed,FY27 renewal confirmed (flat),"Renewed at $480K, flat to FY26. No expansion this cycle — customer wants 2 quarters of stability post-incident before discussing growth.",480000,closed,
+1003,2026-05-10,revenue_protected,High-NPS customer locked in for multi-year,"NPS 9 + champion advocacy converted into 2-year commit. Product team referenceable. Considered key reference account.",360000,closed,sfdc_a005
+1004,2026-08-30,churn_lost,Mid-market churn after champion departure,"New VP Product chose to standardize on incumbent platform. Notice given 2026-08-15, contract ends 2026-09-30. ARR lost: $150K.",150000,closed,sfdc_a006
+1005,2026-05-05,engagement_recovery,Bulk-export fix restored end-user trust,"Customer's analytics team unblocked after 2.4.7 fix. Re-engaged on roadmap calls. NPS jumped from 5 to 8 after fix shipped.",0,closed,sfdc_a008
+1005,2026-09-01,expansion_closed,Analytics team add-on seats,"5 additional analyst seats added at $24K ARR. Triggered by successful unblock of bulk-export workflow.",24000,closed,
+1006,2026-07-15,new_logo,Parent-co consolidation deal,"CFO closed multi-tenant deployment for portfolio. New logo at parent level — separate from existing subsidiary contract. ARR: $480K.",480000,closed,sfdc_a009
+1007,2026-06-20,contraction,Seat reduction during eval period,"Customer reduced from 50 to 30 seats while evaluating CompetitorX. Contract amended 2026-06-15. ARR loss: $48K. Account remains active.",48000,closed,sfdc_a010
+1008,2026-05-20,renewal_secured,Steady-state renewal,"Standard renewal at $180K, no negotiation. Healthy account with consistent product usage and stable champion.",180000,closed,
