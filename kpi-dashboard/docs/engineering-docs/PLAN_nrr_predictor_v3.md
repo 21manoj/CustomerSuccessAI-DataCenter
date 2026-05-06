@@ -1,8 +1,8 @@
 # PLAN: NRR Predictor v3 — Phase 1 Build Plan
 
-**Status:** A1, A3, A4, A5 + Phase 1/1.5 ship-hold criteria + Q1–Q7 thresholds signed off 2026-05-06; awaiting hosting-model resolution before Block 1 starts
-**Branch:** `feature/predictor-v3-phase1` (to be created from `docs/gtm-engineering-reorg`)
-**Authored:** 2026-05-06 v1.0; v1.1 amendment 2026-05-06 (A4, A5, Real Customer Track)
+**Status:** A1–A6 + Phase 1/1.5 ship-hold criteria + Q1–Q7 thresholds signed off 2026-05-06; Block 1 day 1 in progress; awaiting hosting-model resolution before customer onboarding starts
+**Branch:** `feature/predictor-v3-phase1` (created from `docs/gtm-engineering-reorg` 2026-05-06)
+**Authored:** 2026-05-06 v1.0; v1.1 amendment 2026-05-06 (A4, A5, Real Customer Track); v1.2 amendment 2026-05-06 (A6 expansion-as-first-class)
 **Companion:** `nrr_predictor_v3_design_notes.md` (open questions + hazard data shape)
 
 This document is the canonical execution plan. The companion design notes resolve architecture questions; this document locks the build path, the ship/hold criteria, and the verification gates. Both are required reading before Block 1 starts.
@@ -137,6 +137,33 @@ Stored on `CustomerConfig` as `saas_profile` (new column; nullable for non-SaaS 
 
 **Implication for Phase 1 build:** panel construction in Block 1 segments accounts using profile-appropriate thresholds. The hierarchical model in Block 2 fits separate `β_{s,t,v}` for the two profiles, treating them as effectively different verticals at the CDI template level.
 
+### A6. Expansion as a first-class output (not a tertiary sub-model)
+
+The hazard-model architecture in design notes Q5 ordered sub-models as: 1. churn, 2. contraction, 3. expansion. For demo + buyer-narrative purposes that ordering inverts the value proposition. CRO/CFO buyers want **offense** (where will my next $X of expansion ARR come from, and which accounts should I invest CS hours in to capture it?) more than they want **defense** (which accounts might churn?). Predictor v3 ships with both, but the demo lead is expansion.
+
+**What this changes:**
+
+1. **Sub-model parity in the build.** Sub-model 3 (expansion two-part) gets fit with the same calibration discipline as sub-model 1 (churn hazard) — not as a follow-on. Same convergence diagnostics. Same backtest rigor. Same surface-area in Block 4 acceptance harness.
+
+2. **API contract enriched.** The locked contract is **additive** — adds an `expansion_outlook` block alongside the existing `term_decomposition`. See updated full contract below.
+
+3. **Two ranked lists, not one.** Predictor module produces:
+   - `top_expansion_opportunities` — sorted by `expected_arr_lift × P(event)` for CRO + CFO demos
+   - `top_at_risk_accounts` — sorted by `expected_arr_loss × P(churn)` for retention narrative
+   - Both feed CFO/CRO dashboards; UI lead depends on `saas_profile` (per A5)
+
+4. **UI lead varies by `saas_profile`.**
+   - **`saas_enterprise`** (e.g., customer 393) — account-level expansion tile leads (whale shape: per-account stories of $500K-$1M expansion are CFO-grade); portfolio aggregate secondary
+   - **`saas_smb`** (e.g., new real-customer pilot) — portfolio expansion forecast leads ("$1.2M ± $300K across 500 accounts in next 12mo"); account drill-down for top opportunities. Per-account $5K-10K expansions don't tell a CFO story; aggregate does.
+
+5. **Acceptance test re-weighting.** Q6 (Brier on `P(expansion event)`) and Q7 (MAPE on `E[size | event]`) move from "additional sub-model criteria" to **gating-equal-weight with Q1 and Q4**. Failing Q6 or Q7 by > 10% halts ship in the same way failing Q1 (ARR-weighted MAPE) does. The Phase 1.5 ship/hold table below is amended accordingly.
+
+6. **Demo narrative locked.** First customer's first demo of predictor v3 leads with: *"Forward 12-month expansion potential: $X across N accounts. Top 5 expansion opportunities. Drivers per account."* The at-risk story comes second. This positioning matters because it converts CS Pulse from "a churn-prevention tool" (defensive purchase, lower priority) to "a revenue-intelligence platform" (growth tool, board-relevant).
+
+**No new sub-model required.** Same hierarchical GLMM. Same panel. Same hazard architecture. The change is in: how the output is shaped, how it's ranked, how it surfaces in the UI, and how acceptance tests are weighted.
+
+**Risk this addresses:** without A6, the first demo of predictor v3 lands on the churn-led narrative (Zermatt: "1.8% churn risk") and the customer says *"that's not what we bought CS Pulse for."* With A6, the first demo lands on the expansion narrative (Zermatt: "$560K expansion opportunity at ~7-month horizon, drivers: arc reversal + health recovery + renewal-prep window").
+
 ---
 
 ## Phase 1 Ship/Hold Criteria (LOCKED — do not edit post-facto)
@@ -193,9 +220,15 @@ These criteria are written here, locked, before any real data exists. Motivated 
 | Any one Q fails by ≤ 10% margin | Discuss with buyer-equivalent reviewer; pre-decided meaning is "show output, get reaction, decide" |
 | Any one Q fails by > 10% margin | Hold; diagnose; refit |
 
+**Per A6:** Q6 and Q7 are gating with equal weight to Q1 and Q4. The expansion sub-model failing acceptance halts ship in the same way the churn sub-model would.
+
 ---
 
-## API Contract (locked, per M3 from review)
+## API Contract (locked, per M3 from review; enriched per A6)
+
+### Per-account endpoint
+
+`GET /api/v1/predictor/account/<id>/nrr-forecast?horizon=renewal|12mo`
 
 ```json
 {
@@ -220,12 +253,38 @@ These criteria are written here, locked, before any real data exists. Motivated 
       {"covariate": "arc_type=competitive_displacement",   "contribution": -0.01}
     ]
   },
+  "expansion_outlook": {
+    "p_expansion_event_horizon":     0.27,
+    "expected_size_pct_given_event": 0.12,
+    "expected_arr_lift":              559_440,
+    "ci_lower_arr_lift":              178_640,
+    "ci_upper_arr_lift":            1_052_300,
+    "horizon_to_likely_event_months": 7,
+    "expansion_drivers": [
+      {"signal": "arc_type=competitive_displacement_recovery",  "contribution": +0.08},
+      {"signal": "health_slope_3mo (recovering)",               "contribution": +0.04},
+      {"signal": "days_to_renewal_band=91-180",                 "contribution": +0.03}
+    ],
+    "suggested_playbook_id": "PB-08",
+    "suggested_playbook_expected_lift_arr": 180_000
+  },
   "prediction_method": "calibrated",
   "calibration_id": 17,
   "calibrated_at": "2026-05-06T10:00:00Z",
   "feature_flags": {"predictor_v3_active": true}
 }
 ```
+
+### Portfolio endpoints (per A6 — two ranked lists)
+
+`GET /api/v1/predictor/customer/<id>/top-expansion-opportunities?horizon=12mo&limit=10`
+`GET /api/v1/predictor/customer/<id>/top-at-risk-accounts?horizon=12mo&limit=10`
+
+Both return arrays of per-account records with the relevant subset of the per-account contract above. The expansion endpoint sorts by `expected_arr_lift × p_expansion_event`; the at-risk endpoint sorts by `expected_arr_loss × p_churn_at_horizon`.
+
+**UI lead by `saas_profile`** (per A6):
+- `saas_enterprise` tenant → CFO/CRO dashboard leads with **per-account expansion tile** (top 5 from `top-expansion-opportunities`); portfolio aggregate is secondary
+- `saas_smb` tenant → CFO/CRO dashboard leads with **portfolio expansion forecast tile** (sum of `expected_arr_lift` across all accounts with CI); per-account drill-down is secondary
 
 **Units:**
 - All probabilities in `[0, 1]`
@@ -238,6 +297,13 @@ These criteria are written here, locked, before any real data exists. Motivated 
 expected_nrr.point = 1 − p_churn_at_horizon
                        + p_survive_at_horizon × (e_expand_pct − e_contract_pct)
 ```
+
+**Expansion-outlook derivation invariant** (also enforced):
+```
+expansion_outlook.expected_arr_lift =
+    arr × p_expansion_event_horizon × expected_size_pct_given_event
+```
+i.e. the dollar lift is auto-derived from the same two-part expansion sub-model that feeds `e_expand_pct` in the term decomposition. No double-fitting; one model surface, two render paths.
 
 **`prediction_method` values:**
 - `"calibrated"` — fit using ≥ 3 months of panel data for this account
@@ -473,8 +539,8 @@ This document is the contract for Phase 1 execution. Once signed off:
 
 | Role | Name | Date | Status |
 |---|---|---|---|
-| Architect | Manoj Gupta | 2026-05-06 | Signed: A1, A3, A4, A5, Phase 1 P1–P4, Phase 1.5 Q1–Q7. **Pending:** A2 (no objection raised — assumed accepted on commit); customer hosting-model resolution before Block 1 starts. |
-| Executor | Claude (Opus 4.7) | 2026-05-06 | Authored v1.0; amended v1.1 |
+| Architect | Manoj Gupta | 2026-05-06 | Signed: A1, A3, A4, A5, A6, Phase 1 P1–P4, Phase 1.5 Q1–Q7 (Q6/Q7 elevated to gating-equal-weight per A6). **Pending:** A2 (no objection raised — assumed accepted on commit); customer hosting-model resolution before customer onboarding starts. |
+| Executor | Claude (Opus 4.7) | 2026-05-06 | Authored v1.0; amended v1.1; amended v1.2 |
 
 ---
 
@@ -484,3 +550,4 @@ This document is the contract for Phase 1 execution. Once signed off:
 |---|---|---|---|
 | 2026-05-06 | v1.0 | Claude | Initial authored. Incorporates: design notes v3 (Q1-Q6, acceptance tests, hazard data shape); execution plan v1 (autonomy/gate structure); reviewer feedback round 4 (3 priority issues + 6 missing items + meta-pattern observation). |
 | 2026-05-06 | v1.1 | Claude | Amendments after Manoj sign-off on A1 + Phase 1/1.5 criteria + Q1-Q7: added **A4** (Wizard B cleanup as contractual deliverable, single-PR with specific deletion list, P0 enforcement if not merged within 2 weeks of Phase 1.5 sign-off); added **A5** (two-profile SaaS segmentation: SaaS-Enterprise vs SaaS-SMB by median ARR auto-detection, separate threshold ladders, separate CDI templates); added **Real Customer Track** section (placeholder profile for first real-customer pilot — saas_smb, 500 accounts, $10M ARR, 18 months panel; disclosure language; Phase 1 ↔ Phase 1.5 collapse condition; day-by-day onboarding micro-plan conditional on Option A confirmation; tenant-specific risks; 4 open customer questions). |
+| 2026-05-06 | v1.2 | Claude | Added **A6** (Expansion as a first-class output — sub-model parity in build, two ranked lists per tenant, UI lead by saas_profile, Q6/Q7 elevated to gating-equal-weight with Q1/Q4). Enriched API contract with `expansion_outlook` block (P(event), expected size, expected ARR lift with CI, horizon to likely event, drivers, suggested playbook + lift). Added two portfolio endpoints (top-expansion-opportunities + top-at-risk-accounts). New invariant: `expected_arr_lift = arr × p_event × e_size`. Reframes predictor v3 from defensive (predict churn) to offensive (predict growth). |
