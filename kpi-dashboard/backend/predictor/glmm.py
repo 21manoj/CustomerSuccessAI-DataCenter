@@ -305,31 +305,153 @@ def _fit_glmm_inner(
     starting_values: Dict[str, float],
     ridge_lambdas: Dict[str, float],
 ) -> Tuple[Dict[str, float], Dict[str, float], dict]:
-    """Inner GLMM fit — Block 2 day 2 implementation lands here.
+    """Inner GLMM fit — penalized GLM via statsmodels with L2 toward seed.
 
-    For Block 2 day 1 (this commit), this is a structural placeholder
-    returning the starting values verbatim with infinite SE. Day 2
-    replaces this with the actual statsmodels.BinomialBayesMixedGLM
-    or statsmodels.GLM + L2-penalty call.
+    Implementation:
+      1. Build design matrix from `feature_columns()` (model-agnostic).
+      2. Set per-coefficient L2 penalty weights from `ridge_lambdas`
+         (1/σ²; coefficients without an explicit prior get a weakly
+         informative default penalty).
+      3. Fit `sm.GLM(...).fit_regularized(alpha=L2_vector, L1_wt=0)`,
+         centered on `starting_values` (translation: penalize
+         (β − μ)² rather than β²).
+      4. Bootstrap SEs over 200 resamples (cheap; rises to 1000 in
+         production via bootstrap_cis()).
+
+    Tenant random effects are NOT in this inner call — for Phase 1 v1
+    we approximate hierarchical pooling via tenant fixed effects (one-hot
+    on tenant_id) plus the CDI prior shrinkage. Full random-intercept
+    MixedLM lands in Phase 2 (Bayesian).
 
     Contract:
       - Returns (coef_dict, se_dict, diagnostics_dict)
-      - diagnostics_dict has 'converged' (bool), 'iterations', 'method',
+      - diagnostics_dict carries 'converged', 'iterations', 'method',
         'log_likelihood', plus warnings.
     """
-    # Day-1 placeholder: ship the starting values + flag explicitly
-    # that the fit hasn't been wired up yet. Day 2 replaces this.
-    coef = dict(starting_values)
-    for c in feature_columns():
-        coef.setdefault(c, 0.0)
-    ses = {k: float('inf') for k in coef}
-    diagnostics = {
-        'converged': True,  # vacuously — we just returned the prior
-        'iterations': 0,
-        'method': 'PLACEHOLDER_returning_prior',
-        'note': 'Block 2 day 1 scaffolding — actual GLMM call lands in day 2',
-    }
+    import statsmodels.api as sm
+
+    feat_cols = feature_columns()
+
+    # Build design matrix. Drop rows where any required feature is NaN
+    # (these came from the panel's first-month rows where slope/volatility
+    # weren't computable; they're unusable for fitting regardless).
+    fit_df = df.copy()
+    fit_df = fit_df.dropna(subset=feat_cols + [outcome_col])
+    if fit_df.empty:
+        # Nothing to fit on; defer to outer fallback
+        raise ValueError(
+            f'No fittable rows after dropping NaN on {len(feat_cols)} feature cols + {outcome_col}'
+        )
+
+    X = sm.add_constant(fit_df[feat_cols].astype(float).values, has_constant='add')
+    y = fit_df[outcome_col].astype(float).values
+
+    # Build the L2 penalty vector. Position 0 is the intercept.
+    coef_names = ['Intercept'] + feat_cols
+    default_lambda = 0.01  # weak penalty for un-seeded coefficients
+    alpha = np.array([
+        ridge_lambdas.get(name, default_lambda) for name in coef_names
+    ])
+
+    # Translate the regularizer center: statsmodels penalizes ||β||₂.
+    # We want penalty on (β − μ). Rewrite y' = y, X' = X, then offset
+    # the linear predictor by Σ μᵢ Xᵢ — equivalent to fitting (β − μ)
+    # with zero-centered penalty. For a logit/log link this means
+    # passing `offset = X @ μ_vector` to GLM.
+    mu_vector = np.array([
+        starting_values.get(name, 0.0) for name in coef_names
+    ])
+    offset = X @ mu_vector
+
+    family_obj = {
+        'Binomial': sm.families.Binomial(),
+        'Gamma': sm.families.Gamma(sm.families.links.Log()),
+    }[family]
+
+    diagnostics: dict = {'method': 'GLM.fit_regularized + offset', 'family': family}
+    try:
+        model = sm.GLM(y, X, family=family_obj, offset=offset)
+        # alpha is the L2 weight; L1_wt=0 → pure ridge
+        result = model.fit_regularized(alpha=alpha, L1_wt=0.0, refit=False)
+        deviation_from_prior = np.asarray(result.params)
+        params = mu_vector + deviation_from_prior  # add back the prior center
+        diagnostics['converged'] = True
+        diagnostics['iterations'] = getattr(result, 'n_iter', None)
+    except Exception as e:
+        diagnostics['converged'] = False
+        diagnostics['error'] = str(e)
+        # Pass the failure up; outer wrapper falls back to prior wholesale
+        raise
+
+    coef = {name: float(params[i]) for i, name in enumerate(coef_names)}
+
+    # Bootstrap SEs (200 resamples, account-clustered to respect panel
+    # structure). Production runs 1000.
+    ses = _bootstrap_ses(
+        df=fit_df,
+        feat_cols=feat_cols,
+        outcome_col=outcome_col,
+        family_obj=family_obj,
+        starting_values=starting_values,
+        ridge_lambdas=ridge_lambdas,
+        n_resamples=200,
+    )
+
     return coef, ses, diagnostics
+
+
+def _bootstrap_ses(
+    df: pd.DataFrame,
+    feat_cols: List[str],
+    outcome_col: str,
+    family_obj,
+    starting_values: Dict[str, float],
+    ridge_lambdas: Dict[str, float],
+    n_resamples: int = 200,
+) -> Dict[str, float]:
+    """Account-clustered bootstrap SE for each coefficient.
+
+    Resamples accounts (with replacement); pulls all panel rows for
+    the resampled accounts; refits; collects coefficient distribution;
+    SE = std across resamples.
+    """
+    import statsmodels.api as sm
+
+    coef_names = ['Intercept'] + feat_cols
+    mu_vector = np.array([starting_values.get(n, 0.0) for n in coef_names])
+    default_lambda = 0.01
+    alpha = np.array([ridge_lambdas.get(n, default_lambda) for n in coef_names])
+
+    accounts = df['account_id'].unique()
+    coef_samples: List[np.ndarray] = []
+    rng = np.random.default_rng(seed=42)
+
+    for _ in range(n_resamples):
+        # Sample accounts with replacement
+        sampled_accts = rng.choice(accounts, size=len(accounts), replace=True)
+        # Rebuild the panel by stacking per-account slices
+        sample_df = pd.concat(
+            [df[df['account_id'] == a] for a in sampled_accts],
+            ignore_index=True,
+        )
+        if sample_df.empty:
+            continue
+        X = sm.add_constant(sample_df[feat_cols].astype(float).values, has_constant='add')
+        y = sample_df[outcome_col].astype(float).values
+        offset = X @ mu_vector
+        try:
+            model = sm.GLM(y, X, family=family_obj, offset=offset)
+            r = model.fit_regularized(alpha=alpha, L1_wt=0.0, refit=False)
+            coef_samples.append(mu_vector + np.asarray(r.params))
+        except Exception:
+            # Singular bootstrap sample — skip
+            continue
+
+    if not coef_samples:
+        return {n: float('nan') for n in coef_names}
+
+    coef_arr = np.vstack(coef_samples)
+    return {coef_names[i]: float(np.std(coef_arr[:, i], ddof=1)) for i in range(len(coef_names))}
 
 
 def fit_all_sub_models(
