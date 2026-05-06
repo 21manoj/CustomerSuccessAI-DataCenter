@@ -55,6 +55,10 @@ def _load_active_calibrations(
         if db_session is None:
             from extensions import db
             db_session = db.session
+        # Lookup hierarchy:
+        #   1. Per-tenant calibration (customer_id = customer_id)
+        #   2. Pooled calibration (customer_id IS NULL — what Wizard D writes today)
+        #   3. CDI seed pseudo-row (cold-start)
         cal = (
             PredictorCalibration.query
             .filter_by(
@@ -66,6 +70,19 @@ def _load_active_calibrations(
             .order_by(PredictorCalibration.created_at.desc())
             .first()
         )
+        if cal is None:
+            # Fall back to pooled calibration
+            cal = (
+                PredictorCalibration.query
+                .filter(
+                    PredictorCalibration.customer_id.is_(None),
+                    PredictorCalibration.saas_profile == saas_profile,
+                    PredictorCalibration.sub_model == sm,
+                    PredictorCalibration.is_active == True,  # noqa: E712
+                )
+                .order_by(PredictorCalibration.created_at.desc())
+                .first()
+            )
         if cal is None:
             # Cold-start: synthesize from CDI seed
             seed = get_seed('saas_premium', saas_profile)

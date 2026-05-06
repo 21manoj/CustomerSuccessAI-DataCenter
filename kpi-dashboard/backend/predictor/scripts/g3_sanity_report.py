@@ -34,6 +34,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 SANITY_ACCOUNTS_BY_CUSTOMER = {
     393: ['Zermatt Analytics', 'Bernina Health Systems', 'Pilatus Enterprise',
           'Matterhorn Digital', 'Denali Cloud Platform'],
+    # Predictor V3 Demo SaaS Co — 5-account spectrum spanning expansion,
+    # competitive_displacement, silent_churn, recovery, land_and_expand.
+    395: ['Antares Holdings',         # expansion_champion, big lift expected
+          'Cassiopeia Insurance',     # competitive_displacement → churned (definitive event present)
+          'Lyra Media',               # silent_churn → churned (definitive event present)
+          'Deneb Pharma',             # crisis_recovery, mid-recovery
+          'Polaris Cloud'],           # land_and_expand, healthy whale
 }
 
 

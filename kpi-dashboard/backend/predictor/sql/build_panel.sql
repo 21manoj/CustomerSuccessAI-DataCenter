@@ -43,7 +43,7 @@ tenant_profile AS (
     JOIN accounts a ON a.customer_id = c.customer_id
     WHERE c.customer_id = ANY(:target_customer_ids)
       AND c.vertical = 'saas_premium'
-      AND a.account_status NOT IN ('churned', 'cancelled', 'inactive')
+      AND a.account_status NOT IN ('cancelled', 'inactive')
     GROUP BY c.customer_id, c.customer_name, c.vertical
 ),
 
@@ -83,7 +83,7 @@ account_meta AS (
         END AS arr_band
     FROM accounts a
     JOIN tenant_profile tp ON tp.customer_id = a.customer_id
-    WHERE a.account_status NOT IN ('churned', 'cancelled', 'inactive')
+    WHERE a.account_status NOT IN ('cancelled', 'inactive')
 ),
 
 -- ----------------------------------------------------------------------------
