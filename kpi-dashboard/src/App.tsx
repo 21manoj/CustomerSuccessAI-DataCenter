@@ -364,6 +364,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/saas-dashboard/ceo" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="revenue_intelligence"><CEODashboard /></EntitlementGuard></PrivateRoute>} />
         <Route path="/saas-dashboard/sales" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="dashboards"><AESalesDashboard /></EntitlementGuard></PrivateRoute>} />
         <Route path="/saas-dashboard/ops" element={<PrivateRoute vertical="saas"><EntitlementGuard feature="dashboards"><CSOpsIntegrationDashboard /></EntitlementGuard></PrivateRoute>} />
+        <Route path="/saas-dashboard/journey-intelligence" element={<PrivateRoute vertical="saas"><JourneyIntelligenceView /></PrivateRoute>} />
 
         {/* SaaS Dashboard — base platform (must come AFTER sub-routes) */}
         <Route

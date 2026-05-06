@@ -277,8 +277,16 @@ const SidebarNav: React.FC<{ activeId: ViewId; onViewChange: (view: ViewId) => v
             );
             // Items with `href` link out to a dedicated route; others trigger
             // the in-place view change. Same visual treatment for both.
+            // Derive the dashboard-family prefix from current path so SaaS
+            // tenants land on /saas-dashboard/* and DC tenants on /dc-dashboard/*.
+            const prefix = typeof window !== 'undefined' && window.location.pathname.startsWith('/saas-dashboard')
+              ? '/saas-dashboard'
+              : '/dc-dashboard';
+            const resolvedHref = hasHref
+              ? (item as any).href.replace(/^\/dc-dashboard/, prefix)
+              : null;
             return hasHref ? (
-              <a key={item.id} href={(item as any).href} className={className}>
+              <a key={item.id} href={resolvedHref} className={className}>
                 {inner}
               </a>
             ) : (
