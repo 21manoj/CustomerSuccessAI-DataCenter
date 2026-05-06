@@ -42,10 +42,36 @@ fi
 echo ""
 echo "Server API Key: $KEY"
 echo ""
+
+# Sanity check — the compose file in the same directory as .env must
+# pass MCP_SERVER_API_KEY through to the cs-pulse container, otherwise
+# the server has no value to compare against and rejects the key as
+# "expired" (see auth.py validate_server_key()).
+COMPOSE_DIR="$(dirname "$ENV_FILE")"
+COMPOSE_HIT=""
+for cf in "$COMPOSE_DIR"/docker-compose*.yml; do
+    [[ -f "$cf" ]] || continue
+    if grep -q "MCP_SERVER_API_KEY:" "$cf" 2>/dev/null; then
+        COMPOSE_HIT="$cf"
+        break
+    fi
+done
+
+if [[ -z "$COMPOSE_HIT" ]]; then
+    echo "⚠️  WARNING: no docker-compose*.yml in $COMPOSE_DIR passes MCP_SERVER_API_KEY to the container."
+    echo "    The container will not see this key and will reject it as 'expired' on every request."
+    echo "    Add this line under the cs-pulse 'environment:' block:"
+    echo "        MCP_SERVER_API_KEY: \${MCP_SERVER_API_KEY}"
+    echo ""
+fi
+
 echo "Use as:"
 echo "  Authorization: Bearer $KEY"
+echo "  — or —"
+echo "  https://<host>/mcp?api_key=$KEY    (URL form, demo only — rotates after demos)"
 echo ""
 echo "Next steps:"
 echo "  1. Restart cs-pulse container: cd ~/cspulse && sudo docker compose -f docker-compose.ec2-registry.yml up -d --force-recreate cs-pulse"
-echo "  2. Update Claude.ai MCP connector with this key"
-echo "  3. Test: curl -s -H 'Authorization: Bearer $KEY' https://<host>/mcp"
+echo "  2. Verify env reached the container: sudo docker exec cspulse-platform env | grep MCP_SERVER_API_KEY"
+echo "  3. Update Claude.ai MCP connector with this key"
+echo "  4. Test: curl -s -H 'Authorization: Bearer $KEY' https://<host>/mcp"

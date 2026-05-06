@@ -71,6 +71,7 @@ services:
       # Set SESSION_COOKIE_SECURE=false when using HTTP (no HTTPS); required so login cookie is sent and Sacme/Tacme see accounts
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       FEATURE_MCP_SERVER: ${FEATURE_MCP_SERVER:-true}
+      MCP_SERVER_API_KEY: ${MCP_SERVER_API_KEY}
       FEATURE_CONTEXT_GRAPH: ${FEATURE_CONTEXT_GRAPH:-true}
       FEATURE_ASK_AI_V2: ${FEATURE_ASK_AI_V2:-true}
     volumes:

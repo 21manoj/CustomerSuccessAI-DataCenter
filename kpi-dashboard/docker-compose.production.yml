@@ -84,6 +84,7 @@ services:
 
       # MCP Server — enable HTTP transport on port 8001
       FEATURE_MCP_SERVER: "true"
+      MCP_SERVER_API_KEY: ${MCP_SERVER_API_KEY:-}
       FEATURE_CONTEXT_GRAPH: "true"
 
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
