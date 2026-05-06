@@ -30,6 +30,11 @@ import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
 import { trackPageView, trackEvent } from '../../utils/activityTracker';
+// NRR Predictor v3 — per A3 in PLAN_nrr_predictor_v3.md, this swaps in
+// for Wizard B's forecast tile when FEATURE_PREDICTOR_V3_UI is on for
+// the tenant. Demo gate: customer_id === 395 (Predictor V3 Demo SaaS Co)
+// until admin-toggleable per-tenant flag is wired.
+import PredictorV3Tile from '../predictor/PredictorV3Tile';
 
 // ============================================================================
 // TYPES
@@ -1139,7 +1144,31 @@ const CFODashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* Row 1b: NRR Before/After + Cost of Inaction */}
+          {/* Row 1b — Predictor v3 swap-in (A3 hard rule: never render
+              Wizard B legacy + Predictor v3 on the same screen).
+              Demo gate: customer_id === 395 until admin toggle ships. */}
+          {(() => {
+            const showPredictorV3 = (session?.customer_id === 395);
+            const profile: 'saas_enterprise' | 'saas_smb' =
+              (session?.vertical === 'saas_premium') ? 'saas_enterprise' : 'saas_enterprise';
+            if (showPredictorV3 && session) {
+              return (
+                <div className="mb-6">
+                  <PredictorV3Tile
+                    customerId={session.customer_id}
+                    saasProfile={profile}
+                    horizon="12mo"
+                    limit={5}
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* Row 1b (legacy): NRR Before/After + Cost of Inaction
+              — hidden when Predictor v3 is active, per A3. */}
+          {session?.customer_id !== 395 && (
           <div className="grid grid-cols-2 gap-4 mb-6">
             {/* Issue #11 fix (May 4 2026): "no lifecycle history" empty state.
                 When Wizard B has no closed lifecycle outcomes (delta = 0 + zero
@@ -1254,6 +1283,7 @@ const CFODashboard: React.FC = () => {
             {/* Cost of Inaction */}
             <CostOfInactionPanel data={d.cost_of_inaction} />
           </div>
+          )}
 
           {/* Row 1c: Investment Allocation Story */}
           {d.layered_story && d.layered_story.layers.length > 0 && (
