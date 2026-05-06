@@ -1,8 +1,8 @@
 # PLAN: NRR Predictor v3 — Phase 1 Build Plan
 
-**Status:** awaiting sign-off
+**Status:** A1, A3, A4, A5 + Phase 1/1.5 ship-hold criteria + Q1–Q7 thresholds signed off 2026-05-06; awaiting hosting-model resolution before Block 1 starts
 **Branch:** `feature/predictor-v3-phase1` (to be created from `docs/gtm-engineering-reorg`)
-**Authored:** 2026-05-06
+**Authored:** 2026-05-06 v1.0; v1.1 amendment 2026-05-06 (A4, A5, Real Customer Track)
 **Companion:** `nrr_predictor_v3_design_notes.md` (open questions + hazard data shape)
 
 This document is the canonical execution plan. The companion design notes resolve architecture questions; this document locks the build path, the ship/hold criteria, and the verification gates. Both are required reading before Block 1 starts.
@@ -68,6 +68,74 @@ Same pattern is reserved for Wizard E (Phase 4 attribution): `wizards/wizard_e_a
 - **Phase 4:** Wizard E lands; `cs_pulse_delta_pct` reintroduced with real counterfactual attribution.
 
 **Audit step in Block 5:** grep all dashboard files for `portfolio_nrr_forecast`, `current_nrr_pct`, `with_interventions_nrr_pct`. Every reference is either replaced with a predictor v3 call or gated by `!FEATURE_PREDICTOR_V3_UI`. No silent dual rendering.
+
+### A4. Wizard B cleanup deliverable (staged removal, contractual)
+
+To prevent two NRR implementations coexisting indefinitely (which is the realistic failure mode if cleanup stays aspirational), Phase 1.5 sign-off triggers a **scheduled cleanup PR**, not a "we'll get to it."
+
+**Trigger:** Phase 1.5 ship/hold criteria pass on first real-customer pilot.
+
+**Deliverable:** single PR titled `cleanup(wizard-b): remove forecast/attribution code superseded by predictor v3`.
+
+**Specific deletions from `backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py`:**
+
+| Method / constant | Replaced by |
+|---|---|
+| `forecast_portfolio_nrr()` (~640 lines) | `predictor/inference.py` |
+| `_organic_retention()` | (gone — was attribution logic) |
+| `_continuous_renewal_projection()` (v2 feature-flagged variant) | (gone — replaced by hazard model) |
+| `_churn_prob(h)` lookup table | hazard-model coefficients |
+| `0.85` deceleration constant | calibrated extrapolation parameter |
+| `ATTRIBUTION_FACTOR = 0.50` | (moves to Wizard E in Phase 4) |
+| Pattern-level NRR table population in `correlate_nrr_impact()` | (gone — was the 100%/100% noise the reviewer flagged) |
+| Top interventions ranking | `predictor/inference.py` |
+| Renewals at risk ranking | `predictor/inference.py` |
+
+**Net deletion target:** ~900 lines from a ~1500-line file. Wizard B drops to ~600 lines.
+
+**What stays in Wizard B (steady state):** `profile_patterns()`, `analyze_transitions()`, `identify_early_warnings()`, `extract_success_factors()`. Feature extractor only. No NRR math.
+
+**Acceptance criteria for the cleanup PR:**
+- Every method/constant in the table above is gone
+- Wizard B file size reduced by ≥ 800 lines
+- No production caller still references the deleted symbols (grep-verified across all `backend/`, `src/`, MCP tools)
+- Wizard B unit tests pass on the reduced surface
+- A regression test confirms the predictor v3 endpoint produces equivalent or better output on the customer-393 + first-real-customer tenants
+
+**Owner:** same as Phase 1 build owner.
+
+**Due:** within **1 sprint** (2 weeks) of Phase 1.5 sign-off.
+
+**Enforcement:** if not merged within 2 weeks of Phase 1.5 sign-off, becomes a **P0 cleanup that blocks all other Wizard B work** until done. No exceptions.
+
+### A5. Two-profile SaaS segmentation (SaaS-Enterprise vs SaaS-SMB)
+
+The original SaaS thresholds in design notes Q5 (`mid_market < $5M ≤ enterprise < $50M ≤ strategic`) assume a whale-portfolio shape. They break for high-volume / SMB-heavy SaaS portfolios where median account ARR is well below $250K — almost every account would fall below the mid_market floor.
+
+**Decision:** SaaS verticals are sub-classified at tenant onboarding by portfolio shape, with two threshold ladders:
+
+| Profile | Trigger (auto-detected at onboarding) | Segment thresholds |
+|---|---|---|
+| **SaaS-Enterprise** | Median account ARR ≥ $250K | `mid_market < $5M ≤ enterprise < $50M ≤ strategic` |
+| **SaaS-SMB** | Median account ARR < $250K | `smb < $25K ≤ mid_market < $250K ≤ enterprise` |
+
+**Auto-detection rule:**
+```python
+median_arr = np.median([a.revenue for a in accounts if a.account_status == 'active'])
+profile = 'saas_enterprise' if median_arr >= 250_000 else 'saas_smb'
+```
+
+Stored on `CustomerConfig` as `saas_profile` (new column; nullable for non-SaaS verticals).
+
+**Re-evaluation rule:** profile locked for 12 months at onboarding; earlier re-evaluation triggered if median ARR shifts by > 50% (e.g., a strategic-account upmarket move fundamentally changes the shape).
+
+**CDI templates per profile:** the public-benchmark seed (per A1's CDI-as-informative-priors implementation) lives at `config/cdi_seed_public_benchmarks.json` keyed by `(vertical, profile)`. Two SaaS entries: `saas_enterprise` and `saas_smb`. Phase 1 ships both; cold-start tenants pick by their auto-detected profile.
+
+**Anchoring:**
+- Customer 393 (Mount Pike, $6.7M avg ARR) → `saas_enterprise`
+- New first-real-customer (~$20K avg ARR, 500 accounts) → `saas_smb`
+
+**Implication for Phase 1 build:** panel construction in Block 1 segments accounts using profile-appropriate thresholds. The hierarchical model in Block 2 fits separate `β_{s,t,v}` for the two profiles, treating them as effectively different verticals at the CDI template level.
 
 ---
 
@@ -297,6 +365,77 @@ Cold-start logic = segment-mean coefficients applied to current covariates + 2×
 
 ---
 
+## Real Customer Track (parallel to Phase 1 build)
+
+A real customer is targeted for onboarding within 1 week of this document landing. They're the calibration cohort that converts Phase 1 acceptance from structural-only to structural + quantitative. This section captures their onboarding plan and how their data integrates into the predictor v3 build.
+
+### Customer profile (placeholder — pending confirmation)
+
+| Field | Value |
+|---|---|
+| `customer_id` | TBD (assigned at provisioning) |
+| `vertical` | `saas_premium` |
+| `saas_profile` (per A5) | `saas_smb` (auto-detected from $20K avg ARR) |
+| Account count | 500 |
+| Total ARR | $10M |
+| Average ARR / account | $20K |
+| Panel history available | 18 months |
+| Outcome density | "Historical data available" — pending verification of definitive lifecycle subtypes in `outcomes.csv` |
+| Hosting model | TBD — Option A (single-tenant SaaS on our cloud) or Option B (customer-cloud); critical clarification needed before provisioning |
+| Beta disclosure + DPA | Yes — both will be signed |
+| Healthcare? | No (AI-1 stays deferred) |
+| Predictor v3 expectation | Lands on legacy Wizard B for first 3 weeks; migrates to predictor v3 when it ships (confirmed acceptable) |
+
+### Disclosure language for the customer (week 1)
+
+> *"Today's dashboard shows realized NRR — a backward-looking ledger from definitive lifecycle outcomes (churn, contraction, expansion, new logo). Forward-looking expected NRR per account, with confidence intervals and term decomposition (predictor v3), is shipping in approximately 3 weeks. You'll be the first tenant migrated when it ships. Until then, you have signals, arcs, KPI health, playbook execution, and narrative analytics — not predictive NRR. The Wizard B legacy NRR currently shown is the realized number, not a forecast."*
+
+This is an honest position. It defends against AI-DD reviewers who would catch any pretense that the day-1 NRR figure is predictive.
+
+### Phase 1 ↔ Phase 1.5 collapse condition
+
+Phase 1 acceptance is locked as structural-only because synthetic data invalidates quantitative gates. **However:** if the real customer's data lands before Block 4 with sufficient outcome density, Phase 1.5 quantitative gates Q1–Q7 apply at Block 4 instead of being deferred.
+
+**Sufficient outcome density** means: ≥ 30 closed lifecycle outcomes (definitive: `churn_lost`, `contraction`, `expansion_closed`, `new_logo`) across the customer's panel. Estimated: 500 accounts × 18 months at 5%/year churn alone = ~37 churn events; expansion + contraction add more. **Likely met.**
+
+If met: Phase 1 acceptance = structural P1–P4 **plus** quantitative Q1–Q7. If not met: structural-only as documented; Q1–Q7 stay deferred to a later Phase 1.5 milestone when outcomes accumulate.
+
+### Onboarding micro-plan (executes when Option A vs B is confirmed)
+
+Conditional on `hosting_model = Option_A` (single-tenant SaaS on our cloud). If Option B, this track delays 1–2 weeks for IaC work and is split into a separate provisioning plan.
+
+| Day | Action | Owner |
+|---|---|---|
+| Day 1 | Confirm hosting model, customer name, primary admin email. If Option A: provision tenant on EC2 per [`Customer_Admin_Provisioning_Runbook.md`](../GTM-docs/Customer_Admin_Provisioning_Runbook.md). Set `vertical='saas_premium'`, `saas_profile='saas_smb'`. Provision admin user. Issue magic-link. | Claude (with greenlight) |
+| Day 2 | Send 4-CSV templates + [`Signal_Ingestion_Guide.md`](../GTM-docs/Signal_Ingestion_Guide.md). **Walk customer through `outcomes.csv` definitive-vs-narrative subtype distinction explicitly** — this gates whether Phase 1.5 quantitative gates apply. Beta disclosure + DPA signing track started in parallel (legal). | Claude + customer |
+| Day 3 | Customer prepares data export. | Customer |
+| Day 4 | First CSV upload. Wizard A/B/C run. **Smoke test all 5 dashboards (CFO/CRO/VP CS/CSM/Journey Intel) with 500 accounts.** Flag UI scaling issues immediately. | Claude |
+| Day 5 | Fix any UI scaling issues found at Day 4. Customer trains on dashboards. | Claude + customer |
+| Day 6–7 | Customer in steady state on legacy Wizard B. Their panel rows accumulating in DB for predictor v3 fit. | Customer |
+
+Concurrently from Day 1: **Block 1 of predictor v3 build runs in parallel**, panel construction extends to include this tenant (multi-tenant from day one).
+
+### Risks specific to this customer
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| **UI scaling** — dashboards designed for ~30–100 accounts; 500 accounts may break tile rendering, drill-down lists, or load times | Medium | Day 4 smoke test catches it. ~half-day fix if pagination/virtualization needed. Add to Block 5 verification. |
+| **Outcome subtype misuse** — customer populates `outcomes.csv` with narrative subtypes (`revenue_protected`, `churn_averted`) instead of definitive lifecycle subtypes (`churn_lost`, `expansion_closed`). NRR calculation pins at 100%; Phase 1.5 quantitative gates can't apply. | High | Day 2 walkthrough is explicit about this distinction. Review their first upload before Wizard B runs. |
+| **Their internal NRR ledger ≠ our calculated NRR** — they likely already track NRR. Any divergence on day 1 will be challenged. | High | Position predictor v3 as forward-looking expected NRR with CI, not as a backward-ledger restatement. Their accounting NRR is not our target — it's the input to backfill validation. |
+| **Wizard C calibration mismatch** — today auto-runs against HealthScore-derived success/fail. Should run against ContextNode OUTCOMEs once real outcomes exist. | Medium | Tier-2 redesign on backlog (per [Wizard C roadmap memo](../../../.claude/projects/-Users-manojgupta-CustomerSuccessAI-DataCenter/memory/roadmap_wizard_c_learn_from_context_graph.md)). Disclosure: "today's KPI weights are HealthScore-correlated; Wizard C v2 will retrain against your closed outcomes once accumulated." |
+| **Hosting model = Option B (customer-cloud)** — would slip onboarding by 1–2 weeks for IaC. | High if confirmed | Confirm before Day 1. If B, the predictor v3 build still runs on schedule using customer 393 + the new tenant when it lands; UI migration to predictor v3 just slips for them by however long Option B provisioning takes. |
+
+### Open questions for the customer (still pending answers)
+
+1. **Hosting model — Option A or B?** Critical for Day-1 provisioning. Greenlight is for plan amendments only; Day-1 provisioning blocked until this resolves.
+2. **Customer name + primary admin email.** Required for tenant provisioning.
+3. **Expected upload day in the week.** Drives whether their data lands before Block 1 day 3 (panel construction includes them) or later (Block 1 stays customer-393 only; their panel adds when data lands).
+4. **`qualitative_signals.csv` available?** Optional but valuable. If not, predictor v3 panel has gaps in some covariates for this tenant; mitigation is to use Wizard B's pattern features only for them.
+
+These are tracked here, not in the AI-1/2/3 list, because they're customer-specific and resolve via the customer relationship rather than internal team decisions.
+
+---
+
 ## What is NOT in scope for Phase 1
 
 Explicit deferrals so they don't drift in:
@@ -334,8 +473,8 @@ This document is the contract for Phase 1 execution. Once signed off:
 
 | Role | Name | Date | Status |
 |---|---|---|---|
-| Architect | Manoj Gupta | TBD | Pending |
-| Executor | Claude (Opus 4.7) | 2026-05-06 | Authored |
+| Architect | Manoj Gupta | 2026-05-06 | Signed: A1, A3, A4, A5, Phase 1 P1–P4, Phase 1.5 Q1–Q7. **Pending:** A2 (no objection raised — assumed accepted on commit); customer hosting-model resolution before Block 1 starts. |
+| Executor | Claude (Opus 4.7) | 2026-05-06 | Authored v1.0; amended v1.1 |
 
 ---
 
@@ -344,3 +483,4 @@ This document is the contract for Phase 1 execution. Once signed off:
 | Date | Version | Author | Change |
 |---|---|---|---|
 | 2026-05-06 | v1.0 | Claude | Initial authored. Incorporates: design notes v3 (Q1-Q6, acceptance tests, hazard data shape); execution plan v1 (autonomy/gate structure); reviewer feedback round 4 (3 priority issues + 6 missing items + meta-pattern observation). |
+| 2026-05-06 | v1.1 | Claude | Amendments after Manoj sign-off on A1 + Phase 1/1.5 criteria + Q1-Q7: added **A4** (Wizard B cleanup as contractual deliverable, single-PR with specific deletion list, P0 enforcement if not merged within 2 weeks of Phase 1.5 sign-off); added **A5** (two-profile SaaS segmentation: SaaS-Enterprise vs SaaS-SMB by median ARR auto-detection, separate threshold ladders, separate CDI templates); added **Real Customer Track** section (placeholder profile for first real-customer pilot — saas_smb, 500 accounts, $10M ARR, 18 months panel; disclosure language; Phase 1 ↔ Phase 1.5 collapse condition; day-by-day onboarding micro-plan conditional on Option A confirmation; tenant-specific risks; 4 open customer questions). |
