@@ -93,7 +93,11 @@ def build_panel(
     return df
 
 
-def panel_quality_report(df: pd.DataFrame) -> dict:
+def panel_quality_report(
+    df: pd.DataFrame,
+    engine: Optional[Engine] = None,
+    customer_ids: Optional[Iterable[int]] = None,
+) -> dict:
     """Produce the G1.5 data-quality report for a constructed panel.
 
     Per PLAN_nrr_predictor_v3.md G1.5 hard-fail criteria:
@@ -101,6 +105,8 @@ def panel_quality_report(df: pd.DataFrame) -> dict:
       - Any segment × tenant with < 3 accounts → flag
       - Any tenant with zero churn events historically → flag (sub-models 2/3
         still applicable; sub-model 1 won't fit on that tenant alone)
+      - Any active account in `accounts` table absent from the panel → flag
+        (G1.5 v2 enhancement — surfaces accounts with no health_scores at all)
 
     Returns a dict suitable for printing or rendering as a markdown table.
     """
@@ -187,6 +193,41 @@ def panel_quality_report(df: pd.DataFrame) -> dict:
                 'CDI prior + other tenants. Sub-models 2/3 still applicable.'
             ),
         })
+
+    # G1.5 v2 — flag active accounts in `accounts` table absent from panel
+    # (typically: account exists but has no health_scores rows yet)
+    if engine is not None and customer_ids is not None:
+        from sqlalchemy import bindparam, text
+        from sqlalchemy.dialects.postgresql import ARRAY, INTEGER
+
+        cust_ids = list(customer_ids)
+        if cust_ids:
+            stmt = text(
+                "SELECT account_id, customer_id, account_name "
+                "FROM accounts "
+                "WHERE customer_id = ANY(:cids) "
+                "  AND account_status = 'active'"
+            ).bindparams(bindparam('cids', type_=ARRAY(INTEGER)))
+            with engine.connect() as conn:
+                active_accts = pd.read_sql(stmt, conn, params={'cids': cust_ids})
+
+            in_panel = set(df['account_id'].unique().tolist())
+            missing = active_accts[~active_accts['account_id'].isin(in_panel)]
+            if not missing.empty:
+                pct = round(100 * len(missing) / max(len(active_accts), 1), 1)
+                report['flags'].append({
+                    'type': 'active_accounts_missing_from_panel',
+                    'severity': 'hard_fail' if pct > 20 else 'warn',
+                    'count': int(len(missing)),
+                    'pct_of_active': pct,
+                    'account_ids_sample': missing['account_id'].head(10).tolist(),
+                    'detail': (
+                        f'{len(missing)} of {len(active_accts)} active accounts '
+                        f'({pct}%) have no health_scores rows. They are invisible '
+                        f'to the predictor until upstream (Wizard A/health pipeline) '
+                        f'writes for them. Hard-fail at >20%; warn below.'
+                    ),
+                })
 
     if any(f['severity'] == 'hard_fail' for f in report['flags']):
         report['status'] = 'HARD_FAIL'

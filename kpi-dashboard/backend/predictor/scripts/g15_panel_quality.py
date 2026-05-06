@@ -128,7 +128,7 @@ def main() -> int:
     engine = create_engine(db_url)
 
     df = build_panel(customer_ids=customer_ids, engine=engine)
-    report = panel_quality_report(df)
+    report = panel_quality_report(df, engine=engine, customer_ids=customer_ids)
     md = render_markdown(report, customer_ids, df)
 
     # Write artifact for the gate review
