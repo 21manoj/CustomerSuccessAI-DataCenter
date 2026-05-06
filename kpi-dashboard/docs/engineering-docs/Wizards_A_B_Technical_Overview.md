@@ -1,6 +1,6 @@
 # Wizard A & Wizard B — Technical Overview
 
-*Last updated: Apr 25 2026*
+*Last updated: May 6 2026*
 
 CS Pulse runs three deterministic "wizards" inside `process_data`. Wizard A
 classifies each account's behavior into a known arc; Wizard B uses that
@@ -37,28 +37,176 @@ the raw numbers.
 
 ### Wizard B — Pattern Analysis & NRR Forecast
 
-**Purpose.** Two outputs: (a) per-pattern NRR correlation across the
-portfolio, (b) revenue-weighted portfolio NRR forecast (with-CS-Pulse and
-without-CS-Pulse projections).
+**Purpose.** Three outputs: (a) per-arc NRR correlation across the
+portfolio, (b) per-account NRR forecast + 90-day health trajectory, (c)
+revenue-weighted portfolio NRR forecast with both *without-CS-Pulse* and
+*with-further-interventions* counterfactuals.
 
 **Source:** `backend/wizards/wizard_b_pattern_db.py` (DB wrapper) calling
 `backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py`
-(core analyzer).
+(core analyzer, ~1500 lines).
 
 **Workflow (numbered in Wizard B's own stdout):**
-1. Load patterns: group accounts by `arc_type`/`pattern_type` from Wizard A.
-2. Compute pattern-level NRR correlations (avg NRR, ARR exposed,
-   intervention success rate per pattern).
-3. Phase-transition analysis — map account moves between phases.
-4. Early-warning extraction — surface signals that historically preceded
-   churn.
-5. Pattern → NRR impact correlation.
-6. **Portfolio NRR forecast** — weighted aggregation across accounts
-   producing `without_cs_pulse_nrr_pct`, `current_nrr_pct`,
-   `with_interventions_nrr_pct`, `cs_pulse_arr_protected`.
-7. Trajectory at T+30/60/90 days + revenue waterfall (per-account
-   exposure, expected loss, residual risk, attributed save, intervention
-   cost, projected ROI).
+1. Profile patterns — group accounts by `arc_type` from Wizard A.
+2. Phase-transition matrix.
+3. Early-warning rule extraction.
+4. Success-factor analysis — what differentiated recovered accounts.
+5. **NRR correlation** — bucket accounts by arc, compute avg NRR per arc using definitive lifecycle outcomes only.
+6. **Portfolio NRR forecast** — per-account current NRR, T+30/60/90 trajectory, with/without CS Pulse counterfactuals, revenue waterfall, renewal risk overlay, top-10 intervention ranking, then aggregated portfolio metrics.
+
+§1b below walks through Step 5 + Step 6 in detail with formulas and line refs.
+
+---
+
+## 1b. Wizard B NRR Pipeline (detailed)
+
+The full forecast is built in one orchestrated pass through `forecast_portfolio_nrr()` ([line 695](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py)). 11 conceptual steps:
+
+### Step 0 — Wizard A pre-condition
+Every account already has an `arc_type` (steady_growth, crisis_recovery, slow_decline, expansion_heavy, …) from Wizard A. Wizard B reads this from `accounts.arc_type`.
+
+### Step 1 — Per-arc NRR correlation ([line 489](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+
+**Inputs:**
+- `arr_map` — `Account.revenue` per account (current contract ARR)
+- `OUTCOME` ContextNode rows where `revenue_impact_type` is in the *definitive* lifecycle set: `{churn_lost, contraction, expansion_closed, new_logo}`. Narrative outcomes (`revenue_protected`, `churn_averted`) are **excluded** — they're stories, not actual ARR movements.
+- Taxonomy from `config/taxonomy_base.json` — single source of truth so Wizard B can't drift from production bucket-mapping.
+
+**Per arc pattern:**
+```
+NRR_arc                  = (Σ ARR − Σ lost + Σ expansion) / Σ ARR
+intervention_success_rate = % of accounts where ending_health > lowest_health + 5
+```
+
+`new_logo` contributes to expansion **and** is excluded from the denominator (new ARR, not retained).
+
+### Step 2 — Gather per-account inputs ([line 716–757](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+- `arr_map`, `arc_map`, `renewal_map` (from `Account.profile_metadata.renewal_date`)
+- `slope_map` — health momentum from last 2 `HealthScore` rows: `(latest − prev) / Δdays × 30`
+- `arc_playbook_map` — JSON config mapping each arc to prescribed playbooks
+
+### Step 3 — Build per-account forecast record ([line 845](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+For every account:
+```
+{ account_id, arr,
+  current_nrr,                    ← from Step 5 (lifecycle outcomes)
+  health_start, health_end, health_lowest, health_slope_30d,
+  intervention_success_rate,      ← from Step 1
+  renewal_date, days_to_renewal, renewal_urgency,
+  health_trajectory: [T+1, T+2, T+3]   ← from Step 4
+}
+```
+
+### Step 4 — Project health forward ([line 664](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+```
+_extrapolate_health(h_now, slope, months, deceleration=0.85)
+```
+Slope dampens 15% per month (linear trends rarely hold long). Detects threshold crossings (healthy → at-risk → critical).
+
+### Step 5 — Detect "saved" accounts ([line 875](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+
+An account counts as saved-by-CS-Pulse if **all three** are true:
+1. Had a crisis (`lowest_health < 60`)
+2. Recovered (`ending_health > lowest_health + 10`)
+3. Has a positive outcome OUTCOME node (`churn_averted`, `revenue_protected`, `renewal_secured`)
+
+`saved_arr` is the sum of ARR across these accounts.
+
+### Step 6 — Compute current NRR ("with CS Pulse") ([line 934](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+```
+current_nrr = (total_arr − total_lost + total_expansion) / total_arr
+```
+Direct from definitive lifecycle outcomes. **No projection.** This is the truthful "today" number.
+
+### Step 7 — Without CS Pulse counterfactual
+
+Two modes, controlled by `FEATURE_WIZARD_B_V2_FORECAST`:
+
+**v1.5 (default)** — only saved accounts get downgraded ([line 950](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py)). Their organic retention is banded by ending health:
+
+| Ending health | Organic retention |
+|---|---|
+| `< 50` | 40% |
+| `< 70` | 70% |
+| `< 85` | 85% |
+| `≥ 85` | 95% |
+
+Plus a self-recovery modifier: `recovery_pp ≥ 15` → **+0.15** (more credit to organic, less to CS Pulse); `recovery_pp ≤ −5` → **−0.10**.
+
+**v2 (opt-in, `FEATURE_WIZARD_B_V2_FORECAST=true`)** — continuous projection over **all** accounts ([line 992](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py)). Uses `(h_end, h_start, h_lowest, arc_type)` to produce a value in [0%, 130%]. Added April 25 because v1.5 returned 100% NRR for cold-start tenants with no rich OUTCOME data (6-tenant probe showed portfolio MAPE 23pp).
+
+### Step 8 — With-further-interventions counterfactual
+
+For each at-risk account (`current_nrr < 1.0`):
+```
+intervened_nrr  = success_rate × 1.0 + (1 − success_rate) × current_nrr
+projected_save  = arr × (intervened_nrr − current_nrr)
+```
+`success_rate` comes from Step 1's per-arc `intervention_success_rate`.
+
+### Step 9 — Revenue waterfall (backward-looking attribution) ([line 1191](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+
+Uses a fixed health → annual churn probability table:
+
+| Health band | Annual churn prob |
+|---|---|
+| `< 30` | 45% |
+| `< 50` | 45% → 35% (linear) |
+| `< 70` | 25% → 15% (linear) |
+| `< 85` | 8% → 5% (linear) |
+| `≥ 85` | 3% |
+
+Then per account:
+```
+expected_loss_before  = churn_prob(health_lowest) × arr      ← past worst point
+expected_loss_after   = churn_prob(health_now)    × arr      ← today
+gross_saved           = expected_loss_before − expected_loss_after
+attributed_save       = gross_saved × ATTRIBUTION_FACTOR     ← 0.5 today
+```
+
+**`ATTRIBUTION_FACTOR = 0.5`** — only half the recovery is credited to CS Pulse; the rest to organic factors. This is one of the two main trust knobs.
+
+### Step 10 — Renewal risk overlay ([line 828–840](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+
+| Tier | Trigger |
+|---|---|
+| **urgent** | `days_to_renewal ≤ 30 AND projected_health_at_renewal < 50` |
+| **warning** | `≤ 60 AND projected < 60` |
+| **watch** | `≤ 90 AND slope < −1` |
+
+### Step 11 — Top-10 intervention ranking
+
+At-risk accounts sorted by `projected_save / playbook_cost` ROI. Each gets a deadline string ("Act within 7/14/21 days") based on renewal proximity or health severity. Playbook cost comes from `playbook_cost_bridge` with ARR-scaled floors (e.g., $45K min for $8M+ ARR crisis playbooks).
+
+### Step 12 — Aggregate to `portfolio_nrr_forecast` ([line 1303](../../backend/verticals/_template/journey/wizard_b/wizard_b_pattern_analyzer.py))
+
+The single dict returned to the API/UI:
+```
+{
+  current_nrr_pct,                  ← Step 6
+  without_cs_pulse_nrr_pct,         ← Step 7
+  with_interventions_nrr_pct,       ← Step 8
+  cs_pulse_delta_pct,               ← current − without
+  cs_pulse_arr_protected,           ← saved_arr from Step 5
+  cs_pulse_accounts_saved,
+  trajectory,                       ← portfolio T+30/60/90
+  revenue_waterfall,                ← Step 9
+  renewals_at_risk,                 ← Step 10
+  pattern_breakdown,                ← per-arc summary
+  top_interventions[:10],           ← Step 11
+}
+```
+
+### What it ISN'T
+
+- **Not ML.** Deterministic, auditable, feature-flagged. Health → churn probability is a fixed lookup table, not a learned model.
+- **Not real-time.** Wizard B runs on `_process_data_impl` after every CSV ingest; cached in `WizardLearning.learnings.portfolio_nrr_forecast`.
+- **Not a full account-level surface.** Per-account NRR is computed in Step 3 but only top-10 surface to the UI today (gap — exposing per-account NRR is a half-day add: read the cached dict, add an endpoint, add a row on the account detail page).
+
+### The two trust knobs (what to tune if a buyer challenges accuracy)
+
+1. **`ATTRIBUTION_FACTOR = 0.5`** (Step 9) — how much of the recovery to credit to CS Pulse vs. organic factors. Tunable per customer.
+2. **`FEATURE_WIZARD_B_V2_FORECAST`** — switches the without-CS-Pulse counterfactual from "only saved accounts dropped" to a continuous projection over all accounts. v2 is more accurate for cold-start tenants but less conservative.
 
 ---
 
