@@ -1859,6 +1859,85 @@ class WizardFile(db.Model):
         }
 
 
+class PredictorCalibration(db.Model):
+    """NRR Predictor v3 — calibrated coefficients per (customer, profile, sub_model).
+
+    Per Architecture Decision A2 in PLAN_nrr_predictor_v3.md, the predictor
+    has two artifacts: Wizard D writes here (offline calibration) and the
+    `backend/predictor/` module reads here (online inference).
+
+    One row per (customer_id, saas_profile, sub_model) at any given time has
+    `is_active=True`. Historical calibrations are preserved as audit trail —
+    Wizard D never UPDATEs in place, only INSERTs new rows and flips the
+    previous row's is_active to False.
+
+    Sub-models per A6 (expansion is first-class, not tertiary):
+      - 'hazard'           — sub-model 1 (churn hazard, monthly logit)
+      - 'contraction'      — sub-model 2 (contraction GLM, conditional on survive)
+      - 'expansion_event'  — sub-model 3a (P(expansion event), monthly logit)
+      - 'expansion_size'   — sub-model 3b (E[size | event], log link)
+
+    fit_type values:
+      - 'cdi_seed'      — pre-fit baseline from cdi_seed.py priors (cold start)
+      - 'tenant_glmm'   — frequentist hierarchical GLMM (Phase 1 v1)
+      - 'tenant_bayes'  — Bayesian hierarchical (Phase 2; data + hire gated)
+    """
+    __tablename__ = 'predictor_calibrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    calibration_id = db.Column(db.String(60), nullable=False, unique=True, index=True)
+
+    customer_id = db.Column(
+        db.Integer, db.ForeignKey('customers.customer_id'), nullable=True, index=True
+    )  # NULL for vertical-level / CDI-seed calibrations
+    vertical = db.Column(db.String(50), nullable=False, index=True)
+    saas_profile = db.Column(db.String(50), nullable=True, index=True)
+    sub_model = db.Column(db.String(50), nullable=False, index=True)
+
+    fit_type = db.Column(db.String(50), nullable=False)
+    coefficients = db.Column(db.JSON, nullable=False)
+    prior_used = db.Column(db.JSON, nullable=True)
+
+    metrics = db.Column(db.JSON, nullable=True)
+    panel_summary = db.Column(db.JSON, nullable=True)
+
+    fit_started_at = db.Column(db.DateTime, nullable=True)
+    fit_completed_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fitted_by = db.Column(db.String(100), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    is_active = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.Index(
+            'idx_predcal_active_lookup',
+            'customer_id', 'vertical', 'saas_profile', 'sub_model', 'is_active',
+        ),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'calibration_id': self.calibration_id,
+            'customer_id': self.customer_id,
+            'vertical': self.vertical,
+            'saas_profile': self.saas_profile,
+            'sub_model': self.sub_model,
+            'fit_type': self.fit_type,
+            'coefficients': self.coefficients,
+            'prior_used': self.prior_used,
+            'metrics': self.metrics,
+            'panel_summary': self.panel_summary,
+            'fit_started_at': self.fit_started_at.isoformat() if self.fit_started_at else None,
+            'fit_completed_at': self.fit_completed_at.isoformat() if self.fit_completed_at else None,
+            'fitted_by': self.fitted_by,
+            'notes': self.notes,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class ROISnapshot(db.Model):
     """Persisted ROI calculation snapshots for audit trail and trending."""
     __tablename__ = 'roi_snapshots'

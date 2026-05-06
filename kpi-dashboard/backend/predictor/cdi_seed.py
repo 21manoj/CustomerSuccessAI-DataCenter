@@ -93,9 +93,9 @@ SEEDS: Dict[str, CDIProfileSeed] = {
         annual_expansion_event_rate=0.45,             # 45% of accounts expand annually
         annual_expansion_size_pct_given_event=0.18,   # +18% ARR per expansion
         hazard_intercept=CoefficientPrior(
-            mu=-4.5,    # logit of (~0.7%/month from 7% annual)
+            mu=-5.105,  # logit(monthly hazard from 7% annual, AI-2 translated)
             sigma=0.5,  # moderate shrinkage
-            provenance='derived from Gainsight Pulse 2024 mid-Enterprise SaaS gross retention',
+            provenance='Gainsight Pulse 2024 Enterprise SaaS gross retention 93% → AI-2 univariate translation',
         ),
         health_slope_3mo=CoefficientPrior(
             mu=-0.04,
@@ -108,14 +108,14 @@ SEEDS: Dict[str, CDIProfileSeed] = {
             provenance='AI-2 translation (TBD G2)',
         ),
         expansion_event_intercept=CoefficientPrior(
-            mu=-2.5,    # logit of (~3.5%/month from 45% annual)
+            mu=-2.974,  # logit(monthly P(event) from 45% annual, AI-2 translated)
             sigma=0.5,
-            provenance='derived from OpenView 2024 Enterprise SaaS expansion frequency',
+            provenance='OpenView 2024 Enterprise SaaS expansion frequency 45%/yr → AI-2 univariate translation',
         ),
         expansion_size_intercept=CoefficientPrior(
-            mu=-1.7,    # log of 0.18 = -1.71
+            mu=-1.715,  # log(0.18), AI-2 translated
             sigma=0.4,
-            provenance='derived from OpenView 2024 Enterprise SaaS upsell size distribution',
+            provenance='OpenView 2024 Enterprise SaaS upsell size 18% → AI-2 log() translation',
         ),
     ),
     'saas_premium__saas_smb': CDIProfileSeed(
@@ -129,9 +129,9 @@ SEEDS: Dict[str, CDIProfileSeed] = {
         annual_expansion_event_rate=0.62,             # 62% of accounts expand annually
         annual_expansion_size_pct_given_event=0.10,   # +10% ARR per expansion (smaller per-event)
         hazard_intercept=CoefficientPrior(
-            mu=-3.6,    # logit of (~1.4%/month from 15% annual)
+            mu=-4.295,  # logit(monthly hazard from 15% annual, AI-2 translated)
             sigma=0.5,
-            provenance='derived from Gainsight Pulse 2024 SMB SaaS gross retention',
+            provenance='Gainsight Pulse 2024 SMB SaaS gross retention 85% → AI-2 univariate translation',
         ),
         health_slope_3mo=CoefficientPrior(
             mu=-0.06,   # SMB hazards more sensitive to health movement
@@ -144,14 +144,14 @@ SEEDS: Dict[str, CDIProfileSeed] = {
             provenance='AI-2 translation (TBD G2)',
         ),
         expansion_event_intercept=CoefficientPrior(
-            mu=-2.0,    # logit of (~5%/month from 62% annual)
+            mu=-2.477,  # logit(monthly P(event) from 62% annual, AI-2 translated)
             sigma=0.4,
-            provenance='derived from OpenView 2024 SMB SaaS expansion frequency',
+            provenance='OpenView 2024 SMB SaaS expansion frequency 62%/yr → AI-2 univariate translation',
         ),
         expansion_size_intercept=CoefficientPrior(
-            mu=-2.3,    # log of 0.10 = -2.30
+            mu=-2.303,  # log(0.10), AI-2 translated
             sigma=0.4,
-            provenance='derived from OpenView 2024 SMB SaaS upsell size distribution',
+            provenance='OpenView 2024 SMB SaaS upsell size 10% → AI-2 log() translation',
         ),
     ),
 }
