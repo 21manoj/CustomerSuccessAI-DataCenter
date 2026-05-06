@@ -252,6 +252,10 @@ from registration_api import registration_api
 from kpi_reference_ranges_api import kpi_reference_ranges_api
 from direct_rag_api import direct_rag_api
 from customer_performance_summary_api import customer_perf_summary_api
+# NRR Predictor v3 — per A2 in PLAN_nrr_predictor_v3.md, this is the
+# inference HTTP layer. Calibrated coefficients are written by Wizard D
+# and read here at request time.
+from predictor_api import predictor_api
 
 # Product Analytics API - Initialize flag first
 PRODUCT_ANALYTICS_AVAILABLE = False
@@ -407,6 +411,7 @@ app.register_blueprint(registration_api)
 app.register_blueprint(kpi_reference_ranges_api)
 app.register_blueprint(direct_rag_api)
 app.register_blueprint(customer_perf_summary_api)
+app.register_blueprint(predictor_api)
 app.register_blueprint(workflow_config_api)
 app.register_blueprint(export_api)
 app.register_blueprint(backup_restore_api)
