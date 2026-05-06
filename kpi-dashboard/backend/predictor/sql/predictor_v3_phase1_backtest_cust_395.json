@@ -1,0 +1,58 @@
+{
+  "customer_id": 395,
+  "started_at": "2026-05-06T20:56:40.845024+00:00",
+  "criteria": {
+    "P1_convergence": {
+      "pass": true,
+      "detail": "4 calibrations OK (['converged', 'insufficient_events']), 0 bad ([])",
+      "total_calibrations": 4
+    },
+    "P2_decomposition_validity": {
+      "pass": true,
+      "accounts_checked": 30,
+      "violations": [],
+      "violation_count": 0
+    },
+    "P4_decomposition_coherence": {
+      "pass": true,
+      "p_churn_min": 0.001,
+      "p_churn_max": 1.0,
+      "p_churn_spread": 0.999,
+      "note": "predictions must differ across accounts (not all identical to CDI prior)"
+    }
+  },
+  "perf": {
+    "per_account_ms": 50.0,
+    "per_account_budget_ms": 100,
+    "per_account_pass": true,
+    "portfolio_rollup_ms": 1557.3,
+    "portfolio_budget_ms": 2000,
+    "portfolio_pass": true,
+    "n_accounts_in_rollup": 30
+  },
+  "killswitch": {
+    "pass": true,
+    "killed_response_when_off": true,
+    "not_killed_when_on": true
+  },
+  "informational": {
+    "note": "On synthetic data, MAPE/AUC/Brier are not meaningful. Recorded for Phase 1.5 comparison.",
+    "wizard_d_panel_summary": {
+      "n_rows": 500,
+      "n_accounts": 30,
+      "n_tenants": 1,
+      "tenant_ids": [
+        395
+      ]
+    },
+    "n_predictions": 30
+  },
+  "wizard_d_run_id": "wizard_d_dacc4081fbc5",
+  "wizard_d_status": "completed",
+  "wizard_d_fits_by_status": {
+    "converged": 2,
+    "insufficient_events": 2
+  },
+  "overall_pass": true,
+  "completed_at": "2026-05-06T20:57:06.552448+00:00"
+}
