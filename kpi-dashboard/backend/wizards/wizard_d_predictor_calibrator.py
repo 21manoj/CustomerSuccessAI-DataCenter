@@ -134,6 +134,17 @@ def run_wizard_d(
         'tenant_ids': sorted([int(t) for t in panel_df['tenant_id'].unique()]),
     }
 
+    import math
+    def _sanitize_floats(obj):
+        """Recursively convert NaN/Inf to None for JSON column compatibility."""
+        if isinstance(obj, dict):
+            return {k: _sanitize_floats(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_sanitize_floats(v) for v in obj]
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        return obj
+
     for r in all_results:
         # Deactivate previous active row(s)
         prev_active = (
@@ -151,7 +162,9 @@ def run_wizard_d(
             p.is_active = False
 
         # Build coefficient + metrics blob, ensuring serializable
-        coef_serializable = {k: float(v) for k, v in r.coefficients.items()}
+        coef_serializable = _sanitize_floats(
+            {k: float(v) for k, v in r.coefficients.items()}
+        )
 
         cal = PredictorCalibration(
             calibration_id=f'{run_id}__{r.saas_profile}__{r.sub_model}',
@@ -162,7 +175,7 @@ def run_wizard_d(
             fit_type=r.fit_type,
             coefficients=coef_serializable,
             prior_used=None,                 # captured separately in metrics
-            metrics={
+            metrics=_sanitize_floats({
                 **({'coefficient_se': {k: float(v) for k, v in r.coefficient_se.items()}}
                    if r.coefficient_se else {}),
                 'n_observations': r.n_observations,
@@ -170,7 +183,7 @@ def run_wizard_d(
                 'n_tenants': r.n_tenants,
                 'convergence': r.convergence_diagnostics,
                 'status': r.status,
-            },
+            }),
             panel_summary=panel_summary,
             fit_started_at=started_at,
             fit_completed_at=datetime.utcnow(),
