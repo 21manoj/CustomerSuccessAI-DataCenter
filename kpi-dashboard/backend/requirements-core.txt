@@ -18,9 +18,16 @@ numpy==1.26.2
 openpyxl==3.1.3
 scikit-learn==1.3.0
 # NRR Predictor v3 — sub-model GLMM fits (penalized GLM with offset trick;
-# see predictor/glmm.py + PLAN_nrr_predictor_v3.md A1). Pinned to a stable
-# release that's known to work with pandas==2.1.4 + numpy==1.26.2.
-statsmodels==0.14.1
+# see predictor/glmm.py + PLAN_nrr_predictor_v3.md A1).
+#
+# Version pinning rationale (May 6 2026 deploy bug):
+#   - statsmodels 0.14.4 imports `_lazywhere` from scipy._lib._util
+#   - scipy >= 1.14 REMOVED _lazywhere
+#   - Image was on scipy 1.16.3 → statsmodels imports failed at runtime
+# Pin both to a compatible window. scipy 1.13.x is the last that
+# still exports _lazywhere; statsmodels 0.14.4 supports scipy 1.8+.
+scipy>=1.11,<1.14
+statsmodels==0.14.4
 
 # Environment & Config
 python-dotenv>=1.0.0
