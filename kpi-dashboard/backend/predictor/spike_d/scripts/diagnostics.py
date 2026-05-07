@@ -63,7 +63,7 @@ def load_panel(customer_id: Optional[int], panel_csv: Optional[str]) -> pd.DataF
         return df
     if customer_id is None:
         raise ValueError('Provide --customer-id or --panel-csv')
-    from predictor.panel import build_panel
+    from predictor.build_panel import build_panel
     return build_panel(customer_ids=[customer_id])
 
 

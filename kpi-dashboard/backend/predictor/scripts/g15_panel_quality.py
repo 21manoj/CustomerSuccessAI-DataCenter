@@ -24,7 +24,7 @@ from sqlalchemy import create_engine
 # Make the package importable when run as a script
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from predictor.panel import build_panel, panel_quality_report  # noqa: E402
+from predictor.build_panel import build_panel, panel_quality_report  # noqa: E402
 
 
 def render_markdown(report: dict, customer_ids: list, panel_df: pd.DataFrame) -> str:

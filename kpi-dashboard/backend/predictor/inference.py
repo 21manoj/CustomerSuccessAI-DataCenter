@@ -365,7 +365,7 @@ def predict_for_account_id(
     if not acct:
         raise ValueError(f'No account_id={account_id}')
 
-    from predictor.panel import build_panel
+    from predictor.build_panel import build_panel
     panel = build_panel(customer_ids=[acct.customer_id])
     panel = panel[panel['account_id'] == account_id].sort_values('month')
     if panel.empty:

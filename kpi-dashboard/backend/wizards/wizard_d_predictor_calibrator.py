@@ -71,7 +71,7 @@ def run_wizard_d(
         }
     """
     from predictor.glmm import fit_all_sub_models
-    from predictor.panel import build_panel
+    from predictor.build_panel import build_panel
 
     run_id = f'wizard_d_{uuid.uuid4().hex[:12]}'
     started_at = datetime.utcnow()

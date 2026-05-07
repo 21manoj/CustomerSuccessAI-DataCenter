@@ -6,7 +6,7 @@ joins; this wrapper just handles parameter binding and DataFrame
 materialization.
 
 Usage:
-    from predictor.panel import build_panel
+    from predictor.build_panel import build_panel
 
     df = build_panel(customer_ids=[393])
     df = build_panel(customer_ids=[393, 491])  # multi-tenant from day 1
