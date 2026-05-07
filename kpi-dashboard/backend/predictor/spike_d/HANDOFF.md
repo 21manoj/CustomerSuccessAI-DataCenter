@@ -139,9 +139,34 @@ candidate to add a contraction_size GLMM.
       python predictor/scripts/g3_sanity_report.py 395
   ```
 
-After this final sync + refit, the g3 report should show
-`expected_size_pct_given_event` varying across the 5 named accounts
-(Antares ~0.24, others spread across 0.08–0.30), not flat at 0.180.
+After this final sync + refit, the model should reconcile within ~5pp
+of actuals on the 11 expansion-event rows (see "Hand-computed
+reconciliation table" above — Antares 24% vs actual 25%, account 3910
+27.5% vs actual 30%, etc.).
+
+> **Validation gotcha (logged 2026-05-07).** The reconciliation-table
+> predictions and the g3 report's `expected_size_pct_given_event`
+> column are NOT the same metric and will NOT match each other:
+>
+> - **Reconciliation table** (the right validator for fit quality):
+>   model evaluated at the **historical event row's covariates** for
+>   each of the 11 expansion accounts. Antares 2025-06 → 24%.
+>   Computed by feeding `engineer_features(panel)[event_rows]` into
+>   `_linear_predictor` with the active expansion_size coefficients,
+>   then `exp(lp)`. Use the script template in
+>   `predictor/spike_d/scripts/reconcile_expansion_size.py` (or
+>   inline as in this HANDOFF's audit trail).
+>
+> - **g3 report `expected_size_pct_given_event`**: model evaluated at
+>   the account's **current covariates projected forward to the
+>   horizon** (renewal / 12mo). For an account that already had its
+>   big expansion event and is post-event, the conditional next-period
+>   size is naturally smaller. Antares "now" → ~0.077.
+>
+> Both can be true at the same time. The g3 column moving from
+> "flat 0.180 everywhere" (the pre-fix bug) to "spread of values"
+> is the right pre-fix → post-fix smoke test, but the magnitudes
+> won't match the reconciliation table.
 
 ## Auth / access on EC2
 
@@ -154,11 +179,20 @@ After this final sync + refit, the g3 report should show
 
 Three reasonable next moves, in order of priority:
 
-**1. Verify the final glmm.py patch is deployed and produced varied
-expansion sizes.** This is one ssh + docker cp + g3 rerun + paste-the-report.
-If the `expected_size_pct_given_event` numbers in the new g3 report match
-the predicted column in the table above (within ~5pp), Phase 1 closeout is
-truly done.
+**1. ~~Verify the final glmm.py patch is deployed and produced varied
+expansion sizes.~~ DONE 2026-05-07 (Claude Code session).** All five
+Phase-1 patches verified deployed on EC2 (grep-confirmed for each
+distinguishing token). Reconciliation table reproduced exactly: 10 of
+11 accounts within 5pp of actuals; Antares 24.0% vs actual 25.0% (-0.98pp);
+account 3910 27.5% vs actual 30.0% (-2.49pp); worst miss 3911 at +8.28pp
+matching the HANDOFF's flagged worst miss. The g3 report's
+`expected_size_pct_given_event` column will NOT match the reconciliation
+table (see Validation gotcha above) — this caused a false-alarm
+investigation in this session before realising it. Bonus during this
+session: synced 3 files that grep showed were not deployed
+(`inference.py`, `cdi_seed.py`, `panel.py`), and renamed
+`predictor/panel.py` → `predictor/build_panel.py` per the new
+intuitive-file-naming principle.
 
 **2. Decide what to do with the Spike D work.** Originally planned as a
 4-day evaluation of a 2-head architecture (survival + net uplift). Day 1
