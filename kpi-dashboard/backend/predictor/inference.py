@@ -279,12 +279,29 @@ def predict_account_nrr(
         1.0 - p_churn + p_survive * (e_expand_pct - e_contract_pct)
     )
 
-    # ---- CIs (placeholder: ±0.05 around point until bootstrap is wired
-    # through inference; production reads coefficient_se from metrics
-    # and performs delta-method or Monte Carlo per call)
+    # ---- CIs (placeholder, uncalibrated — disclosure-tier only) ---------
+    #
+    # The bounds below are NOT real confidence intervals. They are static
+    # half-widths around the point estimate, intended only to keep the
+    # response shape stable until proper bootstrap/MC CIs are wired through
+    # inference (Phase 1 task #4 — pending). Consumers MUST NOT use these
+    # bounds for threshold-based decisions (e.g., "trigger playbook if
+    # lower_90 < 0.85"). The ci_method='placeholder_uncalibrated' tag and
+    # the ci_disclosure string in the response make this explicit.
+    #
+    # Real CI plan: sample β ~ N(β̂, diag(coefficient_se²)) per inference
+    # call (n=500), propagate through the survival × expansion product,
+    # take quantiles. See predictor/PLAN_nrr_predictor_v3.md §CI for the
+    # design and the trade-off vs. correlated-coefficient bootstrap.
     ci_half_width = 0.05 if cals['hazard']['fit_type'] != 'cdi_seed' else 0.10
     lower_90 = max(0.0, expected_nrr_point - ci_half_width)
     upper_90 = min(1.30, expected_nrr_point + ci_half_width)
+    _CI_DISCLOSURE = (
+        'Confidence intervals are placeholder uncalibrated bounds '
+        '(static ±0.05 around point). Real bootstrap CIs are pending '
+        '(Phase 1 task #4). Use the point estimate; do not threshold on '
+        'the CI bounds.'
+    )
 
     # ---- A6 expansion_outlook block --------------------------------------
     expected_arr_lift = arr * p_expansion_event * e_size_given_event
@@ -296,8 +313,9 @@ def predict_account_nrr(
         'p_expansion_event_horizon': round(p_expansion_event, 3),
         'expected_size_pct_given_event': round(e_size_given_event, 3),
         'expected_arr_lift': round(expected_arr_lift, 0),
-        'ci_lower_arr_lift': round(expected_arr_lift * 0.5, 0),  # placeholder
-        'ci_upper_arr_lift': round(expected_arr_lift * 1.5, 0),  # placeholder
+        'ci_lower_arr_lift': round(expected_arr_lift * 0.5, 0),  # placeholder uncalibrated; see ci_disclosure on expected_nrr
+        'ci_upper_arr_lift': round(expected_arr_lift * 1.5, 0),  # placeholder uncalibrated; see ci_disclosure on expected_nrr
+        'ci_method': 'placeholder_uncalibrated',
         'horizon_to_likely_event_months': horizon_to_likely_event,
         'expansion_drivers': _top_drivers(
             account_features,
@@ -324,7 +342,8 @@ def predict_account_nrr(
             'point':    round(expected_nrr_point, 3),
             'lower_90': round(lower_90, 3),
             'upper_90': round(upper_90, 3),
-            'ci_method': 'placeholder_static_halfwidth',  # TODO: replace with bootstrap once wired (see PLAN_nrr_predictor_v3 §CI)
+            'ci_method': 'placeholder_uncalibrated',
+            'ci_disclosure': _CI_DISCLOSURE,
         },
         'term_decomposition': {
             'p_churn_at_horizon':           round(p_churn, 3),
