@@ -205,8 +205,32 @@ def fit_sub_model(
         df = df[df['tenant_id'] == customer_id]
 
     df = engineer_features(df)
+
+    # For size sub-models (continuous outcome conditional on the matching
+    # event), restrict the fit panel to event rows only. The size model
+    # answers "given that an event happened, what was its magnitude?" —
+    # so non-event rows have no defined outcome and would just inflate
+    # n_obs. Without this filter, n_events is also wrong: sum() over a
+    # continuous column is sum-of-fractions, not a row count.
+    _SIZE_SUB_MODELS = {
+        'expansion_size':   'is_expansion_event',
+        'contraction_size': 'is_contraction_event',  # (no submodel today; reserved)
+    }
+    if sub_model in _SIZE_SUB_MODELS:
+        event_flag = _SIZE_SUB_MODELS[sub_model]
+        if event_flag in df.columns:
+            df = df[df[event_flag].astype(bool)].copy()
+        if spec.outcome_column in df.columns:
+            df = df[df[spec.outcome_column].notna()].copy()
+
     n_obs = len(df)
-    n_events = int(df[spec.outcome_column].sum()) if spec.outcome_column in df.columns else 0
+    if sub_model in _SIZE_SUB_MODELS:
+        # Continuous outcome — n_events is the count of fittable rows
+        n_events = n_obs
+    else:
+        # Binary outcome (hazard / contraction event / expansion event):
+        # 0/1 column, sum == count of positive observations.
+        n_events = int(df[spec.outcome_column].sum()) if spec.outcome_column in df.columns else 0
     n_tenants = df['tenant_id'].nunique()
 
     starting_values, ridge_lambdas = _seed_to_starting_values(seed, sub_model)
@@ -368,20 +392,71 @@ def _fit_glmm_inner(
         'Gamma': sm.families.Gamma(sm.families.links.Log()),
     }[family]
 
-    diagnostics: dict = {'method': 'GLM.fit_regularized + offset', 'family': family}
-    try:
-        model = sm.GLM(y, X, family=family_obj, offset=offset)
-        # alpha is the L2 weight; L1_wt=0 → pure ridge
-        result = model.fit_regularized(alpha=alpha, L1_wt=0.0, refit=False)
-        deviation_from_prior = np.asarray(result.params)
-        params = mu_vector + deviation_from_prior  # add back the prior center
-        diagnostics['converged'] = True
-        diagnostics['iterations'] = getattr(result, 'n_iter', None)
-    except Exception as e:
-        diagnostics['converged'] = False
-        diagnostics['error'] = str(e)
-        # Pass the failure up; outer wrapper falls back to prior wholesale
-        raise
+    diagnostics: dict = {'family': family}
+
+    # ----------------------------------------------------------------------
+    # Fit-method routing. statsmodels' fit_regularized with L1_wt=0 is
+    # supposed to be pure L2, but in practice (Gamma family, small samples)
+    # it returns exact-zero deviations from the prior — i.e., the seed
+    # wins by default and no learning happens. Confirmed empirically
+    # 2026-05-07 on cust_395 expansion_size: 11 events, plain GLM produces
+    # R²=0.70 on log(y) with sensible per-account predictions; fit_regularized
+    # produced all zeros. So:
+    #   - Binomial families (hazard / contraction event / expansion event):
+    #     keep ridge — they have plenty of at-risk-month rows and the
+    #     prior anchor is informative.
+    #   - Gamma family (size sub-models): switch to plain GLM.fit() with
+    #     constant-column drop. Justified because (a) panels are small by
+    #     construction (events only, not at-risk-months); (b) most
+    #     features are constant in the event panel and unidentifiable;
+    #     (c) the seed is still the cold-start fallback when n_events <
+    #     min_events_to_fit.
+    # ----------------------------------------------------------------------
+    if family == 'Gamma':
+        # Drop columns with no variance — they're unidentifiable in the
+        # event panel and confuse the GLM (rank-deficient design matrix).
+        # Index 0 is the intercept; always keep it.
+        col_var = X.var(axis=0)
+        keep_mask = col_var > 0
+        keep_mask[0] = True   # always keep Intercept
+        X_fit = X[:, keep_mask]
+        kept_names = [coef_names[i] for i in range(len(coef_names)) if keep_mask[i]]
+        dropped = [coef_names[i] for i in range(len(coef_names)) if not keep_mask[i]]
+        # Plain MLE (no regularization) — small n, high feature count, Gamma family
+        diagnostics['method'] = 'GLM.fit (plain MLE) + constant-column drop'
+        diagnostics['n_features_kept'] = int(keep_mask.sum())
+        diagnostics['n_features_dropped'] = len(dropped)
+        try:
+            # Note: no offset — for size sub-models we do NOT center on the
+            # prior. The seed only matters at the n_events < min_events
+            # boundary; once we cross it, let the data speak.
+            model = sm.GLM(y, X_fit, family=family_obj)
+            result = model.fit()
+            params_kept = np.asarray(result.params)
+            # Re-expand to full coefficient vector (zeros for dropped cols)
+            params = np.zeros(len(coef_names))
+            params[keep_mask] = params_kept
+            diagnostics['converged'] = bool(result.converged)
+            diagnostics['iterations'] = getattr(result, 'n_iter_', None) or getattr(result, 'iterations', None)
+            diagnostics['log_likelihood'] = float(result.llf)
+        except Exception as e:
+            diagnostics['converged'] = False
+            diagnostics['error'] = str(e)
+            raise
+    else:
+        # Binomial path — keep ridge-toward-prior (existing behavior)
+        diagnostics['method'] = 'GLM.fit_regularized + offset'
+        try:
+            model = sm.GLM(y, X, family=family_obj, offset=offset)
+            result = model.fit_regularized(alpha=alpha, L1_wt=0.0, refit=False)
+            deviation_from_prior = np.asarray(result.params)
+            params = mu_vector + deviation_from_prior
+            diagnostics['converged'] = True
+            diagnostics['iterations'] = getattr(result, 'n_iter', None)
+        except Exception as e:
+            diagnostics['converged'] = False
+            diagnostics['error'] = str(e)
+            raise
 
     coef = {name: float(params[i]) for i, name in enumerate(coef_names)}
 
@@ -392,6 +467,7 @@ def _fit_glmm_inner(
         feat_cols=feat_cols,
         outcome_col=outcome_col,
         family_obj=family_obj,
+        family=family,
         starting_values=starting_values,
         ridge_lambdas=ridge_lambdas,
         n_resamples=200,
@@ -408,12 +484,17 @@ def _bootstrap_ses(
     starting_values: Dict[str, float],
     ridge_lambdas: Dict[str, float],
     n_resamples: int = 200,
+    family: str = 'Binomial',
 ) -> Dict[str, float]:
     """Account-clustered bootstrap SE for each coefficient.
 
     Resamples accounts (with replacement); pulls all panel rows for
     the resampled accounts; refits; collects coefficient distribution;
     SE = std across resamples.
+
+    Family routing matches `_fit_glmm_inner`: Gamma uses plain GLM with
+    constant-column drop (fit_regularized misbehaves on small Gamma
+    samples); Binomial uses fit_regularized with offset-centering.
     """
     import statsmodels.api as sm
 
@@ -438,11 +519,24 @@ def _bootstrap_ses(
             continue
         X = sm.add_constant(sample_df[feat_cols].astype(float).values, has_constant='add')
         y = sample_df[outcome_col].astype(float).values
-        offset = X @ mu_vector
         try:
-            model = sm.GLM(y, X, family=family_obj, offset=offset)
-            r = model.fit_regularized(alpha=alpha, L1_wt=0.0, refit=False)
-            coef_samples.append(mu_vector + np.asarray(r.params))
+            if family == 'Gamma':
+                # Plain MLE with constant-column drop (parallel to _fit_glmm_inner)
+                col_var = X.var(axis=0)
+                keep_mask = col_var > 0
+                keep_mask[0] = True
+                X_fit = X[:, keep_mask]
+                model = sm.GLM(y, X_fit, family=family_obj)
+                r = model.fit()
+                params_kept = np.asarray(r.params)
+                full_params = np.zeros(len(coef_names))
+                full_params[keep_mask] = params_kept
+                coef_samples.append(full_params)
+            else:
+                offset = X @ mu_vector
+                model = sm.GLM(y, X, family=family_obj, offset=offset)
+                r = model.fit_regularized(alpha=alpha, L1_wt=0.0, refit=False)
+                coef_samples.append(mu_vector + np.asarray(r.params))
         except Exception:
             # Singular bootstrap sample — skip
             continue

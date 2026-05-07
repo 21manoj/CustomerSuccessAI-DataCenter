@@ -56,12 +56,21 @@ def feature_columns() -> List[str]:
     cols: List[str] = []
 
     # Continuous / numeric covariates
+    #
+    # NOTE: `tenure_in_panel` was dropped from v1 features. In build_panel.sql
+    # it is computed as ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY
+    # month) − 1, i.e. mechanically identical to month_idx and therefore a
+    # wallclock-month proxy on synthetic data (where all accounts share a
+    # similar panel start). The fitted coefficient (+0.680 in saas_enterprise)
+    # was a fragile cancellation against log_arr (−0.253) — driven by
+    # multicollinearity, not signal. If subscription tenure is wanted as a
+    # feature, derive `account_age_months` from accounts.contract_start
+    # (real subscription age, not panel-observation age) and add it here.
     cols.extend([
         'health',
         'health_slope_1mo',
         'health_slope_3mo',
         'volatility_3mo',
-        'tenure_in_panel',
         'log_arr',
     ])
 

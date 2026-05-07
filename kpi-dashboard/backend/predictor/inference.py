@@ -243,7 +243,10 @@ def predict_account_nrr(
     p_churn = 1.0 - survival
     p_survive = survival
 
-    # Contraction: monthly logit aggregated to horizon (avg over months)
+    # Per-month event probabilities for contraction and expansion. Both are
+    # aggregated to horizon as cumulative event probability — symmetric
+    # treatment per A6 ("expansion as first-class") and to preserve unit
+    # consistency in the NRR identity below.
     contraction_mp = []
     expansion_event_mp = []
     for m in range(1, horizon_months + 1):
@@ -254,13 +257,23 @@ def predict_account_nrr(
         expansion_event_mp.append(_sigmoid(
             _linear_predictor(f_m, cals['expansion_event']['coefficients'])
         ))
-    e_contract_pct = float(np.mean(contraction_mp))
+    p_contraction_event = 1.0 - float(np.prod(1.0 - np.array(contraction_mp)))
     p_expansion_event = 1.0 - float(np.prod(1.0 - np.array(expansion_event_mp)))
+
+    # Per-event size — both terms use a "P(any event in horizon) × E[size|event]"
+    # decomposition. Expansion size comes from the fitted sub-model 3b
+    # (log-link); contraction size is currently a CDI-seed constant
+    # (placeholder until a contraction_size sub-model 2b is fit on real
+    # contraction-magnitude data — see cdi_seed.py).
     expansion_size_lp = _linear_predictor(
         account_features, cals['expansion_size']['coefficients']
     )
     e_size_given_event = math.exp(expansion_size_lp)
     e_expand_pct = p_expansion_event * e_size_given_event
+
+    seed = get_seed('saas_premium', saas_profile)
+    contraction_size_given_event = seed.annual_contraction_size_pct_given_event
+    e_contract_pct = p_contraction_event * contraction_size_given_event
 
     expected_nrr_point = (
         1.0 - p_churn + p_survive * (e_expand_pct - e_contract_pct)
@@ -311,7 +324,7 @@ def predict_account_nrr(
             'point':    round(expected_nrr_point, 3),
             'lower_90': round(lower_90, 3),
             'upper_90': round(upper_90, 3),
-            'ci_method': 'bootstrap_1000',
+            'ci_method': 'placeholder_static_halfwidth',  # TODO: replace with bootstrap once wired (see PLAN_nrr_predictor_v3 §CI)
         },
         'term_decomposition': {
             'p_churn_at_horizon':           round(p_churn, 3),

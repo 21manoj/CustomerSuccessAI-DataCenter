@@ -18,6 +18,7 @@ The returned DataFrame has the schema documented in
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -28,11 +29,37 @@ from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
-_SQL_PATH = Path(__file__).parent / 'sql' / 'build_panel.sql'
+# Which SQL backs build_panel(). Two layouts supported so the same panel.py
+# works on both local dev (v1 and v2 as distinct files) and deployed
+# containers (v2 promoted into build_panel.sql, v2 file may be absent):
+#
+#   Local layout:
+#     build_panel.sql            → v1 content (frozen arr, historical)
+#     build_panel_v2.sql         → v2 content (time-varying arr)
+#     PREDICTOR_BUILD_PANEL_SQL=build_panel_v2.sql → reads build_panel_v2.sql
+#
+#   Promoted layout (e.g. EC2):
+#     build_panel.sql            → v2 content (promoted)
+#     build_panel_v2.sql         → absent or stub
+#     PREDICTOR_BUILD_PANEL_SQL=build_panel_v2.sql → falls back to build_panel.sql
+#
+# Default (no env) reads build_panel.sql, so behavior matches whichever
+# file the deploy puts at that path.
+_SQL_NAME = os.environ.get('PREDICTOR_BUILD_PANEL_SQL', 'build_panel.sql')
+_sql_dir = Path(__file__).parent / 'sql'
+_SQL_PATH = _sql_dir / _SQL_NAME
+# Alias for promoted layout: env asks for v2 but only build_panel.sql exists
+if _SQL_NAME == 'build_panel_v2.sql' and not _SQL_PATH.exists():
+    _SQL_PATH = _sql_dir / 'build_panel.sql'
+if not _SQL_PATH.exists():
+    raise FileNotFoundError(
+        f'PREDICTOR_BUILD_PANEL_SQL={_SQL_NAME!r} → {_SQL_PATH} not found. '
+        f'Allowed values: build_panel.sql, build_panel_v2.sql.'
+    )
 
 
 def _load_sql() -> str:
-    """Read build_panel.sql from disk. Source of truth for panel shape."""
+    """Read panel SQL from disk (file name from PREDICTOR_BUILD_PANEL_SQL)."""
     return _SQL_PATH.read_text()
 
 

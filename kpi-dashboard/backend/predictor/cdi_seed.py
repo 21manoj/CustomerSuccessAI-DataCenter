@@ -66,6 +66,14 @@ class CDIProfileSeed:
     annual_net_revenue_retention: float
     annual_expansion_event_rate: float
     annual_expansion_size_pct_given_event: float
+    # Per-event contraction magnitude (despite the "annual_" prefix this is
+    # per-event, matching the expansion field's convention). Used by the
+    # NRR identity in inference.py: e_contract_pct = P(any contraction in
+    # horizon) × this value. Symmetric with expansion's two-part structure.
+    # Placeholder pending a contraction_size sub-model (Phase 1.5+) once
+    # contraction events with revenue_impact magnitudes accumulate in
+    # context_nodes.
+    annual_contraction_size_pct_given_event: float = 0.10
 
     # Hazard model (sub-model 1) coefficient priors
     hazard_intercept: CoefficientPrior = field(default_factory=lambda: CoefficientPrior(0.0, 1.0, 'placeholder'))
@@ -92,6 +100,7 @@ SEEDS: Dict[str, CDIProfileSeed] = {
         annual_net_revenue_retention=1.12,            # NRR 112% typical for Enterprise SaaS
         annual_expansion_event_rate=0.45,             # 45% of accounts expand annually
         annual_expansion_size_pct_given_event=0.18,   # +18% ARR per expansion
+        annual_contraction_size_pct_given_event=0.10, # -10% ARR per contraction (enterprise: partial seat reductions are typical)
         hazard_intercept=CoefficientPrior(
             mu=-5.105,  # logit(monthly hazard from 7% annual, AI-2 translated)
             sigma=0.5,  # moderate shrinkage
@@ -128,6 +137,7 @@ SEEDS: Dict[str, CDIProfileSeed] = {
         annual_net_revenue_retention=1.02,            # NRR 102% — SMB modal
         annual_expansion_event_rate=0.62,             # 62% of accounts expand annually
         annual_expansion_size_pct_given_event=0.10,   # +10% ARR per expansion (smaller per-event)
+        annual_contraction_size_pct_given_event=0.15, # -15% ARR per contraction (SMB: more drastic seat reductions)
         hazard_intercept=CoefficientPrior(
             mu=-4.295,  # logit(monthly hazard from 15% annual, AI-2 translated)
             sigma=0.5,
