@@ -163,6 +163,25 @@ interface PredictorV3PortfolioNRR {
 /** Customer deployment phase — drives which lens dominates the dashboard. */
 type CustomerPhase = 'pre_deploy' | 'onboarding' | 'active' | 'mature';
 
+/**
+ * Row A of "Past — Three Lenses": raw OUTCOME aggregates from the
+ * customer's uploaded data. Audit-grade, reconciles with P&L.
+ */
+interface HistoricalActuals {
+  historical_nrr_pct_ttm: number | null;
+  arr_churned: number;
+  arr_expanded: number;
+  arr_contracted: number;
+  starting_arr_ttm: number;
+  n_churned_accounts: number;
+  n_expansion_events: number;
+  n_contraction_events: number;
+  lens: 'historical_actuals';
+  engine: 'raw_outcomes';
+  time_direction: 'backward';
+  source: string;
+}
+
 interface CFODashboardData {
   summary_cards: FinancialSummaryCard[];
   power_of_1: PowerOf1Row[];
@@ -181,6 +200,7 @@ interface CFODashboardData {
   has_proof: boolean;
   wizard_b_nrr: WizardBNRR | null;
   predictor_v3_portfolio_nrr: PredictorV3PortfolioNRR | null;
+  historical_actuals: HistoricalActuals | null;
   customer_phase: CustomerPhase;
   // NRR/GRR + Cost of Inaction
   nrr_current: number;
@@ -855,6 +875,257 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
 };
 
 // ============================================================================
+// PAST — THREE LENSES SECTION
+// ============================================================================
+// Renders a 3-row nested section for the "Past Impact" area:
+//   A · Historical Performance (Pre-CS-Pulse) — raw OUTCOME aggregates
+//   B · Counterfactual (Hypothetical with CS Pulse) — Wizard B
+//   C · Realized (Actual CS Pulse Attribution) — proof_data
+// Row C is phase-conditional — hidden / empty-state when customer is
+// in pre_deploy phase. This makes the dashboard honest for M&A DD
+// and brand-new-customer scenarios.
+// See marketing/cfo_dashboard_relabel_mock.html for the design spec.
+
+interface LensRowProps {
+  letter: 'A' | 'B' | 'C';
+  title: string;
+  sourceLabel: string;
+  accentColor: 'grey' | 'amber' | 'green';
+  subtitle: string;
+  cards: Array<{
+    label: string;
+    value: string;
+    sub?: string;
+    color?: 'grey' | 'red' | 'green' | 'amber' | 'cyan' | 'purple';
+  }>;
+  emptyState?: boolean;
+  emptyStateMessage?: string;
+}
+
+const LENS_COLORS: Record<LensRowProps['accentColor'], { border: string; bg: string; letterBg: string; letterText: string; sourcePill: string }> = {
+  grey:  { border: 'border-l-gray-500',    bg: 'bg-[#0d1119]', letterBg: 'bg-gray-400',    letterText: 'text-[#0d1119]', sourcePill: 'bg-gray-500/20 text-gray-300' },
+  amber: { border: 'border-l-amber-500',   bg: 'bg-[#0d1119]', letterBg: 'bg-amber-400',   letterText: 'text-[#0d1119]', sourcePill: 'bg-amber-500/20 text-amber-300' },
+  green: { border: 'border-l-emerald-500', bg: 'bg-[#0d1119]', letterBg: 'bg-emerald-400', letterText: 'text-[#0d1119]', sourcePill: 'bg-emerald-500/20 text-emerald-300' },
+};
+
+const VALUE_COLORS: Record<string, string> = {
+  grey:   'text-gray-200',
+  red:    'text-red-400',
+  green:  'text-emerald-400',
+  amber:  'text-amber-400',
+  cyan:   'text-cyan-400',
+  purple: 'text-purple-400',
+};
+
+const LensRow: React.FC<LensRowProps> = ({ letter, title, sourceLabel, accentColor, subtitle, cards, emptyState, emptyStateMessage }) => {
+  const c = LENS_COLORS[accentColor];
+  return (
+    <div className={`${c.bg} border-l-[3px] ${c.border} rounded-md p-3.5 mb-2.5 ${emptyState ? 'opacity-60' : ''}`}>
+      <div className="flex justify-between items-baseline mb-2">
+        <div className="text-xs font-bold text-gray-100 flex items-center gap-2">
+          <span className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[10px] font-extrabold ${c.letterBg} ${c.letterText}`}>
+            {letter}
+          </span>
+          {title}
+        </div>
+        <div className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${c.sourcePill}`}>
+          {sourceLabel}
+        </div>
+      </div>
+      <div className="text-[10px] text-gray-500 italic mb-2.5">{subtitle}</div>
+      {emptyState ? (
+        <div className="p-3.5 border border-dashed border-gray-700 rounded bg-[#131826] text-gray-500 text-[11px] text-center leading-relaxed">
+          <strong className="text-gray-400">{emptyStateMessage || 'No data yet for this lens.'}</strong>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-2.5">
+          {cards.map((card, i) => (
+            <div key={i} className="bg-[#1a1f2e] border border-[#2a3142] rounded p-2.5 border-t-[3px]" style={{ borderTopColor: accentColor === 'grey' ? '#9ca3af' : accentColor === 'amber' ? '#fbbf24' : '#34d399' }}>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">{card.label}</div>
+              <div className={`text-lg font-extrabold leading-none mb-1 ${VALUE_COLORS[card.color || 'grey']}`}>{card.value}</div>
+              {card.sub && <div className="text-[10px] text-gray-500">{card.sub}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PastThreeLensesSection: React.FC<{
+  d: CFODashboardData;
+  totalArr: number;
+}> = ({ d, totalArr }) => {
+  const ha = d.historical_actuals;
+  const wb = d.wizard_b_nrr;
+  const proof = d.proof_executions;
+  const proofTotalProtected = proof.reduce((s, e) => s + (e.revenue_protected || 0), 0);
+  const proofTotalExpanded = proof.reduce((s, e) => s + (e.revenue_expanded || 0), 0);
+  const proofTotalCost = proof.reduce((s, e) => s + (e.cost || 0), 0);
+  const proofRoi = proofTotalCost > 0 ? ((proofTotalProtected + proofTotalExpanded) / proofTotalCost).toFixed(1) : '0';
+
+  const showRowC = d.customer_phase !== 'pre_deploy' && proof.length > 0;
+
+  return (
+    <div className="bg-[#131826] rounded-xl border border-gray-700/50 p-5 mb-6">
+      <div className="flex items-baseline justify-between mb-3 pb-2 border-b border-gray-700/50">
+        <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-[2px]">
+          ▌ Past — Three Lenses
+        </div>
+        <div className="text-[10px] text-gray-500">
+          A · Historical actuals &middot; B · Counterfactual model &middot; C · Realized attribution
+        </div>
+      </div>
+
+      {/* ROW A — Historical Performance (Pre-CS-Pulse) */}
+      {ha ? (
+        <LensRow
+          letter="A"
+          title="Historical Performance (Pre-CS-Pulse)"
+          sourceLabel="Your data · audit-grade"
+          accentColor="grey"
+          subtitle={`From your uploaded outcomes data (${ha.source}). Reconciles with P&L. Always shown — same for new and mature customers.`}
+          cards={[
+            {
+              label: 'Historical NRR — TTM',
+              value: ha.historical_nrr_pct_ttm != null ? `${ha.historical_nrr_pct_ttm}%` : '—',
+              sub: 'From your outcomes data',
+              color: 'grey',
+            },
+            {
+              label: 'ARR Churned (TTM)',
+              value: formatCompact(ha.arr_churned),
+              sub: `${ha.n_churned_accounts} churn_lost outcomes`,
+              color: 'red',
+            },
+            {
+              label: 'ARR Expanded (TTM)',
+              value: `+${formatCompact(ha.arr_expanded).replace('$', '$')}`,
+              sub: `${ha.n_expansion_events} expansion_closed outcomes`,
+              color: 'green',
+            },
+            {
+              label: 'ARR Contracted (TTM)',
+              value: formatCompact(ha.arr_contracted),
+              sub: `${ha.n_contraction_events} contraction outcomes`,
+              color: 'amber',
+            },
+          ]}
+        />
+      ) : (
+        <LensRow
+          letter="A"
+          title="Historical Performance (Pre-CS-Pulse)"
+          sourceLabel="Your data · audit-grade"
+          accentColor="grey"
+          subtitle="From your uploaded outcomes data (context_nodes.source=observed)."
+          cards={[]}
+          emptyState
+          emptyStateMessage="No historical OUTCOME data uploaded yet. Upload outcomes.csv during onboarding to populate this row."
+        />
+      )}
+
+      {/* ROW B — Counterfactual (Hypothetical with CS Pulse) */}
+      {wb ? (
+        <LensRow
+          letter="B"
+          title="Counterfactual — Hypothetical with CS Pulse"
+          sourceLabel="Wizard B · directional"
+          accentColor="amber"
+          subtitle='Wizard B arc-pattern counterfactual: "what would NRR have been if CS Pulse had been running through this period?" Conservative attribution — only credits the incremental delta over the natural arc trajectory.'
+          cards={[
+            {
+              label: 'Hypothetical NRR (with CS Pulse)',
+              value: `${wb.with_pulse}%`,
+              sub: 'Wizard B current_nrr_pct',
+              color: 'amber',
+            },
+            {
+              label: 'Counterfactual Lift',
+              value: `+${wb.delta}pp`,
+              sub: `≈ ${formatCompact((wb.delta || 0) / 100 * totalArr)} attributable on ${formatCompact(totalArr)} ARR`,
+              color: 'amber',
+            },
+            {
+              label: 'ARR Could\'ve Been Protected',
+              value: formatCompact(wb.arr_protected),
+              sub: 'Wizard B cs_pulse_arr_protected',
+              color: 'amber',
+            },
+            {
+              label: 'Accounts Could\'ve Been Saved',
+              value: `${wb.accounts_saved}`,
+              sub: 'Wizard B cs_pulse_accounts_saved',
+              color: 'amber',
+            },
+          ]}
+        />
+      ) : (
+        <LensRow
+          letter="B"
+          title="Counterfactual — Hypothetical with CS Pulse"
+          sourceLabel="Wizard B · directional"
+          accentColor="amber"
+          subtitle="Wizard B model output."
+          cards={[]}
+          emptyState
+          emptyStateMessage="Wizard B has not produced a counterfactual NRR forecast yet. Runs automatically during onboarding and on every process_data refresh."
+        />
+      )}
+
+      {/* ROW C — Realized (Actual CS Pulse Attribution) */}
+      {showRowC ? (
+        <LensRow
+          letter="C"
+          title="Realized — Actual CS Pulse Attribution"
+          sourceLabel="Audit-traceable proof"
+          accentColor="green"
+          subtitle={`Bottom-up sum of PlaybookExecutionV2.revenue_protected across closed playbooks (${proof.length} executions). Per-account attribution to specific saved accounts — full drill-down in the Playbook ROI Proof table below.`}
+          cards={[
+            {
+              label: 'Revenue Protected',
+              value: formatCompact(proofTotalProtected + proofTotalExpanded),
+              sub: `${proof.length} closed playbooks`,
+              color: 'green',
+            },
+            {
+              label: 'Realized ROI',
+              value: `${proofRoi}×`,
+              sub: `${formatCompact(proofTotalCost)} → ${formatCompact(proofTotalProtected + proofTotalExpanded)}`,
+              color: 'green',
+            },
+            {
+              label: 'Playbooks Resolved',
+              value: `${proof.length} / ${proof.length}`,
+              sub: '100% completion',
+              color: 'green',
+            },
+            {
+              label: 'CS Investment (Closed)',
+              value: formatCompact(proofTotalCost),
+              sub: 'Sum of total_cost on closed PBs',
+              color: 'grey',
+            },
+          ]}
+        />
+      ) : (
+        <LensRow
+          letter="C"
+          title="Realized — Actual CS Pulse Attribution"
+          sourceLabel="Pending deployment"
+          accentColor="green"
+          subtitle="Audit-traceable proof, populated as playbooks fire on at-risk accounts."
+          cards={[]}
+          emptyState
+          emptyStateMessage="CS Pulse hasn't been deployed long enough to attribute saves yet. Once playbooks fire on at-risk accounts, this section will populate. See the Forward Opportunity section below for what's protectable today."
+        />
+      )}
+    </div>
+  );
+};
+
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -1075,6 +1346,7 @@ const CFODashboard: React.FC = () => {
               grr_after: wb.grr_after_pct,
             } : null,
             predictor_v3_portfolio_nrr: v3,
+            historical_actuals: json.historical_actuals || null,
             customer_phase: customerPhase,
             // NRR/GRR + Cost of Inaction (fallback to Power-of-1 when no Wizard B)
             nrr_current: hasWizardB ? wb.with_cs_pulse_nrr_pct : (json.nrr_current || nrr),
@@ -1412,6 +1684,13 @@ const CFODashboard: React.FC = () => {
             <CostOfInactionPanel data={d.cost_of_inaction} />
           </div>
           )}
+
+          {/* Past — Three Lenses (NEW · sits ABOVE Investment Allocation Story).
+              See marketing/cfo_dashboard_relabel_mock.html for design spec.
+              Three rows: A historical actuals / B counterfactual (Wizard B) /
+              C realized (proof_data). Row C is phase-conditional — hidden
+              empty-state when customer is pre_deploy. */}
+          <PastThreeLensesSection d={d} totalArr={d.total_arr} />
 
           {/* Row 1c: Investment Allocation Story */}
           {d.layered_story && d.layered_story.layers.length > 0 && (

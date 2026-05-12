@@ -1225,6 +1225,63 @@ def cfo_dashboard():
         except Exception as e:
             logger.warning(f"CFO proof_data computation failed: {e}")
 
+        # ── HISTORICAL ACTUALS (Row A of "Past — Three Lenses") ──
+        # Raw OUTCOME aggregates from the customer's own uploaded data.
+        # This is the "audit-grade, reconciles-with-P&L" lens, distinct
+        # from Wizard B's counterfactual (Row B) and proof_data's playbook
+        # attribution (Row C).
+        historical_actuals = None
+        try:
+            from sqlalchemy import text as _sql_text
+            from extensions import db as _db
+            ha_rows = _db.session.execute(_sql_text(
+                """
+                SELECT
+                    SUM(CASE WHEN node_subtype = 'churn_lost'      THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_churned,
+                    SUM(CASE WHEN node_subtype = 'expansion_closed' THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_expanded,
+                    SUM(CASE WHEN node_subtype = 'contraction'      THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_contracted,
+                    COUNT(*) FILTER (WHERE node_subtype = 'churn_lost')       AS n_churned,
+                    COUNT(*) FILTER (WHERE node_subtype = 'expansion_closed') AS n_expanded,
+                    COUNT(*) FILTER (WHERE node_subtype = 'contraction')      AS n_contracted
+                FROM context_nodes
+                WHERE customer_id = :cust
+                  AND node_type = 'OUTCOME'
+                  AND node_subtype IN ('churn_lost', 'expansion_closed', 'contraction')
+                """
+            ), {'cust': customer_id}).fetchone()
+
+            if ha_rows:
+                arr_churned    = float(ha_rows[0] or 0)  # negative
+                arr_expanded   = float(ha_rows[1] or 0)  # positive
+                arr_contracted = float(ha_rows[2] or 0)  # negative
+                # Historical NRR ≈ (Total ARR currently + expansion - |churn| - |contraction|) / starting ARR.
+                # Starting ARR for TTM = current_arr + |churn_lost| (the accounts that LEFT had revenue at start).
+                starting_arr_ttm = total_arr + abs(arr_churned)
+                if starting_arr_ttm > 0:
+                    historical_nrr_ttm = (
+                        (starting_arr_ttm + arr_expanded + arr_churned + arr_contracted)
+                        / starting_arr_ttm
+                    ) * 100
+                else:
+                    historical_nrr_ttm = None
+                historical_actuals = {
+                    'historical_nrr_pct_ttm': round(historical_nrr_ttm, 2) if historical_nrr_ttm is not None else None,
+                    'arr_churned': round(arr_churned, 0),
+                    'arr_expanded': round(arr_expanded, 0),
+                    'arr_contracted': round(arr_contracted, 0),
+                    'starting_arr_ttm': round(starting_arr_ttm, 0),
+                    'n_churned_accounts': int(ha_rows[3] or 0),
+                    'n_expansion_events': int(ha_rows[4] or 0),
+                    'n_contraction_events': int(ha_rows[5] or 0),
+                    # Lens metadata
+                    'lens': 'historical_actuals',
+                    'engine': 'raw_outcomes',
+                    'time_direction': 'backward',
+                    'source': 'context_nodes.source=observed (your uploaded data)',
+                }
+        except Exception as e:
+            logger.warning(f"CFO historical_actuals computation failed: {e}")
+
         # ── WIZARD B NRR: backward counterfactual (with/without CS Pulse) ──
         wizard_b_nrr = None
         try:
@@ -1329,7 +1386,9 @@ def cfo_dashboard():
             'account_count': len(accounts),
             # ── PROOF: actual playbook economics ──
             'proof_data': proof_data,
-            # ── WIZARD B: backward counterfactual (with vs without CS Pulse) ──
+            # ── ROW A: historical actuals from customer's uploaded data ──
+            'historical_actuals': historical_actuals,
+            # ── WIZARD B (ROW B): backward counterfactual (with vs without CS Pulse) ──
             'wizard_b_nrr': wizard_b_nrr,
             # ── PREDICTOR v3: forward point forecast (per-account aggregated) ──
             'predictor_v3_portfolio_nrr': predictor_v3_portfolio_nrr,
