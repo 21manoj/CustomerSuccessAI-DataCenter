@@ -33,6 +33,7 @@ import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import { trackPageView, trackDashboardSwitch } from '../../utils/activityTracker';
 import AskAIPortal from '../ai/AskAIPortal';
+import { DashboardErrorState } from '../shared/DashboardErrorState';
 
 // ============================================================================
 // TYPES
@@ -849,6 +850,7 @@ const VPCSDashboard: React.FC = () => {
   const [data, setData] = useState<VPCSDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [activeView, setActiveViewRaw] = useState<VPCSViewId>('vpcs-overview');
   const [healthFilter, setHealthFilter] = useState<string | null>(null);
   const setActiveView = useCallback((view: VPCSViewId) => {
@@ -878,6 +880,14 @@ const VPCSDashboard: React.FC = () => {
           apiCall('/api/v1/playbook-success-metrics', { headers }),
           apiCall('/api/v1/health-score-history?months=6', { headers }),
         ]);
+
+        // Detect session-expired across any endpoint and surface to error UI.
+        // Primary signal: accountsResp (the dashboard's anchor data); any 401
+        // on it means auth has lapsed and we should send the user to /login.
+        const anchorResp = (accountsResp.status === 'fulfilled') ? accountsResp.value : null;
+        if (anchorResp && anchorResp.status === 401) {
+          setErrorStatus(401);
+        }
 
         // Parse responses (graceful fallback per endpoint)
         const parse = async (r: PromiseSettledResult<Response>) =>
@@ -1102,19 +1112,11 @@ const VPCSDashboard: React.FC = () => {
   // ---- Error state ----
   if (error && !data) {
     return (
-      <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif] items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-400 text-sm mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-500 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <DashboardErrorState
+        dashboardLabel="VP CS dashboard"
+        errorMessage={error}
+        errorStatus={errorStatus}
+      />
     );
   }
 

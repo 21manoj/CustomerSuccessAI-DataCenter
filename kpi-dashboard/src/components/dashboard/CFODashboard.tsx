@@ -36,6 +36,7 @@ import { trackPageView, trackEvent } from '../../utils/activityTracker';
 // until admin-toggleable per-tenant flag is wired.
 import PredictorV3Tile from '../predictor/PredictorV3Tile';
 import { PerAccountNRRForecastTable } from '../predictor/PerAccountNRRForecastTable';
+import { DashboardErrorState } from '../shared/DashboardErrorState';
 
 // ============================================================================
 // TYPES
@@ -1170,6 +1171,10 @@ const CFODashboard: React.FC = () => {
   const [data, setData] = useState<CFODashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // HTTP status of the most recent fetch failure; used by the error state
+  // to distinguish auth-expired (401, show "Log in again") from generic
+  // network/server errors (show "Retry").
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [showFutureROI, setShowFutureROI] = useState(false);
 
   // Fetch main dashboard data
@@ -1183,7 +1188,10 @@ const CFODashboard: React.FC = () => {
         const resp = await apiCall('/api/executive/cfo-dashboard', {
           headers: { 'X-Customer-ID': customerId },
         });
-        if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+        if (!resp.ok) {
+          setErrorStatus(resp.status);
+          throw new Error(`API returned ${resp.status}`);
+        }
         const json = await resp.json();
         if (!cancelled) {
           // Transform flat API response into CFODashboardData shape
@@ -1447,19 +1455,11 @@ const CFODashboard: React.FC = () => {
   // ---- Error state ----
   if (error || !data) {
     return (
-      <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif] items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-400 text-sm mb-4">{error || 'No data available. Please refresh or check your connection.'}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-500 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <DashboardErrorState
+        dashboardLabel="CFO dashboard"
+        errorMessage={error}
+        errorStatus={errorStatus}
+      />
     );
   }
 

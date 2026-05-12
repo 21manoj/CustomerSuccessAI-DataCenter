@@ -33,6 +33,7 @@ import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import { trackPageView } from '../../utils/activityTracker';
 import AskAIPortal from '../ai/AskAIPortal';
 import { PredictorV3Tile } from '../predictor/PredictorV3Tile';
+import { DashboardErrorState } from '../shared/DashboardErrorState';
 
 // ============================================================================
 // TYPES
@@ -706,6 +707,7 @@ const CEODashboard: React.FC = () => {
   const [data, setData] = useState<CEODashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   const [sortField, setSortField] = useState<SortField>('arr');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -722,6 +724,10 @@ const CEODashboard: React.FC = () => {
 
         // ── Primary: new CEO endpoint (handles single-customer + portfolio) ──
         const ceoResp = await apiCall('/api/executive/ceo-dashboard', { headers });
+        if (!ceoResp.ok) {
+          setErrorStatus(ceoResp.status);
+          throw new Error(`API returned ${ceoResp.status}`);
+        }
         let companies: PortfolioCompany[] = [];
         let healthDist: HealthBucket[] = [];
         let avgHealth = 0;
@@ -947,20 +953,11 @@ const CEODashboard: React.FC = () => {
   // ---- Error state ----
   if (error && !data) {
     return (
-      <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif] items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-400 text-sm mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 text-white rounded-lg text-sm hover:opacity-90 transition-colors"
-            style={{ backgroundColor: ACCENT }}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <DashboardErrorState
+        dashboardLabel="CEO dashboard"
+        errorMessage={error}
+        errorStatus={errorStatus}
+      />
     );
   }
 

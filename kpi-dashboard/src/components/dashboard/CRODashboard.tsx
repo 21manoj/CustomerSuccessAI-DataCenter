@@ -30,6 +30,7 @@ import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
 import { trackPageView, trackEvent } from '../../utils/activityTracker';
 import { PredictorV3Tile } from '../predictor/PredictorV3Tile';
+import { DashboardErrorState } from '../shared/DashboardErrorState';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
@@ -776,6 +777,7 @@ const CRODashboard: React.FC = () => {
   const [data, setData] = useState<CRODashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   const [timeline, setTimeline] = useState<RevenueTimeline | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
@@ -806,7 +808,10 @@ const CRODashboard: React.FC = () => {
         const resp = await apiCall('/api/executive/cro-dashboard', {
           headers: { 'X-Customer-ID': customerId },
         });
-        if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+        if (!resp.ok) {
+          setErrorStatus(resp.status);
+          throw new Error(`API returned ${resp.status}`);
+        }
         const json = await resp.json();
         // Store vertical context for pillar label resolution across components
         if (json.pillar_labels) {
@@ -899,7 +904,10 @@ const CRODashboard: React.FC = () => {
       const resp = await apiCall(`/api/executive/revenue-timeline?account_id=${accountId}`, {
         headers: { 'X-Customer-ID': customerId },
       });
-      if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+      if (!resp.ok) {
+          setErrorStatus(resp.status);
+          throw new Error(`API returned ${resp.status}`);
+        }
       const json = await resp.json();
       setTimeline(json);
     } catch {
@@ -993,40 +1001,22 @@ const CRODashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
-        <SidebarNav activeId="cro-overview" onViewChange={handleViewChange} onNavigate={handleNav} />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
-              <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h3>
-            <p className="text-gray-400 mb-6">{error}</p>
-            <button onClick={() => window.location.reload()} className="px-6 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-colors">
-              Retry
-            </button>
-          </div>
-        </main>
-      </div>
+      <DashboardErrorState
+        dashboardLabel="CRO dashboard"
+        errorMessage={error}
+        errorStatus={errorStatus}
+      />
     );
   }
 
   // ---- Error state ----
   if (error && !data) {
     return (
-      <div className="flex h-screen bg-[#0f1419] text-white font-['Inter',sans-serif] items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-400 text-sm mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg text-sm hover:bg-cyan-500 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <DashboardErrorState
+        dashboardLabel="CRO dashboard"
+        errorMessage={error}
+        errorStatus={errorStatus}
+      />
     );
   }
 
