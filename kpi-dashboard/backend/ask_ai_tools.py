@@ -291,6 +291,78 @@ TOOL_DEFINITIONS = [
             "required": ["customer_id"]
         }
     },
+    # ════════════════════════════════════════════════════════════════════════
+    # NRR FORECAST TOOLS (Predictor v3 + Wizard B)
+    # ════════════════════════════════════════════════════════════════════════
+    # These five tools surface NRR forecasting via two distinct engines.
+    # Naming + descriptions are explicit so the LLM picks the right tool:
+    #
+    #   FORWARD per-account → get_account_nrr_forecast
+    #   FORWARD portfolio   → get_portfolio_nrr_forecast_v3
+    #   BACKWARD with/without CS Pulse counterfactual → get_realized_nrr_counterfactual
+    #   "Top expansion opportunities" / "Top at-risk accounts" → v3 rankers
+    {
+        "name": "get_account_nrr_forecast",
+        "description": "Per-account FORWARD NRR forecast at horizon (renewal or 12mo) from Predictor v3 (Wizard D-calibrated GLMM). Returns expected_nrr point + 90% CI bounds, term_decomposition (p_churn, p_survive, expand/contract %, top_drivers with feature contributions), expansion_outlook (probability of expansion event, expected size, ARR lift), and calibration_id provenance. Use this when the user asks 'what's account X's NRR forecast?', 'why is X predicted at Y%?', or wants to explain a per-account number. DO NOT use for portfolio-level questions (use get_portfolio_nrr_forecast_v3) or backward counterfactual (use get_realized_nrr_counterfactual).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "account_id": {"type": "integer", "description": "The account_id to forecast"},
+                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo", "description": "Forecast horizon"}
+            },
+            "required": ["account_id"]
+        }
+    },
+    {
+        "name": "get_portfolio_nrr_forecast_v3",
+        "description": "Portfolio-level FORWARD NRR forecast (Predictor v3, ARR-weighted aggregate of per-account predictions). Returns arr_weighted_nrr_pct, simple_avg_nrr_pct, account_count (active + total), top_5_nrr accounts, bottom_5_nrr accounts, prediction_method_counts, and calibration_freshness. Use when the user asks 'what's our forward NRR?', 'what's the v3 portfolio forecast?', or wants the aggregate forecast number. DIFFERENT FROM get_realized_nrr_counterfactual — that's backward counterfactual (with vs without CS Pulse).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo"}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "get_top_expansion_opportunities_v3",
+        "description": "Top expansion opportunities — per-account ranked by Predictor v3 expected_arr_lift over the horizon. Each result entry includes account_id, account_name, ARR, expansion_outlook (expected_arr_lift, p_expansion_event_horizon, expected_size_pct_given_event), expansion_drivers (top feature contributions). Use when the user asks 'where should we focus expansion plays?', 'top expansion bets?', 'which accounts have highest upside?'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo"},
+                "limit": {"type": "integer", "default": 5}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "get_top_at_risk_accounts_v3",
+        "description": "Top at-risk accounts — per-account ranked by Predictor v3 forecast NRR ascending (lowest NRR = highest churn risk). Each result includes account_id, account_name, ARR, expected_nrr {point, lower_90, upper_90}, term_decomposition (p_churn, p_survive, e_contract_pct, e_expand_pct, top_drivers), forecast_arr_loss (projected ARR loss = ARR × (1 - expected_nrr)). Use when the user asks 'which accounts are most at-risk?', 'where should defensive playbooks fire?', 'what's hurting NRR most?'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo"},
+                "limit": {"type": "integer", "default": 5}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "get_realized_nrr_counterfactual",
+        "description": "Backward-looking REALIZED NRR with CS Pulse counterfactual delta (Wizard B). Returns with_cs_pulse_nrr_pct, without_cs_pulse_nrr_pct, delta_pct (= CS Pulse attributable lift), arr_protected, accounts_saved, plus a forward what-if (with_interventions_nrr_pct). DIFFERENT FROM get_portfolio_nrr_forecast_v3 — that's forward point forecast; this is backward counterfactual answering 'did CS Pulse improve NRR vs baseline?'. Use when the user asks 'what's our realized NRR?', 'what was the CS Pulse impact?', 'NRR with vs without CS Pulse?'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer"},
+                "months": {"type": "integer", "default": 3, "description": "Forecast horizon for the forward what-if (default 3, max 12)"}
+            },
+            "required": ["customer_id"]
+        }
+    },
 ]
 
 
@@ -532,6 +604,47 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
         )
     elif tool_name == 'get_calibration_history':
         return _get_calibration_history(customer_id, tool_input.get('limit', 10))
+    # ─── NRR forecast tools (Predictor v3 + Wizard B) ───
+    # Use the MCP @mcp.tool implementations directly — they already
+    # have the right code path (predict_for_account_id wrapping etc).
+    elif tool_name == 'get_account_nrr_forecast':
+        from mcp_server.cs_pulse_predictor import get_account_nrr_forecast as _t
+        impl = getattr(_t, 'fn', _t)
+        return impl(
+            account_id=tool_input['account_id'],
+            horizon=tool_input.get('horizon', '12mo'),
+        )
+    elif tool_name == 'get_portfolio_nrr_forecast_v3':
+        from mcp_server.cs_pulse_predictor import get_portfolio_nrr_forecast_v3 as _t
+        impl = getattr(_t, 'fn', _t)
+        return impl(
+            customer_id=customer_id,
+            horizon=tool_input.get('horizon', '12mo'),
+        )
+    elif tool_name == 'get_top_expansion_opportunities_v3':
+        from mcp_server.cs_pulse_predictor import get_top_expansion_opportunities_v3 as _t
+        impl = getattr(_t, 'fn', _t)
+        return impl(
+            customer_id=customer_id,
+            horizon=tool_input.get('horizon', '12mo'),
+            limit=tool_input.get('limit', 5),
+        )
+    elif tool_name == 'get_top_at_risk_accounts_v3':
+        from mcp_server.cs_pulse_predictor import get_top_at_risk_accounts_v3 as _t
+        impl = getattr(_t, 'fn', _t)
+        return impl(
+            customer_id=customer_id,
+            horizon=tool_input.get('horizon', '12mo'),
+            limit=tool_input.get('limit', 5),
+        )
+    elif tool_name == 'get_realized_nrr_counterfactual':
+        # Wizard B counterfactual — existing MCP tool was named get_nrr_forecast
+        from mcp_server.cs_pulse_revenue import get_nrr_forecast as _t
+        impl = getattr(_t, 'fn', _t)
+        return impl(
+            customer_id=customer_id,
+            months=tool_input.get('months', 3),
+        )
     else:
         return {"error": f"Unknown tool: {tool_name}"}
 
@@ -1095,6 +1208,73 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         except Exception as e:
             logger.warning(f"Portfolio ROI (CFO-aligned) failed: {e}")
             return {"error": f"Portfolio ROI calculation failed: {str(e)}"}
+
+    # ─── NRR forecast tools (Predictor v3 + Wizard B) — direct dispatch ───
+    # Same backing functions as the MCP-path branches above; identical
+    # behavior regardless of whether fastmcp is installed.
+    elif tool_name == 'get_account_nrr_forecast':
+        try:
+            from predictor.inference import predict_for_account_id
+            account_id = tool_input.get('account_id')
+            horizon = tool_input.get('horizon', '12mo')
+            if not account_id:
+                return {"error": "account_id is required"}
+            if horizon not in ('renewal', '12mo'):
+                return {"error": f"horizon must be 'renewal' or '12mo', got {horizon!r}"}
+            return predict_for_account_id(account_id=int(account_id), horizon=horizon)
+        except Exception as e:
+            logger.warning(f"get_account_nrr_forecast failed: {e}")
+            return {"error": f"Predictor v3 per-account forecast failed: {str(e)}"}
+
+    elif tool_name == 'get_portfolio_nrr_forecast_v3':
+        try:
+            from mcp_server.cs_pulse_predictor import get_portfolio_nrr_forecast_v3 as _t
+            impl = getattr(_t, 'fn', _t)
+            return impl(
+                customer_id=customer_id,
+                horizon=tool_input.get('horizon', '12mo'),
+            )
+        except Exception as e:
+            logger.warning(f"get_portfolio_nrr_forecast_v3 failed: {e}")
+            return {"error": f"Predictor v3 portfolio forecast failed: {str(e)}"}
+
+    elif tool_name == 'get_top_expansion_opportunities_v3':
+        try:
+            from mcp_server.cs_pulse_predictor import get_top_expansion_opportunities_v3 as _t
+            impl = getattr(_t, 'fn', _t)
+            return impl(
+                customer_id=customer_id,
+                horizon=tool_input.get('horizon', '12mo'),
+                limit=tool_input.get('limit', 5),
+            )
+        except Exception as e:
+            logger.warning(f"get_top_expansion_opportunities_v3 failed: {e}")
+            return {"error": f"Top expansion v3 failed: {str(e)}"}
+
+    elif tool_name == 'get_top_at_risk_accounts_v3':
+        try:
+            from mcp_server.cs_pulse_predictor import get_top_at_risk_accounts_v3 as _t
+            impl = getattr(_t, 'fn', _t)
+            return impl(
+                customer_id=customer_id,
+                horizon=tool_input.get('horizon', '12mo'),
+                limit=tool_input.get('limit', 5),
+            )
+        except Exception as e:
+            logger.warning(f"get_top_at_risk_accounts_v3 failed: {e}")
+            return {"error": f"Top at-risk v3 failed: {str(e)}"}
+
+    elif tool_name == 'get_realized_nrr_counterfactual':
+        try:
+            from mcp_server.cs_pulse_revenue import get_nrr_forecast as _t
+            impl = getattr(_t, 'fn', _t)
+            return impl(
+                customer_id=customer_id,
+                months=tool_input.get('months', 3),
+            )
+        except Exception as e:
+            logger.warning(f"get_realized_nrr_counterfactual failed: {e}")
+            return {"error": f"Wizard B counterfactual failed: {str(e)}"}
 
     else:
         return {"error": f"Unknown tool: {tool_name}"}
