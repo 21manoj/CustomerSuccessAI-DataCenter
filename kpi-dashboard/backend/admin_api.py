@@ -1047,3 +1047,60 @@ def get_stuck_users():
     except Exception as e:
         current_app.logger.error(f"get_stuck_users failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+# ============================================================
+# POST-LOAD ATTRIBUTION
+# ============================================================
+
+@admin_bp.route('/post-load-attribution', methods=['POST'])
+def trigger_post_load_attribution():
+    """
+    POST /api/admin/post-load-attribution
+
+    Backfill PlaybookExecutionV2.revenue_protected and revenue_expanded
+    for the current customer from matching OUTCOME context_nodes
+    (churn_averted, expansion_closed).
+
+    Intended to be called by the load-driver as a final post-process step
+    after manifest ingest, so the CFO dashboard's proof_data tiles
+    (Revenue Protected, Portfolio ROI, Already Delivered) reflect the
+    real saved-account economics rather than the auto-computed-from-churn-
+    probability fallback (which returns $0 when the synthetic seed's
+    health_at_close <= health_at_trigger).
+
+    Idempotent — safe to re-run.
+    Body: optional {"customer_id": <int>}; defaults to session customer_id.
+    """
+    try:
+        body = request.get_json(silent=True) or {}
+        customer_id = body.get('customer_id') or get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'customer_id required (in body or session)'}), 400
+        customer_id = int(customer_id)
+
+        current_app.logger.info(
+            f'post-load-attribution triggered for customer {customer_id}'
+        )
+
+        from utils.post_load_attribution import backfill_playbook_attribution
+        n_updated, total_prot, total_exp = backfill_playbook_attribution(customer_id)
+
+        return jsonify({
+            'status': 'success',
+            'customer_id': customer_id,
+            'executions_updated': n_updated,
+            'total_revenue_protected': round(total_prot, 0),
+            'total_revenue_expanded': round(total_exp, 0),
+            'message': (
+                f'Backfilled {n_updated} playbook executions: '
+                f'${total_prot:,.0f} revenue_protected, '
+                f'${total_exp:,.0f} revenue_expanded'
+            ),
+        })
+
+    except Exception as e:
+        current_app.logger.error(
+            f'post-load-attribution failed: {e}', exc_info=True
+        )
+        return jsonify({'error': 'An internal error occurred. Please try again or contact support.'}), 500

@@ -268,6 +268,24 @@ def run_manifest(args):
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
 
+    # Post-load attribution backfill — populates PlaybookExecutionV2
+    # revenue_protected / revenue_expanded from matching OUTCOME context_nodes.
+    # Without this, the CFO dashboard's "Revenue Protected" and "Portfolio ROI"
+    # tiles report $0 / 0x because the close-playbook auto-compute returns 0
+    # when synthetic health_at_close <= health_at_trigger.
+    if result.get('status') == 'success':
+        try:
+            attribution = client.backfill_playbook_attribution(int(customer_id))
+            if attribution:
+                logger.info(
+                    f"  Attribution backfill: "
+                    f"{attribution.get('executions_updated', 0)} executions, "
+                    f"${attribution.get('total_revenue_protected', 0):,.0f} protected, "
+                    f"${attribution.get('total_revenue_expanded', 0):,.0f} expanded"
+                )
+        except Exception as e:
+            logger.warning(f"  Attribution backfill failed (non-fatal): {e}")
+
     # Print summary
     logger.info(f"\n{'='*60}")
     logger.info(f"  Result: {result.get('status', 'unknown').upper()}")

@@ -788,6 +788,44 @@ class CSPulseClient:
         """Get context graph summary (node counts, edge counts, revenue) for an account."""
         return self.get('/api/context-graph/summary', params={'account_id': account_id})
 
+    def backfill_playbook_attribution(
+        self,
+        customer_id: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Run post-load attribution backfill on the platform.
+
+        Backfills PlaybookExecutionV2.revenue_protected and revenue_expanded
+        from matching OUTCOME context_nodes. Required after a manifest load
+        because the close-playbook auto-compute (churn-probability delta ×
+        ARR) returns $0 when the synthetic seed's health_at_close has not
+        improved vs. health_at_trigger.
+
+        Without this step, the CFO dashboard's Revenue Protected, Portfolio
+        ROI, and Investment Allocation "Already Delivered" tiles show $0
+        even though context_nodes has $20M+ of saved-account OUTCOMEs.
+
+        Idempotent — safe to re-run.
+
+        Returns:
+            dict with executions_updated, total_revenue_protected,
+            total_revenue_expanded; or None if the API call failed.
+        """
+        cid = customer_id or self.customer_id
+        body = {'customer_id': int(cid)} if cid is not None else {}
+        resp = self.post('/api/admin/post-load-attribution', body)
+        if resp:
+            logger.info(
+                f"Post-load attribution: customer {cid} — "
+                f"updated {resp.get('executions_updated', 0)} executions, "
+                f"${resp.get('total_revenue_protected', 0):,.0f} protected, "
+                f"${resp.get('total_revenue_expanded', 0):,.0f} expanded"
+            )
+        else:
+            logger.warning(
+                f"Post-load attribution call failed for customer {cid}"
+            )
+        return resp
+
     def ensure_enterprise_all_toggles(
         self,
         customer_id: Optional[int] = None,
