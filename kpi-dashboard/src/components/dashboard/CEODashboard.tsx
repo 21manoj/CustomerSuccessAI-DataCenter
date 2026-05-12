@@ -32,6 +32,7 @@ import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import { trackPageView } from '../../utils/activityTracker';
 import AskAIPortal from '../ai/AskAIPortal';
+import { PredictorV3Tile } from '../predictor/PredictorV3Tile';
 
 // ============================================================================
 // TYPES
@@ -1033,6 +1034,20 @@ const CEODashboard: React.FC = () => {
               tag={d.total_at_risk > 10 ? 'Needs attention' : undefined}
             />
           </div>
+
+          {/* Predictor v3 — per-account NRR forecast (top expansion + top at-risk).
+              The CEO sees portfolio aggregate via Row 1 above; this tile
+              gives the drill-down for executive board prep. */}
+          {session && (
+            <div className="mb-6">
+              <PredictorV3Tile
+                customerId={session.customer_id}
+                saasProfile={(session.vertical === 'saas_premium') ? 'saas_enterprise' : 'saas_enterprise'}
+                horizon="12mo"
+                limit={5}
+              />
+            </div>
+          )}
 
           {/* Row 2: Company Comparison Table */}
           <div className="mb-6">

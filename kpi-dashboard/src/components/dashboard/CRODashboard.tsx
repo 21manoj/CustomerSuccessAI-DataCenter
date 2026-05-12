@@ -29,6 +29,7 @@ import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import AskAIPortal from '../ai/AskAIPortal';
 import { trackPageView, trackEvent } from '../../utils/activityTracker';
+import { PredictorV3Tile } from '../predictor/PredictorV3Tile';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
@@ -1089,6 +1090,22 @@ const CRODashboard: React.FC = () => {
               <RevenueCardComponent key={i} card={card} riskAccounts={i === 0 ? d.risk_accounts : undefined} />
             ))}
           </div>
+
+          {/* Predictor v3 — top expansion + top at-risk per-account forecast.
+              Renders for any tenant with a calibrated Wizard D fit.
+              The CRO is the primary consumer of per-account forecasts
+              (where to deploy plays, who to escalate); CFO sees the
+              portfolio aggregate, CRO sees the per-account drill-down. */}
+          {session && (
+            <div className="mb-6">
+              <PredictorV3Tile
+                customerId={session.customer_id}
+                saasProfile={(session.vertical === 'saas_premium') ? 'saas_enterprise' : 'saas_enterprise'}
+                horizon="12mo"
+                limit={5}
+              />
+            </div>
+          )}
 
           {/* Row 2: Metric cards (first 3) + Dual NRR card */}
           <div className="grid grid-cols-4 gap-4 mb-4">

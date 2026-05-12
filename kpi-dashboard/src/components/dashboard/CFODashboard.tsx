@@ -35,6 +35,7 @@ import { trackPageView, trackEvent } from '../../utils/activityTracker';
 // the tenant. Demo gate: customer_id === 395 (Predictor V3 Demo SaaS Co)
 // until admin-toggleable per-tenant flag is wired.
 import PredictorV3Tile from '../predictor/PredictorV3Tile';
+import { PerAccountNRRForecastTable } from '../predictor/PerAccountNRRForecastTable';
 
 // ============================================================================
 // TYPES
@@ -1120,6 +1121,39 @@ const PastThreeLensesSection: React.FC<{
           emptyStateMessage="CS Pulse hasn't been deployed long enough to attribute saves yet. Once playbooks fire on at-risk accounts, this section will populate. See the Forward Opportunity section below for what's protectable today."
         />
       )}
+
+      {/* Phase legend — educates on which phase controls Row C visibility */}
+      <div className="mt-3 p-2.5 bg-[#0d1119] border border-dashed border-gray-700/50 rounded text-[10px] text-gray-500">
+        <div className="font-bold text-indigo-300 uppercase tracking-wider text-[9px] mb-2">
+          Customer phase — controls Row C visibility
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          <div className="flex items-start gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider border border-gray-500 bg-gray-500/20 text-gray-300 flex-shrink-0">
+              <span className="w-1 h-1 rounded-full bg-gray-400" />PRE-DEPLOY
+            </span>
+            <span className="text-[10px] leading-tight">No PBs yet · Row C empty · A + B + Forward lead</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider border border-indigo-500 bg-indigo-500/20 text-indigo-300 flex-shrink-0">
+              <span className="w-1 h-1 rounded-full bg-indigo-400" />ONBOARDING
+            </span>
+            <span className="text-[10px] leading-tight">0–3mo · first proof points · Row C sparse</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider border border-emerald-500 bg-emerald-500/20 text-emerald-300 flex-shrink-0">
+              <span className="w-1 h-1 rounded-full bg-emerald-400" />ACTIVE
+            </span>
+            <span className="text-[10px] leading-tight">3–12mo · steady PBs · Row C is primary CFO story</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider border border-purple-500 bg-purple-500/20 text-purple-300 flex-shrink-0">
+              <span className="w-1 h-1 rounded-full bg-purple-400" />MATURE
+            </span>
+            <span className="text-[10px] leading-tight">12mo+ · full audit trail · all 3 lenses populated</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1691,6 +1725,13 @@ const CFODashboard: React.FC = () => {
               C realized (proof_data). Row C is phase-conditional — hidden
               empty-state when customer is pre_deploy. */}
           <PastThreeLensesSection d={d} totalArr={d.total_arr} />
+
+          {/* Per-Account NRR Forecast — sortable drill-down table.
+              Complements PredictorV3Tile (top 5 each) with the full
+              N-account view. Sortable by NRR, ARR, expansion lift, churn risk. */}
+          {d.predictor_v3_portfolio_nrr && session && (
+            <PerAccountNRRForecastTable customerId={session.customer_id} horizon="12mo" />
+          )}
 
           {/* Row 1c: Investment Allocation Story */}
           {d.layered_story && d.layered_story.layers.length > 0 && (
