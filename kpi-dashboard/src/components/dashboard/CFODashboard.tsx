@@ -47,6 +47,8 @@ interface FinancialSummaryCard {
   tag?: string;
   accent: string;
   estimated?: boolean;
+  /** Optional hover-text disclosing engine / lens / math for trust */
+  tooltip?: string;
 }
 
 interface PowerOf1Row {
@@ -136,6 +138,31 @@ interface WizardBNRR {
   grr_after: number | null;
 }
 
+/**
+ * Predictor v3 portfolio NRR forecast — forward 12-month point estimate.
+ * Distinct from WizardBNRR (counterfactual TTM); both can be present on the
+ * same dashboard and represent different lenses on portfolio NRR. The
+ * `lens`/`engine`/`time_direction` triple disambiguates them visually.
+ */
+interface PredictorV3PortfolioNRR {
+  arr_weighted_nrr_pct: number;
+  simple_avg_nrr_pct: number;
+  horizon: string;
+  account_count: number;
+  active_account_count: number;
+  failed_count: number;
+  prediction_method_counts: Record<string, number>;
+  last_calibration_id: string | null;
+  last_calibration_at: string | null;
+  lens: 'point_forecast_ntm';
+  engine: 'predictor_v3';
+  time_direction: 'forward';
+  method_note: string;
+}
+
+/** Customer deployment phase — drives which lens dominates the dashboard. */
+type CustomerPhase = 'pre_deploy' | 'onboarding' | 'active' | 'mature';
+
 interface CFODashboardData {
   summary_cards: FinancialSummaryCard[];
   power_of_1: PowerOf1Row[];
@@ -153,6 +180,8 @@ interface CFODashboardData {
   proof_executions: ProofExecution[];
   has_proof: boolean;
   wizard_b_nrr: WizardBNRR | null;
+  predictor_v3_portfolio_nrr: PredictorV3PortfolioNRR | null;
+  customer_phase: CustomerPhase;
   // NRR/GRR + Cost of Inaction
   nrr_current: number;
   nrr_with_intervention: number;
@@ -331,7 +360,15 @@ const SummaryCardComponent: React.FC<{ card: FinancialSummaryCard }> = ({ card }
         />
       )}
       <div className="relative">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{card.label}</p>
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+          {card.label}
+          {card.tooltip && (
+            <span
+              title={card.tooltip}
+              className="inline-flex items-center justify-center w-3 h-3 rounded-full border border-gray-600 text-[8px] text-gray-500 cursor-help bg-[#0d1119] hover:border-indigo-400 hover:text-indigo-300"
+            >i</span>
+          )}
+        </p>
         <p className="text-3xl font-bold mb-1" style={{ color: accent }}>
           {card.value}
           {card.estimated && <span className="text-xs italic text-gray-400 ml-1 font-normal">Estimated</span>}
@@ -922,12 +959,62 @@ const CFODashboard: React.FC = () => {
           const proofExecutions = proof.executions || [];
           const hasProof = proofCost > 0 || proofProtected > 0;
 
-          // ── Wizard B NRR (actual portfolio forecast) ──
+          // ── Wizard B NRR (backward counterfactual, TTM) ──
           const wb = json.wizard_b_nrr || {};
           const hasWizardB = !!(wb.with_cs_pulse_nrr_pct && wb.with_cs_pulse_nrr_pct !== wb.without_cs_pulse_nrr_pct);
 
+          // ── Predictor v3 portfolio NRR (forward point forecast, NTM) ──
+          const v3 = json.predictor_v3_portfolio_nrr || null;
+          const hasV3 = !!(v3 && v3.arr_weighted_nrr_pct != null);
+
+          // ── Customer deployment phase — drives Row C visibility + badge ──
+          // Heuristic: phase derives from playbook execution density.
+          //   No PB executions      → pre_deploy
+          //   1-5 PBs               → onboarding
+          //   6+ PBs                → active (we'd refine to "mature" once
+          //                          we know first-PB timestamp > 12mo old)
+          const customerPhase: CustomerPhase =
+            (proof.executions_total || 0) === 0 ? 'pre_deploy'
+            : (proof.executions_total || 0) <= 5 ? 'onboarding'
+            : 'active';
+
+          // Build anchor row. Two configurations:
+          //  - With Predictor v3 data: 4 tiles incl. "Forecast NRR — Next 12mo"
+          //    next to the existing "Realized NRR — TTM" / Revenue Protected pair
+          //  - Without v3 data: legacy 4 tiles (Total ARR / CS Spend / Protected / ROI)
+          // Labels follow the marketing/cfo_dashboard_relabel_mock.html vocabulary:
+          // Realized = backward, Forecast = forward.
           const transformed: CFODashboardData = {
-            summary_cards: hasProof ? [
+            summary_cards: hasProof && hasV3 ? [
+              {
+                label: 'Total ARR',
+                value: formatCompact(totalArr),
+                subtitle: `${json.account_count || '—'} active accounts · full portfolio`,
+                accent: 'white',
+                tooltip: 'Sum of accounts.revenue across all active accounts. Excludes churned-with-zero-ARR.',
+              },
+              {
+                label: 'CS Investment',
+                value: formatCompact(proofCost),
+                subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.executions_total || 0} playbook executions`,
+                accent: 'emerald',
+                tooltip: 'Sum of PlaybookExecutionV2.total_cost. Tiered by ARR band — strategic ($90K), mid-market ($50K), SMB ($25K), small ($12K), <10K ($3K). Includes CSM + VP CS + SA + executive sponsor + AE + travel + platform + 35% overhead.',
+              },
+              {
+                label: 'Realized NRR — TTM',
+                value: `${wb.with_cs_pulse_nrr_pct ?? '—'}%`,
+                subtitle: `Counterfactual (Wizard B) · +${wb.delta_pct || 0}pp from CS Pulse`,
+                accent: 'green',
+                tooltip: `Backward-looking counterfactual NRR from Wizard B. With CS Pulse: ${wb.with_cs_pulse_nrr_pct}%. Without: ${wb.without_cs_pulse_nrr_pct}%. Delta = +${wb.delta_pct}pp. Includes all ${json.account_count || '—'} accounts (incl. churned) in denominator. Differs from "Forecast NRR" — that's forward, this is backward.`,
+              },
+              {
+                label: 'Forecast NRR — Next 12mo',
+                value: `${v3?.arr_weighted_nrr_pct ?? '—'}%`,
+                subtitle: `Forward point (Predictor v3) · ARR-weighted · ${v3?.active_account_count || 0} active`,
+                accent: 'cyan',
+                tooltip: `Forward 12-month point forecast from Predictor v3 (calibrated by Wizard D ${v3?.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3?.active_account_count || 0} currently-active accounts; excludes $0-ARR (typically churned) from the weight. Simple-avg: ${v3?.simple_avg_nrr_pct}%. Differs from "Realized NRR" — that's backward counterfactual.`,
+              },
+            ] : hasProof ? [
               { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white' },
               { label: 'Actual CS Spend', value: formatCompact(proofCost), subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.csm_hours || 0}h CSM time`, accent: 'emerald' },
               { label: 'Revenue Protected', value: formatCompact(proofProtected + proofExpanded), subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`, accent: 'green' },
@@ -987,6 +1074,8 @@ const CFODashboard: React.FC = () => {
               grr_before: wb.grr_before_pct,
               grr_after: wb.grr_after_pct,
             } : null,
+            predictor_v3_portfolio_nrr: v3,
+            customer_phase: customerPhase,
             // NRR/GRR + Cost of Inaction (fallback to Power-of-1 when no Wizard B)
             nrr_current: hasWizardB ? wb.with_cs_pulse_nrr_pct : (json.nrr_current || nrr),
             nrr_with_intervention: hasWizardB ? wb.with_interventions_nrr_pct : (json.nrr_with_intervention || nrr),
@@ -1090,6 +1179,44 @@ const CFODashboard: React.FC = () => {
               <div className="h-0.5 w-12 bg-emerald-500 mt-1.5 rounded-full" />
             </div>
             <div className="flex items-center gap-3 text-xs">
+              {/* Customer deployment phase — drives which dashboard lens
+                  is the primary story. See marketing/cfo_dashboard_relabel_mock.html
+                  for the full phase legend. */}
+              {(() => {
+                const phaseConfig: Record<CustomerPhase, { label: string; color: string; bg: string; border: string; tooltip: string }> = {
+                  pre_deploy: {
+                    label: 'PRE-DEPLOY',
+                    color: 'text-gray-300', bg: 'bg-gray-500/20', border: 'border-gray-500',
+                    tooltip: 'No playbook executions yet. CS Pulse impact data not yet populated; counterfactual + forward forecast tell the story.',
+                  },
+                  onboarding: {
+                    label: 'ONBOARDING',
+                    color: 'text-indigo-300', bg: 'bg-indigo-500/20', border: 'border-indigo-500',
+                    tooltip: 'First playbooks firing. Realized attribution emerging; counterfactual + forward forecast lead.',
+                  },
+                  active: {
+                    label: 'ACTIVE',
+                    color: 'text-emerald-300', bg: 'bg-emerald-500/20', border: 'border-emerald-500',
+                    tooltip: 'Steady playbook execution. Realized ROI is the primary CFO story.',
+                  },
+                  mature: {
+                    label: 'MATURE',
+                    color: 'text-purple-300', bg: 'bg-purple-500/20', border: 'border-purple-500',
+                    tooltip: 'Long-running CS Pulse deployment. All three lenses fully populated.',
+                  },
+                };
+                const cfg = phaseConfig[d.customer_phase] || phaseConfig.pre_deploy;
+                return (
+                  <span
+                    title={cfg.tooltip}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider border ${cfg.color} ${cfg.bg} ${cfg.border}`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.bg.replace('/20', '')}`} />
+                    {cfg.label}
+                  </span>
+                );
+              })()}
+              <span className="text-gray-600">&middot;</span>
               <span className="flex items-center gap-1.5 text-green-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                 Live
@@ -1144,11 +1271,12 @@ const CFODashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* Row 1b — Predictor v3 swap-in (A3 hard rule: never render
-              Wizard B legacy + Predictor v3 on the same screen).
-              Demo gate: customer_id === 395 until admin toggle ships. */}
+          {/* Row 1b — Predictor v3 expansion / at-risk tile.
+              Now data-gated (renders when v3 portfolio NRR is in the API
+              response) rather than hard-coded to cust 395. Any tenant with
+              a calibrated Wizard D fit will see this. */}
           {(() => {
-            const showPredictorV3 = (session?.customer_id === 395);
+            const showPredictorV3 = !!d.predictor_v3_portfolio_nrr;
             const profile: 'saas_enterprise' | 'saas_smb' =
               (session?.vertical === 'saas_premium') ? 'saas_enterprise' : 'saas_enterprise';
             if (showPredictorV3 && session) {
@@ -1167,8 +1295,8 @@ const CFODashboard: React.FC = () => {
           })()}
 
           {/* Row 1b (legacy): NRR Before/After + Cost of Inaction
-              — hidden when Predictor v3 is active, per A3. */}
-          {session?.customer_id !== 395 && (
+              — hidden when Predictor v3 is active. */}
+          {!d.predictor_v3_portfolio_nrr && (
           <div className="grid grid-cols-2 gap-4 mb-6">
             {/* Issue #11 fix (May 4 2026): "no lifecycle history" empty state.
                 When Wizard B has no closed lifecycle outcomes (delta = 0 + zero
