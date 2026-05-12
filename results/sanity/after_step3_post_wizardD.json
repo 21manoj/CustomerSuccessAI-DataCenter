@@ -1,0 +1,249 @@
+{
+  "captured_at": "2026-05-12 15:53:12 UTC",
+  "base_url": "http://3.94.106.197",
+  "customer_id": 333,
+  "frontend_bundle": "main.2482ef64.js",
+  "auth": "ok",
+  "cfo": {
+    "total_arr": 175370000.0,
+    "account_count": 30,
+    "proof_revenue_protected": 20360000.0,
+    "proof_revenue_expanded": 0.0,
+    "proof_total_cost": 880000.0,
+    "proof_realized_roi": 23.1,
+    "proof_executions_total": 16,
+    "proof_executions_resolved": 16,
+    "wb_with_cs_pulse_nrr_pct": 88.49,
+    "wb_without_cs_pulse_nrr_pct": 88.09,
+    "wb_delta_pct": 0.4,
+    "wb_arr_protected": 16990000.0,
+    "wb_accounts_saved": 3,
+    "wb_lens": "counterfactual_ttm",
+    "wb_engine": "wizard_b",
+    "v3_arr_weighted_nrr_pct": 102.39,
+    "v3_simple_avg_nrr_pct": 88.17,
+    "v3_account_count": 30,
+    "v3_active_account_count": 25,
+    "v3_lens": "point_forecast_ntm",
+    "v3_engine": "predictor_v3",
+    "v3_method_counts": {
+      "calibrated": 30
+    },
+    "ha_historical_nrr_pct_ttm": 90.21,
+    "ha_arr_churned": -33400000.0,
+    "ha_arr_expanded": 15990000.0,
+    "ha_arr_contracted": -3020000.0,
+    "ha_starting_arr_ttm": 208770000.0,
+    "ls_blended_roi": 14.7,
+    "ls_total_value": 28721724.0,
+    "ls_layer_names": [
+      "Already Delivered",
+      "Still Protectable",
+      "Growth (Po1 1%)"
+    ],
+    "ls_layer_values": [
+      20360000.0,
+      2236926.0,
+      6124797.0
+    ],
+    "ls_layer_rois": [
+      23.1,
+      54.5,
+      5.9
+    ]
+  },
+  "cro": {
+    "total_arr": 175370000.0,
+    "revenue_at_risk": 39945000.0,
+    "revenue_protected": 32520000.0,
+    "expansion_pipeline": 24460000.0,
+    "accounts_at_risk_count": 14,
+    "nrr_pct": null,
+    "grr_pct": null,
+    "playbook_roi_pct": 23.1
+  },
+  "ceo": {
+    "total_arr": null,
+    "avg_health_score": null,
+    "portfolio_nrr": null,
+    "total_accounts": null,
+    "total_at_risk": null
+  },
+  "csm_scorecard": {
+    "ok": true,
+    "top_keys": [
+      "csm_count",
+      "kpi_labels",
+      "pillar_labels",
+      "scorecards",
+      "vertical"
+    ],
+    "totals": {}
+  },
+  "daily_actions": {
+    "ok": true,
+    "top_keys": [
+      "actions",
+      "date",
+      "kpi_labels",
+      "pillar_labels",
+      "summary",
+      "vertical"
+    ],
+    "totals": {}
+  },
+  "health_summary": {
+    "ok": true,
+    "top_keys": [
+      "arr_exposure",
+      "arr_exposure_label",
+      "average_health",
+      "avg_health_simple",
+      "critical_accounts",
+      "health_avg_method",
+      "health_avg_method_label",
+      "health_distribution",
+      "healthy_accounts",
+      "kpi_labels",
+      "pillar_labels",
+      "risk_accounts",
+      "total_accounts",
+      "total_arr",
+      "vertical"
+    ],
+    "totals": {
+      "total_accounts": 30,
+      "total_arr": 175370000
+    }
+  },
+  "team_capacity": {
+    "ok": true,
+    "top_keys": [
+      "accounts_per_csm",
+      "active_csm_hours",
+      "active_playbooks",
+      "at_risk_accounts",
+      "csm_count",
+      "csm_names",
+      "kpi_labels",
+      "per_csm_breakdown",
+      "pillar_labels",
+      "recent_playbooks_90d",
+      "target_per_csm",
+      "total_accounts",
+      "total_arr",
+      "utilization_pct",
+      "vertical"
+    ],
+    "totals": {
+      "total_accounts": 30,
+      "total_arr": 175370000.0
+    }
+  },
+  "playbook_success_metrics": {
+    "ok": true,
+    "top_keys": [
+      "customer_id",
+      "playbooks",
+      "portfolio_summary",
+      "scope",
+      "total_executions"
+    ],
+    "totals": {}
+  },
+  "v3_top_expansion": {
+    "count": 5,
+    "top_5_account_names": [
+      "Polaris Cloud",
+      "Antares Holdings",
+      "Vega Software",
+      "Castor Systems",
+      "Pollux Corp"
+    ],
+    "top_5_arrs": [
+      20160000.0,
+      20625000.0,
+      13500000.0,
+      9660000.0,
+      12744000.0
+    ],
+    "top_5_expansion_lifts": [
+      1520077.0,
+      1455910.0,
+      1032628.0,
+      551661.0,
+      545178.0
+    ],
+    "top_5_nrr_points": [
+      1.048,
+      1.043,
+      1.048,
+      1.027,
+      1.013
+    ]
+  },
+  "v3_top_at_risk": {
+    "count": 5,
+    "top_5_account_names": [
+      "Antares Holdings",
+      "Polaris Cloud",
+      "Pollux Corp",
+      "Vega Software",
+      "Castor Systems"
+    ],
+    "top_5_arrs": [
+      20625000.0,
+      20160000.0,
+      12744000.0,
+      13500000.0,
+      9660000.0
+    ],
+    "top_5_expansion_lifts": [
+      1455910.0,
+      1520077.0,
+      545178.0,
+      1032628.0,
+      551661.0
+    ],
+    "top_5_nrr_points": [
+      1.043,
+      1.048,
+      1.013,
+      1.048,
+      1.027
+    ]
+  },
+  "v3_antares": {
+    "prediction_method": "calibrated",
+    "calibration_id": "wizard_d_19a8d76df3ac__saas_enterprise__hazard",
+    "expected_nrr_point": 1.043,
+    "p_churn_at_horizon": 0.008,
+    "p_survive_at_horizon": 0.992,
+    "e_expand_pct_given_survive": 0.071,
+    "expansion_expected_arr_lift": 1455910.0,
+    "top_drivers_count": 3
+  },
+  "askai_portfolio_nrr": {
+    "tools_called": [
+      "get_portfolio_nrr_forecast_v3"
+    ],
+    "response_first_300": "## Portfolio NRR Forecast: **102.4%** (12-Month Horizon)\n\nYour ARR-weighted portfolio NRR forecast is **102.4%** over the next 12 months, representing **$4.2M in net revenue growth** on your $175.4M ARR base.\n\n### Key Financial Insights:\n\n**Revenue Growth Projection:**\n- **Net Revenue Expansion**: $",
+    "has_100_5": false,
+    "has_88_5": false
+  },
+  "askai_antares": {
+    "tools_called": [
+      "list_accounts",
+      "get_account_nrr_forecast"
+    ],
+    "response_first_300": "## Antares Holdings NRR Forecast: 104.3% (Not 102%)\n\nBased on our **Predictor v3 model**, Antares Holdings is actually forecast at **104.3% NRR** over the next 12 months, not 102%. Here's the detailed breakdown:\n\n### **Forecast Components**\n- **Expected NRR**: 104.3% (90% CI: 99.3% - 109.3%)\n- **Chu",
+    "has_102_1": false
+  },
+  "admin_post_load_attribution": {
+    "status": "success",
+    "executions_updated": 16,
+    "total_revenue_protected": 20360000.0,
+    "total_cs_investment": 880000.0,
+    "realized_roi_multiplier": 23.1
+  }
+}
