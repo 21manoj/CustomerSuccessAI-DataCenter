@@ -268,12 +268,35 @@ def run_manifest(args):
     scenario = ScenarioManifest(client=client, args=scenario_args)
     result = scenario.run()
 
-    # Post-load attribution backfill — populates PlaybookExecutionV2
-    # revenue_protected / revenue_expanded from matching OUTCOME context_nodes.
-    # Without this, the CFO dashboard's "Revenue Protected" and "Portfolio ROI"
-    # tiles report $0 / 0x because the close-playbook auto-compute returns 0
-    # when synthetic health_at_close <= health_at_trigger.
+    # Post-load steps — both required for a fresh tenant to have
+    # working CFO dashboard tiles and audit-grade per-account NRR forecast.
+    # Run in this order:
+    #   (1) Wizard D recalibration — fits Predictor v3 coefficients from
+    #       the new panel. Without this, /api/v1/predictor/... returns
+    #       prediction_method='cold_start' (CDI seed priors only).
+    #   (2) Post-load attribution backfill — populates
+    #       PlaybookExecutionV2.revenue_protected / total_cost from matching
+    #       OUTCOME context_nodes and the tiered ARR-band cost table.
+    #       Without this, CFO "Revenue Protected" + "Portfolio ROI" tiles
+    #       show $0 / 0x because the close-playbook auto-compute returns 0
+    #       when synthetic health_at_close <= health_at_trigger.
+    # Both are non-fatal — warning logged if either fails.
     if result.get('status') == 'success':
+        # (1) Calibrate Predictor v3 on the new tenant's panel
+        try:
+            wd = client.trigger_wizard_d_recalibration(int(customer_id))
+            if wd:
+                fits = wd.get('fits_by_status', {})
+                logger.info(
+                    f"  Wizard D: "
+                    f"{wd.get('sub_models_calibrated', 0)} sub-models · "
+                    f"fits={fits} · "
+                    f"duration={wd.get('duration_seconds', 0)}s"
+                )
+        except Exception as e:
+            logger.warning(f"  Wizard D recalibration failed (non-fatal): {e}")
+
+        # (2) Backfill PB attribution + tiered cost
         try:
             attribution = client.backfill_playbook_attribution(int(customer_id))
             if attribution:
@@ -281,7 +304,8 @@ def run_manifest(args):
                     f"  Attribution backfill: "
                     f"{attribution.get('executions_updated', 0)} executions, "
                     f"${attribution.get('total_revenue_protected', 0):,.0f} protected, "
-                    f"${attribution.get('total_revenue_expanded', 0):,.0f} expanded"
+                    f"${attribution.get('total_cs_investment', 0):,.0f} cost, "
+                    f"{attribution.get('realized_roi_multiplier', 0)}x ROI"
                 )
         except Exception as e:
             logger.warning(f"  Attribution backfill failed (non-fatal): {e}")

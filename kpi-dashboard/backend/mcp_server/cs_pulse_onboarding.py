@@ -2100,6 +2100,23 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
                 result_summary = wiz_result
                 result_summary['return_code'] = 0
 
+            elif wizard == 'd':
+                # Predictor v3 calibrator. Required after any onboarding /
+                # data refresh — without it, predict_for_account_id falls
+                # back to CDI seed priors (prediction_method='cold_start')
+                # and per-account NRR forecasts are non-tenant-specific.
+                try:
+                    from wizards.wizard_d_predictor_calibrator import run_wizard_d
+                    wiz_result = run_wizard_d(customer_ids=[customer_id])
+                    result_summary = wiz_result
+                    # run_wizard_d returns 'status' not 'return_code'
+                    result_summary['return_code'] = (
+                        0 if wiz_result.get('status') == 'completed' else 1
+                    )
+                except Exception as wd_err:
+                    result_summary['error'] = str(wd_err)
+                    result_summary['return_code'] = 1
+
             run.status = 'completed' if result_summary.get('return_code', 1) == 0 else 'failed'
             run.completed_at = datetime.utcnow()
             run.results = result_summary

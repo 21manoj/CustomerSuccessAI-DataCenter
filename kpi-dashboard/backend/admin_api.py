@@ -1050,6 +1050,75 @@ def get_stuck_users():
 
 
 # ============================================================
+# WIZARD D — Predictor v3 calibrator (admin-trigger)
+# ============================================================
+
+@admin_bp.route('/wizard-d/recalibrate', methods=['POST'])
+def trigger_wizard_d_recalibration():
+    """
+    POST /api/admin/wizard-d/recalibrate
+
+    Run Wizard D to refit the 4 Predictor v3 sub-models (hazard,
+    contraction, expansion_event, expansion_size) from the current panel
+    and write coefficients to predictor_calibrations.
+
+    Required after onboarding / data refresh — without it, the per-account
+    NRR forecast endpoints (/api/v1/predictor/...) return prediction_method
+    = 'cold_start' (CDI seed priors only, not tenant-specific).
+
+    Optional body: {"customer_id": <int>}; defaults to session customer_id.
+    Returns the Wizard D run summary including fits_by_status and
+    sub_models_calibrated.
+
+    Mirrors /api/admin/wizard-c/recalibrate. Idempotent — safe to re-run.
+    """
+    import time as _time
+    try:
+        body = request.get_json(silent=True) or {}
+        customer_id = body.get('customer_id') or get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'customer_id required (in body or session)'}), 400
+        customer_id = int(customer_id)
+
+        current_app.logger.info(
+            f'Wizard D recalibration triggered for customer {customer_id}'
+        )
+
+        from wizards.wizard_d_predictor_calibrator import run_wizard_d
+        t0 = _time.time()
+        result = run_wizard_d(customer_ids=[customer_id])
+        duration = round(_time.time() - t0, 2)
+
+        current_app.logger.info(
+            f"✅ Wizard D completed in {duration}s — "
+            f"status={result.get('status')} "
+            f"sub_models={result.get('sub_models_calibrated')} "
+            f"fits={result.get('fits_by_status')}"
+        )
+
+        return jsonify({
+            'status': result.get('status', 'unknown'),
+            'customer_id': customer_id,
+            'sub_models_calibrated': result.get('sub_models_calibrated', 0),
+            'fits_by_status': result.get('fits_by_status', {}),
+            'panel_summary': result.get('panel_summary', {}),
+            'run_id': result.get('run_id'),
+            'duration_seconds': duration,
+            'message': (
+                f'Calibrated {result.get("sub_models_calibrated", 0)} sub-models. '
+                f'Per-account NRR forecast (/api/v1/predictor/...) now uses '
+                f'calibrated coefficients for customer {customer_id}.'
+            ),
+        })
+
+    except Exception as e:
+        current_app.logger.error(
+            f'Wizard D recalibration failed: {e}', exc_info=True
+        )
+        return jsonify({'error': 'An internal error occurred. Please try again or contact support.'}), 500
+
+
+# ============================================================
 # POST-LOAD ATTRIBUTION
 # ============================================================
 

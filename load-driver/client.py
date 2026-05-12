@@ -788,6 +788,42 @@ class CSPulseClient:
         """Get context graph summary (node counts, edge counts, revenue) for an account."""
         return self.get('/api/context-graph/summary', params={'account_id': account_id})
 
+    def trigger_wizard_d_recalibration(
+        self,
+        customer_id: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Run Wizard D (Predictor v3 calibrator) on the platform.
+
+        Refits the 4 GLMM sub-models (hazard, contraction, expansion_event,
+        expansion_size) from the current panel and writes coefficients to
+        predictor_calibrations. Required after manifest load — without it,
+        Predictor v3 inference returns prediction_method='cold_start' and
+        per-account NRR forecasts are not tenant-specific.
+
+        Idempotent — safe to re-run; deactivates old calibrations and
+        marks the new run as active.
+
+        Returns:
+            dict with sub_models_calibrated, fits_by_status, run_id,
+            duration_seconds; or None if the API call failed.
+        """
+        cid = customer_id or self.customer_id
+        body = {'customer_id': int(cid)} if cid is not None else {}
+        resp = self.post('/api/admin/wizard-d/recalibrate', body)
+        if resp:
+            logger.info(
+                f"Wizard D recalibration: customer {cid} — "
+                f"status={resp.get('status')} "
+                f"sub_models={resp.get('sub_models_calibrated', 0)} "
+                f"fits={resp.get('fits_by_status', {})} "
+                f"duration={resp.get('duration_seconds', 0)}s"
+            )
+        else:
+            logger.warning(
+                f"Wizard D recalibration call failed for customer {cid}"
+            )
+        return resp
+
     def backfill_playbook_attribution(
         self,
         customer_id: Optional[int] = None,

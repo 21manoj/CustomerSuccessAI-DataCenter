@@ -1225,7 +1225,7 @@ def cfo_dashboard():
         except Exception as e:
             logger.warning(f"CFO proof_data computation failed: {e}")
 
-        # ── WIZARD B NRR: actual portfolio forecast ──
+        # ── WIZARD B NRR: backward counterfactual (with/without CS Pulse) ──
         wizard_b_nrr = None
         try:
             from wizards.wizard_b_pattern_db import run_wizard_b
@@ -1243,9 +1243,85 @@ def cfo_dashboard():
                     'intervention_delta_arr': forecast.get('delta_arr', 0),
                     'grr_before_pct': grr_data.get('grr_before_pct'),
                     'grr_after_pct': grr_data.get('grr_after_pct'),
+                    # Lens metadata — helps the frontend label this card
+                    # correctly vs. predictor_v3_portfolio_nrr below.
+                    'lens': 'counterfactual_ttm',
+                    'engine': 'wizard_b',
+                    'time_direction': 'backward',
                 }
         except Exception as e:
             logger.warning(f"CFO wizard_b_nrr computation failed: {e}")
+
+        # ── PREDICTOR v3 PORTFOLIO NRR: forward point forecast ──
+        # ARR-weighted aggregate of per-account predict_for_account_id over
+        # the 12mo horizon. Drives the "Forecast NRR — Next 12mo" tile.
+        # Coexists with wizard_b_nrr above by design — different lens, see
+        # SIGNAL_TO_NRR_AUDIT_NARRATIVE.md for the role split.
+        predictor_v3_portfolio_nrr = None
+        try:
+            from predictor.inference import predict_for_account_id
+            from models import PredictorCalibration
+
+            v3_rows = []
+            v3_failed = 0
+            for a in accounts:
+                try:
+                    pred = predict_for_account_id(
+                        account_id=a.account_id, horizon='12mo'
+                    )
+                    v3_rows.append({
+                        'account_id': a.account_id,
+                        'account_name': a.account_name,
+                        'arr': float(a.revenue or 0),
+                        'nrr_point': pred['expected_nrr']['point'],
+                        'method': pred.get('prediction_method', '?'),
+                    })
+                except Exception:
+                    v3_failed += 1
+
+            if v3_rows:
+                v3_total_arr = sum(r['arr'] for r in v3_rows)
+                arr_weighted = (
+                    sum(r['arr'] * r['nrr_point'] for r in v3_rows) / v3_total_arr
+                    if v3_total_arr > 0 else 0
+                )
+                simple_avg = sum(r['nrr_point'] for r in v3_rows) / len(v3_rows)
+                method_counts: dict[str, int] = {}
+                for r in v3_rows:
+                    method_counts[r['method']] = method_counts.get(r['method'], 0) + 1
+
+                latest_cal = (
+                    PredictorCalibration.query
+                    .filter(PredictorCalibration.is_active == True)  # noqa: E712
+                    .order_by(PredictorCalibration.created_at.desc())
+                    .first()
+                )
+                predictor_v3_portfolio_nrr = {
+                    'arr_weighted_nrr_pct': round(arr_weighted * 100, 2),
+                    'simple_avg_nrr_pct': round(simple_avg * 100, 2),
+                    'horizon': '12mo',
+                    'account_count': len(v3_rows),
+                    'active_account_count': sum(1 for r in v3_rows if r['arr'] > 0),
+                    'failed_count': v3_failed,
+                    'prediction_method_counts': method_counts,
+                    'last_calibration_id': latest_cal.calibration_id if latest_cal else None,
+                    'last_calibration_at': (
+                        latest_cal.created_at.isoformat() if latest_cal else None
+                    ),
+                    # Lens metadata
+                    'lens': 'point_forecast_ntm',
+                    'engine': 'predictor_v3',
+                    'time_direction': 'forward',
+                    'method_note': (
+                        'ARR-weighted average of per-account expected_nrr. '
+                        'Excludes $0-ARR accounts from weight (typically '
+                        'already-churned). simple_avg counts all equally. '
+                        'Differs from wizard_b_nrr by design — forward vs '
+                        'backward, point vs counterfactual.'
+                    ),
+                }
+        except Exception as e:
+            logger.warning(f"CFO predictor_v3_portfolio_nrr computation failed: {e}")
 
         return jsonify({
             'status': 'success',
@@ -1253,8 +1329,10 @@ def cfo_dashboard():
             'account_count': len(accounts),
             # ── PROOF: actual playbook economics ──
             'proof_data': proof_data,
-            # ── WIZARD B: actual NRR forecast ──
+            # ── WIZARD B: backward counterfactual (with vs without CS Pulse) ──
             'wizard_b_nrr': wizard_b_nrr,
+            # ── PREDICTOR v3: forward point forecast (per-account aggregated) ──
+            'predictor_v3_portfolio_nrr': predictor_v3_portfolio_nrr,
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
