@@ -1086,16 +1086,30 @@ def trigger_post_load_attribution():
         from utils.post_load_attribution import backfill_playbook_attribution
         n_updated, total_prot, total_exp = backfill_playbook_attribution(customer_id)
 
+        # Re-pull the recomputed cost so the response includes the new total
+        # CS investment + realized ROI (both surface on CFO dashboard tiles).
+        from extensions import db
+        from sqlalchemy import text as _text
+        cost_row = db.session.execute(_text(
+            "SELECT COALESCE(SUM(total_cost), 0) FROM playbook_executions_v2 WHERE customer_id = :cust"
+        ), {'cust': customer_id}).fetchone()
+        total_cost = float(cost_row[0] or 0) if cost_row else 0.0
+        realized_roi = round((total_prot + total_exp) / max(total_cost, 1), 1)
+
         return jsonify({
             'status': 'success',
             'customer_id': customer_id,
             'executions_updated': n_updated,
             'total_revenue_protected': round(total_prot, 0),
             'total_revenue_expanded': round(total_exp, 0),
+            'total_cs_investment': round(total_cost, 0),
+            'realized_roi_multiplier': realized_roi,
             'message': (
                 f'Backfilled {n_updated} playbook executions: '
                 f'${total_prot:,.0f} revenue_protected, '
-                f'${total_exp:,.0f} revenue_expanded'
+                f'${total_exp:,.0f} revenue_expanded, '
+                f'${total_cost:,.0f} CS investment, '
+                f'{realized_roi}x realized ROI'
             ),
         })
 

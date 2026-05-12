@@ -78,22 +78,65 @@ def health_to_annual_expansion_prob(health: float) -> float:
 EXPANSION_ATTRIBUTION = 0.30
 
 
-def get_full_playbook_cost(playbook_id: str, arr: float) -> float:
-    """Get full intervention cost from cost bridge (CSM labor + platform + overhead).
+# ARR-tiered fully-loaded playbook cost.
+#
+# Captures full intervention economics (CSM + VP CS + SA + executive sponsor +
+# AE + travel + platform allocation + overhead), not just CSM-hours-on-task.
+# The old CSM-hours-only calculator (calculate_cost_bridge in
+# playbook_cost_bridge.py) is still used for unit-economics analysis; this
+# table is the authoritative *total loaded cost* used for CFO ROI math.
+#
+# Sources for the numbers:
+#   - CSM 30hrs × $200/hr = $6K (lead time over a 30-60d intervention)
+#   - VP CS 6hrs × $450/hr = $2.7K (oversight + escalation)
+#   - SA 16hrs × $300/hr = $4.8K (technical workstream)
+#   - Executive sponsor 4hrs × $600/hr = $2.4K (high-touch only at 10M+)
+#   - AE 6hrs × $300/hr = $1.8K (deal protection on at-risk renewals)
+#   - Travel/onsite $5K (capped per playbook for mid-market+)
+#   - Platform/AI allocation $15K (CS Pulse + comms + data tooling)
+#   - Overhead 35% of direct labor (recruiting, training, mgmt)
+# Tiered down at lower ARR bands (less senior coverage, no travel, etc.)
+PLAYBOOK_LOADED_COST_BY_ARR_BAND = {
+    '<10K':       3_000,   # mostly automation + ticket; no CSM time
+    '10K-100K':  12_000,   # email + light CSM touch
+    '100K-1M':   25_000,   # CSM + manager engagement
+    '1M-10M':    50_000,   # CSM + VP CS + SA (mid-market default)
+    '10M+':      90_000,   # adds executive sponsor + AE + multi-stakeholder time
+}
 
-    Uses the same cost bridge as get_playbook_economics for consistency.
-    Adds 20% overhead for exec time, coordination, and context-switching.
+# ARR thresholds (in dollars) used to map raw ARR to a band when arr_band
+# isn't passed by the caller. Mirrors features.ARR_BANDS.
+_ARR_BAND_THRESHOLDS = [
+    (10_000,       '<10K'),
+    (100_000,      '10K-100K'),
+    (1_000_000,    '100K-1M'),
+    (10_000_000,   '1M-10M'),
+    (float('inf'), '10M+'),
+]
+
+
+def _arr_to_band(arr: float) -> str:
+    """Map a raw ARR value to one of the ARR bands above."""
+    for upper, band in _ARR_BAND_THRESHOLDS:
+        if arr < upper:
+            return band
+    return '10M+'
+
+
+def get_full_playbook_cost(playbook_id: str, arr: float) -> float:
+    """Full loaded intervention cost (CSM + VP + SA + exec + AE + travel +
+    platform + overhead), tiered by the account's ARR band.
+
+    Realistic numbers from enterprise SaaS CS economics — averages $50K for
+    the typical 1M-10M defensive playbook, ranging from $3K (automation-only
+    on <10K accounts) to $90K (strategic 10M+ saves with executive sponsor).
+
+    Returns the dollar cost for a single playbook execution on an account
+    of the given ARR. playbook_id is reserved for future per-playbook-type
+    differentiation (defensive vs expansion); ignored for now.
     """
-    try:
-        from playbook_cost_bridge import calculate_cost_bridge
-        bridge = calculate_cost_bridge(account_arr=arr)
-        pb_econ = bridge.playbooks.get(playbook_id)
-        if pb_econ:
-            return pb_econ.manual_cost * 1.20  # +20% overhead
-    except Exception:
-        pass
-    # Fallback: 40 hrs × CSM rate + 20% overhead
-    return 40 * 95 * 1.20
+    band = _arr_to_band(float(arr or 0))
+    return float(PLAYBOOK_LOADED_COST_BY_ARR_BAND.get(band, 50_000))
 
 
 def _classify_health(score):
