@@ -59,6 +59,7 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+!backend/.env.example
 
 # Temporary deployment files
 kpi-dashboard-key.pem

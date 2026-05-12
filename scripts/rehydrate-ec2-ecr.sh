@@ -103,6 +103,14 @@ ssh -o StrictHostKeyChecking=no -i "$KEY_FILE" "ec2-user@${PUBLIC_IP}" "set -e
   if ! grep -q '^REGISTRY=' .env 2>/dev/null; then
     echo 'REGISTRY=${REGISTRY}' >> .env
   fi
+  # Session cookie Secure flag — for direct-IP HTTP demo access, the platform
+  # container must NOT mark the cookie as Secure (browsers drop Secure cookies
+  # over HTTP, breaking login). CloudFront still terminates HTTPS at the edge
+  # for visitors using the d2oqfugrb2ltg9.cloudfront.net URL, so end-to-end
+  # secure access remains possible via CloudFront.
+  if ! grep -q '^SESSION_COOKIE_SECURE=' .env 2>/dev/null; then
+    echo 'SESSION_COOKIE_SECURE=false' >> .env
+  fi
   sudo docker login --username AWS --password-stdin ${REGISTRY} < .ecr-token && rm -f .ecr-token
   sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml pull
   sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loaddriver.yml -f docker-compose.ec2-platform-replica.yml up -d
