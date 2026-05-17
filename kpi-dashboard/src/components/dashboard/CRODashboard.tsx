@@ -132,6 +132,28 @@ interface HealthTransition {
   arr: number;
 }
 
+// CRO-7: per-account monthly history needed for QoQ / YoY at-risk ARR
+// comparison. We sum at-risk ARR per quarter from monthly_scores rather
+// than building a new aggregation endpoint — single source of truth.
+interface MonthlyScore {
+  month: string;        // 'YYYY-MM'
+  health_score: number;
+  status: 'healthy' | 'at_risk' | 'critical';
+  change?: number;
+  pillars?: Record<string, number>;
+}
+
+interface AccountHistory {
+  account_id: number;
+  account_name: string;
+  arr: number;
+  current_health: number;
+  starting_health: number;
+  net_change: number;
+  trajectory: 'improving' | 'declining' | 'stable';
+  monthly_scores: MonthlyScore[];
+}
+
 interface CRODashboardData {
   revenue_cards: RevenueCard[];
   metrics: MetricCard[];
@@ -667,6 +689,192 @@ const TransitionAlertBanner: React.FC<{
   );
 };
 
+// ============================================================================
+// CRO-7: Quarterly At-Risk ARR Comparison
+// ============================================================================
+// Two-column tile: "This quarter vs last quarter" + "This quarter vs same
+// quarter last year". Sums ARR for accounts whose health_score < healthy_min
+// (70) in the latest available month of each quarter. Uses raw monthly_scores
+// from /api/v1/health-score-history rather than a separate aggregation
+// endpoint — simpler, single source of truth, no new API.
+
+interface QuarterlyAtRisk {
+  label: string;       // 'Q4 2025' etc
+  arr: number;
+  accountCount: number;
+  // Whether this quarter has data (≥1 month present in monthly_scores).
+  // If false, render N/A instead of $0 — avoids implying a real zero.
+  hasData: boolean;
+}
+
+function computeQuarterlyAtRisk(
+  accounts: AccountHistory[]
+): { current: QuarterlyAtRisk; lastQuarter: QuarterlyAtRisk; yearAgo: QuarterlyAtRisk } {
+  // thresholdValues() is the canonical source of truth for healthy_min (70).
+  // Hardcoding is explicitly forbidden per MEMORY.md threshold guidance.
+  const healthyMin = thresholdValues().healthy_min;
+  // Anchor "this quarter" on the latest month across all accounts.
+  const allMonths = new Set<string>();
+  for (const acc of accounts) {
+    for (const ms of acc.monthly_scores || []) allMonths.add(ms.month);
+  }
+  const sortedMonths = Array.from(allMonths).sort();
+  const latestMonth = sortedMonths[sortedMonths.length - 1];
+
+  const empty: QuarterlyAtRisk = { label: 'N/A', arr: 0, accountCount: 0, hasData: false };
+  if (!latestMonth) {
+    return { current: empty, lastQuarter: empty, yearAgo: empty };
+  }
+
+  const [yStr, mStr] = latestMonth.split('-');
+  const latestY = Number(yStr);
+  const latestM = Number(mStr); // 1-12
+  const currentQ = Math.ceil(latestM / 3); // 1-4
+
+  const currentBucket = { y: latestY, q: currentQ };
+  const lastQ = currentQ === 1 ? 4 : currentQ - 1;
+  const lastY = currentQ === 1 ? latestY - 1 : latestY;
+  const lastBucket = { y: lastY, q: lastQ };
+  const yearAgoBucket = { y: latestY - 1, q: currentQ };
+
+  const qLabel = (b: { y: number; q: number }) => `Q${b.q} ${b.y}`;
+
+  const monthsInQuarter = (b: { y: number; q: number }) => {
+    const startM = (b.q - 1) * 3 + 1;
+    return [startM, startM + 1, startM + 2].map(
+      (m) => `${b.y}-${String(m).padStart(2, '0')}`
+    );
+  };
+
+  // For each bucket, find the LATEST month within the quarter we have data
+  // for, per account. Snapshot at that month so within-quarter sampling is
+  // consistent across buckets (no double-counting if multiple months exist).
+  const snapshotForBucket = (b: { y: number; q: number }): QuarterlyAtRisk => {
+    const candidateMonths = monthsInQuarter(b).reverse(); // latest in quarter first
+    let totalAtRiskArr = 0;
+    let atRiskCount = 0;
+    let anyDataFound = false;
+    for (const acc of accounts) {
+      let scoreInQuarter: MonthlyScore | null = null;
+      for (const m of candidateMonths) {
+        const ms = (acc.monthly_scores || []).find((x) => x.month === m);
+        if (ms) {
+          scoreInQuarter = ms;
+          anyDataFound = true;
+          break;
+        }
+      }
+      if (scoreInQuarter && scoreInQuarter.health_score < healthyMin) {
+        totalAtRiskArr += acc.arr || 0;
+        atRiskCount += 1;
+      }
+    }
+    return {
+      label: qLabel(b),
+      arr: totalAtRiskArr,
+      accountCount: atRiskCount,
+      hasData: anyDataFound,
+    };
+  };
+
+  return {
+    current: snapshotForBucket(currentBucket),
+    lastQuarter: snapshotForBucket(lastBucket),
+    yearAgo: snapshotForBucket(yearAgoBucket),
+  };
+}
+
+const QuarterlyAtRiskTile: React.FC<{
+  accounts: AccountHistory[];
+  loading: boolean;
+  monthsAvailable: number;
+}> = ({ accounts, loading, monthsAvailable }) => {
+  const stats = React.useMemo(() => computeQuarterlyAtRisk(accounts), [accounts]);
+
+  const renderDelta = (curr: number, ref: QuarterlyAtRisk) => {
+    if (!ref.hasData) {
+      return (
+        <p className="text-[10px] text-gray-500 italic">
+          N/A — only {monthsAvailable} month{monthsAvailable === 1 ? '' : 's'} of history available
+        </p>
+      );
+    }
+    const delta = curr - ref.arr;
+    const pct = ref.arr > 0 ? (delta / ref.arr) * 100 : 0;
+    const up = delta > 0;
+    const flat = Math.abs(delta) < 1;
+    const arrow = flat ? '→' : up ? '↑' : '↓';
+    // At-risk going UP is BAD (red); down is GOOD (green).
+    const color = flat ? 'text-gray-400' : up ? 'text-red-400' : 'text-green-400';
+    return (
+      <p className={`text-[11px] font-medium ${color}`}>
+        {arrow} {formatCompact(Math.abs(delta))} ({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%) vs {ref.label}
+      </p>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 mb-4">
+        <SkeletonLine w="w-1/3" />
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <SkeletonCard className="h-20" />
+          <SkeletonCard className="h-20" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats.current.hasData) {
+    // No history at all — hide rather than render zeros.
+    return null;
+  }
+
+  return (
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 mb-4 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500" />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+          <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">
+            Revenue at Risk · Quarterly Trend
+          </h3>
+        </div>
+        <span
+          className="text-[9px] text-gray-600 italic cursor-help"
+          title="At-risk ARR = total revenue of accounts with health < 70 at the end of each quarter. Snapshot at the latest available month within each quarter. QoQ = prior quarter. YoY = same quarter, prior year."
+        >
+          end-of-quarter snapshot
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {/* QoQ */}
+        <div className="bg-gray-800/30 rounded-lg p-3">
+          <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-1">
+            This Q ({stats.current.label}) vs Last Q
+          </p>
+          <p className="text-xl font-bold text-red-400">{formatCompact(stats.current.arr)}</p>
+          <p className="text-[10px] text-gray-500 mb-1">
+            {stats.current.accountCount} at-risk account{stats.current.accountCount === 1 ? '' : 's'}
+          </p>
+          {renderDelta(stats.current.arr, stats.lastQuarter)}
+        </div>
+        {/* YoY */}
+        <div className="bg-gray-800/30 rounded-lg p-3">
+          <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-1">
+            This Q ({stats.current.label}) vs Same Q Last Year
+          </p>
+          <p className="text-xl font-bold text-red-400">{formatCompact(stats.current.arr)}</p>
+          <p className="text-[10px] text-gray-500 mb-1">
+            {stats.current.accountCount} at-risk account{stats.current.accountCount === 1 ? '' : 's'}
+          </p>
+          {renderDelta(stats.current.arr, stats.yearAgo)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /** Risk account card with expandable pillar breakdown + action buttons */
 const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void; onDraftEmail?: (account: RiskAccount) => void }> = ({ account, onClick, onDraftEmail }) => {
   const [showPillars, setShowPillars] = React.useState(false);
@@ -922,6 +1130,14 @@ const CRODashboard: React.FC = () => {
   const [historyTransitions, setHistoryTransitions] = useState<HealthTransition[]>([]);
   const [dismissedTransitionKeys, setDismissedTransitionKeys] = useState<Set<string>>(new Set());
 
+  // CRO-7: per-account monthly history powers the QoQ + YoY at-risk ARR
+  // tile. Same /api/v1/health-score-history fetch as CRO-6 (one network
+  // call). historyMonthsAvailable lets the YoY tile show "N/A — only X
+  // months" instead of $0 for tenants without 12 months of history.
+  const [historyAccounts, setHistoryAccounts] = useState<AccountHistory[]>([]);
+  const [historyMonthsAvailable, setHistoryMonthsAvailable] = useState<number>(0);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(true);
+
   // Update URL when view changes
   const handleViewChange = useCallback((view: ViewId) => {
     trackEvent('dashboard_switch', `cro_${view}`, { persona: 'cro', view });
@@ -1032,14 +1248,15 @@ const CRODashboard: React.FC = () => {
     return () => { cancelled = true; };
   }, [session]);
 
-  // CRO-6: fetch 12 months of health-score history for transition alerts.
-  // Endpoint /api/v1/health-score-history is vertical-agnostic (works for
-  // SaaS Premium + DC2S, backed by the DC2S handler which queries by
-  // customer_id). Non-fatal on failure: banner just won't render, main
-  // dashboard continues to work.
+  // CRO-6 + CRO-7: fetch 12 months of health-score history powers both
+  // transition alerts and QoQ/YoY at-risk ARR comparison. Endpoint
+  // /api/v1/health-score-history is vertical-agnostic (works for SaaS
+  // Premium + DC2S, backed by the DC2S handler which queries by
+  // customer_id). Non-fatal on failure: tile + banner just won't render.
   useEffect(() => {
     let cancelled = false;
     const fetchHistory = async () => {
+      setHistoryLoading(true);
       try {
         const customerId = getCustomerIdentifier(session);
         const resp = await apiCall('/api/v1/health-score-history?months=12', {
@@ -1051,10 +1268,23 @@ const CRODashboard: React.FC = () => {
         const json = await resp.json();
         if (cancelled) return;
         setHistoryTransitions((json.transitions || []) as HealthTransition[]);
+        setHistoryAccounts((json.accounts || []) as AccountHistory[]);
+        // Months actually available = max length across accounts. Used by
+        // the YoY tile to show "N/A — only X months of history" rather
+        // than silently rendering zeros for tenants without 12 months.
+        const maxMonths = (json.accounts || []).reduce(
+          (m: number, a: AccountHistory) => Math.max(m, (a.monthly_scores || []).length),
+          0
+        );
+        setHistoryMonthsAvailable(maxMonths);
       } catch {
         if (!cancelled) {
           setHistoryTransitions([]);
+          setHistoryAccounts([]);
+          setHistoryMonthsAvailable(0);
         }
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
       }
     };
     fetchHistory();
@@ -1258,6 +1488,15 @@ const CRODashboard: React.FC = () => {
               <RevenueCardComponent key={i} card={card} riskAccounts={i === 0 ? d.risk_accounts : undefined} />
             ))}
           </div>
+
+          {/* CRO-7: QoQ + YoY at-risk ARR comparison. Sits just under the
+              Revenue at Risk card so the CRO has trend context without
+              hunting for it. Hides cleanly if no history available. */}
+          <QuarterlyAtRiskTile
+            accounts={historyAccounts}
+            loading={historyLoading}
+            monthsAvailable={historyMonthsAvailable}
+          />
 
           {/* Predictor v3 — top expansion + top at-risk per-account forecast.
               Renders for any tenant with a calibrated Wizard D fit.
