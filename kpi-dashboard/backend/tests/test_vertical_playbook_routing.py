@@ -179,3 +179,47 @@ def test_get_playbook_economics_single_lookup_routes_by_vertical():
         "SaaS cost bridge silently returned DC2S playbook PB-01 — "
         "this would re-introduce bug B-5."
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# /api/v1/recommendations/<account_id> HTTP wiring
+#
+# The CSMCockpit drawer hits this endpoint when a CSM drills into an account.
+# Before this fix it always invoked verticals.dc2_s.api_routes.get_dc2s_recommendations
+# (DC2S-only), so SaaS tenants got an empty list and the drawer fell back to
+# MOCK_RECOMMENDATIONS. Pin that the wiring now routes through the
+# vertical-aware engine.
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def test_v1_recommendations_route_uses_vertical_aware_engine():
+    """The /api/v1/recommendations/<account_id> handler must delegate to
+    playbook_recommendations_api.get_recommendations_for_account (which is
+    vertical-aware after PR #26), not to verticals.dc2_s.api_routes.
+
+    Source-level assertion: cheaper than spinning up a Flask test client
+    + DB, and catches the regression where someone reverts the dispatch
+    line back to `get_dc2s_recommendations`.
+    """
+    import inspect
+    import api_v1_routes
+
+    src = inspect.getsource(api_v1_routes.v1_recommendations)
+    assert 'get_recommendations_for_account' in src, (
+        "/api/v1/recommendations/<id> must call get_recommendations_for_account "
+        "so SaaS tenants get activation-blitz / voc-sprint / renewal-safeguard "
+        "instead of falling through to the DC2S-only handler."
+    )
+    # Ensure the handler doesn't import or invoke get_dc2s_recommendations.
+    # The string can appear in the docstring (explaining the regression we
+    # closed), so we check for a function call shape specifically.
+    assert 'get_dc2s_recommendations(' not in src, (
+        "/api/v1/recommendations/<id> must NOT call get_dc2s_recommendations — "
+        "that DC2S-only handler ignores the tenant's vertical and returns "
+        "PB-01..PB-06 for SaaS tenants (bug B-4 regression)."
+    )
+    assert 'import get_dc2s_recommendations' not in src, (
+        "/api/v1/recommendations/<id> must not import the DC2S-only handler — "
+        "use playbook_recommendations_api.get_recommendations_for_account, "
+        "which is vertical-aware."
+    )

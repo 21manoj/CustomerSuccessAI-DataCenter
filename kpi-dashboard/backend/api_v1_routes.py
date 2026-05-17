@@ -148,9 +148,121 @@ def v1_daily_actions():
 
 @api_v1.route('/recommendations/<int:account_id>')
 def v1_recommendations(account_id):
-    """Playbook recommendations for an account — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_dc2s_recommendations
-    return _dispatch('recommendations', get_dc2s_recommendations, account_id=account_id)
+    """Playbook recommendations for an account — vertical-aware.
+
+    Routes through ``playbook_recommendations_api.get_recommendations_for_account``
+    so SaaS Premium tenants (and any non-DC2S vertical) get the SaaS playbook
+    catalog (``activation-blitz``, ``voc-sprint``, ``renewal-safeguard``, ...)
+    instead of falling through to the DC2S-only ``get_dc2s_recommendations``
+    handler, which only knows about ``PB-01``..``PB-06``.
+
+    Response shape (normalized for CSMCockpit drill drawer):
+      {
+        "account_id": int,
+        "account_name": str,
+        "vertical": "saas_premium" | "dc2_s" | ...,
+        "overall_health": float | null,
+        "recommendations": [
+          {
+            "playbook_id": "activation-blitz" | "PB-01" | ...,
+            "playbook_name": "Activation Blitz",
+            "priority": "critical" | "high" | "medium",
+            "reasons": [...],
+            "rationale": "<one-line summary>",
+            ...
+          },
+          ...
+        ],
+        "total": int
+      }
+    """
+    customer_id = get_current_customer_id()
+    if not customer_id:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    try:
+        from models import Account
+        from playbook_recommendations_api import get_recommendations_for_account
+        from utils.vertical_health import (
+            get_health_calculator,
+            get_trailing_kpi_values_func,
+            get_precalculated_scores,
+        )
+
+        account = Account.query.filter_by(
+            account_id=account_id,
+            customer_id=int(customer_id),
+        ).first()
+        if not account:
+            return jsonify({'error': 'Account not found'}), 404
+
+        # Build kpi_values + health for the DC2S evaluator branch.
+        # SaaS-path evaluators in get_recommendations_for_account ignore
+        # kpi_values (they read the DB themselves), so it's safe to pass.
+        _get_trailing_kpi_values = get_trailing_kpi_values_func(int(customer_id))
+        calculate_kpi_health = get_health_calculator(int(customer_id))
+        kpi_values = _get_trailing_kpi_values(account_id) or {}
+        precalc_health, _, _ = get_precalculated_scores(account_id)
+        if precalc_health is not None:
+            health = float(precalc_health)
+        else:
+            try:
+                health, _ = calculate_kpi_health(kpi_values, int(customer_id))
+            except Exception:
+                health = None
+
+        raw = get_recommendations_for_account(
+            account_id=account_id,
+            customer_id=int(customer_id),
+            health_score=health,
+            kpi_values=kpi_values,
+        )
+
+        # Normalize the response so CSMCockpit's drill drawer renders the
+        # same fields whether the tenant is DC2S or SaaS-flavored. The
+        # vertical-aware engine emits ``urgency_level`` ("Critical"/"High"/
+        # "Medium"); DC2S API previously emitted lowercase ``priority``.
+        recs_in = raw.get('recommendations', []) if isinstance(raw, dict) else []
+        recs_out = []
+        for r in recs_in:
+            priority = (
+                r.get('priority')
+                or (r.get('urgency_level') or 'medium')
+            )
+            priority_lc = str(priority).strip().lower()
+            reasons = r.get('reasons') or r.get('action_items') or []
+            rationale = r.get('rationale')
+            if not rationale:
+                rationale = reasons[0] if reasons else r.get('estimated_impact', '')
+            recs_out.append({
+                **r,
+                'priority': priority_lc,
+                'urgency_level': priority,
+                'reasons': reasons,
+                'rationale': rationale,
+            })
+
+        return jsonify({
+            'account_id': account_id,
+            'account_name': account.account_name,
+            'vertical': raw.get('vertical') if isinstance(raw, dict) else None,
+            'overall_health': raw.get('health_score') if isinstance(raw, dict) else health,
+            'playbook_source': raw.get('playbook_source') if isinstance(raw, dict) else None,
+            'recommendations': recs_out,
+            'total': len(recs_out),
+        })
+
+    except Exception as e:
+        logger.error(
+            "v1_recommendations failed for account=%s customer=%s: %s",
+            account_id, customer_id, e, exc_info=True,
+        )
+        return jsonify({
+            'error': 'Failed to fetch recommendations',
+            'account_id': account_id,
+            'recommendations': [],
+            'total': 0,
+        }), 500
 
 
 @api_v1.route('/alerts/<int:account_id>')
