@@ -2729,7 +2729,73 @@ def get_team_capacity_api():
                 'at_risk_accounts': csm_at_risk,
             })
 
+        # ── Hours-based resource-pool view (mirrors MCP get_team_capacity) ──
+        # PR-29 (May 17 visual re-eval fix): the prior response exposed an
+        # account-count utilization (accounts_per_csm / target_per_csm) which
+        # always pinned at ~100% for any tenant with the target load. The buyer
+        # needs an HOURS-based utilization gauge anchored to a real resource
+        # pool with totals + bottleneck detection. We compute that here and
+        # keep the legacy account-count fields for backward compat.
+        resource_pool = None
+        hours_utilization_pct = {}
+        hours_feasible = True
+        bottleneck_roles: list = []
+        overflow_hours = 0.0
+        recommendation_text = ''
+        try:
+            import resource_capacity_model as rcm
+            resource_pool = rcm.get_resource_pool_summary()
+
+            # Roll planned hours across the 5 roles using the same heuristic
+            # as the MCP tool: CSM hours come from PlaybookExecutionV2; CS_OPS
+            # and PLATFORM are approximated as a fraction of CSM hours so the
+            # gauge reflects multi-role load, not just CSM.
+            hours_by_role = {
+                rcm.CSRole.CSM: 0.0,
+                rcm.CSRole.CS_OPS: 0.0,
+                rcm.CSRole.PRODUCT: 0.0,
+                rcm.CSRole.PLATFORM: 0.0,
+                rcm.CSRole.LEADERSHIP: 0.0,
+            }
+            for e in active_execs:
+                csm_hrs = float(getattr(e, 'csm_hours_planned', 0) or 0)
+                hours_by_role[rcm.CSRole.CSM] += csm_hrs
+                hours_by_role[rcm.CSRole.CS_OPS] += csm_hrs * 0.5
+                hours_by_role[rcm.CSRole.PLATFORM] += csm_hrs * 0.2
+
+            try:
+                cap = rcm.check_capacity(hours_by_role)
+                hours_feasible = cap.is_feasible
+                hours_utilization_pct = {r: round(u * 100, 1) for r, u in cap.utilization_by_role.items()}
+                bottleneck_roles = [cap.bottleneck_role] if cap.bottleneck_role and not cap.is_feasible else []
+                overflow_hours = float(cap.overflow_hours or 0.0)
+            except Exception:
+                hours_utilization_pct = {r.value: 0.0 for r in hours_by_role.keys()}
+
+            planned_hours_out = {r.value: round(h, 1) for r, h in hours_by_role.items()}
+
+            # Aggregate annual hours/cost across the pool
+            totals = (resource_pool or {}).get('totals', {}) or {}
+            total_hours_available = float(totals.get('total_hours', 0) or 0)
+            total_hours_planned = sum(planned_hours_out.values())
+            total_hours_utilization_pct = round(
+                (total_hours_planned / total_hours_available * 100), 1
+            ) if total_hours_available > 0 else 0.0
+
+            recommendation_text = (
+                f"Team is {'within' if hours_feasible else 'over'} capacity. "
+                + ("No bottlenecks." if not bottleneck_roles else f"Bottleneck roles: {', '.join(bottleneck_roles)}.")
+                + f" {at_risk_count} at-risk accounts need attention."
+            )
+        except Exception as _cap_err:
+            logger.debug("team-capacity hours rollup unavailable: %s", _cap_err)
+            planned_hours_out = {}
+            total_hours_available = 0.0
+            total_hours_planned = 0.0
+            total_hours_utilization_pct = 0.0
+
         return jsonify({
+            # ── Legacy fields (preserved for callers that consume them) ──
             'csm_count': csm_count,
             'csm_names': sorted(csm_set),
             'accounts_per_csm': accounts_per_csm,
@@ -2740,8 +2806,22 @@ def get_team_capacity_api():
             'active_csm_hours': round(active_csm_hours, 1),
             'at_risk_accounts': at_risk_count,
             'total_arr': total_arr,
+            # NOTE: this is the old account-count utilization; kept for
+            # back-compat. Frontend should prefer `hours_utilization_pct` /
+            # `total_hours_utilization_pct` below.
             'utilization_pct': round(accounts_per_csm / target_per_csm * 100, 1),
             'per_csm_breakdown': per_csm_breakdown,
+            # ── Hours-based resource view (new, mirrors MCP get_team_capacity) ──
+            'resource_pool': resource_pool,
+            'planned_hours': planned_hours_out,
+            'hours_utilization_pct': hours_utilization_pct,
+            'total_hours_available': total_hours_available,
+            'total_hours_planned': total_hours_planned,
+            'total_hours_utilization_pct': total_hours_utilization_pct,
+            'feasible': hours_feasible,
+            'bottleneck_roles': bottleneck_roles,
+            'overflow_hours': overflow_hours,
+            'recommendation': recommendation_text,
         })
 
     except Exception as e:
