@@ -119,6 +119,19 @@ interface NRRWaterfallAccount {
   attributed_save: number;
 }
 
+// CRO-6: shape of a single health-threshold transition from
+// /api/v1/health-score-history. We filter client-side for healthy→at_risk
+// (or healthy→critical) flips and render the most recent in a banner.
+interface HealthTransition {
+  account_id: number;
+  account_name: string;
+  month: string;       // 'YYYY-MM'
+  from_status: 'healthy' | 'at_risk' | 'critical';
+  to_status: 'healthy' | 'at_risk' | 'critical';
+  score: number;
+  arr: number;
+}
+
 interface CRODashboardData {
   revenue_cards: RevenueCard[];
   metrics: MetricCard[];
@@ -553,6 +566,107 @@ const NRRAccountAttribution: React.FC<{ accounts: NRRWaterfallAccount[] }> = ({ 
   );
 };
 
+// ============================================================================
+// CRO-6: Transition Alert Banner
+// ============================================================================
+// Dismissible banner shown above revenue cards when accounts have flipped
+// from healthy → at_risk (or critical) in the most recent month of history.
+// Reads transitions[] directly from /api/v1/health-score-history; no
+// AlertRecord backend dependency. If a buyer later demands real alert-table
+// integration, swap the data source — render path stays unchanged.
+
+const TransitionAlertBanner: React.FC<{
+  transitions: HealthTransition[];
+  dismissedKeys: Set<string>;
+  onDismissKey: (key: string) => void;
+}> = ({ transitions, dismissedKeys, onDismissKey }) => {
+  // Filter: only healthy → at_risk OR healthy → critical, and dedupe per
+  // account (keep the most recent transition per account in case multiple
+  // months flipped within the window — latest is what the CRO cares about).
+  const flips = React.useMemo(() => {
+    const downward = transitions.filter(
+      (t) =>
+        t.from_status === 'healthy' &&
+        (t.to_status === 'at_risk' || t.to_status === 'critical')
+    );
+    // Latest month first
+    downward.sort((a, b) => (a.month < b.month ? 1 : a.month > b.month ? -1 : 0));
+    const byAccount = new Map<number, HealthTransition>();
+    for (const t of downward) {
+      if (!byAccount.has(t.account_id)) byAccount.set(t.account_id, t);
+    }
+    return Array.from(byAccount.values());
+  }, [transitions]);
+
+  // The "most recent month" with any flip is the cohort we surface in the
+  // banner. Older flips just contribute to the count history.
+  const mostRecentMonth = flips.length > 0 ? flips[0].month : null;
+  const recentFlips = flips.filter((t) => t.month === mostRecentMonth);
+
+  // Stable dismiss key from month + account-id set: dismissed cohort stays
+  // dismissed across re-renders, but a NEW month's flip surfaces fresh
+  // (user dismissed Feb's banner; March flip → new banner).
+  const cohortKey = mostRecentMonth
+    ? `${mostRecentMonth}:${recentFlips.map((t) => t.account_id).sort().join(',')}`
+    : null;
+
+  if (!cohortKey || dismissedKeys.has(cohortKey) || recentFlips.length === 0) {
+    return null;
+  }
+
+  const totalArr = recentFlips.reduce((s, t) => s + (t.arr || 0), 0);
+  const monthLabel = (() => {
+    // 'YYYY-MM' → 'Feb 2026'
+    const [y, m] = mostRecentMonth!.split('-');
+    const d = new Date(Number(y), Number(m) - 1, 1);
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  })();
+
+  return (
+    <div className="bg-gradient-to-r from-red-500/10 to-orange-500/5 border border-red-500/30 rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
+      <div className="flex-shrink-0 pt-0.5">
+        <AlertTriangle className="w-4 h-4 text-red-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-xs font-semibold text-white">
+            {recentFlips.length} account{recentFlips.length === 1 ? '' : 's'} flipped to at-risk in {monthLabel}
+            <span className="text-red-300 ml-2">{formatCompact(totalArr)} ARR exposed</span>
+          </p>
+          <button
+            onClick={() => onDismissKey(cohortKey)}
+            className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0"
+            aria-label="Dismiss transition alert"
+          >
+            Dismiss
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+          {recentFlips.slice(0, 6).map((t) => (
+            <div key={t.account_id} className="text-[11px] text-gray-300 flex items-center gap-1.5">
+              <span className="font-medium truncate max-w-[180px]">{t.account_name}</span>
+              <span className="text-gray-500">·</span>
+              <span
+                className={`font-semibold ${
+                  t.to_status === 'critical' ? 'text-red-400' : 'text-yellow-400'
+                }`}
+                title={`Health score ${t.score} (${t.from_status} → ${t.to_status})`}
+              >
+                {t.score}
+              </span>
+              <span className="text-gray-500">·</span>
+              <span className="text-gray-500">{formatCompact(t.arr)}</span>
+            </div>
+          ))}
+          {recentFlips.length > 6 && (
+            <span className="text-[11px] text-gray-500 italic">+{recentFlips.length - 6} more</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /** Risk account card with expandable pillar breakdown + action buttons */
 const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void; onDraftEmail?: (account: RiskAccount) => void }> = ({ account, onClick, onDraftEmail }) => {
   const [showPillars, setShowPillars] = React.useState(false);
@@ -801,6 +915,13 @@ const CRODashboard: React.FC = () => {
   const [activePeriod, setActivePeriod] = useState<'Q3' | 'Q4' | 'TTM'>('Q4');
   const [emailDraftAccount, setEmailDraftAccount] = useState<RiskAccount | null>(null);
 
+  // CRO-6: client-side flip-detection from /api/v1/health-score-history.
+  // We pull the transitions[] array and filter for healthy → at_risk (or
+  // critical). months=12 is the tool's max; tenants with shorter history
+  // simply produce fewer transitions — banner hides cleanly.
+  const [historyTransitions, setHistoryTransitions] = useState<HealthTransition[]>([]);
+  const [dismissedTransitionKeys, setDismissedTransitionKeys] = useState<Set<string>>(new Set());
+
   // Update URL when view changes
   const handleViewChange = useCallback((view: ViewId) => {
     trackEvent('dashboard_switch', `cro_${view}`, { persona: 'cro', view });
@@ -908,6 +1029,35 @@ const CRODashboard: React.FC = () => {
       }
     };
     fetchData();
+    return () => { cancelled = true; };
+  }, [session]);
+
+  // CRO-6: fetch 12 months of health-score history for transition alerts.
+  // Endpoint /api/v1/health-score-history is vertical-agnostic (works for
+  // SaaS Premium + DC2S, backed by the DC2S handler which queries by
+  // customer_id). Non-fatal on failure: banner just won't render, main
+  // dashboard continues to work.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchHistory = async () => {
+      try {
+        const customerId = getCustomerIdentifier(session);
+        const resp = await apiCall('/api/v1/health-score-history?months=12', {
+          headers: { 'X-Customer-ID': customerId },
+        });
+        if (!resp.ok) {
+          throw new Error(`history API returned ${resp.status}`);
+        }
+        const json = await resp.json();
+        if (cancelled) return;
+        setHistoryTransitions((json.transitions || []) as HealthTransition[]);
+      } catch {
+        if (!cancelled) {
+          setHistoryTransitions([]);
+        }
+      }
+    };
+    fetchHistory();
     return () => { cancelled = true; };
   }, [session]);
 
@@ -1089,6 +1239,18 @@ const CRODashboard: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* CRO-6: dismissible alert when accounts flipped healthy → at_risk
+              in the most recent month. Computed client-side from
+              health-score-history transitions[]. Hidden when no flips or
+              when the cohort has been dismissed. */}
+          <TransitionAlertBanner
+            transitions={historyTransitions}
+            dismissedKeys={dismissedTransitionKeys}
+            onDismissKey={(k) =>
+              setDismissedTransitionKeys((prev) => new Set(prev).add(k))
+            }
+          />
 
           {/* Row 1: Revenue cards */}
           <div className="grid grid-cols-3 gap-4 mb-4">
