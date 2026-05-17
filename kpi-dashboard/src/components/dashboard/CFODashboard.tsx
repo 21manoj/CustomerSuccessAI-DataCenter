@@ -51,6 +51,14 @@ interface FinancialSummaryCard {
   estimated?: boolean;
   /** Optional hover-text disclosing engine / lens / math for trust */
   tooltip?: string;
+  /**
+   * CFO-4 source-of-record disclosure (May 17 eval fix).
+   * Pinpoints which system the dollar value came from so a CFO can
+   * trace every figure back to its origin. Full GL reconciliation is
+   * out of scope until a GL connector lands; until then this label
+   * makes the data path honest rather than opaque.
+   */
+  source?: string;
 }
 
 interface PowerOf1Row {
@@ -165,6 +173,53 @@ interface PredictorV3PortfolioNRR {
 /** Customer deployment phase — drives which lens dominates the dashboard. */
 type CustomerPhase = 'pre_deploy' | 'onboarding' | 'active' | 'mature';
 
+// ─── Playbook economics (CFO-6 fix, May 17 2026) ─────────────────────────────
+// Shapes from /api/outcome-roi/playbook-economics — see backend
+// `playbook_cost_bridge.py::bridge_to_dict`. Only fields the UI consumes are
+// typed here; rest of payload is ignored.
+
+interface PlaybookEconomics {
+  playbook_id: string;
+  playbook_name: string;
+  metric_id: string;
+  metric_display_name: string;
+  total_hours: number;
+  manual_hours: number;
+  automation_pct: number;
+  manual_cost: number;
+  budget_allocated: number;
+  affordable_runs: number;
+  impact_per_run: number;
+  roi_per_run: number;
+  break_even_arr: number;
+}
+
+interface MetricBridgeEconomics {
+  metric_id: string;
+  metric_display_name: string;
+  cs_initiative_cost: number;
+  platform_cost: number;
+  total_investment: number;
+  linked_playbook_count: number;
+  investment_csm: number;
+  investment_platform: number;
+  investment_misc: number;
+  playbooks: PlaybookEconomics[];
+}
+
+interface PlaybookEconomicsResponse {
+  effective_arr: number;
+  arr_tier: string;
+  csm_rate: number;
+  metrics: Record<string, MetricBridgeEconomics>;
+  totals: {
+    grand_total: number;
+    total_csm: number;
+    total_platform: number;
+    total_misc: number;
+  };
+}
+
 /**
  * Row A of "Past — Three Lenses": raw OUTCOME aggregates from the
  * customer's uploaded data. Audit-grade, reconciles with P&L.
@@ -246,6 +301,49 @@ function formatCompact(value: number): string {
 function formatDollarFull(value: number): string {
   return `$${value.toLocaleString()}`;
 }
+
+// ============================================================================
+// CFO-4 SOURCE-OF-RECORD DISCLOSURE (May 17 2026 eval fix)
+// ============================================================================
+// A CFO eval expects every dollar to be traceable to its system of record.
+// Lacking a GL integration is acceptable in beta; lacking disclosure is not.
+// SOURCES is the single source of truth for the wording shown under each
+// dollar tile — when the GL connector lands we update the strings here and
+// every tile picks them up automatically.
+
+const SOURCES = {
+  /** Aggregated from accounts.revenue (CRM/CSV import). */
+  crm: 'Source: CRM (CSV) · not GL-reconciled',
+  /** PlaybookExecutionV2 records — CRM-derived, attributed in CS Pulse. */
+  csPulseProof: 'Source: CS Pulse · CRM-derived · not GL-reconciled',
+  /** Wizard B counterfactual model — directional, not auditable to GL. */
+  wizardB: 'Source: CS Pulse (Wizard B model) · directional',
+  /** Predictor v3 forward forecast — point estimate, not auditable to GL. */
+  predictorV3: 'Source: CS Pulse (Predictor v3) · forward forecast',
+  /** Power-of-1 industry benchmark estimate — not customer data. */
+  benchmark: 'Source: Power-of-1 benchmark · estimated',
+} as const;
+
+type SourceKey = keyof typeof SOURCES;
+
+/**
+ * Renders a small italic source-of-record label under a dollar value.
+ * Use under any visible dollar tile to satisfy CFO traceability.
+ */
+const SourceLabel: React.FC<{ source: SourceKey | string; className?: string }> = ({
+  source,
+  className = '',
+}) => {
+  const text = (SOURCES as Record<string, string>)[source] || source;
+  return (
+    <p
+      className={`text-[9px] italic text-gray-500 leading-tight ${className}`}
+      title="System-of-record disclosure. Full GL reconciliation pending GL connector."
+    >
+      {text}
+    </p>
+  );
+};
 
 const ACCENT_MAP: Record<string, string> = {
   white: '#ffffff',
@@ -395,6 +493,8 @@ const SummaryCardComponent: React.FC<{ card: FinancialSummaryCard }> = ({ card }
           {card.value}
           {card.estimated && <span className="text-xs italic text-gray-400 ml-1 font-normal">Estimated</span>}
         </p>
+        {/* CFO-4: source-of-record disclosure on every dollar tile. */}
+        {card.source && <SourceLabel source={card.source} className="mb-1" />}
         <p className="text-xs text-gray-500 mb-1">{card.subtitle}</p>
         {card.tag && (
           <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 mt-1">
@@ -668,13 +768,178 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
   );
 };
 
+// Per-metric-category color map for the CFO-6 breakdown.
+// Stable across renders so the visual mapping is consistent between the
+// stacked bar and the drill-down rows.
+const METRIC_CATEGORY_COLORS: Record<string, { bar: string; bg: string; text: string; border: string }> = {
+  TTFV:                    { bar: 'bg-cyan-500',    bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    border: 'border-cyan-500' },
+  NRR:                     { bar: 'bg-emerald-500', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500' },
+  GRR:                     { bar: 'bg-green-500',   bg: 'bg-green-500/10',   text: 'text-green-400',   border: 'border-green-500' },
+  ticket_resolution_time:  { bar: 'bg-amber-500',   bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500' },
+  product_adoption:        { bar: 'bg-purple-500',  bg: 'bg-purple-500/10',  text: 'text-purple-400',  border: 'border-purple-500' },
+  expansion_rate:          { bar: 'bg-fuchsia-500', bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400', border: 'border-fuchsia-500' },
+};
+const METRIC_CATEGORY_FALLBACK = { bar: 'bg-gray-500', bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500' };
+
+/** Friendly display names for the metric categories. */
+const METRIC_CATEGORY_LABELS: Record<string, string> = {
+  TTFV:                    'TTFV',
+  NRR:                     'NRR',
+  GRR:                     'GRR',
+  ticket_resolution_time:  'Ticket Resolution',
+  product_adoption:        'Product Adoption',
+  expansion_rate:          'Expansion',
+};
+
+/**
+ * CFO-6 fix (May 17 2026): real per-playbook investment categorization.
+ *
+ * Before: hard-coded 30 / 45 / 25 split of CS investment into "playbook /
+ *   CSM / overhead". Not traceable to anything real.
+ * After:  real categorized breakdown sourced from
+ *   /api/outcome-roi/playbook-economics — totals + per-metric +
+ *   per-playbook (hours, cost, affordable runs, ROI per run, break-even).
+ *
+ * Default view: stacked bar of $X by metric category (TTFV, NRR, GRR,
+ * Ticket Res, Adoption, Expansion). Click a category to expand the
+ * playbooks under it.
+ */
+const PlaybookInvestmentBreakdown: React.FC<{
+  economics: PlaybookEconomicsResponse;
+}> = ({ economics }) => {
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
+
+  const rows = Object.values(economics.metrics)
+    .map((m) => ({
+      metric_id: m.metric_id,
+      label: METRIC_CATEGORY_LABELS[m.metric_id] || m.metric_display_name,
+      total: m.total_investment,
+      csm: m.investment_csm,
+      platform: m.investment_platform,
+      playbooks: m.playbooks,
+    }))
+    .filter((r) => r.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  const grandTotal = economics.totals.grand_total;
+  const maxRow = rows.length > 0 ? Math.max(...rows.map((r) => r.total)) : 1;
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <p className="text-[9px] text-gray-500 uppercase tracking-wide">Where Your CS Dollars Go</p>
+        <p className="text-[10px] text-emerald-400 font-semibold">{formatCompact(grandTotal)} total</p>
+      </div>
+
+      {/* Stacked bar — visual at-a-glance of category mix. */}
+      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden flex mb-3">
+        {rows.map((r) => {
+          const c = METRIC_CATEGORY_COLORS[r.metric_id] || METRIC_CATEGORY_FALLBACK;
+          const pct = grandTotal > 0 ? (r.total / grandTotal) * 100 : 0;
+          return (
+            <div
+              key={r.metric_id}
+              className={`h-full ${c.bar}`}
+              style={{ width: `${pct}%` }}
+              title={`${r.label}: ${formatCompact(r.total)} (${pct.toFixed(0)}%)`}
+            />
+          );
+        })}
+      </div>
+
+      {/* Per-category rows (click to drill into playbooks). */}
+      <div className="space-y-1.5">
+        {rows.map((r) => {
+          const c = METRIC_CATEGORY_COLORS[r.metric_id] || METRIC_CATEGORY_FALLBACK;
+          const pct = grandTotal > 0 ? (r.total / grandTotal) * 100 : 0;
+          const widthPct = maxRow > 0 ? (r.total / maxRow) * 100 : 0;
+          const isOpen = expandedMetric === r.metric_id;
+          return (
+            <div key={r.metric_id}>
+              <button
+                type="button"
+                onClick={() => setExpandedMetric(isOpen ? null : r.metric_id)}
+                className="w-full text-left group"
+                title={`Click to ${isOpen ? 'hide' : 'show'} the playbooks under ${r.label}`}
+              >
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-gray-400 flex items-center gap-1">
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${c.bar}`} />
+                    {r.label}
+                    <span className="text-gray-600">({r.playbooks.length} PB{r.playbooks.length === 1 ? '' : 's'})</span>
+                  </span>
+                  <span className="text-gray-300">{formatCompact(r.total)} ({pct.toFixed(0)}%)</span>
+                </div>
+                <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${c.bar} rounded-full transition-all`}
+                    style={{ width: `${widthPct}%` }}
+                  />
+                </div>
+              </button>
+              {isOpen && (
+                <div className={`mt-1.5 mb-2 pl-3 pr-2 py-2 rounded ${c.bg} border-l-2 ${c.border}`}>
+                  <div className="text-[9px] text-gray-400 uppercase tracking-wide mb-1.5 flex justify-between">
+                    <span>Playbook</span>
+                    <span>Cost · Runs · ROI</span>
+                  </div>
+                  {r.playbooks.map((pb) => (
+                    <div key={`${pb.playbook_id}:${pb.metric_id}`} className="flex justify-between text-[10px] py-0.5">
+                      <span className="text-gray-300 truncate max-w-[140px]" title={pb.playbook_name}>
+                        <span className={`font-mono ${c.text}`}>{pb.playbook_id}</span>
+                        <span className="text-gray-500 ml-1">{pb.playbook_name}</span>
+                      </span>
+                      <span className="text-gray-300 font-mono whitespace-nowrap">
+                        {formatCompact(pb.manual_cost)}
+                        <span className="text-gray-600"> · </span>
+                        {pb.affordable_runs.toFixed(1)}
+                        <span className="text-gray-600"> · </span>
+                        <span className={c.text}>{pb.roi_per_run.toFixed(0)}x</span>
+                      </span>
+                    </div>
+                  ))}
+                  <div className="text-[9px] text-gray-500 mt-1.5 pt-1 border-t border-gray-700/40">
+                    Break-even ARR: {formatCompact(r.playbooks[0]?.break_even_arr || 0)}
+                    {r.csm > 0 ? ` · ${formatCompact(r.csm)} CSM` : ''}
+                    {r.platform > 0 ? ` + ${formatCompact(r.platform)} platform` : ''}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CSM / Platform / Misc split — secondary footer summary. */}
+      <div className="mt-3 pt-2 border-t border-gray-700/40 grid grid-cols-3 gap-1 text-[9px]">
+        <div>
+          <span className="text-gray-500 block">CSM time</span>
+          <span className="text-gray-200 font-mono">{formatCompact(economics.totals.total_csm)}</span>
+        </div>
+        <div>
+          <span className="text-gray-500 block">Platform</span>
+          <span className="text-gray-200 font-mono">{formatCompact(economics.totals.total_platform)}</span>
+        </div>
+        <div>
+          <span className="text-gray-500 block">Misc</span>
+          <span className="text-gray-200 font-mono">{formatCompact(economics.totals.total_misc)}</span>
+        </div>
+      </div>
+      <SourceLabel source="csPulseProof" className="mt-2" />
+    </div>
+  );
+};
+
 /** Investment Allocation Intelligence (right sidebar) — replaces old EfficiencyGauge */
 const InvestmentAllocationWidget: React.FC<{
   totalArr: number;
   csInvestment: number;
   roiImpact: number;
   isEstimated: boolean;
-}> = ({ totalArr, csInvestment, roiImpact, isEstimated }) => {
+  /** CFO-6 fix: when present, replaces the flat 30/45/25 split with a
+   *  real per-playbook breakdown sourced from get_playbook_economics. */
+  economics?: PlaybookEconomicsResponse | null;
+}> = ({ totalArr, csInvestment, roiImpact, isEstimated, economics }) => {
   const [showDetails, setShowDetails] = useState(false);
 
   // Industry benchmark: 1.5% - 2.5% of ARR for CS investment (TSIA)
@@ -684,7 +949,8 @@ const InvestmentAllocationWidget: React.FC<{
   const inRange = csInvestment >= benchmarkLow * 0.8 && csInvestment <= benchmarkHigh * 1.2;
   const roi = csInvestment > 0 ? roiImpact / csInvestment : 0;
 
-  // Allocation breakdown (industry benchmarks when estimated)
+  // Legacy 30/45/25 fallback — only used when get_playbook_economics is
+  // unavailable. Real per-metric breakdown via PlaybookInvestmentBreakdown.
   const playbookAlloc = csInvestment * 0.30;
   const csmAlloc = csInvestment * 0.45;
   const overheadAlloc = csInvestment * 0.25;
@@ -725,16 +991,31 @@ const InvestmentAllocationWidget: React.FC<{
         </div>
       </div>
 
+      <SourceLabel source={isEstimated ? 'benchmark' : 'csPulseProof'} className="mb-2" />
+
       {isEstimated && (
         <p className="text-[9px] text-amber-400/70 mb-2">* Estimated from Power-of-1 benchmarks</p>
+      )}
+
+      {/* CFO-6 (May 17 2026): real per-playbook investment breakdown.
+          Always-on when get_playbook_economics is available — replaces the
+          flat 30/45/25 split that was hard-coded here. Falls back to the
+          old benchmark split (gated behind "Details") only when economics
+          is null (endpoint failed / not deployed). */}
+      {economics && (
+        <div className="border-t border-gray-700/50 pt-3 mt-2">
+          <PlaybookInvestmentBreakdown economics={economics} />
+        </div>
       )}
 
       {/* Expandable details */}
       {showDetails && (
         <div className="border-t border-gray-700/50 pt-3 mt-2 space-y-3">
-          {/* Allocation breakdown */}
+          {/* Legacy 30/45/25 fallback — only when real economics missing. */}
+          {!economics && (
           <div>
             <p className="text-[9px] text-gray-500 uppercase tracking-wide mb-2">Where Your CS Dollars Go</p>
+            <p className="text-[9px] text-amber-400/70 mb-1.5">Fallback split — real per-playbook breakdown unavailable.</p>
             <div className="space-y-1.5">
               {[
                 { label: 'Playbook interventions', amount: playbookAlloc, pct: 30, color: 'bg-cyan-500' },
@@ -753,6 +1034,7 @@ const InvestmentAllocationWidget: React.FC<{
               ))}
             </div>
           </div>
+          )}
 
           {/* Benchmark context */}
           <div className="bg-gray-800/30 rounded-lg p-2.5">
@@ -840,6 +1122,7 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
             ARR at Risk <span className="text-gray-600">(health &lt; 70)</span>
           </p>
           <p className="text-2xl font-bold text-red-400">{formatCompact(coi.arr_at_risk)}</p>
+          <SourceLabel source="crm" />
         </div>
         <div>
           <p
@@ -849,6 +1132,7 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
             Annual Churn Exposure
           </p>
           <p className="text-2xl font-bold text-orange-400">{formatCompact(coi.annual_churn_exposure)}</p>
+          <SourceLabel source="csPulseProof" />
         </div>
         <div>
           <p
@@ -1176,6 +1460,10 @@ const CFODashboard: React.FC = () => {
   // network/server errors (show "Retry").
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [showFutureROI, setShowFutureROI] = useState(false);
+  // CFO-6 (May 17 2026): per-playbook investment breakdown.
+  // Fetched independently so a failure here doesn't kill the dashboard;
+  // widget falls back to the legacy 30/45/25 split when null.
+  const [playbookEconomics, setPlaybookEconomics] = useState<PlaybookEconomicsResponse | null>(null);
 
   // Fetch main dashboard data
   useEffect(() => {
@@ -1305,6 +1593,7 @@ const CFODashboard: React.FC = () => {
                 subtitle: `${json.account_count || '—'} active accounts · full portfolio`,
                 accent: 'white',
                 tooltip: 'Sum of accounts.revenue across all active accounts. Excludes churned-with-zero-ARR.',
+                source: 'crm',
               },
               {
                 label: 'CS Investment',
@@ -1312,6 +1601,7 @@ const CFODashboard: React.FC = () => {
                 subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.executions_total || 0} playbook executions`,
                 accent: 'emerald',
                 tooltip: 'Sum of PlaybookExecutionV2.total_cost. Tiered by ARR band — strategic ($90K), mid-market ($50K), SMB ($25K), small ($12K), <10K ($3K). Includes CSM + VP CS + SA + executive sponsor + AE + travel + platform + 35% overhead.',
+                source: 'csPulseProof',
               },
               {
                 label: 'Realized NRR — TTM',
@@ -1319,6 +1609,7 @@ const CFODashboard: React.FC = () => {
                 subtitle: `Counterfactual (Wizard B) · +${wb.delta_pct || 0}pp from CS Pulse`,
                 accent: 'green',
                 tooltip: `Backward-looking counterfactual NRR from Wizard B. With CS Pulse: ${wb.with_cs_pulse_nrr_pct}%. Without: ${wb.without_cs_pulse_nrr_pct}%. Delta = +${wb.delta_pct}pp. Includes all ${json.account_count || '—'} accounts (incl. churned) in denominator. Differs from "Forecast NRR" — that's forward, this is backward.`,
+                source: 'wizardB',
               },
               {
                 // CFO-10 (May 17 FDE eval) — KNOWN GAP: portfolio-level NRR tile
@@ -1336,17 +1627,18 @@ const CFODashboard: React.FC = () => {
                 subtitle: `Forward point (Predictor v3) · ARR-weighted · ${v3?.active_account_count || 0} active`,
                 accent: 'cyan',
                 tooltip: `Forward 12-month point forecast from Predictor v3 (calibrated by Wizard D ${v3?.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3?.active_account_count || 0} currently-active accounts; excludes $0-ARR (typically churned) from the weight. Simple-avg: ${v3?.simple_avg_nrr_pct}%. Portfolio CI is aggregated; see the Per-Account NRR Forecast table below for per-account 90% CI bounds. Differs from "Realized NRR" — that's backward counterfactual.`,
+                source: 'predictorV3',
               },
             ] : hasProof ? [
-              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white' },
-              { label: 'Actual CS Spend', value: formatCompact(proofCost), subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.csm_hours || 0}h CSM time`, accent: 'emerald' },
-              { label: 'Revenue Protected', value: formatCompact(proofProtected + proofExpanded), subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`, accent: 'green' },
-              { label: 'Portfolio ROI', value: `${proofRoi}x`, subtitle: `${formatCompact(proofCost)} → ${formatCompact(proofProtected + proofExpanded)}`, accent: 'cyan' },
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white', source: 'crm' },
+              { label: 'Actual CS Spend', value: formatCompact(proofCost), subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.csm_hours || 0}h CSM time`, accent: 'emerald', source: 'csPulseProof' },
+              { label: 'Revenue Protected', value: formatCompact(proofProtected + proofExpanded), subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`, accent: 'green', source: 'csPulseProof' },
+              { label: 'Portfolio ROI', value: `${proofRoi}x`, subtitle: `${formatCompact(proofCost)} → ${formatCompact(proofProtected + proofExpanded)}`, accent: 'cyan', source: 'csPulseProof' },
             ] : [
-              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white' },
-              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Power-of-1 benchmark estimate', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: true },
-              { label: 'Projected Impact', value: formatCompact(roiImpact), subtitle: `GRR: ${grr}%`, accent: 'green', estimated: true },
-              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true },
+              { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white', source: 'crm' },
+              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Power-of-1 benchmark estimate', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: true, source: 'benchmark' },
+              { label: 'Projected Impact', value: formatCompact(roiImpact), subtitle: `GRR: ${grr}%`, accent: 'green', estimated: true, source: 'benchmark' },
+              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true, source: 'benchmark' },
             ],
             power_of_1: po1Metrics,
             power_of_1_total: po1Metrics.reduce((sum: number, m: PowerOf1Row) => sum + m.dollar_impact, 0),
@@ -1428,6 +1720,28 @@ const CFODashboard: React.FC = () => {
       }
     };
     fetchData();
+    return () => { cancelled = true; };
+  }, [session]);
+
+  // CFO-6 (May 17 2026): fetch the per-playbook economics breakdown.
+  // Separate from the main /cfo-dashboard fetch so an error here is
+  // non-fatal — the widget gracefully falls back to the legacy split.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchEconomics = async () => {
+      try {
+        const customerId = getCustomerIdentifier(session);
+        const resp = await apiCall('/api/outcome-roi/playbook-economics', {
+          headers: { 'X-Customer-ID': customerId },
+        });
+        if (!resp.ok) return;
+        const json: PlaybookEconomicsResponse = await resp.json();
+        if (!cancelled) setPlaybookEconomics(json);
+      } catch {
+        // Swallow — non-fatal. UI falls back to the legacy split.
+      }
+    };
+    fetchEconomics();
     return () => { cancelled = true; };
   }, [session]);
 
@@ -1697,6 +2011,7 @@ const CFODashboard: React.FC = () => {
                   <span className="text-cyan-400">{d.wizard_b_nrr.accounts_saved} accounts saved from churn</span>
                 </div>
                 <p className="text-[9px] text-gray-600 mt-2">Based on actual health trajectories, playbook outcomes, and saved-account attribution.</p>
+                <SourceLabel source="wizardB" className="mt-1" />
               </div>
             ) : (
               /* ── Fallback: Power-of-1 NRR estimate ── */
@@ -1721,6 +2036,7 @@ const CFODashboard: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-[9px] text-gray-600 mt-1">Power-of-1 estimate. Run playbooks to see actual NRR impact.</p>
+                <SourceLabel source="benchmark" className="mt-1" />
               </div>
             )}
 
@@ -1761,6 +2077,14 @@ const CFODashboard: React.FC = () => {
                     purple: { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/10', badge: 'Invest' },
                   };
                   const c = colors[layer.color] || colors.green;
+                  // Layers map: green=Already Delivered (proof_data) →
+                  // cyan=Still Protectable (waterfall) → purple=Growth (Po1).
+                  // Each has a different system of record.
+                  const layerSource: SourceKey = layer.color === 'green'
+                    ? 'csPulseProof'
+                    : layer.color === 'purple'
+                      ? 'benchmark'
+                      : 'wizardB';
                   return (
                     <div key={i} className={`rounded-xl border ${c.border} ${c.bg} p-4`}>
                       <div className="flex items-center justify-between mb-2">
@@ -1768,6 +2092,7 @@ const CFODashboard: React.FC = () => {
                         <span className={`text-[9px] px-2 py-0.5 rounded-full ${c.bg} ${c.text} font-semibold`}>{c.badge}</span>
                       </div>
                       <p className={`text-2xl font-bold ${c.text} mb-1`}>{formatCompact(layer.value)}</p>
+                      <SourceLabel source={layerSource} className="mb-1" />
                       <div className="flex items-center justify-between text-[10px] text-gray-500">
                         <span>Cost: {formatCompact(layer.cost)}</span>
                         <span className={`font-semibold ${c.text}`}>{layer.roi}x ROI</span>
@@ -1787,7 +2112,10 @@ const CFODashboard: React.FC = () => {
                   <Shield className="w-4 h-4 text-green-400" />
                   <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Playbook ROI Proof</h3>
                 </div>
-                <span className="text-[10px] text-gray-500">{d.proof_executions.filter(e => e.revenue_protected > 0).length} interventions with measurable impact</span>
+                <span className="text-[10px] text-gray-500 flex flex-col items-end">
+                  <span>{d.proof_executions.filter(e => e.revenue_protected > 0).length} interventions with measurable impact</span>
+                  <SourceLabel source="csPulseProof" />
+                </span>
               </div>
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -1885,8 +2213,9 @@ const CFODashboard: React.FC = () => {
                     {d.renewals_at_risk.length}
                   </span>
                 </div>
-                <span className="text-[10px] text-gray-500">
-                  {formatCompact(d.renewals_at_risk.reduce((s, r) => s + r.arr, 0))} ARR
+                <span className="text-[10px] text-gray-500 flex flex-col items-end">
+                  <span>{formatCompact(d.renewals_at_risk.reduce((s, r) => s + r.arr, 0))} ARR</span>
+                  <SourceLabel source="crm" />
                 </span>
               </div>
               <div className="space-y-1">
@@ -1923,6 +2252,11 @@ const CFODashboard: React.FC = () => {
             </button>
             {showFutureROI && (
               <div className="mt-4 space-y-6">
+                {/* CFO-4: tables in this section are Power-of-1 benchmark
+                    projections, not customer-data dollars. Single banner
+                    disclosure here is sufficient — every dollar inside is
+                    benchmark-sourced. */}
+                <SourceLabel source="benchmark" className="px-1" />
                 {/* Power of 1 Metrics Table */}
                 <PowerOf1Table rows={d.power_of_1} total={d.power_of_1_total} />
 
@@ -1948,7 +2282,10 @@ const CFODashboard: React.FC = () => {
                     Account Investment Breakdown
                   </h3>
                 </div>
-                <span className="text-[10px] text-gray-500">{d.has_proof ? 'From playbook executions' : 'Estimated (ARR-weighted)'}</span>
+                <span className="text-[10px] text-gray-500 flex flex-col items-end">
+                  <span>{d.has_proof ? 'From playbook executions' : 'Estimated (ARR-weighted)'}</span>
+                  <SourceLabel source={d.has_proof ? 'csPulseProof' : 'benchmark'} />
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -2037,6 +2374,15 @@ const CFODashboard: React.FC = () => {
               </div>
             </div>
             <p className="text-[9px] text-gray-600 italic">From {d.proof_executions.length} playbook executions</p>
+            <SourceLabel source="csPulseProof" className="mt-1" />
+            {/* CFO-6: real per-playbook breakdown also rendered here when
+                proof data exists, so a customer with playbook history still
+                gets the categorized "where the dollars go" view. */}
+            {playbookEconomics && (
+              <div className="border-t border-gray-700/50 pt-3 mt-3">
+                <PlaybookInvestmentBreakdown economics={playbookEconomics} />
+              </div>
+            )}
           </div>
         ) : (
           <InvestmentAllocationWidget
@@ -2044,6 +2390,7 @@ const CFODashboard: React.FC = () => {
             csInvestment={d.cs_investment}
             roiImpact={d.roi_impact}
             isEstimated={d.is_estimated_investment}
+            economics={playbookEconomics}
           />
         )}
 
@@ -2065,6 +2412,7 @@ const CFODashboard: React.FC = () => {
                 </div>
               )}
             </div>
+            <SourceLabel source="csPulseProof" className="mt-2" />
           </div>
         )}
 
