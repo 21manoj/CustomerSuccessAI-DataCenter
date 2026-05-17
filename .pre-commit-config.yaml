@@ -1,0 +1,28 @@
+# Pre-commit hooks for cs-pulse / CustomerSuccessAI-DataCenter.
+#
+# Install once:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Then every `git commit` runs the hooks below. Manual run:
+#   pre-commit run --all-files
+#
+# We intentionally keep this lean -- only the audits that have already paid
+# for themselves catching real bugs go here. Style/formatting is left to the
+# editor.
+
+repos:
+  - repo: local
+    hooks:
+      - id: audit-account-column-access
+        name: Audit Account ORM column access
+        description: >
+          Catch Python code accessing Account.<column> where <column> is not
+          actually a column on the Account ORM model. Three production bugs
+          in the last six weeks shared this shape (PR #21 acct.health_score,
+          PR #28 acct.assigned_csm, session 11 journey_data drift).
+        entry: python scripts/audit_account_column_access.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit, push]

@@ -1,0 +1,20 @@
+# audit_account_column_access baseline
+# 
+# This file grandfathers KNOWN PRE-EXISTING violations so the audit can be
+# turned on without first cleaning the entire codebase. EVERY ENTRY HERE IS
+# A REAL OR LIKELY BUG. They should be fixed, not whitewashed.
+# 
+# Format: <relpath>:<base>.<attr>
+# Line numbers are intentionally excluded so unrelated edits don't churn
+# this file. To regenerate after a deliberate review:
+#   python scripts/audit_account_column_access.py --regenerate-baseline
+
+kpi-dashboard/backend/data_quality_api.py:acct.products
+kpi-dashboard/backend/mcp_tool_bridge.py:account.health_score
+kpi-dashboard/backend/mcp_tool_bridge.py:account.name
+kpi-dashboard/backend/mcp_tool_bridge.py:account.status
+kpi-dashboard/backend/playbook_triggers_api.py:account.health_score
+kpi-dashboard/backend/test_runner_api.py:a.id
+kpi-dashboard/backend/test_runner_api.py:acct.arr
+kpi-dashboard/backend/test_runner_api.py:acct.id
+kpi-dashboard/backend/test_runner_api.py:acct.name
