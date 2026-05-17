@@ -69,8 +69,10 @@ def get_account_nrr_forecast(
     Args:
         customer_id: The customer (tenant) ID that owns the account
         account_id: The account_id to forecast
-        horizon: 'renewal' (default account-specific renewal date) or
-                 '12mo' (12 months from now). Defaults to '12mo'.
+        horizon: 'renewal' (account-specific renewal date), 'quarter'
+                 (3 months from now — use when the user asks about
+                 "this quarter" or a short window), or '12mo' (12
+                 months from now). Defaults to '12mo'.
 
     Returns:
         dict with expected_nrr {point, lower_90, upper_90, ci_method,
@@ -92,9 +94,9 @@ def get_account_nrr_forecast(
         except ImportError as e:
             raise ToolError(f'Predictor v3 not available: {e}')
 
-        if horizon not in ('renewal', '12mo'):
+        if horizon not in ('renewal', 'quarter', '12mo'):
             raise ToolError(
-                f"horizon must be 'renewal' or '12mo', got {horizon!r}"
+                f"horizon must be 'renewal', 'quarter', or '12mo', got {horizon!r}"
             )
 
         # Tenant isolation: confirm the account belongs to the supplied customer
@@ -143,7 +145,7 @@ def get_portfolio_nrr_forecast_v3(
 
     Args:
         customer_id: The customer (tenant) ID
-        horizon: 'renewal' or '12mo' (default '12mo')
+        horizon: 'renewal', 'quarter' (3 months), or '12mo' (default '12mo')
 
     Returns:
         dict with arr_weighted_nrr, simple_avg_nrr, account_count,
@@ -156,9 +158,9 @@ def get_portfolio_nrr_forecast_v3(
     _require_auth(customer_id)
     app = _get_flask_app()
 
-    if horizon not in ('renewal', '12mo'):
+    if horizon not in ('renewal', 'quarter', '12mo'):
         raise ToolError(
-            f"horizon must be 'renewal' or '12mo', got {horizon!r}"
+            f"horizon must be 'renewal', 'quarter', or '12mo', got {horizon!r}"
         )
 
     with app.app_context():
@@ -292,7 +294,8 @@ def get_top_expansion_opportunities_v3(
 
     Args:
         customer_id: The customer (tenant) ID
-        horizon: 'renewal' or '12mo' (default '12mo')
+        horizon: 'renewal', 'quarter' (3 months — use for "this quarter"
+                 questions), or '12mo' (default '12mo')
         limit: Max number of results to return (default 10)
 
     Returns:
@@ -304,9 +307,9 @@ def get_top_expansion_opportunities_v3(
     _require_auth(customer_id)
     app = _get_flask_app()
 
-    if horizon not in ('renewal', '12mo'):
+    if horizon not in ('renewal', 'quarter', '12mo'):
         raise ToolError(
-            f"horizon must be 'renewal' or '12mo', got {horizon!r}"
+            f"horizon must be 'renewal', 'quarter', or '12mo', got {horizon!r}"
         )
 
     with app.app_context():
@@ -368,7 +371,8 @@ def get_top_at_risk_accounts_v3(
 
     Args:
         customer_id: The customer (tenant) ID
-        horizon: 'renewal' or '12mo' (default '12mo')
+        horizon: 'renewal', 'quarter' (3 months — use for "revenue at
+                 risk this quarter" questions), or '12mo' (default '12mo')
         limit: Max number of results to return (default 10)
 
     Returns:
@@ -381,9 +385,9 @@ def get_top_at_risk_accounts_v3(
     _require_auth(customer_id)
     app = _get_flask_app()
 
-    if horizon not in ('renewal', '12mo'):
+    if horizon not in ('renewal', 'quarter', '12mo'):
         raise ToolError(
-            f"horizon must be 'renewal' or '12mo', got {horizon!r}"
+            f"horizon must be 'renewal', 'quarter', or '12mo', got {horizon!r}"
         )
 
     with app.app_context():
@@ -393,6 +397,15 @@ def get_top_at_risk_accounts_v3(
         accts = Account.query.filter_by(customer_id=customer_id).all()
         rows = []
         for a in accts:
+            # Mirror get_at_risk_accounts behavior: exclude already-churned
+            # accounts (and zero-ARR accounts which are typically churned)
+            # from the at-risk list regardless of horizon. This matters
+            # most for the 'quarter' horizon where the at-risk ARR baseline
+            # needs to align with the eval's "active accounts only" framing.
+            if (a.account_status or '').lower() == 'churned':
+                continue
+            if not (a.revenue or 0):
+                continue
             try:
                 pred = predict_for_account_id(
                     account_id=a.account_id, horizon=horizon

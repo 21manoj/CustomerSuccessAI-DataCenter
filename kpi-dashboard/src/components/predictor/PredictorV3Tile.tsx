@@ -56,7 +56,7 @@ interface PredictorRankRow {
 interface Props {
   customerId: number;
   saasProfile: 'saas_enterprise' | 'saas_smb';
-  horizon?: 'renewal' | '12mo';
+  horizon?: 'renewal' | 'quarter' | '12mo';
   limit?: number;
 }
 
@@ -141,7 +141,7 @@ export const PredictorV3Tile: React.FC<Props> = ({
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-emerald-400" />
             <h3 className="text-sm font-semibold text-emerald-100">
-              Forward {horizon === '12mo' ? '12-month' : 'renewal-horizon'} expansion
+              Forward {horizon === '12mo' ? '12-month' : horizon === 'quarter' ? '3-month (quarter)' : 'renewal-horizon'} expansion
             </h3>
           </div>
           <div className="text-3xl font-bold text-emerald-200">{fmtUsd(totalLift)}</div>

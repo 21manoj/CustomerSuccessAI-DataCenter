@@ -1138,6 +1138,13 @@ const CRODashboard: React.FC = () => {
   const [historyMonthsAvailable, setHistoryMonthsAvailable] = useState<number>(0);
   const [historyLoading, setHistoryLoading] = useState<boolean>(true);
 
+  // Forecast horizon for Predictor v3 tile. Defaults to '12mo' so existing
+  // dashboard behavior is preserved; selecting 'quarter' answers the FDE
+  // CRO-1 question ("revenue at risk next quarter") with a 3-month window;
+  // 'renewal' uses each account's contract renewal date. The PredictorV3Tile
+  // re-fetches when this changes (its useEffect depends on horizon).
+  const [predictorHorizon, setPredictorHorizon] = useState<'renewal' | 'quarter' | '12mo'>('12mo');
+
   // Update URL when view changes
   const handleViewChange = useCallback((view: ViewId) => {
     trackEvent('dashboard_switch', `cro_${view}`, { persona: 'cro', view });
@@ -1502,13 +1509,64 @@ const CRODashboard: React.FC = () => {
               Renders for any tenant with a calibrated Wizard D fit.
               The CRO is the primary consumer of per-account forecasts
               (where to deploy plays, who to escalate); CFO sees the
-              portfolio aggregate, CRO sees the per-account drill-down. */}
+              portfolio aggregate, CRO sees the per-account drill-down.
+
+              Horizon selector (added May 17 2026, FDE CRO-1 fix): switches
+              the at-risk + expansion + per-account NRR queries between
+              account-specific renewal date, 3-month quarter window, and
+              12-month default. The tile re-fetches when horizon changes. */}
           {session && (
             <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-gray-500">
+                  Forward NRR Forecast
+                </div>
+                <div
+                  className="inline-flex items-center gap-1 text-[11px]"
+                  role="radiogroup"
+                  aria-label="Forecast horizon"
+                >
+                  <span className="text-gray-500 mr-1">Horizon:</span>
+                  {([
+                    { id: 'renewal' as const, label: 'Renewal' },
+                    { id: 'quarter' as const, label: 'Quarter' },
+                    { id: '12mo' as const,    label: '12mo'    },
+                  ]).map((opt) => {
+                    const active = predictorHorizon === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => {
+                          setPredictorHorizon(opt.id);
+                          trackEvent('cro_horizon_change', `horizon_${opt.id}`, {
+                            persona: 'cro',
+                            horizon: opt.id,
+                          });
+                        }}
+                        className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                          active
+                            ? 'bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-500/40'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                        }`}
+                        title={
+                          opt.id === 'renewal' ? "Each account's contract renewal date"
+                          : opt.id === 'quarter' ? "3 months from now — answers 'this quarter' questions"
+                          : '12 months from now (default)'
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <PredictorV3Tile
                 customerId={session.customer_id}
                 saasProfile={(session.vertical === 'saas_premium') ? 'saas_enterprise' : 'saas_enterprise'}
-                horizon="12mo"
+                horizon={predictorHorizon}
                 limit={5}
               />
             </div>
