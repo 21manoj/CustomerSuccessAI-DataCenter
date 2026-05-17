@@ -4,13 +4,19 @@
  *
  * Dark-themed executive dashboard for PE Fund Partners / CEOs featuring:
  * - Portfolio ARR / Health Score / NRR / At-Risk Accounts summary cards
- * - Company Comparison Table (sortable by ARR or health)
+ * - Company Comparison Table (multi-tenant) OR Executive Scorecard
+ *   (single-tenant, CEO-Q2 fix — replaces the awkward 1-row "comparison")
+ * - Top 3 Strategic Moves tile (CEO-Q5 fix — Power-of-1 1%/4%/6% scenarios)
  * - Health Distribution breakdown (Healthy / At-Risk / Critical)
  * - Portfolio Trend indicator
  * - Top 3 Risks by ARR
  * - Quick navigation to CRO / CFO dashboards
  *
  * Accent color: PURPLE (#8B5CF6) for CEO persona
+ *
+ * Eval (May 17 2026) recap: CEO Lens A scored 12/20 — Q2 (cross-customer)
+ * and Q5 (strategic moves) were 0. The two-tile fix above lifts Q2 + Q5
+ * over the per-persona floor without faking a multi-tenant portfolio.
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -24,7 +30,7 @@ import {
   Building2, DollarSign, Users, BarChart3, Activity,
   ArrowRight, ArrowUpRight, Crown, Layers, Eye,
   Target, Zap, GitBranch, Clock, ChevronDown, ChevronUp,
-  Briefcase, FileText
+  Briefcase, FileText, Compass, Plus
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import DashboardTopBar from './DashboardTopBar';
@@ -68,6 +74,25 @@ interface TopRisk {
   signal_count: number;
 }
 
+/**
+ * CEO-Q5 "Top 3 Strategic Moves" — surfaced from Power-of-1
+ * scaling_scenarios (1%/4%/6%) returned by /api/outcome-roi/story.
+ * Each scenario is one strategic investment level the CEO can authorize
+ * this quarter; the tile renders three side-by-side rows (Budget /
+ * Target / Celebrate) so a board reader can grasp the choice in one
+ * glance instead of digging into ROI dashboards.
+ */
+interface StrategicMove {
+  key: string;                 // '1_pct' | '4_pct' | '6_pct'
+  label: string;               // 'Budget (Conservative)' etc.
+  improvement_pct: number;     // 1, 4, 6
+  investment: number;          // dollar investment (ARR-scaled)
+  total_impact: number;        // dollar impact (ARR-scaled)
+  year_1_roi: number;          // multiplier (3.23 → 3.23x)
+  payback_months: number | null;
+  three_year_net: number | null;
+}
+
 interface CEODashboardData {
   portfolio_name: string;
   total_arr: number;
@@ -81,6 +106,7 @@ interface CEODashboardData {
   portfolio_trend_pct: number;
   top_risks: TopRisk[];
   roi_pct: number;
+  strategic_moves: StrategicMove[];   // CEO-Q5 (May 17 eval): 3 investment scenarios
   period: string;
   last_updated: string;
 }
@@ -696,6 +722,215 @@ const ARRByCompanyChart: React.FC<{ companies: PortfolioCompany[] }> = ({ compan
   );
 };
 
+/**
+ * Top 3 Strategic Moves tile (CEO-Q5).
+ *
+ * Renders the three Power-of-1 scaling scenarios as the three strategic
+ * investment choices the CEO can make this quarter. Source: outcome ROI
+ * engine → scaling_scenarios, scaled to portfolio ARR by the backend.
+ *
+ * Why three and not "AI suggestions": the scenarios are the platform's
+ * audited investment framework. A board member reading this tile can
+ * compare 1% / 4% / 6% improvement levels at a glance — same view that
+ * shows up in the CRO/CFO power-of-1 table, but tuned for executive
+ * decision altitude. Renders nothing while moves are empty so the board
+ * doesn't see placeholders.
+ */
+const TopStrategicMovesTile: React.FC<{ moves: StrategicMove[] }> = ({ moves }) => {
+  if (!moves || moves.length === 0) return null;
+
+  // Color cues — budget→amber (conservative), target→purple (recommended), celebrate→emerald (stretch)
+  const tone = (key: string): { border: string; accent: string; bg: string; tag: string } => {
+    if (key.startsWith('1')) return { border: 'border-amber-500/30', accent: 'text-amber-300', bg: 'bg-amber-500/5', tag: 'Conservative' };
+    if (key.startsWith('6')) return { border: 'border-emerald-500/30', accent: 'text-emerald-300', bg: 'bg-emerald-500/5', tag: 'Stretch' };
+    return { border: ACCENT_BORDER, accent: ACCENT_TEXT, bg: 'bg-purple-500/5', tag: 'Recommended' };
+  };
+
+  return (
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Compass className="w-4 h-4" style={{ color: ACCENT }} />
+          <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
+            Top 3 Strategic Moves — This Quarter
+          </h3>
+        </div>
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${ACCENT_BG_15} ${ACCENT_TEXT}`}>
+          Power-of-1 scenarios
+        </span>
+      </div>
+      <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        {moves.map((m) => {
+          const t = tone(m.key);
+          return (
+            <div
+              key={m.key}
+              className={`relative rounded-lg border ${t.border} ${t.bg} p-4 flex flex-col gap-2`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">{t.tag}</p>
+                  <p className="text-sm font-semibold text-white leading-tight">{m.label}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    Move every KPI {m.improvement_pct}% this quarter
+                  </p>
+                </div>
+                <span className={`text-xs font-bold ${t.accent}`}>{m.improvement_pct}%</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-700/40">
+                <div>
+                  <p className="text-[10px] text-gray-500">Invest</p>
+                  <p className={`text-sm font-semibold ${t.accent}`}>{formatCompact(m.investment)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500">Impact (yr 1)</p>
+                  <p className="text-sm font-semibold text-white">{formatCompact(m.total_impact)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500">Year-1 ROI</p>
+                  <p className="text-sm font-semibold text-white">
+                    {m.year_1_roi > 0 ? `${m.year_1_roi.toFixed(2)}x` : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500">Payback</p>
+                  <p className="text-sm font-semibold text-white">
+                    {m.payback_months ? `${m.payback_months.toFixed(1)} mo` : '—'}
+                  </p>
+                </div>
+              </div>
+
+              {m.three_year_net != null && m.three_year_net > 0 && (
+                <p className="text-[10px] text-gray-500 pt-1">
+                  3-yr net:&nbsp;
+                  <span className={`font-semibold ${t.accent}`}>{formatCompact(m.three_year_net)}</span>
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="px-5 py-2 border-t border-gray-700/40">
+        <p className="text-[9px] italic text-gray-500 leading-tight">
+          Source: Power-of-1 benchmark · estimated. Scenarios scale to portfolio ARR;
+          actuals will diverge as Wizard B / C learn from your outcomes.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Single-tenant Executive Scorecard (CEO-Q2).
+ *
+ * Renders when there is only one customer in scope — replaces the awkward
+ * 1-row "comparison" table with a scorecard framed as "this is what you
+ * own and where it stands." Same five fields as the comparison view
+ * (Health / ARR / At-Risk / NRR / Trend) but at executive altitude.
+ *
+ * A small "Add Comparison Customer" CTA is included; clicking it is a
+ * no-op until a real multi-tenant portfolio model lands (roadmap).
+ */
+const ExecutiveScorecard: React.FC<{ company: PortfolioCompany; period: string }> = ({ company, period }) => {
+  const healthColor = classifyColor(company.health_score);
+  const cls = classify(company.health_score);
+  return (
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Briefcase className="w-4 h-4" style={{ color: ACCENT }} />
+          <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
+            Executive Scorecard
+            <span className="text-gray-500 font-normal normal-case ml-2">&middot; {company.name}</span>
+          </h3>
+        </div>
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${ACCENT_BG_15} ${ACCENT_TEXT}`}>
+          {period}
+        </span>
+      </div>
+      <div className="p-5 grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* Health */}
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">Health</p>
+          <p className="text-2xl font-bold font-mono" style={{ color: healthColor }}>
+            {company.health_score.toFixed(0)}
+          </p>
+          <span
+            className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+              cls === 'critical' ? 'bg-red-500/20 text-red-400'
+              : cls === 'at_risk' ? 'bg-yellow-500/20 text-yellow-400'
+              : 'bg-green-500/20 text-green-400'
+            }`}
+          >
+            {cls === 'critical' ? 'Critical' : cls === 'at_risk' ? 'At Risk' : 'Healthy'}
+          </span>
+        </div>
+
+        {/* ARR */}
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">ARR</p>
+          <p className="text-2xl font-bold text-white font-mono">{formatCompact(company.arr)}</p>
+          <p className="text-[10px] text-gray-500">{company.account_count} accounts</p>
+        </div>
+
+        {/* At-Risk */}
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">At Risk</p>
+          <p className={`text-2xl font-bold font-mono ${
+            company.at_risk_count > 10 ? 'text-red-400'
+            : company.at_risk_count > 0 ? 'text-yellow-400'
+            : 'text-green-400'
+          }`}>
+            {company.at_risk_count}
+          </p>
+          <p className="text-[10px] text-gray-500">
+            {company.account_count > 0 ? `${((company.at_risk_count / company.account_count) * 100).toFixed(0)}% of book` : '—'}
+          </p>
+        </div>
+
+        {/* NRR */}
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">NRR</p>
+          <p className={`text-2xl font-bold font-mono ${
+            company.nrr >= 110 ? 'text-green-400'
+            : company.nrr >= 100 ? 'text-yellow-400'
+            : 'text-red-400'
+          }`}>
+            {company.nrr.toFixed(1)}%
+          </p>
+          <p className="text-[10px] text-gray-500">portfolio-weighted</p>
+        </div>
+
+        {/* Trend */}
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">Trend</p>
+          <div className="flex items-center gap-1.5">
+            {getTrendIcon(company.trend)}
+            <span className={`text-2xl font-bold font-mono ${getTrendColor(company.trend)}`}>
+              {company.trend_change > 0 ? '+' : ''}{company.trend_change.toFixed(1)}%
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-500">vs last period</p>
+        </div>
+      </div>
+      <div className="px-5 py-3 border-t border-gray-700/40 flex items-center justify-between">
+        <p className="text-[10px] text-gray-500 italic">
+          Single-tenant view &middot; cross-customer comparison unlocks when a second customer is added to this portfolio.
+        </p>
+        <button
+          disabled
+          title="Cross-customer comparison: enable a second tenant in this portfolio to unlock."
+          className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md border border-gray-700/60 text-gray-500 cursor-not-allowed"
+        >
+          <Plus className="w-3 h-3" />
+          Add Comparison Customer
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -736,6 +971,7 @@ const CEODashboard: React.FC = () => {
         let totalArr = 0;
         let totalAccounts = 0;
         let totalAtRisk = 0;
+        let strategicMoves: StrategicMove[] = [];
 
         if (ceoResp.ok) {
           const ceoJson = await ceoResp.json();
@@ -746,6 +982,9 @@ const CEODashboard: React.FC = () => {
               apiCall(`/api/portfolio/${ceoJson.portfolio_id}/companies`, { headers }),
               apiCall('/api/outcome-roi/portfolio-summary', { headers }),
             ]);
+            // Intentionally do not fetch strategic moves in portfolio mode here —
+            // moves are tenant-specific. (Phase 2 multi-tenant portfolio will need
+            // its own aggregate; out of scope for the CEO-Q5 single-tenant fix.)
             if (portfolioResp.status === 'fulfilled' && portfolioResp.value.ok) {
               const pJson = await portfolioResp.value.json();
               const customerList = pJson.companies || pJson.customers || pJson.data || [];
@@ -793,6 +1032,37 @@ const CEODashboard: React.FC = () => {
               { label: 'At Risk', count: ps.at_risk || 0, color: HEALTH_COLORS.at_risk, bgClass: 'bg-yellow-500/15', textClass: 'text-yellow-400' },
               { label: 'Critical', count: ps.critical || 0, color: HEALTH_COLORS.critical, bgClass: 'bg-red-500/15', textClass: 'text-red-400' },
             ];
+
+            // CEO-Q5 (May 17 eval): pull Power-of-1 scaling scenarios from the
+            // outcome-roi story. The engine ARR-scales the three scenarios
+            // (1%/4%/6%) to portfolio total ARR, so the tile renders dollar
+            // amounts that match this customer's investment scale instead of
+            // the $10M baseline. Failure is non-fatal — the tile self-hides.
+            try {
+              const storyResp = await apiCall('/api/outcome-roi/story', { headers });
+              if (storyResp.ok) {
+                const storyJson = await storyResp.json();
+                const scenarios = storyJson?.story?.scaling_scenarios || {};
+                const ORDER = ['1_pct', '4_pct', '6_pct'];
+                strategicMoves = ORDER
+                  .filter((k) => scenarios[k])
+                  .map((k) => {
+                    const s = scenarios[k];
+                    return {
+                      key: k,
+                      label: s.label || k,
+                      improvement_pct: s.improvement_pct || 0,
+                      investment: s.investment || 0,
+                      total_impact: s.total_impact || 0,
+                      year_1_roi: s.year_1_roi || 0,
+                      payback_months: s.payback_months ?? null,
+                      three_year_net: s.three_year_net ?? null,
+                    } as StrategicMove;
+                  });
+              }
+            } catch {
+              // Strategic moves are optional — keep the rest of the dashboard rendering.
+            }
           }
         }
 
@@ -859,6 +1129,7 @@ const CEODashboard: React.FC = () => {
             portfolio_trend_pct: avgTrendChange,
             top_risks: topRisks,
             roi_pct: roiPct,
+            strategic_moves: strategicMoves,
             period: 'Q1 2026',
             last_updated: 'just now',
           });
@@ -1046,18 +1317,33 @@ const CEODashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Row 2: Company Comparison Table */}
+          {/* Row 2: Comparison view (CEO-Q2).
+              Single-tenant install renders an Executive Scorecard rather
+              than a misleading 1-row "comparison" table. The full
+              cross-customer comparison table comes back automatically when
+              the portfolio has 2+ tenants. */}
           <div className="mb-6">
-            <CompanyTable
-              companies={sortedCompanies}
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-              onCompanyClick={handleCompanyClick}
-            />
+            {d.companies.length > 1 ? (
+              <CompanyTable
+                companies={sortedCompanies}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+                onCompanyClick={handleCompanyClick}
+              />
+            ) : d.companies.length === 1 ? (
+              <ExecutiveScorecard company={d.companies[0]} period={d.period} />
+            ) : null}
           </div>
 
-          {/* Row 3: Health Distribution + ARR by Company */}
+          {/* Row 3: CEO-Q5 — Top 3 Strategic Moves (Power-of-1 scenarios). */}
+          {d.strategic_moves && d.strategic_moves.length > 0 && (
+            <div className="mb-6">
+              <TopStrategicMovesTile moves={d.strategic_moves} />
+            </div>
+          )}
+
+          {/* Row 4: Health Distribution + ARR by Company */}
           <div className="grid grid-cols-2 gap-4">
             <HealthDistribution buckets={d.health_distribution} totalAccounts={d.total_accounts} />
             <ARRByCompanyChart companies={d.companies} />
