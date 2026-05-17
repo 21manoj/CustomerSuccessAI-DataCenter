@@ -154,6 +154,17 @@ interface VPCSDashboardData {
       utilization_pct: number;
       at_risk_accounts: number;
     }>;
+    // Hours-based resource-pool view (from PR-29 backend enrichment).
+    // Optional so the dashboard still renders against an older API build.
+    total_hours_available?: number;
+    total_hours_planned?: number;
+    total_hours_utilization_pct?: number;
+    total_fte?: number;
+    total_annual_cost?: number;
+    feasible?: boolean;
+    bottleneck_roles?: string[];
+    recommendation?: string;
+    active_playbooks?: number;
   };
   quick_stats: {
     avg_resolution_days: number;
@@ -673,22 +684,70 @@ const AccountPortfolioTable: React.FC<{ accounts: AccountRow[] }> = ({ accounts 
   </div>
 );
 
-/** Team Capacity gauge (right sidebar) */
+/** Team Capacity gauge (right sidebar).
+ *
+ * Hours-based utilization view (PR-29). Reads the resource-pool aggregate
+ * exposed by /api/v1/team-capacity (PR-21 enrichment): total annual hours
+ * available across all 5 CS roles, hours committed by active playbooks,
+ * resulting utilization %, FTE/cost totals, bottleneck list, and the
+ * backend-computed recommendation.
+ *
+ * Legacy props (accountsPerCsm, targetPerCsm, csmCount, accountUtilization)
+ * are accepted for backward compatibility but are no longer the primary
+ * gauge — they ALWAYS pinned to ~100% on a fully-loaded portfolio.
+ */
 const TeamCapacityGauge: React.FC<{
+  hoursAvailable: number;
+  hoursCommitted: number;
+  hoursUtilizationPct: number;
+  totalFte?: number;
+  totalAnnualCost?: number;
+  activePlaybooks?: number;
+  bottleneckRoles?: string[];
+  feasible?: boolean;
+  recommendation?: string;
+  // Legacy/fallback inputs — used only when hoursAvailable === 0
+  // (e.g. cold-start tenant or older API build without resource_pool).
   accountsPerCsm: number;
   targetPerCsm: number;
   csmCount: number;
-}> = ({ accountsPerCsm, targetPerCsm, csmCount }) => {
-  const utilization = Math.round((accountsPerCsm / targetPerCsm) * 100);
+}> = ({
+  hoursAvailable,
+  hoursCommitted,
+  hoursUtilizationPct,
+  totalFte,
+  totalAnnualCost,
+  activePlaybooks,
+  bottleneckRoles,
+  feasible,
+  recommendation,
+  accountsPerCsm,
+  targetPerCsm,
+  csmCount,
+}) => {
+  // Prefer hours-based utilization. Fall back to account-count only when the
+  // resource pool isn't available (older backend or load error).
+  const useHours = hoursAvailable > 0;
+  const utilization = useHours
+    ? Math.round(hoursUtilizationPct)
+    : Math.round((accountsPerCsm / targetPerCsm) * 100);
   const circumference = 2 * Math.PI * 40;
   const progress = (Math.min(utilization, 100) / 100) * circumference;
   const gaugeColor = utilization > 90 ? '#ef4444' : utilization > 75 ? '#eab308' : TEAL;
 
+  const formatHours = (h: number): string => {
+    if (h >= 1000) return `${(h / 1000).toFixed(1)}k`;
+    return `${Math.round(h)}`;
+  };
+
   return (
     <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
-      <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-4">
+      <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-1">
         Team Capacity
       </h3>
+      <p className="text-[9px] text-gray-600 mb-3">
+        {useHours ? 'Hours committed vs available (annual)' : 'Accounts per CSM (target ratio)'}
+      </p>
       {/* Gauge */}
       <div className="flex justify-center mb-4">
         <div className="relative w-24 h-24">
@@ -715,24 +774,94 @@ const TeamCapacityGauge: React.FC<{
       </div>
       {/* Stats */}
       <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">CSMs on Team</span>
-          <span className="text-xs font-semibold text-white">{csmCount}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Accounts per CSM</span>
-          <span className="text-xs font-semibold text-teal-400">{accountsPerCsm}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Target per CSM</span>
-          <span className="text-xs font-medium text-gray-300">{targetPerCsm}</span>
-        </div>
-        <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${Math.min(100, utilization)}%`, backgroundColor: gaugeColor }}
-          />
-        </div>
+        {useHours ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">Hours Committed</span>
+              <span className="text-xs font-semibold text-teal-400">
+                {formatHours(hoursCommitted)}h
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">Hours Available</span>
+              <span className="text-xs font-medium text-gray-300">
+                {formatHours(hoursAvailable)}h
+              </span>
+            </div>
+            {(totalFte !== undefined && totalFte > 0) && (
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-500">Total FTE</span>
+                <span className="text-xs font-semibold text-white">{totalFte.toFixed(2)}</span>
+              </div>
+            )}
+            {(totalAnnualCost !== undefined && totalAnnualCost > 0) && (
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-500">Annual Cost</span>
+                <span className="text-xs font-medium text-gray-300 font-mono">
+                  {formatCompact(totalAnnualCost)}
+                </span>
+              </div>
+            )}
+            {csmCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-500">CSMs on Team</span>
+                <span className="text-xs font-medium text-gray-300">{csmCount}</span>
+              </div>
+            )}
+            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${Math.min(100, utilization)}%`, backgroundColor: gaugeColor }}
+              />
+            </div>
+            {/* Bottleneck / feasibility line */}
+            <div className="pt-2 border-t border-gray-700/40 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-500">Bottlenecks</span>
+                {bottleneckRoles && bottleneckRoles.length > 0 ? (
+                  <span className="text-[10px] font-semibold text-orange-400">
+                    {bottleneckRoles.join(', ')}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium text-green-400">None</span>
+                )}
+              </div>
+              {activePlaybooks !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-gray-500">Active Playbooks</span>
+                  <span className="text-xs font-semibold text-white">{activePlaybooks}</span>
+                </div>
+              )}
+            </div>
+            {recommendation && (
+              <p className="text-[10px] text-gray-400 leading-snug pt-1">
+                {recommendation}
+              </p>
+            )}
+          </>
+        ) : (
+          // Fallback (cold-start / older backend): the prior account-count gauge
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">CSMs on Team</span>
+              <span className="text-xs font-semibold text-white">{csmCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">Accounts per CSM</span>
+              <span className="text-xs font-semibold text-teal-400">{accountsPerCsm}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">Target per CSM</span>
+              <span className="text-xs font-medium text-gray-300">{targetPerCsm}</span>
+            </div>
+            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${Math.min(100, utilization)}%`, backgroundColor: gaugeColor }}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1031,6 +1160,16 @@ const VPCSDashboard: React.FC = () => {
             target_per_csm: realTargetPerCsm,
             csm_count: realCsmCount,
             per_csm_breakdown: capacityData?.per_csm_breakdown || [],
+            // Hours-based resource-pool view (preferred; PR-29 fix).
+            total_hours_available: Number(capacityData?.total_hours_available || 0),
+            total_hours_planned: Number(capacityData?.total_hours_planned || 0),
+            total_hours_utilization_pct: Number(capacityData?.total_hours_utilization_pct || 0),
+            total_fte: Number(capacityData?.resource_pool?.totals?.total_fte || 0),
+            total_annual_cost: Number(capacityData?.resource_pool?.totals?.total_annual_cost || 0),
+            feasible: capacityData?.feasible !== undefined ? !!capacityData.feasible : true,
+            bottleneck_roles: Array.isArray(capacityData?.bottleneck_roles) ? capacityData.bottleneck_roles : [],
+            recommendation: typeof capacityData?.recommendation === 'string' ? capacityData.recommendation : '',
+            active_playbooks: Number(capacityData?.active_playbooks || 0),
           },
           quick_stats: {
             avg_resolution_days: roiData?.avg_resolution_days || 4.2,
@@ -1529,6 +1668,15 @@ const VPCSDashboard: React.FC = () => {
               {/* Team Capacity detail */}
               <div className="mt-6">
                 <TeamCapacityGauge
+                  hoursAvailable={d.team_capacity.total_hours_available || 0}
+                  hoursCommitted={d.team_capacity.total_hours_planned || 0}
+                  hoursUtilizationPct={d.team_capacity.total_hours_utilization_pct || 0}
+                  totalFte={d.team_capacity.total_fte}
+                  totalAnnualCost={d.team_capacity.total_annual_cost}
+                  activePlaybooks={d.team_capacity.active_playbooks}
+                  bottleneckRoles={d.team_capacity.bottleneck_roles}
+                  feasible={d.team_capacity.feasible}
+                  recommendation={d.team_capacity.recommendation}
                   accountsPerCsm={d.team_capacity.accounts_per_csm}
                   targetPerCsm={d.team_capacity.target_per_csm}
                   csmCount={d.team_capacity.csm_count}
@@ -1595,6 +1743,15 @@ const VPCSDashboard: React.FC = () => {
       <aside className="w-80 flex-shrink-0 bg-[#0d1117] border-l border-gray-700/50 py-6 px-4 overflow-y-auto flex flex-col gap-5">
         {/* Team Capacity */}
         <TeamCapacityGauge
+          hoursAvailable={d.team_capacity.total_hours_available || 0}
+          hoursCommitted={d.team_capacity.total_hours_planned || 0}
+          hoursUtilizationPct={d.team_capacity.total_hours_utilization_pct || 0}
+          totalFte={d.team_capacity.total_fte}
+          totalAnnualCost={d.team_capacity.total_annual_cost}
+          activePlaybooks={d.team_capacity.active_playbooks}
+          bottleneckRoles={d.team_capacity.bottleneck_roles}
+          feasible={d.team_capacity.feasible}
+          recommendation={d.team_capacity.recommendation}
           accountsPerCsm={d.team_capacity.accounts_per_csm}
           targetPerCsm={d.team_capacity.target_per_csm}
           csmCount={d.team_capacity.csm_count}
