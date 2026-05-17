@@ -75,10 +75,18 @@ export const PredictorV3Tile: React.FC<Props> = ({
     let cancelled = false;
     (async () => {
       try {
-        const [exp, risk]: [any, any] = await Promise.all([
+        // `apiCall` returns a `Response`, not parsed JSON — must `.json()` it
+        // before reading `.results`. Without the json() step, `exp.results`
+        // is `undefined` and the tile renders "No expansion opportunities"
+        // even when the backend returns 10 candidates (May 17 FDE bug).
+        const [expResp, riskResp] = await Promise.all([
           apiCall(`/api/v1/predictor/customer/${customerId}/top-expansion-opportunities?horizon=${horizon}&limit=${limit}`),
           apiCall(`/api/v1/predictor/customer/${customerId}/top-at-risk-accounts?horizon=${horizon}&limit=${limit}`),
         ]);
+        if (cancelled) return;
+
+        const exp: any = await expResp.json().catch(() => ({}));
+        const risk: any = await riskResp.json().catch(() => ({}));
         if (cancelled) return;
 
         // Kill-switch detection: API returns 503 with body {error:'predictor_disabled', fallback:'wizard_b_legacy'}

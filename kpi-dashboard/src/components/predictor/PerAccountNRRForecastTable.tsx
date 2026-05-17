@@ -96,10 +96,17 @@ export const PerAccountNRRForecastTable: React.FC<Props> = ({ customerId, horizo
         // Pull both top-expansion + top-at-risk with high limit. The endpoints
         // return per-account predictions in different sort orders; we dedupe
         // by account_id to get the complete portfolio.
-        const [exp, risk]: [any, any] = await Promise.all([
+        // `apiCall` returns a `Response`, not parsed JSON — must `.json()` it
+        // before reading `.results`. Without the json() step the table comes
+        // up empty even when the backend returns the full portfolio (paired
+        // with the PredictorV3Tile fix in the same commit).
+        const [expResp, riskResp] = await Promise.all([
           apiCall(`/api/v1/predictor/customer/${customerId}/top-expansion-opportunities?horizon=${horizon}&limit=100`),
           apiCall(`/api/v1/predictor/customer/${customerId}/top-at-risk-accounts?horizon=${horizon}&limit=100`),
         ]);
+        if (cancelled) return;
+        const exp: any = await expResp.json().catch(() => ({}));
+        const risk: any = await riskResp.json().catch(() => ({}));
         if (cancelled) return;
 
         const byId = new Map<number, AccountForecastRow>();
