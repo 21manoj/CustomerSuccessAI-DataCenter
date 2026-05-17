@@ -221,27 +221,59 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None,
     return recommendations
 
 
+def _resolve_vertical_for_customer(customer_id):
+    """Local helper to look up vertical for a customer.
+
+    Mirrors mcp_server.cs_pulse_mcp_server._resolve_customer_vertical but
+    inlined here so the HTTP route (which doesn't import the MCP module)
+    can route correctly. Reads CustomerConfig.vertical first (canonical
+    long form), then Customer.vertical (short code), normalizes via
+    vertical_registry.
+
+    Returns canonical long-form vertical: 'saas_premium', 'dc2_s', etc.
+    """
+    try:
+        from models import Customer, CustomerConfig
+        from utils.vertical_registry import normalize_vertical
+
+        cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+        if cfg and cfg.vertical:
+            return normalize_vertical(cfg.vertical)
+
+        cust = Customer.query.get(int(customer_id))
+        if cust and getattr(cust, 'vertical', None):
+            return normalize_vertical(cust.vertical)
+    except Exception as e:
+        logger.debug(f"vertical resolution failed for customer {customer_id}: {e}")
+    return 'dc2_s'  # legacy fallback
+
+
 def get_recommendations_for_account(account_id, customer_id, health_score=None,
                                     kpi_values=None):
     """Get ranked playbook recommendations for a specific account.
 
-    Vertical-aware: when kpi_values are provided (DC2S path), evaluates
-    PB-01 through PB-06 from verticals/dc2_s/vertical_config.py using
-    canonical trigger conditions and actual KPI data.
+    Vertical-aware (fixes bug B-4 from May 17 FDE eval):
+      - dc2_s tenant: evaluates PB-01 through PB-06 from verticals/dc2_s/vertical_config.py
+        using actual KPI values against canonical trigger conditions.
+      - saas_premium (and other non-DC) tenants: routes to generic SaaS-flavored
+        evaluators (voc-sprint, activation-blitz, sla-stabilizer, renewal-safeguard,
+        expansion-timing) — the playbook IDs referenced by power_of_1_economics.json's
+        `linked_playbooks` field for the non-DC catalog.
 
-    When kpi_values are not provided, falls back to generic evaluators
-    (voc-sprint, activation-blitz, sla-stabilizer, renewal-safeguard,
-    expansion-timing).
+    The previous version unconditionally entered the DC2S branch whenever kpi_values
+    were provided (which is the standard MCP call path), so SaaS tenants got
+    DC2S playbook recommendations AND a hardcoded `vertical: 'dc2_s'` tag.
 
     Args:
         account_id: Account identifier
-        customer_id: Customer/tenant ID
+        customer_id: Customer/tenant ID — used to resolve the tenant's vertical
         health_score: Optional pre-calculated health score (0-100)
-        kpi_values: Optional dict of KPI code → value for DC2S evaluation.
-                    When provided, activates the DC2S vertical path.
+        kpi_values: Optional dict of KPI code → value. Required for DC2S evaluation;
+                    ignored on the SaaS path (the generic evaluators read account/KPI
+                    state from the DB themselves).
 
     Returns:
-        dict with ranked recommendations list
+        dict with ranked recommendations list and the resolved vertical tag.
     """
     account = Account.query.filter_by(
         account_id=int(account_id),
@@ -251,6 +283,9 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
     if not account:
         return {"account_id": account_id, "recommendations": [],
                 "error": f"Account {account_id} not found"}
+
+    # ── Resolve the customer's vertical (source of truth: CustomerConfig.vertical) ──
+    vertical = _resolve_vertical_for_customer(customer_id)
 
     # ── Retrieve pillar scores from latest HealthScore ──
     pillar_scores = None
@@ -264,7 +299,7 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
         pass
 
     # ── DC2S Vertical Path: PB-01 through PB-06 ──
-    if kpi_values is not None:
+    if vertical == 'dc2_s' and kpi_values is not None:
         recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score, pillar_scores,
                                                     customer_id=customer_id)
 
@@ -288,7 +323,7 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
             'recommendations': recommendations,
         }
 
-    # ── Generic Path (non-DC2S / legacy) ──
+    # ── Generic Path (saas_premium and other non-DC2S verticals) ──
     playbooks = {
         'voc-sprint': ('VoC Sprint', evaluate_account_for_voc_sprint),
         'activation-blitz': ('Activation Blitz', evaluate_account_for_activation_blitz),
@@ -329,6 +364,8 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
         'account_id': account_id,
         'account_name': account.account_name,
         'health_score': health_score,
+        'vertical': vertical,
+        'playbook_source': 'generic_saas_evaluators (voc-sprint, activation-blitz, sla-stabilizer, renewal-safeguard, expansion-timing)',
         'total_recommendations': len(recommendations),
         'recommendations': recommendations,
     }

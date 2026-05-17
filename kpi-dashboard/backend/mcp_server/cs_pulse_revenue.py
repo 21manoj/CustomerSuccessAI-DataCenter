@@ -183,7 +183,10 @@ def get_playbook_economics(
             ).all()
             effective_arr = float(sum(_get_account_arr(a) for a in accounts)) if accounts else 10_000_000
 
-        result = calculate_cost_bridge(account_arr=effective_arr)
+        # Resolve the tenant's vertical so SaaS tenants get the SaaS playbook
+        # catalog instead of DC2S's PB-01..PB-06. Closes bug B-5 from May 17 eval.
+        vertical = _resolve_customer_vertical(customer_id)
+        result = calculate_cost_bridge(account_arr=effective_arr, vertical=vertical)
         return bridge_to_dict(result)
 
 

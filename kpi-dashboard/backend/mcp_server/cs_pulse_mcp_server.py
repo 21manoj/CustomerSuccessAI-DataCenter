@@ -163,12 +163,41 @@ def _validate_account_ownership(customer_id: int, account_id: int):
 
 
 def _resolve_customer_vertical(customer_id: int) -> str:
-    """Look up the vertical for a customer. Falls back to 'dc2_s'."""
-    from models import Customer
+    """Look up the vertical for a customer.
+
+    Resolution order (most authoritative first):
+      1. CustomerConfig.vertical — canonical long form ('saas_premium', 'dc2_s', ...)
+      2. Customer.vertical        — short code ('saas', 'dc', 'msp') — normalized via
+                                    vertical_registry.VERTICAL_ALIASES
+      3. Legacy fallback 'dc2_s'
+
+    Why two tables: Customer.vertical predates CustomerConfig.vertical and uses short
+    codes ('saas', 'dc'). When a downstream caller checks `vertical == 'saas_premium'`
+    the short form silently misses, defaulting the tenant to dc2_s. Normalizing both
+    sources here is the single fix point — see bugs B-4 / B-5 in the May 17 FDE eval.
+    """
+    from models import Customer, CustomerConfig
+    from utils.vertical_registry import normalize_vertical
+
     customer = Customer.query.get(int(customer_id))
     if not customer:
         raise ToolError(f"Customer {customer_id} not found")
-    return getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+
+    # 1. CustomerConfig.vertical — canonical long form
+    try:
+        cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+        if cfg and cfg.vertical:
+            return normalize_vertical(cfg.vertical)
+    except Exception:
+        pass
+
+    # 2. Customer.vertical — short code, normalize to long form
+    short = getattr(customer, 'vertical', None)
+    if short:
+        return normalize_vertical(short)
+
+    # 3. Legacy fallback
+    return 'dc2_s'
 
 
 def _get_precalculated_scores(account_id: int):

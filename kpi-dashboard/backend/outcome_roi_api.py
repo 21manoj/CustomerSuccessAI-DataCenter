@@ -1762,7 +1762,20 @@ def playbook_economics():
                 float(a.revenue) if a.revenue else 0 for a in accounts
             )) if accounts else 10_000_000
 
-        result = calculate_cost_bridge(account_arr=account_arr)
+        # Resolve tenant vertical so SaaS tenants get SaaS playbook catalog (bug B-5).
+        try:
+            from models import Customer, CustomerConfig
+            from utils.vertical_registry import normalize_vertical
+            cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+            if cfg and cfg.vertical:
+                vertical = normalize_vertical(cfg.vertical)
+            else:
+                cust = Customer.query.get(int(customer_id))
+                vertical = normalize_vertical(getattr(cust, 'vertical', None) or 'dc2_s')
+        except Exception:
+            vertical = 'dc2_s'
+
+        result = calculate_cost_bridge(account_arr=account_arr, vertical=vertical)
         return jsonify({
             'status': 'success',
             'customer_id': customer_id,
