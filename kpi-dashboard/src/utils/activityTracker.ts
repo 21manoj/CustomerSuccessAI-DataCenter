@@ -20,7 +20,8 @@ type EventType =
   | 'export'
   | 'account_drill'
   | 'playbook_action'
-  | 'mcp_query';
+  | 'mcp_query'
+  | 'cro_horizon_change';
 
 // Session ID for correlating events within a browser session
 const SESSION_ID = `ui_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
