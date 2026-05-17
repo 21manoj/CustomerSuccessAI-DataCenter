@@ -32,6 +32,7 @@ from cs_pulse_mcp_server import (
     _check_mcp_enabled,
     _require_auth,
     _require_account_auth,
+    _validate_account_ownership,
     _get_flask_app,
     ToolError,
 )
@@ -44,7 +45,11 @@ logger = logging.getLogger(__name__)
 # ===================================================================
 
 @mcp.tool
-def get_account_nrr_forecast(account_id: int, horizon: str = '12mo') -> dict:
+def get_account_nrr_forecast(
+    customer_id: int,
+    account_id: int,
+    horizon: str = '12mo',
+) -> dict:
     """Forward NRR forecast for a single account (Predictor v3).
 
     Returns the per-account NRR forecast with full decomposition: point
@@ -62,6 +67,7 @@ def get_account_nrr_forecast(account_id: int, horizon: str = '12mo') -> dict:
     existing get_nrr_forecast tool (Wizard B).
 
     Args:
+        customer_id: The customer (tenant) ID that owns the account
         account_id: The account_id to forecast
         horizon: 'renewal' (default account-specific renewal date) or
                  '12mo' (12 months from now). Defaults to '12mo'.
@@ -77,7 +83,7 @@ def get_account_nrr_forecast(account_id: int, horizon: str = '12mo') -> dict:
         calibrated_at.
     """
     _check_mcp_enabled()
-    _require_account_auth(account_id)
+    _require_account_auth(customer_id, account_id)
     app = _get_flask_app()
 
     with app.app_context():
@@ -90,6 +96,14 @@ def get_account_nrr_forecast(account_id: int, horizon: str = '12mo') -> dict:
             raise ToolError(
                 f"horizon must be 'renewal' or '12mo', got {horizon!r}"
             )
+
+        # Tenant isolation: confirm the account belongs to the supplied customer
+        # before running inference. _require_account_auth enforces API-key
+        # scope; _validate_account_ownership enforces the customer_id ↔
+        # account_id link, matching the convention used by every other
+        # account-scoped MCP tool (get_account_health, get_revenue_at_risk,
+        # get_crm_account_data, get_outcome_roi_story).
+        _validate_account_ownership(customer_id, account_id)
 
         try:
             result = predict_for_account_id(account_id=account_id, horizon=horizon)

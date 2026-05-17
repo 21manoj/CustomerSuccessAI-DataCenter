@@ -307,10 +307,11 @@ TOOL_DEFINITIONS = [
         "input_schema": {
             "type": "object",
             "properties": {
+                "customer_id": {"type": "integer", "description": "The customer (tenant) ID that owns the account"},
                 "account_id": {"type": "integer", "description": "The account_id to forecast"},
                 "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo", "description": "Forecast horizon"}
             },
-            "required": ["account_id"]
+            "required": ["customer_id", "account_id"]
         }
     },
     {
@@ -610,7 +611,11 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
     elif tool_name == 'get_account_nrr_forecast':
         from mcp_server.cs_pulse_predictor import get_account_nrr_forecast as _t
         impl = getattr(_t, 'fn', _t)
+        # customer_id from Ask AI session context — the MCP tool requires
+        # it for tenant-isolation auth. The LLM-supplied customer_id (if
+        # any) is ignored: Ask AI is always scoped to the session's tenant.
         return impl(
+            customer_id=customer_id,
             account_id=tool_input['account_id'],
             horizon=tool_input.get('horizon', '12mo'),
         )
@@ -1215,12 +1220,21 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
     elif tool_name == 'get_account_nrr_forecast':
         try:
             from predictor.inference import predict_for_account_id
+            from models import Account
             account_id = tool_input.get('account_id')
             horizon = tool_input.get('horizon', '12mo')
             if not account_id:
                 return {"error": "account_id is required"}
             if horizon not in ('renewal', '12mo'):
                 return {"error": f"horizon must be 'renewal' or '12mo', got {horizon!r}"}
+            # Tenant isolation: confirm the account belongs to the session's
+            # customer before forecasting. Matches the MCP path's auth check.
+            owned = Account.query.filter_by(
+                account_id=int(account_id),
+                customer_id=int(customer_id),
+            ).first()
+            if not owned:
+                return {"error": f"Account {account_id} not found for customer {customer_id}"}
             return predict_for_account_id(account_id=int(account_id), horizon=horizon)
         except Exception as e:
             logger.warning(f"get_account_nrr_forecast failed: {e}")
