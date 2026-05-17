@@ -20,19 +20,36 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, AlertTriangle, ShieldOff } from 'lucide-react';
 import { apiCall } from '../../utils/api';
+import { ForecastWithCI } from '../shared/ForecastWithCI';
 
+// Predictor v3 API enriches every forecast with CI bounds and a disclosure
+// string. We pipe these through verbatim — the <ForecastWithCI> component
+// renders the warning styling for `placeholder_uncalibrated` and the
+// platform's own "do not threshold on the CI bounds" wording.
 interface PredictorRankRow {
   account_id: number;
   account_name: string;
   arr: number;
   ranking_score: number;
-  expected_nrr: { point: number; lower_90: number; upper_90: number };
+  expected_nrr: {
+    point: number;
+    lower_90: number;
+    upper_90: number;
+    ci_method?: string;
+    ci_disclosure?: string;
+  };
   term_decomposition: { p_churn_at_horizon: number };
   expansion_outlook: {
     expected_arr_lift: number;
     p_expansion_event_horizon: number;
     expected_size_pct_given_event: number;
     horizon_to_likely_event_months: number | null;
+    // Expansion CI fields — top-expansion endpoint returns lower/upper on the
+    // expected_arr_lift point estimate alongside ci_method + ci_disclosure.
+    ci_lower_arr_lift?: number;
+    ci_upper_arr_lift?: number;
+    ci_method?: string;
+    ci_disclosure?: string;
   };
 }
 
@@ -157,8 +174,32 @@ export const PredictorV3Tile: React.FC<Props> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-emerald-300 font-semibold">+{fmtUsd(row.expansion_outlook.expected_arr_lift)}</div>
-                  <div className="text-xs text-gray-500">NRR {fmtPct(row.expected_nrr.point)}</div>
+                  {/* CRO-3 (May 17 FDE eval): expansion ARR lift now renders with
+                      lower/upper CI bounds + (i) disclosure tooltip. The leading
+                      "+" sign stays as a visual cue for expansion direction. */}
+                  <div className="text-emerald-300 font-semibold flex items-center justify-end gap-1">
+                    <span>+</span>
+                    <ForecastWithCI
+                      point={row.expansion_outlook.expected_arr_lift}
+                      lower={row.expansion_outlook.ci_lower_arr_lift}
+                      upper={row.expansion_outlook.ci_upper_arr_lift}
+                      format="currency"
+                      ciMethod={row.expansion_outlook.ci_method}
+                      ciDisclosure={row.expansion_outlook.ci_disclosure}
+                    />
+                  </div>
+                  {/* CRO-8 / CFO-10: NRR forecast now renders with CI. */}
+                  <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
+                    <span>NRR</span>
+                    <ForecastWithCI
+                      point={row.expected_nrr.point}
+                      lower={row.expected_nrr.lower_90}
+                      upper={row.expected_nrr.upper_90}
+                      format="percent"
+                      ciMethod={row.expected_nrr.ci_method}
+                      ciDisclosure={row.expected_nrr.ci_disclosure}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -183,7 +224,20 @@ export const PredictorV3Tile: React.FC<Props> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-red-300 font-semibold">−{fmtUsd(row.ranking_score)}</div>
-                  <div className="text-xs text-gray-500">NRR {fmtPct(row.expected_nrr.point)}</div>
+                  {/* CRO-8 / CFO-10: NRR forecast with CI on at-risk rows. The
+                      Spica Labs verification check (98.8% (93.8% – 103.8%))
+                      lives in this exact tile slot. */}
+                  <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
+                    <span>NRR</span>
+                    <ForecastWithCI
+                      point={row.expected_nrr.point}
+                      lower={row.expected_nrr.lower_90}
+                      upper={row.expected_nrr.upper_90}
+                      format="percent"
+                      ciMethod={row.expected_nrr.ci_method}
+                      ciDisclosure={row.expected_nrr.ci_disclosure}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -193,7 +247,8 @@ export const PredictorV3Tile: React.FC<Props> = ({
 
       <div className="text-[10px] text-gray-600 italic">
         NRR Predictor v3 ({saasProfile === 'saas_enterprise' ? 'enterprise' : 'SMB'} profile, {horizon} horizon).
-        Forward-looking expected NRR with bootstrap CIs. Replaces Wizard B's realized-NRR ledger when active.
+        Forward-looking expected NRR with 90% CI bounds shown inline. Replaces Wizard B's realized-NRR ledger when active.
+        Hover (i) on any forecast for CI methodology + calibration notes.
       </div>
     </div>
   );
