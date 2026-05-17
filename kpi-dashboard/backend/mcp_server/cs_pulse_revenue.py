@@ -541,8 +541,10 @@ def get_team_capacity(customer_id: int) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
-        from models import PlaybookExecutionV2, Account
+        from models import PlaybookExecutionV2, Account, HealthScore
+        from sqlalchemy import func
         import resource_capacity_model as rcm
+        import utils.health_thresholds as ht
 
         # Get resource pool summary
         pool = rcm.get_resource_pool_summary()
@@ -593,7 +595,42 @@ def get_team_capacity(customer_id: int) -> dict:
         # Portfolio context
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue or 0) for a in accounts)
-        at_risk_count = sum(1 for a in accounts if float(a.health_score or 100) < 70)
+
+        # Latest health_score per account is stored in HealthScore (separate table),
+        # NOT on the Account model. Cold-start tenants with no HealthScore rows must
+        # not raise — they show 0 at-risk accounts. Batch-load latest row per
+        # account_id to avoid N+1 on large portfolios.
+        at_risk_count = 0
+        account_ids = [a.account_id for a in accounts]
+        if account_ids:
+            try:
+                latest_month_sq = (
+                    HealthScore.query
+                    .with_entities(
+                        HealthScore.account_id,
+                        func.max(HealthScore.measurement_month).label('latest_month'),
+                    )
+                    .filter(HealthScore.account_id.in_(account_ids))
+                    .group_by(HealthScore.account_id)
+                    .subquery()
+                )
+                latest_rows = (
+                    HealthScore.query
+                    .join(
+                        latest_month_sq,
+                        (HealthScore.account_id == latest_month_sq.c.account_id)
+                        & (HealthScore.measurement_month == latest_month_sq.c.latest_month),
+                    )
+                    .all()
+                )
+                at_risk_min = ht.healthy_min()  # healthy threshold (e.g. 70); below = at-risk
+                at_risk_count = sum(
+                    1 for hs in latest_rows
+                    if hs.health_score is not None and float(hs.health_score) < at_risk_min
+                )
+            except Exception:
+                # Cold-start safety: no HealthScore rows yet → 0 at-risk accounts
+                at_risk_count = 0
 
         bottleneck_list = [bottleneck] if bottleneck else []
 
