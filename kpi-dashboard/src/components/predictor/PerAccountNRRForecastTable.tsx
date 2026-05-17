@@ -13,12 +13,22 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { ArrowUpDown, TrendingUp, AlertTriangle } from 'lucide-react';
 import { apiCall } from '../../utils/api';
+import { ForecastWithCI } from '../shared/ForecastWithCI';
 
 interface AccountForecastRow {
   account_id: number;
   account_name: string;
   arr: number;
-  expected_nrr: { point: number; lower_90: number; upper_90: number };
+  // Predictor v3 carries CI bounds + a methodology disclosure on every NRR
+  // and expansion forecast — propagate them through so the UI can render
+  // them inline (CFO-10 May 17 FDE eval gap).
+  expected_nrr: {
+    point: number;
+    lower_90: number;
+    upper_90: number;
+    ci_method?: string;
+    ci_disclosure?: string;
+  };
   term_decomposition: {
     p_churn_at_horizon: number;
     p_survive_at_horizon: number;
@@ -30,6 +40,10 @@ interface AccountForecastRow {
     p_expansion_event_horizon: number;
     expected_size_pct_given_event: number;
     horizon_to_likely_event_months: number | null;
+    ci_lower_arr_lift?: number;
+    ci_upper_arr_lift?: number;
+    ci_method?: string;
+    ci_disclosure?: string;
   };
   calibration_id?: string;
   calibrated_at?: string;
@@ -237,10 +251,21 @@ export const PerAccountNRRForecastTable: React.FC<Props> = ({ customerId, horizo
                     {formatCompactDollars(r.arr)}
                   </td>
                   <td className="px-3 py-2 text-right">
+                    {/* CFO-10 (May 17 FDE eval): NRR forecast renders with 90% CI bounds
+                        + (i) disclosure tooltip inline. ForecastWithCI handles the
+                        warning styling when ci_method='placeholder_uncalibrated'.
+                        The micro-bar visual stays right of the CI for at-a-glance
+                        color grading. */}
                     <div className="inline-flex items-center gap-2 justify-end">
-                      <span className={`font-semibold ${nrrColor(nrrPoint)}`}>
-                        {(nrrPoint * 100).toFixed(1)}%
-                      </span>
+                      <ForecastWithCI
+                        point={nrrPoint}
+                        lower={r.expected_nrr?.lower_90}
+                        upper={r.expected_nrr?.upper_90}
+                        format="percent"
+                        ciMethod={r.expected_nrr?.ci_method}
+                        ciDisclosure={r.expected_nrr?.ci_disclosure}
+                        pointClassName={`font-semibold ${nrrColor(nrrPoint)}`}
+                      />
                       <div className="inline-block w-16 h-1.5 bg-gray-800 rounded">
                         <div
                           className={`h-full rounded ${nrrBarColor(nrrPoint)}`}
@@ -254,7 +279,18 @@ export const PerAccountNRRForecastTable: React.FC<Props> = ({ customerId, horizo
                   </td>
                   <td className="px-3 py-2 text-right font-mono text-[11px]">
                     {expLift > 0 ? (
-                      <span className="text-emerald-400">{formatCompactDollars(expLift)}</span>
+                      // CFO-10: expansion ARR lift renders with CI bounds + (i)
+                      // disclosure. ForecastWithCI degrades to point-only when
+                      // ci_lower/upper are absent (older API versions).
+                      <ForecastWithCI
+                        point={expLift}
+                        lower={r.expansion_outlook?.ci_lower_arr_lift}
+                        upper={r.expansion_outlook?.ci_upper_arr_lift}
+                        format="currency"
+                        ciMethod={r.expansion_outlook?.ci_method}
+                        ciDisclosure={r.expansion_outlook?.ci_disclosure}
+                        pointClassName="text-emerald-400"
+                      />
                     ) : (
                       <span className="text-gray-600">—</span>
                     )}

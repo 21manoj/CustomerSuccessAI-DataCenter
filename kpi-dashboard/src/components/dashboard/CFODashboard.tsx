@@ -1321,11 +1321,21 @@ const CFODashboard: React.FC = () => {
                 tooltip: `Backward-looking counterfactual NRR from Wizard B. With CS Pulse: ${wb.with_cs_pulse_nrr_pct}%. Without: ${wb.without_cs_pulse_nrr_pct}%. Delta = +${wb.delta_pct}pp. Includes all ${json.account_count || '—'} accounts (incl. churned) in denominator. Differs from "Forecast NRR" — that's forward, this is backward.`,
               },
               {
+                // CFO-10 (May 17 FDE eval) — KNOWN GAP: portfolio-level NRR tile
+                // does NOT show CI bounds today. get_portfolio_nrr_forecast_v3
+                // returns only the ARR-weighted point estimate; per-account
+                // lower/upper bounds are NOT aggregated into a portfolio CI.
+                // The per-account drill-down (PerAccountNRRForecastTable below)
+                // surfaces CI per row. TODO: when the portfolio tool gains a
+                // CI aggregation (ARR-weighted sum of lower/upper bounds), swap
+                // this card's value for a <ForecastWithCI> render. Until then
+                // we leave the point-only display and direct curious users to
+                // the per-account view via the tooltip below.
                 label: 'Forecast NRR — Next 12mo',
                 value: `${v3?.arr_weighted_nrr_pct ?? '—'}%`,
                 subtitle: `Forward point (Predictor v3) · ARR-weighted · ${v3?.active_account_count || 0} active`,
                 accent: 'cyan',
-                tooltip: `Forward 12-month point forecast from Predictor v3 (calibrated by Wizard D ${v3?.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3?.active_account_count || 0} currently-active accounts; excludes $0-ARR (typically churned) from the weight. Simple-avg: ${v3?.simple_avg_nrr_pct}%. Differs from "Realized NRR" — that's backward counterfactual.`,
+                tooltip: `Forward 12-month point forecast from Predictor v3 (calibrated by Wizard D ${v3?.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3?.active_account_count || 0} currently-active accounts; excludes $0-ARR (typically churned) from the weight. Simple-avg: ${v3?.simple_avg_nrr_pct}%. Portfolio CI is aggregated; see the Per-Account NRR Forecast table below for per-account 90% CI bounds. Differs from "Realized NRR" — that's backward counterfactual.`,
               },
             ] : hasProof ? [
               { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white' },
