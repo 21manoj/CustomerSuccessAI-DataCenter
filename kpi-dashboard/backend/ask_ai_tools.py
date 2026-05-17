@@ -303,37 +303,37 @@ TOOL_DEFINITIONS = [
     #   "Top expansion opportunities" / "Top at-risk accounts" → v3 rankers
     {
         "name": "get_account_nrr_forecast",
-        "description": "Per-account FORWARD NRR forecast at horizon (renewal or 12mo) from Predictor v3 (Wizard D-calibrated GLMM). Returns expected_nrr point + 90% CI bounds, term_decomposition (p_churn, p_survive, expand/contract %, top_drivers with feature contributions), expansion_outlook (probability of expansion event, expected size, ARR lift), and calibration_id provenance. Use this when the user asks 'what's account X's NRR forecast?', 'why is X predicted at Y%?', or wants to explain a per-account number. DO NOT use for portfolio-level questions (use get_portfolio_nrr_forecast_v3) or backward counterfactual (use get_realized_nrr_counterfactual).",
+        "description": "Per-account FORWARD NRR forecast at horizon (renewal, quarter=3mo, or 12mo) from Predictor v3 (Wizard D-calibrated GLMM). Returns expected_nrr point + 90% CI bounds, term_decomposition (p_churn, p_survive, expand/contract %, top_drivers with feature contributions), expansion_outlook (probability of expansion event, expected size, ARR lift), and calibration_id provenance. Use this when the user asks 'what's account X's NRR forecast?', 'why is X predicted at Y%?', or wants to explain a per-account number. Use horizon='quarter' for 'this quarter' framing. DO NOT use for portfolio-level questions (use get_portfolio_nrr_forecast_v3) or backward counterfactual (use get_realized_nrr_counterfactual).",
         "input_schema": {
             "type": "object",
             "properties": {
                 "customer_id": {"type": "integer", "description": "The customer (tenant) ID that owns the account"},
                 "account_id": {"type": "integer", "description": "The account_id to forecast"},
-                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo", "description": "Forecast horizon"}
+                "horizon": {"type": "string", "enum": ["renewal", "quarter", "12mo"], "default": "12mo", "description": "Forecast horizon: 'renewal' (contract-specific), 'quarter' (3mo), or '12mo' (default)"}
             },
             "required": ["customer_id", "account_id"]
         }
     },
     {
         "name": "get_portfolio_nrr_forecast_v3",
-        "description": "Portfolio-level FORWARD NRR forecast (Predictor v3, ARR-weighted aggregate of per-account predictions). Returns arr_weighted_nrr_pct, simple_avg_nrr_pct, account_count (active + total), top_5_nrr accounts, bottom_5_nrr accounts, prediction_method_counts, and calibration_freshness. Use when the user asks 'what's our forward NRR?', 'what's the v3 portfolio forecast?', or wants the aggregate forecast number. DIFFERENT FROM get_realized_nrr_counterfactual — that's backward counterfactual (with vs without CS Pulse).",
+        "description": "Portfolio-level FORWARD NRR forecast (Predictor v3, ARR-weighted aggregate of per-account predictions). Returns arr_weighted_nrr_pct, simple_avg_nrr_pct, account_count (active + total), top_5_nrr accounts, bottom_5_nrr accounts, prediction_method_counts, and calibration_freshness. Use when the user asks 'what's our forward NRR?', 'what's the v3 portfolio forecast?', or wants the aggregate forecast number. Use horizon='quarter' for 'this quarter' framing. DIFFERENT FROM get_realized_nrr_counterfactual — that's backward counterfactual (with vs without CS Pulse).",
         "input_schema": {
             "type": "object",
             "properties": {
                 "customer_id": {"type": "integer"},
-                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo"}
+                "horizon": {"type": "string", "enum": ["renewal", "quarter", "12mo"], "default": "12mo"}
             },
             "required": ["customer_id"]
         }
     },
     {
         "name": "get_top_expansion_opportunities_v3",
-        "description": "Top expansion opportunities — per-account ranked by Predictor v3 expected_arr_lift over the horizon. Each result entry includes account_id, account_name, ARR, expansion_outlook (expected_arr_lift, p_expansion_event_horizon, expected_size_pct_given_event), expansion_drivers (top feature contributions). Use when the user asks 'where should we focus expansion plays?', 'top expansion bets?', 'which accounts have highest upside?'.",
+        "description": "Top expansion opportunities — per-account ranked by Predictor v3 expected_arr_lift over the horizon. Each result entry includes account_id, account_name, ARR, expansion_outlook (expected_arr_lift, p_expansion_event_horizon, expected_size_pct_given_event), expansion_drivers (top feature contributions). Use when the user asks 'where should we focus expansion plays?', 'top expansion bets?', 'which accounts have highest upside?'. Use horizon='quarter' for 'this quarter' framing.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "customer_id": {"type": "integer"},
-                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo"},
+                "horizon": {"type": "string", "enum": ["renewal", "quarter", "12mo"], "default": "12mo"},
                 "limit": {"type": "integer", "default": 5}
             },
             "required": ["customer_id"]
@@ -341,12 +341,12 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_top_at_risk_accounts_v3",
-        "description": "Top at-risk accounts — per-account ranked by Predictor v3 forecast NRR ascending (lowest NRR = highest churn risk). Each result includes account_id, account_name, ARR, expected_nrr {point, lower_90, upper_90}, term_decomposition (p_churn, p_survive, e_contract_pct, e_expand_pct, top_drivers), forecast_arr_loss (projected ARR loss = ARR × (1 - expected_nrr)). Use when the user asks 'which accounts are most at-risk?', 'where should defensive playbooks fire?', 'what's hurting NRR most?'.",
+        "description": "Top at-risk accounts — per-account ranked by Predictor v3 forecast NRR ascending (lowest NRR = highest churn risk). Each result includes account_id, account_name, ARR, expected_nrr {point, lower_90, upper_90}, term_decomposition (p_churn, p_survive, e_contract_pct, e_expand_pct, top_drivers), forecast_arr_loss (projected ARR loss = ARR × (1 - expected_nrr)). Use when the user asks 'which accounts are most at-risk?', 'where should defensive playbooks fire?', 'what's hurting NRR most?'. Use horizon='quarter' to answer 'revenue at risk this quarter' — quarter-bounded ARR-at-risk runs ~25-30% of the 12mo number.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "customer_id": {"type": "integer"},
-                "horizon": {"type": "string", "enum": ["renewal", "12mo"], "default": "12mo"},
+                "horizon": {"type": "string", "enum": ["renewal", "quarter", "12mo"], "default": "12mo"},
                 "limit": {"type": "integer", "default": 5}
             },
             "required": ["customer_id"]
@@ -1225,8 +1225,8 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
             horizon = tool_input.get('horizon', '12mo')
             if not account_id:
                 return {"error": "account_id is required"}
-            if horizon not in ('renewal', '12mo'):
-                return {"error": f"horizon must be 'renewal' or '12mo', got {horizon!r}"}
+            if horizon not in ('renewal', 'quarter', '12mo'):
+                return {"error": f"horizon must be 'renewal', 'quarter', or '12mo', got {horizon!r}"}
             # Tenant isolation: confirm the account belongs to the session's
             # customer before forecasting. Matches the MCP path's auth check.
             owned = Account.query.filter_by(

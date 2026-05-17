@@ -16,9 +16,15 @@ two independent feature flags gate this:
 
 Endpoints (per A6, three of them):
 
-  GET /api/v1/predictor/account/<account_id>/nrr-forecast?horizon=renewal|12mo
-  GET /api/v1/predictor/customer/<customer_id>/top-expansion-opportunities?horizon=12mo&limit=10
-  GET /api/v1/predictor/customer/<customer_id>/top-at-risk-accounts?horizon=12mo&limit=10
+  GET /api/v1/predictor/account/<account_id>/nrr-forecast?horizon=renewal|quarter|12mo
+  GET /api/v1/predictor/customer/<customer_id>/top-expansion-opportunities?horizon=renewal|quarter|12mo&limit=10
+  GET /api/v1/predictor/customer/<customer_id>/top-at-risk-accounts?horizon=renewal|quarter|12mo&limit=10
+
+Horizon values:
+  renewal — account-specific renewal date (days_to_renewal / 30, min 1mo)
+  quarter — 3 months from now (added May 17 2026 for CRO "this quarter"
+            framing; same calibration as 12mo, no retrain)
+  12mo    — 12 months from now (default)
 """
 
 from __future__ import annotations
@@ -70,10 +76,10 @@ def get_account_nrr_forecast(account_id: int):
         return killed
 
     horizon = request.args.get('horizon', 'renewal')
-    if horizon not in ('renewal', '12mo'):
+    if horizon not in ('renewal', 'quarter', '12mo'):
         return jsonify({
             'error': 'invalid_horizon',
-            'message': "horizon must be 'renewal' or '12mo'",
+            'message': "horizon must be 'renewal', 'quarter', or '12mo'",
         }), 400
 
     from extensions import db
@@ -123,12 +129,18 @@ def _ranked_portfolio(
     accts = (
         db.session.query(Account)
         .filter(Account.customer_id == customer_id)
-        .filter(Account.account_status.notin_(['cancelled', 'inactive']))
+        .filter(Account.account_status.notin_(['cancelled', 'inactive', 'churned']))
         .all()
     )
 
     rows = []
     for a in accts:
+        # Mirror get_at_risk_accounts: $0-ARR accounts are typically churned
+        # and produce a nonsense rank-score (P(churn) × 0 = 0). Skip them
+        # for the at-risk path; expansion path naturally drops them to the
+        # bottom by expected_arr_lift, but we skip there too for cleanliness.
+        if sort_key == 'churn_loss' and not (a.revenue or 0):
+            continue
         try:
             pred = predict_for_account_id(
                 account_id=a.account_id,
@@ -164,7 +176,7 @@ def get_top_expansion_opportunities(customer_id: int):
         return killed
 
     horizon = request.args.get('horizon', '12mo')
-    if horizon not in ('renewal', '12mo'):
+    if horizon not in ('renewal', 'quarter', '12mo'):
         return jsonify({'error': 'invalid_horizon'}), 400
     try:
         limit = int(request.args.get('limit', 10))
@@ -200,7 +212,7 @@ def get_top_at_risk_accounts(customer_id: int):
         return killed
 
     horizon = request.args.get('horizon', '12mo')
-    if horizon not in ('renewal', '12mo'):
+    if horizon not in ('renewal', 'quarter', '12mo'):
         return jsonify({'error': 'invalid_horizon'}), 400
     try:
         limit = int(request.args.get('limit', 10))

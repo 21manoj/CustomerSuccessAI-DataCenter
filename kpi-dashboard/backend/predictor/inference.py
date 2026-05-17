@@ -10,7 +10,14 @@ Per A6 (expansion as first-class), the inference output carries:
     ARR lift with CI, drivers specific to expansion
 
 API contract (locked in PLAN v1.2):
-  GET /api/v1/predictor/account/<id>/nrr-forecast?horizon=renewal|12mo
+  GET /api/v1/predictor/account/<id>/nrr-forecast?horizon=renewal|quarter|12mo
+
+The 'quarter' horizon (added May 17 2026, FDE eval CRO-1 fix) is a 3-month
+forward window. It reuses the same hazard / contraction / expansion event
+calibrations as the 12mo horizon — only the rollout length changes — so
+no recalibration is needed. For Cox-like monthly hazards, the cumulative
+churn probability at 3 months runs ~25-30% of the 12-month value, which
+is the basis for the "smaller quarter numbers" UX expectation.
 
 This module produces the JSON shape from PLAN §"API Contract".
 """
@@ -305,8 +312,15 @@ def predict_account_nrr(
 
     # ---- A6 expansion_outlook block --------------------------------------
     expected_arr_lift = arr * p_expansion_event * e_size_given_event
+    # Cap horizon_to_likely_event_months at horizon_months — otherwise a
+    # short horizon (e.g., 'quarter' = 3mo) can produce nonsensical
+    # "expansion expected in 23 months" messages when the user is asking
+    # a quarter-bounded question.
     horizon_to_likely_event = (
-        round(1.0 / max(np.mean(expansion_event_mp), 1e-6))
+        min(
+            round(1.0 / max(np.mean(expansion_event_mp), 1e-6)),
+            horizon_months,
+        )
         if expansion_event_mp else None
     )
     expansion_outlook = {
@@ -366,13 +380,20 @@ def predict_account_nrr(
 
 def predict_for_account_id(
     account_id: int,
-    horizon: str = 'renewal',  # or '12mo'
+    horizon: str = 'renewal',  # 'renewal' | 'quarter' | '12mo'
     db_session=None,
 ) -> dict:
     """End-to-end: account_id → API-contract JSON.
 
     Reads the latest panel row for the account, projects features forward,
     applies calibrated coefficients, returns the locked API shape.
+
+    Horizon values:
+      - 'renewal' — each account's contract renewal date (days_to_renewal
+        rounded to months, min 1)
+      - 'quarter' — 3 months from now (added May 17 2026 for the CRO
+        "this quarter" framing; reuses 12mo calibration, no retrain)
+      - '12mo' — 12 months from now (default)
     """
     from models import Account
 
@@ -398,12 +419,21 @@ def predict_for_account_id(
     saas_profile = latest['saas_profile']
     arr = float(latest['arr'])
 
-    # Horizon handling per Q1: report both renewal and 12mo on demand
+    # Horizon handling — three values supported:
+    #   renewal → account-specific (days_to_renewal / 30, min 1mo)
+    #   quarter → 3 months
+    #   12mo    → 12 months
     if horizon == 'renewal':
         dtr = latest.get('days_to_renewal') or 365
         horizon_months = max(1, int(round(dtr / 30.0)))
-    else:
+    elif horizon == 'quarter':
+        horizon_months = 3
+    elif horizon == '12mo':
         horizon_months = 12
+    else:
+        raise ValueError(
+            f"horizon must be 'renewal' | 'quarter' | '12mo', got {horizon!r}"
+        )
 
     response = predict_account_nrr(
         account_features={col: latest.get(col) for col in feature_columns()},
